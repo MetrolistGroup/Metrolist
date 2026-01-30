@@ -418,7 +418,7 @@
     <string name="listen_together_view_logs_desc">Verbindung und Meldungen debuggen</string>
     <string name="listen_together_logs">Verbindungsprotokolle</string>
     <string name="listen_together_no_logs">Noch keine Protokolle</string>
-    <string name="listen_together_description">Höre gemeinsam mit Freunden Musik in Echtzeit. Erstellen einen Raum, um Gastgeber zu sein, oder trete mit einem Code einem bestehenden Raum bei.</string>
+    <string name="listen_together_description">Höre gemeinsam mit Freunden Musik in Echtzeit. Erstelle einen Raum, um Gastgeber zu sein, oder trete mit einem Code einem bestehenden Raum bei.</string>
     <string name="listen_together_background_disconnect_note">Hinweis: Die Verbindung kann unterbrochen werden, wenn Sie einen Raum erstellen, während keine Musik abgespielt wird, und dann zu einer anderen App wechseln.</string>
     <string name="join_existing_room">Bestehendem Raum beitreten</string>
     <string name="room_code">Raumcode</string>
