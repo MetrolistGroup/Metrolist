@@ -393,4 +393,26 @@
     <string name="player_client_android_vr_desc">La opción más rápida. Transmisión directa de URL sin descifrado de firma. Recomendado para la mayoría de los usuarios.</string>
     <string name="player_client_web_remix_desc">Es más lento, pero admite formatos premium. Utiliza el descifrado de firma JavaScript, que añade entre 5 y 10 segundos al inicio de la reproducción.</string>
     <string name="player_client_web_remix">Web Remix</string>
+    <string name="error_username_empty">Nombre de Usuario requerido.</string>
+    <string name="enter_username">Ingresar Nombre de Usuario</string>
+    <string name="connected_users">Usuarios Conectados</string>
+    <string name="listen_together_desc">Escuchar música con amigos en tiempo real</string>
+    <string name="listen_together_username">Nombre de Usuario</string>
+    <string name="listen_together_connected">Conectado</string>
+    <string name="listen_together_connecting">Conectando…</string>
+    <string name="listen_together_reconnecting">Reconectando…</string>
+    <string name="listen_together_disconnected">Desconectado</string>
+    <string name="listen_together_error">Error de Conexión</string>
+    <string name="listen_together_you_are_guest">Tú eres un invitado</string>
+    <string name="listen_together_create_room">Crear Sala</string>
+    <string name="listen_together_create_room_desc">Crea una sala y comparte el código con tus amigos</string>
+    <string name="listen_together_join_room">Unirse a Sala</string>
+    <string name="listen_together_room_code">Código de Sala</string>
+    <string name="listen_together_leave_room">Dejar Sala</string>
+    <string name="listen_together_you_are_host">Tú eres el anfitrión</string>
+    <string name="listen_together_users">%d usuarios en la sala</string>
+    <string name="waiting_for_approval">Esperando por la aprobación del anfitrión</string>
+    <string name="invalid_room_code">Código de sala inválido</string>
+    <string name="join_request_denied">Solicitud para unirse denegado</string>
+    <string name="listen_together_description">Escucha música con amigos en tiempo real. Crea una sala como anfitrión o únete a una sala existente con un código.</string>
 </resources>
