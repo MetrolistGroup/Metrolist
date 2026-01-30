@@ -396,7 +396,7 @@
     <string name="keep_screen_on_when_player_is_expanded">Mantieni lo schermo acceso quando il lettore è espanso</string>
     <string name="decryption_library">Libreria di decifratura</string>
     <string name="decryption_library_newpipe">Estrattore di NewPipe (ufficiale)</string>
-    <string name="decryption_library_newpipe_desc">Libreria ufficiale di TeamNewPipe, la più aggiornata rispetto alle modifiche di YouTube. Consigliata come predefinita. Passaggio automatico all’API di PipePipe in caso di errore.</string>
+    <string name="decryption_library_newpipe_desc">Libreria ufficiale di TeamNewPipe, la più aggiornata rispetto alle modifiche di YouTube. Consigliata come predefinita. Passaggio automatico all\'API di PipePipe in caso di errore.</string>
     <string name="decryption_library_pipepipe_api">API di PipePipe</string>
     <string name="decryption_library_pipepipe_api_desc">Decifratura basata su API tramite MetroExtractor. Più veloce, ma dipende da un\'API esterna. Passa automaticamente a NewPipe in caso di errore.</string>
     <string name="listen_together_desc">Ascolta musica con gli amici in tempo reale</string>
