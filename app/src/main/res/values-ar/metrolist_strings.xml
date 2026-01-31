@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="explore">Explore</string>
+    <string name="explore">استكشاف</string>
     <string name="back_button_desc">للخلف</string>
     <string name="no_title">لا يوجد عنوان</string>
     <string name="unknown_artist">فنان غير معروف</string>
@@ -410,7 +410,7 @@
     <string name="crop_album_art_desc">فرض نسبة عرض إلى ارتفاع مربعة عن طريق اقتصاص صور معاينة الفيديو</string>
     <string name="keep_screen_on_when_player_is_expanded">إبقاء الشاشة مفتوحة عند توسيع مشغل الفيديو</string>
     <string name="decryption_library_newpipe">مستخرج NewPipe [رسمي]</string>
-    <string name="decryption_library_newpipe_desc">مكتبة TeamNewPipe الرسمية.\nالأكثر تحديثًا مع تغييرات YouTube. يُوصى به كإعداد افتراضي\nالرجوع التلقائي إلى واجهة برمجة تطبيقات PipePipe في حالة الفشل</string>
+    <string name="decryption_library_newpipe_desc">المكتبة الرسمية الأكثر تحديثًا من TeamNewPipe.\nيُوصى بها كإعداد افتراضي لمواكبة تغييرات YouTube.\nيتم الرجوع تلقائيًا إلى واجهة برمجة تطبيقات PipePipe في حال الفشل.</string>
     <string name="decryption_library_pipepipe_api">واجهة برمجة تطبيقات PipePipe</string>
     <string name="decryption_library_pipepipe_api_desc">فك تشفير قائم على واجهة برمجة التطبيقات باستخدام MetroExtractor. أسرع ولكنه يعتمد على واجهة برمجة تطبيقات خارجية. الرجوع التلقائي إلى NewPipe في حالة الفشل.</string>
     <string name="decryption_library">إعدادات مكتبة فك التشفير</string>
