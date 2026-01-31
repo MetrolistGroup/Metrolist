@@ -440,4 +440,15 @@
     <string name="creating_room">Створення сеансу…</string>
     <string name="listen_together_not_configured">Listen Together не налаштований. Налаштуйте URL сервера у Налаштуваннях → Інтеграції → Listen Together.</string>
     <string name="connect">Приєднатися</string>
+    <string name="disconnect">Відключитися</string>
+    <string name="create">Створити</string>
+    <string name="join">Приєднатися</string>
+    <string name="approve">Прийняти</string>
+    <string name="reject">Відхилити</string>
+    <string name="clear">Очистити</string>
+    <string name="copy">Копіювати</string>
+    <string name="copied_to_clipboard">Скопійовано в буфер обміну</string>
+    <string name="not_set">Не встановлено</string>
+    <string name="hosting_room">Кімната для гостей</string>
+    <string name="in_room">У кімнаті</string>
 </resources>
