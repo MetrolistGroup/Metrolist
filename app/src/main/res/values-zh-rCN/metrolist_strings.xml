@@ -444,14 +444,14 @@
     <string name="listen_together_notification_channel_desc">“一起听歌”通知</string>
     <string name="listen_together_room_created">%s 房间已创建</string>
     <string name="kick_user">踢出房间</string>
-    <string name="host_label">主持</string>
+    <string name="host_label">房主</string>
     <string name="you_label">你</string>
     <string name="connected_users">在线用户</string>
     <string name="enter_username">输入用户名</string>
     <string name="change">更改</string>
     <string name="listen_together_cannot_edit_username_in_room">在房间内时无法修改用户名</string>
     <string name="error_username_empty">需要用户名。</string>
-    <string name="listen_together_suggestion_sent">已发送建议给主持！</string>
+    <string name="listen_together_suggestion_sent">已发送建议给房主！</string>
     <string name="resync">重新同步</string>
-    <string name="suggest_to_host">向主持人提出建议</string>
+    <string name="suggest_to_host">向房主提出建议</string>
 </resources>
