@@ -157,4 +157,19 @@
     <string name="lastfm_now_playing">Saada hetkel esitatava loo andmed</string>
     <string name="last_fm_send_likes">Saada meeldimised/mittemeeldimised</string>
     <string name="scrobbling_configuration">Kraasimise seadistused</string>
+    <string name="top_result">Parim vaste</string>
+    <string name="other_results">Muud vasted</string>
+    <string name="show_artist_description">Kuva artisti kirjeldust</string>
+    <string name="show_artist_subscriber_count">Kuva tellijate arvu</string>
+    <string name="show_artist_monthly_listeners">Kuva igakuine kuulajate arv</string>
+    <string name="show_less">Kuva vähem</string>
+    <string name="show_more">Kuva rohkem</string>
+    <string name="artist_page_settings">Artisti leht</string>
+    <string name="about_artist">Teave</string>
+    <string name="download_playlist_desc">Laadi alla kõik lood võrguühenduseta taasesituseks</string>
+    <string name="remove_download_playlist_desc">Eemalda kõik alla laetud lood sellest esitlusloendist</string>
+    <string name="download_in_progress_desc">Allalaadimine on pooleli</string>
+    <string name="share_playlist_desc">Jaga esitlusloendit teistega</string>
+    <string name="delete_playlist_desc">Kustuta see esitlusloend jäädavalt</string>
+    <string name="sync_playlist_desc">Sünkroniseeri esitlusloend Youtube Music\'ga</string>
 </resources>
