@@ -404,4 +404,6 @@
     <string name="decryption_library_newpipe_desc">Oficiální knihovna od vývojářů TeamNewPipe. Nejlépe drží krok se změnami YouTube. Doporučeno jako výchozí. Pokud selže, automaticky se použije PipePipe API.</string>
     <string name="decryption_library_pipepipe_api">PipePipe API</string>
     <string name="decryption_library_pipepipe_api_desc">Dešifrování založené na API používající MetroExtractor. Rychlejší, ale závisí na externí API. Pokud selže, automaticky se použije NewPipe.</string>
+    <string name="listen_together">Společný poslech</string>
+    <string name="listen_together_desc">Poslouchejte hudbu společně s přáteli</string>
 </resources>
