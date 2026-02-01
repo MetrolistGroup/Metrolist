@@ -394,4 +394,8 @@
     <string name="decryption_library_newpipe_desc">Resmi TeamNewPipe kütüphanesi. YouTube\'daki değişikliklere en güncel şekilde uyum sağlar. Varsayılan olarak önerilir.Başarısız olması durumunda otomatik olarak PipePipe API\'sine geri dönüş yapılır.</string>
     <string name="decryption_library_pipepipe_api">PipePipe API\'si</string>
     <string name="decryption_library_pipepipe_api_desc">MetroExtractor kullanarak API tabanlı şifre çözme. Daha hızlıdır ancak harici bir API\'ye bağlıdır. Başarısız olması durumunda otomatik olarak NewPipe\'a geri döner.</string>
+    <string name="listen_together">Birlikte Dinle</string>
+    <string name="listen_together_desc">Arkadaşlarınızla gerçek zamanlı olarak müzik dinleyin</string>
+    <string name="listen_together_server_url">Sunucu URL\'si</string>
+    <string name="listen_together_username">Kullanıcı adı</string>
 </resources>
