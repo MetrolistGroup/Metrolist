@@ -383,7 +383,7 @@
     <string name="error_eq_apply_failed">Error al aplicar el perfil de ecualización: %1$s</string>
     <string name="error_playback_failed">Reproducción fallida</string>
     <string name="error_copied">Información del error copiada al portapapeles</string>
-    <string name="copy_error">Error al copiar</string>
+    <string name="copy_error">Copiar el error</string>
     <string name="error_copy_hint">Copia la información del error para ayudar a solucionar el problema</string>
     <string name="player_client">Reproductor</string>
     <string name="player_client_android_vr">Android VR</string>
