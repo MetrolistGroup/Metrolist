@@ -436,4 +436,5 @@
     <string name="change">Ganti</string>
     <string name="copied_to_clipboard">Disalin ke papan klip</string>
     <string name="not_set">Belum diatur</string>
+    <string name="listen_together_connected">Terhubung</string>
 </resources>
