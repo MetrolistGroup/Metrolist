@@ -437,4 +437,15 @@
     <string name="copied_to_clipboard">Disalin ke papan klip</string>
     <string name="not_set">Belum diatur</string>
     <string name="listen_together_connected">Terhubung</string>
+    <string name="listen_together">Dengar bersama</string>
+    <string name="listen_together_desc">Dengarkan musik dengan teman secara real-time</string>
+    <string name="listen_together_server_url">URL Server</string>
+    <string name="listen_together_username">Nama pengguna</string>
+    <string name="listen_together_suggestion_received">%1$s diminta %2$s</string>
+    <string name="hosting_room">Ruang hosting</string>
+    <string name="in_room">Di ruangan</string>
+    <string name="pending_requests">Menunggu permintaan</string>
+    <string name="pending_suggestions">Menunggu saran</string>
+    <string name="suggest_to_host">Sarankan ke host</string>
+    <string name="kick_user">Keluarkan</string>
 </resources>
