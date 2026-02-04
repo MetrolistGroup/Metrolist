@@ -469,4 +469,13 @@
     <string name="host_label">Hostitel</string>
     <string name="resync">Synchronizovat znovu</string>
     <string name="hosting_room">Hostování místnosti</string>
+    <string name="mute">Ztlumit</string>
+    <string name="unmute">Zrušit ztlumení</string>
+    <string name="crash_title">Aplikace se neočekávaně ukončila</string>
+    <string name="crash_description">Došlo k neočekávané chybě. Pošlete nám hlášení o chybě, abyste nám pomohli problém opravit.</string>
+    <string name="crash_share_logs">Sdílet logy</string>
+    <string name="crash_share_title">Sdílet hlášení o chybě</string>
+    <string name="crash_report_subject">Metrolist hlášení o chybě</string>
+    <string name="crash_close">Zavřít</string>
+    <string name="crash_no_log">Není k dispozici žádný záznam o chybě</string>
 </resources>
