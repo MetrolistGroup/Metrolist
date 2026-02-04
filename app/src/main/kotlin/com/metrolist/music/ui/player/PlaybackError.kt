@@ -5,15 +5,8 @@
 
 package com.metrolist.music.ui.player
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.os.Build
-import android.widget.Toast
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,15 +18,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -42,8 +30,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.PlaybackException
-import com.metrolist.music.BuildConfig
-import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 
 @Composable
@@ -51,10 +37,6 @@ fun PlaybackError(
     error: PlaybackException,
     retry: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val playerConnection = LocalPlayerConnection.current
-    val mediaMetadata by playerConnection?.mediaMetadata?.collectAsState() ?: return
-    
     // Build detailed error info for debugging
     val rawErrorMessage = error.cause?.cause?.message 
         ?: error.cause?.message 
@@ -75,45 +57,6 @@ fun PlaybackError(
         "This app does not support playing age-restricted songs. We are working on fixing this issue."
     } else {
         rawErrorMessage
-    }
-    
-    val songId = mediaMetadata?.id ?: "Unknown"
-    val songTitle = mediaMetadata?.title ?: "Unknown"
-    val songArtists = mediaMetadata?.artists?.joinToString(", ") { it.name } ?: "Unknown"
-    val songLink = "https://music.youtube.com/watch?v=$songId"
-    
-    val detailedErrorInfo = buildString {
-        appendLine("=== Metrolist Error Report ===")
-        appendLine()
-        appendLine("App Version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
-        appendLine("Architecture: ${BuildConfig.ARCHITECTURE}")
-        appendLine("Android Version: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
-        appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}")
-        appendLine()
-        appendLine("=== Song Info ===")
-        appendLine("Title: $songTitle")
-        appendLine("Artists: $songArtists")
-        appendLine("Song ID: $songId")
-        appendLine("Link: $songLink")
-        appendLine()
-        appendLine("=== Error Details ===")
-        appendLine("Error Code: ${error.errorCode}")
-        appendLine("Error Code Name: ${getErrorCodeName(error.errorCode)}")
-        appendLine("Message: $errorMessage")
-        error.cause?.let { cause ->
-            appendLine("Cause: ${cause::class.simpleName}: ${cause.message}")
-            cause.cause?.let { innerCause ->
-                appendLine("Inner Cause: ${innerCause::class.simpleName}: ${innerCause.message}")
-            }
-        }
-        appendLine()
-        appendLine("=== Stack Trace (Summary) ===")
-        error.stackTrace.take(5).forEach { element ->
-            appendLine("  at $element")
-        }
-        if (error.stackTrace.size > 5) {
-            appendLine("  ... and ${error.stackTrace.size - 5} more")
-        }
     }
     
     Column(
@@ -168,57 +111,22 @@ fun PlaybackError(
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // Action buttons
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // Retry button
+        Button(
+            onClick = retry,
+            shape = RoundedCornerShape(20.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            )
         ) {
-            // Retry button
-            Button(
-                onClick = retry,
-                shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.replay),
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(text = stringResource(R.string.retry))
-            }
-            
-            // Copy error info button
-            OutlinedButton(
-                onClick = {
-                    val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    val clip = ClipData.newPlainText("Metrolist Error Report", detailedErrorInfo)
-                    clipboardManager.setPrimaryClip(clip)
-                    Toast.makeText(context, context.getString(R.string.error_copied), Toast.LENGTH_SHORT).show()
-                },
-                shape = RoundedCornerShape(20.dp)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.backup),
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(text = stringResource(R.string.copy_error))
-            }
+            Icon(
+                painter = painterResource(R.drawable.replay),
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(text = stringResource(R.string.retry))
         }
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        // Hint text
-        Text(
-            text = stringResource(R.string.error_copy_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            textAlign = TextAlign.Center
-        )
     }
 }
 
