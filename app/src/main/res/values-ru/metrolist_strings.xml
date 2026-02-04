@@ -469,4 +469,13 @@
     <string name="enter_username">Введите имя пользователя</string>
     <string name="error_username_empty">Имя пользователя обязательно.</string>
     <string name="resync">Синхронизировать заново</string>
+    <string name="mute">Отключить звук</string>
+    <string name="unmute">Включить звук</string>
+    <string name="crash_title">Сбой приложения</string>
+    <string name="crash_description">Произошла непредвиденная ошибка. Пожалуйста, отправьте отчет о сбое, чтобы помочь нам устранить проблему.</string>
+    <string name="crash_share_logs">Поделиться логами</string>
+    <string name="crash_share_title">Поделиться отчетом о сбое</string>
+    <string name="crash_report_subject">Отчет о сбое Metrolist</string>
+    <string name="crash_close">Закрыть</string>
+    <string name="crash_no_log">Лог сбоя недоступен</string>
 </resources>
