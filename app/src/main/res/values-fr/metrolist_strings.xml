@@ -464,4 +464,13 @@
     <string name="clear">Effacer</string>
     <string name="in_room">Dans la salle</string>
     <string name="kick_user">Coup</string>
+    <string name="mute">Muet</string>
+    <string name="unmute">Réactiver le son</string>
+    <string name="crash_title">L\'application a planté</string>
+    <string name="crash_description">Une erreur inattendue s\'est produite. Veuillez partager le rapport d\'erreur afin de nous aider à résoudre le problème.</string>
+    <string name="crash_share_logs">Partager les journaux</string>
+    <string name="crash_share_title">Partager le rapport d\'incident</string>
+    <string name="crash_report_subject">Rapport d\'incident Metrolist</string>
+    <string name="crash_close">Fermer</string>
+    <string name="crash_no_log">Aucun rapport d\'incident disponible</string>
 </resources>
