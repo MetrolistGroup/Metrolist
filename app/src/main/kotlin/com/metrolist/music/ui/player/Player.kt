@@ -1348,12 +1348,12 @@ fun BottomSheetPlayer(
                                         painter = painterResource(
                                             if (effectiveIsPlaying) R.drawable.pause else R.drawable.play
                                         ),
-                                        contentDescription = if (effectiveIsPlaying) "Pause" else stringResource(R.string.play),
+                                        contentDescription = if (effectiveIsPlaying) stringResource(R.string.pause) else stringResource(R.string.play),
                                         modifier = Modifier.size(32.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = if (effectiveIsPlaying) "Pause" else stringResource(R.string.play),
+                                        text = if (effectiveIsPlaying) stringResource(R.string.pause) else stringResource(R.string.play),
                                         style = MaterialTheme.typography.titleMedium
                                     )
                                 }

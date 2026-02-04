@@ -479,6 +479,8 @@
     <string name="listen_together_leave_room">Leave room</string>
     <string name="listen_together_you_are_host">You are the host</string>
     <string name="listen_together_you_are_guest">You are a guest</string>
+    <string name="mute">Mute</string>
+    <string name="unmute">Unmute</string>
     <string name="listen_together_users">%d users in room</string>
     <string name="listen_together_join_requests">Join requests</string>
     <string name="listen_together_view_logs">View logs</string>
