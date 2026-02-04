@@ -528,4 +528,13 @@
     <string name="enter_username">Enter username</string>
     <string name="error_username_empty">Username is required.</string>
     <string name="resync">Resync</string>
+
+    <!-- Crash Handler -->
+    <string name="crash_title">App Crashed</string>
+    <string name="crash_description">An unexpected error occurred. Please share the crash report to help us fix the issue.</string>
+    <string name="crash_share_logs">Share Logs</string>
+    <string name="crash_share_title">Share crash report</string>
+    <string name="crash_report_subject">Metrolist Crash Report</string>
+    <string name="crash_close">Close</string>
+    <string name="crash_no_log">No crash log available</string>
 </resources>
