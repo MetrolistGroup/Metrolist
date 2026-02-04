@@ -455,4 +455,13 @@
     <string name="hosting_room">Alojando la sala</string>
     <string name="in_room">En la sala</string>
     <string name="pending_requests">Solicitudes pendientes</string>
+    <string name="pending_suggestions">Sugerencias pendientes</string>
+    <string name="suggest_to_host">Sugerir al anfitrión</string>
+    <string name="kick_user">Expulsar</string>
+    <string name="host_label">Anfitrión</string>
+    <string name="you_label">Tú</string>
+    <string name="connected_users">Usuarios conectados</string>
+    <string name="enter_username">Introducir nombre de usuario</string>
+    <string name="error_username_empty">El nombre de usuario es obligatorio.</string>
+    <string name="resync">Volver a sincronizar</string>
 </resources>
