@@ -291,9 +291,9 @@ constructor(
                                     it.toMediaItem(parentId)
                                 }
 
-                            parentId.startsWith("${MusicService.PLAYLIST}/") ->
-                                when (val playlistId =
-                                    parentId.removePrefix("${MusicService.PLAYLIST}/")) {
+                            parentId.startsWith("${MusicService.PLAYLIST}/") -> {
+                                val playlistId = parentId.removePrefix("${MusicService.PLAYLIST}/")
+                                val songs = when (playlistId) {
                                     PlaylistEntity.LIKED_PLAYLIST_ID -> database.likedSongs(
                                         SongSortType.CREATE_DATE,
                                         true
@@ -320,33 +320,62 @@ constructor(
                                         database.playlistSongs(playlistId).map { list ->
                                             list.map { it.song }
                                         }
-                                }.first().map {
-                                    it.toMediaItem(parentId)
-                                }
+                                }.first()
+
+                                // Add shuffle item at the top
+                                listOf(
+                                    MediaItem.Builder()
+                                        .setMediaId("$parentId/${MusicService.SHUFFLE_ACTION}")
+                                        .setMediaMetadata(
+                                            MediaMetadata.Builder()
+                                                .setTitle(context.getString(R.string.shuffle))
+                                                .setArtworkUri(drawableUri(R.drawable.shuffle))
+                                                .setIsPlayable(true)
+                                                .setIsBrowsable(false)
+                                                .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                                                .build()
+                                        ).build()
+                                ) + songs.map { it.toMediaItem(parentId) }
+                            }
 
                             parentId.startsWith("${MusicService.YOUTUBE_PLAYLIST}/") -> {
                                 val playlistId = parentId.removePrefix("${MusicService.YOUTUBE_PLAYLIST}/")
                                 try {
-                                    YouTube.playlist(playlistId).getOrNull()?.songs
+                                    val songs = YouTube.playlist(playlistId).getOrNull()?.songs
                                         ?.take(100)
                                         ?.filterExplicit(context.dataStore.get(HideExplicitKey, false))
                                         ?.filterVideoSongs(context.dataStore.get(HideVideoSongsKey, false))
-                                        ?.map { songItem ->
-                                            MediaItem.Builder()
-                                                .setMediaId("$parentId/${songItem.id}")
-                                                .setMediaMetadata(
-                                                    MediaMetadata.Builder()
-                                                        .setTitle(songItem.title)
-                                                        .setSubtitle(songItem.artists.joinToString(", ") { it.name })
-                                                        .setArtist(songItem.artists.joinToString(", ") { it.name })
-                                                        .setArtworkUri(songItem.thumbnail.toUri())
-                                                        .setIsPlayable(true)
-                                                        .setIsBrowsable(false)
-                                                        .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
-                                                        .build()
-                                                )
-                                                .build()
-                                        } ?: emptyList()
+                                        ?: emptyList()
+
+                                    // Add shuffle item at the top
+                                    listOf(
+                                        MediaItem.Builder()
+                                            .setMediaId("$parentId/${MusicService.SHUFFLE_ACTION}")
+                                            .setMediaMetadata(
+                                                MediaMetadata.Builder()
+                                                    .setTitle(context.getString(R.string.shuffle))
+                                                    .setArtworkUri(drawableUri(R.drawable.shuffle))
+                                                    .setIsPlayable(true)
+                                                    .setIsBrowsable(false)
+                                                    .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                                                    .build()
+                                            ).build()
+                                    ) + songs.map { songItem ->
+                                        MediaItem.Builder()
+                                            .setMediaId("$parentId/${songItem.id}")
+                                            .setMediaMetadata(
+                                                MediaMetadata.Builder()
+                                                    .setTitle(songItem.title)
+                                                    .setSubtitle(songItem.artists.joinToString(", ") { it.name })
+                                                    .setArtist(songItem.artists.joinToString(", ") { it.name })
+                                                    .setArtworkUri(songItem.thumbnail.toUri())
+                                                    .setIsPlayable(true)
+                                                    .setIsBrowsable(false)
+                                                    .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                                                    .build()
+                                            )
+                                            .build()
+                                    }
                                 } catch (e: Exception) {
                                     reportException(e)
                                     emptyList()
@@ -551,17 +580,27 @@ constructor(
                             list.map { it.song }
                         }
                     }.first()
-                    MediaItemsWithStartPosition(
-                        songs.map { it.toMediaItem() },
-                        songs.indexOfFirst { it.id == songId }.takeIf { it != -1 } ?: 0,
-                        startPositionMs
-                    )
+
+                    // Check if this is a shuffle action
+                    if (songId == MusicService.SHUFFLE_ACTION) {
+                        MediaItemsWithStartPosition(
+                            songs.shuffled().map { it.toMediaItem() },
+                            0,
+                            C.TIME_UNSET
+                        )
+                    } else {
+                        MediaItemsWithStartPosition(
+                            songs.map { it.toMediaItem() },
+                            songs.indexOfFirst { it.id == songId }.takeIf { it != -1 } ?: 0,
+                            startPositionMs
+                        )
+                    }
                 }
 
                 MusicService.YOUTUBE_PLAYLIST -> {
                     val songId = path.getOrNull(2) ?: return@future defaultResult
                     val playlistId = path.getOrNull(1) ?: return@future defaultResult
-                    
+
                     val songs = try {
                         YouTube.playlist(playlistId).getOrNull()?.songs?.map {
                             it.toMediaItem()
@@ -570,12 +609,21 @@ constructor(
                         reportException(e)
                         return@future defaultResult
                     }
-                    
-                    MediaItemsWithStartPosition(
-                        songs,
-                        songs.indexOfFirst { it.mediaId.endsWith(songId) }.takeIf { it != -1 } ?: 0,
-                        C.TIME_UNSET
-                    )
+
+                    // Check if this is a shuffle action
+                    if (songId == MusicService.SHUFFLE_ACTION) {
+                        MediaItemsWithStartPosition(
+                            songs.shuffled(),
+                            0,
+                            C.TIME_UNSET
+                        )
+                    } else {
+                        MediaItemsWithStartPosition(
+                            songs,
+                            songs.indexOfFirst { it.mediaId.endsWith(songId) }.takeIf { it != -1 } ?: 0,
+                            C.TIME_UNSET
+                        )
+                    }
                 }
 
                 MusicService.SEARCH -> {
