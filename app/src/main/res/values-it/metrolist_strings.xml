@@ -464,4 +464,13 @@
     <string name="error_username_empty">Il nome utente è obbligatorio.</string>
     <string name="resync">Risincronizza</string>
     <string name="hosting_room">Stanza ospitante</string>
+    <string name="mute">Silenzia</string>
+    <string name="unmute">Riattiva audio</string>
+    <string name="crash_title">L\'app si è interrotta inaspettatamente</string>
+    <string name="crash_description">Si è verificato un errore inaspettato. Si prega di condividere il rapporto per aiutarci a risolvere il problema.</string>
+    <string name="crash_share_logs">Condividi i log</string>
+    <string name="crash_share_title">Condividi il rapporto</string>
+    <string name="crash_report_subject">Rapporto di Metrolist</string>
+    <string name="crash_close">Chiudi</string>
+    <string name="crash_no_log">Nessun log di errore è disponibile</string>
 </resources>
