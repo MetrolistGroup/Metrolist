@@ -72,11 +72,19 @@ data class SongEntity(
         }
     }
 
-    fun toggleLibrary() = copy(
+    fun toggleLibrary(syncToYouTube: Boolean = true) = copy(
         liked = if (inLibrary == null) liked else false,
         inLibrary = if (inLibrary == null) LocalDateTime.now() else null,
         likedDate = if (inLibrary == null) likedDate else null
-    )
+    ).also {
+        if (syncToYouTube) {
+            CoroutineScope(Dispatchers.IO).launch {
+                // Use the new reliable method that fetches fresh tokens
+                val addToLibrary = inLibrary == null
+                YouTube.toggleSongLibrary(id, addToLibrary)
+            }
+        }
+    }
 
     fun toggleUploaded() = copy(
         isUploaded = !isUploaded

@@ -78,6 +78,9 @@ data class LibraryPage(
         }
 
         fun fromMusicResponsiveListItemRenderer(renderer: MusicResponsiveListItemRenderer): YTItem? {
+            // Extract library tokens using the new method that properly handles multiple toggle items
+            val libraryTokens = PageHelper.extractLibraryTokensFromMenuItems(renderer.menu?.menuRenderer?.items)
+
             return when {
                 renderer.isSong -> SongItem(
                     id = renderer.playlistItemData?.videoId ?: return null,
@@ -107,12 +110,8 @@ data class LibraryPage(
                         it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
                     } != null,
                     endpoint = renderer.overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint,
-                    libraryAddToken = PageHelper.extractFeedbackToken(renderer.menu?.menuRenderer?.items?.find {
-                        PageHelper.isLibraryIcon(it.toggleMenuServiceItemRenderer?.defaultIcon?.iconType)
-                    }?.toggleMenuServiceItemRenderer, "LIBRARY_ADD"),
-                    libraryRemoveToken = PageHelper.extractFeedbackToken(renderer.menu?.menuRenderer?.items?.find {
-                        PageHelper.isLibraryIcon(it.toggleMenuServiceItemRenderer?.defaultIcon?.iconType)
-                    }?.toggleMenuServiceItemRenderer, "LIBRARY_REMOVE")
+                    libraryAddToken = libraryTokens.addToken,
+                    libraryRemoveToken = libraryTokens.removeToken
                 )
 
                 renderer.isArtist -> ArtistItem(

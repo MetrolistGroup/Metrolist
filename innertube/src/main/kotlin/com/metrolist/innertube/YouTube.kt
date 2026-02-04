@@ -1147,6 +1147,49 @@ object YouTube {
         innerTube.feedback(WEB_REMIX, tokens).body<FeedbackResponse>().feedbackResponses.all { it.isProcessed }
     }
 
+    /**
+     * Add a song to library by fetching fresh feedback tokens from the next endpoint
+     * This is more reliable than using cached tokens which might be stale
+     */
+    suspend fun addSongToLibrary(videoId: String): Result<Boolean> = runCatching {
+        // Get fresh song data with menu tokens using next endpoint
+        val nextResult = next(WatchEndpoint(videoId = videoId)).getOrThrow()
+        val song = nextResult.items.find { it.id == videoId }
+            ?: throw Exception("Song not found in next response")
+        
+        val addToken = song.libraryAddToken
+            ?: throw Exception("Add to library token not available")
+        
+        feedback(listOf(addToken)).getOrThrow()
+    }
+
+    /**
+     * Remove a song from library by fetching fresh feedback tokens from the next endpoint
+     */
+    suspend fun removeSongFromLibrary(videoId: String): Result<Boolean> = runCatching {
+        // Get fresh song data with menu tokens using next endpoint
+        val nextResult = next(WatchEndpoint(videoId = videoId)).getOrThrow()
+        val song = nextResult.items.find { it.id == videoId }
+            ?: throw Exception("Song not found in next response")
+        
+        val removeToken = song.libraryRemoveToken
+            ?: throw Exception("Remove from library token not available")
+        
+        feedback(listOf(removeToken)).getOrThrow()
+    }
+
+    /**
+     * Toggle song library status - adds if not in library, removes if in library
+     * Uses fresh tokens fetched from the API for reliability
+     */
+    suspend fun toggleSongLibrary(videoId: String, addToLibrary: Boolean): Result<Boolean> = runCatching {
+        if (addToLibrary) {
+            addSongToLibrary(videoId).getOrThrow()
+        } else {
+            removeSongFromLibrary(videoId).getOrThrow()
+        }
+    }
+
     suspend fun getMediaInfo(videoId: String): Result<MediaInfo> = runCatching {
         return innerTube.getMediaInfo(videoId)
     }

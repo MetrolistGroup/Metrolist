@@ -28,7 +28,7 @@ data class ArtistItemsPage(
                         id = it.navigationEndpoint?.browseEndpoint?.browseId
                     )
                 }
-            
+
             // Extract album from last flexColumn (like SimpMusic does)
             val album = renderer.flexColumns.lastOrNull()
                 ?.musicResponsiveListItemFlexColumnRenderer?.text?.runs
@@ -40,7 +40,10 @@ data class ArtistItemsPage(
                         )
                     } else null
                 }
-            
+
+            // Extract library tokens using the new method that properly handles multiple toggle items
+            val libraryTokens = PageHelper.extractLibraryTokensFromMenuItems(renderer.menu?.menuRenderer?.items)
+
             return SongItem(
                 id = renderer.playlistItemData?.videoId ?: return null,
                 title = renderer.flexColumns.firstOrNull()
@@ -58,12 +61,8 @@ data class ArtistItemsPage(
                     it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
                 } != null,
                 endpoint = renderer.overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint,
-                libraryAddToken = PageHelper.extractFeedbackToken(renderer.menu?.menuRenderer?.items?.find {
-                    PageHelper.isLibraryIcon(it.toggleMenuServiceItemRenderer?.defaultIcon?.iconType)
-                }?.toggleMenuServiceItemRenderer, "LIBRARY_ADD"),
-                libraryRemoveToken = PageHelper.extractFeedbackToken(renderer.menu?.menuRenderer?.items?.find {
-                    PageHelper.isLibraryIcon(it.toggleMenuServiceItemRenderer?.defaultIcon?.iconType)
-                }?.toggleMenuServiceItemRenderer, "LIBRARY_REMOVE")
+                libraryAddToken = libraryTokens.addToken,
+                libraryRemoveToken = libraryTokens.removeToken
             )
         }
 

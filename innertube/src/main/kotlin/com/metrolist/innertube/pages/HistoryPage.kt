@@ -28,6 +28,9 @@ data class HistoryPage(
         }
 
         private fun fromMusicResponsiveListItemRenderer(renderer: MusicResponsiveListItemRenderer): SongItem? {
+            // Extract library tokens using the new method that properly handles multiple toggle items
+            val libraryTokens = PageHelper.extractLibraryTokensFromMenuItems(renderer.menu?.menuRenderer?.items)
+
             return SongItem(
                 id = renderer.playlistItemData?.videoId ?: return null,
                 title = renderer.flexColumns.firstOrNull()
@@ -54,12 +57,8 @@ data class HistoryPage(
                 } != null,
                 endpoint = renderer.overlay?.musicItemThumbnailOverlayRenderer?.content
                     ?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint,
-                libraryAddToken = PageHelper.extractFeedbackToken(renderer.menu?.menuRenderer?.items?.find {
-                    PageHelper.isLibraryIcon(it.toggleMenuServiceItemRenderer?.defaultIcon?.iconType)
-                }?.toggleMenuServiceItemRenderer, "LIBRARY_ADD"),
-                libraryRemoveToken = PageHelper.extractFeedbackToken(renderer.menu?.menuRenderer?.items?.find {
-                    PageHelper.isLibraryIcon(it.toggleMenuServiceItemRenderer?.defaultIcon?.iconType)
-                }?.toggleMenuServiceItemRenderer, "LIBRARY_REMOVE"),
+                libraryAddToken = libraryTokens.addToken,
+                libraryRemoveToken = libraryTokens.removeToken,
                 historyRemoveToken = renderer.menu?.menuRenderer?.items?.find {
                     it.menuServiceItemRenderer?.icon?.iconType == "REMOVE_FROM_HISTORY"
                 }?.menuServiceItemRenderer?.serviceEndpoint?.feedbackEndpoint?.feedbackToken

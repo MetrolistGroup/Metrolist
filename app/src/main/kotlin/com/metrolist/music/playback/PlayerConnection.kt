@@ -131,6 +131,10 @@ class PlayerConnection(
         service.toggleLike()
     }
 
+    fun toggleLibrary() {
+        service.toggleLibrary()
+    }
+
     /**
      * Toggle play/pause - handles Cast when active
      */

@@ -363,10 +363,9 @@ fun SelectionSongMenu(
                                         }
                                     }
                                     coroutineScope.launch {
-                                        val tokens =
-                                            songSelection.mapNotNull { it.song.libraryRemoveToken }
-                                        tokens.chunked(20).forEach {
-                                            YouTube.feedback(it)
+                                        // Use the new reliable method that fetches fresh tokens
+                                        songSelection.forEach { song ->
+                                            YouTube.toggleSongLibrary(song.id, false)
                                         }
                                     }
                                 } else {
@@ -377,12 +376,11 @@ fun SelectionSongMenu(
                                         }
                                     }
                                     coroutineScope.launch {
-                                        val tokens =
-                                            songSelection.filter { it.song.inLibrary == null }
-                                                .mapNotNull { it.song.libraryAddToken }
-                                        tokens.chunked(20).forEach {
-                                            YouTube.feedback(it)
-                                        }
+                                        // Use the new reliable method that fetches fresh tokens
+                                        songSelection.filter { it.song.inLibrary == null }
+                                            .forEach { song ->
+                                                YouTube.toggleSongLibrary(song.id, true)
+                                            }
                                     }
                                 }
                             }

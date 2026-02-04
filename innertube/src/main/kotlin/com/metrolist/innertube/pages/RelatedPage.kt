@@ -19,6 +19,9 @@ data class RelatedPage(
 ) {
     companion object {
         fun fromMusicResponsiveListItemRenderer(renderer: MusicResponsiveListItemRenderer): SongItem? {
+            // Extract library tokens using the new method that properly handles multiple toggle items
+            val libraryTokens = PageHelper.extractLibraryTokensFromMenuItems(renderer.menu?.menuRenderer?.items)
+
             return SongItem(
                 id = renderer.playlistItemData?.videoId ?: return null,
                 title =
@@ -50,12 +53,8 @@ data class RelatedPage(
                     renderer.badges?.find {
                         it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
                     } != null,
-                libraryAddToken = PageHelper.extractFeedbackToken(renderer.menu?.menuRenderer?.items?.find {
-                    PageHelper.isLibraryIcon(it.toggleMenuServiceItemRenderer?.defaultIcon?.iconType)
-                }?.toggleMenuServiceItemRenderer, "LIBRARY_ADD"),
-                libraryRemoveToken = PageHelper.extractFeedbackToken(renderer.menu?.menuRenderer?.items?.find {
-                    PageHelper.isLibraryIcon(it.toggleMenuServiceItemRenderer?.defaultIcon?.iconType)
-                }?.toggleMenuServiceItemRenderer, "LIBRARY_REMOVE")
+                libraryAddToken = libraryTokens.addToken,
+                libraryRemoveToken = libraryTokens.removeToken
             )
         }
 
