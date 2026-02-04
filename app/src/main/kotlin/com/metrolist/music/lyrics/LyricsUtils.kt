@@ -20,6 +20,10 @@ object LyricsUtils {
     // Regex for rich sync format: [MM:SS.mm]<MM:SS.mm> word <MM:SS.mm> word ...
     private val RICH_SYNC_LINE_REGEX = "\\[(\\d{1,2}):(\\d{2})\\.(\\d{2,3})\\](.+)".toRegex()
     private val RICH_SYNC_WORD_REGEX = "<(\\d{1,2}):(\\d{2})\\.(\\d{2,3})>\\s*([^<]+)".toRegex()
+    
+    // Regex for agent and background markers
+    private val AGENT_REGEX = "\\{agent:([^}]+)\\}".toRegex()
+    private val BACKGROUND_REGEX = "^\\{bg\\}".toRegex()
 
     private val KANA_ROMAJI_MAP: Map<String, String> = mapOf(
         // Digraphs (Yōon - combinations like kya, sho)
@@ -322,7 +326,20 @@ object LyricsUtils {
                 val millisPart = if (matchResult.groupValues[3].length == 3) centiseconds else centiseconds * 10
                 val lineTimeMs = minutes * DateUtils.MINUTE_IN_MILLIS + seconds * DateUtils.SECOND_IN_MILLIS + millisPart
                 
-                val content = matchResult.groupValues[4].trimStart()
+                var content = matchResult.groupValues[4].trimStart()
+                
+                // Parse agent marker {agent:v1}
+                val agentMatch = AGENT_REGEX.find(content)
+                val agent = agentMatch?.groupValues?.get(1)
+                if (agentMatch != null) {
+                    content = content.replaceFirst(AGENT_REGEX, "")
+                }
+                
+                // Parse background marker {bg}
+                val isBackground = BACKGROUND_REGEX.containsMatchIn(content)
+                if (isBackground) {
+                    content = content.replaceFirst(BACKGROUND_REGEX, "")
+                }
                 
                 // Parse word-level timestamps from content
                 val wordTimings = parseRichSyncWords(content, index, lines)
@@ -331,7 +348,7 @@ object LyricsUtils {
                 val plainText = content.replace(Regex("<\\d{1,2}:\\d{2}\\.\\d{2,3}>\\s*"), "").trim()
                 
                 if (plainText.isNotBlank()) {
-                    result.add(LyricsEntry(lineTimeMs, plainText, wordTimings))
+                    result.add(LyricsEntry(lineTimeMs, plainText, wordTimings, agent = agent, isBackground = isBackground))
                 }
             }
         }
@@ -421,7 +438,7 @@ object LyricsUtils {
                     
                     if (wordTimestamps != null) {
                         result.addAll(entries.map { entry ->
-                            LyricsEntry(entry.time, entry.text, wordTimestamps)
+                            LyricsEntry(entry.time, entry.text, wordTimestamps, agent = entry.agent, isBackground = entry.isBackground)
                         })
                     } else {
                         result.addAll(entries)
@@ -457,8 +474,21 @@ object LyricsUtils {
         }
         val matchResult = LINE_REGEX.matchEntire(line.trim()) ?: return null
         val times = matchResult.groupValues[1]
-        val text = matchResult.groupValues[3]
+        var text = matchResult.groupValues[3]
         val timeMatchResults = TIME_REGEX.findAll(times)
+        
+        // Parse agent marker {agent:v1}
+        val agentMatch = AGENT_REGEX.find(text)
+        val agent = agentMatch?.groupValues?.get(1)
+        if (agentMatch != null) {
+            text = text.replaceFirst(AGENT_REGEX, "")
+        }
+        
+        // Parse background marker {bg}
+        val isBackground = BACKGROUND_REGEX.containsMatchIn(text)
+        if (isBackground) {
+            text = text.replaceFirst(BACKGROUND_REGEX, "")
+        }
 
         return timeMatchResults
             .map { timeMatchResult ->
@@ -470,7 +500,7 @@ object LyricsUtils {
                     mil *= 10
                 }
                 val time = min * DateUtils.MINUTE_IN_MILLIS + sec * DateUtils.SECOND_IN_MILLIS + mil
-                LyricsEntry(time, text, words)
+                LyricsEntry(time, text, words, agent = agent, isBackground = isBackground)
             }.toList()
     }
 

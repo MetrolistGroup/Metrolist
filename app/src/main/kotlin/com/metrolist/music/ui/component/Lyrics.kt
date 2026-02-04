@@ -246,7 +246,7 @@ fun Lyrics(
             val isMacedonianLyrics = romanizeMacedonianLyrics && !romanizeCyrillicByLine && isMacedonian(lyrics)
 
             parsedLines.map { entry ->
-                val newEntry = LyricsEntry(entry.time, entry.text, entry.words)
+                val newEntry = LyricsEntry(entry.time, entry.text, entry.words, agent = entry.agent, isBackground = entry.isBackground)
                 
                 if (romanizeJapaneseLyrics && isJapanese(entry.text) && !isChinese(entry.text)) {
                     scope.launch {
@@ -781,38 +781,72 @@ fun Lyrics(
                         )
                         .padding(horizontal = 24.dp, vertical = 8.dp)
                     
+                    // Check if this line shares the same time as the currently active line
+                    // This enables synchronized word-by-word animation for both main and background vocals
+                    val currentLineTime = if (displayedCurrentLineIndex >= 0 && displayedCurrentLineIndex < lines.size) {
+                        lines[displayedCurrentLineIndex].time
+                    } else -1L
+                    val isLineAtSameTime = item.time == currentLineTime
+                    val isActiveByIndex = index == displayedCurrentLineIndex
+                    val isActiveByTime = isLineAtSameTime && displayedCurrentLineIndex >= 0
+                    
                     val alpha by animateFloatAsState(
                         targetValue = when {
                             !isSynced || (isSelectionModeActive && isSelected) -> 1f
-                            index == displayedCurrentLineIndex -> 1f
+                            isActiveByIndex || isActiveByTime -> 1f
                             else -> 0.5f
                         },
                         animationSpec = tween(durationMillis = 400)
                     )
                     val scale by animateFloatAsState(
-                        targetValue = if (index == displayedCurrentLineIndex) 1.05f else 1f,
+                        targetValue = if (isActiveByIndex || isActiveByTime) 1.05f else 1f,
                         animationSpec = tween(durationMillis = 400)
                     )
 
-                    Column(
-                        modifier = itemModifier.graphicsLayer {
-                            this.alpha = alpha
-                            this.scaleX = scale
-                            this.scaleY = scale
-                        },
-                        horizontalAlignment = when (lyricsTextPosition) {
+                    // Determine alignment based on agent for multi-singer support
+                    val agentAlignment = when {
+                        item.isBackground -> Alignment.CenterHorizontally // Background always centered
+                        item.agent == "v1" -> Alignment.Start // First vocalist - left
+                        item.agent == "v2" -> Alignment.End // Second vocalist - right
+                        item.agent == "v1000" -> Alignment.CenterHorizontally // Group/chorus - center
+                        else -> when (lyricsTextPosition) {
                             LyricsPosition.LEFT -> Alignment.Start
                             LyricsPosition.CENTER -> Alignment.CenterHorizontally
                             LyricsPosition.RIGHT -> Alignment.End
                         }
-                    ) {
-                        val isActiveLine = index == displayedCurrentLineIndex && isSynced
-                        val lineColor = if (isActiveLine) expressiveAccent else expressiveAccent.copy(alpha = 0.7f)
-                        val alignment = when (lyricsTextPosition) {
+                    }
+                    
+                    val agentTextAlign = when {
+                        item.isBackground -> TextAlign.Center
+                        item.agent == "v1" -> TextAlign.Left
+                        item.agent == "v2" -> TextAlign.Right
+                        item.agent == "v1000" -> TextAlign.Center
+                        else -> when (lyricsTextPosition) {
                             LyricsPosition.LEFT -> TextAlign.Left
                             LyricsPosition.CENTER -> TextAlign.Center
                             LyricsPosition.RIGHT -> TextAlign.Right
                         }
+                    }
+                    
+                    // Smaller scale for background vocals
+                    val bgScale = if (item.isBackground) 0.85f else 1f
+
+                    Column(
+                        modifier = itemModifier.graphicsLayer {
+                            this.alpha = if (item.isBackground) alpha * 0.8f else alpha
+                            this.scaleX = scale * bgScale
+                            this.scaleY = scale * bgScale
+                        },
+                        horizontalAlignment = agentAlignment
+                    ) {
+                        // Use time-based active check to sync both main and background lines with same timestamp
+                        val isActiveLine = (isActiveByIndex || isActiveByTime) && isSynced
+                        val lineColor = if (isActiveLine) {
+                            if (item.isBackground) expressiveAccent.copy(alpha = 0.85f) else expressiveAccent
+                        } else {
+                            expressiveAccent.copy(alpha = if (item.isBackground) 0.5f else 0.7f)
+                        }
+                        val alignment = agentTextAlign
                         
                         val hasWordTimings = item.words?.isNotEmpty() == true
                         
@@ -977,7 +1011,7 @@ fun Lyrics(
                                     val wordDuration = wordEndMs - wordStartMs
 
                                     val isWordActive = isActiveLine && currentPlaybackPosition >= wordStartMs && currentPlaybackPosition < wordEndMs
-                                    val hasWordPassed = (isActiveLine && currentPlaybackPosition >= wordEndMs) || (!isActiveLine && index < displayedCurrentLineIndex)
+                                    val hasWordPassed = (isActiveLine && currentPlaybackPosition >= wordEndMs) || (!isActiveLine && item.time < currentLineTime)
 
                                     if (isWordActive && wordDuration > 0) {
                                         val timeElapsed = currentPlaybackPosition - wordStartMs
@@ -1028,7 +1062,7 @@ fun Lyrics(
                                     val wordDuration = wordEndMs - wordStartMs
 
                                     val isWordActive = isActiveLine && currentPlaybackPosition >= wordStartMs && currentPlaybackPosition < wordEndMs
-                                    val hasWordPassed = (isActiveLine && currentPlaybackPosition >= wordEndMs) || (!isActiveLine && index < displayedCurrentLineIndex)
+                                    val hasWordPassed = (isActiveLine && currentPlaybackPosition >= wordEndMs) || (!isActiveLine && item.time < currentLineTime)
 
                                     if (isWordActive && wordDuration > 0) {
                                         val timeElapsed = currentPlaybackPosition - wordStartMs
@@ -1095,7 +1129,7 @@ fun Lyrics(
                                     val wordDuration = wordEndMs - wordStartMs
 
                                     val isWordActive = isActiveLine && currentPlaybackPosition >= wordStartMs && currentPlaybackPosition < wordEndMs
-                                    val hasWordPassed = (isActiveLine && currentPlaybackPosition >= wordEndMs) || (!isActiveLine && index < displayedCurrentLineIndex)
+                                    val hasWordPassed = (isActiveLine && currentPlaybackPosition >= wordEndMs) || (!isActiveLine && item.time < currentLineTime)
 
                                     val rawProgress = if (isWordActive && wordDuration > 0) {
                                         val elapsed = currentPlaybackPosition - wordStartMs
