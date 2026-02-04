@@ -8,7 +8,7 @@ package com.metrolist.music.utils
 import android.net.ConnectivityManager
 import androidx.media3.common.PlaybackException
 import com.metrolist.music.constants.AudioQuality
-import com.metrolist.innertube.NewPipeUtils
+import com.metrolist.innertube.NewPipeExtractor
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.YouTubeClient
 import com.metrolist.innertube.models.YouTubeClient.Companion.ANDROID_CREATOR
@@ -33,27 +33,17 @@ object YTPlayerUtils {
     private val httpClient = OkHttpClient.Builder()
         .proxy(YouTube.proxy)
         .build()
-    /**
-     * The main client is used for metadata and initial streams.
-     * Do not use other clients for this because it can result in inconsistent metadata.
-     * For example other clients can have different normalization targets (loudnessDb).
-     *
-     * [com.metrolist.innertube.models.YouTubeClient.WEB_REMIX] should be preferred here because currently it is the only client which provides:
-     * - the correct metadata (like loudnessDb)
-     * - premium formats
-     */
-    private val MAIN_CLIENT: YouTubeClient = ANDROID_VR_1_43_32
-    /**
-     * Clients used for fallback streams in case the streams of the main client do not work.
-     */
+
+    private val MAIN_CLIENT: YouTubeClient = WEB_REMIX
+
     private val STREAM_FALLBACK_CLIENTS: Array<YouTubeClient> = arrayOf(
+        TVHTML5,
+        ANDROID_VR_1_43_32,
         ANDROID_VR_1_61_48,
-        WEB_REMIX,
         ANDROID_CREATOR,
         IPADOS,
         ANDROID_VR_NO_AUTH,
         MOBILE,
-        TVHTML5,
         TVHTML5_SIMPLY_EMBEDDED_PLAYER,
         IOS,
         WEB,
@@ -143,9 +133,13 @@ object YTPlayerUtils {
             if (streamPlayerResponse?.playabilityStatus?.status == "OK") {
                 Timber.tag(logTag).d("Player response status OK for client: ${if (clientIndex == -1) MAIN_CLIENT.clientName else STREAM_FALLBACK_CLIENTS[clientIndex].clientName}")
 
+                // Try to get streams using newPipePlayer method
+                val newPipeResponse = YouTube.newPipePlayer(videoId, streamPlayerResponse)
+                val responseToUse = newPipeResponse ?: streamPlayerResponse
+
                 format =
                     findFormat(
-                        streamPlayerResponse,
+                        responseToUse,
                         audioQuality,
                         connectivityManager,
                     )
@@ -157,7 +151,7 @@ object YTPlayerUtils {
 
                 Timber.tag(logTag).d("Format found: ${format.mimeType}, bitrate: ${format.bitrate}")
 
-                streamUrl = findUrlOrNull(format, videoId)
+                streamUrl = findUrlOrNull(format, videoId, responseToUse)
                 if (streamUrl == null) {
                     Timber.tag(logTag).d("Stream URL not found for format")
                     continue
@@ -289,14 +283,9 @@ object YTPlayerUtils {
         }
         return false
     }
-    /**
-     * Wrapper around the [NewPipeUtils.getSignatureTimestamp] function which reports exceptions
-     */
-    private fun getSignatureTimestampOrNull(
-        videoId: String
-    ): Int? {
+    private fun getSignatureTimestampOrNull(videoId: String): Int? {
         Timber.tag(logTag).d("Getting signature timestamp for videoId: $videoId")
-        return NewPipeUtils.getSignatureTimestamp(videoId)
+        return NewPipeExtractor.getSignatureTimestamp(videoId)
             .onSuccess { Timber.tag(logTag).d("Signature timestamp obtained: $it") }
             .onFailure {
                 Timber.tag(logTag).e(it, "Failed to get signature timestamp")
@@ -304,21 +293,52 @@ object YTPlayerUtils {
             }
             .getOrNull()
     }
-    /**
-     * Wrapper around the [NewPipeUtils.getStreamUrl] function which reports exceptions
-     */
+
     private fun findUrlOrNull(
         format: PlayerResponse.StreamingData.Format,
-        videoId: String
+        videoId: String,
+        playerResponse: PlayerResponse
     ): String? {
         Timber.tag(logTag).d("Finding stream URL for format: ${format.mimeType}, videoId: $videoId")
-        return NewPipeUtils.getStreamUrl(format, videoId)
-            .onSuccess { Timber.tag(logTag).d("Stream URL obtained successfully") }
-            .onFailure {
-                Timber.tag(logTag).e(it, "Failed to get stream URL")
-                reportException(it)
+
+        // First check if format already has a URL from newPipePlayer
+        if (!format.url.isNullOrEmpty()) {
+            Timber.tag(logTag).d("Using URL from format directly")
+            return format.url
+        }
+
+        // Try to get URL using NewPipeExtractor signature deobfuscation
+        val deobfuscatedUrl = NewPipeExtractor.getStreamUrl(format, videoId)
+        if (deobfuscatedUrl != null) {
+            Timber.tag(logTag).d("Stream URL obtained via deobfuscation")
+            return deobfuscatedUrl
+        }
+
+        // Fallback: try to get URL from StreamInfo
+        Timber.tag(logTag).d("Trying StreamInfo fallback for URL")
+        val streamUrls = YouTube.getNewPipeStreamUrls(videoId)
+        if (streamUrls.isNotEmpty()) {
+            val streamUrl = streamUrls.find { it.first == format.itag }?.second
+            if (streamUrl != null) {
+                Timber.tag(logTag).d("Stream URL obtained from StreamInfo")
+                return streamUrl
             }
-            .getOrNull()
+
+            // If exact itag not found, try to find any audio stream
+            val audioStream = streamUrls.find { urlPair ->
+                playerResponse.streamingData?.adaptiveFormats?.any {
+                    it.itag == urlPair.first && it.isAudio
+                } == true
+            }?.second
+
+            if (audioStream != null) {
+                Timber.tag(logTag).d("Audio stream URL obtained from StreamInfo (different itag)")
+                return audioStream
+            }
+        }
+
+        Timber.tag(logTag).e("Failed to get stream URL")
+        return null
     }
 
     fun forceRefreshForVideo(videoId: String) {
