@@ -377,7 +377,7 @@
     <string name="persistent_shuffle_desc">Yeni şarkılar veya çalma listeleri başlatırken karışık çalma özelliğini açık tutun</string>
     <string name="error_playback_failed">Oynatma başarısız</string>
     <string name="error_copied">Hata bilgisi panoya kopyalandı</string>
-    <string name="copy_error">Kopyalama hatası</string>
+    <string name="copy_error">Hatayı kopyala</string>
     <string name="error_copy_hint">Hata bilgilerini paylaşmak geliştiricilerin hata çözümünde yardımcı olur</string>
     <string name="error_title">Hata</string>
     <string name="error_eq_apply_failed">Ekolayzır profilini kaydederken sorun oluştu: %1$s</string>
