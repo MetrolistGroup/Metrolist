@@ -500,8 +500,8 @@
     <string name="palette_blue_grey">Сине-серый</string>
     <string name="cd_back">Назад</string>
     <string name="cd_pure_black_mode">Режим чистого чёрного</string>
-    <string name="cd_light_mode">Светлая тема</string>
-    <string name="cd_dark_mode">Тёмная тема</string>
-    <string name="cd_system_mode">Как в системе</string>
+    <string name="cd_light_mode">Светлый режим</string>
+    <string name="cd_dark_mode">Тёмный режим</string>
+    <string name="cd_system_mode">Системный режим</string>
     <string name="cd_palette_item">Палитра «%1$s»</string>
 </resources>
