@@ -464,4 +464,27 @@
     <string name="enter_username">Introdu numele de utilizator</string>
     <string name="error_username_empty">Numele de utilizator este necesar.</string>
     <string name="resync">Resincronizează</string>
+    <string name="crash_title">Aplicația s-a blocat</string>
+    <string name="crash_description">A apărut o eroare neașteptată. Te rugăm să ne trimiți raportul de eroare pentru a ne ajuta să remediem problema.</string>
+    <string name="crash_share_logs">Partajează jurnalele</string>
+    <string name="crash_share_title">Partajează raportul de eroare</string>
+    <string name="crash_report_subject">Raport de eroare Metrolist</string>
+    <string name="crash_close">Închide</string>
+    <string name="crash_no_log">Niciun jurnal de eroare disponibil</string>
+    <string name="palette_dynamic">Dinamic</string>
+    <string name="palette_purple">Mov</string>
+    <string name="palette_deep_purple">Mov închis</string>
+    <string name="palette_indigo">Indigo</string>
+    <string name="palette_blue">Albastru</string>
+    <string name="palette_cyan">Cyan</string>
+    <string name="palette_teal">Turcoaz</string>
+    <string name="palette_green">Verde</string>
+    <string name="palette_light_green">Verde deschis</string>
+    <string name="palette_lime">Lime</string>
+    <string name="palette_yellow">Galben</string>
+    <string name="palette_orange">Portocaliu</string>
+    <string name="palette_deep_orange">Portocaliu închis</string>
+    <string name="palette_brown">Maro</string>
+    <string name="palette_grey">Gri</string>
+    <string name="cd_back">Înapoi</string>
 </resources>
