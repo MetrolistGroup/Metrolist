@@ -13,9 +13,8 @@ import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import coil3.toBitmap
 import kotlinx.coroutines.launch
-import com.metrolist.music.widget.MusicWidget
-import com.metrolist.music.widget.MusicWidgetActions
-import com.metrolist.music.widget.TurntableWidget
+import com.metrolist.music.widget.MusicWidgetReceiver
+import com.metrolist.music.widget.MetrolistWidgetManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -221,6 +220,9 @@ class MusicService :
     @Inject
     lateinit var eqProfileRepository: EQProfileRepository
 
+    @Inject
+    lateinit var widgetManager: MetrolistWidgetManager
+
     private lateinit var audioManager: AudioManager
     private var audioFocusRequest: AudioFocusRequest? = null
     private var lastAudioFocusState = AudioManager.AUDIOFOCUS_NONE
@@ -323,6 +325,7 @@ class MusicService :
 
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
 
         // 3. Connect the processor to the service
         equalizerService.setAudioProcessor(customEqualizerAudioProcessor)
@@ -1617,9 +1620,14 @@ class MusicService :
             currentMediaMetadata.value = player.currentMetadata
         }
 
-        // Discord RPC updates
+        // Widget and Discord RPC updates
         if (events.containsAny(Player.EVENT_IS_PLAYING_CHANGED)) {
             updateWidgetUI(player.isPlaying)
+            if (player.isPlaying) {
+                startWidgetUpdates()
+            } else {
+                stopWidgetUpdates()
+            }
             if (!player.isPlaying && !events.containsAny(Player.EVENT_POSITION_DISCONTINUITY, Player.EVENT_MEDIA_ITEM_TRANSITION)) {
                 scope.launch {
                     discordRpc?.close()
@@ -2412,6 +2420,7 @@ class MusicService :
     }
 
     override fun onDestroy() {
+        isRunning = false
         castConnectionHandler?.release()
         if (dataStore.get(PersistentQueueKey, true)) {
             saveQueueToDisk()
@@ -2446,26 +2455,22 @@ class MusicService :
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            MusicWidgetActions.ACTION_PLAY_PAUSE -> {
+            MusicWidgetReceiver.ACTION_PLAY_PAUSE -> {
                 if (player.isPlaying) player.pause() else player.play()
                 updateWidgetUI(player.isPlaying)
             }
-            MusicWidgetActions.ACTION_NEXT -> {
+            MusicWidgetReceiver.ACTION_LIKE -> {
+                toggleLike()
+            }
+            MusicWidgetReceiver.ACTION_NEXT -> {
                 player.seekToNext()
                 updateWidgetUI(player.isPlaying)
             }
-            MusicWidgetActions.ACTION_PREV -> {
+            MusicWidgetReceiver.ACTION_PREVIOUS -> {
                 player.seekToPrevious()
                 updateWidgetUI(player.isPlaying)
             }
-            MusicWidgetActions.ACTION_LIKE -> {
-                toggleLike()
-                updateWidgetUI(player.isPlaying)
-            }
-            MusicWidgetActions.ACTION_SHARE -> {
-                shareSong()
-            }
-            MusicWidgetActions.ACTION_UPDATE_WIDGET -> {
+            MusicWidgetReceiver.ACTION_UPDATE_WIDGET -> {
                 updateWidgetUI(player.isPlaying)
             }
         }
@@ -2477,43 +2482,46 @@ class MusicService :
      * Updates all app widgets with current playback state
      */
     private fun updateWidgetUI(isPlaying: Boolean) {
-        try {
-            val context = this
-
-            scope.launch(Dispatchers.IO) {
+        scope.launch {
+            try {
                 val songData = currentSong.value
                 val song = songData?.song
                 val songTitle = song?.title ?: getString(R.string.no_song_playing)
                 val artistName = songData?.artists?.joinToString(", ") { it.name } ?: getString(R.string.tap_to_open)
                 val isLiked = songData?.song?.liked == true
 
-                try {
-                    MusicWidget.updateWidget(
-                        context = context,
-                        title = songTitle,
-                        artist = artistName,
-                        isPlaying = isPlaying,
-                        albumArtUrl = song?.thumbnailUrl,
-                        isLiked = isLiked
-                    )
-                } catch (_: Exception) {
-                    // Widget not added to home screen
-                }
-
-                try {
-                    TurntableWidget.updateWidget(
-                        context = context,
-                        isPlaying = isPlaying,
-                        albumArtUrl = song?.thumbnailUrl,
-                        isLiked = isLiked
-                    )
-                } catch (_: Exception) {
-                    // Widget not added to home screen
-                }
+                widgetManager.updateWidgets(
+                    title = songTitle,
+                    artist = artistName,
+                    artworkUri = song?.thumbnailUrl,
+                    isPlaying = isPlaying,
+                    isLiked = isLiked,
+                    duration = if (player.duration != C.TIME_UNSET) player.duration else 0,
+                    currentPosition = player.currentPosition
+                )
+            } catch (e: Exception) {
+                // Widget not added to home screen or other error
             }
-        } catch (e: Exception) {
-            reportException(e)
         }
+    }
+
+    private var widgetUpdateJob: Job? = null
+
+    private fun startWidgetUpdates() {
+        widgetUpdateJob?.cancel()
+        widgetUpdateJob = scope.launch {
+            while (isActive) {
+                if (player.isPlaying) {
+                    updateWidgetUI(true)
+                }
+                delay(200)
+            }
+        }
+    }
+
+    private fun stopWidgetUpdates() {
+        widgetUpdateJob?.cancel()
+        widgetUpdateJob = null
     }
 
     private fun shareSong() {
@@ -2589,5 +2597,9 @@ class MusicService :
         private const val MIN_GAIN_MB = -1500 // Minimum gain in millibels (-15 dB)
 
         private const val TAG = "MusicService"
+        
+        @Volatile
+        var isRunning = false
+            private set
     }
 }

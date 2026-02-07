@@ -4,6 +4,6 @@
     android:viewportWidth="24"
     android:width="24dp">
     <path
-        android:fillColor="?android:attr/textColorPrimary"
+        android:fillColor="@color/widget_play_button_low_icon"
         android:pathData="M6,19h4V5H6v14zM14,5v14h4V5h-4z"/>
 </vector>

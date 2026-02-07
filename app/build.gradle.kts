@@ -8,7 +8,6 @@ if (localPropertiesFile.exists()) {
 }
 plugins {
     id("com.android.application")
-    kotlin("android")
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.compose.compiler)
@@ -238,11 +237,6 @@ dependencies {
     implementation(libs.tinypinyin)
     ksp(libs.room.compiler)
     implementation(libs.room.ktx)
-
-    // Glance for Material 3 Expressive Widgets
-    implementation(libs.glance)
-    implementation(libs.glance.appwidget)
-    implementation(libs.glance.material3)
 
     implementation(libs.apache.lang3)
 

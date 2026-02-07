@@ -4,6 +4,6 @@
     android:viewportWidth="24"
     android:width="24dp">
     <path
-        android:fillColor="?android:attr/textColorPrimary"
+        android:fillColor="@color/widget_on_primary_container"
         android:pathData="M8,5v14l11,-7z"/>
 </vector>

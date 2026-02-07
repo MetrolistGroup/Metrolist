@@ -444,9 +444,13 @@
     <string name="play_pause">Play/Pause</string>
     <string name="next">Next</string>
     <string name="like">Like</string>
+    <string name="not_playing">No song playing</string>
+    <string name="tap_to_play">Tap to open Metrolist</string>
     <string name="widget_description">Music player widget with playback controls</string>
-    <string name="turntable_widget_description">Quick access to your most recently played track</string>
     <string name="queue_widget_description">Music player with queue preview</string>
+    <string name="turntable_widget_description">Circular music widget with play and like controls</string>
+    <string name="widget_music_player">Music Player</string>
+    <string name="widget_turntable">Turntable</string>
 
     <!-- Player Client Settings -->
     <string name="player_client">Player client</string>

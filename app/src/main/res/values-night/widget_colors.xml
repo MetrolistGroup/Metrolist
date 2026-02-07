@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Widget colors fallback for Android < 12 (API 31) - Dark Mode -->
+    <!-- Material 3 Primary Container (Dark) -->
+    <color name="widget_primary_container">#4F378B</color>
+    <color name="widget_on_primary_container">#EADDFF</color>
+
+    <!-- Material 3 Tertiary Container (Dark) - For like button -->
+    <color name="widget_tertiary_container">#633B48</color>
+    <color name="widget_on_tertiary_container">#FFD8E4</color>
+
+    <!-- Play button colors (Low style) -->
+    <color name="widget_play_button_low_bg">@color/widget_primary_container</color>
+    <color name="widget_play_button_low_icon">@color/widget_on_primary_container</color>
+</resources>

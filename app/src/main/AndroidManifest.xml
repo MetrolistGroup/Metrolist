@@ -229,9 +229,12 @@
         <receiver
             android:name=".widget.MusicWidgetReceiver"
             android:exported="true"
-            android:label="@string/app_name">
+            android:label="@string/widget_music_player">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.metrolist.music.widget.PLAY_PAUSE" />
+                <action android:name="com.metrolist.music.widget.LIKE" />
+                <action android:name="com.metrolist.music.widget.UPDATE_WIDGET" />
             </intent-filter>
 
             <meta-data
@@ -239,13 +242,16 @@
                 android:resource="@xml/music_widget_info" />
         </receiver>
 
-        <!-- Turntable Widget (2x2) -->
+        <!-- Turntable Widget -->
         <receiver
             android:name=".widget.TurntableWidgetReceiver"
             android:exported="true"
-            android:label="Turntable">
+            android:label="@string/widget_turntable">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.metrolist.music.widget.TURNTABLE_PLAY_PAUSE" />
+                <action android:name="com.metrolist.music.widget.TURNTABLE_LIKE" />
+                <action android:name="com.metrolist.music.widget.UPDATE_TURNTABLE_WIDGET" />
             </intent-filter>
 
             <meta-data
