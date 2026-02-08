@@ -193,7 +193,7 @@ fun AboutScreen(
 
             IconButton(
                 onClick = {
-                    uriHandler.openUri("https://mostafaalagamy.github.io")
+                    uriHandler.openUri("https://metrolist.meowery.eu")
                 }
             ) {
                 Icon(

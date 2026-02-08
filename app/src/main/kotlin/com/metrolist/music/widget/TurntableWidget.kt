@@ -85,7 +85,7 @@ class TurntableWidget : GlanceAppWidget() {
             ) {
                 if (albumArtBitmap != null) {
                     Image(
-                        provider = BitmapImageProvider(albumArtBitmap),
+                        provider = ImageProvider(albumArtBitmap),
                         contentDescription = context.getString(R.string.album_art),
                         modifier = GlanceModifier.size(120.dp).cornerRadius(60.dp),
                         contentScale = ContentScale.Crop

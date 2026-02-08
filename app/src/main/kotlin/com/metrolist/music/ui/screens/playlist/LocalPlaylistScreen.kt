@@ -262,7 +262,7 @@ fun LocalPlaylistScreen(
 
     val downloadUtil = LocalDownloadUtil.current
     var downloadState by remember {
-        mutableStateOf(Download.STATE_STOPPED)
+        mutableIntStateOf(Download.STATE_STOPPED)
     }
 
     val editable: Boolean = playlist?.playlist?.isEditable == true

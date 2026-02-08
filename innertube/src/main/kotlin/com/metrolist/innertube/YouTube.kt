@@ -1228,7 +1228,7 @@ object YouTube {
         videoId: String,
         tempRes: PlayerResponse,
     ): PlayerResponse? {
-        if (tempRes.playabilityStatus?.status != "OK") {
+        if (tempRes.playabilityStatus.status != "OK") {
             return null
         }
 

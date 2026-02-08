@@ -170,6 +170,40 @@ class ListenTogetherClient @Inject constructor(
     // Initialize scope early before init block since it's used in observeNetworkChanges()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
+    // State flows - initialized before init block to avoid NullPointerException when accessing log()
+    private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
+    val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
+
+    private val _roomState = MutableStateFlow<RoomState?>(null)
+    val roomState: StateFlow<RoomState?> = _roomState.asStateFlow()
+
+    private val _role = MutableStateFlow(RoomRole.NONE)
+    val role: StateFlow<RoomRole> = _role.asStateFlow()
+
+    private val _userId = MutableStateFlow<String?>(null)
+    val userId: StateFlow<String?> = _userId.asStateFlow()
+
+    private val _pendingJoinRequests = MutableStateFlow<List<JoinRequestPayload>>(emptyList())
+    val pendingJoinRequests: StateFlow<List<JoinRequestPayload>> = _pendingJoinRequests.asStateFlow()
+
+    private val _bufferingUsers = MutableStateFlow<List<String>>(emptyList())
+    val bufferingUsers: StateFlow<List<String>> = _bufferingUsers.asStateFlow()
+
+    // Suggestions: pending items visible to host
+    private val _pendingSuggestions = MutableStateFlow<List<SuggestionReceivedPayload>>(emptyList())
+    val pendingSuggestions: StateFlow<List<SuggestionReceivedPayload>> = _pendingSuggestions.asStateFlow()
+
+    // Blocked usernames (internal list for privacy)
+    private val _blockedUsernames = MutableStateFlow<Set<String>>(emptySet())
+    val blockedUsernames: StateFlow<Set<String>> = _blockedUsernames.asStateFlow()
+
+    private val _logs = MutableStateFlow<List<LogEntry>>(emptyList())
+    val logs: StateFlow<List<LogEntry>> = _logs.asStateFlow()
+
+    // Event flow
+    private val _events = MutableSharedFlow<ListenTogetherEvent>()
+    val events: SharedFlow<ListenTogetherEvent> = _events.asSharedFlow()
+    
     init {
         setInstance(this)
         ensureNotificationChannel()
@@ -363,40 +397,6 @@ class ListenTogetherClient @Inject constructor(
     } catch (e: Exception) { 
         true 
     }
-
-    // State flows
-    private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
-    val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
-
-    private val _roomState = MutableStateFlow<RoomState?>(null)
-    val roomState: StateFlow<RoomState?> = _roomState.asStateFlow()
-
-    private val _role = MutableStateFlow(RoomRole.NONE)
-    val role: StateFlow<RoomRole> = _role.asStateFlow()
-
-    private val _userId = MutableStateFlow<String?>(null)
-    val userId: StateFlow<String?> = _userId.asStateFlow()
-
-    private val _pendingJoinRequests = MutableStateFlow<List<JoinRequestPayload>>(emptyList())
-    val pendingJoinRequests: StateFlow<List<JoinRequestPayload>> = _pendingJoinRequests.asStateFlow()
-
-    private val _bufferingUsers = MutableStateFlow<List<String>>(emptyList())
-    val bufferingUsers: StateFlow<List<String>> = _bufferingUsers.asStateFlow()
-
-    // Suggestions: pending items visible to host
-    private val _pendingSuggestions = MutableStateFlow<List<SuggestionReceivedPayload>>(emptyList())
-    val pendingSuggestions: StateFlow<List<SuggestionReceivedPayload>> = _pendingSuggestions.asStateFlow()
-
-    // Blocked usernames (internal list for privacy)
-    private val _blockedUsernames = MutableStateFlow<Set<String>>(emptySet())
-    val blockedUsernames: StateFlow<Set<String>> = _blockedUsernames.asStateFlow()
-
-    private val _logs = MutableStateFlow<List<LogEntry>>(emptyList())
-    val logs: StateFlow<List<LogEntry>> = _logs.asStateFlow()
-
-    // Event flow
-    private val _events = MutableSharedFlow<ListenTogetherEvent>()
-    val events: SharedFlow<ListenTogetherEvent> = _events.asSharedFlow()
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)

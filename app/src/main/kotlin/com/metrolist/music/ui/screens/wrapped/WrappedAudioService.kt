@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.core.net.toUri
+import timber.log.Timber
 
 class WrappedAudioService(
     private val context: Context,
@@ -42,7 +44,7 @@ class WrappedAudioService(
             player = ExoPlayer.Builder(context).build().apply {
                 addListener(object : Player.Listener {
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                        Log.e("WrappedAudioService", "Player error", error)
+                        Timber.tag("WrappedAudioService").e(error, "Player error")
                         playbackJob?.cancel()
                     }
                 })
@@ -70,7 +72,7 @@ class WrappedAudioService(
 
     fun playTrack(songId: String?) {
         if (player?.currentMediaItem?.mediaId == songId) {
-            Log.d("WrappedAudioService", "Track $songId is already loaded or playing.")
+            Timber.tag("WrappedAudioService").d("Track $songId is already loaded or playing.")
             if (player?.isPlaying == false) player?.play()
             return
         }
@@ -89,15 +91,15 @@ class WrappedAudioService(
                     player?.volume = if (_isMuted.value) 0f else 1f
                 }
             } catch (e: Exception) {
-                Log.e("WrappedAudioService", "Error during playback preparation", e)
+                Timber.tag("WrappedAudioService").e(e, "Error during playback preparation")
             }
         }
     }
 
     private suspend fun getSongUri(songId: String?): Uri {
-        val fallbackUri = Uri.parse("android.resource://${context.packageName}/${R.raw.wrapped_theme}")
+        val fallbackUri = "android.resource://${context.packageName}/${R.raw.wrapped_theme}".toUri()
         if (songId == null) {
-            Log.i("WrappedAudio", "No song ID provided, using fallback audio.")
+            Timber.tag("WrappedAudio").i("No song ID provided, using fallback audio.")
             return fallbackUri
         }
 
@@ -114,13 +116,14 @@ class WrappedAudioService(
             }
             val streamUrl = playbackData?.streamUrl
             if (streamUrl.isNullOrBlank()) {
-                Log.w("WrappedAudio", "Resolved URL for $songId is null or blank. Using fallback.")
+                Timber.tag("WrappedAudio")
+                    .w("Resolved URL for $songId is null or blank. Using fallback.")
                 fallbackUri
             } else {
-                Uri.parse(streamUrl)
+                streamUrl.toUri()
             }
         } catch (e: Exception) {
-            Log.e("WrappedAudio", "Failed to resolve URL for $songId. Using fallback.", e)
+            Timber.tag("WrappedAudio").e(e, "Failed to resolve URL for $songId. Using fallback.")
             fallbackUri
         }
     }
@@ -137,6 +140,6 @@ class WrappedAudioService(
         playbackJob?.cancel()
         player?.release()
         player = null
-        Log.d("WrappedAudioService", "Player released.")
+        Timber.tag("WrappedAudioService").d("Player released.")
     }
 }

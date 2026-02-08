@@ -70,7 +70,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data android:scheme="https" />
-                <data android:host="mostafaalagamy.github.io" />
+                <data android:host="metrolist.meowery.eu" />
                 <data android:pathPrefix="/listen" />
             </intent-filter>
 
@@ -184,7 +184,6 @@
 
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
-            android:screenOrientation="fullSensor"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 

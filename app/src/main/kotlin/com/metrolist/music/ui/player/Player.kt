@@ -288,8 +288,8 @@ fun BottomSheetPlayer(
         }
     }
     val isCasting by castHandler?.isCasting?.collectAsState() ?: remember { mutableStateOf(false) }
-    val castPosition by castHandler?.castPosition?.collectAsState() ?: remember { mutableStateOf(0L) }
-    val castDuration by castHandler?.castDuration?.collectAsState() ?: remember { mutableStateOf(0L) }
+    val castPosition by castHandler?.castPosition?.collectAsState() ?: remember { mutableLongStateOf(0L) }
+    val castDuration by castHandler?.castDuration?.collectAsState() ?: remember { mutableLongStateOf(0L) }
     val castIsPlaying by castHandler?.castIsPlaying?.collectAsState() ?: remember { mutableStateOf(false) }
     
     // Use Cast state when casting, otherwise local player
@@ -318,7 +318,7 @@ fun BottomSheetPlayer(
         mutableStateOf<Long?>(null)
     }
     // Track when we last manually set position to avoid Cast overwriting it
-    var lastManualSeekTime by remember { mutableStateOf(0L) }
+    var lastManualSeekTime by remember { mutableLongStateOf(0L) }
     
     var gradientColors by remember {
         mutableStateOf<List<Color>>(emptyList())
@@ -1565,7 +1565,7 @@ fun BottomSheetPlayer(
                         .padding(bottom = 24.dp)
                         .fillMaxSize()
                 ) {
-                    BoxWithConstraints(
+                    Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
                             .weight(1f)
@@ -1733,7 +1733,7 @@ fun InlineLyricsView(
         }
     }
 
-    BoxWithConstraints(
+    Box (
         modifier = Modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(12.dp)),

@@ -120,7 +120,7 @@ class MusicWidget : GlanceAppWidget() {
                 ) {
                     if (albumArtBitmap != null) {
                         Image(
-                            provider = BitmapImageProvider(albumArtBitmap),
+                            provider = ImageProvider(albumArtBitmap),
                             contentDescription = context.getString(R.string.album_art),
                             modifier = GlanceModifier.size(40.dp).cornerRadius(10.dp),
                             contentScale = ContentScale.Crop
@@ -247,7 +247,7 @@ class MusicWidget : GlanceAppWidget() {
                 ) {
                     if (albumArtBitmap != null) {
                         Image(
-                            provider = BitmapImageProvider(albumArtBitmap),
+                            provider = ImageProvider(albumArtBitmap),
                             contentDescription = context.getString(R.string.album_art),
                             modifier = GlanceModifier.size(88.dp).cornerRadius(16.dp),
                             contentScale = ContentScale.Crop

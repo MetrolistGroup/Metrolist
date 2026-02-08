@@ -14,7 +14,14 @@ import com.my.kizzy.rpc.RpcImage
 class DiscordRPC(
     val context: Context,
     token: String,
-) : KizzyRPC(token) {
+) : KizzyRPC(
+    token = token,
+    os = "Android",
+    browser = "Discord Android",
+    device = android.os.Build.DEVICE,
+    userAgent = SuperProperties.userAgent,
+    superPropertiesBase64 = SuperProperties.superPropertiesBase64
+) {
     suspend fun updateSong(song: Song, currentPlaybackTimeMillis: Long, playbackSpeed: Float = 1.0f, useDetails: Boolean = false) = runCatching {
         val currentTime = System.currentTimeMillis()
 
@@ -41,7 +48,7 @@ class DiscordRPC(
             smallText = song.artists.firstOrNull()?.name,
             buttons = listOf(
                 "Listen on YouTube Music" to "https://music.youtube.com/watch?v=${song.song.id}",
-                "Visit Metrolist" to "https://github.com/mostafaalagamy/Metrolist"
+                "Visit Metrolist" to "https://github.com/MetrolistGroup/Metrolist"
             ),
             type = Type.LISTENING,
             statusDisplayType = if (useDetails) StatusDisplayType.DETAILS else StatusDisplayType.STATE,

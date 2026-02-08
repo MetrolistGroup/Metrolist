@@ -10,7 +10,7 @@ This file outlines the process of setting up a local dev environment for Metroli
 
 ## Basic setup
 ```bash
-git clone https://github.com/mostafaalagamy/Metrolist
+git clone https://github.com/MetrolistGroup/Metrolist
 cd Metrolist
 git submodule update --init --recursive
 cd app

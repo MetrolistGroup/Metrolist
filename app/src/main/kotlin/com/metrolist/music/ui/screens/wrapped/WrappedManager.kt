@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
 import java.io.FileOutputStream
 import java.time.LocalDateTime
@@ -86,12 +87,13 @@ class WrappedManager(
                         val songIds = allSongs.map { it.id }
                         databaseDao.addSongToPlaylist(createdPlaylist, songIds)
                     } else {
-                        Log.e("WrappedManager", "Failed to retrieve created playlist with id: $playlistId")
+                        Timber.tag("WrappedManager")
+                            .e("Failed to retrieve created playlist with id: $playlistId")
                     }
                 }
                 _state.update { it.copy(playlistCreationState = PlaylistCreationState.Success) }
             } catch (e: Exception) {
-                Log.e("WrappedManager", "Error saving wrapped playlist", e)
+                Timber.tag("WrappedManager").e(e, "Error saving wrapped playlist")
                 _state.update { it.copy(playlistCreationState = PlaylistCreationState.Idle) }
             }
         }
@@ -101,7 +103,7 @@ class WrappedManager(
         val topSongs = _state.value.topSongs
         val topArtists = _state.value.topArtists
         if (topSongs.isEmpty()) {
-            Log.w("WrappedManager", "Cannot generate playlist map, top songs list is empty.")
+            Timber.tag("WrappedManager").w("Cannot generate playlist map, top songs list is empty.")
             _state.update { it.copy(trackMap = emptyMap()) }
             return
         }
@@ -173,14 +175,14 @@ class WrappedManager(
             playlistMap[WrappedScreenType.Playlist] = endSong
             playlistMap[WrappedScreenType.Conclusion] = "2-p9DM2Xvsc"
 
-            Log.d("WrappedManager", "Generated Playlist Map: $playlistMap")
+            Timber.tag("WrappedManager").d("Generated Playlist Map: $playlistMap")
             _state.update { it.copy(trackMap = playlistMap) }
         }
     }
 
     suspend fun prepare() {
         if (_state.value.isDataReady) return
-        Log.d("WrappedManager", "Starting Wrapped data preparation")
+        Timber.tag("WrappedManager").d("Starting Wrapped data preparation")
 
         val fromTimestamp = Calendar.getInstance().apply {
             set(WrappedConstants.YEAR, Calendar.JANUARY, 1, 0, 0, 0)
@@ -234,6 +236,6 @@ class WrappedManager(
 
         generatePlaylistMap()
         _state.update { it.copy(isDataReady = true) }
-        Log.d("WrappedManager", "Wrapped data preparation finished")
+        Timber.tag("WrappedManager").d("Wrapped data preparation finished")
     }
 }

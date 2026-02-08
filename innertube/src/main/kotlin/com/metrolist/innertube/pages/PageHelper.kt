@@ -90,7 +90,7 @@ object PageHelper {
 
         for (item in menuItems) {
             val toggleRenderer = item.toggleMenuServiceItemRenderer ?: continue
-            val iconType = toggleRenderer.defaultIcon.iconType ?: continue
+            val iconType = toggleRenderer.defaultIcon.iconType
 
             // Skip KEEP/KEEP_OFF icons (Pin to Listen Again) - these are NOT library actions
             if (iconType == "KEEP" || iconType == "KEEP_OFF") continue

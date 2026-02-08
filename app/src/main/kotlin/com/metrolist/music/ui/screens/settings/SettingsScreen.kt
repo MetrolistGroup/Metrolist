@@ -194,25 +194,30 @@ fun SettingsScreen(
                     )
                 )
                 if (latestVersionName != BuildConfig.VERSION_NAME) {
-                    add(
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.update),
-                            title = { 
-                                Text(
-                                    text = stringResource(R.string.new_version_available),
-                                )
-                            },
-                            description = {
-                                Text(
-                                    text = latestVersionName,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            },
-                            showBadge = true,
-                            onClick = { uriHandler.openUri(Updater.getLatestDownloadUrl()) }
+                    val releaseInfo = Updater.getCachedLatestRelease()
+                    val downloadUrl = releaseInfo?.let { Updater.getDownloadUrlForCurrentVariant(it) }
+                    
+                    if (downloadUrl != null) {
+                        add(
+                            Material3SettingsItem(
+                                icon = painterResource(R.drawable.update),
+                                title = { 
+                                    Text(
+                                        text = stringResource(R.string.new_version_available),
+                                    )
+                                },
+                                description = {
+                                    Text(
+                                        text = latestVersionName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                },
+                                showBadge = true,
+                                onClick = { uriHandler.openUri(downloadUrl) }
+                            )
                         )
-                    )
+                    }
                 }
             }
         )

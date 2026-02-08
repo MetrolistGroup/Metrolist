@@ -24,9 +24,11 @@ import android.widget.RemoteViews
 import android.app.PendingIntent
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.database.SQLException
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -187,6 +189,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.coroutineContext
 import okhttp3.OkHttpClient
+import timber.log.Timber
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.time.LocalDateTime
@@ -327,6 +330,29 @@ class MusicService :
     var castConnectionHandler: CastConnectionHandler? = null
         private set
 
+    private val screenStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                Intent.ACTION_SCREEN_OFF -> {
+                    if (!player.isPlaying) {
+                        scope.launch(Dispatchers.IO) {
+                            discordRpc?.closeRPC()
+                        }
+                    }
+                }
+                Intent.ACTION_SCREEN_ON -> {
+                    if (player.isPlaying) {
+                        scope.launch {
+                            currentSong.value?.let { song ->
+                                discordRpc?.updateSong(song, player.currentPosition, player.playbackParameters.speed, dataStore.get(DiscordUseDetailsKey, false))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         
@@ -337,16 +363,14 @@ class MusicService :
         equalizerService.setAudioProcessor(customEqualizerAudioProcessor)
 
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val nm = getSystemService(NotificationManager::class.java)
-                nm?.createNotificationChannel(
-                    NotificationChannel(
-                        CHANNEL_ID,
-                        getString(R.string.music_player),
-                        NotificationManager.IMPORTANCE_LOW
-                    )
+            val nm = getSystemService(NotificationManager::class.java)
+            nm?.createNotificationChannel(
+                NotificationChannel(
+                    CHANNEL_ID,
+                    getString(R.string.music_player),
+                    NotificationManager.IMPORTANCE_LOW
                 )
-            }
+            )
             val pending = PendingIntent.getActivity(
                 this,
                 0,
@@ -441,6 +465,13 @@ class MusicService :
 
         connectivityManager = getSystemService()!!
         connectivityObserver = NetworkConnectivityObserver(this)
+        
+        val screenStateFilter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+        }
+        registerReceiver(screenStateReceiver, screenStateFilter)
+        
         audioQuality = dataStore.get(AudioQualityKey).toEnum(com.metrolist.music.constants.AudioQuality.AUTO)
         playerVolume = MutableStateFlow(dataStore.get(PlayerVolumeKey, 1f).coerceIn(0f, 1f))
 
@@ -634,69 +665,79 @@ class MusicService :
             }
 
         if (dataStore.get(PersistentQueueKey, true)) {
-            runCatching {
-                filesDir.resolve(PERSISTENT_QUEUE_FILE).inputStream().use { fis ->
-                    ObjectInputStream(fis).use { oos ->
-                        oos.readObject() as PersistQueue
-                    }
-                }
-            }.onSuccess { queue ->
+            val queueFile = filesDir.resolve(PERSISTENT_QUEUE_FILE)
+            if (queueFile.exists()) {
                 runCatching {
-                    // Convert back to proper queue type
-                    val restoredQueue = queue.toQueue()
-                    playQueue(
-                        queue = restoredQueue,
-                        playWhenReady = false,
-                    )
+                    queueFile.inputStream().use { fis ->
+                        ObjectInputStream(fis).use { oos ->
+                            oos.readObject() as PersistQueue
+                        }
+                    }
+                }.onSuccess { queue ->
+                    runCatching {
+                        // Convert back to proper queue type
+                        val restoredQueue = queue.toQueue()
+                        playQueue(
+                            queue = restoredQueue,
+                            playWhenReady = false,
+                        )
+                    }.onFailure { error ->
+                        Timber.tag(TAG).w(error, "Failed to restore persisted queue, clearing data")
+                        clearPersistedQueueFiles()
+                    }
                 }.onFailure { error ->
-                    Log.w(TAG, "Failed to restore persisted queue, clearing data", error)
+                    Timber.tag(TAG).w(error, "Failed to read persisted queue, clearing data")
                     clearPersistedQueueFiles()
                 }
-            }.onFailure { error ->
-                Log.w(TAG, "Failed to read persisted queue, clearing data", error)
-                clearPersistedQueueFiles()
             }
-            runCatching {
-                filesDir.resolve(PERSISTENT_AUTOMIX_FILE).inputStream().use { fis ->
-                    ObjectInputStream(fis).use { oos ->
-                        oos.readObject() as PersistQueue
-                    }
-                }
-            }.onSuccess { queue ->
+
+            val automixFile = filesDir.resolve(PERSISTENT_AUTOMIX_FILE)
+            if (automixFile.exists()) {
                 runCatching {
-                    automixItems.value = queue.items.map { it.toMediaItem() }
+                    automixFile.inputStream().use { fis ->
+                        ObjectInputStream(fis).use { oos ->
+                            oos.readObject() as PersistQueue
+                        }
+                    }
+                }.onSuccess { queue ->
+                    runCatching {
+                        automixItems.value = queue.items.map { it.toMediaItem() }
+                    }.onFailure { error ->
+                        Timber.tag(TAG).w(error, "Failed to restore automix queue, clearing data")
+                        clearPersistedQueueFiles()
+                    }
                 }.onFailure { error ->
-                    Log.w(TAG, "Failed to restore automix queue, clearing data", error)
+                    Timber.tag(TAG).w(error, "Failed to read automix queue, clearing data")
                     clearPersistedQueueFiles()
                 }
-            }.onFailure { error ->
-                Log.w(TAG, "Failed to read automix queue, clearing data", error)
-                clearPersistedQueueFiles()
             }
 
             // Restore player state
-            runCatching {
-                filesDir.resolve(PERSISTENT_PLAYER_STATE_FILE).inputStream().use { fis ->
-                    ObjectInputStream(fis).use { oos ->
-                        oos.readObject() as PersistPlayerState
+            val playerStateFile = filesDir.resolve(PERSISTENT_PLAYER_STATE_FILE)
+            if (playerStateFile.exists()) {
+                runCatching {
+                    playerStateFile.inputStream().use { fis ->
+                        ObjectInputStream(fis).use { oos ->
+                            oos.readObject() as PersistPlayerState
+                        }
                     }
-                }
-            }.onSuccess { playerState ->
-                // Restore player settings after queue is loaded
-                scope.launch {
-                    delay(1000) // Wait for queue to be loaded
-                    player.repeatMode = playerState.repeatMode
-                    player.shuffleModeEnabled = playerState.shuffleModeEnabled
-                    playerVolume.value = playerState.volume
+                }.onSuccess { playerState ->
+                    // Restore player settings after queue is loaded
+                    scope.launch {
+                        delay(1000) // Wait for queue to be loaded
+                        player.repeatMode = playerState.repeatMode
+                        player.shuffleModeEnabled = playerState.shuffleModeEnabled
+                        playerVolume.value = playerState.volume
 
-                    // Restore position if it's still valid
-                    if (playerState.currentMediaItemIndex < player.mediaItemCount) {
-                        player.seekTo(playerState.currentMediaItemIndex, playerState.currentPosition)
+                        // Restore position if it's still valid
+                        if (playerState.currentMediaItemIndex < player.mediaItemCount) {
+                            player.seekTo(playerState.currentMediaItemIndex, playerState.currentPosition)
+                        }
                     }
+                }.onFailure { error ->
+                    Timber.tag(TAG).w(error, "Failed to read player state, clearing data")
+                    clearPersistedQueueFiles()
                 }
-            }.onFailure { error ->
-                Log.w(TAG, "Failed to read player state, clearing data", error)
-                clearPersistedQueueFiles()
             }
         }
 
@@ -1848,7 +1889,7 @@ class MusicService :
         val mediaId = player.currentMediaItem?.mediaId
         Timber.tag(TAG).w(error, "Player error occurred for $mediaId: errorCode=${error.errorCode}, message=${error.message}")
         reportException(error)
-        
+
         // Check if this song has failed too many times
         if (mediaId != null && hasExceededRetryLimit(mediaId)) {
             Timber.tag(TAG).w("Song $mediaId has exceeded retry limit, skipping")
@@ -1861,7 +1902,7 @@ class MusicService :
         if (mediaId != null) {
             performAggressiveCacheClear(mediaId)
         }
-        
+
         // Handle specific error types with strict strategies
         when {
             isRangeNotSatisfiableError(error) -> {
@@ -1879,6 +1920,7 @@ class MusicService :
                 handleExpiredUrlError(mediaId)
                 return
             }
+
             !isNetworkConnected.value || isNetworkRelatedError(error) -> {
                 Timber.tag(TAG).d("Network-related error detected, waiting for connection")
                 waitOnNetworkError()
@@ -1991,7 +2033,7 @@ class MusicService :
             
             // Wait before retry
             delay(RETRY_DELAY_MS)
-            
+
             // Force re-prepare from position 0 to avoid range issues
             val currentIndex = player.currentMediaItemIndex
             player.seekTo(currentIndex, 0)
@@ -2084,7 +2126,7 @@ class MusicService :
         retryJob = scope.launch {
             performAggressiveCacheClear(mediaId)
             delay(RETRY_DELAY_MS)
-            
+
             val currentPosition = player.currentPosition
             val currentIndex = player.currentMediaItemIndex
             player.seekTo(currentIndex, currentPosition)
@@ -2093,7 +2135,7 @@ class MusicService :
             Timber.tag(TAG).d("Retrying playback for $mediaId after generic IO error")
         }
     }
-    
+
     /**
      * Handles final failure when all recovery attempts have been exhausted.
      */
@@ -2409,10 +2451,10 @@ class MusicService :
                 Timber.tag(TAG).e(it, "Failed to save queue")
                 reportException(it)
             }
-            
+
             runCatching {
-                filesDir.resolve(PERSISTENT_AUTOMIX_FILE).outputStream().use { fos ->
-                    ObjectOutputStream(fos).use { oos ->
+            filesDir.resolve(PERSISTENT_AUTOMIX_FILE).outputStream().use { fos ->
+                ObjectOutputStream(fos).use { oos ->
                         oos.writeObject(persistAutomix)
                     }
                 }
@@ -2421,7 +2463,7 @@ class MusicService :
                 Timber.tag(TAG).e(it, "Failed to save automix")
                 reportException(it)
             }
-            
+
             runCatching {
                 filesDir.resolve(PERSISTENT_PLAYER_STATE_FILE).outputStream().use { fos ->
                     ObjectOutputStream(fos).use { oos ->
@@ -2440,6 +2482,11 @@ class MusicService :
     }
 
     override fun onDestroy() {
+        try {
+            unregisterReceiver(screenStateReceiver)
+        } catch (e: Exception) {
+            // Ignore
+        }
         castConnectionHandler?.release()
         if (dataStore.get(PersistentQueueKey, true)) {
             saveQueueToDisk()

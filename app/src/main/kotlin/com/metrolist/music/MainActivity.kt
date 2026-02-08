@@ -130,6 +130,7 @@ import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.DefaultOpenTabKey
 import com.metrolist.music.constants.DisableScreenshotKey
 import com.metrolist.music.constants.DynamicThemeKey
+import com.metrolist.music.constants.ListenTogetherUsernameKey
 import com.metrolist.music.constants.MiniPlayerBottomSpacing
 import com.metrolist.music.constants.MiniPlayerHeight
 import com.metrolist.music.constants.NavigationBarAnimationSpec
@@ -137,12 +138,12 @@ import com.metrolist.music.constants.NavigationBarHeight
 import com.metrolist.music.constants.PauseSearchHistoryKey
 import com.metrolist.music.constants.PureBlackKey
 import com.metrolist.music.constants.SYSTEM_DEFAULT
+import com.metrolist.music.constants.SelectedThemeColorKey
 import com.metrolist.music.constants.SlimNavBarHeight
 import com.metrolist.music.constants.SlimNavBarKey
 import com.metrolist.music.constants.StopMusicOnTaskClearKey
 import com.metrolist.music.constants.UpdateNotificationsEnabledKey
 import com.metrolist.music.constants.UseNewMiniPlayerDesignKey
-import com.metrolist.music.constants.ListenTogetherUsernameKey
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.SearchHistory
 import com.metrolist.music.extensions.toEnum
@@ -161,6 +162,7 @@ import com.metrolist.music.ui.component.LocalBottomSheetPageState
 import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.ui.component.rememberBottomSheetState
 import com.metrolist.music.ui.component.shimmer.ShimmerTheme
+import com.metrolist.music.ui.menu.ListenTogetherDialog
 import com.metrolist.music.ui.menu.YouTubeSongMenu
 import com.metrolist.music.ui.player.BottomSheetPlayer
 import com.metrolist.music.ui.screens.Screens
@@ -168,11 +170,8 @@ import com.metrolist.music.ui.screens.navigationBuilder
 import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.screens.settings.NavigationTab
 import com.metrolist.music.ui.theme.ColorSaver
-import com.metrolist.music.constants.SelectedThemeColorKey
 import com.metrolist.music.ui.theme.DefaultThemeColor
 import com.metrolist.music.ui.theme.MetrolistTheme
-import com.metrolist.music.ui.menu.ListenTogetherDialog
-
 import com.metrolist.music.ui.theme.extractThemeColor
 import com.metrolist.music.ui.utils.appBarScrollBehavior
 import com.metrolist.music.ui.utils.resetHeightOffset
@@ -198,7 +197,6 @@ import java.net.URLDecoder
 import java.net.URLEncoder
 import java.util.Locale
 import javax.inject.Inject
-import kotlin.time.Duration.Companion.days
 
 @Suppress("DEPRECATION", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @AndroidEntryPoint
@@ -365,40 +363,41 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(checkForUpdates) {
             if (checkForUpdates) {
                 withContext(Dispatchers.IO) {
-                    if (System.currentTimeMillis() - Updater.lastCheckTime > 1.days.inWholeMilliseconds) {
-                        val updatesEnabled = dataStore.get(CheckForUpdatesKey, true)
-                        val notifEnabled = dataStore.get(UpdateNotificationsEnabledKey, true)
-                        if (!updatesEnabled) return@withContext
-                        Updater.getLatestVersionName().onSuccess {
-                            onLatestVersionNameChange(it)
-                            if (Updater.isUpdateAvailable(BuildConfig.VERSION_NAME, it) && notifEnabled) {
-                                val downloadUrl = Updater.getLatestDownloadUrl()
-                                val intent = Intent(Intent.ACTION_VIEW, downloadUrl.toUri())
+                    val updatesEnabled = dataStore.get(CheckForUpdatesKey, true)
+                    val notifEnabled = dataStore.get(UpdateNotificationsEnabledKey, true)
+                    if (!updatesEnabled) return@withContext
+                    
+                    Updater.checkForUpdate().onSuccess { (releaseInfo, hasUpdate) ->
+                        if (releaseInfo != null) {
+                            onLatestVersionNameChange(releaseInfo.versionName)
+                            if (hasUpdate && notifEnabled) {
+                                val downloadUrl = Updater.getDownloadUrlForCurrentVariant(releaseInfo)
+                                if (downloadUrl != null) {
+                                    val intent = Intent(Intent.ACTION_VIEW, downloadUrl.toUri())
 
-                                val flags = PendingIntent.FLAG_UPDATE_CURRENT or
-                                    (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
-                                val pending = PendingIntent.getActivity(this@MainActivity, 1001, intent, flags)
+                                    val flags = PendingIntent.FLAG_UPDATE_CURRENT or
+                                        (PendingIntent.FLAG_IMMUTABLE)
+                                    val pending = PendingIntent.getActivity(this@MainActivity, 1001, intent, flags)
 
-                                val notif = NotificationCompat.Builder(this@MainActivity, "updates")
-                                    .setSmallIcon(R.drawable.update)
-                                    .setContentTitle(getString(R.string.update_available_title))
-                                    .setContentText(it)
-                                    .setContentIntent(pending)
-                                    .setAutoCancel(true)
-                                    .build()
+                                    val notif = NotificationCompat.Builder(this@MainActivity, "updates")
+                                        .setSmallIcon(R.drawable.update)
+                                        .setContentTitle(getString(R.string.update_available_title))
+                                        .setContentText(releaseInfo.versionName)
+                                        .setContentIntent(pending)
+                                        .setAutoCancel(true)
+                                        .build()
 
-                                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                                    ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-                                ) {
-                                    NotificationManagerCompat.from(this@MainActivity).notify(1001, notif)
+                                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                                        ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                                    ) {
+                                        NotificationManagerCompat.from(this@MainActivity).notify(1001, notif)
+                                    }
                                 }
                             }
                         }
                     }
                 }
             } else {
-                // when the user disables updates, reset to the current version
-                // to trick the app into thinking it's on the latest version
                 onLatestVersionNameChange(BuildConfig.VERSION_NAME)
             }
         }
@@ -607,8 +606,8 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(navBackStackEntry) {
                     if (inSearchScreen) {
                         val searchQuery = withContext(Dispatchers.IO) {
-                            if (navBackStackEntry?.arguments?.getString("query",)!!.contains("%",)) {
-                                navBackStackEntry?.arguments?.getString("query",)!!
+                            if (navBackStackEntry?.arguments?.getString("query")!!.contains("%")) {
+                                navBackStackEntry?.arguments?.getString("query")!!
                             } else {
                                 URLDecoder.decode(
                                     navBackStackEntry?.arguments?.getString("query")!!,
