@@ -852,82 +852,96 @@ fun ArtistScreen(
                     // If the other FAB is visible.
                     .padding(bottom = if (showLocalFab) 64.dp else 0.dp)
             ) {
-                 androidx.compose.material3.SmallFloatingActionButton(
-                    modifier = Modifier.padding(16.dp).offset(x = (-4).dp), // Align center with standard FAB (56dp vs 48dp)
-                    onClick = {
-                         if (showLocal) {
-                             if (librarySongs.isNotEmpty()) {
-                                playerConnection.playQueue(
-                                    ListQueue(
-                                        title = libraryArtist?.artist?.name ?: "Unknown Artist",
-                                        items = librarySongs.map { it.toMediaItem() }
-                                    )
+                val onPlayAllClick: () -> Unit = {
+                     if (showLocal) {
+                         if (librarySongs.isNotEmpty()) {
+                            playerConnection.playQueue(
+                                ListQueue(
+                                    title = libraryArtist?.artist?.name ?: "Unknown Artist",
+                                    items = librarySongs.map { it.toMediaItem() }
                                 )
-                            }
-                        } else if (artistPage != null) {
-                            val songSection = artistPage.sections.find { section ->
-                                (section.items.firstOrNull() as? SongItem)?.album != null
-                            }
-                            
-                            val moreEndpoint = songSection?.moreEndpoint
-                            if (moreEndpoint != null) {
-                                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                                    val result = YouTube.artistItems(moreEndpoint).getOrNull()
-                                    withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                        if (result != null && result.items.isNotEmpty()) {
-                                            val songs = result.items.filterIsInstance<SongItem>().map { it.toMediaItem() }
+                            )
+                        }
+                    } else if (artistPage != null) {
+                        val songSection = artistPage.sections.find { section ->
+                            (section.items.firstOrNull() as? SongItem)?.album != null
+                        }
+                        
+                        val moreEndpoint = songSection?.moreEndpoint
+                        if (moreEndpoint != null) {
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                val result = YouTube.artistItems(moreEndpoint).getOrNull()
+                                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    if (result != null && result.items.isNotEmpty()) {
+                                        val songs = result.items.filterIsInstance<SongItem>().map { it.toMediaItem() }
+                                        playerConnection.playQueue(
+                                            ListQueue(
+                                                title = artistPage.artist.title,
+                                                items = songs
+                                            )
+                                        )
+                                    } else {
+                                        // Fallback to loaded items
+                                        val songs = songSection.items.filterIsInstance<SongItem>().map { it.toMediaItem() }
+                                        if (songs.isNotEmpty()) {
                                             playerConnection.playQueue(
                                                 ListQueue(
                                                     title = artistPage.artist.title,
                                                     items = songs
                                                 )
                                             )
-                                        } else {
-                                            // Fallback to loaded items
-                                            val songs = songSection.items.filterIsInstance<SongItem>().map { it.toMediaItem() }
-                                            if (songs.isNotEmpty()) {
-                                                playerConnection.playQueue(
-                                                    ListQueue(
-                                                        title = artistPage.artist.title,
-                                                        items = songs
-                                                    )
-                                                )
-                                            }
                                         }
                                     }
                                 }
-                                } else if (songSection != null) {
-                                // Use loaded items if no more endpoint
-                                val songs = songSection.items.filterIsInstance<SongItem>().map { it.toMediaItem() }
-                                playerConnection.playQueue(
-                                    ListQueue(
-                                        title = artistPage.artist.title,
-                                        items = songs
-                                    )
+                            }
+                            } else if (songSection != null) {
+                            // Use loaded items if no more endpoint
+                            val songs = songSection.items.filterIsInstance<SongItem>().map { it.toMediaItem() }
+                            playerConnection.playQueue(
+                                ListQueue(
+                                    title = artistPage.artist.title,
+                                    items = songs
                                 )
-                            } else {
-                                // Fallback to shuffle endpoint (stripped) if no song section found
-                                val shuffleEndpoint = artistPage.artist.shuffleEndpoint
-                                if (shuffleEndpoint != null) {
-                                    val endpoint = if (shuffleEndpoint.playlistId != null) {
-                                        WatchEndpoint(
-                                            playlistId = shuffleEndpoint.playlistId,
-                                            params = null, // Remove shuffle params to play in order
-                                            videoId = null // Ensure videoId is null to start from beginning of playlist
-                                        )
-                                    } else {
-                                        shuffleEndpoint
-                                    }
-                                    playerConnection.playQueue(YouTubeQueue(endpoint))
+                            )
+                        } else {
+                            // Fallback to shuffle endpoint (stripped) if no song section found
+                            val shuffleEndpoint = artistPage.artist.shuffleEndpoint
+                            if (shuffleEndpoint != null) {
+                                val endpoint = if (shuffleEndpoint.playlistId != null) {
+                                    WatchEndpoint(
+                                        playlistId = shuffleEndpoint.playlistId,
+                                        params = null, // Remove shuffle params to play in order
+                                        videoId = null // Ensure videoId is null to start from beginning of playlist
+                                    )
+                                } else {
+                                    shuffleEndpoint
                                 }
+                                playerConnection.playQueue(YouTubeQueue(endpoint))
                             }
                         }
-                    },
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.play),
-                        contentDescription = "Play All",
-                    )
+                    }
+                }
+
+                if (showLocalFab) {
+                     androidx.compose.material3.SmallFloatingActionButton(
+                        modifier = Modifier.padding(16.dp).offset(x = (-4).dp), // Align center with standard FAB (56dp vs 48dp)
+                        onClick = onPlayAllClick
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.play),
+                            contentDescription = "Play All",
+                        )
+                    }
+                } else {
+                    androidx.compose.material3.FloatingActionButton(
+                        modifier = Modifier.padding(16.dp),
+                        onClick = onPlayAllClick
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.play),
+                            contentDescription = "Play All",
+                        )
+                    }
                 }
             }
         }
