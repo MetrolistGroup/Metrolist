@@ -504,4 +504,24 @@
     <string name="cd_dark_mode">Tmavý režim</string>
     <string name="cd_system_mode">Systémový režim</string>
     <string name="cd_palette_item">%1$s paleta</string>
+    <string name="listen_together_choose_server">Vybrat server</string>
+    <string name="listen_together_custom_server">Vlastní server</string>
+    <string name="listen_together_use_custom_server">Použít vlastní server</string>
+    <string name="listen_together_auto_approval">Automaticky schvalovat žádosti o připojení</string>
+    <string name="listen_together_auto_approval_desc">Automaticky schvalovat žádosti o připojení namísto ručního schvalování</string>
+    <string name="listen_together_sync_volume">Synchronizovat hlasitost s hostitelem</string>
+    <string name="listen_together_sync_volume_desc">Hlasitost hostů se řídí hlasitostí hostitele</string>
+    <string name="transfer_host">Předat roli hostitele</string>
+    <string name="copy_code">Zkopírovat kód</string>
+    <string name="kick_user_desc">Odebrat tohoto uživatele z místnosti</string>
+    <string name="permanently_kick_user">Trvale zablokovat</string>
+    <string name="permanently_kick_user_desc">Žádosti o připojení tohoto uživatele budou zablokovány a jeho návrhy skryty</string>
+    <string name="transfer_ownership">Předat vlastnictví</string>
+    <string name="transfer_ownership_desc">Nastaví tohoto uživatele hostitelem místnosti</string>
+    <string name="manage_user">Spravovat uživatele</string>
+    <string name="listen_together_blocked_users">Zablokování uživatelé</string>
+    <string name="listen_together_blocked_users_count">%d uživatel(ů) zablokováno</string>
+    <string name="listen_together_no_blocked_users">Žádní zablokování uživatelé</string>
+    <string name="unblock">Odblokovat</string>
+    <string name="user_blocked_by_host">Uživatel zablokován hostitelem</string>
 </resources>
