@@ -456,7 +456,7 @@
     <string name="copy">Копировать</string>
     <string name="change">Изменить</string>
     <string name="copied_to_clipboard">Скопировано в буфер обмена</string>
-    <string name="not_set">Не задано</string>
+    <string name="not_set">Не указано</string>
     <string name="hosting_room">Хостинг комнаты</string>
     <string name="in_room">В комнате</string>
     <string name="pending_requests">Ожидающие запросы</string>
@@ -504,4 +504,24 @@
     <string name="cd_dark_mode">Тёмный режим</string>
     <string name="cd_system_mode">Системный режим</string>
     <string name="cd_palette_item">Палитра «%1$s»</string>
+    <string name="listen_together_choose_server">Выбрать сервер</string>
+    <string name="listen_together_custom_server">Пользовательский сервер</string>
+    <string name="listen_together_use_custom_server">Использовать пользовательский сервер</string>
+    <string name="listen_together_auto_approval">Автоодобрение запросов на вход</string>
+    <string name="listen_together_auto_approval_desc">Запросы на вход будут одобряться автоматически, без ручной проверки</string>
+    <string name="listen_together_sync_volume">Синхронизация громкости хоста</string>
+    <string name="listen_together_sync_volume_desc">У гостей будет та же громкость, что и у хоста</string>
+    <string name="transfer_host">Передать хоста</string>
+    <string name="copy_code">Скопировать код</string>
+    <string name="kick_user_desc">Удалить этого пользователя из сессии</string>
+    <string name="permanently_kick_user">Заблокировать навсегда</string>
+    <string name="permanently_kick_user_desc">Заблокировать запросы этого пользователя и скрыть его предложения</string>
+    <string name="transfer_ownership">Передать владение</string>
+    <string name="transfer_ownership_desc">Сделать этого пользователя хостом комнаты</string>
+    <string name="manage_user">Управление пользователем</string>
+    <string name="listen_together_blocked_users">Заблокированные пользователи</string>
+    <string name="listen_together_blocked_users_count">заблокировано пользователей: %d</string>
+    <string name="listen_together_no_blocked_users">Нет заблокированных пользователей</string>
+    <string name="unblock">Разблокировать</string>
+    <string name="user_blocked_by_host">Пользователь заблокирован хостом</string>
 </resources>
