@@ -494,4 +494,24 @@
     <string name="cd_dark_mode">Karanlık modu</string>
     <string name="cd_system_mode">Sistem modu</string>
     <string name="cd_palette_item">%1$s paleti</string>
+    <string name="listen_together_sync_volume">Sunucu sesini eşitle</string>
+    <string name="listen_together_use_custom_server">Özel sunucu kullan</string>
+    <string name="listen_together_custom_server">Özel sunucu</string>
+    <string name="listen_together_choose_server">Sunucu seç</string>
+    <string name="listen_together_sync_volume_desc">Misafirler sunucu sahibinin ses seviyesini takip eder</string>
+    <string name="listen_together_auto_approval_desc">Katılım isteklerini manuel olarak incelemek yerine otomatik olarak onaylayın</string>
+    <string name="listen_together_auto_approval">Katılım isteklerini otomatik olarak onayla</string>
+    <string name="copy_code">Kodu kopyala</string>
+    <string name="kick_user_desc">Bu kişiyi oturumdan kaldır</string>
+    <string name="permanently_kick_user">Kalıcı Olarak Engelle</string>
+    <string name="permanently_kick_user_desc">Bu kişinin katılma isteklerini engelle ve önerilerini gizle</string>
+    <string name="listen_together_no_blocked_users">Engellenen kullanıcı yok</string>
+    <string name="listen_together_blocked_users_count">%d kullanıcı engellendi</string>
+    <string name="listen_together_blocked_users">Engellenen Kullanıcılar</string>
+    <string name="manage_user">Kullanıcıyı Yönet</string>
+    <string name="transfer_ownership_desc">Bu kişiyi odanın sunucu sahibi yapın</string>
+    <string name="unblock">Engellemeyi kaldır</string>
+    <string name="user_blocked_by_host">Kullanıcı sunucu sahibi tarafından engellendi</string>
+    <string name="transfer_ownership">Sahipliği Aktar</string>
+    <string name="transfer_host">Sunucuyu devret</string>
 </resources>
