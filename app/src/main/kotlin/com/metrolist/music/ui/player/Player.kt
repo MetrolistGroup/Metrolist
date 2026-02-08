@@ -564,7 +564,6 @@ fun BottomSheetPlayer(
         mutableStateOf(false)
     }
 
-
     var isFullScreen by rememberSaveable {
         mutableStateOf(false)
     }
