@@ -15,6 +15,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -182,6 +183,7 @@ import com.metrolist.music.viewmodels.HomeViewModel
 import com.valentinilk.shimmer.LocalShimmerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -219,7 +221,21 @@ class MainActivity : ComponentActivity() {
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             if (service is MusicBinder) {
-                playerConnection = PlayerConnection(this@MainActivity, service, database, lifecycleScope)
+                try {
+                    playerConnection = PlayerConnection(this@MainActivity, service, database, lifecycleScope)
+                    Log.d("MainActivity", "PlayerConnection created successfully")
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Failed to create PlayerConnection", e)
+                    // Retry after a short delay of 500ms
+                    lifecycleScope.launch {
+                        delay(500)
+                        try {
+                            playerConnection = PlayerConnection(this@MainActivity, service, database, lifecycleScope)
+                        } catch (e2: Exception) {
+                            Log.e("MainActivity", "Failed to create PlayerConnection on retry", e2)
+                        }
+                    }
+                }
             }
         }
 
