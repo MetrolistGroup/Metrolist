@@ -24,9 +24,11 @@ import android.widget.RemoteViews
 import android.app.PendingIntent
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.database.SQLException
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -320,6 +322,29 @@ class MusicService :
     var castConnectionHandler: CastConnectionHandler? = null
         private set
 
+    private val screenStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                Intent.ACTION_SCREEN_OFF -> {
+                    if (!player.isPlaying) {
+                        scope.launch(Dispatchers.IO) {
+                            discordRpc?.closeRPC()
+                        }
+                    }
+                }
+                Intent.ACTION_SCREEN_ON -> {
+                    if (player.isPlaying) {
+                        scope.launch {
+                            currentSong.value?.let { song ->
+                                discordRpc?.updateSong(song, player.currentPosition, player.playbackParameters.speed, dataStore.get(DiscordUseDetailsKey, false))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
 
@@ -426,6 +451,13 @@ class MusicService :
 
         connectivityManager = getSystemService()!!
         connectivityObserver = NetworkConnectivityObserver(this)
+        
+        val screenStateFilter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+        }
+        registerReceiver(screenStateReceiver, screenStateFilter)
+        
         audioQuality = dataStore.get(AudioQualityKey).toEnum(com.metrolist.music.constants.AudioQuality.AUTO)
         playerVolume = MutableStateFlow(dataStore.get(PlayerVolumeKey, 1f).coerceIn(0f, 1f))
 
@@ -2402,6 +2434,11 @@ class MusicService :
     }
 
     override fun onDestroy() {
+        try {
+            unregisterReceiver(screenStateReceiver)
+        } catch (e: Exception) {
+            // Ignore
+        }
         castConnectionHandler?.release()
         if (dataStore.get(PersistentQueueKey, true)) {
             saveQueueToDisk()
