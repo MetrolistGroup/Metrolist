@@ -499,4 +499,24 @@
     <string name="cd_dark_mode">Mode Sombre</string>
     <string name="cd_system_mode">Mode Système</string>
     <string name="cd_palette_item">Palette %1$s</string>
+    <string name="listen_together_choose_server">Choisir un serveur</string>
+    <string name="listen_together_custom_server">Serveur personnalisé</string>
+    <string name="listen_together_use_custom_server">Utiliser un serveur personnalisé</string>
+    <string name="listen_together_auto_approval">Approuver automatiquement les demandes d\'adhésion</string>
+    <string name="listen_together_auto_approval_desc">Approuver automatiquement les demandes d\'adhésion au lieu de les examiner manuellement</string>
+    <string name="listen_together_sync_volume_desc">Les invités suivent le volume sonore indiqué par l\'hôte</string>
+    <string name="listen_together_sync_volume">Synchroniser le volume hôte</string>
+    <string name="transfer_host">Hôte de transfert</string>
+    <string name="copy_code">Copier le code</string>
+    <string name="kick_user_desc">Supprimer cette personne de la session</string>
+    <string name="permanently_kick_user">Bloquer définitivement</string>
+    <string name="permanently_kick_user_desc">Bloquez les demandes d\'adhésion de cette personne et masquez ses suggestions</string>
+    <string name="transfer_ownership">Transfert de propriété</string>
+    <string name="transfer_ownership_desc">Désignez cette personne comme l\'hôte de la salle</string>
+    <string name="manage_user">Gérer les utilisateurs</string>
+    <string name="listen_together_blocked_users">Utilisateurs bloqués</string>
+    <string name="listen_together_blocked_users_count">%d utilisateur(s) bloqué(s)</string>
+    <string name="listen_together_no_blocked_users">Aucun utilisateur bloqué</string>
+    <string name="unblock">Débloquer</string>
+    <string name="user_blocked_by_host">Utilisateur bloqué par l\'hôte</string>
 </resources>
