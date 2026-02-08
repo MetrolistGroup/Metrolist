@@ -192,6 +192,30 @@ class App : Application(), SingletonImageLoader.Factory {
                     }
                 }
         }
+
+        applicationScope.launch(Dispatchers.IO) {
+            dataStore.data
+                .map { Triple(it[ContentCountryKey], it[ContentLanguageKey], it[AppLanguageKey]) }
+                .distinctUntilChanged()
+                .collect { (contentCountry, contentLanguage, appLanguage) ->
+                    val systemLocale = Locale.getDefault()
+                    val effectiveAppLocale = appLanguage
+                        ?.takeUnless { it == SYSTEM_DEFAULT }
+                        ?.let { Locale.forLanguageTag(it) }
+                        ?: systemLocale
+
+                    YouTube.locale = YouTubeLocale(
+                        gl = contentCountry?.takeIf { it != SYSTEM_DEFAULT }
+                            ?: effectiveAppLocale.country.takeIf { it in CountryCodeToName }
+                            ?: systemLocale.country.takeIf { it in CountryCodeToName }
+                            ?: "US",
+                        hl = contentLanguage?.takeIf { it != SYSTEM_DEFAULT }
+                            ?: effectiveAppLocale.toLanguageTag().takeIf { it in LanguageCodeToName }
+                            ?: effectiveAppLocale.language.takeIf { it in LanguageCodeToName }
+                            ?: "en"
+                    )
+                }
+        }
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader {
