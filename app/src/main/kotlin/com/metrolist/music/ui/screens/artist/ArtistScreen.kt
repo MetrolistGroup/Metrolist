@@ -853,7 +853,7 @@ fun ArtistScreen(
                     .padding(bottom = if (showLocalFab) 64.dp else 0.dp)
             ) {
                  androidx.compose.material3.SmallFloatingActionButton(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(16.dp).offset(x = (-4).dp), // Align center with standard FAB (56dp vs 48dp)
                     onClick = {
                          if (showLocal) {
                              if (librarySongs.isNotEmpty()) {
