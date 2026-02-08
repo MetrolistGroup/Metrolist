@@ -1,19 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Default circular art for turntable widget preview -->
+<!-- Default art for turntable widget preview, matching the music player widget icon -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Circular gradient background -->
-    <item>
-        <shape android:shape="oval">
-            <gradient
-                android:angle="135"
-                android:startColor="#6750A4"
-                android:centerColor="#7F67BE"
-                android:endColor="#D0BCFF"
-                android:type="linear" />
-        </shape>
-    </item>
-    <!-- Centered app icon -->
     <item
-        android:drawable="@drawable/ic_launcher_foreground"
+        android:drawable="@mipmap/ic_launcher"
         android:gravity="center" />
 </layer-list>
