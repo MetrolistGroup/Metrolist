@@ -189,12 +189,12 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.coroutineContext
 import okhttp3.OkHttpClient
+import timber.log.Timber
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.time.LocalDateTime
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
-import timber.log.Timber
 
 private const val INSTANT_SILENCE_SKIP_STEP_MS = 15_000L
 private const val INSTANT_SILENCE_SKIP_SETTLE_MS = 350L
@@ -1482,7 +1482,7 @@ class MusicService :
                             val loudnessDb = loudness.toFloat()
                             val targetGain = (-loudnessDb * 100).toInt()
                             val clampedGain = targetGain.coerceIn(MIN_GAIN_MB, MAX_GAIN_MB)
-                            
+
                             Timber.tag(TAG).d("Calculated raw normalization gain: $targetGain mB (from loudness: $loudnessDb)")
                             
                             try {
@@ -1511,7 +1511,6 @@ class MusicService :
             }
         }
     }
-
 
     private fun releaseLoudnessEnhancer() {
         try {
@@ -1944,7 +1943,7 @@ class MusicService :
             stopOnError()
         }
     }
-    
+
     /**
      * Performs aggressive cache clearing for a media item.
      * Clears both player cache and download cache, plus URL cache.
