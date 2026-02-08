@@ -3,7 +3,6 @@
     android:minWidth="110dp"
     android:minHeight="110dp"
     android:updatePeriodMillis="1800000"
-    android:previewImage="@mipmap/ic_launcher"
     android:previewLayout="@layout/widget_turntable"
     android:initialLayout="@layout/widget_turntable"
     android:description="@string/turntable_widget_description"

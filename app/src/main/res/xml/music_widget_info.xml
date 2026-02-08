@@ -5,10 +5,8 @@
     android:minResizeWidth="110dp"
     android:minResizeHeight="40dp"
     android:updatePeriodMillis="1800000"
-    android:previewImage="@mipmap/ic_launcher"
     android:previewLayout="@layout/widget_music_player"
     android:initialLayout="@layout/widget_music_player"
     android:description="@string/widget_description"
     android:widgetCategory="home_screen"
     android:resizeMode="horizontal|vertical" />
-
