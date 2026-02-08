@@ -277,7 +277,8 @@ class MusicService :
     @DownloadCache
     lateinit var downloadCache: SimpleCache
 
-    private lateinit var player: ExoPlayer
+    lateinit var player: ExoPlayer
+        private set
     private lateinit var mediaSession: MediaLibrarySession
     
     // Tracks if player has been properly initilized

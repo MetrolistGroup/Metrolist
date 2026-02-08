@@ -6,6 +6,7 @@
 package com.metrolist.music.playback
 
 import android.content.Context
+import android.util.Log
 import timber.log.Timber
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -16,6 +17,7 @@ import androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM
 import androidx.media3.common.Player.REPEAT_MODE_OFF
 import androidx.media3.common.Player.STATE_ENDED
 import androidx.media3.common.Timeline
+import androidx.media3.exoplayer.ExoPlayer
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.extensions.currentMetadata
 import com.metrolist.music.extensions.getCurrentQueueIndex
@@ -32,6 +34,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PlayerConnection(
@@ -52,7 +55,7 @@ class PlayerConnection(
      * Safe player accessor checks readiness & handles errors.
      * Should be used by all player access within this class.
      */
-    private fun getPlayerSafe(): Player {
+    private fun getPlayerSafe(): ExoPlayer {
         return try {
             if (!playerReadinessFlow.value) {
                 Timber.tag(TAG).w("Player accessed before service initialization complete; returning best-effort reference")
@@ -68,7 +71,7 @@ class PlayerConnection(
      * Public accessor for player. Throws if player not ready.
      * Callers should check [isPlayerInitialized] before calling, or handle exceptions.
      */
-    val player: Player
+    val player: ExoPlayer
         get() = getPlayerSafe()
 
     /** Tracks whether player initialization completed successfully */
@@ -81,46 +84,37 @@ class PlayerConnection(
     init {
         Timber.tag(TAG).d("PlayerConnection init: playerReady=${playerReadinessFlow.value}")
         
-        try {
-            // Initialize with safe player access
+        // Initialize with player state or safe defaults if player not ready
+        val initialState = try {
             val initialPlayer = getPlayerSafe()
-            
-            playbackState = MutableStateFlow(initialPlayer.playbackState)
-            playWhenReady = MutableStateFlow(initialPlayer.playWhenReady)
-            isPlaying =
-                combine(playbackState, playWhenReady) { playbackState, playWhenReady ->
-                    playWhenReady && playbackState != STATE_ENDED
-                }.stateIn(
-                    scope,
-                    SharingStarted.Lazily,
-                    initialPlayer.playWhenReady && initialPlayer.playbackState != STATE_ENDED
-                )
-            
-            // Track service readiness changes in background.
-            scope.launch {
-                playerReadinessFlow.collect { ready ->
-                    isPlayerInitialized.value = ready
-                    if (ready) {
-                        Timber.tag(TAG).d("Service player initialization detected by PlayerConnection")
-                    }
+            Triple(initialPlayer.playbackState, initialPlayer.playWhenReady, 
+                   initialPlayer.playWhenReady && initialPlayer.playbackState != STATE_ENDED)
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error during PlayerConnection initialization, using defaults")
+            Triple(Player.STATE_IDLE, false, false)
+        }
+        
+        playbackState = MutableStateFlow(initialState.first)
+        playWhenReady = MutableStateFlow(initialState.second)
+        isPlaying = combine(playbackState, playWhenReady) { state, ready ->
+            ready && state != STATE_ENDED
+        }.stateIn(
+            scope,
+            SharingStarted.Lazily,
+            initialState.third
+        )
+        
+        // Track service readiness changes in background.
+        scope.launch {
+            playerReadinessFlow.collect { ready ->
+                isPlayerInitialized.value = ready
+                if (ready) {
+                    Timber.tag(TAG).d("Service player initialization detected by PlayerConnection")
                 }
             }
-            
-            Timber.tag(TAG).d("PlayerConnection state flows initialized successfully")
-        } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "Error during PlayerConnection initialization")
-            // Initialize with safe defaults even on error, allowing retries
-            playbackState = MutableStateFlow(Player.STATE_IDLE)
-            playWhenReady = MutableStateFlow(false)
-            isPlaying = combine(playbackState, playWhenReady) { playbackState, playWhenReady ->
-                playWhenReady && playbackState != STATE_ENDED
-            }.stateIn(
-                scope,
-                SharingStarted.Lazily,
-                false
-            )
-            throw e // Re-throw for caller to handle
         }
+        
+        Timber.tag(TAG).d("PlayerConnection state flows initialized successfully")
     }
     
     // Effective playing state, considers Cast when active
@@ -214,6 +208,11 @@ class PlayerConnection(
     }
 
     fun startRadioSeamlessly() {
+        // Block if Listen Together guest
+        if (shouldBlockPlaybackChanges?.invoke() == true) {
+            Log.d("PlayerConnection", "startRadioSeamlessly blocked - Listen Together guest")
+            return
+        }
         if (!playerReadinessFlow.value) {
             Timber.tag(TAG).w("startRadioSeamlessly called before player ready; delegating to service")
         }
@@ -223,55 +222,38 @@ class PlayerConnection(
             Timber.tag(TAG).e(e, "Error in startRadioSeamlessly")
             throw e
         }
-        // Block if Listen Together guest (but allow internal sync)
-        if (!allowInternalSync && shouldBlockPlaybackChanges?.invoke() == true) {
-            android.util.Log.d("PlayerConnection", "playQueue blocked - Listen Together guest")
-            return
-        }
-        service.playQueue(queue)
-    }
-
-    fun startRadioSeamlessly() {
-        // Block if Listen Together guest
-        if (shouldBlockPlaybackChanges?.invoke() == true) {
-            android.util.Log.d("PlayerConnection", "startRadioSeamlessly blocked - Listen Together guest")
-            return
-        }
-        service.startRadioSeamlessly()
     }
 
     fun playNext(item: MediaItem) = playNext(listOf(item))
 
     fun playNext(items: List<MediaItem>) {
+        // Block if Listen Together guest (unless internal sync)
+        if (!allowInternalSync && shouldBlockPlaybackChanges?.invoke() == true) {
+            Log.d("PlayerConnection", "playNext blocked - Listen Together guest")
+            return
+        }
         try {
             service.playNext(items)
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Error in playNext")
             throw e
         }
-        // Block if Listen Together guest (unless internal sync)
-        if (!allowInternalSync && shouldBlockPlaybackChanges?.invoke() == true) {
-            android.util.Log.d("PlayerConnection", "playNext blocked - Listen Together guest")
-            return
-        }
-        service.playNext(items)
     }
 
     fun addToQueue(item: MediaItem) = addToQueue(listOf(item))
 
     fun addToQueue(items: List<MediaItem>) {
+        // Block if Listen Together guest (unless internal sync)
+        if (!allowInternalSync && shouldBlockPlaybackChanges?.invoke() == true) {
+            Log.d("PlayerConnection", "addToQueue blocked - Listen Together guest")
+            return
+        }
         try {
             service.addToQueue(items)
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Error in addToQueue")
             throw e
         }
-        // Block if Listen Together guest (unless internal sync)
-        if (!allowInternalSync && shouldBlockPlaybackChanges?.invoke() == true) {
-            android.util.Log.d("PlayerConnection", "addToQueue blocked - Listen Together guest")
-            return
-        }
-        service.addToQueue(items)
     }
 
     fun toggleLike() {
