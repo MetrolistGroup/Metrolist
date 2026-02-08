@@ -940,6 +940,7 @@ fun ArtistScreen(
                         Icon(
                             painter = painterResource(R.drawable.play),
                             contentDescription = "Play All",
+                            modifier = Modifier.size(32.dp)
                         )
                     }
                 }
