@@ -6,7 +6,7 @@
 package com.metrolist.music.playback
 
 import android.content.Context
-import android.util.Log
+import timber.log.Timber
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -55,11 +55,11 @@ class PlayerConnection(
     private fun getPlayerSafe(): Player {
         return try {
             if (!playerReadinessFlow.value) {
-                Log.w(TAG, "Player accessed before service initialization complete; returning best-effort reference")
+                Timber.tag(TAG).w("Player accessed before service initialization complete; returning best-effort reference")
             }
             service.player
         } catch (e: UninitializedPropertyAccessException) {
-            Log.e(TAG, "Fatal: player property accessed but not initialized", e)
+            Timber.tag(TAG).e(e, "Fatal: player property accessed but not initialized")
             throw IllegalStateException("MusicService.player not initialized; possible race condition in service startup", e)
         }
     }
@@ -79,7 +79,7 @@ class PlayerConnection(
     val isPlaying: kotlinx.coroutines.flow.StateFlow<Boolean>
     
     init {
-        Log.d(TAG, "PlayerConnection init: playerReady=${playerReadinessFlow.value}")
+        Timber.tag(TAG).d("PlayerConnection init: playerReady=${playerReadinessFlow.value}")
         
         try {
             // Initialize with safe player access
@@ -101,14 +101,14 @@ class PlayerConnection(
                 playerReadinessFlow.collect { ready ->
                     isPlayerInitialized.value = ready
                     if (ready) {
-                        Log.d(TAG, "Service player initialization detected by PlayerConnection")
+                        Timber.tag(TAG).d("Service player initialization detected by PlayerConnection")
                     }
                 }
             }
             
-            Log.d(TAG, "PlayerConnection state flows initialized successfully")
+            Timber.tag(TAG).d("PlayerConnection state flows initialized successfully")
         } catch (e: Exception) {
-            Log.e(TAG, "Error during PlayerConnection initialization", e)
+            Timber.tag(TAG).e(e, "Error during PlayerConnection initialization")
             // Initialize with safe defaults even on error, allowing retries
             playbackState = MutableStateFlow(Player.STATE_IDLE)
             playWhenReady = MutableStateFlow(false)
@@ -179,7 +179,7 @@ class PlayerConnection(
         try {
             // Register listener with the player for state updates
             player.addListener(this)
-            Log.d(TAG, "Player listener registered successfully")
+            Timber.tag(TAG).d("Player listener registered successfully")
 
             // Initialize state flows from current player state
             // These will be kept in sync via listener callbacks
@@ -193,9 +193,9 @@ class PlayerConnection(
             shuffleModeEnabled.value = player.shuffleModeEnabled
             repeatMode.value = player.repeatMode
             
-            Log.d(TAG, "PlayerConnection fully initialized with player state")
+            Timber.tag(TAG).d("PlayerConnection fully initialized with player state")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize PlayerConnection listener or state", e)
+            Timber.tag(TAG).e(e, "Failed to initialize PlayerConnection listener or state")
             // Propagate the error so MainActivity can retry
             throw e
         }
@@ -203,24 +203,24 @@ class PlayerConnection(
 
     fun playQueue(queue: Queue) {
         if (!playerReadinessFlow.value) {
-            Log.w(TAG, "playQueue called before player ready; delegating to service")
+            Timber.tag(TAG).w("playQueue called before player ready; delegating to service")
         }
         try {
             service.playQueue(queue)
         } catch (e: Exception) {
-            Log.e(TAG, "Error in playQueue", e)
+            Timber.tag(TAG).e(e, "Error in playQueue")
             throw e
         }
     }
 
     fun startRadioSeamlessly() {
         if (!playerReadinessFlow.value) {
-            Log.w(TAG, "startRadioSeamlessly called before player ready; delegating to service")
+            Timber.tag(TAG).w("startRadioSeamlessly called before player ready; delegating to service")
         }
         try {
             service.startRadioSeamlessly()
         } catch (e: Exception) {
-            Log.e(TAG, "Error in startRadioSeamlessly", e)
+            Timber.tag(TAG).e(e, "Error in startRadioSeamlessly")
             throw e
         }
         // Block if Listen Together guest (but allow internal sync)
@@ -246,7 +246,7 @@ class PlayerConnection(
         try {
             service.playNext(items)
         } catch (e: Exception) {
-            Log.e(TAG, "Error in playNext", e)
+            Timber.tag(TAG).e(e, "Error in playNext")
             throw e
         }
         // Block if Listen Together guest (unless internal sync)
@@ -263,7 +263,7 @@ class PlayerConnection(
         try {
             service.addToQueue(items)
         } catch (e: Exception) {
-            Log.e(TAG, "Error in addToQueue", e)
+            Timber.tag(TAG).e(e, "Error in addToQueue")
             throw e
         }
         // Block if Listen Together guest (unless internal sync)
@@ -278,7 +278,7 @@ class PlayerConnection(
         try {
             service.toggleLike()
         } catch (e: Exception) {
-            Log.e(TAG, "Error in toggleLike", e)
+            Timber.tag(TAG).e(e, "Error in toggleLike")
         }
     }
 
@@ -294,7 +294,7 @@ class PlayerConnection(
         try {
             service.toggleLibrary()
         } catch (e: Exception) {
-            Log.e(TAG, "Error in toggleLibrary", e)
+            Timber.tag(TAG).e(e, "Error in toggleLibrary")
         }
     }
 
@@ -314,7 +314,7 @@ class PlayerConnection(
                 player.togglePlayPause()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error in togglePlayPause", e)
+            Timber.tag(TAG).e(e, "Error in togglePlayPause")
         }
     }
     
@@ -333,7 +333,7 @@ class PlayerConnection(
                 player.playWhenReady = true
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error in play", e)
+            Timber.tag(TAG).e(e, "Error in play")
         }
     }
     
@@ -349,7 +349,7 @@ class PlayerConnection(
                 player.playWhenReady = false
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error in pause", e)
+            Timber.tag(TAG).e(e, "Error in pause")
         }
     }
 
@@ -365,7 +365,7 @@ class PlayerConnection(
                 player.seekTo(position)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error in seekTo", e)
+            Timber.tag(TAG).e(e, "Error in seekTo")
         }
     }
 
@@ -381,7 +381,7 @@ class PlayerConnection(
             player.prepare()
             player.playWhenReady = true
         } catch (e: Exception) {
-            Log.e(TAG, "Error in seekToNext", e)
+            Timber.tag(TAG).e(e, "Error in seekToNext")
         }
         player.seekToNext()
         if (player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED) {
@@ -405,7 +405,7 @@ class PlayerConnection(
             player.prepare()
             player.playWhenReady = true
         } catch (e: Exception) {
-            Log.e(TAG, "Error in seekToPrevious", e)
+            Timber.tag(TAG).e(e, "Error in seekToPrevious")
         }
 
         // Logic to mimic standard seekToPrevious behavior but with explicit callbacks

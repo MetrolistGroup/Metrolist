@@ -15,9 +15,9 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
-import android.util.Log
 import android.view.View
 import android.view.WindowManager
+import timber.log.Timber
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
@@ -231,16 +231,16 @@ class MainActivity : ComponentActivity() {
             if (service is MusicBinder) {
                 try {
                     playerConnection = PlayerConnection(this@MainActivity, service, database, lifecycleScope)
-                    Log.d("MainActivity", "PlayerConnection created successfully")
+                    Timber.tag("MainActivity").d("PlayerConnection created successfully")
                 } catch (e: Exception) {
-                    Log.e("MainActivity", "Failed to create PlayerConnection", e)
-                    // Retry after a short delay of 500ms
+                    Timber.tag("MainActivity").e(e, "Failed to create PlayerConnection")
+                    // Retry after a delay of 500ms
                     lifecycleScope.launch {
                         delay(500)
                         try {
                             playerConnection = PlayerConnection(this@MainActivity, service, database, lifecycleScope)
                         } catch (e2: Exception) {
-                            Log.e("MainActivity", "Failed to create PlayerConnection on retry", e2)
+                            Timber.tag("MainActivity").e(e2, "Failed to create PlayerConnection on retry")
                         }
                     }
                 }
