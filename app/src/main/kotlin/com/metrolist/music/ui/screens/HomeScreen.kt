@@ -905,6 +905,9 @@ fun HomeScreen(
                 // Check if section contains songs for Play All functionality
                 val sectionSongs = section.items.filterIsInstance<SongItem>()
                 val hasPlayableSongs = sectionSongs.isNotEmpty()
+                // Check if this section contains ONLY songs (like Quick picks, Trending songs)
+                val isSongsOnlySection = section.items.isNotEmpty() && 
+                    section.items.all { it is SongItem }
 
                 item(key = "home_section_title_$index") {
                     NavigationTitle(
@@ -951,15 +954,86 @@ fun HomeScreen(
                     )
                 }
 
-                item(key = "home_section_list_$index") {
-                    LazyRow(
-                        contentPadding = WindowInsets.systemBars
-                            .only(WindowInsetsSides.Horizontal)
-                            .asPaddingValues(),
-                        modifier = Modifier.animateItem()
-                    ) {
-                        items(section.items) { item ->
-                            ytGridItem(item)
+                if (isSongsOnlySection) {
+                    // Render songs as a horizontal scrollable list (like Quick picks in YouTube Music)
+                    item(key = "home_section_list_$index") {
+                        LazyHorizontalGrid(
+                            state = rememberLazyGridState(),
+                            rows = GridCells.Fixed(4),
+                            contentPadding = WindowInsets.systemBars
+                                .only(WindowInsetsSides.Horizontal)
+                                .asPaddingValues(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(ListItemHeight * 4)
+                                .animateItem()
+                        ) {
+                            items(
+                                items = sectionSongs.distinctBy { it.id },
+                                key = { it.id }
+                            ) { song ->
+                                YouTubeListItem(
+                                    item = song,
+                                    isActive = song.id == mediaMetadata?.id,
+                                    isPlaying = isPlaying,
+                                    isSwipeable = false,
+                                    trailingContent = {
+                                        IconButton(
+                                            onClick = {
+                                                menuState.show {
+                                                    YouTubeSongMenu(
+                                                        song = song,
+                                                        navController = navController,
+                                                        onDismiss = menuState::dismiss
+                                                    )
+                                                }
+                                            }
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.more_vert),
+                                                contentDescription = null
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .width(horizontalLazyGridItemWidth)
+                                        .combinedClickable(
+                                            onClick = {
+                                                if (song.id == mediaMetadata?.id) {
+                                                    playerConnection.togglePlayPause()
+                                                } else {
+                                                    playerConnection.playQueue(
+                                                        YouTubeQueue.radio(song.toMediaMetadata())
+                                                    )
+                                                }
+                                            },
+                                            onLongClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                menuState.show {
+                                                    YouTubeSongMenu(
+                                                        song = song,
+                                                        navController = navController,
+                                                        onDismiss = menuState::dismiss
+                                                    )
+                                                }
+                                            }
+                                        )
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Render mixed content as horizontal grid items (albums, playlists, artists, etc.)
+                    item(key = "home_section_list_$index") {
+                        LazyRow(
+                            contentPadding = WindowInsets.systemBars
+                                .only(WindowInsetsSides.Horizontal)
+                                .asPaddingValues(),
+                            modifier = Modifier.animateItem()
+                        ) {
+                            items(section.items) { item ->
+                                ytGridItem(item)
+                            }
                         }
                     }
                 }
