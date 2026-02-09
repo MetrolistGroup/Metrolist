@@ -661,13 +661,15 @@ fun HomeScreen(
 
                 forgottenFavorites?.takeIf { it.isNotEmpty() }?.let { forgottenFavorites ->
                     item(key = "forgotten_favorites_title") {
+                        val forgottenFavoritesTitle = stringResource(R.string.forgotten_favorites)
+
                         NavigationTitle(
-                            title = stringResource(R.string.forgotten_favorites),
+                            title = forgottenFavoritesTitle,
                             modifier = Modifier.animateItem(),
                             onPlayAllClick = {
                                 playerConnection.playQueue(
                                     ListQueue(
-                                        title = stringResource(R.string.forgotten_favorites),
+                                        title = forgottenFavoritesTitle,
                                         items = forgottenFavorites.map { it.toMediaMetadata().toMediaItem() }
                                     )
                                 )
