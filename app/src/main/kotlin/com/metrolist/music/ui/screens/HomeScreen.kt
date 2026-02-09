@@ -168,6 +168,7 @@ fun HomeScreen(
     val isPlaying by playerConnection.isEffectivelyPlaying.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
 
+    val ytmQuickPicks by viewModel.ytmQuickPicks.collectAsState()
     val forgottenFavorites by viewModel.forgottenFavorites.collectAsState()
     val keepListening by viewModel.keepListening.collectAsState()
     val similarRecommendations by viewModel.similarRecommendations.collectAsState()
@@ -475,6 +476,93 @@ fun HomeScreen(
                                 } else {
                                     ContainedLoadingIndicator()
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // YouTube Music Quick Picks Section (Always at top)
+                ytmQuickPicks?.takeIf { it.isNotEmpty() }?.let { ytmPicks ->
+                    item(key = "ytm_quick_picks_title") {
+                        NavigationTitle(
+                            title = stringResource(R.string.quick_picks),
+                            modifier = Modifier.animateItem(),
+                            onPlayAllClick = {
+                                val songs = ytmPicks.filterIsInstance<SongItem>()
+                                if (songs.isNotEmpty()) {
+                                    playerConnection.playQueue(
+                                        ListQueue(
+                                            title = "Quick Picks",
+                                            items = songs.distinctBy { it.id }.map { it.toMediaItem() }
+                                        )
+                                    )
+                                }
+                            }
+                        )
+                    }
+
+                    item(key = "ytm_quick_picks_list") {
+                        LazyHorizontalGrid(
+                            state = rememberLazyGridState(),
+                            rows = GridCells.Fixed(4),
+                            contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal)
+                                .asPaddingValues(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(ListItemHeight * 4)
+                                .animateItem()
+                        ) {
+                            items(
+                                items = ytmPicks.filterIsInstance<SongItem>().distinctBy { it.id },
+                                key = { it.id }
+                            ) { song ->
+                                YouTubeListItem(
+                                    item = song,
+                                    isActive = song.id == mediaMetadata?.id,
+                                    isPlaying = isPlaying,
+                                    isSwipeable = false,
+                                    trailingContent = {
+                                        IconButton(
+                                            onClick = {
+                                                menuState.show {
+                                                    YouTubeSongMenu(
+                                                        song = song,
+                                                        navController = navController,
+                                                        onDismiss = menuState::dismiss
+                                                    )
+                                                }
+                                            }
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.more_vert),
+                                                contentDescription = null
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .width(horizontalLazyGridItemWidth)
+                                        .combinedClickable(
+                                            onClick = {
+                                                if (song.id == mediaMetadata?.id) {
+                                                    playerConnection.togglePlayPause()
+                                                } else {
+                                                    playerConnection.playQueue(
+                                                        YouTubeQueue.radio(song.toMediaMetadata())
+                                                    )
+                                                }
+                                            },
+                                            onLongClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                menuState.show {
+                                                    YouTubeSongMenu(
+                                                        song = song,
+                                                        navController = navController,
+                                                        onDismiss = menuState::dismiss
+                                                    )
+                                                }
+                                            }
+                                        )
+                                )
                             }
                         }
                     }
