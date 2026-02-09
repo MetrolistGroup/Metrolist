@@ -253,4 +253,25 @@
     <string name="min_playback_duration_title">Minimum afspeelduur</string>
     <string name="crop_album_art_desc">Dwing een vierkante beeldverhouding door videominiaturen bij te snijden</string>
     <string name="enable_simpmusic_desc">Gebruik SimpMusic songtekst provider voor gesynchroniseerde teksten</string>
+    <string name="skip_silence_instant">Stilte direct overslaan</string>
+    <string name="skip_silence_instant_desc">Spoel tijdens stille momenten vooruit in plaats van het afspelen te versnellen</string>
+    <string name="discord_use_details_description">Toon de titel van het nummer duidelijk in plaats van de naam van de artiest</string>
+    <string name="audio_quality_max">Max (bèta)</string>
+    <string name="min_playback_duration_description">De minimale hoeveelheid van een nummer die moet worden afgespeeld voordat het als “afgespeeld” wordt geregistreerd</string>
+    <string name="percentage_format">%d%%</string>
+    <string name="minimum_playback_duration">Minimale afspeelduur</string>
+    <string name="playlist_add_local_to_synced_note">Opmerking: het toevoegen van lokale nummers aan gesynchroniseerde/externe afspeellijsten wordt niet ondersteund. Alle andere combinaties zijn geldig</string>
+    <string name="auto_download_on_like_desc">Download automatisch nummers die je leuk vindt</string>
+    <string name="pause_remote_listen_history">Het delen van luistergeschiedenis met YouTube Music pauzeren</string>
+    <string name="all_time">Altijd</string>
+    <string name="likes">Vind-ik-leuks</string>
+    <string name="dislikes">Niet leuk</string>
+    <string name="pause_music_when_media_is_muted">Muziek pauzeren wanneer media gedempt is</string>
+    <string name="keep_screen_on_when_player_is_expanded">Houd scherm aan als mediaspeler is uitgeklapt</string>
+    <string name="update_channel_desc">Meldingen over nieuwe versies</string>
+    <string name="google_cast">Google Casten</string>
+    <string name="play_next_desc">Voeg toe aan het begin van je wachtrij</string>
+    <string name="add_to_queue_desc">Voeg toe aan het einde van je wachtrij</string>
+    <string name="share_desc">Deel een link naar dit item</string>
+    <string name="delete_desc">Dit item permanent verwijderen</string>
 </resources>
