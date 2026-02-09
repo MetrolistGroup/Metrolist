@@ -391,7 +391,7 @@
     <string name="next">التالي</string>
     <string name="like">اعجاب</string>
     <string name="widget_description">أداة تشغيل الموسيقى مع عناصر تحكم التشغيل</string>
-    <string name="turntable_widget_description">الوصول السريع الى اخر مسيقى تم الاستماع اليها</string>
+    <string name="turntable_widget_description">أداة موسيقى دائرية تحتوي على أزرار التشغيل والإعجاب</string>
     <string name="queue_widget_description">مشغل موسيقى مع معاينة قائمة التشغيل</string>
     <string name="persistent_shuffle_title">التشغيل العشوائي المستمر</string>
     <string name="persistent_shuffle_desc">الإبقاء على التشغيل العشوائي مفعّلًا عند بدء أغانٍي أو قوائم تشغيل جديدة</string>
@@ -514,4 +514,28 @@
     <string name="cd_dark_mode">الوضع الداكن</string>
     <string name="cd_system_mode">وضع النظام</string>
     <string name="cd_palette_item">لوحة ألوان %1$s</string>
+    <string name="not_playing">لا يتم تشغيل أي أغنية</string>
+    <string name="tap_to_play">اضغط لفتح Metrolist</string>
+    <string name="widget_music_player">مشغل موسيقى</string>
+    <string name="widget_turntable">القرص الدوار</string>
+    <string name="listen_together_choose_server">اختر خادمًا</string>
+    <string name="listen_together_custom_server">خادم مخصص</string>
+    <string name="listen_together_use_custom_server">استخدام خادم مخصص</string>
+    <string name="listen_together_auto_approval">الموافقة التلقائية على طلبات الانضمام</string>
+    <string name="listen_together_auto_approval_desc">الموافقة التلقائية على طلبات الانضمام بدلاً من مراجعتها يدويًا</string>
+    <string name="listen_together_sync_volume">مزامنة وحدة تخزين المضيف</string>
+    <string name="listen_together_sync_volume_desc">مستوى صوت الضيوف مطابق لمستوى صوت المضيف</string>
+    <string name="transfer_host">مضيف النقل</string>
+    <string name="copy_code">نسخ الكود</string>
+    <string name="kick_user_desc">إزالة هذا الشخص من الجلسة</string>
+    <string name="permanently_kick_user">حظر دائم</string>
+    <string name="permanently_kick_user_desc">حظر طلبات انضمام هذا الشخص وإخفاء اقتراحاته</string>
+    <string name="transfer_ownership">نقل الملكية</string>
+    <string name="transfer_ownership_desc">اجعل هذا الشخص مضيف الغرفة</string>
+    <string name="manage_user">إدارة المستخدم</string>
+    <string name="listen_together_blocked_users">المستخدمون المحظورون</string>
+    <string name="listen_together_blocked_users_count">تم حظر %d مستخدم (مستخدمين)</string>
+    <string name="listen_together_no_blocked_users">لا يوجد مستخدمون محظورون</string>
+    <string name="unblock">إلغاء الحظر</string>
+    <string name="user_blocked_by_host">تم حظر المستخدم من قبل المضيف</string>
 </resources>
