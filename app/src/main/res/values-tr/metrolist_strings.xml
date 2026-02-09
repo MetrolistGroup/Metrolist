@@ -360,7 +360,7 @@
     <string name="next">Bir sonraki</string>
     <string name="like">Beğen</string>
     <string name="widget_description">Oynatıcı widgetı için arkaplan kontrolcüsü</string>
-    <string name="turntable_widget_description">Son zamanlarda en çok dinlediğin parçalar için hızlı erişim</string>
+    <string name="turntable_widget_description">Oynatılan ve beğenilen şarkılar için dairesel müzik widget\'ı</string>
     <string name="queue_widget_description">Sıra önizlemeli oynatıcı</string>
     <string name="lyrics_offset">Şarkı sözünün gecikme süresi</string>
     <string name="skip_silence_desc">Şarkıların sessiz kısımlarını hızlıca atla</string>
@@ -514,4 +514,8 @@
     <string name="user_blocked_by_host">Kullanıcı sunucu sahibi tarafından engellendi</string>
     <string name="transfer_ownership">Sahipliği Aktar</string>
     <string name="transfer_host">Sunucuyu devret</string>
+    <string name="not_playing">Herhangi bir şarkı oynatılmıyor</string>
+    <string name="tap_to_play">Metrolist\'i açmak için tıkla</string>
+    <string name="widget_music_player">Müzik oynatıcı</string>
+    <string name="widget_turntable">Dönen plak</string>
 </resources>
