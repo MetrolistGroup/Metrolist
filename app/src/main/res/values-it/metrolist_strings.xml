@@ -363,7 +363,7 @@
     <string name="next">Prossimo</string>
     <string name="like">Mi piace</string>
     <string name="widget_description">Widget lettore musicale con controlli della riproduzione</string>
-    <string name="turntable_widget_description">Accesso rapido i tuoi brani ascoltati più recentemente</string>
+    <string name="turntable_widget_description">Widget musicale circolare con controlli di riproduzione e mi piace</string>
     <string name="queue_widget_description">Lettore musicale con anteprima della coda</string>
     <string name="remember_shuffle_and_repeat">Ricorda le opzioni di ripetizione e di riproduzione casuale</string>
     <string name="remember_shuffle_and_repeat_desc">Ricorda le modalità di ripetizione e di riproduzione casuale quando l\'app viene riavviata</string>
@@ -519,4 +519,8 @@
     <string name="unblock">Sbloccare</string>
     <string name="user_blocked_by_host">Utente bloccato dall\'host</string>
     <string name="cd_system_mode">Modalità di sistema</string>
+    <string name="not_playing">Nessun brano in riproduzione</string>
+    <string name="tap_to_play">Premi per aprire Metrolist</string>
+    <string name="widget_music_player">Riproduttore Musicale</string>
+    <string name="widget_turntable">Piatto girevole</string>
 </resources>
