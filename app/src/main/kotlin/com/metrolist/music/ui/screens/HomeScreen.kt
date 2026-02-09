@@ -591,7 +591,7 @@ fun HomeScreen(
                                 playerConnection.playQueue(
                                     ListQueue(
                                         title = "Quick Picks",
-                                        items = quickPicks.map { it.toMediaMetadata().toMediaItem() }
+                                        items = quickPicks.distinctBy { it.id }.map { it.toMediaItem() }
                                     )
                                 )
                             }
@@ -768,7 +768,7 @@ fun HomeScreen(
                                 playerConnection.playQueue(
                                     ListQueue(
                                         title = forgottenFavoritesTitle,
-                                        items = forgottenFavorites.map { it.toMediaMetadata().toMediaItem() }
+                                        items = forgottenFavorites.distinctBy { it.id }.map { it.toMediaItem() }
                                     )
                                 )
                             }
