@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
     <!-- Allow cleartext traffic for Listen Together local servers -->
-    <!-- For production, use wss:// (secure WebSocket) instead -->
+    <!-- We're already using WSS for the prod server -->
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />

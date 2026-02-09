@@ -328,20 +328,25 @@ fun AccountSettings(
             Spacer(Modifier.height(4.dp))
 
             if (latestVersionName != BuildConfig.VERSION_NAME) {
-                PreferenceEntry(
-                    title = {
-                        Text(text = stringResource(R.string.new_version_available))
-                    },
-                    description = latestVersionName,
-                    icon = {
-                        BadgedBox(badge = { Badge() }) {
-                            Icon(painterResource(R.drawable.update), null)
+                val releaseInfo = Updater.getCachedLatestRelease()
+                val downloadUrl = releaseInfo?.let { Updater.getDownloadUrlForCurrentVariant(it) }
+                
+                if (downloadUrl != null) {
+                    PreferenceEntry(
+                        title = {
+                            Text(text = stringResource(R.string.new_version_available))
+                        },
+                        description = latestVersionName,
+                        icon = {
+                            BadgedBox(badge = { Badge() }) {
+                                Icon(painterResource(R.drawable.update), null)
+                            }
+                        },
+                        onClick = {
+                            uriHandler.openUri(downloadUrl)
                         }
-                    },
-                    onClick = {
-                        uriHandler.openUri(Updater.getLatestDownloadUrl())
-                    }
-                )
+                    )
+                }
             }
         }
     }

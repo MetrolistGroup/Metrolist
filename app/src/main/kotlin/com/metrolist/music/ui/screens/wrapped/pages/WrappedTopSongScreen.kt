@@ -102,7 +102,7 @@ fun WrappedTopSongScreen(topSong: SongWithStats?, isVisible: Boolean) {
                 contentDescription = stringResource(id = R.string.wrapped_top_song_album_art_content_description),
                     modifier = Modifier
                         .size(200.dp)
-                        .clip(RoundedCornerShape(16.dp)),
+                        .clip(RoundedCornerShape(3.dp)),
                     contentScale = ContentScale.Crop
                 )
             }

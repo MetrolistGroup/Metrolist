@@ -257,11 +257,11 @@ fun Queue(
                     val iconSize = 24.dp
                     val queueShape = RoundedCornerShape(
                         topStart = 50.dp, bottomStart = 50.dp,
-                        topEnd = 5.dp, bottomEnd = 5.dp
+                        topEnd = 3.dp, bottomEnd = 3.dp
                     )
-                    val middleShape = RoundedCornerShape(5.dp)
+                    val middleShape = RoundedCornerShape(3.dp)
                     val repeatShape = RoundedCornerShape(
-                        topStart = 5.dp, bottomStart = 5.dp,
+                        topStart = 3.dp, bottomStart = 3.dp,
                         topEnd = 50.dp, bottomEnd = 50.dp
                     )
 
@@ -397,8 +397,7 @@ fun Queue(
                         ),
                 ) {
                     TextButton(
-                        onClick = { if (!isListenTogetherGuest) state.expandSoft() },
-                        enabled = !isListenTogetherGuest,
+                            onClick = { state.expandSoft() },
                         modifier = Modifier.weight(1f)
                     ) {
                         Row(

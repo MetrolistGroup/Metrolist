@@ -1,0 +1,17 @@
+name: Setup and Generate Protobuf
+description: Install protoc and generate protobuf files
+
+runs:
+  using: composite
+  steps:
+    - name: Install protoc
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y protobuf-compiler
+      shell: bash
+
+    - name: Generate protobuf files
+      run: |
+        cd app
+        bash generate_proto.sh
+      shell: bash

@@ -134,6 +134,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 
+import com.metrolist.innertube.YouTube
+import com.metrolist.music.ui.utils.isScrollingUp
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ArtistScreen(
@@ -810,8 +815,12 @@ fun ArtistScreen(
             }
         }
 
+        val isScrollingUp = lazyListState.isScrollingUp()
+        val showLocalFab = librarySongs.isNotEmpty() && libraryArtist?.artist?.isLocal != true
+        
+        // Library/Local Toggle FAB
         HideOnScrollFAB(
-            visible = librarySongs.isNotEmpty() && libraryArtist?.artist?.isLocal != true,
+            visible = showLocalFab,
             lazyListState = lazyListState,
             icon = if (showLocal) R.drawable.language else R.drawable.library_music,
             onClick = {
@@ -819,6 +828,125 @@ fun ArtistScreen(
                 if (!showLocal && artistPage == null) viewModel.fetchArtistsFromYTM()
             }
         )
+        
+        // Play All FAB (Stacked above Library/Local FAB if visible)
+        val canPlayAll = !isGuest && (
+            (showLocal && librarySongs.isNotEmpty()) || 
+            (!showLocal && artistPage?.sections?.any { 
+                (it.items.firstOrNull() as? SongItem)?.album != null 
+            } == true)
+        )
+
+        if (canPlayAll) {
+             androidx.compose.animation.AnimatedVisibility(
+                visible = isScrollingUp,
+                enter = androidx.compose.animation.slideInVertically { it * 2 },
+                exit = androidx.compose.animation.slideOutVertically { it * 2 },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .windowInsetsPadding(
+                        LocalPlayerAwareWindowInsets.current
+                            .only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal),
+                    )
+                    // Add padding to position it above the other FAB (56dp height + 16dp padding + 8dp spacing)
+                    // If the other FAB is visible.
+                    .padding(bottom = if (showLocalFab) 64.dp else 0.dp)
+            ) {
+                val onPlayAllClick: () -> Unit = {
+                     if (showLocal) {
+                         if (librarySongs.isNotEmpty()) {
+                            playerConnection.playQueue(
+                                ListQueue(
+                                    title = libraryArtist?.artist?.name ?: "Unknown Artist",
+                                    items = librarySongs.map { it.toMediaItem() }
+                                )
+                            )
+                        }
+                    } else if (artistPage != null) {
+                        val songSection = artistPage.sections.find { section ->
+                            (section.items.firstOrNull() as? SongItem)?.album != null
+                        }
+                        
+                        val moreEndpoint = songSection?.moreEndpoint
+                        if (moreEndpoint != null) {
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                val result = YouTube.artistItems(moreEndpoint).getOrNull()
+                                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    if (result != null && result.items.isNotEmpty()) {
+                                        val songs = result.items.filterIsInstance<SongItem>().map { it.toMediaItem() }
+                                        playerConnection.playQueue(
+                                            ListQueue(
+                                                title = artistPage.artist.title,
+                                                items = songs
+                                            )
+                                        )
+                                    } else {
+                                        // Fallback to loaded items
+                                        val songs = songSection.items.filterIsInstance<SongItem>().map { it.toMediaItem() }
+                                        if (songs.isNotEmpty()) {
+                                            playerConnection.playQueue(
+                                                ListQueue(
+                                                    title = artistPage.artist.title,
+                                                    items = songs
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            } else if (songSection != null) {
+                            // Use loaded items if no more endpoint
+                            val songs = songSection.items.filterIsInstance<SongItem>().map { it.toMediaItem() }
+                            playerConnection.playQueue(
+                                ListQueue(
+                                    title = artistPage.artist.title,
+                                    items = songs
+                                )
+                            )
+                        } else {
+                            // Fallback to shuffle endpoint (stripped) if no song section found
+                            val shuffleEndpoint = artistPage.artist.shuffleEndpoint
+                            if (shuffleEndpoint != null) {
+                                val endpoint = if (shuffleEndpoint.playlistId != null) {
+                                    WatchEndpoint(
+                                        playlistId = shuffleEndpoint.playlistId,
+                                        params = null, // Remove shuffle params to play in order
+                                        videoId = null // Ensure videoId is null to start from beginning of playlist
+                                    )
+                                } else {
+                                    shuffleEndpoint
+                                }
+                                playerConnection.playQueue(YouTubeQueue(endpoint))
+                            }
+                        }
+                    }
+                }
+
+                if (showLocalFab) {
+                     androidx.compose.material3.SmallFloatingActionButton(
+                        modifier = Modifier.padding(16.dp).offset(x = (-4).dp), // Align center with standard FAB (56dp vs 48dp)
+                        onClick = onPlayAllClick
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.play),
+                            contentDescription = "Play All",
+                        )
+                    }
+                } else {
+                    androidx.compose.material3.FloatingActionButton(
+                        modifier = Modifier.padding(16.dp),
+                        onClick = onPlayAllClick
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.play),
+                            contentDescription = "Play All",
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+            }
+        }
+
 
         SnackbarHost(
             hostState = snackbarHostState,

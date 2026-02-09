@@ -62,6 +62,18 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
+            <!-- Listen Together invite link -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:host="metrolist.meowery.eu" />
+                <data android:pathPrefix="/listen" />
+            </intent-filter>
+
             <!-- Youtube filter -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
@@ -172,7 +184,6 @@
 
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
-            android:screenOrientation="fullSensor"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
@@ -218,9 +229,12 @@
         <receiver
             android:name=".widget.MusicWidgetReceiver"
             android:exported="true"
-            android:label="@string/app_name">
+            android:label="@string/widget_music_player">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.metrolist.music.widget.PLAY_PAUSE" />
+                <action android:name="com.metrolist.music.widget.LIKE" />
+                <action android:name="com.metrolist.music.widget.UPDATE_WIDGET" />
             </intent-filter>
 
             <meta-data
@@ -228,13 +242,16 @@
                 android:resource="@xml/music_widget_info" />
         </receiver>
 
-        <!-- Turntable Widget (2x2) -->
+        <!-- Turntable Widget -->
         <receiver
             android:name=".widget.TurntableWidgetReceiver"
             android:exported="true"
-            android:label="Turntable">
+            android:label="@string/widget_turntable">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.metrolist.music.widget.TURNTABLE_PLAY_PAUSE" />
+                <action android:name="com.metrolist.music.widget.TURNTABLE_LIKE" />
+                <action android:name="com.metrolist.music.widget.UPDATE_TURNTABLE_WIDGET" />
             </intent-filter>
 
             <meta-data

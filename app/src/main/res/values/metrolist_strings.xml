@@ -444,9 +444,13 @@
     <string name="play_pause">Play/Pause</string>
     <string name="next">Next</string>
     <string name="like">Like</string>
+    <string name="not_playing">No song playing</string>
+    <string name="tap_to_play">Tap to open Metrolist</string>
     <string name="widget_description">Music player widget with playback controls</string>
-    <string name="turntable_widget_description">Quick access to your most recently played track</string>
     <string name="queue_widget_description">Music player with queue preview</string>
+    <string name="turntable_widget_description">Circular music widget with play and like controls</string>
+    <string name="widget_music_player">Music Player</string>
+    <string name="widget_turntable">Turntable</string>
 
     <!-- Player Client Settings -->
     <string name="player_client">Player client</string>
@@ -466,6 +470,9 @@
     <string name="listen_together">Listen Together</string>
     <string name="listen_together_desc">Listen to music with friends in real-time</string>
     <string name="listen_together_server_url">Server URL</string>
+    <string name="listen_together_choose_server">Choose server</string>
+    <string name="listen_together_custom_server">Custom server</string>
+    <string name="listen_together_use_custom_server">Use custom server</string>
     <string name="listen_together_username">Username</string>
     <string name="listen_together_connected">Connected</string>
     <string name="listen_together_reconnecting">Reconnecting…</string>
@@ -487,6 +494,10 @@
     <string name="listen_together_view_logs_desc">Debug connection and messages</string>
     <string name="listen_together_logs">Connection logs</string>
     <string name="listen_together_no_logs">No logs yet</string>
+    <string name="listen_together_auto_approval">Auto-approve join requests</string>
+    <string name="listen_together_auto_approval_desc">Automatically approve join requests instead of reviewing them manually</string>
+    <string name="listen_together_sync_volume">Sync host volume</string>
+    <string name="listen_together_sync_volume_desc">Guests follow the host volume level</string>
     <string name="listen_together_description">Listen to music with your friends in real-time. Create a room to be the host or join an existing room with a code.</string>
     <string name="listen_together_background_disconnect_note">Note: You may get disconnected if you create a room while no music is playing and then switch to another app.</string>
     <string name="listen_together_not_configured">Listen Together is not configured. Please set up the server URL in Settings → Integrations → Listen Together.</string>
@@ -524,12 +535,25 @@
     <string name="pending_suggestions">Pending suggestions</string>
     <string name="suggest_to_host">Suggest to host</string>
     <string name="kick_user">Kick</string>
+    <string name="transfer_host">Transfer host</string>
     <string name="host_label">Host</string>
     <string name="you_label">You</string>
     <string name="connected_users">Connected users</string>
     <string name="enter_username">Enter username</string>
     <string name="error_username_empty">Username is required.</string>
     <string name="resync">Resync</string>
+    <string name="copy_code">Copy code</string>
+    <string name="kick_user_desc">Remove this person from the session</string>
+    <string name="permanently_kick_user">Permanently Block</string>
+    <string name="permanently_kick_user_desc">Block this person\'s join requests and hide their suggestions</string>
+    <string name="transfer_ownership">Transfer Ownership</string>
+    <string name="transfer_ownership_desc">Make this person the host of the room</string>
+    <string name="manage_user">Manage User</string>
+    <string name="listen_together_blocked_users">Blocked Users</string>
+    <string name="listen_together_blocked_users_count">%d user(s) blocked</string>
+    <string name="listen_together_no_blocked_users">No blocked users</string>
+    <string name="unblock">Unblock</string>
+    <string name="user_blocked_by_host">User blocked by host</string>
 
     <!-- AI Lyrics Translation -->
     <string name="ai_lyrics_translation">AI Lyrics Translation</string>
@@ -600,4 +624,5 @@
     <string name="cd_dark_mode">Dark mode</string>
     <string name="cd_system_mode">System mode</string>
     <string name="cd_palette_item">%1$s palette</string>
+    <string name="play_all">Play all</string>
 </resources>

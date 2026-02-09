@@ -178,7 +178,7 @@ fun WrappedIntro(onNext: () -> Unit) {
                 visible = visible,
                 enter = fadeIn(animationSpec = tween(FADE_IN_DURATION, delayMillis = TITLE_DELAY)) + slideInVertically(animationSpec = tween(SLIDE_IN_DURATION, delayMillis = TITLE_DELAY))
             ) {
-                BoxWithConstraints {
+                Box {
                     val baseStyle = TextStyle(
                         fontFamily = bbhBartle,
                         textAlign = TextAlign.Center,

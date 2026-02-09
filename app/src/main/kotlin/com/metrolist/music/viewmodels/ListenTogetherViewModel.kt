@@ -29,6 +29,7 @@ class ListenTogetherViewModel @Inject constructor(
     val logs = manager.logs
     val events = manager.events
     val hasPersistedSession = manager.hasPersistedSession
+    val blockedUsernames = manager.blockedUsernames
 
     init {
         manager.initialize()
@@ -66,14 +67,18 @@ class ListenTogetherViewModel @Inject constructor(
         manager.kickUser(userId, reason)
     }
 
+    fun blockUser(username: String) {
+        manager.blockUser(username)
+    }
+
+    fun unblockUser(username: String) {
+        manager.unblockUser(username)
+    }
+
     fun clearLogs() {
         manager.clearLogs()
     }
 
-    fun sendChat(message: String) {
-        manager.sendChat(message)
-    }
-    
     fun forceReconnect() {
         manager.forceReconnect()
     }

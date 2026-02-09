@@ -22,11 +22,11 @@ object MessageTypes {
     const val PLAYBACK_ACTION = "playback_action"
     const val BUFFER_READY = "buffer_ready"
     const val KICK_USER = "kick_user"
+    const val TRANSFER_HOST = "transfer_host"
     const val PING = "ping"
     const val CHAT = "chat"
     const val REQUEST_SYNC = "request_sync"
     const val RECONNECT = "reconnect"
-    // Suggestions (Client -> Server)
     const val SUGGEST_TRACK = "suggest_track"
     const val APPROVE_SUGGESTION = "approve_suggestion"
     const val REJECT_SUGGESTION = "reject_suggestion"
@@ -43,15 +43,12 @@ object MessageTypes {
     const val BUFFER_COMPLETE = "buffer_complete"
     const val ERROR = "error"
     const val PONG = "pong"
-    const val ROOM_STATE = "room_state"
-    const val CHAT_MESSAGE = "chat_message"
     const val HOST_CHANGED = "host_changed"
     const val KICKED = "kicked"
     const val SYNC_STATE = "sync_state"
     const val RECONNECTED = "reconnected"
     const val USER_RECONNECTED = "user_reconnected"
     const val USER_DISCONNECTED = "user_disconnected"
-    // Suggestions (Server -> Client)
     const val SUGGESTION_RECEIVED = "suggestion_received"
     const val SUGGESTION_APPROVED = "suggestion_approved"
     const val SUGGESTION_REJECTED = "suggestion_rejected"
@@ -71,6 +68,7 @@ object PlaybackActions {
     const val QUEUE_REMOVE = "queue_remove"
     const val QUEUE_CLEAR = "queue_clear"
     const val SYNC_QUEUE = "sync_queue"
+    const val SET_VOLUME = "set_volume"
 }
 
 /**
@@ -119,6 +117,7 @@ data class RoomState(
     @SerialName("is_playing") val isPlaying: Boolean,
     val position: Long, // milliseconds
     @SerialName("last_update") val lastUpdate: Long, // unix timestamp ms
+    val volume: Float = 1f,
     val queue: List<TrackInfo> = emptyList()
 )
 
@@ -154,7 +153,9 @@ data class PlaybackActionPayload(
     @SerialName("track_info") val trackInfo: TrackInfo? = null,
     @SerialName("insert_next") val insertNext: Boolean? = null,
     val queue: List<TrackInfo>? = null,
-    @SerialName("queue_title") val queueTitle: String? = null
+    @SerialName("queue_title") val queueTitle: String? = null,
+    val volume: Float? = null,
+    @SerialName("server_time") val serverTime: Long? = null
 )
 
 @Serializable
@@ -166,6 +167,11 @@ data class BufferReadyPayload(
 data class KickUserPayload(
     @SerialName("user_id") val userId: String,
     val reason: String? = null
+)
+
+@Serializable
+data class TransferHostPayload(
+    @SerialName("new_host_id") val newHostId: String
 )
 
 @Serializable
@@ -296,7 +302,8 @@ data class SyncStatePayload(
     @SerialName("is_playing") val isPlaying: Boolean,
     val position: Long,
     @SerialName("last_update") val lastUpdate: Long,
-    val queue: List<TrackInfo>? = null
+    val queue: List<TrackInfo>? = null,
+    val volume: Float? = null
 )
 
 // Reconnection payloads

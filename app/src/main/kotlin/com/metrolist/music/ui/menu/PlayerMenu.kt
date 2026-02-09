@@ -132,7 +132,7 @@ fun PlayerMenu(
         }
     }
     val isCasting by castHandler?.isCasting?.collectAsState() ?: remember { mutableStateOf(false) }
-    val castVolume by castHandler?.castVolume?.collectAsState() ?: remember { mutableStateOf(1f) }
+    val castVolume by castHandler?.castVolume?.collectAsState() ?: remember { mutableFloatStateOf(1f) }
     val castDeviceName by castHandler?.castDeviceName?.collectAsState() ?: remember { mutableStateOf<String?>(null) }
     
     val librarySong by database.song(mediaMetadata.id).collectAsState(initial = null)
@@ -840,11 +840,200 @@ fun ListenTogetherDialog(
     var isCreatingRoom by rememberSaveable { mutableStateOf(false) }
     var isJoiningRoom by rememberSaveable { mutableStateOf(false) }
     var joinErrorMessage by rememberSaveable { mutableStateOf<String?>(null) }
-
+    
+    // User action menu state
+    var selectedUserForMenu by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedUsername by rememberSaveable { mutableStateOf<String?>(null) }
+    
     // Localized helper strings
     val waitingForApprovalText = stringResource(R.string.waiting_for_approval)
     val invalidRoomCodeText = stringResource(R.string.invalid_room_code)
     val joinRequestDeniedText = stringResource(R.string.join_request_denied)
+
+    // User action menu dialog
+    if (selectedUserForMenu != null && selectedUsername != null) {
+        ListDialog(
+            onDismiss = {
+                selectedUserForMenu = null
+                selectedUsername = null
+            }
+        ) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.group),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(40.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            text = stringResource(R.string.manage_user),
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = selectedUsername ?: "",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            
+            item { Spacer(modifier = Modifier.height(12.dp)) }
+            
+            // Kick button
+            item {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                        .clickable {
+                            selectedUserForMenu?.let {
+                                listenTogetherManager.kickUser(it, "Removed by host")
+                            }
+                            selectedUserForMenu = null
+                            selectedUsername = null
+                        },
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.errorContainer
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.close),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.kick_user),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                text = stringResource(R.string.kick_user_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+            
+            item { Spacer(modifier = Modifier.height(8.dp)) }
+            
+            // Permanently kick button
+            item {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                        .clickable {
+                            selectedUserForMenu?.let { userId ->
+                                selectedUsername?.let { username ->
+                                    listenTogetherManager.blockUser(username)
+                                    listenTogetherManager.kickUser(userId, R.string.user_blocked_by_host.toString())
+                                }
+                            }
+                            selectedUserForMenu = null
+                            selectedUsername = null
+                        },
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.close),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.permanently_kick_user),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = stringResource(R.string.permanently_kick_user_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+            
+            item { Spacer(modifier = Modifier.height(8.dp)) }
+            
+            // Transfer ownership button
+            item {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                        .clickable {
+                            selectedUserForMenu?.let {
+                                listenTogetherManager.transferHost(it)
+                            }
+                            selectedUserForMenu = null
+                            selectedUsername = null
+                        },
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.crown),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.transfer_ownership),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = stringResource(R.string.transfer_ownership_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+            
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+        }
+        return
+    }
 
     // Sync usernameInput when savedUsername changes
     LaunchedEffect(savedUsername) {
@@ -875,6 +1064,10 @@ fun ListenTogetherDialog(
 
                 is ListenTogetherEvent.RoomCreated -> {
                     isCreatingRoom = false
+                    val clipboard =
+                        context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    val clip = android.content.ClipData.newPlainText("ListenTogetherRoom", event.roomCode)
+                    clipboard.setPrimaryClip(clip)
                 }
 
                 else -> { /* ignore other events here */ }
@@ -1064,21 +1257,51 @@ fun ListenTogetherDialog(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 6.sp
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                IconButton(
-                                    onClick = {
-                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                        val clip = android.content.ClipData.newPlainText("Room Code", room.roomCode)
-                                        clipboard.setPrimaryClip(clip)
-                                        Toast.makeText(context, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
-                                    }
+                            }
+                            if (isHost) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                val inviteLink = remember(room.roomCode) {
+                                    "https://metrolist.meowery.eu/listen?code=${room.roomCode}"
+                                }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
                                 ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.content_copy),
-                                        contentDescription = stringResource(R.string.copy),
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                                    FilledTonalButton(
+                                        onClick = {
+                                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                            val clip = android.content.ClipData.newPlainText("Listen Together Link", inviteLink)
+                                            clipboard.setPrimaryClip(clip)
+                                            Toast.makeText(context, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
+                                        }
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.link),
+                                            contentDescription = stringResource(R.string.copy_link),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(stringResource(R.string.copy_link))
+                                    }
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    FilledTonalButton(
+                                        onClick = {
+                                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                            val clip = android.content.ClipData.newPlainText("Room Code", room.roomCode)
+                                            clipboard.setPrimaryClip(clip)
+                                            Toast.makeText(context, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
+                                        }
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.content_copy),
+                                            contentDescription = stringResource(R.string.copy_code),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(stringResource(R.string.copy_code))
+                                    }
                                 }
                             }
                         }
@@ -1113,7 +1336,15 @@ fun ListenTogetherDialog(
                                 // User avatar card
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.width(72.dp)
+                                    modifier = Modifier
+                                        .width(72.dp)
+                                        .clickable(
+                                            enabled = isHost && user.userId != userId,
+                                            onClick = {
+                                                selectedUserForMenu = user.userId
+                                                selectedUsername = user.username
+                                            }
+                                        )
                                 ) {
                                     // Circular avatar
                                     Box(
@@ -1169,33 +1400,6 @@ fun ListenTogetherDialog(
                                                         ),
                                                         contentDescription = null,
                                                         tint = MaterialTheme.colorScheme.onPrimary,
-                                                        modifier = Modifier.size(12.dp)
-                                                    )
-                                                }
-                                            }
-                                        }
-                                        
-                                        // Kick button for host
-                                        if (isHost && user.userId != userId) {
-                                            Surface(
-                                                modifier = Modifier
-                                                    .align(Alignment.TopEnd)
-                                                    .offset(x = 4.dp, y = (-4).dp)
-                                                    .size(20.dp)
-                                                    .clickable {
-                                                        listenTogetherManager.kickUser(user.userId, "Removed by host")
-                                                    },
-                                                shape = RoundedCornerShape(50),
-                                                color = MaterialTheme.colorScheme.error
-                                            ) {
-                                                Box(
-                                                    contentAlignment = Alignment.Center,
-                                                    modifier = Modifier.fillMaxSize()
-                                                ) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.close),
-                                                        contentDescription = stringResource(R.string.kick_user),
-                                                        tint = MaterialTheme.colorScheme.onError,
                                                         modifier = Modifier.size(12.dp)
                                                     )
                                                 }

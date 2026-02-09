@@ -108,6 +108,7 @@ object AppModule {
     @Singleton
     @Provides
     fun provideListenTogetherManager(
+        @ApplicationContext context: Context,
         client: ListenTogetherClient,
-    ): ListenTogetherManager = ListenTogetherManager(client)
+    ): ListenTogetherManager = ListenTogetherManager(client, context)
 }

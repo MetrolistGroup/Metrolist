@@ -11,6 +11,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
@@ -23,6 +25,9 @@ jobs:
         with:
           cache-read-only: true
           cache-cleanup: on-success
+
+      - name: Setup and Generate Protobuf
+        uses: ./.github/actions/setup-protobuf
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew

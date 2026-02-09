@@ -103,6 +103,7 @@ import com.metrolist.music.ui.component.NavigationTitle
 import com.metrolist.music.ui.component.SongListItem
 import com.metrolist.music.ui.component.YouTubeGridItem
 import androidx.compose.material3.Checkbox
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.util.fastForEachReversed
@@ -176,7 +177,7 @@ fun AlbumScreen(
 
     val downloadUtil = LocalDownloadUtil.current
     var downloadState by remember {
-        mutableStateOf(Download.STATE_STOPPED)
+        mutableIntStateOf(Download.STATE_STOPPED)
     }
 
     LaunchedEffect(albumWithSongs) {
@@ -217,10 +218,10 @@ fun AlbumScreen(
                             .size(240.dp)
                             .shadow(
                                 elevation = 24.dp,
-                                shape = RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(3.dp),
                                 spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
                             ),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(3.dp)
                     ) {
                         AsyncImage(
                             model = albumWithSongs.album.thumbnailUrl,

@@ -687,8 +687,8 @@ private fun LegacyMiniPlayer(
             )
 
             IconButton(
-                enabled = canSkipNext,
-                onClick = playerConnection::seekToNext,
+                    enabled = canSkipNext && !isListenTogetherGuest,
+                    onClick = if (isListenTogetherGuest) ({}) else ({ playerConnection.seekToNext() }),
             ) {
                 Icon(painter = painterResource(R.drawable.skip_next), contentDescription = null)
             }

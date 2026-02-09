@@ -101,3 +101,4 @@ core.*
 *.so
 *.bin
 .env
+app/src/main/java/com/metrolist/music/listentogether/proto/*

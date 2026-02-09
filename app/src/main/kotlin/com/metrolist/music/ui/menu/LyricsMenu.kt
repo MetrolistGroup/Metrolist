@@ -234,7 +234,7 @@ fun LyricsMenu(
         val isLoading by viewModel.isLoading.collectAsState()
 
         var expandedItemIndex by rememberSaveable {
-            mutableStateOf(-1)
+            mutableIntStateOf(-1)
         }
 
         ListDialog(

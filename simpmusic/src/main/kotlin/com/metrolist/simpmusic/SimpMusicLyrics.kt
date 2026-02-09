@@ -73,12 +73,25 @@ object SimpMusicLyrics {
             throw IllegalStateException("Lyrics unavailable")
         }
 
-        val bestMatch = if (duration > 0 && tracks.size > 1) {
-            tracks.minByOrNull { track ->
+        // Filter tracks that match duration within tolerance (10 seconds)
+        val validTracks = if (duration > 0) {
+            tracks.filter { track ->
+                abs((track.duration ?: 0) - duration) <= 10
+            }
+        } else {
+            tracks
+        }
+
+        if (validTracks.isEmpty()) {
+            throw IllegalStateException("Lyrics unavailable")
+        }
+
+        val bestMatch = if (duration > 0 && validTracks.size > 1) {
+            validTracks.minByOrNull { track ->
                 abs((track.duration ?: 0) - duration)
             }
         } else {
-            tracks.firstOrNull()
+            validTracks.firstOrNull()
         }
 
         // Prioritize richSyncLyrics for word-by-word sync, then syncedLyrics, then plainLyrics

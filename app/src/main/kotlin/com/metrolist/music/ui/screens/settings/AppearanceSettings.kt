@@ -104,7 +104,7 @@ import com.metrolist.music.utils.IconUtils
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.ui.component.WavySlider
-import me.saket.squiggles.SquigglySlider
+import com.metrolist.music.ui.component.SquigglySlider
 import kotlin.math.roundToInt
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.rememberCoroutineScope
@@ -759,19 +759,10 @@ fun AppearanceSettings(
                             value = sliderValue,
                             valueRange = 0f..1f,
                             onValueChange = { /* preview only */ },
-                            modifier = Modifier
-                                .weight(1f)
-                                .pointerInput(Unit) {
-                                    awaitPointerEventScope {
-                                        while (true) {
-                                            awaitPointerEvent()
-                                        }
-                                    }
-                                },
-                            squigglesSpec = SquigglySlider.SquigglesSpec(
-                                amplitude = 2.dp,
-                                strokeWidth = 3.dp,
-                            ),
+                            modifier = Modifier.weight(1f),
+                            enabled = false,
+                            colors = sliderPreviewColors,
+                            isPlaying = true,
                         )
                         Text(
                             text = stringResource(R.string.squiggly),

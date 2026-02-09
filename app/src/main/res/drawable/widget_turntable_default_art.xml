@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Default circular art for turntable widget preview -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Circular gradient background -->
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:angle="135"
+                android:startColor="#283A4D"
+                android:centerColor="#405571"
+                android:endColor="#6B8099"
+                android:type="linear" />
+        </shape>
+    </item>
+    <!-- Centered app icon -->
+    <item
+        android:drawable="@drawable/ic_launcher_foreground"
+        android:gravity="center" />
+</layer-list>

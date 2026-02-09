@@ -112,6 +112,7 @@ import com.metrolist.music.db.entities.Artist
 import com.metrolist.music.db.entities.LocalItem
 import com.metrolist.music.db.entities.Playlist
 import com.metrolist.music.db.entities.Song
+import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.playback.queues.LocalAlbumRadio
@@ -494,9 +495,18 @@ fun HomeScreen(
                 }
                 quickPicks?.takeIf { it.isNotEmpty() }?.let { quickPicks ->
                     item(key = "quick_picks_title") {
+                        val quickPicksTitle = stringResource(R.string.quick_picks)
                         NavigationTitle(
-                            title = stringResource(R.string.quick_picks),
-                            modifier = Modifier.animateItem()
+                            title = quickPicksTitle,
+                            modifier = Modifier.animateItem(),
+                            onPlayAllClick = {
+                                playerConnection.playQueue(
+                                    ListQueue(
+                                        title = quickPicksTitle,
+                                        items = quickPicks.distinctBy { it.id }.map { it.toMediaItem() }
+                                    )
+                                )
+                            }
                         )
                     }
 
@@ -661,9 +671,18 @@ fun HomeScreen(
 
                 forgottenFavorites?.takeIf { it.isNotEmpty() }?.let { forgottenFavorites ->
                     item(key = "forgotten_favorites_title") {
+                        val forgottenFavoritesTitle = stringResource(R.string.forgotten_favorites)
                         NavigationTitle(
-                            title = stringResource(R.string.forgotten_favorites),
-                            modifier = Modifier.animateItem()
+                            title = forgottenFavoritesTitle,
+                            modifier = Modifier.animateItem(),
+                            onPlayAllClick = {
+                                playerConnection.playQueue(
+                                    ListQueue(
+                                        title = forgottenFavoritesTitle,
+                                        items = forgottenFavorites.distinctBy { it.id }.map { it.toMediaItem() }
+                                    )
+                                )
+                            }
                         )
                     }
 
@@ -794,6 +813,13 @@ fun HomeScreen(
             }
 
             homePage?.sections?.forEachIndexed { index, section ->
+                // Check if section contains songs for Play All functionality
+                val sectionSongs = section.items.filterIsInstance<SongItem>()
+                val hasPlayableSongs = sectionSongs.isNotEmpty()
+                // Check if this section contains ONLY songs (like Quick picks, Trending songs)
+                val isSongsOnlySection = section.items.isNotEmpty() && 
+                    section.items.all { it is SongItem }
+
                 item(key = "home_section_title_$index") {
                     NavigationTitle(
                         title = section.title,
@@ -825,19 +851,100 @@ fun HomeScreen(
                                 }
                             }
                         },
+                        onPlayAllClick = if (hasPlayableSongs) {
+                            {
+                                playerConnection.playQueue(
+                                    ListQueue(
+                                        title = section.title,
+                                        items = sectionSongs.map { it.toMediaMetadata().toMediaItem() }
+                                    )
+                                )
+                            }
+                        } else null,
                         modifier = Modifier.animateItem()
                     )
                 }
 
-                item(key = "home_section_list_$index") {
-                    LazyRow(
-                        contentPadding = WindowInsets.systemBars
-                            .only(WindowInsetsSides.Horizontal)
-                            .asPaddingValues(),
-                        modifier = Modifier.animateItem()
-                    ) {
-                        items(section.items) { item ->
-                            ytGridItem(item)
+                if (isSongsOnlySection) {
+                    // Render songs as a horizontal scrollable list (like Quick picks in YouTube Music)
+                    item(key = "home_section_list_$index") {
+                        LazyHorizontalGrid(
+                            state = rememberLazyGridState(),
+                            rows = GridCells.Fixed(4),
+                            contentPadding = WindowInsets.systemBars
+                                .only(WindowInsetsSides.Horizontal)
+                                .asPaddingValues(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(ListItemHeight * 4)
+                                .animateItem()
+                        ) {
+                            items(
+                                items = sectionSongs.distinctBy { it.id },
+                                key = { it.id }
+                            ) { song ->
+                                YouTubeListItem(
+                                    item = song,
+                                    isActive = song.id == mediaMetadata?.id,
+                                    isPlaying = isPlaying,
+                                    isSwipeable = false,
+                                    trailingContent = {
+                                        IconButton(
+                                            onClick = {
+                                                menuState.show {
+                                                    YouTubeSongMenu(
+                                                        song = song,
+                                                        navController = navController,
+                                                        onDismiss = menuState::dismiss
+                                                    )
+                                                }
+                                            }
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.more_vert),
+                                                contentDescription = null
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .width(horizontalLazyGridItemWidth)
+                                        .combinedClickable(
+                                            onClick = {
+                                                if (song.id == mediaMetadata?.id) {
+                                                    playerConnection.togglePlayPause()
+                                                } else {
+                                                    playerConnection.playQueue(
+                                                        YouTubeQueue.radio(song.toMediaMetadata())
+                                                    )
+                                                }
+                                            },
+                                            onLongClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                menuState.show {
+                                                    YouTubeSongMenu(
+                                                        song = song,
+                                                        navController = navController,
+                                                        onDismiss = menuState::dismiss
+                                                    )
+                                                }
+                                            }
+                                        )
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Render mixed content as horizontal grid items (albums, playlists, artists, etc.)
+                    item(key = "home_section_list_$index") {
+                        LazyRow(
+                            contentPadding = WindowInsets.systemBars
+                                .only(WindowInsetsSides.Horizontal)
+                                .asPaddingValues(),
+                            modifier = Modifier.animateItem()
+                        ) {
+                            items(section.items) { item ->
+                                ytGridItem(item)
+                            }
                         }
                     }
                 }

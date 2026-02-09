@@ -6,9 +6,7 @@
 package com.metrolist.music.ui.screens.settings.integrations
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -30,7 +28,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -64,25 +61,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
+import com.metrolist.music.constants.ListenTogetherAutoApprovalKey
 import com.metrolist.music.constants.ListenTogetherServerUrlKey
+import com.metrolist.music.constants.ListenTogetherSyncVolumeKey
 import com.metrolist.music.constants.ListenTogetherUsernameKey
 import com.metrolist.music.listentogether.ConnectionState
 import com.metrolist.music.listentogether.ListenTogetherEvent
+import com.metrolist.music.listentogether.ListenTogetherServer
+import com.metrolist.music.listentogether.ListenTogetherServers
 import com.metrolist.music.listentogether.LogEntry
 import com.metrolist.music.listentogether.LogLevel
 import com.metrolist.music.listentogether.RoomRole
@@ -90,12 +87,10 @@ import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.component.PreferenceEntry
 import com.metrolist.music.ui.component.PreferenceGroupTitle
 import com.metrolist.music.ui.component.SwitchPreference
-import com.metrolist.music.ui.component.TextFieldDialog
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.viewmodels.ListenTogetherViewModel
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,17 +106,21 @@ fun ListenTogetherSettings(
     val roomState by viewModel.roomState.collectAsState()
     val role by viewModel.role.collectAsState()
     val pendingJoinRequests by viewModel.pendingJoinRequests.collectAsState()
-    val bufferingUsers by viewModel.bufferingUsers.collectAsState()
     val logs by viewModel.logs.collectAsState()
+    val blockedUsernames by viewModel.blockedUsernames.collectAsState()
     
-    var serverUrl by rememberPreference(ListenTogetherServerUrlKey, "ws://metroserver.meowery.eu/ws")
+    val servers = remember { ListenTogetherServers.servers }
+    var serverUrl by rememberPreference(ListenTogetherServerUrlKey, ListenTogetherServers.defaultServerUrl)
     var username by rememberPreference(ListenTogetherUsernameKey, "")
+    var autoApproval by rememberPreference(ListenTogetherAutoApprovalKey, false)
+    var syncHostVolume by rememberPreference(ListenTogetherSyncVolumeKey, true)
     
     var showServerUrlDialog by rememberSaveable { mutableStateOf(false) }
     var showUsernameDialog by rememberSaveable { mutableStateOf(false) }
     var showCreateRoomDialog by rememberSaveable { mutableStateOf(false) }
     var showJoinRoomDialog by rememberSaveable { mutableStateOf(false) }
     var showLogsDialog by rememberSaveable { mutableStateOf(false) }
+    var showBlockedUsersDialog by rememberSaveable { mutableStateOf(false) }
     var roomCodeInput by rememberSaveable { mutableStateOf("") }
     
     // Handle events
@@ -156,10 +155,17 @@ fun ListenTogetherSettings(
     
     // Dialogs
     if (showServerUrlDialog) {
-        TextFieldDialog(
-            title = { Text(stringResource(R.string.listen_together_server_url)) },
-            initialTextFieldValue = TextFieldValue(serverUrl),
-            onDone = { serverUrl = it },
+        ServerChooserDialog(
+            servers = servers,
+            currentUrl = serverUrl,
+            onSelect = { server ->
+                serverUrl = server.url
+                showServerUrlDialog = false
+            },
+            onUseCustom = { customUrl ->
+                serverUrl = customUrl
+                showServerUrlDialog = false
+            },
             onDismiss = { showServerUrlDialog = false }
         )
     }
@@ -311,6 +317,14 @@ fun ListenTogetherSettings(
             logs = logs,
             onClear = { viewModel.clearLogs() },
             onDismiss = { showLogsDialog = false }
+        )
+    }
+
+    if (showBlockedUsersDialog) {
+        BlockedUsersDialog(
+            blockedUsernames = blockedUsernames,
+            onUnblock = { viewModel.unblockUser(it) },
+            onDismiss = { showBlockedUsersDialog = false }
         )
     }
 
@@ -619,9 +633,24 @@ fun ListenTogetherSettings(
             title = stringResource(R.string.settings)
         )
         
+        val selectedServer = remember(serverUrl) { ListenTogetherServers.findByUrl(serverUrl) }
+
+        PreferenceEntry(
+            title = { Text(stringResource(R.string.listen_together_blocked_users)) },
+            description = if (blockedUsernames.isNotEmpty()) 
+                stringResource(R.string.listen_together_blocked_users_count, blockedUsernames.size)
+            else 
+                stringResource(R.string.listen_together_no_blocked_users),
+            icon = { Icon(painterResource(R.drawable.person), null) },
+            onClick = { if (blockedUsernames.isNotEmpty()) showBlockedUsersDialog = true },
+            isEnabled = blockedUsernames.isNotEmpty()
+        )
+
         PreferenceEntry(
             title = { Text(stringResource(R.string.listen_together_server_url)) },
-            description = serverUrl,
+            description = selectedServer?.let { server ->
+                "${server.name} - ${server.location} - ${server.operator}\n${server.url}"
+            } ?: serverUrl,
             icon = { Icon(painterResource(R.drawable.cloud), null) },
             onClick = { showServerUrlDialog = true }
         )
@@ -640,6 +669,23 @@ fun ListenTogetherSettings(
             isEnabled = roomState == null
         )
         
+        SwitchPreference(
+            title = { Text(stringResource(R.string.listen_together_auto_approval)) },
+            description = stringResource(R.string.listen_together_auto_approval_desc),
+            icon = { Icon(painterResource(R.drawable.done), null) },
+            checked = autoApproval,
+            onCheckedChange = { autoApproval = it },
+            isEnabled = roomState == null || role != RoomRole.GUEST
+        )
+
+        SwitchPreference(
+            title = { Text(stringResource(R.string.listen_together_sync_volume)) },
+            description = stringResource(R.string.listen_together_sync_volume_desc),
+            icon = { Icon(painterResource(R.drawable.volume_up), null) },
+            checked = syncHostVolume,
+            onCheckedChange = { syncHostVolume = it }
+        )
+
         PreferenceEntry(
             title = { Text(stringResource(R.string.listen_together_view_logs)) },
             description = stringResource(R.string.listen_together_view_logs_desc),
@@ -752,6 +798,106 @@ fun LogsDialog(
 }
 
 @Composable
+private fun ServerChooserDialog(
+    servers: List<ListenTogetherServer>,
+    currentUrl: String,
+    onSelect: (ListenTogetherServer) -> Unit,
+    onUseCustom: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var customUrl by rememberSaveable(currentUrl) { mutableStateOf(currentUrl) }
+    val trimmedCustomUrl = customUrl.trim()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.listen_together_choose_server)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                servers.forEach { server ->
+                    val isSelected = server.url == currentUrl
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(server) },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            }
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = server.name,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "${server.location} - ${server.operator}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = server.url,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            if (isSelected) {
+                                Icon(
+                                    painter = painterResource(R.drawable.done),
+                                    contentDescription = null
+                                )
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider()
+
+                Text(
+                    text = stringResource(R.string.listen_together_custom_server),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                OutlinedTextField(
+                    value = customUrl,
+                    onValueChange = { customUrl = it },
+                    label = { Text(stringResource(R.string.listen_together_server_url)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Button(
+                    onClick = { onUseCustom(trimmedCustomUrl) },
+                    enabled = trimmedCustomUrl.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.listen_together_use_custom_server))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
 fun LogEntryItem(log: LogEntry) {
     val context = LocalContext.current
 
@@ -811,3 +957,72 @@ fun LogEntryItem(log: LogEntry) {
         }
     }
 }
+
+@Composable
+fun BlockedUsersDialog(
+    blockedUsernames: Set<String>,
+    onUnblock: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val listState = rememberLazyListState()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.listen_together_blocked_users)) },
+        text = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+            ) {
+                if (blockedUsernames.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.listen_together_no_blocked_users),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(blockedUsernames.toList()) { username ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = username,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                TextButton(
+                                    onClick = { onUnblock(username) },
+                                    modifier = Modifier.padding(0.dp)
+                                ) {
+                                    Text(stringResource(R.string.unblock))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.ok))
+            }
+        }
+    )
+}
+

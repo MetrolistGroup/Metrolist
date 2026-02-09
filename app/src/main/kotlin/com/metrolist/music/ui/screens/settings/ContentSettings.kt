@@ -44,6 +44,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -349,7 +350,7 @@ fun ContentSettings(
     }
 
     if (showTopLengthDialog) {
-        var tempLength by rememberSaveable { mutableStateOf(lengthTop.toFloat()) }
+        var tempLength by rememberSaveable { mutableFloatStateOf(lengthTop.toFloat()) }
 
         AlertDialog(
             onDismissRequest = { showTopLengthDialog = false },

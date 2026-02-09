@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Widget background - uses Material 3 surface colors -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:shape="rectangle">
-    <solid android:color="#F5F5F5" />
+    <solid android:color="@android:color/system_accent1_100"
+        tools:targetApi="31" />
     <corners android:radius="28dp" />
 </shape>

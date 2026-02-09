@@ -22,6 +22,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.guava.future
+import timber.log.Timber
 
 class CoilBitmapLoader(
     private val context: Context,
@@ -30,8 +31,8 @@ class CoilBitmapLoader(
     
     override fun supportsMimeType(mimeType: String): Boolean = mimeType.startsWith("image/")
 
-    private fun createFallbackBitmap(): Bitmap = 
-        Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
+    private fun createFallbackBitmap(): Bitmap =
+        createBitmap(64, 64)
 
     private fun Bitmap.copyIfNeeded(): Bitmap {
         return if (isRecycled) {
@@ -51,7 +52,7 @@ class CoilBitmapLoader(
                 val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size)
                 bitmap?.copyIfNeeded() ?: createFallbackBitmap()
             } catch (e: Exception) {
-                Log.w("CoilBitmapLoader", "Failed to decode bitmap data", e)
+                Timber.tag("CoilBitmapLoader").w(e, "Failed to decode bitmap data")
                 createFallbackBitmap()
             }
         }
@@ -74,7 +75,7 @@ class CoilBitmapLoader(
                         val bitmap = result.image.toBitmap()
                         bitmap.copyIfNeeded()
                     } catch (e: Exception) {
-                        Log.w("CoilBitmapLoader", "Failed to convert image to bitmap", e)
+                        Timber.tag("CoilBitmapLoader").w(e, "Failed to convert image to bitmap")
                         createFallbackBitmap()
                     }
                 }
