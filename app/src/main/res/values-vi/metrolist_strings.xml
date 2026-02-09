@@ -229,7 +229,7 @@
     <string name="update_channel_desc">Thông báo về phiên bản mới của ứng dụng</string>
     <string name="google_cast">Google Cast</string>
     <string name="google_cast_description">Bật trình chiếu Audio đến Chromecast và các thiết bị khác có hỗ trợ tính năng trình chiếu (Cast)</string>
-    <string name="lyrics_romanize_macedonian">Lời Romanize Macedonian</string>
+    <string name="lyrics_romanize_macedonian">Phiên âm chữ Ma-xê-đô-ni-a (Macedonia) sang chữ Latinh</string>
     <string name="integrations">Tích hợp tiện ích</string>
     <string name="username">Tên người dùng</string>
     <string name="password">Mật khẩu</string>
@@ -387,7 +387,7 @@
     <string name="remember_shuffle_and_repeat">Nhớ trạng thái ngẫu nhiên và lặp</string>
     <string name="remember_shuffle_and_repeat_desc">Nhớ chế độ ngẫu nhiên &amp; lặp khi mở lại ứng dụng</string>
     <string name="pause_music_when_media_is_muted">Tạm dừng nhạc khi tắt tiếng media</string>
-    <string name="keep_screen_on_when_player_is_expanded">Giữ màn hình luôn bật khi trình phát được mở rộng</string>
+    <string name="keep_screen_on_when_player_is_expanded">Giữ màn hình bật khi mở trình phát</string>
     <string name="last_fm_send_likes_description">Đánh dấu yêu thích/bỏ yêu thích bài hát trên Last.fm khi chúng được thích/bỏ thích trong Metrolist</string>
     <string name="logging_in">Đang đăng nhập…</string>
     <string name="hide_video_songs">Ẩn bài hát video</string>
@@ -401,4 +401,19 @@
     <string name="apple_music_style">Apple Music</string>
     <string name="lyrics_text_size">Cỡ chữ lời bài hát</string>
     <string name="lyrics_line_spacing">Giãn dòng lời bài hát</string>
+    <string name="enable_wavy_slider">Bật thanh trượt lượn sóng</string>
+    <string name="wavy">Lượn sóng</string>
+    <string name="enable_simpmusic">Kiếm lời nhạc từ SimpMusic</string>
+    <string name="enable_simpmusic_desc">Sử dụng trình cung cấp SimpMusic để đồng bộ lời bài hát</string>
+    <string name="lyrics_offset">Độ trễ của lời</string>
+    <string name="play_next_desc">Thêm vào đầu danh sách phát nhạc</string>
+    <string name="add_to_queue_desc">Thêm vào cuối danh sách phát nhạc</string>
+    <string name="add_to_library_desc">Lưu vào thư viện</string>
+    <string name="download_desc">Cho phép phát lại ngoại tuyến</string>
+    <string name="add_to_playlist_desc">Lưu vào danh sách nhạc</string>
+    <string name="refetch_desc">Lấy dữ liệu mới nhất từ Youtube Music</string>
+    <string name="share_desc">Chia sẻ liên kết của vật này</string>
+    <string name="delete_desc">Xóa vĩnh viễn vật này</string>
+    <string name="advanced_desc">Đổi nhịp độ và cao độ của bài hát</string>
+    <string name="equalizer_desc">Chỉnh độ cân bằng của âm thanh</string>
 </resources>
