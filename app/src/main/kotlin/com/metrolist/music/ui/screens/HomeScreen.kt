@@ -113,6 +113,7 @@ import com.metrolist.music.db.entities.LocalItem
 import com.metrolist.music.db.entities.Playlist
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.models.toMediaMetadata
+import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.playback.queues.LocalAlbumRadio
 import com.metrolist.music.playback.queues.YouTubeAlbumRadio
@@ -168,6 +169,7 @@ fun HomeScreen(
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
 
     val quickPicks by viewModel.quickPicks.collectAsState()
+    val ytmQuickPicks by viewModel.ytmQuickPicks.collectAsState()
     val forgottenFavorites by viewModel.forgottenFavorites.collectAsState()
     val keepListening by viewModel.keepListening.collectAsState()
     val similarRecommendations by viewModel.similarRecommendations.collectAsState()
@@ -492,11 +494,107 @@ fun HomeScreen(
                         }
                     }
                 }
-                quickPicks?.takeIf { it.isNotEmpty() }?.let { quickPicks ->
+
+                // YouTube Music Quick Picks Section (Always at top)
+                ytmQuickPicks?.takeIf { it.isNotEmpty() }?.let { ytmPicks ->
+                    item(key = "ytm_quick_picks_title") {
+                        NavigationTitle(
+                            title = stringResource(R.string.quick_picks),
+                            modifier = Modifier.animateItem(),
+                            onPlayAllClick = {
+                                val songs = ytmPicks.filterIsInstance<SongItem>()
+                                if (songs.isNotEmpty()) {
+                                    playerConnection.playQueue(
+                                        ListQueue(
+                                            title = "Quick Picks",
+                                            items = songs.map { it.toMediaMetadata().toMediaItem() }
+                                        )
+                                    )
+                                }
+                            }
+                        )
+                    }
+
+                    item(key = "ytm_quick_picks_list") {
+                        LazyHorizontalGrid(
+                            state = rememberLazyGridState(),
+                            rows = GridCells.Fixed(4),
+                            contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal)
+                                .asPaddingValues(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(ListItemHeight * 4)
+                                .animateItem()
+                        ) {
+                            items(
+                                items = ytmPicks.filterIsInstance<SongItem>().distinctBy { it.id },
+                                key = { it.id }
+                            ) { song ->
+                                YouTubeListItem(
+                                    item = song,
+                                    isActive = song.id == mediaMetadata?.id,
+                                    isPlaying = isPlaying,
+                                    isSwipeable = false,
+                                    trailingContent = {
+                                        IconButton(
+                                            onClick = {
+                                                menuState.show {
+                                                    YouTubeSongMenu(
+                                                        song = song,
+                                                        navController = navController,
+                                                        onDismiss = menuState::dismiss
+                                                    )
+                                                }
+                                            }
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.more_vert),
+                                                contentDescription = null
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .width(horizontalLazyGridItemWidth)
+                                        .combinedClickable(
+                                            onClick = {
+                                                if (song.id == mediaMetadata?.id) {
+                                                    playerConnection.togglePlayPause()
+                                                } else {
+                                                    playerConnection.playQueue(
+                                                        YouTubeQueue.radio(song.toMediaMetadata())
+                                                    )
+                                                }
+                                            },
+                                            onLongClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                menuState.show {
+                                                    YouTubeSongMenu(
+                                                        song = song,
+                                                        navController = navController,
+                                                        onDismiss = menuState::dismiss
+                                                    )
+                                                }
+                                            }
+                                        )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                quickPicks?.takeIf { it.isNotEmpty() && ytmQuickPicks.isNullOrEmpty() }?.let { quickPicks ->
                     item(key = "quick_picks_title") {
                         NavigationTitle(
                             title = stringResource(R.string.quick_picks),
-                            modifier = Modifier.animateItem()
+                            modifier = Modifier.animateItem(),
+                            onPlayAllClick = {
+                                playerConnection.playQueue(
+                                    ListQueue(
+                                        title = "Quick Picks",
+                                        items = quickPicks.map { it.toMediaMetadata().toMediaItem() }
+                                    )
+                                )
+                            }
                         )
                     }
 
@@ -804,6 +902,10 @@ fun HomeScreen(
             }
 
             homePage?.sections?.forEachIndexed { index, section ->
+                // Check if section contains songs for Play All functionality
+                val sectionSongs = section.items.filterIsInstance<SongItem>()
+                val hasPlayableSongs = sectionSongs.isNotEmpty()
+
                 item(key = "home_section_title_$index") {
                     NavigationTitle(
                         title = section.title,
@@ -835,6 +937,16 @@ fun HomeScreen(
                                 }
                             }
                         },
+                        onPlayAllClick = if (hasPlayableSongs) {
+                            {
+                                playerConnection.playQueue(
+                                    ListQueue(
+                                        title = section.title,
+                                        items = sectionSongs.map { it.toMediaMetadata().toMediaItem() }
+                                    )
+                                )
+                            }
+                        } else null,
                         modifier = Modifier.animateItem()
                     )
                 }
