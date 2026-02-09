@@ -252,23 +252,26 @@ class HomeViewModel @Inject constructor(
         similarRecommendations.value = (artistRecommendations + songRecommendations + albumRecommendations).shuffled()
 
         YouTube.home().onSuccess { page ->
-            // Extract YouTube Music Quick Picks (first section that contains only songs)
-            // This is language-independent - we identify it by content type, not title
+            // Find Quick Picks section - it's typically the first section with only songs
+            // Quick Picks contains only SongItem and is usually at the beginning
             val quickPicksSection = page.sections.firstOrNull { section ->
                 section.items.isNotEmpty() && 
                 section.items.all { it is com.metrolist.innertube.models.SongItem }
             }
+            
+            // Set ytmQuickPicks with the detected quick picks section
             ytmQuickPicks.value = quickPicksSection?.items
+                ?.filterIsInstance<com.metrolist.innertube.models.SongItem>()
                 ?.filterExplicit(hideExplicit)
                 ?.filterVideoSongs(hideVideoSongs)
                 ?.take(20)
 
-            // Filter out the quick picks section from homePage to avoid duplication
-            // since it will be displayed separately as ytmQuickPicks
-            val filteredSections = if (quickPicksSection != null) {
-                page.sections.filter { it != quickPicksSection }
-            } else {
-                page.sections
+            // Keep all sections but filter out the quick picks section to avoid duplication
+            // since ytmQuickPicks will be shown as the first section in the home screen
+            val filteredSections = page.sections.filter { section ->
+                // Keep sections that are not purely songs (mixed content, albums, playlists, artists)
+                // or sections that have different content from the quick picks we extracted
+                quickPicksSection == null || section != quickPicksSection
             }
 
             homePage.value = page.copy(

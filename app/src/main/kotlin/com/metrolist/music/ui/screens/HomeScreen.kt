@@ -427,21 +427,20 @@ fun HomeScreen(
 
             if (selectedChip == null) {
                 // YouTube Music Quick Picks Section - First section at top (like simpmusic)
-                ytmQuickPicks?.takeIf { it.isNotEmpty() }?.let { ytmPicks ->
+                // Show Quick Picks when data is available
+                val quickPicksSongs = ytmQuickPicks?.filterIsInstance<SongItem>()?.distinctBy { it.id }
+                if (!quickPicksSongs.isNullOrEmpty()) {
                     item(key = "ytm_quick_picks_title") {
                         NavigationTitle(
                             title = stringResource(R.string.quick_picks),
                             modifier = Modifier.animateItem(),
                             onPlayAllClick = {
-                                val songs = ytmPicks.filterIsInstance<SongItem>()
-                                if (songs.isNotEmpty()) {
-                                    playerConnection.playQueue(
-                                        ListQueue(
-                                            title = "Quick Picks",
-                                            items = songs.distinctBy { it.id }.map { it.toMediaItem() }
-                                        )
+                                playerConnection.playQueue(
+                                    ListQueue(
+                                        title = "Quick Picks",
+                                        items = quickPicksSongs.map { it.toMediaItem() }
                                     )
-                                }
+                                )
                             }
                         )
                     }
@@ -458,7 +457,7 @@ fun HomeScreen(
                                 .animateItem()
                         ) {
                             items(
-                                items = ytmPicks.filterIsInstance<SongItem>().distinctBy { it.id },
+                                items = quickPicksSongs,
                                 key = { it.id }
                             ) { song ->
                                 YouTubeListItem(
@@ -508,6 +507,27 @@ fun HomeScreen(
                                             }
                                         )
                                 )
+                            }
+                        }
+                    }
+                } else if (isLoading && ytmQuickPicks == null) {
+                    // Show shimmer placeholder while loading Quick Picks
+                    item(key = "ytm_quick_picks_shimmer") {
+                        ShimmerHost(
+                            modifier = Modifier.animateItem()
+                        ) {
+                            TextPlaceholder(
+                                height = 36.dp,
+                                modifier = Modifier
+                                    .padding(12.dp)
+                                    .width(200.dp),
+                            )
+                            LazyRow(
+                                contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).asPaddingValues(),
+                            ) {
+                                items(4) {
+                                    GridItemPlaceHolder()
+                                }
                             }
                         }
                     }
