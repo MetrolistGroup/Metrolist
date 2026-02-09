@@ -362,7 +362,7 @@
     <string name="play_pause">Lecture/Pause</string>
     <string name="next">Suivant</string>
     <string name="widget_description">Widget de lecteur de musique avec commandes de lecture</string>
-    <string name="turntable_widget_description">Accès rapide à votre dernier titre écouté</string>
+    <string name="turntable_widget_description">Widget musical circulaire avec commandes de lecture et d\'appréciation</string>
     <string name="queue_widget_description">Lecteur de musique avec aperçu de la file d\'attente</string>
     <string name="like">J\'aime</string>
     <string name="remember_shuffle_and_repeat">Se souvenir de la lecture aléatoire et de la répétition</string>
@@ -519,4 +519,8 @@
     <string name="listen_together_no_blocked_users">Aucun utilisateur bloqué</string>
     <string name="unblock">Débloquer</string>
     <string name="user_blocked_by_host">Utilisateur bloqué par l\'hôte</string>
+    <string name="not_playing">Aucune chanson en cours de lecture</string>
+    <string name="tap_to_play">Appuyez pour ouvrir Metrolist</string>
+    <string name="widget_music_player">Lecteur de Musique</string>
+    <string name="widget_turntable">Platine vinyle</string>
 </resources>
