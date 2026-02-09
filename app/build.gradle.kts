@@ -82,7 +82,7 @@ android {
 
     signingConfigs {
         create("persistentDebug") {
-            storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+            storeFile = file("persistent-debug.keystore")
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
