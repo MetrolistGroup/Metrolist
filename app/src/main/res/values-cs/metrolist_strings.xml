@@ -368,7 +368,7 @@
     <string name="next">Další</string>
     <string name="like">Oblíbení</string>
     <string name="widget_description">Widget hudebního přehrávače s ovládáním přehrávání</string>
-    <string name="turntable_widget_description">Rychlý přístup k vaší naposledy přehrané skladbě</string>
+    <string name="turntable_widget_description">Kruhový widget přehrávače s možnostmi ovládání přehrání a oblíbení</string>
     <string name="queue_widget_description">Hudební přehrávač s náhledem fronty</string>
     <string name="remember_shuffle_and_repeat">Zapamatovat náhodné přehrávání a opakování</string>
     <string name="remember_shuffle_and_repeat_desc">Zapamatovat náhodné přehrávání a režim opakování při restartování aplikace</string>
@@ -524,4 +524,8 @@
     <string name="listen_together_no_blocked_users">Žádní zablokování uživatelé</string>
     <string name="unblock">Odblokovat</string>
     <string name="user_blocked_by_host">Uživatel zablokován hostitelem</string>
+    <string name="not_playing">Nehraje žádná skladba</string>
+    <string name="tap_to_play">Klepněte pro otevření Metrolistu</string>
+    <string name="widget_music_player">Hudební přehrávač</string>
+    <string name="widget_turntable">Gramofon</string>
 </resources>
