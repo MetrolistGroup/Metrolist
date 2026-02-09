@@ -6,6 +6,8 @@
 package com.metrolist.music.playback
 
 import android.content.Context
+import android.util.Log
+import timber.log.Timber
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -15,6 +17,7 @@ import androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM
 import androidx.media3.common.Player.REPEAT_MODE_OFF
 import androidx.media3.common.Player.STATE_ENDED
 import androidx.media3.common.Timeline
+import androidx.media3.exoplayer.ExoPlayer
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.extensions.currentMetadata
 import com.metrolist.music.extensions.getCurrentQueueIndex
@@ -31,7 +34,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
-import timber.log.Timber
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PlayerConnection(
@@ -40,21 +43,81 @@ class PlayerConnection(
     val database: MusicDatabase,
     scope: CoroutineScope,
 ) : Player.Listener {
-    val service = binder.service
-    val player = service.player
+    private companion object {
+        private const val TAG = "PlayerConnection"
+        private const val PLAYER_INIT_TIMEOUT_MS = 5000L // 5 second timeout for player initialization
+    }
 
-    val playbackState = MutableStateFlow(player.playbackState)
-    private val playWhenReady = MutableStateFlow(player.playWhenReady)
-    val isPlaying =
-        combine(playbackState, playWhenReady) { playbackState, playWhenReady ->
-            playWhenReady && playbackState != STATE_ENDED
+    val service = binder.service
+    private val playerReadinessFlow = service.isPlayerReady
+    
+    /**
+     * Safe player accessor checks readiness & handles errors.
+     * Should be used by all player access within this class.
+     */
+    private fun getPlayerSafe(): ExoPlayer {
+        return try {
+            if (!playerReadinessFlow.value) {
+                Timber.tag(TAG).w("Player accessed before service initialization complete; returning best-effort reference")
+            }
+            service.player
+        } catch (e: UninitializedPropertyAccessException) {
+            Timber.tag(TAG).e(e, "Fatal: player property accessed but not initialized")
+            throw IllegalStateException("MusicService.player not initialized; possible race condition in service startup", e)
+        }
+    }
+
+    /**
+     * Public accessor for player. Throws if player not ready.
+     * Callers should check [isPlayerInitialized] before calling, or handle exceptions.
+     */
+    val player: ExoPlayer
+        get() = getPlayerSafe()
+
+    /** Tracks whether player initialization completed successfully */
+    private val isPlayerInitialized = MutableStateFlow(service.isPlayerReady.value)
+
+    val playbackState: MutableStateFlow<Int>
+    private val playWhenReady: MutableStateFlow<Boolean>
+    val isPlaying: kotlinx.coroutines.flow.StateFlow<Boolean>
+    
+    init {
+        Timber.tag(TAG).d("PlayerConnection init: playerReady=${playerReadinessFlow.value}")
+        
+        // Initialize with player state or safe defaults if player not ready
+        val initialState = try {
+            val initialPlayer = getPlayerSafe()
+            Triple(initialPlayer.playbackState, initialPlayer.playWhenReady, 
+                   initialPlayer.playWhenReady && initialPlayer.playbackState != STATE_ENDED)
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error during PlayerConnection initialization, using defaults")
+            Triple(Player.STATE_IDLE, false, false)
+        }
+        
+        playbackState = MutableStateFlow(initialState.first)
+        playWhenReady = MutableStateFlow(initialState.second)
+        isPlaying = combine(playbackState, playWhenReady) { state, ready ->
+            ready && state != STATE_ENDED
         }.stateIn(
             scope,
             SharingStarted.Lazily,
-            player.playWhenReady && player.playbackState != STATE_ENDED
+            initialState.third
         )
+        
+        // Track service readiness changes in background.
+        scope.launch {
+            playerReadinessFlow.collect { ready ->
+                isPlayerInitialized.value = ready
+                if (ready) {
+                    Timber.tag(TAG).d("Service player initialization detected by PlayerConnection")
+                }
+            }
+        }
+        
+        Timber.tag(TAG).d("PlayerConnection state flows initialized successfully")
+    }
     
-    // Effective playing state - considers Cast when active
+    // Effective playing state, considers Cast when active
     val isEffectivelyPlaying = combine(
         isPlaying,
         service.castConnectionHandler?.isCasting ?: MutableStateFlow(false),
@@ -64,7 +127,7 @@ class PlayerConnection(
     }.stateIn(
         scope,
         SharingStarted.Lazily,
-        player.playWhenReady && player.playbackState != STATE_ENDED
+        player.playbackState != STATE_ENDED && player.playWhenReady
     )
     
     val mediaMetadata = MutableStateFlow(player.currentMetadata)
@@ -107,35 +170,58 @@ class PlayerConnection(
     var onSkipNext: (() -> Unit)? = null
 
     init {
-        player.addListener(this)
+        try {
+            // Register listener with the player for state updates
+            player.addListener(this)
+            Timber.tag(TAG).d("Player listener registered successfully")
 
-        playbackState.value = player.playbackState
-        playWhenReady.value = player.playWhenReady
-        mediaMetadata.value = player.currentMetadata
-        queueTitle.value = service.queueTitle
-        queueWindows.value = player.getQueueWindows()
-        currentWindowIndex.value = player.getCurrentQueueIndex()
-        currentMediaItemIndex.value = player.currentMediaItemIndex
-        shuffleModeEnabled.value = player.shuffleModeEnabled
-        repeatMode.value = player.repeatMode
+            // Initialize state flows from current player state
+            // These will be kept in sync via listener callbacks
+            playbackState.value = player.playbackState
+            playWhenReady.value = player.playWhenReady
+            mediaMetadata.value = player.currentMetadata
+            queueTitle.value = service.queueTitle
+            queueWindows.value = player.getQueueWindows()
+            currentWindowIndex.value = player.getCurrentQueueIndex()
+            currentMediaItemIndex.value = player.currentMediaItemIndex
+            shuffleModeEnabled.value = player.shuffleModeEnabled
+            repeatMode.value = player.repeatMode
+            
+            Timber.tag(TAG).d("PlayerConnection fully initialized with player state")
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Failed to initialize PlayerConnection listener or state")
+            // Propagate the error so MainActivity can retry
+            throw e
+        }
     }
 
     fun playQueue(queue: Queue) {
-        // Block if Listen Together guest (but allow internal sync)
-        if (!allowInternalSync && shouldBlockPlaybackChanges?.invoke() == true) {
-            Timber.tag("PlayerConnection").d("playQueue blocked - Listen Together guest")
-            return
+        if (!playerReadinessFlow.value) {
+            Timber.tag(TAG).w("playQueue called before player ready; delegating to service")
         }
-        service.playQueue(queue)
+        try {
+            service.playQueue(queue)
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error in playQueue")
+            throw e
+        }
     }
 
     fun startRadioSeamlessly() {
         // Block if Listen Together guest
         if (shouldBlockPlaybackChanges?.invoke() == true) {
-            Timber.tag("PlayerConnection").d("startRadioSeamlessly blocked - Listen Together guest")
+            Log.d("PlayerConnection", "startRadioSeamlessly blocked - Listen Together guest")
             return
         }
-        service.startRadioSeamlessly()
+        if (!playerReadinessFlow.value) {
+            Timber.tag(TAG).w("startRadioSeamlessly called before player ready; delegating to service")
+        }
+        try {
+            service.startRadioSeamlessly()
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error in startRadioSeamlessly")
+            throw e
+        }
     }
 
     fun playNext(item: MediaItem) = playNext(listOf(item))
@@ -143,10 +229,15 @@ class PlayerConnection(
     fun playNext(items: List<MediaItem>) {
         // Block if Listen Together guest (unless internal sync)
         if (!allowInternalSync && shouldBlockPlaybackChanges?.invoke() == true) {
-            Timber.tag("PlayerConnection").d("playNext blocked - Listen Together guest")
+            Log.d("PlayerConnection", "playNext blocked - Listen Together guest")
             return
         }
-        service.playNext(items)
+        try {
+            service.playNext(items)
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error in playNext")
+            throw e
+        }
     }
 
     fun addToQueue(item: MediaItem) = addToQueue(listOf(item))
@@ -154,14 +245,23 @@ class PlayerConnection(
     fun addToQueue(items: List<MediaItem>) {
         // Block if Listen Together guest (unless internal sync)
         if (!allowInternalSync && shouldBlockPlaybackChanges?.invoke() == true) {
-            Timber.tag("PlayerConnection").d("addToQueue blocked - Listen Together guest")
+            Log.d("PlayerConnection", "addToQueue blocked - Listen Together guest")
             return
         }
-        service.addToQueue(items)
+        try {
+            service.addToQueue(items)
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error in addToQueue")
+            throw e
+        }
     }
 
     fun toggleLike() {
-        service.toggleLike()
+        try {
+            service.toggleLike()
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error in toggleLike")
+        }
     }
 
     fun toggleMute() {
@@ -173,22 +273,30 @@ class PlayerConnection(
     }
 
     fun toggleLibrary() {
-        service.toggleLibrary()
+        try {
+            service.toggleLibrary()
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error in toggleLibrary")
+        }
     }
 
     /**
      * Toggle play/pause - handles Cast when active
      */
     fun togglePlayPause() {
-        val castHandler = service.castConnectionHandler
-        if (castHandler?.isCasting?.value == true) {
-            if (castHandler.castIsPlaying.value) {
-                castHandler.pause()
+        try {
+            val castHandler = service.castConnectionHandler
+            if (castHandler?.isCasting?.value == true) {
+                if (castHandler.castIsPlaying.value) {
+                    castHandler.pause()
+                } else {
+                    castHandler.play()
+                }
             } else {
-                castHandler.play()
+                player.togglePlayPause()
             }
-        } else {
-            player.togglePlayPause()
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error in togglePlayPause")
         }
     }
     
@@ -196,14 +304,18 @@ class PlayerConnection(
      * Start playback - handles Cast when active
      */
     fun play() {
-        val castHandler = service.castConnectionHandler
-        if (castHandler?.isCasting?.value == true) {
-            castHandler.play()
-        } else {
-            if (player.playbackState == Player.STATE_IDLE) {
-                player.prepare()
+        try {
+            val castHandler = service.castConnectionHandler
+            if (castHandler?.isCasting?.value == true) {
+                castHandler.play()
+            } else {
+                if (player.playbackState == Player.STATE_IDLE) {
+                    player.prepare()
+                }
+                player.playWhenReady = true
             }
-            player.playWhenReady = true
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error in play")
         }
     }
     
@@ -211,11 +323,15 @@ class PlayerConnection(
      * Pause playback - handles Cast when active
      */
     fun pause() {
-        val castHandler = service.castConnectionHandler
-        if (castHandler?.isCasting?.value == true) {
-            castHandler.pause()
-        } else {
-            player.playWhenReady = false
+        try {
+            val castHandler = service.castConnectionHandler
+            if (castHandler?.isCasting?.value == true) {
+                castHandler.pause()
+            } else {
+                player.playWhenReady = false
+            }
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error in pause")
         }
     }
 
@@ -223,20 +339,31 @@ class PlayerConnection(
      * Seek to position - handles Cast when active
      */
     fun seekTo(position: Long) {
-        val castHandler = service.castConnectionHandler
-        if (castHandler?.isCasting?.value == true) {
-            castHandler.seekTo(position)
-        } else {
-            player.seekTo(position)
+        try {
+            val castHandler = service.castConnectionHandler
+            if (castHandler?.isCasting?.value == true) {
+                castHandler.seekTo(position)
+            } else {
+                player.seekTo(position)
+            }
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error in seekTo")
         }
     }
 
     fun seekToNext() {
-        // When casting, use Cast skip instead of local player
-        val castHandler = service.castConnectionHandler
-        if (castHandler?.isCasting?.value == true) {
-            castHandler.skipToNext()
-            return
+        try {
+            // When casting, use Cast skip instead of local player
+            val castHandler = service.castConnectionHandler
+            if (castHandler?.isCasting?.value == true) {
+                castHandler.skipToNext()
+                return
+            }
+            player.seekToNext()
+            player.prepare()
+            player.playWhenReady = true
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error in seekToNext")
         }
         player.seekToNext()
         if (player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED) {
@@ -249,11 +376,18 @@ class PlayerConnection(
     var onRestartSong: (() -> Unit)? = null
 
     fun seekToPrevious() {
-        // When casting, use Cast skip instead of local player
-        val castHandler = service.castConnectionHandler
-        if (castHandler?.isCasting?.value == true) {
-            castHandler.skipToPrevious()
-            return
+        try {
+            // When casting, use Cast skip instead of local player
+            val castHandler = service.castConnectionHandler
+            if (castHandler?.isCasting?.value == true) {
+                castHandler.skipToPrevious()
+                return
+            }
+            player.seekToPrevious()
+            player.prepare()
+            player.playWhenReady = true
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error in seekToPrevious")
         }
 
         // Logic to mimic standard seekToPrevious behavior but with explicit callbacks
@@ -345,6 +479,11 @@ class PlayerConnection(
     }
 
     fun dispose() {
-        player.removeListener(this)
+        try {
+            player.removeListener(this)
+            Log.d(TAG, "PlayerConnection disposed successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during PlayerConnection disposal", e)
+        }
     }
 }

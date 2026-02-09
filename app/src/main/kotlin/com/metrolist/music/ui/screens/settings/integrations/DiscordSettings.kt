@@ -80,6 +80,7 @@ import com.metrolist.music.ui.component.TextFieldDialog
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberPreference
+import com.metrolist.music.utils.SuperProperties
 import com.my.kizzy.rpc.KizzyRPC
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -117,7 +118,11 @@ fun DiscordSettings(
         }
         // Fetch user info when token changes
         launch(Dispatchers.IO) {
-            KizzyRPC.getUserInfo(token).onSuccess {
+            KizzyRPC.getUserInfo(
+                token, 
+                SuperProperties.userAgent, 
+                SuperProperties.superPropertiesBase64
+            ).onSuccess {
                 discordUsername = it.username
                 discordName = it.name
             }.onFailure {

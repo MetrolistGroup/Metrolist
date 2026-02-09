@@ -17,6 +17,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.view.View
 import android.view.WindowManager
+import timber.log.Timber
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
@@ -186,6 +187,7 @@ import com.metrolist.music.viewmodels.HomeViewModel
 import com.valentinilk.shimmer.LocalShimmerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -225,9 +227,24 @@ class MainActivity : ComponentActivity() {
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             if (service is MusicBinder) {
-                playerConnection = PlayerConnection(this@MainActivity, service, database, lifecycleScope)
-                // Connect Listen Together manager to player
-                listenTogetherManager.setPlayerConnection(playerConnection)
+                try {
+                    playerConnection = PlayerConnection(this@MainActivity, service, database, lifecycleScope)
+                    Timber.tag("MainActivity").d("PlayerConnection created successfully")
+                    // Connect Listen Together manager to player
+                    listenTogetherManager.setPlayerConnection(playerConnection)
+                } catch (e: Exception) {
+                    Timber.tag("MainActivity").e(e, "Failed to create PlayerConnection")
+                    // Retry after a delay of 500ms
+                    lifecycleScope.launch {
+                        delay(500)
+                        try {
+                            playerConnection = PlayerConnection(this@MainActivity, service, database, lifecycleScope)
+                            listenTogetherManager.setPlayerConnection(playerConnection)
+                        } catch (e2: Exception) {
+                            Timber.tag("MainActivity").e(e2, "Failed to create PlayerConnection on retry")
+                        }
+                    }
+                }
             }
         }
 
