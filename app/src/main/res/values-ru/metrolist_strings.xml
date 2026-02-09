@@ -367,7 +367,7 @@
     <string name="next">Следующий</string>
     <string name="like">Нравится</string>
     <string name="widget_description">Виджет музыкального плеера с элементами управления воспроизведением</string>
-    <string name="turntable_widget_description">Быстрый доступ к последнему воспроизведённому треку</string>
+    <string name="turntable_widget_description">Круглый музыкальный виджет с кнопками воспроизведения и лайка</string>
     <string name="queue_widget_description">Музыкальный плеер с предпросмотром очереди</string>
     <string name="system_equalizer">Системный эквалайзер</string>
     <string name="remember_shuffle_and_repeat">Запоминать перемешивание и повтор</string>
@@ -524,4 +524,8 @@
     <string name="listen_together_no_blocked_users">Нет заблокированных пользователей</string>
     <string name="unblock">Разблокировать</string>
     <string name="user_blocked_by_host">Пользователь заблокирован хостом</string>
+    <string name="not_playing">Ничего не играет</string>
+    <string name="tap_to_play">Нажмите, чтобы открыть Metrolist</string>
+    <string name="widget_music_player">Музыкальный плеер</string>
+    <string name="widget_turntable">Виниловый проигрыватель</string>
 </resources>
