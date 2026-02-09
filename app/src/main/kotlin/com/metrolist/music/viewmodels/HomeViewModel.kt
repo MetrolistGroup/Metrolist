@@ -263,8 +263,16 @@ class HomeViewModel @Inject constructor(
                 ?.filterVideoSongs(hideVideoSongs)
                 ?.take(20)
 
+            // Filter out the quick picks section from homePage to avoid duplication
+            // since it will be displayed separately as ytmQuickPicks
+            val filteredSections = if (quickPicksSection != null) {
+                page.sections.filter { it != quickPicksSection }
+            } else {
+                page.sections
+            }
+
             homePage.value = page.copy(
-                sections = page.sections.map { section ->
+                sections = filteredSections.map { section ->
                     section.copy(items = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs))
                 }
             )

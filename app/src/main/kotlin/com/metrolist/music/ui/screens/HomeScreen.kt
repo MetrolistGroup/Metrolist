@@ -426,62 +426,7 @@ fun HomeScreen(
             }
 
             if (selectedChip == null) {
-                item(key = "wrapped_card") {
-                    AnimatedVisibility(visible = shouldShowWrappedCard) {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            ),
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (isWrappedDataReady) {
-                                    Column(
-                                        modifier = Modifier.padding(16.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
-                                    ) {
-                                        val bbhFont = try {
-                                            FontFamily(Font(R.font.bbh_bartle_regular))
-                                        } catch (e: Exception) {
-                                            FontFamily.Default
-                                        }
-                                        Text(
-                                            text = stringResource(R.string.wrapped_ready_title),
-                                            style = MaterialTheme.typography.headlineLarge.copy(
-                                                fontFamily = bbhFont,
-                                                textAlign = TextAlign.Center
-                                            )
-                                        )
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = stringResource(R.string.wrapped_ready_subtitle),
-                                            style = MaterialTheme.typography.bodyLarge.copy(
-                                                textAlign = TextAlign.Center
-                                            )
-                                        )
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        Button(onClick = {
-                                            navController.navigate("wrapped")
-                                        }) {
-                                            Text(stringResource(R.string.open))
-                                        }
-                                    }
-                                } else {
-                                    ContainedLoadingIndicator()
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // YouTube Music Quick Picks Section (Always at top)
+                // YouTube Music Quick Picks Section - First section at top (like simpmusic)
                 ytmQuickPicks?.takeIf { it.isNotEmpty() }?.let { ytmPicks ->
                     item(key = "ytm_quick_picks_title") {
                         NavigationTitle(
@@ -563,6 +508,61 @@ fun HomeScreen(
                                             }
                                         )
                                 )
+                            }
+                        }
+                    }
+                }
+
+                item(key = "wrapped_card") {
+                    AnimatedVisibility(visible = shouldShowWrappedCard) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            ),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isWrappedDataReady) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+                                    ) {
+                                        val bbhFont = try {
+                                            FontFamily(Font(R.font.bbh_bartle_regular))
+                                        } catch (e: Exception) {
+                                            FontFamily.Default
+                                        }
+                                        Text(
+                                            text = stringResource(R.string.wrapped_ready_title),
+                                            style = MaterialTheme.typography.headlineLarge.copy(
+                                                fontFamily = bbhFont,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = stringResource(R.string.wrapped_ready_subtitle),
+                                            style = MaterialTheme.typography.bodyLarge.copy(
+                                                textAlign = TextAlign.Center
+                                            )
+                                        )
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Button(onClick = {
+                                            navController.navigate("wrapped")
+                                        }) {
+                                            Text(stringResource(R.string.open))
+                                        }
+                                    }
+                                } else {
+                                    ContainedLoadingIndicator()
+                                }
                             }
                         }
                     }
