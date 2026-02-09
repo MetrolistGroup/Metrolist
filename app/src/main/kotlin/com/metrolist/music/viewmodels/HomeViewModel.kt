@@ -70,7 +70,6 @@ class HomeViewModel @Inject constructor(
     }.distinctUntilChanged()
 
     val quickPicks = MutableStateFlow<List<Song>?>(null)
-    val ytmQuickPicks = MutableStateFlow<List<YTItem>?>(null)
     val forgottenFavorites = MutableStateFlow<List<Song>?>(null)
     val keepListening = MutableStateFlow<List<LocalItem>?>(null)
     val similarRecommendations = MutableStateFlow<List<SimilarRecommendation>?>(null)
@@ -252,17 +251,6 @@ class HomeViewModel @Inject constructor(
         similarRecommendations.value = (artistRecommendations + songRecommendations + albumRecommendations).shuffled()
 
         YouTube.home().onSuccess { page ->
-            // Extract YouTube Music Quick Picks (first section that contains only songs)
-            // This is language-independent - we identify it by content type, not title
-            val quickPicksSection = page.sections.firstOrNull { section ->
-                section.items.isNotEmpty() && 
-                section.items.all { it is com.metrolist.innertube.models.SongItem }
-            }
-            ytmQuickPicks.value = quickPicksSection?.items
-                ?.filterExplicit(hideExplicit)
-                ?.filterVideoSongs(hideVideoSongs)
-                ?.take(20)
-
             homePage.value = page.copy(
                 sections = page.sections.map { section ->
                     section.copy(items = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs))
