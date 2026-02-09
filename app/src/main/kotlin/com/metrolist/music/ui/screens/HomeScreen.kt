@@ -663,7 +663,15 @@ fun HomeScreen(
                     item(key = "forgotten_favorites_title") {
                         NavigationTitle(
                             title = stringResource(R.string.forgotten_favorites),
-                            modifier = Modifier.animateItem()
+                            modifier = Modifier.animateItem(),
+                            onPlayAllClick = {
+                                playerConnection.playQueue(
+                                    ListQueue(
+                                        title = stringResource(R.string.forgotten_favorites),
+                                        items = forgottenFavorites.map { it.toMediaMetadata().toMediaItem() }
+                                    )
+                                )
+                            }
                         )
                     }
 
