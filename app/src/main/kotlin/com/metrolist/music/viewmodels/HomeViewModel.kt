@@ -70,7 +70,6 @@ class HomeViewModel @Inject constructor(
     }.distinctUntilChanged()
 
     val quickPicks = MutableStateFlow<List<Song>?>(null)
-    val ytmQuickPicks = MutableStateFlow<List<YTItem>?>(null)
     val forgottenFavorites = MutableStateFlow<List<Song>?>(null)
     val keepListening = MutableStateFlow<List<LocalItem>?>(null)
     val similarRecommendations = MutableStateFlow<List<SimilarRecommendation>?>(null)
@@ -252,30 +251,8 @@ class HomeViewModel @Inject constructor(
         similarRecommendations.value = (artistRecommendations + songRecommendations + albumRecommendations).shuffled()
 
         YouTube.home().onSuccess { page ->
-            // Find Quick Picks section - it's typically the first section with only songs
-            // Quick Picks contains only SongItem and is usually at the beginning
-            val quickPicksSection = page.sections.firstOrNull { section ->
-                section.items.isNotEmpty() && 
-                section.items.all { it is com.metrolist.innertube.models.SongItem }
-            }
-            
-            // Set ytmQuickPicks with the detected quick picks section
-            ytmQuickPicks.value = quickPicksSection?.items
-                ?.filterIsInstance<com.metrolist.innertube.models.SongItem>()
-                ?.filterExplicit(hideExplicit)
-                ?.filterVideoSongs(hideVideoSongs)
-                ?.take(20)
-
-            // Keep all sections but filter out the quick picks section to avoid duplication
-            // since ytmQuickPicks will be shown as the first section in the home screen
-            val filteredSections = page.sections.filter { section ->
-                // Keep sections that are not purely songs (mixed content, albums, playlists, artists)
-                // or sections that have different content from the quick picks we extracted
-                quickPicksSection == null || section != quickPicksSection
-            }
-
             homePage.value = page.copy(
-                sections = filteredSections.map { section ->
+                sections = page.sections.map { section ->
                     section.copy(items = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs))
                 }
             )
