@@ -60,6 +60,15 @@ import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
 import com.metrolist.music.ui.component.TextFieldDialog
 import com.metrolist.music.utils.rememberPreference
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.material3.Icon
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.style.TextDecoration
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -289,29 +298,48 @@ fun AiSettings(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Bottom))
-                .padding(horizontal = 16.dp)
         ) {
-            Material3SettingsGroup(
-                title = stringResource(R.string.ai_provider),
-                items = listOf(
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.explore_outlined),
-                        title = { Text(stringResource(R.string.ai_provider)) },
-                        description = { Text(aiProvider) },
-                        onClick = { showProviderDialog = true }
-                    ),
-                    if (aiProvider == "Custom") {
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.link),
-                            title = { Text(stringResource(R.string.ai_base_url)) },
-                            description = { Text(openRouterBaseUrl.ifBlank { stringResource(R.string.not_set) }) },
-                            onClick = { showBaseUrlDialog = true }
-                        )
-                    } else {
-                        null
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.ai_setup_guide),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    val uriHandler = LocalUriHandler.current
+                    
+                    val annotatedString = buildAnnotatedString {
+                        append(stringResource(R.string.ai_setup_step_1) + "\n")
+                        append(stringResource(R.string.ai_setup_step_2) + "\n")
+                        append(stringResource(R.string.ai_setup_step_3) + "\n\n")
+                        
+                        append(stringResource(R.string.ai_setup_api_need))
+                        pushLink(LinkAnnotation.Url(
+                            url = "https://openrouter.ai",
+                            linkInteractionListener = { uriHandler.openUri("https://openrouter.ai") }
+                        ))
+                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline)) {
+                            append(stringResource(R.string.ai_setup_api_provider))
+                        }
+                        pop()
+                        append(stringResource(R.string.ai_setup_api_end))
                     }
-                ).filterNotNull()
-            )
+                    
+                    Text(
+                        text = annotatedString,
+                        style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(27.dp))
 

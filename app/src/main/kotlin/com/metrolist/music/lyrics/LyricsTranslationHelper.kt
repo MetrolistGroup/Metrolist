@@ -135,7 +135,7 @@ object LyricsTranslationHelper {
                 // Convert language code to full language name for better AI understanding
                 val fullLanguageName = LanguageCodeToName[targetLanguage] 
                     ?: try {
-                        Locale(targetLanguage).displayLanguage.takeIf { it.isNotBlank() && it != targetLanguage }
+                        Locale.forLanguageTag(targetLanguage).displayLanguage.takeIf { it.isNotBlank() && it != targetLanguage }
                     } catch (e: Exception) { null }
                     ?: targetLanguage
 
