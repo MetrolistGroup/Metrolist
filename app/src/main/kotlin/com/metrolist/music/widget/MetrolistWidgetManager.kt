@@ -208,15 +208,26 @@ class MetrolistWidgetManager @Inject constructor(
     }
 
     private fun getRoundedCornerBitmap(bitmap: Bitmap, cornerRadius: Float): Bitmap {
-        val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+        // Ensure the bitmap is square for thumbnails
+        val size = minOf(bitmap.width, bitmap.height)
+        val xOffset = (bitmap.width - size) / 2
+        val yOffset = (bitmap.height - size) / 2
+        val squareBitmap = Bitmap.createBitmap(bitmap, xOffset, yOffset, size, size)
+
+        val output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
         val paint = Paint().apply {
             isAntiAlias = true
             isFilterBitmap = true
-            shader = BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+            shader = BitmapShader(squareBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
         }
-        val rect = RectF(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat())
+        val rect = RectF(0f, 0f, size.toFloat(), size.toFloat())
         canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
+        
+        if (squareBitmap != bitmap) {
+            squareBitmap.recycle()
+        }
+        
         return output
     }
 
