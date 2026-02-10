@@ -528,4 +528,6 @@
     <string name="tap_to_play">Klepněte pro otevření Metrolistu</string>
     <string name="widget_music_player">Hudební přehrávač</string>
     <string name="widget_turntable">Gramofon</string>
+    <string name="enter_room_code">Vložte kód místnosti</string>
+    <string name="listen_together_settings_desc">Nastavit server, uživatelské jméno a další</string>
 </resources>
