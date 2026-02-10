@@ -2441,11 +2441,9 @@ class MusicService :
         playbackStats: PlaybackStats,
     ) {
         val mediaItem = eventTime.timeline.getWindow(eventTime.windowIndex, Timeline.Window()).mediaItem
+        val historyDurationMs = dataStore[HistoryDuration]?.times(1000f) ?: 30000f
 
-        if (playbackStats.totalPlayTimeMs >= (
-                    dataStore[HistoryDuration]?.times(1000f)
-                        ?: 30000f
-                    ) &&
+        if (playbackStats.totalPlayTimeMs >= historyDurationMs &&
             !dataStore.get(PauseListenHistoryKey, false)
         ) {
             database.query {
@@ -2463,14 +2461,17 @@ class MusicService :
             }
         }
 
-        CoroutineScope(Dispatchers.IO).launch {
-            val playbackUrl = YTPlayerUtils.playerResponseForMetadata(mediaItem.mediaId, null)
-                .getOrNull()?.playbackTracking?.videostatsPlaybackUrl?.baseUrl
-            playbackUrl?.let {
-                YouTube.registerPlayback(null, playbackUrl)
-                    .onFailure {
-                        reportException(it)
-                    }
+        if (playbackStats.totalPlayTimeMs >= historyDurationMs) {
+            CoroutineScope(Dispatchers.IO).launch {
+                val playbackUrl = database.format(mediaItem.mediaId).first()?.playbackUrl
+                    ?: YTPlayerUtils.playerResponseForMetadata(mediaItem.mediaId, null)
+                        .getOrNull()?.playbackTracking?.videostatsPlaybackUrl?.baseUrl
+                playbackUrl?.let {
+                    YouTube.registerPlayback(null, playbackUrl)
+                        .onFailure {
+                            reportException(it)
+                        }
+                }
             }
         }
     }
