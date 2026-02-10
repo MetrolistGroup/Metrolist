@@ -455,12 +455,16 @@ fun Lyrics(
                 if (needsTranslation) {
                     var shouldTranslate = true
                     if (autoTranslateLyricsMismatch) {
-                        val combinedText = lines.take(5).joinToString(" ") { it.text }
-                        val detectedLang = LanguageDetectionHelper.identifyLanguage(combinedText)
-                        val systemLang = java.util.Locale.getDefault().language
-                        
-                        if (detectedLang != null && detectedLang == systemLang) {
-                            shouldTranslate = false
+                        try {
+                            val combinedText = lines.take(5).joinToString(" ") { it.text }
+                            val detectedLang = LanguageDetectionHelper.identifyLanguage(combinedText)
+                            val systemLang = java.util.Locale.getDefault().language
+                            
+                            if (detectedLang != null && detectedLang == systemLang) {
+                                shouldTranslate = false
+                            }
+                        } catch (e: Exception) {
+                            timber.log.Timber.e(e, "Language detection failed, proceeding with translation")
                         }
                     }
 

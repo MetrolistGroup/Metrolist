@@ -246,7 +246,6 @@ fun SettingsScreen(
                     contentDescription = null
                 )
             }
-        },
-        scrollBehavior = scrollBehavior
+        }
     )
 }

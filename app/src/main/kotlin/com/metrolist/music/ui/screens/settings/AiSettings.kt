@@ -438,7 +438,6 @@ fun AiSettings(
                     contentDescription = null
                 )
             }
-        },
-        scrollBehavior = scrollBehavior
+        }
     )
 }
