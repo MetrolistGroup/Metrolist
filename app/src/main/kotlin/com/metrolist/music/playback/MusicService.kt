@@ -2461,16 +2461,16 @@ class MusicService :
                 } catch (_: SQLException) {
                 }
             }
+        }
 
-            CoroutineScope(Dispatchers.IO).launch {
-                val playbackUrl = YTPlayerUtils.playerResponseForMetadata(mediaItem.mediaId, null)
-                    .getOrNull()?.playbackTracking?.videostatsPlaybackUrl?.baseUrl
-                playbackUrl?.let {
-                    YouTube.registerPlayback(null, playbackUrl)
-                        .onFailure {
-                            reportException(it)
-                        }
-                }
+        CoroutineScope(Dispatchers.IO).launch {
+            val playbackUrl = YTPlayerUtils.playerResponseForMetadata(mediaItem.mediaId, null)
+                .getOrNull()?.playbackTracking?.videostatsPlaybackUrl?.baseUrl
+            playbackUrl?.let {
+                YouTube.registerPlayback(null, playbackUrl)
+                    .onFailure {
+                        reportException(it)
+                    }
             }
         }
     }
