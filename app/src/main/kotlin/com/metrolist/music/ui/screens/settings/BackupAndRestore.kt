@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -43,10 +44,16 @@ import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
 import com.metrolist.music.ui.menu.AddToPlaylistDialogOnline
+import com.metrolist.music.ui.menu.CsvColumnMappingDialog
+import com.metrolist.music.ui.menu.CsvImportProgressDialog
 import com.metrolist.music.ui.menu.LoadingScreen
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.viewmodels.BackupRestoreViewModel
+import com.metrolist.music.viewmodels.ConvertedSongLog
+import com.metrolist.music.viewmodels.CsvImportState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -70,7 +77,18 @@ fun BackupAndRestore(
     var progressPercentage by rememberSaveable {
         mutableIntStateOf(0)
     }
+
+    // CSV column mapping state
+    var csvImportState by remember { mutableStateOf<CsvImportState?>(null) }
+    var showCsvColumnMapping by rememberSaveable { mutableStateOf(false) }
+    var showCsvImportProgress by rememberSaveable { mutableStateOf(false) }
+    var csvImportProgress by rememberSaveable { mutableIntStateOf(0) }
+    val csvRecentLogs = remember { mutableStateListOf<ConvertedSongLog>() }
+    var pendingCsvUri by remember { mutableStateOf<android.net.Uri?>(null) }
+
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
     val backupLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
             if (uri != null) {
@@ -86,20 +104,16 @@ fun BackupAndRestore(
     val importPlaylistFromCsv =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri == null) return@rememberLauncherForActivityResult
-            val result = viewModel.importPlaylistFromCsv(context, uri)
-            importedSongs.clear()
-            importedSongs.addAll(result)
-
-            if (importedSongs.isNotEmpty()) {
-                showChoosePlaylistDialogOnline = true
-            }
+            pendingCsvUri = uri
+            val previewState = viewModel.previewCsvFile(context, uri)
+            csvImportState = previewState
+            showCsvColumnMapping = true
         }
     val importM3uLauncherOnline = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         val result = viewModel.loadM3UOnline(context, uri)
         importedSongs.clear()
         importedSongs.addAll(result)
-
 
         if (importedSongs.isNotEmpty()) {
             showChoosePlaylistDialogOnline = true
@@ -173,6 +187,7 @@ fun BackupAndRestore(
             }
         }
     )
+
     AddToPlaylistDialogOnline(
         isVisible = showChoosePlaylistDialogOnline,
         allowSyncing = false,
@@ -197,4 +212,56 @@ fun BackupAndRestore(
         isVisible = isProgressStarted,
         value = progressPercentage,
     )
+
+    // CSV column mapping dialog
+    csvImportState?.let { state ->
+        CsvColumnMappingDialog(
+            isVisible = showCsvColumnMapping,
+            csvState = state,
+            onDismiss = {
+                showCsvColumnMapping = false
+                csvImportState = null
+            },
+            onConfirm = { mappingState ->
+                showCsvColumnMapping = false
+                csvImportState = mappingState
+                pendingCsvUri?.let { uri ->
+                    showCsvImportProgress = true
+                    coroutineScope.launch(Dispatchers.Default) {
+                        val result = viewModel.importPlaylistFromCsv(
+                            context,
+                            uri,
+                            mappingState,
+                            onProgress = { progress ->
+                                csvImportProgress = progress
+                            },
+                            onLogUpdate = { logs ->
+                                csvRecentLogs.clear()
+                                csvRecentLogs.addAll(logs)
+                            },
+                        )
+                        importedSongs.clear()
+                        importedSongs.addAll(result)
+                        if (result.isNotEmpty()) {
+                            showCsvImportProgress = false
+                            csvImportProgress = 0
+                            csvRecentLogs.clear()
+                            showChoosePlaylistDialogOnline = true
+                        }
+                    }
+                }
+            },
+        )
+    }
+
+    // CSV import progress dialog
+    CsvImportProgressDialog(
+        isVisible = showCsvImportProgress,
+        progress = csvImportProgress,
+        recentLogs = csvRecentLogs.toList(),
+        onDismiss = {
+            // Cannot dismiss while importing
+        },
+    )
 }
+

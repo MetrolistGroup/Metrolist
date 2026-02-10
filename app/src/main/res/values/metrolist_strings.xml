@@ -649,4 +649,17 @@
     <string name="hold_to_recognize">Hold search icon to recognize music</string>
     <string name="play_on_app">Play on Metrolist</string>
     <string name="recognized_track">Recognized Track</string>
+
+    <!-- CSV Import Strings -->
+    <string name="map_csv_columns">Map CSV Columns</string>
+    <string name="first_row_is_header">First row is header</string>
+    <string name="artist_name_column">Artist Name Column</string>
+    <string name="song_title_column">Song Title Column</string>
+    <string name="youtube_url_column">YouTube URL Column (Optional)</string>
+    <string name="continue_action">Continue</string>
+    <string name="importing_csv">Importing CSV</string>
+    <string name="recently_converted">Recently Converted</string>
+    <string name="column_label">Col %d</string>
+    <string name="csv_import_failed">Failed to import CSV file</string>
+    <string name="csv_preview_failed">Failed to preview CSV file</string>
 </resources>
