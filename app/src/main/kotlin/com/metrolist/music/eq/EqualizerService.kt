@@ -19,7 +19,7 @@ import javax.inject.Singleton
 class EqualizerService @Inject constructor() {
 
     @SuppressLint("UnsafeOptInUsageError")
-    private var audioProcessor: CustomEqualizerAudioProcessor? = null
+    private val audioProcessors = mutableListOf<CustomEqualizerAudioProcessor>()
     private var pendingProfile: SavedEQProfile? = null
     private var shouldDisable: Boolean = false
 
@@ -28,25 +28,30 @@ class EqualizerService @Inject constructor() {
     }
 
     /**
-     * Set the audio processor instance
+     * Add an audio processor instance
      * This should be called when ExoPlayer is initialized
      */
     @OptIn(UnstableApi::class)
-    fun setAudioProcessor(processor: CustomEqualizerAudioProcessor) {
-        this.audioProcessor = processor
-        Timber.tag(TAG).d("Audio processor set")
+    fun addAudioProcessor(processor: CustomEqualizerAudioProcessor) {
+        audioProcessors.add(processor)
+        Timber.tag(TAG).d("Audio processor added. Total: ${audioProcessors.size}")
 
         // Apply pending profile if one was set before processor was available
         if (shouldDisable) {
-            disable()
-            shouldDisable = false
-            Timber.tag(TAG).d("Applied pending disable request")
+            processor.disable()
+            // Don't clear shouldDisable here, as we might add more processors
         } else if (pendingProfile != null) {
             val profile = pendingProfile!!
-            applyProfile(profile)
-            pendingProfile = null
-            Timber.tag(TAG).d("Applied pending profile: ${profile.name}")
+            applyProfileToProcessor(processor, profile)
+            // Don't clear pendingProfile here
         }
+    }
+
+    /**
+     * Remove an audio processor instance
+     */
+    fun removeAudioProcessor(processor: CustomEqualizerAudioProcessor) {
+        audioProcessors.remove(processor)
     }
 
     /**
@@ -55,34 +60,38 @@ class EqualizerService @Inject constructor() {
      */
     @OptIn(UnstableApi::class)
     fun applyProfile(profile: SavedEQProfile): Result<Unit> {
-        val processor = audioProcessor
-        if (processor == null) {
+        if (audioProcessors.isEmpty()) {
             Timber.tag(TAG)
-                .w("Audio processor not set yet. Storing profile as pending: ${profile.name}")
+                .w("No audio processors set yet. Storing profile as pending: ${profile.name}")
             pendingProfile = profile
             shouldDisable = false
             return Result.success(Unit)
         }
 
-        try {
-            // Clear any pending state since we're applying now
-            pendingProfile = null
-            shouldDisable = false
+        pendingProfile = profile // Keep it for future processors
+        shouldDisable = false
+        
+        var success = true
+        var lastError: Exception? = null
 
-            // Convert SavedEQProfile to ParametricEQ
-            val parametricEQ = ParametricEQ(
-                preamp = profile.preamp,
-                bands = profile.bands
-            )
-
-            processor.applyProfile(parametricEQ)
-            Timber.tag(TAG)
-                .d("Applied EQ profile: ${profile.name} with ${profile.bands.size} bands and ${profile.preamp} dB preamp")
-            return Result.success(Unit)
-        } catch (e: Exception) {
-            Timber.tag(TAG).e("Failed to apply profile: ${e.message}")
-            return Result.failure(e)
+        audioProcessors.forEach { processor ->
+            try {
+                applyProfileToProcessor(processor, profile)
+            } catch (e: Exception) {
+                success = false
+                lastError = e
+            }
         }
+
+        return if (success) Result.success(Unit) else Result.failure(lastError ?: Exception("Unknown error"))
+    }
+
+    private fun applyProfileToProcessor(processor: CustomEqualizerAudioProcessor, profile: SavedEQProfile) {
+        val parametricEQ = ParametricEQ(
+            preamp = profile.preamp,
+            bands = profile.bands
+        )
+        processor.applyProfile(parametricEQ)
     }
 
     /**
@@ -91,31 +100,31 @@ class EqualizerService @Inject constructor() {
      */
     @OptIn(UnstableApi::class)
     fun disable() {
-        val processor = audioProcessor
-        if (processor == null) {
-            Timber.tag(TAG).w("Audio processor not set yet. Storing disable as pending")
+        if (audioProcessors.isEmpty()) {
+            Timber.tag(TAG).w("No audio processors set yet. Storing disable as pending")
             shouldDisable = true
             pendingProfile = null
             return
         }
 
-        try {
-            // Clear any pending state since we're disabling now
-            pendingProfile = null
-            shouldDisable = false
+        shouldDisable = true // Keep state
+        pendingProfile = null
 
-            processor.disable()
-            Timber.tag(TAG).d("Equalizer disabled")
-        } catch (e: Exception) {
-            Timber.tag(TAG).e("Failed to disable equalizer: ${e.message}")
+        audioProcessors.forEach { processor ->
+            try {
+                processor.disable()
+            } catch (e: Exception) {
+                Timber.tag(TAG).e("Failed to disable equalizer: ${e.message}")
+            }
         }
+        Timber.tag(TAG).d("Equalizer disabled on all processors")
     }
 
     /**
      * Check if audio processor is set
      */
     fun isInitialized(): Boolean {
-        return audioProcessor != null
+        return audioProcessors.isNotEmpty()
     }
 
     /**
@@ -123,7 +132,7 @@ class EqualizerService @Inject constructor() {
      */
     @OptIn(UnstableApi::class)
     fun isEnabled(): Boolean {
-        return audioProcessor?.isEnabled() ?: false
+        return audioProcessors.any { it.isEnabled() }
     }
 
     /**
@@ -142,8 +151,8 @@ class EqualizerService @Inject constructor() {
      */
     fun release() {
         // AudioProcessor is managed by ExoPlayer, we just clear our reference
-        audioProcessor = null
-        Timber.tag(TAG).d("Audio processor reference cleared (pending state preserved)")
+        audioProcessors.clear()
+        Timber.tag(TAG).d("Audio processor references cleared")
     }
 }
 

@@ -168,30 +168,49 @@ class PlayerConnection(
     var onSkipPrevious: (() -> Unit)? = null
     var onSkipNext: (() -> Unit)? = null
 
+    private var attachedPlayer: Player? = null
+
     init {
         try {
-            // Register listener with the player for state updates
-            player.addListener(this)
-            Timber.tag(TAG).d("Player listener registered successfully")
-
-            // Initialize state flows from current player state
-            // These will be kept in sync via listener callbacks
-            playbackState.value = player.playbackState
-            playWhenReady.value = player.playWhenReady
-            mediaMetadata.value = player.currentMetadata
-            queueTitle.value = service.queueTitle
-            queueWindows.value = player.getQueueWindows()
-            currentWindowIndex.value = player.getCurrentQueueIndex()
-            currentMediaItemIndex.value = player.currentMediaItemIndex
-            shuffleModeEnabled.value = player.shuffleModeEnabled
-            repeatMode.value = player.repeatMode
+            // Observe player changes (e.g. crossfade swap)
+            scope.launch {
+                service.playerFlow.collect { newPlayer ->
+                    if (newPlayer != null && newPlayer != attachedPlayer) {
+                        updateAttachedPlayer(newPlayer)
+                    }
+                }
+            }
             
-            Timber.tag(TAG).d("PlayerConnection fully initialized with player state")
+            // Initial setup if flow hasn't emitted yet but service is ready
+            if (attachedPlayer == null && service.isPlayerReady.value) {
+                 updateAttachedPlayer(player)
+            }
+
+            Timber.tag(TAG).d("PlayerConnection flow observer registered")
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Failed to initialize PlayerConnection listener or state")
             // Propagate the error so MainActivity can retry
             throw e
         }
+    }
+
+    private fun updateAttachedPlayer(newPlayer: Player) {
+        attachedPlayer?.removeListener(this)
+        attachedPlayer = newPlayer
+        newPlayer.addListener(this)
+        
+        // Refresh all state from new player
+        playbackState.value = newPlayer.playbackState
+        playWhenReady.value = newPlayer.playWhenReady
+        mediaMetadata.value = newPlayer.currentMetadata
+        queueTitle.value = service.queueTitle
+        queueWindows.value = newPlayer.getQueueWindows()
+        currentWindowIndex.value = newPlayer.getCurrentQueueIndex()
+        currentMediaItemIndex.value = newPlayer.currentMediaItemIndex
+        shuffleModeEnabled.value = newPlayer.shuffleModeEnabled
+        repeatMode.value = newPlayer.repeatMode
+        
+        Timber.tag(TAG).d("Attached to new player instance: $newPlayer")
     }
 
     fun playQueue(queue: Queue) {
@@ -473,7 +492,8 @@ class PlayerConnection(
 
     fun dispose() {
         try {
-            player.removeListener(this)
+            attachedPlayer?.removeListener(this)
+            attachedPlayer = null
             Timber.tag(TAG).d("PlayerConnection disposed successfully")
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Error during PlayerConnection disposal")

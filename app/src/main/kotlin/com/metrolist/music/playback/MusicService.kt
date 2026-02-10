@@ -81,6 +81,9 @@ import com.metrolist.music.constants.AudioQualityKey
 import com.metrolist.music.constants.AutoDownloadOnLikeKey
 import com.metrolist.music.constants.AutoLoadMoreKey
 import com.metrolist.music.constants.AutoSkipNextOnErrorKey
+import com.metrolist.music.constants.CrossfadeDurationKey
+import com.metrolist.music.constants.CrossfadeEnabledKey
+import com.metrolist.music.constants.CrossfadeGaplessKey
 import com.metrolist.music.constants.DisableLoadMoreWhenRepeatAllKey
 import com.metrolist.music.constants.DiscordTokenKey
 import com.metrolist.music.constants.DiscordUseDetailsKey
@@ -224,9 +227,29 @@ class MusicService :
     private var reentrantFocusGain = false
     private var wasPlayingBeforeVolumeMute = false
     private var isPausedByVolumeMute = false
+    
+    private var crossfadeEnabled = false
+    private var crossfadeDuration = 5000
+    private var crossfadeGapless = true
+    private var crossfadeTriggerJob: Job? = null
+    
+    private val secondaryPlayerListener = object : Player.Listener {
+        override fun onPlayerError(error: PlaybackException) {
+            Timber.tag(TAG).e(error, "Secondary player error")
+            secondaryPlayer?.stop()
+            secondaryPlayer?.clearMediaItems()
+            secondaryPlayer = null
+        }
+    }
 
     private var scope = CoroutineScope(Dispatchers.Main) + Job()
+    
     private val binder = MusicBinder()
+
+    inner class MusicBinder : Binder() {
+        val service: MusicService
+            get() = this@MusicService
+    }
 
     private lateinit var connectivityManager: ConnectivityManager
     lateinit var connectivityObserver: NetworkConnectivityObserver
@@ -273,16 +296,23 @@ class MusicService :
 
     lateinit var player: ExoPlayer
         private set
+    private var secondaryPlayer: ExoPlayer? = null
+    private var fadingPlayer: ExoPlayer? = null
+    private var isCrossfading = false
+    private var crossfadeJob: Job? = null
+
     private lateinit var mediaSession: MediaLibrarySession
     
     // Tracks if player has been properly initilized
     private val playerInitialized = MutableStateFlow(false)
     val isPlayerReady: kotlinx.coroutines.flow.StateFlow<Boolean> = playerInitialized.asStateFlow()
 
-    // Custom Audio Processor
-    private val customEqualizerAudioProcessor = CustomEqualizerAudioProcessor()
-    private val silenceDetectorAudioProcessor =
-        SilenceDetectorAudioProcessor { handleLongSilenceDetected() }
+    // Expose active player flow for UI/Connection updates
+    private val _playerFlow = MutableStateFlow<ExoPlayer?>(null)
+    val playerFlow = _playerFlow.asStateFlow()
+
+    private val playerSilenceProcessors = HashMap<Player, SilenceDetectorAudioProcessor>()
+
 
     private val instantSilenceSkipEnabled = MutableStateFlow(false)
 
@@ -352,7 +382,7 @@ class MusicService :
         playerInitialized.value = false
         
         // 3. Connect the processor to the service
-        equalizerService.setAudioProcessor(customEqualizerAudioProcessor)
+        // handled in createExoPlayer
 
         try {
             val nm = getSystemService(NotificationManager::class.java)
@@ -393,32 +423,12 @@ class MusicService :
                     setSmallIcon(R.drawable.small_icon)
                 },
         )
-        player =
-            ExoPlayer
-                .Builder(this)
-                .setMediaSourceFactory(createMediaSourceFactory())
-                .setRenderersFactory(createRenderersFactory())
-                .setHandleAudioBecomingNoisy(true)
-                .setWakeMode(C.WAKE_MODE_NETWORK)
-                .setAudioAttributes(
-                    AudioAttributes
-                        .Builder()
-                        .setUsage(C.USAGE_MEDIA)
-                        .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                        .build(),
-                    false,
-                ).setSeekBackIncrementMs(5000)
-                .setSeekForwardIncrementMs(5000)
-                .setDeviceVolumeControlEnabled(true)
-                .build()
-                .apply {
-                    addListener(this@MusicService)
-                    sleepTimer = SleepTimer(scope, this)
-                    addListener(sleepTimer)
-                    addAnalyticsListener(PlaybackStatsListener(false, this@MusicService))
-                    setOffloadEnabled(dataStore.get(AudioOffload, false))
-                }
-        
+        player = createExoPlayer()
+        player.addListener(this@MusicService)
+        sleepTimer = SleepTimer(scope, player)
+        player.addListener(sleepTimer)
+        player.addAnalyticsListener(PlaybackStatsListener(false, this@MusicService))
+
         // Mark player as initialized after successful creation
         playerInitialized.value = true
         Timber.tag(TAG).d("Player successfully initialized")
@@ -477,7 +487,6 @@ class MusicService :
                     val result = equalizerService.applyProfile(profile)
                     if (result.isSuccess && player.playbackState == Player.STATE_READY && player.isPlaying) {
                         // Instant update: flush buffers and seek slightly to re-process audio
-                        customEqualizerAudioProcessor.flush()
                         // Small seek to force re-buffer through the new EQ settings
                         // Seek to current position effectively resets the pipeline
                         player.seekTo(player.currentPosition) 
@@ -485,7 +494,6 @@ class MusicService :
                 } else {
                     equalizerService.disable()
                     if (player.playbackState == Player.STATE_READY && player.isPlaying) {
-                        customEqualizerAudioProcessor.flush()
                         player.seekTo(player.currentPosition)
                     }
                 }
@@ -554,13 +562,19 @@ class MusicService :
             .distinctUntilChanged()
             .collectLatest(scope) { (skipSilence, instantSkip) ->
                 player.skipSilenceEnabled = skipSilence
+                secondaryPlayer?.skipSilenceEnabled = skipSilence
 
                 val enableInstant = skipSilence && instantSkip
                 instantSilenceSkipEnabled.value = enableInstant
-                silenceDetectorAudioProcessor.instantModeEnabled = enableInstant
+                
+                playerSilenceProcessors.values.forEach { processor ->
+                    processor.instantModeEnabled = enableInstant
+                    if (!enableInstant) {
+                        processor.resetTracking()
+                    }
+                }
 
                 if (!enableInstant) {
-                    silenceDetectorAudioProcessor.resetTracking()
                     silenceSkipJob?.cancel()
                 }
             }
@@ -573,6 +587,18 @@ class MusicService :
         ) { format, normalizeAudio ->
             format to normalizeAudio
         }.collectLatest(scope) { (format, normalizeAudio) -> setupLoudnessEnhancer()}
+
+        combine(
+            dataStore.data.map { it[AudioOffload] ?: false },
+            dataStore.data.map { it[CrossfadeEnabledKey] ?: false }
+        ) { offloadPref, crossfadeEnabled ->
+             // Force disable offload if crossfade is enabled to prevent volume ramp issues
+             if (crossfadeEnabled) false else offloadPref
+        }.distinctUntilChanged()
+        .collectLatest(scope) { useOffload ->
+             player.setOffloadEnabled(useOffload)
+             secondaryPlayer?.setOffloadEnabled(useOffload)
+        }
 
         dataStore.data
             .map { it[DiscordTokenKey] to (it[EnableDiscordRPCKey] ?: true) }
@@ -656,6 +682,21 @@ class MusicService :
                 }
             }
 
+        dataStore.data
+            .map { prefs ->
+                Triple(
+                    prefs[CrossfadeEnabledKey] ?: false,
+                    prefs[CrossfadeDurationKey] ?: 5,
+                    prefs[CrossfadeGaplessKey] ?: true
+                )
+            }
+            .distinctUntilChanged()
+            .collect(scope) { (enabled, duration, gapless) ->
+                crossfadeEnabled = enabled
+                crossfadeDuration = duration * 1000 // Convert to ms
+                crossfadeGapless = gapless
+            }
+
         if (dataStore.get(PersistentQueueKey, true)) {
             val queueFile = filesDir.resolve(PERSISTENT_QUEUE_FILE)
             if (queueFile.exists()) {
@@ -669,10 +710,16 @@ class MusicService :
                     runCatching {
                         // Convert back to proper queue type
                         val restoredQueue = queue.toQueue()
-                        playQueue(
-                            queue = restoredQueue,
-                            playWhenReady = false,
-                        )
+                        // Wait for player initialization before playing
+                        scope.launch {
+                            playerInitialized.first { it }
+                            if (isActive) {
+                                playQueue(
+                                    queue = restoredQueue,
+                                    playWhenReady = false,
+                                )
+                            }
+                        }
                     }.onFailure { error ->
                         Timber.tag(TAG).w(error, "Failed to restore persisted queue, clearing data")
                         clearPersistedQueueFiles()
@@ -752,6 +799,52 @@ class MusicService :
                 }
             }
         }
+    }
+
+    private fun createExoPlayer(): ExoPlayer {
+        val eqProcessor = CustomEqualizerAudioProcessor()
+        equalizerService.addAudioProcessor(eqProcessor)
+        
+        val silenceProcessor = SilenceDetectorAudioProcessor { handleLongSilenceDetected() }
+        
+        // Set initial state
+        runBlocking {
+            val skipSilence = dataStore.get(SkipSilenceKey, false)
+            val instantSkip = dataStore.get(SkipSilenceInstantKey, false)
+            silenceProcessor.instantModeEnabled = skipSilence && instantSkip
+        }
+
+        val player = ExoPlayer.Builder(this)
+            .setMediaSourceFactory(createMediaSourceFactory())
+            .setRenderersFactory(createRenderersFactory(eqProcessor, silenceProcessor))
+            .setHandleAudioBecomingNoisy(true)
+            .setWakeMode(C.WAKE_MODE_NETWORK)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(C.USAGE_MEDIA)
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                    .build(),
+                false,
+            )
+            .setSeekBackIncrementMs(5000)
+            .setSeekForwardIncrementMs(5000)
+            .setDeviceVolumeControlEnabled(true)
+            .build()
+        
+        playerSilenceProcessors[player] = silenceProcessor
+
+        player.apply {
+                runBlocking {
+                    val offload = dataStore.get(AudioOffload, false)
+                    val crossfade = dataStore.get(CrossfadeEnabledKey, false)
+                    setOffloadEnabled(if (crossfade) false else offload)
+                    skipSilenceEnabled = dataStore.get(SkipSilenceKey, false)
+                }
+                
+                // Cleanup handled manually in onDestroy/release
+            }
+        _playerFlow.value = player
+        return player
     }
 
     private fun setupAudioFocusRequest() {
@@ -1257,6 +1350,7 @@ class MusicService :
                                                 .map { it.toMediaItem() }
                                             if (relatedItems.isNotEmpty()) {
                                                 automixItems.value = relatedItems
+
                                             }
                                         }
                                     }
@@ -1618,6 +1712,7 @@ class MusicService :
                 resetRetryCount(mediaId)
                 Timber.tag(TAG).d("Playback successful for $mediaId, reset retry count")
             }
+            scheduleCrossfade()
         }
 
         if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
@@ -1656,6 +1751,7 @@ class MusicService :
                 Player.EVENT_PLAY_WHEN_READY_CHANGED
             )
         ) {
+            scheduleCrossfade()
             val isBufferingOrReady =
                 player.playbackState == Player.STATE_BUFFERING || player.playbackState == Player.STATE_READY
             if (isBufferingOrReady && player.playWhenReady) {
@@ -2288,14 +2384,15 @@ class MusicService :
         isSilenceSkipping = true
         try {
             var hops = 0
-            while (coroutineContext.isActive && instantSilenceSkipEnabled.value && silenceDetectorAudioProcessor.isCurrentlySilent()) {
+            val silenceProcessor = playerSilenceProcessors[player] ?: return
+            while (coroutineContext.isActive && instantSilenceSkipEnabled.value && silenceProcessor.isCurrentlySilent()) {
                 val current = player.currentPosition
                 val target = (current + INSTANT_SILENCE_SKIP_STEP_MS).coerceAtMost(duration - 500)
 
                 if (target <= current) break
 
                 // Reset silence tracking before seeking to prevent immediate re-trigger
-                silenceDetectorAudioProcessor.resetTracking()
+                silenceProcessor.resetTracking()
                 player.seekTo(target)
                 hops++
 
@@ -2413,7 +2510,10 @@ class MusicService :
             },
         )
 
-    private fun createRenderersFactory() =
+    private fun createRenderersFactory(
+        eqProcessor: CustomEqualizerAudioProcessor,
+        silenceProcessor: SilenceDetectorAudioProcessor
+    ) =
         object : DefaultRenderersFactory(this) {
             override fun buildAudioSink(
                 context: Context,
@@ -2427,8 +2527,8 @@ class MusicService :
                     DefaultAudioSink.DefaultAudioProcessorChain(
                         // 2. Inject processor into audio pipeline
                         arrayOf(
-                            customEqualizerAudioProcessor,
-                            silenceDetectorAudioProcessor,
+                            eqProcessor,
+                            silenceProcessor,
                         ),
                         SilenceSkippingAudioProcessor(2_000_000, 20_000, 256),
                         SonicAudioProcessor(),
@@ -2572,6 +2672,10 @@ class MusicService :
         mediaSession.release()
         player.removeListener(this)
         player.removeListener(sleepTimer)
+        playerSilenceProcessors.remove(player)
+        // Note: equalizerService audio processors are cleared in equalizerService.release() if needed,
+        // or we can't easily reference the specific processor created in createExoPlayer here without storing it.
+        // But since we are destroying the service, it's fine.
         player.release()
         discordUpdateJob?.cancel()
         super.onDestroy()
@@ -2584,11 +2688,6 @@ class MusicService :
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo) = mediaSession
-
-    inner class MusicBinder : Binder() {
-        val service: MusicService
-            get() = this@MusicService
-    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -2708,6 +2807,151 @@ class MusicService :
                 timber.log.Timber.e(e, "Failed to initialize Google Cast")
             }
         }
+    }
+
+
+    override fun onPositionDiscontinuity(
+        oldPosition: Player.PositionInfo,
+        newPosition: Player.PositionInfo,
+        reason: Int
+    ) {
+        if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+            scheduleCrossfade()
+        }
+    }
+    
+    private fun scheduleCrossfade() {
+        crossfadeTriggerJob?.cancel()
+        crossfadeTriggerJob = null
+        if (!crossfadeEnabled || player.duration == C.TIME_UNSET || player.duration <= crossfadeDuration) return
+        if (crossfadeGapless && isNextItemGapless()) return
+        if (!player.hasNextMediaItem()) return
+        
+        val triggerTime = player.duration - crossfadeDuration.toLong()
+        val delayMs = triggerTime - player.currentPosition
+        if (delayMs <= 0) return
+        
+        val targetMediaId = player.currentMediaItem?.mediaId
+        
+        crossfadeTriggerJob = scope.launch {
+            delay(delayMs)
+            if (isActive && player.isPlaying && player.currentMediaItem?.mediaId == targetMediaId) {
+                startCrossfade()
+            }
+        }
+    }
+    
+    private fun isNextItemGapless(): Boolean {
+        val current = player.currentMediaItem?.mediaMetadata ?: return false
+        val nextIndex = player.nextMediaItemIndex
+        if (nextIndex == C.INDEX_UNSET) return false
+        val next = player.getMediaItemAt(nextIndex).mediaMetadata
+        return current.albumTitle != null && current.albumTitle == next.albumTitle
+    }
+    
+    private fun startCrossfade() {
+        if (isCrossfading) return
+        val nextIndex = player.nextMediaItemIndex
+        if (nextIndex == C.INDEX_UNSET) return
+        
+        secondaryPlayer = createExoPlayer()
+        val secPlayer = secondaryPlayer!!
+        secPlayer.addListener(secondaryPlayerListener)
+        
+        val itemCount = player.mediaItemCount
+        val items = mutableListOf<MediaItem>()
+        // Copy entire queue history + future
+        for (i in 0 until itemCount) {
+            items.add(player.getMediaItemAt(i))
+        }
+        
+        secPlayer.setMediaItems(items)
+        // Seek to next track (the one we are fading into)
+        secPlayer.seekTo(nextIndex, 0)
+        secPlayer.prepare()
+        secPlayer.volume = 0f
+        secPlayer.playWhenReady = true
+        
+        performCrossfadeSwap()
+    }
+    
+    private fun performCrossfadeSwap() {
+        isCrossfading = true
+        val nextPlayer = secondaryPlayer ?: return
+        val currentPlayer = player
+        
+        fadingPlayer = currentPlayer
+        player = nextPlayer
+        _playerFlow.value = player
+        secondaryPlayer = null
+        
+        fadingPlayer?.removeListener(this)
+        
+        // Add listener to sync play/pause state
+        player.addListener(object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isCrossfading && fadingPlayer != null) {
+                    if (isPlaying) {
+                        fadingPlayer?.play()
+                    } else {
+                        fadingPlayer?.pause()
+                    }
+                } else {
+                    player.removeListener(this)
+                }
+            }
+        })
+
+        nextPlayer.removeListener(secondaryPlayerListener)
+        nextPlayer.addListener(this)
+        
+        sleepTimer.player = player
+        
+        try {
+            (mediaSession as MediaSession).player = player
+        } catch (e: Exception) {
+            timber.log.Timber.e(e, "Failed to swap player in MediaSession")
+        }
+        
+        crossfadeJob = scope.launch {
+            val duration = crossfadeDuration.toLong()
+            val steps = 20
+            val stepTime = duration / steps
+            val startVolume = try { fadingPlayer?.volume ?: 1f } catch(e:Exception) { 1f }
+            
+            for (i in 0..steps) {
+                if (!isActive) break
+                // Pause volume ramp if player is paused
+                while (!player.isPlaying && isActive) {
+                    delay(100)
+                }
+                
+                val progress = i / steps.toFloat()
+                val fadeIn = 1.0f - (1.0f - progress) * (1.0f - progress)
+                val fadeOut = (1.0f - progress) * (1.0f - progress)
+                
+                try {
+                    player.volume = startVolume * fadeIn
+                    fadingPlayer?.volume = startVolume * fadeOut
+                } catch (e: Exception) { break }
+                
+                delay(stepTime)
+            }
+            
+            try {
+                fadingPlayer?.volume = 0f
+                player.volume = startVolume
+                cleanupCrossfade()
+            } catch (e: Exception) { }
+        }
+    }
+    
+    private fun cleanupCrossfade() {
+        fadingPlayer?.stop()
+        fadingPlayer?.clearMediaItems()
+        fadingPlayer?.release()
+        fadingPlayer = null
+        isCrossfading = false
     }
 
     companion object {

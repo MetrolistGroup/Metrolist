@@ -253,6 +253,12 @@
     <string name="pause_music_when_media_is_muted">Pause music when media is muted</string>
     <string name="keep_screen_on_when_player_is_expanded">Keep screen on when player is expanded</string>
 
+    <string name="crossfade">Crossfade</string>
+    <string name="crossfade_desc">Crossfade between songs</string>
+    <string name="crossfade_duration">Crossfade duration</string>
+    <string name="crossfade_gapless">Disable for gapless albums</string>
+    <string name="crossfade_gapless_desc">Don\'t crossfade if the album is gapless</string>
+
     <!-- Romanization Settings -->
     <string name="lyrics_romanization_cyrillic">Cyrillic</string>
     <string name="lyrics_romanize_title">Romanization</string>
@@ -296,6 +302,7 @@
     <!-- Offload -->
     <string name="audio_offload">Enable offload</string>
     <string name="audio_offload_description">Use the offload audio path for audio playback. Disabling this may increase power usage but can be useful if you experience issues with audio playback or post processing</string>
+    <string name="audio_offload_disabled_by_crossfade">Disabled because Crossfade is active</string>
 
     <!-- Google Cast -->
     <string name="google_cast">Google Cast</string>
