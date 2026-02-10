@@ -467,6 +467,7 @@
     <string name="decryption_library_pipepipe_api_desc">API-based decryption using MetroExtractor. Faster but depends on external API. Automatic fallback to NewPipe if fails.</string>
 
     <!-- Listen Together -->
+    <string name="together">Together</string>
     <string name="listen_together">Listen Together</string>
     <string name="listen_together_desc">Listen to music with friends in real-time</string>
     <string name="listen_together_server_url">Server URL</string>
@@ -520,6 +521,7 @@
     <string name="creating_room">Creating room…</string>
     <string name="connect">Connect</string>
     <string name="disconnect">Disconnect</string>
+    <string name="reconnect">Reconnect</string>
     <string name="create">Create</string>
     <string name="join">Join</string>
     <string name="approve">Approve</string>
@@ -540,6 +542,8 @@
     <string name="you_label">You</string>
     <string name="connected_users">Connected users</string>
     <string name="enter_username">Enter username</string>
+    <string name="enter_room_code">Enter room code</string>
+    <string name="listen_together_settings_desc">Configure server, username, and more</string>
     <string name="error_username_empty">Username is required.</string>
     <string name="resync">Resync</string>
     <string name="copy_code">Copy code</string>

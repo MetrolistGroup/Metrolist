@@ -92,6 +92,10 @@ fun NavGraphBuilder.navigationBuilder(
         LibraryScreen(navController)
     }
 
+    composable(Screens.ListenTogether.route) {
+        ListenTogetherScreen(navController)
+    }
+
     composable("history") {
         HistoryScreen(navController)
     }

@@ -1426,36 +1426,36 @@ fun BottomSheetPlayer(
                                 .fillMaxWidth()
                                 .padding(horizontal = PlayerHorizontalPadding),
                         ) {
-                            if (!isListenTogetherGuest) {
-                                Box(modifier = Modifier.weight(1f)) {
-                                    ResizableIconButton(
-                                        icon = when (repeatMode) {
-                                            Player.REPEAT_MODE_OFF, Player.REPEAT_MODE_ALL -> R.drawable.repeat
-                                            Player.REPEAT_MODE_ONE -> R.drawable.repeat_one
-                                            else -> throw IllegalStateException()
-                                        },
-                                        color = TextBackgroundColor,
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .padding(4.dp)
-                                            .align(Alignment.Center),
-                                        enabled = !isListenTogetherGuest,
-                                        onClick = {
-                                            playerConnection.player.toggleRepeatMode()
-                                        }
-                                    )
-                                }
+                            Box(modifier = Modifier.weight(1f)) {
+                                ResizableIconButton(
+                                    icon = when (repeatMode) {
+                                        Player.REPEAT_MODE_OFF, Player.REPEAT_MODE_ALL -> R.drawable.repeat
+                                        Player.REPEAT_MODE_ONE -> R.drawable.repeat_one
+                                        else -> throw IllegalStateException()
+                                    },
+                                    color = TextBackgroundColor,
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .padding(4.dp)
+                                        .align(Alignment.Center)
+                                        .alpha(if (isListenTogetherGuest) 0.5f else 1f),
+                                    enabled = !isListenTogetherGuest,
+                                    onClick = {
+                                        playerConnection.player.toggleRepeatMode()
+                                    }
+                                )
                             }
 
                             Box(modifier = Modifier.weight(1f)) {
                                 ResizableIconButton(
                                     icon = R.drawable.skip_previous,
-                                        enabled = canSkipPrevious && !isListenTogetherGuest,
+                                    enabled = canSkipPrevious && !isListenTogetherGuest,
                                     color = TextBackgroundColor,
                                     modifier =
                                     Modifier
                                         .size(32.dp)
-                                        .align(Alignment.Center),
+                                        .align(Alignment.Center)
+                                        .alpha(if (isListenTogetherGuest) 0.5f else 1f),
                                     onClick = playerConnection::seekToPrevious,
                                 )
                             }
@@ -1516,12 +1516,13 @@ fun BottomSheetPlayer(
                             Box(modifier = Modifier.weight(1f)) {
                                 ResizableIconButton(
                                     icon = R.drawable.skip_next,
-                                        enabled = canSkipNext && !isListenTogetherGuest,
+                                    enabled = canSkipNext && !isListenTogetherGuest,
                                     color = TextBackgroundColor,
                                     modifier =
                                     Modifier
                                         .size(32.dp)
-                                        .align(Alignment.Center),
+                                        .align(Alignment.Center)
+                                        .alpha(if (isListenTogetherGuest) 0.5f else 1f),
                                     onClick = playerConnection::seekToNext,
                                 )
                             }
