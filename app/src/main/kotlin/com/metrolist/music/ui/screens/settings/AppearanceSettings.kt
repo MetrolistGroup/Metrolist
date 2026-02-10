@@ -60,6 +60,7 @@ import com.metrolist.music.constants.CropAlbumArtKey
 import com.metrolist.music.constants.DefaultOpenTabKey
 import com.metrolist.music.constants.DynamicThemeKey
 import com.metrolist.music.constants.EnableDynamicIconKey
+import com.metrolist.music.constants.EnableHighRefreshRateKey
 import com.metrolist.music.constants.GridItemSize
 import com.metrolist.music.constants.GridItemsSizeKey
 import com.metrolist.music.constants.HidePlayerThumbnailKey
@@ -124,6 +125,10 @@ fun AppearanceSettings(
     )
     val (enableDynamicIcon, onEnableDynamicIconChange) = rememberPreference(
         EnableDynamicIconKey,
+        defaultValue = true
+    )
+    val (enableHighRefreshRate, onEnableHighRefreshRateChange) = rememberPreference(
+        EnableHighRefreshRateKey,
         defaultValue = true
     )
     val (selectedThemeColorInt) = rememberPreference(
@@ -797,6 +802,29 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { handleIconChange(!enableDynamicIcon) }
+                    )
+                )
+                add(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.speed),
+                        title = { Text(stringResource(R.string.enable_high_refresh_rate)) },
+                        description = { Text(stringResource(R.string.enable_high_refresh_rate_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = enableHighRefreshRate,
+                                onCheckedChange = onEnableHighRefreshRateChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter = painterResource(
+                                            id = if (enableHighRefreshRate) R.drawable.check else R.drawable.close
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            )
+                        },
+                        onClick = { onEnableHighRefreshRateChange(!enableHighRefreshRate) }
                     )
                 )
                 // Only show dynamic theme option when using the default/dynamic color

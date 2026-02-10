@@ -629,4 +629,6 @@
     <string name="cd_system_mode">System mode</string>
     <string name="cd_palette_item">%1$s palette</string>
     <string name="play_all">Play all</string>
+    <string name="enable_high_refresh_rate">Enable high refresh rate</string>
+    <string name="enable_high_refresh_rate_desc">Force the display to run at the highest supported refresh rate (e.g. 120Hz)</string>
 </resources>
