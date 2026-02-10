@@ -457,7 +457,7 @@
     <string name="change">Изменить</string>
     <string name="copied_to_clipboard">Скопировано в буфер обмена</string>
     <string name="not_set">Не указано</string>
-    <string name="hosting_room">Комната для гостей</string>
+    <string name="hosting_room">Хостинг комнаты</string>
     <string name="in_room">В комнате</string>
     <string name="pending_requests">Ожидающие запросы</string>
     <string name="pending_suggestions">Ожидающие предложения</string>
