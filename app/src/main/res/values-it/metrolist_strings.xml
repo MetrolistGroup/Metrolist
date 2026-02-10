@@ -553,4 +553,8 @@
     <string name="ai_error_unexpected">Risultato di traduzione inaspettato</string>
     <string name="ai_error_unknown">Si è verificato un errore sconosciuto</string>
     <string name="ai_error_translation_failed">Traduzione fallita</string>
+    <string name="ai_error_api_key_required">È necessaria una chiave API</string>
+    <string name="ai_error_no_lyrics">Nessun testo da tradurre</string>
+    <string name="ai_error_lyrics_empty">Il testo è vuoto</string>
+    <string name="play_all">Riproduci tutto</string>
 </resources>
