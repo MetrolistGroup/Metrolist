@@ -547,4 +547,6 @@
     <string name="ai_setup_api_end">per accedere a molti modelli.</string>
     <string name="ai_language_mismatch_desc">Salta la traduzione se il testo è nella lingua di sistema</string>
     <string name="ai_translation_literal">Originale + Traduzione</string>
+    <string name="ai_translation_transcribed">Originale + Trascrizione</string>
+    <string name="ai_api_key_required">Chiave API Necessaria</string>
 </resources>
