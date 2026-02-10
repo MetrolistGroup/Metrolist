@@ -366,7 +366,7 @@
     <string name="next">Siguiente</string>
     <string name="like">Me gusta</string>
     <string name="widget_description">Widget reproductor de música con controles de reproducción</string>
-    <string name="turntable_widget_description">Acceso rápido a la última canción reproducida</string>
+    <string name="turntable_widget_description">Widget musical circular con controles de reproducir y me gusta</string>
     <string name="queue_widget_description">Reproductor de música con vista previa de la cola</string>
     <string name="crop_album_art">Recortar portada del álbum</string>
     <plurals name="profiles_count">
@@ -499,4 +499,28 @@
     <string name="cd_dark_mode">Modo oscuro</string>
     <string name="cd_system_mode">Modo del sistema</string>
     <string name="cd_palette_item">Paleta %1$s</string>
+    <string name="not_playing">No hay canción en reproducción</string>
+    <string name="tap_to_play">Toca para abrir Metrolist</string>
+    <string name="widget_music_player">Reproductor de música</string>
+    <string name="widget_turntable">Tocadiscos</string>
+    <string name="listen_together_choose_server">Elegir servidor</string>
+    <string name="listen_together_custom_server">Servidor personalizado</string>
+    <string name="listen_together_use_custom_server">Usar servidor personalizado</string>
+    <string name="listen_together_auto_approval">Aprobar automáticamente solicitudes de unión</string>
+    <string name="listen_together_auto_approval_desc">Aprobar automáticamente solicitudes de unión en lugar de revisarlas manualmente</string>
+    <string name="listen_together_sync_volume">Sincronizar volumen del anfitrión</string>
+    <string name="listen_together_sync_volume_desc">Los invitados siguen el nivel de volumen del anfitrión</string>
+    <string name="transfer_host">Transferir anfitrión</string>
+    <string name="copy_code">Copiar código</string>
+    <string name="kick_user_desc">Eliminar a esta persona de la sesión</string>
+    <string name="permanently_kick_user">Bloquear permanentemente</string>
+    <string name="permanently_kick_user_desc">Bloquear las solicitudes de unión de esta persona y ocultar sus sugerencias</string>
+    <string name="transfer_ownership">Transferir propiedad</string>
+    <string name="transfer_ownership_desc">Convertir a esta persona en el anfitrión de la sala</string>
+    <string name="manage_user">Administrar usuario</string>
+    <string name="listen_together_blocked_users">Usuarios bloqueados</string>
+    <string name="listen_together_blocked_users_count">%d usuario(s) bloqueado(s)</string>
+    <string name="listen_together_no_blocked_users">No hay usuarios bloqueados</string>
+    <string name="unblock">Desbloquear</string>
+    <string name="user_blocked_by_host">Usuario bloqueado por el anfitrión</string>
 </resources>
