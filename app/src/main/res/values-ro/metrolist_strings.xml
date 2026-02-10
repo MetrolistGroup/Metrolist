@@ -376,7 +376,7 @@
     <string name="next">Următoarea</string>
     <string name="like">Apreciază</string>
     <string name="widget_description">Widget pentru playerul muzical cu controale pentru redare</string>
-    <string name="turntable_widget_description">Acces rapid la cea mai recentă piesă redată</string>
+    <string name="turntable_widget_description">Widget de muzică circular cu butoane de redare și apreciere</string>
     <string name="queue_widget_description">Player de muzică cu previzualizare pentru coadă</string>
     <string name="persistent_shuffle_title">Amestecare persistentă</string>
     <string name="persistent_shuffle_desc">Menține modul de amestecare activat atunci când redai melodii sau playlisturi noi</string>
@@ -487,4 +487,21 @@
     <string name="palette_brown">Maro</string>
     <string name="palette_grey">Gri</string>
     <string name="cd_back">Înapoi</string>
+    <string name="not_playing">Nu se redă nicio melodie</string>
+    <string name="tap_to_play">Atinge pentru a deschide Metrolist</string>
+    <string name="widget_music_player">Player de muzică</string>
+    <string name="widget_turntable">Platan</string>
+    <string name="listen_together_choose_server">Alege serverul</string>
+    <string name="listen_together_custom_server">Server personalizat</string>
+    <string name="listen_together_use_custom_server">Folosește un server personalizat</string>
+    <string name="mute">Mut</string>
+    <string name="unmute">Scoate de pe mut</string>
+    <string name="listen_together_auto_approval">Aprobă automat cererile de alăturare</string>
+    <string name="listen_together_auto_approval_desc">Aprobă în mod automat cererile de alăturare în loc să le evaluezi manual</string>
+    <string name="listen_together_sync_volume">Sincronizează volumul cu gazda</string>
+    <string name="listen_together_sync_volume_desc">Invitații folosesc același nivel al volumului ca și gazda</string>
+    <string name="transfer_host">Transferă rolul de gazdă</string>
+    <string name="copy_code">Copiază codul</string>
+    <string name="kick_user_desc">Elimină această persoană din sesiune</string>
+    <string name="permanently_kick_user">Blochează permanent</string>
 </resources>
