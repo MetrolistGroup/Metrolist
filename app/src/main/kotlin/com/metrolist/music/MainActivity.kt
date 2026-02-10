@@ -856,6 +856,14 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             }
+                            
+                            val onSearchLongClick: () -> Unit = remember(navController) {
+                                {
+                                    navController.navigate("recognition") {
+                                        launchSingleTop = true
+                                    }
+                                }
+                            }
 
                             // Pre-calculate values for graphicsLayer to avoid reading state during composition
                             val navBarTotalHeight = bottomInset + NavigationBarHeight
@@ -874,6 +882,7 @@ class MainActivity : ComponentActivity() {
                                         onItemClick = onNavItemClick,
                                         pureBlack = pureBlack,
                                         slimNav = slimNav,
+                                        onSearchLongClick = onSearchLongClick,
                                         modifier = Modifier
                                             .align(Alignment.BottomCenter)
                                             .height(bottomInset + navPadding)
@@ -959,12 +968,21 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
+                            val onRailSearchLongClick: () -> Unit = remember(navController) {
+                                {
+                                    navController.navigate("recognition") {
+                                        launchSingleTop = true
+                                    }
+                                }
+                            }
+
                             if (showRail && currentRoute != "wrapped") {
                                 AppNavigationRail(
                                     navigationItems = navigationItems,
                                     currentRoute = currentRoute,
                                     onItemClick = onRailItemClick,
-                                    pureBlack = pureBlack
+                                    pureBlack = pureBlack,
+                                    onSearchLongClick = onRailSearchLongClick
                                 )
                             }
                             Box(Modifier.weight(1f)) {

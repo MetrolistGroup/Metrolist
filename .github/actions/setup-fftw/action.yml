@@ -1,0 +1,82 @@
+name: 'Setup FFTW for Android'
+description: 'Build and cache FFTW static libraries for Android ABIs'
+
+inputs:
+  ndk-version:
+    description: 'Android NDK version'
+    required: false
+    default: '27.0.12077973'
+  fftw-version:
+    description: 'FFTW version to build'
+    required: false
+    default: '3.3.10'
+  api-level:
+    description: 'Android API level'
+    required: false
+    default: '26'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Cache FFTW libraries
+      id: cache-fftw
+      uses: actions/cache@v4
+      with:
+        path: app/src/main/cpp/vibrafp/third_party/fftw-android
+        key: fftw-${{ inputs.fftw-version }}-ndk-${{ inputs.ndk-version }}-api-${{ inputs.api-level }}
+
+    - name: Build FFTW for Android
+      if: steps.cache-fftw.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        NDK_VERSION: ${{ inputs.ndk-version }}
+        FFTW_VERSION: ${{ inputs.fftw-version }}
+        API: ${{ inputs.api-level }}
+        OUT_BASE: app/src/main/cpp/vibrafp/third_party/fftw-android
+      run: |
+        # Find the correct NDK path
+        if [ -d "$ANDROID_NDK_HOME" ]; then
+          NDK_PATH="$ANDROID_NDK_HOME"
+        elif [ -d "$ANDROID_NDK" ]; then
+          NDK_PATH="$ANDROID_NDK"
+        elif [ -d "$ANDROID_SDK_ROOT/ndk/$NDK_VERSION" ]; then
+          NDK_PATH="$ANDROID_SDK_ROOT/ndk/$NDK_VERSION"
+        elif [ -d "/usr/local/lib/android/sdk/ndk/$NDK_VERSION" ]; then
+          NDK_PATH="/usr/local/lib/android/sdk/ndk/$NDK_VERSION"
+        else
+          # List available NDK versions
+          echo "Looking for NDK..."
+          if [ -d "$ANDROID_SDK_ROOT/ndk" ]; then
+            echo "Available NDK versions in $ANDROID_SDK_ROOT/ndk:"
+            ls -la "$ANDROID_SDK_ROOT/ndk/" || true
+          fi
+          if [ -d "/usr/local/lib/android/sdk/ndk" ]; then
+            echo "Available NDK versions in /usr/local/lib/android/sdk/ndk:"
+            ls -la "/usr/local/lib/android/sdk/ndk/" || true
+            # Use any available NDK version
+            NDK_PATH=$(find /usr/local/lib/android/sdk/ndk -maxdepth 1 -type d -name "[0-9]*" | head -1)
+          fi
+        fi
+
+        if [ -z "$NDK_PATH" ] || [ ! -d "$NDK_PATH" ]; then
+          echo "ERROR: Could not find Android NDK"
+          exit 1
+        fi
+
+        echo "Using NDK at: $NDK_PATH"
+        cd app/src/main/cpp/vibrafp/third_party
+        chmod +x build-fftw-android.sh
+        ./build-fftw-android.sh --ndk "$NDK_PATH" --out "$GITHUB_WORKSPACE/$OUT_BASE" --version "$FFTW_VERSION" --api "$API"
+        
+    - name: Verify FFTW installation
+      shell: bash
+      run: |
+        echo "FFTW installation:"
+        ls -la app/src/main/cpp/vibrafp/third_party/fftw-android/ || echo "fftw-android directory not found"
+        for abi in arm64-v8a armeabi-v7a x86_64 x86; do
+          if [ -f "app/src/main/cpp/vibrafp/third_party/fftw-android/$abi/lib/libfftw3.a" ]; then
+            echo "✓ $abi: libfftw3.a found"
+          else
+            echo "✗ $abi: libfftw3.a NOT found"
+          fi
+        done

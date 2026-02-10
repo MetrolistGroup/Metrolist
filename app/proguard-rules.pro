@@ -119,3 +119,10 @@
 
 ## JSoup re2j optional dependency
 -dontwarn com.google.re2j.**
+
+# Vibra fingerprint library
+-keep class com.metrolist.music.recognition.VibraSignature { *; }
+-keepclassmembers class com.metrolist.music.recognition.VibraSignature {
+    native <methods>;
+}
+

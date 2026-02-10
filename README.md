@@ -184,6 +184,8 @@ Credits:
 
 [**metroserver**](https://github.com/MetrolistGroup/metroserver) – for providing us with the listen together implementation.
 
+[**MusicRecognizer**](https://github.com/aleksey-saenko/MusicRecognizer) – for the music recognition feature implementation and Shazam API integration.
+
 The open-source community for tools, libraries, and APIs that make this project possible.
 
 <sub>Thank you to all the amazing developers who made this project possible!</sub>

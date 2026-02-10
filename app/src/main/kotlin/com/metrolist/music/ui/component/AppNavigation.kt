@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.component
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +20,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,7 +46,8 @@ fun AppNavigationRail(
     currentRoute: String?,
     onItemClick: (Screens, Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    pureBlack: Boolean = false
+    pureBlack: Boolean = false,
+    onSearchLongClick: (() -> Unit)? = null
 ) {
     val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
     
@@ -62,13 +65,24 @@ fun AppNavigationRail(
                 if (isSelected) screen.iconIdActive else screen.iconIdInactive
             }
             
+            val itemModifier = if (screen == Screens.Search && onSearchLongClick != null) {
+                Modifier.pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = { onSearchLongClick() }
+                    )
+                }
+            } else {
+                Modifier
+            }
+            
             NavigationRailItem(
                 selected = isSelected,
                 onClick = { onItemClick(screen, isSelected) },
                 icon = {
                     Icon(
                         painter = painterResource(id = iconRes),
-                        contentDescription = stringResource(screen.titleId)
+                        contentDescription = stringResource(screen.titleId),
+                        modifier = itemModifier
                     )
                 }
             )
@@ -85,7 +99,8 @@ fun AppNavigationBar(
     onItemClick: (Screens, Boolean) -> Unit,
     modifier: Modifier = Modifier,
     pureBlack: Boolean = false,
-    slimNav: Boolean = false
+    slimNav: Boolean = false,
+    onSearchLongClick: (() -> Unit)? = null
 ) {
     val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
     val contentColor = if (pureBlack) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
@@ -103,13 +118,24 @@ fun AppNavigationBar(
                 if (isSelected) screen.iconIdActive else screen.iconIdInactive
             }
             
+            val itemModifier = if (screen == Screens.Search && onSearchLongClick != null) {
+                Modifier.pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = { onSearchLongClick() }
+                    )
+                }
+            } else {
+                Modifier
+            }
+            
             NavigationBarItem(
                 selected = isSelected,
                 onClick = { onItemClick(screen, isSelected) },
                 icon = {
                     Icon(
                         painter = painterResource(id = iconRes),
-                        contentDescription = stringResource(screen.titleId)
+                        contentDescription = stringResource(screen.titleId),
+                        modifier = itemModifier
                     )
                 },
                 label = if (!slimNav) {

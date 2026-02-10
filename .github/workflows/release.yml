@@ -105,6 +105,9 @@ jobs:
           cd app
           bash generate_proto.sh
 
+      - name: Setup FFTW for Android
+        uses: ./.github/actions/setup-fftw
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
