@@ -353,7 +353,7 @@
     <string name="next">下一曲</string>
     <string name="like">喜欢</string>
     <string name="widget_description">带播放控制的音乐播放器小部件</string>
-    <string name="turntable_widget_description">快速访问你最近播放过的曲目</string>
+    <string name="turntable_widget_description">带有播放和点赞控制按钮的播放控件</string>
     <string name="queue_widget_description">带队列预览的音乐播放器</string>
     <string name="about_artist">关于</string>
     <string name="show_more">显示更多</string>
@@ -488,7 +488,7 @@
     <string name="cd_system_mode">系统模式</string>
     <string name="cd_pure_black_mode">纯黑模式</string>
     <string name="cd_light_mode">浅色模式</string>
-    <string name="cd_palette_item">样式</string>
+    <string name="cd_palette_item">样式 %1$s</string>
     <string name="listen_together_choose_server">选择服务器</string>
     <string name="listen_together_custom_server">自定义服务器</string>
     <string name="listen_together_use_custom_server">使用自定义服务器</string>
@@ -502,4 +502,15 @@
     <string name="listen_together_blocked_users_count">已屏蔽 %d 位用户</string>
     <string name="listen_together_no_blocked_users">无已屏蔽的用户</string>
     <string name="unblock">取消屏蔽</string>
+    <string name="not_playing">未在播放歌曲</string>
+    <string name="tap_to_play">点击以打开Metrolist</string>
+    <string name="widget_music_player">播放器</string>
+    <string name="listen_together_sync_volume">与主持人音量保持一致</string>
+    <string name="listen_together_sync_volume_desc">访客音量随主持人同步</string>
+    <string name="transfer_host">更换主持人</string>
+    <string name="kick_user_desc">从此会话中移除该人</string>
+    <string name="transfer_ownership_desc">将此人设为主持人</string>
+    <string name="user_blocked_by_host">你已被主持人拉黑</string>
+    <string name="transfer_ownership">移交所有权</string>
+    <string name="widget_turntable">虚拟打碟台</string>
 </resources>
