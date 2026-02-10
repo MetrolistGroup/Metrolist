@@ -271,35 +271,23 @@ fun AiSettings(
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.ai_lyrics_translation)) },
-                navigationIcon = {
-                    androidx.compose.material3.IconButton(onClick = { navController.navigateUp() }) {
-                        androidx.compose.material3.Icon(
-                            painterResource(R.drawable.arrow_back),
-                            contentDescription = null
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent
-                ),
-                scrollBehavior = scrollBehavior
+    Column(
+        Modifier
+            .windowInsetsPadding(
+                LocalPlayerAwareWindowInsets.current.only(
+                    WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
+                )
             )
-        },
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Bottom))
-                .padding(horizontal = 16.dp)
-        ) {
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp)
+    ) {
+        Spacer(
+            Modifier.windowInsetsPadding(
+                LocalPlayerAwareWindowInsets.current.only(
+                    WindowInsetsSides.Top
+                )
+            )
+        )
             Material3SettingsGroup(
                 title = stringResource(R.string.ai_provider),
                 items = listOf(
@@ -439,6 +427,18 @@ fun AiSettings(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-        }
     }
+
+    TopAppBar(
+        title = { Text(stringResource(R.string.ai_lyrics_translation)) },
+        navigationIcon = {
+            androidx.compose.material3.IconButton(onClick = { navController.navigateUp() }) {
+                androidx.compose.material3.Icon(
+                    painterResource(R.drawable.arrow_back),
+                    contentDescription = null
+                )
+            }
+        },
+        scrollBehavior = scrollBehavior
+    )
 }
