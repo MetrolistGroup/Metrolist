@@ -819,8 +819,7 @@ fun ListenTogetherSettings(
                     contentDescription = null,
                 )
             }
-        },
-        scrollBehavior = scrollBehavior
+        }
     )
 }
 
