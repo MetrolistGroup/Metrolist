@@ -493,7 +493,7 @@
     <string name="palette_brown">Marrone</string>
     <string name="palette_grey">Grigio</string>
     <string name="palette_blue_grey">Blu Grigio</string>
-    <string name="cd_back">Sfondo</string>
+    <string name="cd_back">Retro</string>
     <string name="cd_pure_black_mode">Modalità Nero puro</string>
     <string name="cd_light_mode">Modalità chiara</string>
     <string name="cd_dark_mode">Modalità scura</string>
@@ -522,7 +522,7 @@
     <string name="not_playing">Nessun brano in riproduzione</string>
     <string name="tap_to_play">Premi per aprire Metrolist</string>
     <string name="widget_music_player">Riproduttore Musicale</string>
-    <string name="widget_turntable">Piatto girevole</string>
+    <string name="widget_turntable">Giradischi</string>
     <string name="together">Insieme</string>
     <string name="reconnect">Riconnessione</string>
     <string name="enter_room_code">Inserisci codice stanza</string>
@@ -537,7 +537,7 @@
     <string name="ai_auto_translate">Traduci automaticamente tutte le canzoni</string>
     <string name="ai_language_mismatch">Traduci solo se la lingua non corrisponde</string>
     <string name="ai_translation_mode">Modalità di Traduzione</string>
-    <string name="ai_target_language">Lingua di Destinazione</string>
+    <string name="ai_target_language">Lingua di destinazione</string>
     <string name="ai_setup_guide">Guida alla Configurazione</string>
     <string name="ai_setup_step_1">1. Seleziona il tuo provider (ad esempio OpenRouter, ChatGPT) oppure \'Personalizzato\'.</string>
     <string name="ai_setup_step_2">2. Inserisci la tua Chiave API.</string>
@@ -546,7 +546,11 @@
     <string name="ai_setup_api_provider">OpenRouter.ai</string>
     <string name="ai_setup_api_end">per accedere a molti modelli.</string>
     <string name="ai_language_mismatch_desc">Salta la traduzione se il testo è nella lingua di sistema</string>
-    <string name="ai_translation_literal">Originale + Traduzione</string>
-    <string name="ai_translation_transcribed">Originale + Trascrizione</string>
-    <string name="ai_api_key_required">Chiave API Necessaria</string>
+    <string name="ai_translation_literal">Originale + traduzione</string>
+    <string name="ai_translation_transcribed">Originale + trascrizione</string>
+    <string name="ai_api_key_required">Chiave API necessaria</string>
+    <string name="ai_error_language_required">La lingua di destinazione è necessaria</string>
+    <string name="ai_error_unexpected">Risultato di traduzione inaspettato</string>
+    <string name="ai_error_unknown">Si è verificato un errore sconosciuto</string>
+    <string name="ai_error_translation_failed">Traduzione fallita</string>
 </resources>
