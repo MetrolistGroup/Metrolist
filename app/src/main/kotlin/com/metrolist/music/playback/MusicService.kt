@@ -1204,9 +1204,10 @@ class MusicService :
                 player.playWhenReady = playWhenReady
             }
 
-            // Rebuild shuffle order when persisting shuffle across queues is enabled
-            if (persistShuffleAcrossQueues && previousShuffleEnabled) {
-                onShuffleModeEnabledChanged(true)
+            // Rebuild shuffle order if shuffle is enabled
+            if (player.shuffleModeEnabled) {
+                val shufflePlaylistFirst = dataStore.get(ShufflePlaylistFirstKey, false)
+                applyShuffleOrder(player.currentMediaItemIndex, player.mediaItemCount, shufflePlaylistFirst)
             }
         }
     }
@@ -1257,6 +1258,10 @@ class MusicService :
                     }
 
                     player.addMediaItems(currentIndex + 1, radioItems)
+                    if (player.shuffleModeEnabled) {
+                        val shufflePlaylistFirst = dataStore.get(ShufflePlaylistFirstKey, false)
+                        applyShuffleOrder(player.currentMediaItemIndex, player.mediaItemCount, shufflePlaylistFirst)
+                    }
                 }
 
                 currentQueue = radioQueue
@@ -1283,6 +1288,10 @@ class MusicService :
                                     player.removeMediaItems(currentIndex + 1, itemCount)
                                 }
                                 player.addMediaItems(currentIndex + 1, radioItems)
+                                if (player.shuffleModeEnabled) {
+                                    val shufflePlaylistFirst = dataStore.get(ShufflePlaylistFirstKey, false)
+                                    applyShuffleOrder(player.currentMediaItemIndex, player.mediaItemCount, shufflePlaylistFirst)
+                                }
                             }
                         }
                     }
@@ -1464,6 +1473,10 @@ class MusicService :
 
     fun addToQueue(items: List<MediaItem>) {
         player.addMediaItems(items)
+        if (player.shuffleModeEnabled) {
+            val shufflePlaylistFirst = dataStore.get(ShufflePlaylistFirstKey, false)
+            applyShuffleOrder(player.currentMediaItemIndex, player.mediaItemCount, shufflePlaylistFirst)
+        }
         player.prepare()
     }
 
@@ -1683,6 +1696,10 @@ class MusicService :
                 }
                 if (player.playbackState != STATE_IDLE && mediaItems.isNotEmpty()) {
                     player.addMediaItems(mediaItems)
+                    if (player.shuffleModeEnabled) {
+                        val shufflePlaylistFirst = dataStore.get(ShufflePlaylistFirstKey, false)
+                        applyShuffleOrder(player.currentMediaItemIndex, player.mediaItemCount, shufflePlaylistFirst)
+                    }
                 }
             }
         }
@@ -1812,43 +1829,7 @@ class MusicService :
             val currentIndex = player.currentMediaItemIndex
             val totalCount = player.mediaItemCount
 
-            if (shufflePlaylistFirst && originalQueueSize > 0 && originalQueueSize < totalCount) {
-                // Shuffle original items and added items separately
-                // Original items are shuffled first, then added items come after
-                
-                // Get indices for original songs (excluding current)
-                val originalIndices = (0 until originalQueueSize).filter { it != currentIndex }.toMutableList()
-                // Get indices for added songs (automix, auto-load, etc.)
-                val addedIndices = (originalQueueSize until totalCount).filter { it != currentIndex }.toMutableList()
-                
-                // Shuffle both groups separately
-                originalIndices.shuffle()
-                addedIndices.shuffle()
-                
-                // Build final order: current -> shuffled originals -> shuffled added
-                val shuffledIndices = IntArray(totalCount)
-                var pos = 0
-                shuffledIndices[pos++] = currentIndex
-                
-                // If current is from original queue, add remaining originals first
-                if (currentIndex < originalQueueSize) {
-                    originalIndices.forEach { shuffledIndices[pos++] = it }
-                    addedIndices.forEach { shuffledIndices[pos++] = it }
-                } else {
-                    // Current is from added songs, still put all originals first
-                    (0 until originalQueueSize).shuffled().forEach { shuffledIndices[pos++] = it }
-                    addedIndices.forEach { shuffledIndices[pos++] = it }
-                }
-                
-                player.setShuffleOrder(DefaultShuffleOrder(shuffledIndices, System.currentTimeMillis()))
-            } else {
-                // Original behavior - shuffle everything together
-                val shuffledIndices = IntArray(totalCount) { it }
-                shuffledIndices.shuffle()
-                shuffledIndices[shuffledIndices.indexOf(currentIndex)] = shuffledIndices[0]
-                shuffledIndices[0] = currentIndex
-                player.setShuffleOrder(DefaultShuffleOrder(shuffledIndices, System.currentTimeMillis()))
-            }
+            applyShuffleOrder(currentIndex, totalCount, shufflePlaylistFirst)
         }
 
         // Save shuffle mode to preferences
@@ -1877,6 +1858,51 @@ class MusicService :
         // Save state when repeat mode changes
         if (dataStore.get(PersistentQueueKey, true)) {
             saveQueueToDisk()
+        }
+    }
+
+    /**
+     * Applies a new shuffle order to the player, maintaining the current item's position.
+     * If `shufflePlaylistFirst` is true, it attempts to shuffle original items separately from added items.
+     */
+    private fun applyShuffleOrder(
+        currentIndex: Int,
+        totalCount: Int,
+        shufflePlaylistFirst: Boolean
+    ) {
+        if (totalCount == 0) return
+
+        if (shufflePlaylistFirst && originalQueueSize > 0 && originalQueueSize < totalCount) {
+            // Shuffle original items and added items separately
+            val originalIndices = (0 until originalQueueSize).filter { it != currentIndex }.toMutableList()
+            val addedIndices = (originalQueueSize until totalCount).filter { it != currentIndex }.toMutableList()
+            
+            originalIndices.shuffle()
+            addedIndices.shuffle()
+            
+            val shuffledIndices = IntArray(totalCount)
+            var pos = 0
+            shuffledIndices[pos++] = currentIndex
+            
+            if (currentIndex < originalQueueSize) {
+                originalIndices.forEach { shuffledIndices[pos++] = it }
+                addedIndices.forEach { shuffledIndices[pos++] = it }
+            } else {
+                (0 until originalQueueSize).shuffled().forEach { shuffledIndices[pos++] = it }
+                addedIndices.forEach { shuffledIndices[pos++] = it }
+            }
+            player.setShuffleOrder(DefaultShuffleOrder(shuffledIndices, System.currentTimeMillis()))
+        } else {
+            val shuffledIndices = IntArray(totalCount) { it }
+            shuffledIndices.shuffle()
+            // Ensure current item is first in the shuffle order
+            val currentItemIndexInShuffled = shuffledIndices.indexOf(currentIndex)
+            if (currentItemIndexInShuffled != -1) { // Should always be true if totalCount > 0
+                val temp = shuffledIndices[0]
+                shuffledIndices[0] = shuffledIndices[currentItemIndexInShuffled]
+                shuffledIndices[currentItemIndexInShuffled] = temp
+            }
+            player.setShuffleOrder(DefaultShuffleOrder(shuffledIndices, System.currentTimeMillis()))
         }
     }
 
@@ -2868,8 +2894,8 @@ class MusicService :
         secPlayer.setMediaItems(items)
         // Seek to next track (the one we are fading into)
         secPlayer.seekTo(nextIndex, 0)
-        secPlayer.prepare()
         secPlayer.volume = 0f
+        secPlayer.prepare()
         secPlayer.playWhenReady = true
         
         performCrossfadeSwap()
