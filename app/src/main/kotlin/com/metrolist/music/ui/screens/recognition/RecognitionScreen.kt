@@ -456,45 +456,20 @@ private fun SuccessState(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.padding(horizontal = 16.dp)
     ) {
-        // Album art with close button overlay
-        Box {
-            Card(
-                modifier = Modifier
-                    .size(180.dp)
-                    .aspectRatio(1f),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-            ) {
-                AsyncImage(
-                    model = result.coverArtHqUrl ?: result.coverArtUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
-            
-            // Close button - Material 3 Expressive style
-            Surface(
-                onClick = onClose,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .size(32.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.9f),
-                contentColor = MaterialTheme.colorScheme.onSurface
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.close),
-                        contentDescription = stringResource(R.string.close),
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
+        // Album art
+        Card(
+            modifier = Modifier
+                .size(180.dp)
+                .aspectRatio(1f),
+            shape = RoundedCornerShape(com.metrolist.music.constants.ThumbnailCornerRadius),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            AsyncImage(
+                model = result.coverArtHqUrl ?: result.coverArtUrl,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
         }
         
         Spacer(modifier = Modifier.height(8.dp))
