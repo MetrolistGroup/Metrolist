@@ -15,7 +15,11 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -29,10 +33,10 @@ import kotlin.random.Random
  * Shazam music recognition with built-in rate limiting and queue management
  */
 object Shazam {
-    // ═══════════════════════════════════════════════════════════════
+
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
     // Configuration
-    // ═══════════════════════════════════════════════════════════════
-    
     private const val MAX_CONCURRENT_REQUESTS = 2
     
     private const val MIN_REQUEST_INTERVAL_MS = 1000L
@@ -44,11 +48,8 @@ object Shazam {
     private const val CACHE_DURATION_MS = 300000L
     
     private const val MAX_QUEUE_SIZE = 50
-    
-    // ═══════════════════════════════════════════════════════════════
+
     // Internal State
-    // ═══════════════════════════════════════════════════════════════
-    
     private val activeRequests = AtomicInteger(0)
     
     private var lastRequestTime = 0L
@@ -62,11 +63,8 @@ object Shazam {
     private var nextRequestId = 0L
     
     private var isProcessingQueue = false
-    
-    // ═══════════════════════════════════════════════════════════════
+
     // HTTP Client Configuration
-    // ═══════════════════════════════════════════════════════════════
-    
     private val client by lazy {
         HttpClient(CIO) {
             install(ContentNegotiation) {
@@ -98,10 +96,6 @@ object Shazam {
         "Europe/Paris", "Europe/London", "America/New_York",
         "America/Los_Angeles", "Asia/Tokyo", "Asia/Dubai"
     )
-
-    // ═══════════════════════════════════════════════════════════════
-    // Public API
-    // ═══════════════════════════════════════════════════════════════
 
     /**
      * Recognize music from audio signature
@@ -152,10 +146,6 @@ object Shazam {
         client.close()
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // Private Implementation
-    // ═══════════════════════════════════════════════════════════════
-
     /**
      * Enqueue request for processing
      */
@@ -197,7 +187,7 @@ object Shazam {
 
             activeRequests.incrementAndGet()
 
-            kotlinx.coroutines.GlobalScope.launch {
+            scope.launch {
                 try {
                     val result = executeRequest(request.signature, request.sampleDurationMs)
                     request.completeWith(result)
@@ -431,10 +421,6 @@ object Shazam {
             youtubeVideoId = youtubeVideoId
         )
     }
-
-    // ═══════════════════════════════════════════════════════════════
-    // Data Classes
-    // ═══════════════════════════════════════════════════════════════
 
     /**
      * Pending request in queue
