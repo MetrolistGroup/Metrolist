@@ -186,68 +186,47 @@ fun ActionPromptDialog(
     onCancel: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit = {}
 ) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Surface(
-            modifier = Modifier.padding(24.dp),
-            shape = AlertDialogDefaults.shape,
-            color = AlertDialogDefaults.containerColor,
-            tonalElevation = AlertDialogDefaults.TonalElevation,
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp)
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    // title
-                    if (titleBar != null) {
-                        Row {
-                            titleBar()
-                        }
-                    } else if (title != null) {
-                        Text(
-                            text = title,
-                            overflow = TextOverflow.Ellipsis,
-                            maxLines = 1,
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
-                        Spacer(Modifier.height(16.dp))
-                    }
-
-                    content() // body
-                }
-
-                Row(
-                    horizontalArrangement = Arrangement.End,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (onReset != null) {
-                        Row(modifier = Modifier.weight(1f)) {
-                            TextButton(
-                                onClick = { onReset() },
-                            ) {
-                                Text(stringResource(R.string.reset))
-                            }
-                        }
-                    }
-
-                    if (onCancel != null) {
-                        TextButton(
-                            onClick = { onCancel() }
-                        ) {
-                            Text(stringResource(android.R.string.cancel))
-                        }
-                    }
-
+    DefaultDialog(
+        onDismiss = onDismiss,
+        title = if (titleBar != null) {
+            { Row { titleBar() } }
+        } else if (title != null) {
+            {
+                Text(
+                    text = title,
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+            }
+        } else null,
+        buttons = {
+            if (onReset != null) {
+                Row(modifier = Modifier.weight(1f)) {
                     TextButton(
-                        onClick = { onConfirm() }
+                        onClick = { onReset() },
                     ) {
-                        Text(stringResource(android.R.string.ok))
+                        Text(stringResource(R.string.reset))
                     }
                 }
             }
+
+            if (onCancel != null) {
+                TextButton(
+                    onClick = { onCancel() }
+                ) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            }
+
+            TextButton(
+                onClick = { onConfirm() }
+            ) {
+                Text(stringResource(android.R.string.ok))
+            }
         }
+    ) {
+        content()
     }
 }
 
