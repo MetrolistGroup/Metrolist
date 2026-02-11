@@ -229,7 +229,7 @@ class MusicService :
     private var isPausedByVolumeMute = false
     
     private var crossfadeEnabled = false
-    private var crossfadeDuration = 5000
+    private var crossfadeDuration = 5000f
     private var crossfadeGapless = true
     private var crossfadeTriggerJob: Job? = null
     
@@ -686,14 +686,14 @@ class MusicService :
             .map { prefs ->
                 Triple(
                     prefs[CrossfadeEnabledKey] ?: false,
-                    prefs[CrossfadeDurationKey] ?: 5,
+                    prefs[CrossfadeDurationKey] ?: 5f,
                     prefs[CrossfadeGaplessKey] ?: true
                 )
             }
             .distinctUntilChanged()
             .collect(scope) { (enabled, duration, gapless) ->
                 crossfadeEnabled = enabled
-                crossfadeDuration = duration * 1000 // Convert to ms
+                crossfadeDuration = duration * 1000f // Convert to ms
                 crossfadeGapless = gapless
             }
 
