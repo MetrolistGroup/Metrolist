@@ -2975,6 +2975,8 @@ class MusicService :
 
         nextPlayer.removeListener(secondaryPlayerListener)
         nextPlayer.addListener(this)
+        // Add PlaybackStatsListener to the new player for history tracking
+        nextPlayer.addAnalyticsListener(PlaybackStatsListener(false, this@MusicService))
         
         sleepTimer.player = player
         
