@@ -320,15 +320,14 @@ fun ThemeControls(
                     horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // System mode (separated)
+                    // System mode (AUTO)
                     ModeCircle(
                         darkMode = darkMode,
                         pureBlack = pureBlack,
                         targetMode = DarkMode.AUTO,
-                        targetPureBlack = false,
+                        targetPureBlack = pureBlack,
                         onClick = {
                             onDarkModeChange(DarkMode.AUTO)
-                            onPureBlackChange(false)
                         },
                         showIcon = true
                     )
