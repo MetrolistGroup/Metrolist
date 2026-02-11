@@ -219,16 +219,20 @@ class WrappedManager(
             @Suppress("UNCHECKED_CAST")
             val topArtistsResult = results[2] as List<Artist>
             _state.update {
+                val uniqueSongs = (results[4] as? Number)?.toInt() ?: 0
+                val uniqueArtists = (results[5] as? Number)?.toInt() ?: 0
+                val totalAlbumsVal = (results[6] as? Number)?.toInt() ?: 0
+                val totalMinutesVal = (results[7] as? Number)?.toLong() ?: 0L
                 it.copy(
                     accountInfo = results[0] as AccountInfo?,
                     topSongs = topSongsResult,
                     topArtists = topArtistsResult,
                     top5Albums = topAlbumsResult,
                     topAlbum = topAlbumsResult.firstOrNull(),
-                    uniqueSongCount = results[4] as Int,
-                    uniqueArtistCount = results[5] as Int,
-                    totalAlbums = results[6] as Int,
-                    totalMinutes = (results[7] as Long) / 1000 / 60
+                    uniqueSongCount = uniqueSongs,
+                    uniqueArtistCount = uniqueArtists,
+                    totalAlbums = totalAlbumsVal,
+                    totalMinutes = totalMinutesVal / 1000 / 60
                 )
             }
         }
