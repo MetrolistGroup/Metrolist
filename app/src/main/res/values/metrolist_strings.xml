@@ -253,7 +253,7 @@
     <string name="pause_music_when_media_is_muted">Pause music when media is muted</string>
     <string name="keep_screen_on_when_player_is_expanded">Keep screen on when player is expanded</string>
 
-    <string name="crossfade">Crossfade</string>
+    <string name="crossfade">Crossfade (beta)</string>
     <string name="crossfade_desc">Crossfade between songs</string>
     <string name="crossfade_duration">Crossfade duration</string>
     <string name="crossfade_gapless">Disable for gapless albums</string>
