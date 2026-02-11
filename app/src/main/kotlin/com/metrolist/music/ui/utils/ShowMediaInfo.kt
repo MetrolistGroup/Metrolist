@@ -269,60 +269,28 @@ fun ShowMediaInfo(videoId: String) {
                         color = MaterialTheme.colorScheme.onBackground,
                         textAlign = TextAlign.Start
                     )
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(all = 16.dp)
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
                     ) {
-                        Column {
-                            BasicText(
-                                text = stringResource(R.string.subscribers),
-                                style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.onBackground),
-                            )
-                            BasicText(
-                                text = info?.subscribers ?: "",
-                                style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.onBackground),
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
-                        }
-                        Column {
-                            BasicText(
-                                text = stringResource(R.string.views),
-                                style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.onBackground),
-                                modifier = Modifier
-                            )
-                            BasicText(
-                                text = info?.viewCount?.let(::numberFormatter).orEmpty(),
-                                style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.onBackground),
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
-                        }
-                        Column {
-                            BasicText(
-                                text = stringResource(R.string.likes),
-                                style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.onBackground),
-                                modifier = Modifier
-                            )
-                            BasicText(
-                                text = info?.like?.let(::numberFormatter).orEmpty(),
-                                style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.onBackground),
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
-                        }
-                        Column {
-                            BasicText(
-                                text = stringResource(R.string.dislikes),
-                                style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.onBackground),
-                                modifier = Modifier
-                            )
-                            BasicText(
-                                text = info?.dislike?.let(::numberFormatter).orEmpty(),
-                                style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.onBackground),
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
-                        }
+                        BasicText(
+                            text = "${stringResource(R.string.subscribers)}: ${info?.subscribers ?: ""}",
+                            style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.onBackground),
+                        )
+                        BasicText(
+                            text = "${stringResource(R.string.views)}: ${info?.viewCount?.let(::numberFormatter).orEmpty()}",
+                            style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.onBackground),
+                        )
+                        BasicText(
+                            text = "${stringResource(R.string.likes)}: ${info?.like?.let(::numberFormatter).orEmpty()}",
+                            style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.onBackground),
+                        )
+                        BasicText(
+                            text = "${stringResource(R.string.dislikes)}: ${info?.dislike?.let(::numberFormatter).orEmpty()}",
+                            style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.onBackground),
+                        )
                     }
                 }
             }
