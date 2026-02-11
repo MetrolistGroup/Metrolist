@@ -36,6 +36,7 @@
     <string name="generating_image">Generating image</string>
     <string name="please_wait">Please wait</string>
     <string name="cancel">Cancel</string>
+    <string name="enable">Enable</string>
     <string name="share_lyrics">Share lyrics</string>
     <string name="share_as_text">Share as text</string>
     <string name="share_as_image">Share as image</string>
@@ -253,11 +254,13 @@
     <string name="pause_music_when_media_is_muted">Pause music when media is muted</string>
     <string name="keep_screen_on_when_player_is_expanded">Keep screen on when player is expanded</string>
 
-    <string name="crossfade">Crossfade (beta)</string>
+    <string name="crossfade">Crossfade</string>
     <string name="crossfade_desc">Crossfade between songs</string>
     <string name="crossfade_duration">Crossfade duration</string>
     <string name="crossfade_gapless">Disable for gapless albums</string>
     <string name="crossfade_gapless_desc">Don\'t crossfade if the album is gapless</string>
+    <string name="crossfade_beta_title">Beta Feature</string>
+    <string name="crossfade_beta_message">Crossfade is a new feature and may have bugs. If you experience any issues, please report them.\n\nThis feature disables audio offload due to technical limitations.</string>
 
     <!-- Romanization Settings -->
     <string name="lyrics_romanization_cyrillic">Cyrillic</string>
