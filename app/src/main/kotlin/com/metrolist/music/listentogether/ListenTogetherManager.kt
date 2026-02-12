@@ -424,6 +424,8 @@ class ListenTogetherManager @Inject constructor(
             
             is ListenTogetherEvent.JoinApproved -> {
                 Timber.tag(TAG).d("Join approved for room: ${event.roomCode}")
+                // Save current mute state before joining as guest so we can restore it on leave
+                saveMuteStateOnJoin()
                 // Apply the full initial state including queue
                 applyPlaybackState(
                     currentTrack = event.state.currentTrack,
@@ -680,11 +682,36 @@ class ListenTogetherManager @Inject constructor(
         // Just restore any previously forced mute state (should typically be none)
         restoreGuestMuteState()
     }
-
-    private fun restoreGuestMuteState() {
-        if (!muteForcedByPreference) return
+    
+    /**
+     * Save the current mute state when joining a room as guest.
+     * This allows us to restore it when leaving the room.
+     */
+    private fun saveMuteStateOnJoin() {
         val connection = playerConnection ?: return
-        connection.setMuted(previousMuteState ?: false)
+        // Only save if we haven't already saved (avoid overwriting on role changes)
+        if (previousMuteState == null) {
+            previousMuteState = connection.isMuted.value
+            Timber.tag(TAG).d("Saved mute state on join: ${previousMuteState}")
+        }
+    }
+
+    /**
+     * Restore the mute state that was saved when joining the room.
+     * This is called when leaving the room to ensure the user's
+     * mute preference is restored (unmuted by default if they muted during session).
+     */
+    private fun restoreGuestMuteState() {
+        val connection = playerConnection ?: return
+        val savedState = previousMuteState
+        
+        // If player is currently muted, unmute it when leaving Listen Together
+        // This addresses the issue where mute state persists after leaving
+        if (connection.isMuted.value) {
+            Timber.tag(TAG).d("Unmuting player on leave (was muted during Listen Together session)")
+            connection.setMuted(false)
+        }
+        
         previousMuteState = null
         muteForcedByPreference = false
     }

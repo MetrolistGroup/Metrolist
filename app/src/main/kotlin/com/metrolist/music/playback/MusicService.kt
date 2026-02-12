@@ -276,11 +276,17 @@ class MusicService :
     val isMuted = MutableStateFlow(false)
 
     fun toggleMute() {
-        isMuted.value = !isMuted.value
+        val newMutedState = !isMuted.value
+        isMuted.value = newMutedState
+        // Immediately update player volume to ensure it takes effect
+        player.volume = if (newMutedState) 0f else playerVolume.value
     }
 
     fun setMuted(muted: Boolean) {
         isMuted.value = muted
+        // Immediately update player volume to ensure it takes effect
+        // This handles cases where the player reference may have changed
+        player.volume = if (muted) 0f else playerVolume.value
     }
 
 
