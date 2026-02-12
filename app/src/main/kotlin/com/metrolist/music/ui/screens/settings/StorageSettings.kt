@@ -44,6 +44,7 @@ import coil3.SingletonImageLoader
 import coil3.annotation.DelicateCoilApi
 import coil3.annotation.ExperimentalCoilApi
 import coil3.imageLoader
+import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
@@ -59,6 +60,7 @@ import com.metrolist.music.ui.utils.formatFileSize
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -70,6 +72,7 @@ fun StorageSettings(
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
     val context = LocalContext.current
+    val database = LocalDatabase.current
     val imageDiskCache = context.imageLoader.diskCache ?: return
     val playerCache = LocalPlayerConnection.current?.service?.playerCache ?: return
     val downloadCache = LocalPlayerConnection.current?.service?.downloadCache ?: return
@@ -200,7 +203,21 @@ fun StorageSettings(
             onDismiss = { clearImageCacheDialog = false },
             onConfirm = {
                 coroutineScope.launch(Dispatchers.IO) {
-                    imageDiskCache.clear()
+                    val urlsToPreserve = mutableSetOf<String>()
+                    val downloadedSongs = try {
+                        database.dao.downloadedSongsByNameAsc().first()
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
+                    downloadedSongs.forEach { song ->
+                        song.song.thumbnailUrl?.let { urlsToPreserve.add(it) }
+                        song.album?.thumbnailUrl?.let { urlsToPreserve.add(it) }
+                    }
+                    imageDiskCache.keys().forEach { key ->
+                        if (key !in urlsToPreserve) {
+                            imageDiskCache.remove(key)
+                        }
+                    }
                 }
                 clearImageCacheDialog = false
             },
