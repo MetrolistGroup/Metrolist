@@ -15,9 +15,11 @@ import androidx.lifecycle.viewModelScope
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.filterExplicit
 import com.metrolist.innertube.models.filterVideoSongs
+import com.metrolist.innertube.models.filterYoutubeShorts
 import com.metrolist.innertube.pages.ArtistPage
 import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
+import com.metrolist.music.constants.HideYoutubeShortsKey
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.extensions.filterExplicit
 import com.metrolist.music.extensions.filterExplicitAlbums
@@ -66,7 +68,13 @@ class ArtistViewModel @Inject constructor(
         // Load artist page and reload when hide explicit setting changes
         viewModelScope.launch {
             context.dataStore.data
-                .map { (it[HideExplicitKey] ?: false) to (it[HideVideoSongsKey] ?: false) }
+                .map {
+                    Triple(
+                        it[HideExplicitKey] ?: false,
+                        it[HideVideoSongsKey] ?: false,
+                        it[HideYoutubeShortsKey] ?: false
+                    )
+                }
                 .distinctUntilChanged()
                 .collect {
                     fetchArtistsFromYTM()
@@ -78,11 +86,12 @@ class ArtistViewModel @Inject constructor(
         viewModelScope.launch {
             val hideExplicit = context.dataStore.get(HideExplicitKey, false)
             val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
+            val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
             YouTube.artist(artistId)
                 .onSuccess { page ->
                     val filteredSections = page.sections
                         .map { section ->
-                            section.copy(items = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs))
+                            section.copy(items = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
                         }
                         .filter { section -> section.items.isNotEmpty() }
 

@@ -103,3 +103,10 @@ fun <T : YTItem> List<T>.filterVideoSongs(disableVideos: Boolean = false) =
     } else {
         this
     }
+
+fun <T : YTItem> List<T>.filterYoutubeShorts(enabled: Boolean = false) =
+    if (enabled) {
+        filterNot { it is PlaylistItem && it.id.startsWith("SS") }
+    } else {
+        this
+    }

@@ -6,6 +6,7 @@
 package com.metrolist.music.extensions
 
 import com.metrolist.music.db.entities.Album
+import com.metrolist.music.db.entities.Playlist
 import com.metrolist.music.db.entities.Song
 
 fun <T> List<T>.reversed(reversed: Boolean) = if (reversed) asReversed() else this
@@ -61,6 +62,14 @@ fun List<Song>.filterVideoSongs(enabled: Boolean = true) =
 fun List<Album>.filterExplicitAlbums(enabled: Boolean = true) =
     if (enabled) {
         filter { !it.album.explicit }
+    } else {
+        this
+    }
+
+// Extension function to filter YouTube Shorts playlist
+fun List<Playlist>.filterYoutubeShorts(enabled: Boolean = false) =
+    if (enabled) {
+        filterNot { it.playlist.browseId?.startsWith("SS") == true }
     } else {
         this
     }

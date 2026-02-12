@@ -330,6 +330,7 @@
     <string name="scrobble_delay_percent">Scrobble delay percent</string>
     <string name="scrobble_delay_minutes">Scrobble delay minutes</string>
     <string name="hide_video_songs">Hide video songs</string>
+    <string name="hide_youtube_shorts">Hide YouTube Shorts</string>
 
     <string name="details_desc">View the song\'s information</string>
     <string name="edit_desc">Change the title or artist</string>

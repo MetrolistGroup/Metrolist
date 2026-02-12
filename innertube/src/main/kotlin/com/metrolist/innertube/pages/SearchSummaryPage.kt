@@ -15,6 +15,7 @@ import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.models.clean
 import com.metrolist.innertube.models.filterExplicit
 import com.metrolist.innertube.models.filterVideoSongs
+import com.metrolist.innertube.models.filterYoutubeShorts
 import com.metrolist.innertube.models.oddElements
 import com.metrolist.innertube.models.splitBySeparator
 import com.metrolist.innertube.utils.parseTime
@@ -52,6 +53,23 @@ data class SearchSummaryPage(
                         title = s.title,
                         items =
                             s.items.filterVideoSongs(true).ifEmpty {
+                                return@mapNotNull null
+                            },
+                    )
+                },
+            )
+        } else {
+            this
+        }
+
+    fun filterYoutubeShorts(enabled: Boolean = false) =
+        if (enabled) {
+            SearchSummaryPage(
+                summaries.mapNotNull { s ->
+                    SearchSummary(
+                        title = s.title,
+                        items =
+                            s.items.filterYoutubeShorts(true).ifEmpty {
                                 return@mapNotNull null
                             },
                     )

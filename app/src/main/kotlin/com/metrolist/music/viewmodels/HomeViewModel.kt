@@ -15,11 +15,13 @@ import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.models.filterExplicit
 import com.metrolist.innertube.models.filterVideoSongs
+import com.metrolist.innertube.models.filterYoutubeShorts
 import com.metrolist.innertube.pages.ExplorePage
 import com.metrolist.innertube.pages.HomePage
 import com.metrolist.innertube.utils.completed
 import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
+import com.metrolist.music.constants.HideYoutubeShortsKey
 import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.constants.QuickPicks
 import com.metrolist.music.constants.QuickPicksKey
@@ -155,6 +157,7 @@ class HomeViewModel @Inject constructor(
         isLoading.value = true
         val hideExplicit = context.dataStore.get(HideExplicitKey, false)
         val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
+        val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
 
         getQuickPicks()
         forgottenFavorites.value = database.forgottenFavorites().first().filterVideoSongs(hideVideoSongs).shuffled().take(20)
@@ -166,11 +169,7 @@ class HomeViewModel @Inject constructor(
         keepListening.value = (keepListeningSongs + keepListeningAlbums + keepListeningArtists).shuffled()
 
         if (YouTube.cookie != null) {
-            YouTube.library("FEmusic_liked_playlists").completed().onSuccess {
-                accountPlaylists.value = it.items.filterIsInstance<PlaylistItem>().filterNot { it.id == "SE" }
-            }.onFailure {
-                reportException(it)
-            }
+            loadAccountPlaylists()
         }
 
         // Get recommendations from most played artists (prioritize recent listening)
@@ -251,7 +250,7 @@ class HomeViewModel @Inject constructor(
         YouTube.home().onSuccess { page ->
             homePage.value = page.copy(
                 sections = page.sections.map { section ->
-                    section.copy(items = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs))
+                    section.copy(items = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
                 }
             )
         }.onFailure {
@@ -279,6 +278,7 @@ class HomeViewModel @Inject constructor(
         if (continuation == null || _isLoadingMore.value) return
         val hideExplicit = context.dataStore.get(HideExplicitKey, false)
         val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
+        val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
 
         viewModelScope.launch(Dispatchers.IO) {
             _isLoadingMore.value = true
@@ -290,7 +290,7 @@ class HomeViewModel @Inject constructor(
             homePage.value = nextSections.copy(
                 chips = homePage.value?.chips,
                 sections = (homePage.value?.sections.orEmpty() + nextSections.sections).map { section ->
-                    section.copy(items = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs))
+                    section.copy(items = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
                 }
             )
             _isLoadingMore.value = false
@@ -312,15 +312,27 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val hideExplicit = context.dataStore.get(HideExplicitKey, false)
             val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
+            val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
             val nextSections = YouTube.home(params = chip.endpoint?.params).getOrNull() ?: return@launch
 
             homePage.value = nextSections.copy(
                 chips = homePage.value?.chips,
                 sections = nextSections.sections.map { section ->
-                    section.copy(items = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs))
+                    section.copy(items = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
                 }
             )
             selectedChip.value = chip
+        }
+    }
+
+    private suspend fun loadAccountPlaylists() {
+        val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
+        YouTube.library("FEmusic_liked_playlists").completed().onSuccess {
+            accountPlaylists.value = it.items.filterIsInstance<PlaylistItem>()
+                .filterNot { it.id == "SE" }
+                .filterYoutubeShorts(hideYoutubeShorts)
+        }.onFailure {
+            reportException(it)
         }
     }
 
@@ -404,6 +416,18 @@ class HomeViewModel @Inject constructor(
                         }
                     } finally {
                         isProcessingAccountData = false
+                    }
+                }
+        }
+
+        // Listen for HideYoutubeShorts preference changes and reload account playlists instantly
+        viewModelScope.launch(Dispatchers.IO) {
+            context.dataStore.data
+                .map { it[HideYoutubeShortsKey] ?: false }
+                .distinctUntilChanged()
+                .collect {
+                    if (YouTube.cookie != null && accountPlaylists.value != null) {
+                        loadAccountPlaylists()
                     }
                 }
         }

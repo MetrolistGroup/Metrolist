@@ -64,6 +64,7 @@ import com.metrolist.music.constants.EnableLrcLibKey
 import com.metrolist.music.constants.EnableSimpMusicKey
 import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
+import com.metrolist.music.constants.HideYoutubeShortsKey
 import com.metrolist.music.constants.LanguageCodeToName
 import com.metrolist.music.constants.PreferredLyricsProvider
 import com.metrolist.music.constants.PreferredLyricsProviderKey
@@ -105,6 +106,7 @@ fun ContentSettings(
     val (contentCountry, onContentCountryChange) = rememberPreference(key = ContentCountryKey, defaultValue = "system")
     val (hideExplicit, onHideExplicitChange) = rememberPreference(key = HideExplicitKey, defaultValue = false)
     val (hideVideoSongs, onHideVideoSongsChange) = rememberPreference(key = HideVideoSongsKey, defaultValue = false)
+    val (hideYoutubeShorts, onHideYoutubeShortsChange) = rememberPreference(key = HideYoutubeShortsKey, defaultValue = false)
     val (showArtistDescription, onShowArtistDescriptionChange) = rememberPreference(key = ShowArtistDescriptionKey, defaultValue = true)
     val (showArtistSubscriberCount, onShowArtistSubscriberCountChange) = rememberPreference(key = ShowArtistSubscriberCountKey, defaultValue = true)
     val (showMonthlyListeners, onShowMonthlyListenersChange) = rememberPreference(key = ShowMonthlyListenersKey, defaultValue = true)
@@ -495,6 +497,26 @@ fun ContentSettings(
                         )
                     },
                     onClick = { onHideVideoSongsChange(!hideVideoSongs) }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.hide_image),
+                    title = { Text(stringResource(R.string.hide_youtube_shorts)) },
+                    trailingContent = {
+                        Switch(
+                            checked = hideYoutubeShorts,
+                            onCheckedChange = onHideYoutubeShortsChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (hideYoutubeShorts) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onHideYoutubeShortsChange(!hideYoutubeShorts) }
                 )
             )
         )
