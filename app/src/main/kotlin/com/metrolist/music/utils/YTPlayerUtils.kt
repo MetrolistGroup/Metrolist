@@ -6,6 +6,8 @@
 package com.metrolist.music.utils
 
 import android.net.ConnectivityManager
+import android.net.Uri
+import android.util.Log
 import androidx.media3.common.PlaybackException
 import com.metrolist.innertube.NewPipeExtractor
 import com.metrolist.innertube.YouTube
@@ -27,15 +29,21 @@ import com.metrolist.music.constants.AudioQuality
 import com.metrolist.music.utils.YTPlayerUtils.MAIN_CLIENT
 import com.metrolist.music.utils.YTPlayerUtils.STREAM_FALLBACK_CLIENTS
 import com.metrolist.music.utils.YTPlayerUtils.validateStatus
+import com.metrolist.music.utils.potoken.PoTokenGenerator
+import com.metrolist.music.utils.potoken.PoTokenResult
+import com.metrolist.music.utils.sabr.EjsNTransformSolver
 import okhttp3.OkHttpClient
 import timber.log.Timber
 
 object YTPlayerUtils {
     private const val logTag = "YTPlayerUtils"
+    private const val TAG = "YTPlayerUtils"
 
     private val httpClient = OkHttpClient.Builder()
         .proxy(YouTube.proxy)
         .build()
+
+    private val poTokenGenerator = PoTokenGenerator()
 
     private val MAIN_CLIENT: YouTubeClient = WEB_REMIX
 
@@ -92,9 +100,25 @@ object YTPlayerUtils {
             }
         Timber.tag(logTag).d("Session authentication status: ${if (isLoggedIn) "Logged in" else "Not logged in"}")
 
+        // Generate PoToken for WEB_REMIX client
+        var poToken: PoTokenResult? = null
+        if (MAIN_CLIENT.useWebPoTokens && sessionId != null) {
+            Timber.tag(logTag).d("Generating PoToken for WEB_REMIX with sessionId")
+            try {
+                poToken = poTokenGenerator.getWebClientPoToken(videoId, sessionId)
+                if (poToken != null) {
+                    Timber.tag(logTag).d("PoToken generated successfully")
+                } else {
+                    Timber.tag(logTag).d("PoToken generation returned null, will try without")
+                }
+            } catch (e: Exception) {
+                Timber.tag(logTag).e(e, "PoToken generation failed: ${e.message}")
+            }
+        }
+
         Timber.tag(logTag).d("Attempting to get player response using MAIN_CLIENT: ${MAIN_CLIENT.clientName}")
         val mainPlayerResponse =
-            YouTube.player(videoId, playlistId, MAIN_CLIENT, signatureTimestamp).getOrThrow()
+            YouTube.player(videoId, playlistId, MAIN_CLIENT, signatureTimestamp, poToken?.playerRequestPoToken).getOrThrow()
         val audioConfig = mainPlayerResponse.playerConfig?.audioConfig
         val videoDetails = mainPlayerResponse.videoDetails
         val playbackTracking = mainPlayerResponse.playbackTracking
@@ -128,8 +152,10 @@ object YTPlayerUtils {
                 }
 
                 Timber.tag(logTag).d("Fetching player response for fallback client: ${client.clientName}")
+                // Only pass poToken for clients that support it
+                val clientPoToken = if (client.useWebPoTokens) poToken?.playerRequestPoToken else null
                 streamPlayerResponse =
-                    YouTube.player(videoId, playlistId, client, signatureTimestamp).getOrNull()
+                    YouTube.player(videoId, playlistId, client, signatureTimestamp, clientPoToken).getOrNull()
             }
 
             // process current client response
@@ -160,6 +186,25 @@ object YTPlayerUtils {
                     continue
                 }
 
+                // Apply n-transform for throttle parameter handling
+                val currentClient = if (clientIndex == -1) MAIN_CLIENT else STREAM_FALLBACK_CLIENTS[clientIndex]
+                if (currentClient.useWebPoTokens) {
+                    try {
+                        Timber.tag(logTag).d("Applying n-transform to stream URL")
+                        streamUrl = EjsNTransformSolver.transformNParamInUrl(streamUrl!!)
+
+                        // Append pot= parameter with streaming data poToken
+                        if (poToken?.streamingDataPoToken != null) {
+                            Timber.tag(logTag).d("Appending pot= parameter to stream URL")
+                            val separator = if ("?" in streamUrl!!) "&" else "?"
+                            streamUrl = "${streamUrl}${separator}pot=${Uri.encode(poToken.streamingDataPoToken)}"
+                        }
+                    } catch (e: Exception) {
+                        Timber.tag(logTag).e(e, "N-transform or pot append failed: ${e.message}")
+                        // Continue with original URL
+                    }
+                }
+
                 streamExpiresInSeconds = streamPlayerResponse.streamingData?.expiresInSeconds
                 if (streamExpiresInSeconds == null) {
                     Timber.tag(logTag).d("Stream expiration time not found")
@@ -171,15 +216,19 @@ object YTPlayerUtils {
                 if (clientIndex == STREAM_FALLBACK_CLIENTS.size - 1) {
                     /** skip [validateStatus] for last client */
                     Timber.tag(logTag).d("Using last fallback client without validation: ${STREAM_FALLBACK_CLIENTS[clientIndex].clientName}")
+                    // Log for release builds
+                    Log.i(TAG, "Playback: client=${currentClient.clientName}, videoId=$videoId")
                     break
                 }
 
-                if (validateStatus(streamUrl)) {
+                if (validateStatus(streamUrl!!)) {
                     // working stream found
-                    Timber.tag(logTag).d("Stream validated successfully with client: ${if (clientIndex == -1) MAIN_CLIENT.clientName else STREAM_FALLBACK_CLIENTS[clientIndex].clientName}")
+                    Timber.tag(logTag).d("Stream validated successfully with client: ${currentClient.clientName}")
+                    // Log for release builds
+                    Log.i(TAG, "Playback: client=${currentClient.clientName}, videoId=$videoId")
                     break
                 } else {
-                    Timber.tag(logTag).d("Stream validation failed for client: ${if (clientIndex == -1) MAIN_CLIENT.clientName else STREAM_FALLBACK_CLIENTS[clientIndex].clientName}")
+                    Timber.tag(logTag).d("Stream validation failed for client: ${currentClient.clientName}")
                 }
             } else {
                 Timber.tag(logTag).d("Player response status not OK: ${streamPlayerResponse?.playabilityStatus?.status}, reason: ${streamPlayerResponse?.playabilityStatus?.reason}")

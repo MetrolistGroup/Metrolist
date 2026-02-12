@@ -5,6 +5,28 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
+# WEB_REMIX Streaming - WebView JavaScript interfaces
+-keepclassmembers class com.metrolist.music.utils.sabr.EjsNTransformSolver$SolverWebView {
+    @android.webkit.JavascriptInterface public *;
+}
+-keepclassmembers class com.metrolist.music.utils.cipher.CipherWebView {
+    @android.webkit.JavascriptInterface public *;
+}
+-keepclassmembers class com.metrolist.music.utils.potoken.PoTokenWebView {
+    @android.webkit.JavascriptInterface public *;
+}
+
+# Keep streaming utility classes
+-keep class com.metrolist.music.utils.cipher.** { *; }
+-keep class com.metrolist.music.utils.sabr.** { *; }
+-keep class com.metrolist.music.utils.potoken.** { *; }
+
+# Keep coroutine continuation for WebView callbacks
+-keepclassmembers class * {
+    void resume(...);
+    void resumeWithException(...);
+}
+
 # If your project uses WebView with JS, uncomment the following
 # and specify the fully qualified class name to the JavaScript interface
 # class:
