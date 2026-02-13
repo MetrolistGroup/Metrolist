@@ -586,4 +586,13 @@
     <string name="play_on_app">Riproduci su Metrolist</string>
     <string name="listening">In ascolto…</string>
     <string name="continue_action">Continua</string>
+    <string name="enable">Attiva</string>
+    <string name="crossfade">Dissolvenza incrociata</string>
+    <string name="crossfade_desc">Dissolvenza incrociata tra brani</string>
+    <string name="crossfade_duration">Durata della dissolvenza incrociata</string>
+    <string name="crossfade_gapless">Disabilita per album senza interruzioni</string>
+    <string name="crossfade_gapless_desc">Non usare la dissolvenza incrociata se l\'album non ha interruzioni tra le tracce</string>
+    <string name="crossfade_beta_title">Funzioni beta</string>
+    <string name="crossfade_beta_message">La dissolvenza incrociata è una funzione beta che potrebbe avere errori. Se ne trovi uno, per favore segnalalo.\n\nQuesta funzione disabilita l\'audio di scarico a causa di limitazioni tecniche.</string>
+    <string name="audio_offload_disabled_by_crossfade">Disabilitato poiché è attiva la dissolvenza incrociata</string>
 </resources>
