@@ -591,4 +591,13 @@
     <string name="listening">Слушаем…</string>
     <string name="continue_action">Продолжить</string>
     <string name="hold_to_recognize">Удерживайте значок поиска для распознавания музыки</string>
+    <string name="enable">Включить</string>
+    <string name="crossfade">Кроссфейд</string>
+    <string name="crossfade_desc">Плавный переход между треками</string>
+    <string name="crossfade_duration">Длительность кроссфейда</string>
+    <string name="crossfade_gapless">Отключать для альбомов без пауз</string>
+    <string name="crossfade_gapless_desc">Не применять кроссфейд, если альбом воспроизводится без пауз</string>
+    <string name="crossfade_beta_title">Бета-функция</string>
+    <string name="crossfade_beta_message">Кроссфейд - новая функция, которая может работать нестабильно. Пожалуйста, сообщите нам, если столкнётесь с ошибками.\n\nЭта функция отключает аппаратное ускорение аудио из-за технических ограничений.</string>
+    <string name="audio_offload_disabled_by_crossfade">Отключено, так как включён кроссфейд</string>
 </resources>
