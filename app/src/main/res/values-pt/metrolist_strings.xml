@@ -584,4 +584,6 @@
     <string name="hold_to_recognize"></string>
     <string name="palette_blue"></string>
     <string name="listen_together_room_created"></string>
+    <string name="skip_silence_instant_desc">Saltar as partes silenciosas das músicas em vez de aumentar a velocidade</string>
+    <string name="skip_silence_desc">Avançar durante as partes silenciosas das músicas</string>
 </resources>
