@@ -557,4 +557,17 @@
     <string name="ai_error_no_lyrics">Nessun testo da tradurre</string>
     <string name="ai_error_lyrics_empty">Il testo è vuoto</string>
     <string name="play_all">Riproduci tutto</string>
+    <string name="recognize_music">Identifica brani</string>
+    <string name="artist_name_column">Colonna dell\'artista</string>
+    <string name="recognized_track">Brano identificato</string>
+    <string name="map_csv_columns">Mappa colonne CSV</string>
+    <string name="column_label">Col %d</string>
+    <string name="try_again">Prova di nuovo</string>
+    <string name="recognition_history">Cronologia delle identificazioni</string>
+    <string name="song_title_column">Colonna del titolo</string>
+    <string name="recognition">Identificazione</string>
+    <string name="recently_converted">Convertiti di recente</string>
+    <string name="csv_import_failed">Impossibile importare il file CSV</string>
+    <string name="importing_csv">Importazione del CSV</string>
+    <string name="hold_to_recognize">Tieni premuta l\'icona di ricerca per identificare brani</string>
 </resources>
