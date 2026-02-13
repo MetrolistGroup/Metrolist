@@ -94,6 +94,7 @@ import com.metrolist.music.ui.component.NewActionGrid
 import com.metrolist.music.ui.component.VolumeSlider
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.log2
 import kotlin.math.pow
@@ -650,12 +651,23 @@ fun TempoPitchDialog(onDismiss: () -> Unit) {
         playerConnection.player.playbackParameters =
             PlaybackParameters(tempo, 2f.pow(transposeValue.toFloat() / 12))
     }
+
+    LaunchedEffect(tempo, transposeValue) {
+        delay(200)
+        updatePlaybackParameters()
+    }
+
+    val onDismissWithUpdate = {
+        updatePlaybackParameters()
+        onDismiss()
+    }
+
     val listenTogetherManager = com.metrolist.music.LocalListenTogetherManager.current
     val isInRoom = listenTogetherManager?.isInRoom ?: false
 
     AlertDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false),
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismissWithUpdate,
         title = {
             Text(stringResource(R.string.tempo_and_pitch))
         },
@@ -664,7 +676,6 @@ fun TempoPitchDialog(onDismiss: () -> Unit) {
                 onClick = {
                     tempo = 1f
                     transposeValue = 0
-                    updatePlaybackParameters()
                 },
             ) {
                 Text(stringResource(R.string.reset))
@@ -672,7 +683,7 @@ fun TempoPitchDialog(onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(
-                onClick = onDismiss,
+                onClick = onDismissWithUpdate,
             ) {
                 Text(stringResource(android.R.string.ok))
             }
@@ -686,7 +697,6 @@ fun TempoPitchDialog(onDismiss: () -> Unit) {
                         values = (0..35).map { round((0.25f + it * 0.05f) * 100) / 100 },
                         onValueUpdate = {
                             tempo = it
-                            updatePlaybackParameters()
                         },
                         valueText = { "x$it" },
                         modifier = Modifier.padding(bottom = 12.dp),
@@ -698,7 +708,6 @@ fun TempoPitchDialog(onDismiss: () -> Unit) {
                     values = (-12..12).toList(),
                     onValueUpdate = {
                         transposeValue = it
-                        updatePlaybackParameters()
                     },
                     valueText = { "${if (it > 0) "+" else ""}$it" },
                 )
