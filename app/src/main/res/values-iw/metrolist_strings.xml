@@ -585,4 +585,5 @@
     <string name="hold_to_recognize"></string>
     <string name="palette_blue"></string>
     <string name="listen_together_room_created"></string>
+    <string name="discord"></string>
 </resources>
