@@ -343,7 +343,7 @@
     <string name="enable_simpmusic_desc">Verwenden Sie den Anbieter SimpMusic-Lyrics für synchronisierte Songtexte.</string>
     <plurals name="profiles_count">
         <item quantity="one">Equalizer-Benutzeroberfläche</item>
-        <item quantity="other"/>
+        <item quantity="other"></item>
     </plurals>
     <string name="system_equalizer">System-Equalizer</string>
     <string name="no_song_playing">Es wird kein Song abgespielt</string>
@@ -428,7 +428,7 @@
     <string name="listen_together_auto_approval_desc">Beitrittsanfragen automatisch genehmigen, anstatt sie manuell zu prüfen</string>
     <string name="listen_together_sync_volume">Lautstärke des Hosts synchronisieren</string>
     <string name="listen_together_sync_volume_desc">Gäste passen sich der Lautstärke des Hosts an</string>
-    <string name="listen_together_description">Hören gemeinsam mit deinen Freunden Musik in Echtzeit. Erstellen einen Raum, um Gastgeber zu sein, oder trete mit einem Code einem bestehenden Raum bei.</string>
+    <string name="listen_together_description">Hören gemeinsam mit deinen Freunden Musik in Echtzeit. Erstelle einen Raum, um Gastgeber zu sein, oder trete mit einem Code einem bestehenden Raum bei.</string>
     <string name="listen_together_background_disconnect_note">Hinweis: Die Verbindung kann unterbrochen werden, wenn du einen Raum erstellst, während keine Musik abgespielt wird, und dann zu einer anderen App wechselst.</string>
     <string name="listen_together_not_configured">Listen Together ist nicht konfiguriert. Bitte richte die Server-URL unter „Einstellungen“ → „Integrationen“ → „Listen Together“ ein.</string>
     <string name="listen_together_suggestion_received">%1$s hat %2$s vorgeschlagen</string>
@@ -551,4 +551,34 @@
     <string name="ai_error_translation_failed">Übersetzung fehlgeschlagen</string>
     <string name="palette_amber">Bernstein</string>
     <string name="play_all">Alle abspielen</string>
+    <string name="recognize_music">Musik erkennen</string>
+    <string name="youtube_url_column">YouTube-URL-Spalte (optional)</string>
+    <string name="re_listen">Noch einmal zuhören</string>
+    <string name="clear_recognition_history_confirm">Bist du sicher, dass du den gesamten Erkennungsverlauf löschen möchten?</string>
+    <string name="no_match_found">Keine Übereinstimmung gefunden</string>
+    <string name="delete_from_history">Aus Verlauf löschen</string>
+    <string name="artist_name_column">Spalte „Künstlername“</string>
+    <string name="csv_preview_failed">Fehler beim Anzeigen der CSV-Datei</string>
+    <string name="processing">Verarbeitung…</string>
+    <string name="clear_recognition_history">Lösche Erkennungs-Verlauf</string>
+    <string name="recognized_track">Erkannter Titel</string>
+    <string name="map_csv_columns">CSV-Spalten zuordnen</string>
+    <string name="column_label">Spalte %d</string>
+    <string name="palette_lime">Limette</string>
+    <string name="recognition_error">Erkennungsfehler</string>
+    <string name="enable_high_refresh_rate_desc">Erzwinge, dass das Display mit der höchsten unterstützten Bildwiederholfrequenz (z. B. 120 Hz) läuft.</string>
+    <string name="first_row_is_header">Die erste Zeile ist die Kopfzeile</string>
+    <string name="try_again">Versuche es erneut</string>
+    <string name="tap_to_recognize">Zum Erkennen antippen</string>
+    <string name="recognition_history">Erkennungs-Verlauf</string>
+    <string name="enable_high_refresh_rate">Aktiviere eine hohe Bildwiederholrate</string>
+    <string name="song_title_column">Spalte für Songtitel</string>
+    <string name="recognition">Erkennung</string>
+    <string name="recently_converted">Kürzlich konvertiert</string>
+    <string name="csv_import_failed">Fehler beim Importieren der CSV-Datei</string>
+    <string name="importing_csv">CSV importieren</string>
+    <string name="play_on_app">Auf Metrolist abspielen</string>
+    <string name="listening">Hören…</string>
+    <string name="continue_action">Weitermachen</string>
+    <string name="hold_to_recognize">Halten Sie das Suchsymbol gedrückt, um Musik zu erkennen.</string>
 </resources>
