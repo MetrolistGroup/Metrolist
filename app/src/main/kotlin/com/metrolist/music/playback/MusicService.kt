@@ -764,8 +764,9 @@ class MusicService :
                     // Restore player settings after queue is loaded
                     scope.launch {
                         delay(1000) // Wait for queue to be loaded
-                        player.repeatMode = playerState.repeatMode
-                        player.shuffleModeEnabled = playerState.shuffleModeEnabled
+                        // Don't restore repeat/shuffle from playerState as they are already set from DataStore (source of truth)
+                        // player.repeatMode = playerState.repeatMode
+                        // player.shuffleModeEnabled = playerState.shuffleModeEnabled
                         playerVolume.value = playerState.volume
 
                         // Restore position if it's still valid
@@ -1649,10 +1650,24 @@ class MusicService :
         )
     }
 
+    private var previousMediaItemIndex = C.INDEX_UNSET
+
     override fun onMediaItemTransition(
         mediaItem: MediaItem?,
         reason: Int,
     ) {
+        // Force Repeat One if the player ignored it and auto-advanced
+        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
+            val repeatMode = runBlocking { dataStore.get(RepeatModeKey, REPEAT_MODE_OFF) }
+            if (repeatMode == REPEAT_MODE_ONE && 
+                previousMediaItemIndex != C.INDEX_UNSET && 
+                previousMediaItemIndex != player.currentMediaItemIndex) {
+                
+                player.seekTo(previousMediaItemIndex, 0)
+            }
+        }
+        previousMediaItemIndex = player.currentMediaItemIndex
+
         lastPlaybackSpeed = -1.0f // force update song
 
         setupLoudnessEnhancer()
@@ -1713,6 +1728,16 @@ class MusicService :
     override fun onPlaybackStateChanged(
         @Player.State playbackState: Int,
     ) {
+        // Force Repeat All if the player ignored it and ended playback
+        if (playbackState == Player.STATE_ENDED) {
+            val repeatMode = runBlocking { dataStore.get(RepeatModeKey, REPEAT_MODE_OFF) }
+            if (repeatMode == REPEAT_MODE_ALL && player.mediaItemCount > 0) {
+                player.seekTo(0, 0)
+                player.prepare()
+                player.play()
+            }
+        }
+
         // Save state when playback state changes (but not during silence skipping)
         if (dataStore.get(PersistentQueueKey, true) && !isSilenceSkipping) {
             saveQueueToDisk()
@@ -2852,7 +2877,7 @@ class MusicService :
         crossfadeTriggerJob = null
         if (!crossfadeEnabled || player.duration == C.TIME_UNSET || player.duration <= crossfadeDuration) return
         if (crossfadeGapless && isNextItemGapless()) return
-        if (!player.hasNextMediaItem()) return
+        if (!player.hasNextMediaItem() && player.repeatMode != REPEAT_MODE_ONE) return
         
         val triggerTime = player.duration - crossfadeDuration.toLong()
         val delayMs = triggerTime - player.currentPosition
@@ -2919,8 +2944,19 @@ class MusicService :
     
     private fun startCrossfade() {
         if (isCrossfading) return
-        val nextIndex = player.nextMediaItemIndex
-        if (nextIndex == C.INDEX_UNSET) return
+        
+        // Preserve player state before creating the secondary player
+        // Use runBlocking to ensure we get the correct state from DataStore
+        val savedRepeatMode = runBlocking { dataStore.get(RepeatModeKey, REPEAT_MODE_OFF) }
+        val savedShuffleEnabled = runBlocking { dataStore.get(ShuffleModeKey, false) }
+        
+        // For repeat-one, crossfade back into the same track
+        val targetIndex = if (savedRepeatMode == REPEAT_MODE_ONE) {
+            player.currentMediaItemIndex
+        } else {
+            player.nextMediaItemIndex
+        }
+        if (targetIndex == C.INDEX_UNSET) return
         
         // Record current song to history before crossfade
         recordCurrentSongToHistory()
@@ -2937,13 +2973,24 @@ class MusicService :
         }
         
         secPlayer.setMediaItems(items)
-        // Seek to next track (the one we are fading into)
-        secPlayer.seekTo(nextIndex, 0)
+        // Seek to target track (next track, or current track for repeat-one)
+        secPlayer.seekTo(targetIndex, 0)
         secPlayer.volume = 0f
+        
+        // Copy repeat and shuffle state to the new player
+        secPlayer.repeatMode = savedRepeatMode
+        secPlayer.shuffleModeEnabled = savedShuffleEnabled
+        
         secPlayer.prepare()
         secPlayer.playWhenReady = true
         
         performCrossfadeSwap()
+        
+        // Rebuild shuffle order on the new primary player if shuffle was active
+        if (savedShuffleEnabled) {
+            val shufflePlaylistFirst = dataStore.get(ShufflePlaylistFirstKey, false)
+            applyShuffleOrder(player.currentMediaItemIndex, player.mediaItemCount, shufflePlaylistFirst)
+        }
     }
     
     private fun performCrossfadeSwap() {
