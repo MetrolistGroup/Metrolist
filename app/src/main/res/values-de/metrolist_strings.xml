@@ -343,7 +343,7 @@
     <string name="enable_simpmusic_desc">Verwenden Sie den Anbieter SimpMusic-Lyrics für synchronisierte Songtexte.</string>
     <plurals name="profiles_count">
         <item quantity="one">Equalizer-Benutzeroberfläche</item>
-        <item quantity="other"></item>
+        <item quantity="other"/>
     </plurals>
     <string name="system_equalizer">System-Equalizer</string>
     <string name="no_song_playing">Es wird kein Song abgespielt</string>
@@ -581,4 +581,13 @@
     <string name="listening">Hören…</string>
     <string name="continue_action">Weitermachen</string>
     <string name="hold_to_recognize">Halten Sie das Suchsymbol gedrückt, um Musik zu erkennen.</string>
+    <string name="enable">Aktivieren</string>
+    <string name="crossfade">Song-Überblendung (Crossfade)</string>
+    <string name="crossfade_desc">Überblendung zwischen Liedern</string>
+    <string name="crossfade_duration">Überblenddauer</string>
+    <string name="crossfade_gapless">Deaktivieren für lückenlose Alben</string>
+    <string name="crossfade_gapless_desc">Nicht Überblenden, wenn das Album lückenlos ist</string>
+    <string name="crossfade_beta_title">Beta-Funktion</string>
+    <string name="crossfade_beta_message">Song-Überblendung (Crossfade) ist eine neue Funktion und kann Fehler enthalten. Sollten Sie Probleme feststellen, melden Sie diese bitte.\n\nDiese Funktion deaktiviert die Audioauslagerung aus technischen Gründen.</string>
+    <string name="audio_offload_disabled_by_crossfade">Deaktiviert, da Song-Überblendung (Crossfade) aktiv ist.</string>
 </resources>
