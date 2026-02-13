@@ -53,7 +53,7 @@
     <string name="follow_theme">Segui il tema</string>
     <string name="gradient">Gradiente</string>
     <string name="player_background_blur">Sfuma</string>
-    <string name="player_buttons_style">Colori dei bottoni del riproduttore</string>
+    <string name="player_buttons_style">Colori dei pulsanti del riproduttore</string>
     <string name="default_style">Predefiniti</string>
     <string name="secondary_color_style">Secondari</string>
     <string name="enable_swipe_thumbnail">Attiva la possibilità di cambiare brano scorrendo sulla copertina</string>
@@ -145,7 +145,7 @@
     <string name="disable">Disabilita</string>
     <string name="swipe_sensitivity_desc">Imposta quanto sensibile deve essere il gesto per cambiare la canzone</string>
     <string name="clear_image_cache_dialog">Sei sicuro di voler cancellare tutte le immagini in cache?</string>
-    <string name="swipe_sensitivity">Sensibilità del gesto per cambiare brano nel minilettore</string>
+    <string name="swipe_sensitivity">Sensibilità del gesto per cambiare brano nel mini lettore</string>
     <string name="sensitivity_percentage">%1$d%%</string>
     <string name="subscribe">Iscriviti</string>
     <string name="subscribed">Iscritto</string>
@@ -166,7 +166,7 @@
     <string name="close">Chiudi</string>
     <string name="minimum_volume">Volume minimo</string>
     <string name="maximum_volume">Volume massimo</string>
-    <string name="hide_player_thumbnail">Nascondi Miniatura del Lettore</string>
+    <string name="hide_player_thumbnail">Nascondi miniatura del lettore</string>
     <string name="hide_player_thumbnail_desc">Sostituisci la copertina dell\'album con il logo dell\'app nel lettore</string>
     <string name="settings_section_ui">Interfaccia</string>
     <string name="settings_section_privacy">Privacy e Sicurezza</string>
@@ -247,9 +247,9 @@
     <string name="advanced_desc">Cambia il tempo e la tonalità del brano</string>
     <string name="equalizer_desc">Regola l\'equalizzatore audio</string>
     <string name="enable_dynamic_icon">Attiva l\'icona dinamica</string>
-    <string name="mini_player">Mini-lettore</string>
-    <string name="pure_black_mini_player">Mini-lettore nero puro</string>
-    <string name="mini_player_outline">Schema del mini-lettore</string>
+    <string name="mini_player">Mini lettore</string>
+    <string name="pure_black_mini_player">Mini lettore nero puro</string>
+    <string name="mini_player_outline">Schema del mini lettore</string>
     <string name="cache_size_warning_title">Aspetta!</string>
     <string name="cache_size_warning_message">Hai scelto un limite alla dimensione della cache più piccola di quella che l\'app sta usando attualmente (%1$s). Se continui, l\'app può rimuovere %2$s di cache per arrivare al nuovo limite. Procedere comunque?</string>
     <string name="cache_size_warning_confirm">Continua</string>
@@ -570,4 +570,20 @@
     <string name="csv_import_failed">Impossibile importare il file CSV</string>
     <string name="importing_csv">Importazione del CSV</string>
     <string name="hold_to_recognize">Tieni premuta l\'icona di ricerca per identificare brani</string>
+    <string name="youtube_url_column">Colonna dell\'URL YouTube (opzionale)</string>
+    <string name="re_listen">Riascolta</string>
+    <string name="clear_recognition_history_confirm">Sicuro di voler cancellare tutta la cronologia delle identificazioni?</string>
+    <string name="no_match_found">Nessuna corrispondenza</string>
+    <string name="delete_from_history">Cancella dalla cronologia</string>
+    <string name="csv_preview_failed">Impossibile mostrare l\'anteprima del file CSV</string>
+    <string name="processing">Elaborazione…</string>
+    <string name="clear_recognition_history">Pulisci cronologia delle identificazioni</string>
+    <string name="recognition_error">Errore di identificazione</string>
+    <string name="enable_high_refresh_rate_desc">Forza lo schermo alla frequenza di aggiornamento più alta supportata (ad esempio 120Hz)</string>
+    <string name="first_row_is_header">La prima riga è l\'intestazione</string>
+    <string name="tap_to_recognize">Premi per identificare</string>
+    <string name="enable_high_refresh_rate">Abilita frequenza di aggiornamento elevata</string>
+    <string name="play_on_app">Riproduci su Metrolist</string>
+    <string name="listening">In ascolto…</string>
+    <string name="continue_action">Continua</string>
 </resources>
