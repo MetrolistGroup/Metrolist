@@ -591,4 +591,13 @@
     <string name="ai_language_mismatch_desc">Přeskočit překlad, pokud byl jazyk textů identifikován jako váš systémový</string>
     <string name="play_all">Přehrát vše</string>
     <string name="hold_to_recognize">Podržte ikonu vyhledávání pro rozpoznání hudby</string>
+    <string name="enable">Povolit</string>
+    <string name="crossfade">Prolnutí</string>
+    <string name="crossfade_desc">Prolnutí mezi skladbami</string>
+    <string name="crossfade_duration">Trvání prolnutí</string>
+    <string name="crossfade_gapless">Zakázat pro alba bez mezer</string>
+    <string name="crossfade_gapless_desc">Zakázat, pokud mezi skladbami alba nejsou mezery</string>
+    <string name="crossfade_beta_title">Beta funkce</string>
+    <string name="crossfade_beta_message">Prolnutí je nová funkce, ve které se mohou vyskytnout chyby. Pokud na nějaké narazíte, prosíme nahlaste je.\n\nTato funkce zakáže offload zvuku z důvodu technických omezení.</string>
+    <string name="audio_offload_disabled_by_crossfade">Zakázáno z důvodu aktivního prolnutí</string>
 </resources>
