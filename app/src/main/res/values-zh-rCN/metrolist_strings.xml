@@ -576,4 +576,13 @@
     <string name="listening">正在聆听…</string>
     <string name="continue_action">继续</string>
     <string name="hold_to_recognize">按住搜索图标识别音乐</string>
+    <string name="enable">启用</string>
+    <string name="crossfade">淡入淡出</string>
+    <string name="crossfade_desc">歌曲间淡入淡出</string>
+    <string name="crossfade_duration">淡入淡出时长</string>
+    <string name="crossfade_gapless">对无缝专辑禁用</string>
+    <string name="crossfade_gapless_desc">如果专辑为无缝格式则不淡入淡出</string>
+    <string name="crossfade_beta_title">测试功能</string>
+    <string name="crossfade_beta_message">淡入淡出是一项新功能，可能存在错误。如果您遇到任何问题，请及时反馈。\n\n由于技术限制，此功能会禁用省电播放。</string>
+    <string name="audio_offload_disabled_by_crossfade">因淡入淡出已启用而禁用</string>
 </resources>
