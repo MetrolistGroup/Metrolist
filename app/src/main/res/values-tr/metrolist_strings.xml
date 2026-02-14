@@ -581,4 +581,13 @@
     <string name="listening">Dinleniliyor…</string>
     <string name="continue_action">Devam et</string>
     <string name="hold_to_recognize">Müziği tanımlamak için arama tuşuna basılı tutun</string>
+    <string name="enable">Etkinleştir</string>
+    <string name="crossfade">Çapraz geçiş</string>
+    <string name="crossfade_desc">Şarkılar arasında çapraz geçiş</string>
+    <string name="crossfade_duration">Çapraz geçiş süresi</string>
+    <string name="crossfade_gapless">Aralıksız albümler için bunu kapat</string>
+    <string name="crossfade_gapless_desc">Albüm kesintisiz ise çapraz geçişi kullanma</string>
+    <string name="crossfade_beta_title">Beta Özellikleri</string>
+    <string name="crossfade_beta_message">Çapraz geçiş yeni bir özelliktir ve hatalar içerebilir. Bir hata ile karşılaşırsanız lütfen bildirin.\n\nBu özellik, bazı teknik kısıtlamalar nedeniyle sesin donanıma devredilmesini devre dışı bırakır (ses, DSP yerine CPU üzerinde işlenir).</string>
+    <string name="audio_offload_disabled_by_crossfade">Çapraz geçiş aktif olduğu için kapatıldı</string>
 </resources>
