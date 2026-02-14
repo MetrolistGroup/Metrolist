@@ -1,0 +1,788 @@
+build	Set up job	﻿2026-02-12T21:53:09.9431536Z Current runner version: '2.331.0'
+build	Set up job	2026-02-12T21:53:09.9456484Z ##[group]Runner Image Provisioner
+build	Set up job	2026-02-12T21:53:09.9457278Z Hosted Compute Agent
+build	Set up job	2026-02-12T21:53:09.9457854Z Version: 20260123.484
+build	Set up job	2026-02-12T21:53:09.9458492Z Commit: 6bd6555ca37d84114959e1c76d2c01448ff61c5d
+build	Set up job	2026-02-12T21:53:09.9459206Z Build Date: 2026-01-23T19:41:17Z
+build	Set up job	2026-02-12T21:53:09.9459871Z Worker ID: {b02ecc5b-fed6-4a9e-9155-043615723651}
+build	Set up job	2026-02-12T21:53:09.9460566Z Azure Region: westcentralus
+build	Set up job	2026-02-12T21:53:09.9461210Z ##[endgroup]
+build	Set up job	2026-02-12T21:53:09.9462569Z ##[group]Operating System
+build	Set up job	2026-02-12T21:53:09.9463238Z Ubuntu
+build	Set up job	2026-02-12T21:53:09.9463689Z 24.04.3
+build	Set up job	2026-02-12T21:53:09.9464147Z LTS
+build	Set up job	2026-02-12T21:53:09.9464547Z ##[endgroup]
+build	Set up job	2026-02-12T21:53:09.9465223Z ##[group]Runner Image
+build	Set up job	2026-02-12T21:53:09.9465972Z Image: ubuntu-24.04
+build	Set up job	2026-02-12T21:53:09.9466440Z Version: 20260209.23.1
+build	Set up job	2026-02-12T21:53:09.9467521Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260209.23/images/ubuntu/Ubuntu2404-Readme.md
+build	Set up job	2026-02-12T21:53:09.9469226Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260209.23
+build	Set up job	2026-02-12T21:53:09.9470105Z ##[endgroup]
+build	Set up job	2026-02-12T21:53:09.9471158Z ##[group]GITHUB_TOKEN Permissions
+build	Set up job	2026-02-12T21:53:09.9473011Z Contents: read
+build	Set up job	2026-02-12T21:53:09.9473581Z Metadata: read
+build	Set up job	2026-02-12T21:53:09.9474044Z Packages: read
+build	Set up job	2026-02-12T21:53:09.9474671Z ##[endgroup]
+build	Set up job	2026-02-12T21:53:09.9476926Z Secret source: None
+build	Set up job	2026-02-12T21:53:09.9477628Z Prepare workflow directory
+build	Set up job	2026-02-12T21:53:09.9858732Z Prepare all required actions
+build	Set up job	2026-02-12T21:53:09.9896736Z Getting action download info
+build	Set up job	2026-02-12T21:53:10.4597099Z Download action repository 'actions/checkout@v6' (SHA:de0fac2e4500dabe0009e67214ff5f5447ce83dd)
+build	Set up job	2026-02-12T21:53:10.6260812Z Download action repository 'actions/setup-java@v5' (SHA:be666c2fcd27ec809703dec50e508c2fdc7f6654)
+build	Set up job	2026-02-12T21:53:11.4983172Z Download action repository 'gradle/actions@v5' (SHA:f29f5a9d7b09a7c6b29859002d29d24e1674c884)
+build	Set up job	2026-02-12T21:53:12.9488690Z Download action repository 'actions/upload-artifact@v6' (SHA:b7c566a772e6b6bfb58ed0dc250532a479d7789f)
+build	Set up job	2026-02-12T21:53:13.2116303Z Complete job name: build
+build	Run actions/checkout@v6	﻿2026-02-12T21:53:13.2801016Z ##[group]Run actions/checkout@v6
+build	Run actions/checkout@v6	2026-02-12T21:53:13.2801812Z with:
+build	Run actions/checkout@v6	2026-02-12T21:53:13.2802189Z   submodules: recursive
+build	Run actions/checkout@v6	2026-02-12T21:53:13.2802568Z   repository: MetrolistGroup/Metrolist
+build	Run actions/checkout@v6	2026-02-12T21:53:13.2803183Z   token: ***
+build	Run actions/checkout@v6	2026-02-12T21:53:13.2803726Z   ssh-strict: true
+build	Run actions/checkout@v6	2026-02-12T21:53:13.2804015Z   ssh-user: git
+build	Run actions/checkout@v6	2026-02-12T21:53:13.2804401Z   persist-credentials: true
+build	Run actions/checkout@v6	2026-02-12T21:53:13.2804743Z   clean: true
+build	Run actions/checkout@v6	2026-02-12T21:53:13.2805089Z   sparse-checkout-cone-mode: true
+build	Run actions/checkout@v6	2026-02-12T21:53:13.2805729Z   fetch-depth: 1
+build	Run actions/checkout@v6	2026-02-12T21:53:13.2806049Z   fetch-tags: false
+build	Run actions/checkout@v6	2026-02-12T21:53:13.2806381Z   show-progress: true
+build	Run actions/checkout@v6	2026-02-12T21:53:13.2806652Z   lfs: false
+build	Run actions/checkout@v6	2026-02-12T21:53:13.2807046Z   set-safe-directory: true
+build	Run actions/checkout@v6	2026-02-12T21:53:13.2807665Z ##[endgroup]
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3791903Z Syncing repository: MetrolistGroup/Metrolist
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3794635Z ##[group]Getting Git version info
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3795860Z Working directory is '/home/runner/work/Metrolist/Metrolist'
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3797501Z [command]/usr/bin/git version
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3798271Z git version 2.52.0
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3808222Z ##[endgroup]
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3824447Z Temporarily overriding HOME='/home/runner/work/_temp/6dbfbc55-6418-4810-82bb-946477fab411' before making global git config changes
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3826385Z Adding repository directory to the temporary git global config as a safe directory
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3830702Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Metrolist/Metrolist
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3872954Z Deleting the contents of '/home/runner/work/Metrolist/Metrolist'
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3877017Z ##[group]Initializing the repository
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3881891Z [command]/usr/bin/git init /home/runner/work/Metrolist/Metrolist
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3976454Z hint: Using 'master' as the name for the initial branch. This default branch name
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3977677Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3978347Z hint: to use in all of your new repositories, which will suppress this warning,
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3979045Z hint: call:
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3979569Z hint:
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3980515Z hint: 	git config --global init.defaultBranch <name>
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3981068Z hint:
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3981838Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3983164Z hint: 'development'. The just-created branch can be renamed via this command:
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3984149Z hint:
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3984805Z hint: 	git branch -m <name>
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3985597Z hint:
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3986697Z hint: Disable this message with "git config set advice.defaultBranchName false"
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3988009Z Initialized empty Git repository in /home/runner/work/Metrolist/Metrolist/.git/
+build	Run actions/checkout@v6	2026-02-12T21:53:13.3992959Z [command]/usr/bin/git remote add origin https://github.com/MetrolistGroup/Metrolist
+build	Run actions/checkout@v6	2026-02-12T21:53:13.4028451Z ##[endgroup]
+build	Run actions/checkout@v6	2026-02-12T21:53:13.4029462Z ##[group]Disabling automatic garbage collection
+build	Run actions/checkout@v6	2026-02-12T21:53:13.4033279Z [command]/usr/bin/git config --local gc.auto 0
+build	Run actions/checkout@v6	2026-02-12T21:53:13.4063054Z ##[endgroup]
+build	Run actions/checkout@v6	2026-02-12T21:53:13.4064246Z ##[group]Setting up auth
+build	Run actions/checkout@v6	2026-02-12T21:53:13.4065058Z Removing SSH command configuration
+build	Run actions/checkout@v6	2026-02-12T21:53:13.4070948Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build	Run actions/checkout@v6	2026-02-12T21:53:13.4104290Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build	Run actions/checkout@v6	2026-02-12T21:53:13.4433309Z Removing HTTP extra header
+build	Run actions/checkout@v6	2026-02-12T21:53:13.4438964Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build	Run actions/checkout@v6	2026-02-12T21:53:13.4471022Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build	Run actions/checkout@v6	2026-02-12T21:53:13.4703728Z Removing includeIf entries pointing to credentials config files
+build	Run actions/checkout@v6	2026-02-12T21:53:13.4705119Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build	Run actions/checkout@v6	2026-02-12T21:53:13.4736943Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build	Run actions/checkout@v6	2026-02-12T21:53:13.4974945Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+build	Run actions/checkout@v6	2026-02-12T21:53:13.5012268Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/Metrolist/Metrolist/.git.path /home/runner/work/_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Run actions/checkout@v6	2026-02-12T21:53:13.5041536Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/Metrolist/Metrolist/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Run actions/checkout@v6	2026-02-12T21:53:13.5140736Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Run actions/checkout@v6	2026-02-12T21:53:13.5147237Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Run actions/checkout@v6	2026-02-12T21:53:13.5149548Z ##[endgroup]
+build	Run actions/checkout@v6	2026-02-12T21:53:13.5150181Z ##[group]Fetching the repository
+build	Run actions/checkout@v6	2026-02-12T21:53:13.5154962Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +5640cfbb907a3410604cede92c32eefc14afeb2a:refs/remotes/pull/2783/merge
+build	Run actions/checkout@v6	2026-02-12T21:53:14.4966702Z From https://github.com/MetrolistGroup/Metrolist
+build	Run actions/checkout@v6	2026-02-12T21:53:14.4967591Z  * [new ref]         5640cfbb907a3410604cede92c32eefc14afeb2a -> pull/2783/merge
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5001887Z ##[endgroup]
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5002522Z ##[group]Determining the checkout info
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5003268Z ##[endgroup]
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5008543Z [command]/usr/bin/git sparse-checkout disable
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5052780Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5083082Z ##[group]Checking out the ref
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5087001Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/2783/merge
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5897218Z Note: switching to 'refs/remotes/pull/2783/merge'.
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5897787Z 
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5898118Z You are in 'detached HEAD' state. You can look around, make experimental
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5898869Z changes and commit them, and you can discard any commits you make in this
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5899647Z state without impacting any branches by switching back to a branch.
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5900090Z 
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5900408Z If you want to create a new branch to retain commits you create, you may
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5901152Z do so (now or later) by using -c with the switch command. Example:
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5901588Z 
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5901744Z   git switch -c <new-branch-name>
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5902011Z 
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5902161Z Or undo this operation with:
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5902414Z 
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5902545Z   git switch -
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5902751Z 
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5903107Z Turn off this advice by setting config variable advice.detachedHead to false
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5903632Z 
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5904235Z HEAD is now at 5640cfb Merge 1e76204b54a1046093bf2499c6a7b8b27f238b7e into 39a4b5e3d1e69b8d0e534f8636e8a84dd96bec53
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5909679Z ##[endgroup]
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5910080Z ##[group]Setting up auth for fetching submodules
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5916991Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5957907Z [command]/usr/bin/git config --global include.path /home/runner/work/_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Run actions/checkout@v6	2026-02-12T21:53:14.5989172Z [command]/usr/bin/git config --global --unset-all url.https://github.com/.insteadOf
+build	Run actions/checkout@v6	2026-02-12T21:53:14.6018263Z [command]/usr/bin/git config --global --add url.https://github.com/.insteadOf git@github.com:
+build	Run actions/checkout@v6	2026-02-12T21:53:14.6050508Z [command]/usr/bin/git config --global --add url.https://github.com/.insteadOf org-260068764@github.com:
+build	Run actions/checkout@v6	2026-02-12T21:53:14.6078945Z ##[endgroup]
+build	Run actions/checkout@v6	2026-02-12T21:53:14.6079791Z ##[group]Fetching submodules
+build	Run actions/checkout@v6	2026-02-12T21:53:14.6083597Z [command]/usr/bin/git submodule sync --recursive
+build	Run actions/checkout@v6	2026-02-12T21:53:14.6346529Z [command]/usr/bin/git -c protocol.version=2 submodule update --init --force --depth=1 --recursive
+build	Run actions/checkout@v6	2026-02-12T21:53:14.6603988Z Submodule 'metroproto' (https://github.com/MetrolistGroup/metroproto) registered for path 'metroproto'
+build	Run actions/checkout@v6	2026-02-12T21:53:14.6633183Z Cloning into '/home/runner/work/Metrolist/Metrolist/metroproto'...
+build	Run actions/checkout@v6	2026-02-12T21:53:15.0974273Z Submodule path 'metroproto': checked out 'a48dda85eccd4afc366ad2f09f1ae56d526f44d2'
+build	Run actions/checkout@v6	2026-02-12T21:53:15.1008752Z [command]/usr/bin/git submodule foreach --recursive git config --local gc.auto 0
+build	Run actions/checkout@v6	2026-02-12T21:53:15.1242129Z Entering 'metroproto'
+build	Run actions/checkout@v6	2026-02-12T21:53:15.1290801Z ##[endgroup]
+build	Run actions/checkout@v6	2026-02-12T21:53:15.1291284Z ##[group]Persisting credentials for submodules
+build	Run actions/checkout@v6	2026-02-12T21:53:15.1298130Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'url\.https\:\/\/github\.com\/\.insteadOf' && git config --local --unset-all 'url.https://github.com/.insteadOf' || :"
+build	Run actions/checkout@v6	2026-02-12T21:53:15.1525922Z Entering 'metroproto'
+build	Run actions/checkout@v6	2026-02-12T21:53:15.1584476Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build	Run actions/checkout@v6	2026-02-12T21:53:15.1811773Z Entering 'metroproto'
+build	Run actions/checkout@v6	2026-02-12T21:53:15.1831860Z file:/home/runner/work/Metrolist/Metrolist/.git/modules/metroproto/config	remote.origin.url
+build	Run actions/checkout@v6	2026-02-12T21:53:15.1866461Z [command]/usr/bin/git config --file /home/runner/work/Metrolist/Metrolist/.git/modules/metroproto/config includeIf.gitdir:/home/runner/work/Metrolist/Metrolist/.git/modules/metroproto.path /home/runner/work/_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Run actions/checkout@v6	2026-02-12T21:53:15.1904027Z [command]/usr/bin/git config --file /home/runner/work/Metrolist/Metrolist/.git/modules/metroproto/config includeIf.gitdir:/github/workspace/.git/modules/metroproto.path /github/runner_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Run actions/checkout@v6	2026-02-12T21:53:15.1937069Z [command]/usr/bin/git submodule foreach --recursive git config --local --add 'url.https://github.com/.insteadOf' 'git@github.com:'
+build	Run actions/checkout@v6	2026-02-12T21:53:15.2165144Z Entering 'metroproto'
+build	Run actions/checkout@v6	2026-02-12T21:53:15.2223328Z [command]/usr/bin/git submodule foreach --recursive git config --local --add 'url.https://github.com/.insteadOf' 'org-260068764@github.com:'
+build	Run actions/checkout@v6	2026-02-12T21:53:15.2508957Z Entering 'metroproto'
+build	Run actions/checkout@v6	2026-02-12T21:53:15.2583269Z ##[endgroup]
+build	Run actions/checkout@v6	2026-02-12T21:53:15.2637817Z [command]/usr/bin/git log -1 --format=%H
+build	Run actions/checkout@v6	2026-02-12T21:53:15.2685198Z 5640cfbb907a3410604cede92c32eefc14afeb2a
+build	Set up JDK 21	﻿2026-02-12T21:53:15.3030335Z ##[group]Run actions/setup-java@v5
+build	Set up JDK 21	2026-02-12T21:53:15.3030763Z with:
+build	Set up JDK 21	2026-02-12T21:53:15.3031028Z   java-version: 21
+build	Set up JDK 21	2026-02-12T21:53:15.3031330Z   distribution: temurin
+build	Set up JDK 21	2026-02-12T21:53:15.3031676Z   java-package: jdk
+build	Set up JDK 21	2026-02-12T21:53:15.3031989Z   check-latest: false
+build	Set up JDK 21	2026-02-12T21:53:15.3032325Z   server-id: github
+build	Set up JDK 21	2026-02-12T21:53:15.3032650Z   server-username: GITHUB_ACTOR
+build	Set up JDK 21	2026-02-12T21:53:15.3033041Z   server-password: GITHUB_TOKEN
+build	Set up JDK 21	2026-02-12T21:53:15.3033437Z   overwrite-settings: true
+build	Set up JDK 21	2026-02-12T21:53:15.3033823Z   job-status: success
+build	Set up JDK 21	2026-02-12T21:53:15.3034352Z   token: ***
+build	Set up JDK 21	2026-02-12T21:53:15.3034642Z ##[endgroup]
+build	Set up JDK 21	2026-02-12T21:53:15.4528632Z ##[group]Installed distributions
+build	Set up JDK 21	2026-02-12T21:53:15.5756499Z Resolved Java 21.0.10+7 from tool-cache
+build	Set up JDK 21	2026-02-12T21:53:15.5756999Z Setting Java 21.0.10+7 as the default
+build	Set up JDK 21	2026-02-12T21:53:15.5768746Z Creating toolchains.xml for JDK version 21 from temurin
+build	Set up JDK 21	2026-02-12T21:53:15.5844300Z Writing to /home/runner/.m2/toolchains.xml
+build	Set up JDK 21	2026-02-12T21:53:15.5844788Z 
+build	Set up JDK 21	2026-02-12T21:53:15.5845018Z Java configuration:
+build	Set up JDK 21	2026-02-12T21:53:15.5845615Z   Distribution: temurin
+build	Set up JDK 21	2026-02-12T21:53:15.5845999Z   Version: 21.0.10+7
+build	Set up JDK 21	2026-02-12T21:53:15.5846428Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Set up JDK 21	2026-02-12T21:53:15.5846796Z 
+build	Set up JDK 21	2026-02-12T21:53:15.5847108Z ##[endgroup]
+build	Set up JDK 21	2026-02-12T21:53:15.5859396Z Creating settings.xml with server-id: github
+build	Set up JDK 21	2026-02-12T21:53:15.5863378Z Writing to /home/runner/.m2/settings.xml
+build	Set Up Gradle	﻿2026-02-12T21:53:15.6080513Z ##[group]Run gradle/actions/setup-gradle@v5
+build	Set Up Gradle	2026-02-12T21:53:15.6080823Z with:
+build	Set Up Gradle	2026-02-12T21:53:15.6081006Z   cache-read-only: true
+build	Set Up Gradle	2026-02-12T21:53:15.6081220Z   cache-cleanup: on-success
+build	Set Up Gradle	2026-02-12T21:53:15.6081443Z   cache-disabled: false
+build	Set Up Gradle	2026-02-12T21:53:15.6081658Z   cache-write-only: false
+build	Set Up Gradle	2026-02-12T21:53:15.6081880Z   cache-overwrite-existing: false
+build	Set Up Gradle	2026-02-12T21:53:15.6082157Z   gradle-home-cache-includes: caches
+build	Set Up Gradle	notifications
+build	Set Up Gradle	
+build	Set Up Gradle	2026-02-12T21:53:15.6082453Z   add-job-summary: always
+build	Set Up Gradle	2026-02-12T21:53:15.6082676Z   add-job-summary-as-pr-comment: never
+build	Set Up Gradle	2026-02-12T21:53:15.6082934Z   dependency-graph: disabled
+build	Set Up Gradle	2026-02-12T21:53:15.6083215Z   dependency-graph-report-dir: dependency-graph-reports
+build	Set Up Gradle	2026-02-12T21:53:15.6083548Z   dependency-graph-continue-on-failure: true
+build	Set Up Gradle	2026-02-12T21:53:15.6083829Z   build-scan-publish: false
+build	Set Up Gradle	2026-02-12T21:53:15.6084044Z   validate-wrappers: true
+build	Set Up Gradle	2026-02-12T21:53:15.6084267Z   allow-snapshot-wrappers: false
+build	Set Up Gradle	2026-02-12T21:53:15.6084512Z   gradle-home-cache-strict-match: false
+build	Set Up Gradle	2026-02-12T21:53:15.6084805Z   workflow-job-context: null
+build	Set Up Gradle	2026-02-12T21:53:15.6085174Z   github-token: ***
+build	Set Up Gradle	2026-02-12T21:53:15.6085562Z env:
+build	Set Up Gradle	2026-02-12T21:53:15.6085835Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Set Up Gradle	2026-02-12T21:53:15.6086489Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Set Up Gradle	2026-02-12T21:53:15.6086836Z ##[endgroup]
+build	Set Up Gradle	2026-02-12T21:53:16.0050487Z Merged default JDK locations into /home/runner/.m2/toolchains.xml
+build	Set Up Gradle	2026-02-12T21:53:16.0054528Z ##[group]Restore Gradle state from cache
+build	Set Up Gradle	2026-02-12T21:53:16.2807219Z Cache hit for restore-key: gradle-home-v1|Linux-X64|build_release[21841cddb07fda8c6aef89eca24a831a]-39a4b5e3d1e69b8d0e534f8636e8a84dd96bec53
+build	Set Up Gradle	2026-02-12T21:53:17.3077071Z Received 11187203 of 11187203 (100.0%), 13.0 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:17.3079599Z Cache Size: ~11 MB (11187203 B)
+build	Set Up Gradle	2026-02-12T21:53:17.3110123Z [command]/usr/bin/tar -xf /home/runner/work/_temp/a235b7a7-e0b7-4f6c-9950-b819bde8709b/cache.tzst -P -C /home/runner/work/Metrolist/Metrolist --use-compress-program unzstd
+build	Set Up Gradle	2026-02-12T21:53:17.5753125Z Cache restored successfully
+build	Set Up Gradle	2026-02-12T21:53:17.5780024Z Restored cache entry with key gradle-home-v1|Linux-X64|build[2cb0af248bc636430f7cbe09f7756c21]-5640cfbb907a3410604cede92c32eefc14afeb2a to /home/runner/.gradle/caches,/home/runner/.gradle/notifications,/home/runner/.gradle/.setup-gradle in 1571ms
+build	Set Up Gradle	2026-02-12T21:53:17.7648156Z Cache hit for: gradle-instrumented-jars-v1-3bf6cb36a782bab92b15ae8d285a56d7
+build	Set Up Gradle	2026-02-12T21:53:17.7725240Z Cache hit for: gradle-kotlin-dsl-v1-9cc6fc4c64b8f2cc0a7b6d4dcd02c47a
+build	Set Up Gradle	2026-02-12T21:53:17.7820834Z Cache hit for: gradle-wrapper-zips-v1-8c0de4c6bda6041d6e054bf825a89c98
+build	Set Up Gradle	2026-02-12T21:53:17.7881194Z Cache hit for: gradle-generated-gradle-jars-v1-cb4b032a7d08b9bf1e84e9eacaebcc29
+build	Set Up Gradle	2026-02-12T21:53:17.7989984Z Cache hit for: gradle-groovy-dsl-v1-1e4e8a326713b6e7727e39446c215994
+build	Set Up Gradle	2026-02-12T21:53:17.7996121Z Cache hit for: gradle-transforms-v1-88bd59aad0133caa8eb9e5af209cd3ee
+build	Set Up Gradle	2026-02-12T21:53:17.8093191Z Cache hit for: gradle-dependencies-v1-2cd3d88ef494fb75a17c7dc7ba39b076
+build	Set Up Gradle	2026-02-12T21:53:18.3060405Z Received 63806 of 63806 (100.0%), 0.2 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:18.3060912Z Cache Size: ~0 MB (63806 B)
+build	Set Up Gradle	2026-02-12T21:53:18.3089828Z [command]/usr/bin/tar -xf /home/runner/work/_temp/210d3d44-0971-408f-b84a-c2038c6ff923/cache.tzst -P -C /home/runner/work/Metrolist/Metrolist --use-compress-program unzstd
+build	Set Up Gradle	2026-02-12T21:53:18.3199796Z Cache restored successfully
+build	Set Up Gradle	2026-02-12T21:53:18.3202245Z Restored cache entry with key gradle-instrumented-jars-v1-3bf6cb36a782bab92b15ae8d285a56d7 to /home/runner/.gradle/caches/jars-*/*/ in 741ms
+build	Set Up Gradle	2026-02-12T21:53:18.3841590Z Received 95281 of 95281 (100.0%), 0.2 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:18.3842477Z Cache Size: ~0 MB (95281 B)
+build	Set Up Gradle	2026-02-12T21:53:18.3876856Z [command]/usr/bin/tar -xf /home/runner/work/_temp/4b6ff5d2-d147-4cb5-b9ca-fd77f48d2b02/cache.tzst -P -C /home/runner/work/Metrolist/Metrolist --use-compress-program unzstd
+build	Set Up Gradle	2026-02-12T21:53:18.3963875Z Received 344534 of 344534 (100.0%), 0.8 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:18.3964809Z Cache Size: ~0 MB (344534 B)
+build	Set Up Gradle	2026-02-12T21:53:18.4022774Z [command]/usr/bin/tar -xf /home/runner/work/_temp/537fe0fb-329a-4ed4-b7bf-adf4cfae403e/cache.tzst -P -C /home/runner/work/Metrolist/Metrolist --use-compress-program unzstd
+build	Set Up Gradle	2026-02-12T21:53:18.4061798Z Cache restored successfully
+build	Set Up Gradle	2026-02-12T21:53:18.4070574Z Restored cache entry with key gradle-groovy-dsl-v1-1e4e8a326713b6e7727e39446c215994 to /home/runner/.gradle/caches/*/groovy-dsl/*/ in 826ms
+build	Set Up Gradle	2026-02-12T21:53:18.5982498Z Cache restored successfully
+build	Set Up Gradle	2026-02-12T21:53:18.5986018Z Restored cache entry with key gradle-kotlin-dsl-v1-9cc6fc4c64b8f2cc0a7b6d4dcd02c47a to /home/runner/.gradle/caches/*/kotlin-dsl/accessors/*/,/home/runner/.gradle/caches/*/kotlin-dsl/scripts/*/ in 1019ms
+build	Set Up Gradle	2026-02-12T21:53:18.9901657Z Received 37799095 of 41993399 (90.0%), 36.0 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:19.0013003Z Received 33554432 of 136357209 (24.6%), 32.0 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:19.0277674Z Received 41993399 of 41993399 (100.0%), 38.6 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:19.0289336Z Cache Size: ~40 MB (41993399 B)
+build	Set Up Gradle	2026-02-12T21:53:19.0352327Z Received 33554432 of 173674862 (19.3%), 31.2 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:19.0353031Z Received 37748736 of 470677256 (8.0%), 35.6 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:19.1726858Z [command]/usr/bin/tar -xf /home/runner/work/_temp/f0fd2528-e057-49f5-8ae9-7df9cd9166f7/cache.tzst -P -C /home/runner/work/Metrolist/Metrolist --use-compress-program unzstd
+build	Set Up Gradle	2026-02-12T21:53:19.6069241Z Cache restored successfully
+build	Set Up Gradle	2026-02-12T21:53:19.6309415Z Restored cache entry with key gradle-generated-gradle-jars-v1-cb4b032a7d08b9bf1e84e9eacaebcc29 to /home/runner/.gradle/caches/9.3.1/generated-gradle-jars/gradle-api-9.3.1.jar in 2051ms
+build	Set Up Gradle	2026-02-12T21:53:20.0885914Z Received 134217728 of 136357209 (98.4%), 61.3 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:20.0886876Z Received 134217728 of 173674862 (77.3%), 61.6 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:20.0887515Z Received 134217728 of 470677256 (28.5%), 62.0 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:20.2345678Z Received 136357209 of 136357209 (100.0%), 58.2 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:20.2348360Z Cache Size: ~130 MB (136357209 B)
+build	Set Up Gradle	2026-02-12T21:53:20.2787750Z [command]/usr/bin/tar -xf /home/runner/work/_temp/0ea19442-c97b-4502-a350-cae193cc75cd/cache.tzst -P -C /home/runner/work/Metrolist/Metrolist --use-compress-program unzstd
+build	Set Up Gradle	2026-02-12T21:53:20.4192506Z Received 173674862 of 173674862 (100.0%), 68.7 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:20.4193186Z Cache Size: ~166 MB (173674862 B)
+build	Set Up Gradle	2026-02-12T21:53:20.4381554Z [command]/usr/bin/tar -xf /home/runner/work/_temp/dbe751d5-6e47-4515-b593-2f5fd6fb9e93/cache.tzst -P -C /home/runner/work/Metrolist/Metrolist --use-compress-program unzstd
+build	Set Up Gradle	2026-02-12T21:53:20.6230011Z Cache restored successfully
+build	Set Up Gradle	2026-02-12T21:53:20.6524507Z Restored cache entry with key gradle-wrapper-zips-v1-8c0de4c6bda6041d6e054bf825a89c98 to /home/runner/.gradle/wrapper/dists/gradle-9.3.1-bin/23ovyewtku6u96viwx3xl3oks in 3074ms
+build	Set Up Gradle	2026-02-12T21:53:21.0973792Z Received 268435456 of 470677256 (57.0%), 83.3 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:22.0984625Z Received 427819008 of 470677256 (90.9%), 100.2 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:22.4024005Z Received 470677256 of 470677256 (100.0%), 102.5 MBs/sec
+build	Set Up Gradle	2026-02-12T21:53:22.4026541Z Cache Size: ~449 MB (470677256 B)
+build	Set Up Gradle	2026-02-12T21:53:22.4117143Z [command]/usr/bin/tar -xf /home/runner/work/_temp/077cd253-6259-4a07-8221-4f11152010f5/cache.tzst -P -C /home/runner/work/Metrolist/Metrolist --use-compress-program unzstd
+build	Set Up Gradle	2026-02-12T21:53:23.1300597Z Cache restored successfully
+build	Set Up Gradle	2026-02-12T21:53:23.1753981Z Restored cache entry with key gradle-transforms-v1-88bd59aad0133caa8eb9e5af209cd3ee to /home/runner/.gradle/caches/transforms-4/*/,/home/runner/.gradle/caches/*/transforms/*/ in 5595ms
+build	Set Up Gradle	2026-02-12T21:53:23.5615820Z Cache restored successfully
+build	Set Up Gradle	2026-02-12T21:53:23.6542201Z Restored cache entry with key gradle-dependencies-v1-2cd3d88ef494fb75a17c7dc7ba39b076 to /home/runner/.gradle/caches/modules-*/files-*/*/*/*/* in 6074ms
+build	Set Up Gradle	2026-02-12T21:53:23.6691393Z Not restoring configuration-cache state, as Encryption Key was not provided
+build	Set Up Gradle	2026-02-12T21:53:23.6781303Z ##[endgroup]
+build	Set Up Gradle	2026-02-12T21:53:23.7013513Z ##[group]All Gradle Wrapper jars are valid
+build	Set Up Gradle	2026-02-12T21:53:23.7014838Z ✓ Found known Gradle Wrapper JAR files:
+build	Set Up Gradle	2026-02-12T21:53:23.7016064Z   b3a875ddc1f044746e1b1a55f645584505f4a10438c1afea9f15e92a7c42ec13 gradle/wrapper/gradle-wrapper.jar
+build	Set Up Gradle	2026-02-12T21:53:23.7017350Z ##[endgroup]
+build	Setup and Generate Protobuf	﻿2026-02-12T21:53:23.7284398Z Prepare all required actions
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7321035Z ##[group]Run ./.github/actions/setup-protobuf
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7321381Z env:
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7321717Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7322255Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7322696Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7323033Z   GRADLE_USER_HOME: /home/runner/.gradle
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7323351Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7323671Z   GRADLE_BUILD_ACTION_CACHE_RESTORED: true
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7324139Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7324645Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7324997Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7325746Z ##[endgroup]
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7404071Z ##[group]Run sudo apt-get update
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7404480Z [36;1msudo apt-get update[0m
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7404856Z [36;1msudo apt-get install -y protobuf-compiler[0m
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7457752Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7458144Z env:
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7458479Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7459013Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7459488Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7459827Z   GRADLE_USER_HOME: /home/runner/.gradle
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7460146Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7460482Z   GRADLE_BUILD_ACTION_CACHE_RESTORED: true
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7460957Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7461466Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7461819Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.7462113Z ##[endgroup]
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.8342449Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.8687657Z Hit:2 http://azure.archive.ubuntu.com/ubuntu noble InRelease
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.8693969Z Get:6 https://packages.microsoft.com/repos/azure-cli noble InRelease [3564 B]
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.8708045Z Get:3 http://azure.archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.8761249Z Get:7 https://packages.microsoft.com/ubuntu/24.04/prod noble InRelease [3600 B]
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.8762695Z Get:4 http://azure.archive.ubuntu.com/ubuntu noble-backports InRelease [126 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:23.8787397Z Get:5 http://azure.archive.ubuntu.com/ubuntu noble-security InRelease [126 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.0083153Z Get:8 https://packages.microsoft.com/repos/azure-cli noble/main amd64 Packages [2129 B]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.0642913Z Get:9 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 Packages [1742 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.0742599Z Get:10 http://azure.archive.ubuntu.com/ubuntu noble-updates/main Translation-en [325 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.0759787Z Get:11 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 Components [175 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.0784261Z Get:12 http://azure.archive.ubuntu.com/ubuntu noble-updates/universe amd64 Components [386 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.0827804Z Get:13 http://azure.archive.ubuntu.com/ubuntu noble-updates/restricted amd64 Packages [2594 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.1060243Z Get:14 http://azure.archive.ubuntu.com/ubuntu noble-updates/restricted Translation-en [595 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.1098148Z Get:15 http://azure.archive.ubuntu.com/ubuntu noble-updates/restricted amd64 Components [212 B]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.1116832Z Get:16 http://azure.archive.ubuntu.com/ubuntu noble-updates/multiverse amd64 Components [940 B]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.1394846Z Get:17 https://packages.microsoft.com/ubuntu/24.04/prod noble/main all Packages [643 B]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.1426214Z Get:18 https://packages.microsoft.com/ubuntu/24.04/prod noble/main armhf Packages [11.4 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.1458656Z Get:19 https://packages.microsoft.com/ubuntu/24.04/prod noble/main amd64 Packages [88.9 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.1533869Z Get:20 https://packages.microsoft.com/ubuntu/24.04/prod noble/main arm64 Packages [68.3 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.1977700Z Get:21 http://azure.archive.ubuntu.com/ubuntu noble-backports/main amd64 Components [7280 B]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.1990029Z Get:22 http://azure.archive.ubuntu.com/ubuntu noble-backports/universe amd64 Components [10.5 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.2423474Z Get:23 http://azure.archive.ubuntu.com/ubuntu noble-backports/restricted amd64 Components [216 B]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.2430709Z Get:24 http://azure.archive.ubuntu.com/ubuntu noble-backports/multiverse amd64 Components [212 B]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.2533073Z Get:25 http://azure.archive.ubuntu.com/ubuntu noble-security/main amd64 Packages [1448 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.2606562Z Get:26 http://azure.archive.ubuntu.com/ubuntu noble-security/main Translation-en [234 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.2623659Z Get:27 http://azure.archive.ubuntu.com/ubuntu noble-security/main amd64 Components [21.5 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.2634486Z Get:28 http://azure.archive.ubuntu.com/ubuntu noble-security/universe amd64 Components [74.2 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.2648235Z Get:29 http://azure.archive.ubuntu.com/ubuntu noble-security/restricted amd64 Packages [2452 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.2760333Z Get:30 http://azure.archive.ubuntu.com/ubuntu noble-security/restricted Translation-en [564 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.2792635Z Get:31 http://azure.archive.ubuntu.com/ubuntu noble-security/restricted amd64 Components [212 B]
+build	Setup and Generate Protobuf	2026-02-12T21:53:24.2799524Z Get:32 http://azure.archive.ubuntu.com/ubuntu noble-security/multiverse amd64 Components [212 B]
+build	Setup and Generate Protobuf	2026-02-12T21:53:28.4171324Z Fetched 11.2 MB in 1s (8041 kB/s)
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.1835852Z Reading package lists...
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.2177826Z Reading package lists...
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.3992073Z Building dependency tree...
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.4000251Z Reading state information...
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.5628802Z The following additional packages will be installed:
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.5632770Z   libprotobuf-dev libprotobuf32t64 libprotoc32t64
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.5638884Z Suggested packages:
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.5639318Z   protobuf-mode-el
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.5824506Z The following NEW packages will be installed:
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.5829099Z   libprotobuf-dev libprotobuf32t64 libprotoc32t64 protobuf-compiler
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.6006560Z 0 upgraded, 4 newly installed, 0 to remove and 16 not upgraded.
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.6007364Z Need to get 3048 kB of archives.
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.6007928Z After this operation, 17.8 MB of additional disk space will be used.
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.6008392Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.6650477Z Get:2 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 libprotobuf32t64 amd64 3.21.12-8.2ubuntu0.2 [923 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.7344594Z Get:3 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 libprotoc32t64 amd64 3.21.12-8.2ubuntu0.2 [683 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.7913052Z Get:4 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 libprotobuf-dev amd64 3.21.12-8.2ubuntu0.2 [1413 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:29.8588531Z Get:5 http://azure.archive.ubuntu.com/ubuntu noble-updates/universe amd64 protobuf-compiler amd64 3.21.12-8.2ubuntu0.2 [29.0 kB]
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.1169361Z Fetched 3048 kB in 0s (11.3 MB/s)
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.1417081Z Selecting previously unselected package libprotobuf32t64:amd64.
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.1692862Z (Reading database ... 
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.1693831Z (Reading database ... 5%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.1694440Z (Reading database ... 10%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.1695046Z (Reading database ... 15%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.1695879Z (Reading database ... 20%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.1696436Z (Reading database ... 25%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.1696976Z (Reading database ... 30%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.1697872Z (Reading database ... 35%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.1698499Z (Reading database ... 40%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.1699463Z (Reading database ... 45%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.1700004Z (Reading database ... 50%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.1782083Z (Reading database ... 55%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.2238372Z (Reading database ... 60%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.2592157Z (Reading database ... 65%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.2916739Z (Reading database ... 70%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.3252859Z (Reading database ... 75%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.4648927Z (Reading database ... 80%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.6096249Z (Reading database ... 85%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.8381896Z (Reading database ... 90%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.9801054Z (Reading database ... 95%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.9801601Z (Reading database ... 100%
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.9802203Z (Reading database ... 218331 files and directories currently installed.)
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.9847065Z Preparing to unpack .../libprotobuf32t64_3.21.12-8.2ubuntu0.2_amd64.deb ...
+build	Setup and Generate Protobuf	2026-02-12T21:53:30.9875818Z Unpacking libprotobuf32t64:amd64 (3.21.12-8.2ubuntu0.2) ...
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.0263567Z Selecting previously unselected package libprotoc32t64:amd64.
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.0421779Z Preparing to unpack .../libprotoc32t64_3.21.12-8.2ubuntu0.2_amd64.deb ...
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.0431797Z Unpacking libprotoc32t64:amd64 (3.21.12-8.2ubuntu0.2) ...
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.0743989Z Selecting previously unselected package libprotobuf-dev:amd64.
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.0904044Z Preparing to unpack .../libprotobuf-dev_3.21.12-8.2ubuntu0.2_amd64.deb ...
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.0912336Z Unpacking libprotobuf-dev:amd64 (3.21.12-8.2ubuntu0.2) ...
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.1741865Z Selecting previously unselected package protobuf-compiler.
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.1908218Z Preparing to unpack .../protobuf-compiler_3.21.12-8.2ubuntu0.2_amd64.deb ...
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.1916455Z Unpacking protobuf-compiler (3.21.12-8.2ubuntu0.2) ...
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.2379390Z Setting up libprotobuf32t64:amd64 (3.21.12-8.2ubuntu0.2) ...
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.2401503Z Setting up libprotobuf-dev:amd64 (3.21.12-8.2ubuntu0.2) ...
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.2421261Z Setting up libprotoc32t64:amd64 (3.21.12-8.2ubuntu0.2) ...
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.2441685Z Setting up protobuf-compiler (3.21.12-8.2ubuntu0.2) ...
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.2463334Z Processing triggers for man-db (2.12.0-4build2) ...
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.2487777Z Not building database; man-db/auto-update is not 'true'.
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.2498797Z Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.9506978Z 
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.9507905Z Running kernel seems to be up-to-date.
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.9508357Z 
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.9508557Z No services need to be restarted.
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.9508901Z 
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.9509079Z No containers need to be restarted.
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.9509413Z 
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.9509642Z No user sessions are running outdated binaries.
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.9510059Z 
+build	Setup and Generate Protobuf	2026-02-12T21:53:31.9510437Z No VM guests are running outdated hypervisor (qemu) binaries on this host.
+build	Setup and Generate Protobuf	2026-02-12T21:53:32.8343118Z ##[group]Run cd app
+build	Setup and Generate Protobuf	2026-02-12T21:53:32.8343409Z [36;1mcd app[0m
+build	Setup and Generate Protobuf	2026-02-12T21:53:32.8343647Z [36;1mbash generate_proto.sh[0m
+build	Setup and Generate Protobuf	2026-02-12T21:53:32.8392789Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build	Setup and Generate Protobuf	2026-02-12T21:53:32.8393167Z env:
+build	Setup and Generate Protobuf	2026-02-12T21:53:32.8393508Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Setup and Generate Protobuf	2026-02-12T21:53:32.8394031Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Setup and Generate Protobuf	2026-02-12T21:53:32.8394493Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+build	Setup and Generate Protobuf	2026-02-12T21:53:32.8394832Z   GRADLE_USER_HOME: /home/runner/.gradle
+build	Setup and Generate Protobuf	2026-02-12T21:53:32.8395145Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+build	Setup and Generate Protobuf	2026-02-12T21:53:32.8395863Z   GRADLE_BUILD_ACTION_CACHE_RESTORED: true
+build	Setup and Generate Protobuf	2026-02-12T21:53:32.8396349Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+build	Setup and Generate Protobuf	2026-02-12T21:53:32.8396853Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+build	Setup and Generate Protobuf	2026-02-12T21:53:32.8397200Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+build	Setup and Generate Protobuf	2026-02-12T21:53:32.8397500Z ##[endgroup]
+build	Setup and Generate Protobuf	2026-02-12T21:53:32.8637086Z Protobuf files (lite) generated successfully in src/main/java
+build	Setup FFTW for Android	﻿2026-02-12T21:53:32.8728786Z Prepare all required actions
+build	Setup FFTW for Android	2026-02-12T21:53:32.8729184Z Getting action download info
+build	Setup FFTW for Android	2026-02-12T21:53:33.0506681Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+build	Setup FFTW for Android	2026-02-12T21:53:33.1608323Z ##[group]Run ./.github/actions/setup-fftw
+build	Setup FFTW for Android	2026-02-12T21:53:33.1608646Z with:
+build	Setup FFTW for Android	2026-02-12T21:53:33.1608852Z   ndk-version: 27.0.12077973
+build	Setup FFTW for Android	2026-02-12T21:53:33.1609117Z   fftw-version: 3.3.10
+build	Setup FFTW for Android	2026-02-12T21:53:33.1609356Z   api-level: 26
+build	Setup FFTW for Android	2026-02-12T21:53:33.1609565Z env:
+build	Setup FFTW for Android	2026-02-12T21:53:33.1609883Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Setup FFTW for Android	2026-02-12T21:53:33.1610402Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Setup FFTW for Android	2026-02-12T21:53:33.1610841Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+build	Setup FFTW for Android	2026-02-12T21:53:33.1611162Z   GRADLE_USER_HOME: /home/runner/.gradle
+build	Setup FFTW for Android	2026-02-12T21:53:33.1611651Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+build	Setup FFTW for Android	2026-02-12T21:53:33.1611979Z   GRADLE_BUILD_ACTION_CACHE_RESTORED: true
+build	Setup FFTW for Android	2026-02-12T21:53:33.1612481Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+build	Setup FFTW for Android	2026-02-12T21:53:33.1612984Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+build	Setup FFTW for Android	2026-02-12T21:53:33.1613330Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+build	Setup FFTW for Android	2026-02-12T21:53:33.1613618Z ##[endgroup]
+build	Setup FFTW for Android	2026-02-12T21:53:33.1691969Z ##[group]Run actions/cache@v4
+build	Setup FFTW for Android	2026-02-12T21:53:33.1692278Z with:
+build	Setup FFTW for Android	2026-02-12T21:53:33.1692574Z   path: app/src/main/cpp/vibrafp/third_party/fftw-android
+build	Setup FFTW for Android	2026-02-12T21:53:33.1692963Z   key: fftw-3.3.10-ndk-27.0.12077973-api-26
+build	Setup FFTW for Android	2026-02-12T21:53:33.1693290Z   enableCrossOsArchive: false
+build	Setup FFTW for Android	2026-02-12T21:53:33.1693568Z   fail-on-cache-miss: false
+build	Setup FFTW for Android	2026-02-12T21:53:33.1693839Z   lookup-only: false
+build	Setup FFTW for Android	2026-02-12T21:53:33.1694074Z   save-always: false
+build	Setup FFTW for Android	2026-02-12T21:53:33.1694286Z env:
+build	Setup FFTW for Android	2026-02-12T21:53:33.1694602Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Setup FFTW for Android	2026-02-12T21:53:33.1695135Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Setup FFTW for Android	2026-02-12T21:53:33.1695786Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+build	Setup FFTW for Android	2026-02-12T21:53:33.1696109Z   GRADLE_USER_HOME: /home/runner/.gradle
+build	Setup FFTW for Android	2026-02-12T21:53:33.1696424Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+build	Setup FFTW for Android	2026-02-12T21:53:33.1696745Z   GRADLE_BUILD_ACTION_CACHE_RESTORED: true
+build	Setup FFTW for Android	2026-02-12T21:53:33.1697210Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+build	Setup FFTW for Android	2026-02-12T21:53:33.1697717Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+build	Setup FFTW for Android	2026-02-12T21:53:33.1698054Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+build	Setup FFTW for Android	2026-02-12T21:53:33.1698340Z ##[endgroup]
+build	Setup FFTW for Android	2026-02-12T21:53:33.5038387Z Cache hit for: fftw-3.3.10-ndk-27.0.12077973-api-26
+build	Setup FFTW for Android	2026-02-12T21:53:34.4653065Z Received 4823814 of 4823814 (100.0%), 6.2 MBs/sec
+build	Setup FFTW for Android	2026-02-12T21:53:34.4653794Z Cache Size: ~5 MB (4823814 B)
+build	Setup FFTW for Android	2026-02-12T21:53:34.4686272Z [command]/usr/bin/tar -xf /home/runner/work/_temp/670f1904-ae68-40e0-b3ad-b40d7b269d4b/cache.tzst -P -C /home/runner/work/Metrolist/Metrolist --use-compress-program unzstd
+build	Setup FFTW for Android	2026-02-12T21:53:34.4988101Z Cache restored successfully
+build	Setup FFTW for Android	2026-02-12T21:53:34.5079460Z Cache restored from key: fftw-3.3.10-ndk-27.0.12077973-api-26
+build	Setup FFTW for Android	2026-02-12T21:53:34.5194098Z ##[group]Run echo "FFTW installation:"
+build	Setup FFTW for Android	2026-02-12T21:53:34.5194459Z [36;1mecho "FFTW installation:"[0m
+build	Setup FFTW for Android	2026-02-12T21:53:34.5195017Z [36;1mls -la app/src/main/cpp/vibrafp/third_party/fftw-android/ || echo "fftw-android directory not found"[0m
+build	Setup FFTW for Android	2026-02-12T21:53:34.5196055Z [36;1mfor abi in arm64-v8a armeabi-v7a x86_64 x86; do[0m
+build	Setup FFTW for Android	2026-02-12T21:53:34.5196906Z [36;1m  if [ -f "app/src/main/cpp/vibrafp/third_party/fftw-android/$abi/lib/libfftw3.a" ]; then[0m
+build	Setup FFTW for Android	2026-02-12T21:53:34.5197442Z [36;1m    echo "✓ $abi: libfftw3.a found"[0m
+build	Setup FFTW for Android	2026-02-12T21:53:34.5197754Z [36;1m  else[0m
+build	Setup FFTW for Android	2026-02-12T21:53:34.5198016Z [36;1m    echo "✗ $abi: libfftw3.a NOT found"[0m
+build	Setup FFTW for Android	2026-02-12T21:53:34.5198332Z [36;1m  fi[0m
+build	Setup FFTW for Android	2026-02-12T21:53:34.5198565Z [36;1mdone[0m
+build	Setup FFTW for Android	2026-02-12T21:53:34.5249163Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build	Setup FFTW for Android	2026-02-12T21:53:34.5249832Z env:
+build	Setup FFTW for Android	2026-02-12T21:53:34.5250176Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Setup FFTW for Android	2026-02-12T21:53:34.5250713Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Setup FFTW for Android	2026-02-12T21:53:34.5251167Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+build	Setup FFTW for Android	2026-02-12T21:53:34.5251510Z   GRADLE_USER_HOME: /home/runner/.gradle
+build	Setup FFTW for Android	2026-02-12T21:53:34.5251830Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+build	Setup FFTW for Android	2026-02-12T21:53:34.5252154Z   GRADLE_BUILD_ACTION_CACHE_RESTORED: true
+build	Setup FFTW for Android	2026-02-12T21:53:34.5252623Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+build	Setup FFTW for Android	2026-02-12T21:53:34.5253128Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+build	Setup FFTW for Android	2026-02-12T21:53:34.5253471Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+build	Setup FFTW for Android	2026-02-12T21:53:34.5253758Z ##[endgroup]
+build	Setup FFTW for Android	2026-02-12T21:53:34.5321553Z FFTW installation:
+build	Setup FFTW for Android	2026-02-12T21:53:34.5336662Z total 24
+build	Setup FFTW for Android	2026-02-12T21:53:34.5337137Z drwxr-xr-x 6 runner runner 4096 Feb 11 01:32 .
+build	Setup FFTW for Android	2026-02-12T21:53:34.5337774Z drwxr-xr-x 3 runner runner 4096 Feb 12 21:53 ..
+build	Setup FFTW for Android	2026-02-12T21:53:34.5338198Z drwxr-xr-x 6 runner runner 4096 Feb 11 01:30 arm64-v8a
+build	Setup FFTW for Android	2026-02-12T21:53:34.5338726Z drwxr-xr-x 6 runner runner 4096 Feb 11 01:31 armeabi-v7a
+build	Setup FFTW for Android	2026-02-12T21:53:34.5339453Z drwxr-xr-x 6 runner runner 4096 Feb 11 01:32 x86
+build	Setup FFTW for Android	2026-02-12T21:53:34.5339830Z drwxr-xr-x 6 runner runner 4096 Feb 11 01:32 x86_64
+build	Setup FFTW for Android	2026-02-12T21:53:34.5340365Z ✓ arm64-v8a: libfftw3.a found
+build	Setup FFTW for Android	2026-02-12T21:53:34.5340685Z ✓ armeabi-v7a: libfftw3.a found
+build	Setup FFTW for Android	2026-02-12T21:53:34.5341034Z ✓ x86_64: libfftw3.a found
+build	Setup FFTW for Android	2026-02-12T21:53:34.5341441Z ✓ x86: libfftw3.a found
+build	Grant execute permission for gradlew	﻿2026-02-12T21:53:34.5368971Z ##[group]Run chmod +x gradlew
+build	Grant execute permission for gradlew	2026-02-12T21:53:34.5369304Z [36;1mchmod +x gradlew[0m
+build	Grant execute permission for gradlew	2026-02-12T21:53:34.5413419Z shell: /usr/bin/bash -e {0}
+build	Grant execute permission for gradlew	2026-02-12T21:53:34.5413700Z env:
+build	Grant execute permission for gradlew	2026-02-12T21:53:34.5414047Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Grant execute permission for gradlew	2026-02-12T21:53:34.5414603Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Grant execute permission for gradlew	2026-02-12T21:53:34.5415061Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+build	Grant execute permission for gradlew	2026-02-12T21:53:34.5415642Z   GRADLE_USER_HOME: /home/runner/.gradle
+build	Grant execute permission for gradlew	2026-02-12T21:53:34.5415971Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+build	Grant execute permission for gradlew	2026-02-12T21:53:34.5416290Z   GRADLE_BUILD_ACTION_CACHE_RESTORED: true
+build	Grant execute permission for gradlew	2026-02-12T21:53:34.5416762Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+build	Grant execute permission for gradlew	2026-02-12T21:53:34.5417278Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+build	Grant execute permission for gradlew	2026-02-12T21:53:34.5417634Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+build	Grant execute permission for gradlew	2026-02-12T21:53:34.5417931Z ##[endgroup]
+build	Generate debug.keystore if not exists	﻿2026-02-12T21:53:34.5516841Z ##[group]Run mkdir -p ~/.android
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5517199Z [36;1mmkdir -p ~/.android[0m
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5517542Z [36;1mif [ ! -f ~/.android/debug.keystore ]; then[0m
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5517893Z [36;1m  keytool -genkey -v \[0m
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5518251Z [36;1m    -keystore ~/.android/debug.keystore \[0m
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5518613Z [36;1m    -storepass android \[0m
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5518910Z [36;1m    -alias androiddebugkey \[0m
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5519216Z [36;1m    -keypass android \[0m
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5519503Z [36;1m    -keyalg RSA \[0m
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5519773Z [36;1m    -keysize 2048 \[0m
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5520046Z [36;1m    -validity 10000 \[0m
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5520367Z [36;1m    -dname "CN=Android Debug,O=Android,C=US"[0m
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5520780Z [36;1mfi[0m
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5563690Z shell: /usr/bin/bash -e {0}
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5563986Z env:
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5564342Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5564921Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5565634Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5566017Z   GRADLE_USER_HOME: /home/runner/.gradle
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5566364Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5566701Z   GRADLE_BUILD_ACTION_CACHE_RESTORED: true
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5567175Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5567701Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5568046Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+build	Generate debug.keystore if not exists	2026-02-12T21:53:34.5568339Z ##[endgroup]
+build	Generate debug.keystore if not exists	2026-02-12T21:53:35.5148676Z Generating 2,048 bit RSA key pair and self-signed certificate (SHA384withRSA) with a validity of 10,000 days
+build	Generate debug.keystore if not exists	2026-02-12T21:53:35.5152747Z 	for: CN=Android Debug, O=Android, C=US
+build	Generate debug.keystore if not exists	2026-02-12T21:53:35.8097095Z [Storing /home/runner/.android/debug.keystore]
+build	Build and Lint Universal FOSS Debug APK	﻿2026-02-12T21:53:35.9852719Z ##[group]Run ./gradlew --console=plain assembleUniversalFossDebug :app:lintUniversalFossDebug --warning-mode summary
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9853673Z [36;1m./gradlew --console=plain assembleUniversalFossDebug :app:lintUniversalFossDebug --warning-mode summary[0m
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9903809Z shell: /usr/bin/bash -e {0}
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9904098Z env:
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9904438Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9904996Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9905797Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9906146Z   GRADLE_USER_HOME: /home/runner/.gradle
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9906464Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9906792Z   GRADLE_BUILD_ACTION_CACHE_RESTORED: true
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9907260Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9907783Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9908175Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9908476Z   GITHUB_EVENT_NAME: pull_request
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9908758Z   PULL_REQUEST: true
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9908998Z   LASTFM_API_KEY: 
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9909231Z   LASTFM_SECRET: 
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:35.9909455Z ##[endgroup]
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:37.0667535Z Starting a Gradle Daemon (subsequent builds will be faster)
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:39.8662525Z Calculating task graph as no cached configuration is available for tasks: assembleUniversalFossDebug :app:lintUniversalFossDebug
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:52.1661853Z 
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:52.1662710Z > Configure project :app
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:52.1664431Z Checking the license for package NDK (Side by side) 27.0.12077973 in /usr/local/lib/android/sdk/licenses
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:52.1665716Z License for package NDK (Side by side) 27.0.12077973 accepted.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:53:52.1667486Z Preparing "Install NDK (Side by side) 27.0.12077973 v.27.0.12077973".
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:08.0658132Z "Install NDK (Side by side) 27.0.12077973 v.27.0.12077973" ready.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:08.0660689Z Installing NDK (Side by side) 27.0.12077973 in /usr/local/lib/android/sdk/ndk/27.0.12077973
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:08.0662118Z "Install NDK (Side by side) 27.0.12077973 v.27.0.12077973" complete.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:08.4657156Z "Install NDK (Side by side) 27.0.12077973 v.27.0.12077973" finished.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:15.0666265Z 
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:15.0686513Z > Task :kugou:checkKotlinGradlePluginConfigurationErrors SKIPPED
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:15.0688313Z > Task :innertube:checkKotlinGradlePluginConfigurationErrors SKIPPED
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:15.1714286Z > Task :kugou:processResources NO-SOURCE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:15.1717958Z > Task :innertube:processResources NO-SOURCE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:15.1718712Z > Task :lrclib:checkKotlinGradlePluginConfigurationErrors SKIPPED
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:15.1719372Z > Task :lrclib:processResources NO-SOURCE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:15.1720008Z > Task :kizzy:checkKotlinGradlePluginConfigurationErrors SKIPPED
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.0657801Z > Task :kugou:compileKotlin
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.0658798Z > Task :kugou:compileJava NO-SOURCE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.0659664Z > Task :kugou:classes UP-TO-DATE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.1660402Z > Task :lrclib:compileKotlin
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.1665570Z > Task :lrclib:compileJava NO-SOURCE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.1670825Z > Task :lrclib:classes UP-TO-DATE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.1675867Z > Task :kizzy:compileKotlin
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.1680517Z > Task :kizzy:compileJava NO-SOURCE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.1682651Z > Task :kizzy:processResources NO-SOURCE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.1683663Z > Task :kizzy:classes UP-TO-DATE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.2706857Z > Task :kugou:jar
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.2707894Z > Task :lrclib:jar
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.2708926Z > Task :lastfm:checkKotlinGradlePluginConfigurationErrors SKIPPED
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.2710099Z > Task :kizzy:jar
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.2710846Z > Task :lastfm:processResources NO-SOURCE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.2711971Z > Task :betterlyrics:checkKotlinGradlePluginConfigurationErrors SKIPPED
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.3736947Z > Task :betterlyrics:processResources NO-SOURCE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:30.3738397Z > Task :simpmusic:checkKotlinGradlePluginConfigurationErrors SKIPPED
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:32.8664382Z > Task :simpmusic:compileKotlin
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:32.8746561Z > Task :simpmusic:compileJava NO-SOURCE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:32.8747792Z > Task :simpmusic:processResources NO-SOURCE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:32.8748418Z > Task :simpmusic:classes UP-TO-DATE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:32.8748933Z > Task :simpmusic:jar
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:32.8749614Z > Task :shazamkit:checkKotlinGradlePluginConfigurationErrors SKIPPED
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:33.0658641Z > Task :lastfm:compileKotlin
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:33.0665085Z > Task :lastfm:compileJava NO-SOURCE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:33.0665863Z > Task :lastfm:classes UP-TO-DATE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:33.0666413Z > Task :lastfm:jar
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:33.1659740Z > Task :shazamkit:processResources NO-SOURCE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:33.1686986Z > Task :app:preBuild UP-TO-DATE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:33.1688655Z > Task :app:preX86_64GmsDebugBuild UP-TO-DATE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:33.9663206Z > Task :betterlyrics:compileKotlin
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:33.9666362Z > Task :betterlyrics:compileJava NO-SOURCE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:33.9696769Z > Task :betterlyrics:classes UP-TO-DATE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:33.9702712Z > Task :betterlyrics:jar
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:35.1657118Z 
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:35.1686376Z > Task :app:configureCMakeDebug[arm64-v8a]
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:35.1687275Z Checking the license for package CMake 3.22.1 in /usr/local/lib/android/sdk/licenses
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:35.1688129Z License for package CMake 3.22.1 accepted.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:35.1688715Z Preparing "Install CMake 3.22.1 v.3.22.1".
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:36.9669637Z "Install CMake 3.22.1 v.3.22.1" ready.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:36.9670779Z Installing CMake 3.22.1 in /usr/local/lib/android/sdk/cmake/3.22.1
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:36.9671709Z "Install CMake 3.22.1 v.3.22.1" complete.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:36.9672478Z "Install CMake 3.22.1 v.3.22.1" finished.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:37.6656525Z 
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:37.6664633Z > Task :app:configureCMakeDebug[armeabi-v7a]
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:40.9655510Z > Task :shazamkit:compileKotlin
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:40.9657113Z > Task :shazamkit:compileJava NO-SOURCE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:40.9658165Z > Task :shazamkit:classes UP-TO-DATE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:41.1679408Z > Task :shazamkit:jar
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:41.7656593Z > Task :app:configureCMakeDebug[x86]
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:45.0655451Z > Task :innertube:compileKotlin
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:59.1655857Z > Task :app:buildCMakeDebug[x86]
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:54:59.6656649Z > Task :app:configureCMakeDebug[x86_64]
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:00.3657150Z > Task :app:buildCMakeDebug[arm64-v8a]
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:00.3664577Z > Task :app:preUniversalFossDebugBuild UP-TO-DATE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:00.5675552Z > Task :app:mergeUniversalFossDebugJniLibFolders
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:00.6709299Z > Task :app:generateUniversalFossDebugBuildConfig
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:01.0656330Z > Task :app:extractUniversalFossDebugSupportedLocales
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:01.3656251Z > Task :app:buildCMakeDebug[armeabi-v7a]
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:01.4680896Z > Task :app:generateUniversalFossDebugResources
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:03.7656345Z > Task :app:generateUniversalFossDebugLocaleConfig
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:03.7696618Z > Task :app:processUniversalFossDebugNavigationResources
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:03.7697435Z > Task :app:javaPreCompileUniversalFossDebug
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:03.7698209Z > Task :app:generateUniversalFossDebugAssets UP-TO-DATE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:04.0656625Z > Task :app:mergeUniversalFossDebugAssets
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:04.1661708Z > Task :app:compressUniversalFossDebugAssets
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:06.6665737Z > Task :app:packageUniversalFossDebugResources
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:06.9657612Z > Task :innertube:compileJava NO-SOURCE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:06.9658676Z > Task :innertube:classes UP-TO-DATE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:07.0679508Z > Task :app:parseUniversalFossDebugLocalResources
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:07.5658729Z > Task :innertube:jar
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:07.5662202Z > Task :app:generateUniversalFossDebugRFile
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:08.4655554Z > Task :app:checkUniversalFossDebugDuplicateClasses
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:10.2655792Z > Task :app:desugarUniversalFossDebugFileDependencies
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:12.9696654Z > Task :app:buildCMakeDebug[x86_64]
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:34.1679622Z > Task :app:l8DexDesugarLibUniversalFossDebug
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:37.5656125Z > Task :app:kspUniversalFossDebugKotlin
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:40.2666582Z > Task :app:mergeExtDexUniversalFossDebug
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:55:42.9661692Z > Task :app:mergeUniversalFossDebugNativeLibs
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8654639Z 
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8740252Z ##[error]Exception in thread "AWT-EventQueue-0" java.lang.NullPointerException: Cannot invoke "ksp.com.intellij.openapi.application.Application.getService(java.lang.Class)" because the return value of "ksp.com.intellij.openapi.application.ApplicationManager.getApplication()" is null
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8752513Z 	at ksp.com.intellij.openapi.fileEditor.FileDocumentManager.getInstance(FileDocumentManager.java:35)
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8754367Z 	at ksp.com.intellij.openapi.fileTypes.BinaryFileTypeDecompilers.lambda$notifyDecompilerSetChange$1(BinaryFileTypeDecompilers.java:29)
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8756190Z 	at java.desktop/java.awt.event.InvocationEvent.dispatch(InvocationEvent.java:318)
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8757284Z 	at java.desktop/java.awt.EventQueue.dispatchEventImpl(EventQueue.java:773)
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8758302Z 	at java.desktop/java.awt.EventQueue$4.run(EventQueue.java:720)
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8759123Z 	at java.desktop/java.awt.EventQueue$4.run(EventQueue.java:714)
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8760079Z 	at java.base/java.security.AccessController.doPrivileged(AccessController.java:400)
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8761439Z 	at java.base/java.security.ProtectionDomain$JavaSecurityAccessImpl.doIntersectionPrivilege(ProtectionDomain.java:87)
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8762750Z 	at java.desktop/java.awt.EventQueue.dispatchEvent(EventQueue.java:742)
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8763931Z 	at java.desktop/java.awt.EventDispatchThread.pumpOneEventForFilters(EventDispatchThread.java:203)
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8785610Z 	at java.desktop/java.awt.EventDispatchThread.pumpEventsForFilter(EventDispatchThread.java:124)
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8787061Z 	at java.desktop/java.awt.EventDispatchThread.pumpEventsForHierarchy(EventDispatchThread.java:113)
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8788274Z 	at java.desktop/java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:109)
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8789403Z 	at java.desktop/java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:101)
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:32.8790439Z 	at java.desktop/java.awt.EventDispatchThread.run(EventDispatchThread.java:90)
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:41.9656497Z 
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:41.9657514Z > Task :app:stripUniversalFossDebugDebugSymbols
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:42.3669262Z > Task :app:extractUniversalFossDebugNativeDebugMetadata
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:42.9656039Z > Task :app:mergeUniversalFossDebugNativeDebugMetadata
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:46.6655891Z > Task :app:checkUniversalFossDebugAarMetadata
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:46.7667542Z > Task :app:compileUniversalFossDebugNavigationResources
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:46.9679240Z > Task :app:mapUniversalFossDebugSourceSetPaths
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:49.4697515Z > Task :app:mergeLibDexUniversalFossDebug
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:49.4698708Z > Task :app:createUniversalFossDebugCompatibleScreenManifests
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:49.5686806Z > Task :app:extractDeepLinksUniversalFossDebug
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:51.1655984Z > Task :app:processUniversalFossDebugMainManifest
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:53.4655697Z > Task :app:processUniversalFossDebugManifest
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:53.5655686Z > Task :app:processUniversalFossDebugManifestForPackage
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:53.6669113Z > Task :app:validateSigningUniversalFossDebug
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:53.6685111Z > Task :app:writeUniversalFossDebugAppMetadata
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:53.6689641Z > Task :app:writeUniversalFossDebugSigningConfigVersions
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:53.6693892Z > Task :app:preUniversalFossDebugAndroidTestBuild SKIPPED
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:53.6698595Z > Task :app:extractProguardFiles
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:53.6703163Z > Task :app:preUniversalFossDebugUnitTestBuild UP-TO-DATE
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:56:58.7656743Z > Task :app:mergeUniversalFossDebugResources
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:02.5657407Z > Task :app:processUniversalFossDebugResources
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:02.9656228Z > Task :app:compileUniversalFossDebugKotlin
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.7661543Z e: file:///home/runner/work/Metrolist/Metrolist/app/src/main/kotlin/com/metrolist/music/ui/screens/settings/StorageSettings.kt:208:34 Unresolved reference 'dao'.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.7677536Z e: file:///home/runner/work/Metrolist/Metrolist/app/src/main/kotlin/com/metrolist/music/ui/screens/settings/StorageSettings.kt:208:65 Cannot infer type for type parameter 'T'. Specify it explicitly.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.7679010Z 
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.7679319Z > Task :app:compileUniversalFossDebugKotlin FAILED
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.7686051Z e: file:///home/runner/work/Metrolist/Metrolist/app/src/main/kotlin/com/metrolist/music/ui/screens/settings/StorageSettings.kt:210:25 Cannot infer type for type parameter 'T'. Specify it explicitly.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.7688766Z e: file:///home/runner/work/Metrolist/Metrolist/app/src/main/kotlin/com/metrolist/music/ui/screens/settings/StorageSettings.kt:212:47 Cannot infer type for value parameter 'song'. Specify it explicitly.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.7691249Z e: file:///home/runner/work/Metrolist/Metrolist/app/src/main/kotlin/com/metrolist/music/ui/screens/settings/StorageSettings.kt:213:30 Unresolved reference 'song'.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.7693711Z e: file:///home/runner/work/Metrolist/Metrolist/app/src/main/kotlin/com/metrolist/music/ui/screens/settings/StorageSettings.kt:213:49 Cannot infer type for type parameter 'T'. Specify it explicitly.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.7696702Z e: file:///home/runner/work/Metrolist/Metrolist/app/src/main/kotlin/com/metrolist/music/ui/screens/settings/StorageSettings.kt:213:49 Cannot infer type for type parameter 'R'. Specify it explicitly.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.7699390Z e: file:///home/runner/work/Metrolist/Metrolist/app/src/main/kotlin/com/metrolist/music/ui/screens/settings/StorageSettings.kt:213:53 Cannot infer type for type parameter 'T'. Specify it explicitly.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.7701808Z e: file:///home/runner/work/Metrolist/Metrolist/app/src/main/kotlin/com/metrolist/music/ui/screens/settings/StorageSettings.kt:214:30 Unresolved reference 'album'.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.7704250Z e: file:///home/runner/work/Metrolist/Metrolist/app/src/main/kotlin/com/metrolist/music/ui/screens/settings/StorageSettings.kt:214:51 Cannot infer type for type parameter 'T'. Specify it explicitly.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.7707224Z e: file:///home/runner/work/Metrolist/Metrolist/app/src/main/kotlin/com/metrolist/music/ui/screens/settings/StorageSettings.kt:214:51 Cannot infer type for type parameter 'R'. Specify it explicitly.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.7709878Z e: file:///home/runner/work/Metrolist/Metrolist/app/src/main/kotlin/com/metrolist/music/ui/screens/settings/StorageSettings.kt:214:55 Cannot infer type for type parameter 'T'. Specify it explicitly.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.7712334Z e: file:///home/runner/work/Metrolist/Metrolist/app/src/main/kotlin/com/metrolist/music/ui/screens/settings/StorageSettings.kt:216:36 Unresolved reference 'keys'.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.7714801Z e: file:///home/runner/work/Metrolist/Metrolist/app/src/main/kotlin/com/metrolist/music/ui/screens/settings/StorageSettings.kt:216:53 Cannot infer type for value parameter 'key'. Specify it explicitly.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8654264Z 
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8655568Z gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1770933220915.json
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8656805Z FAILURE: Build failed with an exception.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8657223Z 
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8657401Z * What went wrong:
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8658079Z Execution failed for task ':app:compileUniversalFossDebugKotlin'.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8659652Z > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8661047Z    > Compilation error. See log for more details
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8661474Z 
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8661628Z * Try:
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8662128Z > Run with --stacktrace option to get the stack trace.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8670511Z > Run with --info or --debug option to get more log output.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8677847Z > Run with --scan to get full insights from a Build Scan (powered by Develocity).
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8692893Z > Get more help at https://help.gradle.org.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8694537Z 
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8697244Z 61 actionable tasks: 61 executed
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8698062Z Configuration cache entry stored.
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:23.8699862Z BUILD FAILED in 3m 47s
+build	Build and Lint Universal FOSS Debug APK	2026-02-12T21:57:24.2993189Z ##[error]Process completed with exit code 1.
+build	Post Setup FFTW for Android	﻿2026-02-12T21:57:24.3091154Z Post job cleanup.
+build	Post Set Up Gradle	﻿2026-02-12T21:57:24.3191983Z Post job cleanup.
+build	Post Set Up Gradle	2026-02-12T21:57:24.5712376Z In post-action step
+build	Post Set Up Gradle	2026-02-12T21:57:24.5722175Z Cache is read-only: will not save state for use in subsequent builds.
+build	Post Set Up Gradle	2026-02-12T21:57:24.5729605Z Generating Job Summary
+build	Post Set Up Gradle	2026-02-12T21:57:24.5747542Z Completed post-action step
+build	Post Set up JDK 21	﻿2026-02-12T21:57:24.5939805Z Post job cleanup.
+build	Post Run actions/checkout@v6	﻿2026-02-12T21:57:24.7326787Z Post job cleanup.
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8155522Z [command]/usr/bin/git version
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8193750Z git version 2.52.0
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8234547Z Temporarily overriding HOME='/home/runner/work/_temp/d787158d-8a96-473b-86d0-f261b2d6ac0e' before making global git config changes
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8236248Z Adding repository directory to the temporary git global config as a safe directory
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8241018Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Metrolist/Metrolist
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8272340Z Removing SSH command configuration
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8279859Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8314651Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8554683Z Entering 'metroproto'
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8616572Z Removing HTTP extra header
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8621240Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8654692Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8885250Z Entering 'metroproto'
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8942736Z Removing includeIf entries pointing to credentials config files
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8955216Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8983252Z includeif.gitdir:/home/runner/work/Metrolist/Metrolist/.git.path
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8984234Z includeif.gitdir:/home/runner/work/Metrolist/Metrolist/.git/worktrees/*.path
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8985064Z includeif.gitdir:/github/workspace/.git.path
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8985950Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.8996377Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/Metrolist/Metrolist/.git.path
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9021904Z /home/runner/work/_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9037199Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/Metrolist/Metrolist/.git.path /home/runner/work/_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9077619Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/Metrolist/Metrolist/.git/worktrees/*.path
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9103109Z /home/runner/work/_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9116976Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/Metrolist/Metrolist/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9154151Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9178974Z /github/runner_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9189891Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9226007Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9250994Z /github/runner_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9261611Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9299871Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9545643Z Entering 'metroproto'
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9566570Z file:/home/runner/work/Metrolist/Metrolist/.git/modules/metroproto/config	remote.origin.url
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9601523Z [command]/usr/bin/git config --file /home/runner/work/Metrolist/Metrolist/.git/modules/metroproto/config --name-only --get-regexp ^includeIf\.gitdir:
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9635562Z includeif.gitdir:/home/runner/work/Metrolist/Metrolist/.git/modules/metroproto.path
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9638437Z includeif.gitdir:/github/workspace/.git/modules/metroproto.path
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9646785Z [command]/usr/bin/git config --file /home/runner/work/Metrolist/Metrolist/.git/modules/metroproto/config --get-all includeif.gitdir:/home/runner/work/Metrolist/Metrolist/.git/modules/metroproto.path
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9668484Z /home/runner/work/_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9678906Z [command]/usr/bin/git config --file /home/runner/work/Metrolist/Metrolist/.git/modules/metroproto/config --unset includeif.gitdir:/home/runner/work/Metrolist/Metrolist/.git/modules/metroproto.path /home/runner/work/_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9712996Z [command]/usr/bin/git config --file /home/runner/work/Metrolist/Metrolist/.git/modules/metroproto/config --get-all includeif.gitdir:/github/workspace/.git/modules/metroproto.path
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9736501Z /github/runner_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9746798Z [command]/usr/bin/git config --file /home/runner/work/Metrolist/Metrolist/.git/modules/metroproto/config --unset includeif.gitdir:/github/workspace/.git/modules/metroproto.path /github/runner_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config
+build	Post Run actions/checkout@v6	2026-02-12T21:57:24.9777926Z Removing credentials config '/home/runner/work/_temp/git-credentials-fb0b7344-789d-46e8-b8fa-7ec016201ee9.config'
+build	Complete job	﻿2026-02-12T21:57:24.9919256Z Cleaning up orphan processes
+build	Complete job	2026-02-12T21:57:25.0271594Z Terminate orphan process: pid (3079) (java)
+build	Complete job	2026-02-12T21:57:25.0309706Z Terminate orphan process: pid (3321) (java)

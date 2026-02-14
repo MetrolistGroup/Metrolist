@@ -5,7 +5,7 @@ import com.metrolist.lrclib.models.bestMatchingFor
 import com.metrolist.lrclib.models.bestMatchingForRelaxed
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO
+
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
@@ -18,7 +18,7 @@ import kotlin.math.abs
 
 object LrcLib {
     private val client by lazy {
-        HttpClient(CIO) {
+        HttpClient {
             install(ContentNegotiation) {
                 json(
                     Json {
@@ -38,8 +38,14 @@ object LrcLib {
 
     // Patterns to clean from title
     private val titleCleanupPatterns = listOf(
-        Regex("""\s*\(.*?(official|video|audio|lyrics|lyric|visualizer|hd|hq|4k|remaster|remix|live|acoustic|version|edit|extended|radio|clean|explicit).*?\)""", RegexOption.IGNORE_CASE),
-        Regex("""\s*\[.*?(official|video|audio|lyrics|lyric|visualizer|hd|hq|4k|remaster|remix|live|acoustic|version|edit|extended|radio|clean|explicit).*?\]""", RegexOption.IGNORE_CASE),
+        Regex(
+            """\s*\(.*?(official|video|audio|lyrics|lyric|visualizer|hd|hq|4k|remaster|remix|live|acoustic|version|edit|extended|radio|clean|explicit).*?\)""",
+            RegexOption.IGNORE_CASE
+        ),
+        Regex(
+            """\s*\[.*?(official|video|audio|lyrics|lyric|visualizer|hd|hq|4k|remaster|remix|live|acoustic|version|edit|extended|radio|clean|explicit).*?\]""",
+            RegexOption.IGNORE_CASE
+        ),
         Regex("""\s*【.*?】"""),
         Regex("""\s*\|.*$"""),
         Regex("""\s*-\s*(official|video|audio|lyrics|lyric|visualizer).*$""", RegexOption.IGNORE_CASE),
@@ -50,7 +56,8 @@ object LrcLib {
     )
 
     // Patterns to extract primary artist
-    private val artistSeparators = listOf(" & ", " and ", ", ", " x ", " X ", " feat. ", " feat ", " ft. ", " ft ", " featuring ", " with ")
+    private val artistSeparators =
+        listOf(" & ", " and ", ", ", " x ", " X ", " feat. ", " feat ", " ft. ", " ft ", " featuring ", " with ")
 
     private fun cleanTitle(title: String): String {
         var cleaned = title.trim()
@@ -93,37 +100,37 @@ object LrcLib {
     ): List<Track> {
         val cleanedTitle = cleanTitle(title)
         val cleanedArtist = cleanArtist(artist)
-        
+
         // Strategy 1: Search with cleaned title and artist
         var results = queryLyricsWithParams(
             trackName = cleanedTitle,
             artistName = cleanedArtist,
             albumName = album
         ).filter { it.syncedLyrics != null || it.plainLyrics != null }
-        
+
         if (results.isNotEmpty()) return results
-        
+
         // Strategy 2: Search with cleaned title only (artist might be different)
         results = queryLyricsWithParams(
             trackName = cleanedTitle
         ).filter { it.syncedLyrics != null || it.plainLyrics != null }
-        
+
         if (results.isNotEmpty()) return results
-        
+
         // Strategy 3: Use q parameter with combined search
         results = queryLyricsWithParams(
             query = "$cleanedArtist $cleanedTitle"
         ).filter { it.syncedLyrics != null || it.plainLyrics != null }
-        
+
         if (results.isNotEmpty()) return results
-        
+
         // Strategy 4: Use q parameter with just title
         results = queryLyricsWithParams(
             query = cleanedTitle
         ).filter { it.syncedLyrics != null || it.plainLyrics != null }
-        
+
         if (results.isNotEmpty()) return results
-        
+
         // Strategy 5: Try original title if different from cleaned
         if (cleanedTitle != title.trim()) {
             results = queryLyricsWithParams(
@@ -131,7 +138,7 @@ object LrcLib {
                 artistName = artist.trim()
             ).filter { it.syncedLyrics != null || it.plainLyrics != null }
         }
-        
+
         return results
     }
 
@@ -151,6 +158,7 @@ object LrcLib {
                     track.syncedLyrics ?: track.plainLyrics
                 }?.let(LrcLib::Lyrics)
             }
+
             else -> {
                 // Try with relaxed duration matching (±5 seconds instead of ±2)
                 tracks.bestMatchingForRelaxed(duration)?.let { track ->
@@ -189,10 +197,11 @@ object LrcLib {
                     val titleSimilarity = calculateStringSimilarity(cleanedTitle, track.trackName)
                     val artistSimilarity = calculateStringSimilarity(cleanedArtist, track.artistName)
                     score += (titleSimilarity + artistSimilarity) / 2.0
-                    
+
                     score
                 }
             }
+
             else -> {
                 tracks.sortedBy { abs(it.duration.toInt() - duration) }
             }
@@ -223,10 +232,10 @@ object LrcLib {
     private fun calculateStringSimilarity(str1: String, str2: String): Double {
         val s1 = str1.trim().lowercase()
         val s2 = str2.trim().lowercase()
-        
+
         if (s1 == s2) return 1.0
         if (s1.isEmpty() || s2.isEmpty()) return 0.0
-        
+
         return when {
             s1.contains(s2) || s2.contains(s1) -> 0.8
             else -> {
@@ -241,10 +250,10 @@ object LrcLib {
         val len1 = str1.length
         val len2 = str2.length
         val matrix = Array(len1 + 1) { IntArray(len2 + 1) }
-        
+
         for (i in 0..len1) matrix[i][0] = i
         for (j in 0..len2) matrix[0][j] = j
-        
+
         for (i in 1..len1) {
             for (j in 1..len2) {
                 val cost = if (str1[i - 1] == str2[j - 1]) 0 else 1
@@ -255,7 +264,7 @@ object LrcLib {
                 )
             }
         }
-        
+
         return matrix[len1][len2]
     }
 
@@ -266,8 +275,7 @@ object LrcLib {
         queryLyrics(artist = artist, title = title, album = null)
     }
 
-    @JvmInline
-    value class Lyrics(
+    data class Lyrics(
         val text: String,
     ) {
         val sentences
@@ -278,11 +286,11 @@ object LrcLib {
                         text.trim().lines().filter { it.length >= 10 }.forEach {
                             put(
                                 it[8].digitToInt() * 10L +
-                                    it[7].digitToInt() * 100 +
-                                    it[5].digitToInt() * 1000 +
-                                    it[4].digitToInt() * 10000 +
-                                    it[2].digitToInt() * 60 * 1000 +
-                                    it[1].digitToInt() * 600 * 1000,
+                                        it[7].digitToInt() * 100 +
+                                        it[5].digitToInt() * 1000 +
+                                        it[4].digitToInt() * 10000 +
+                                        it[2].digitToInt() * 60 * 1000 +
+                                        it[1].digitToInt() * 600 * 1000,
                                 it.substring(10),
                             )
                         }
@@ -290,5 +298,3 @@ object LrcLib {
                 }.getOrNull()
     }
 }
-
-

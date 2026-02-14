@@ -1,19 +1,31 @@
 plugins {
     alias(libs.plugins.kotlin.serialization)
-    kotlin("jvm")
+    kotlin("multiplatform")
 }
 
 kotlin {
-    jvmToolchain(21)
-}
+    jvm()
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
 
-dependencies {
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.okhttp)
-    implementation(libs.ktor.client.content.negotiation)
-    implementation(libs.ktor.serialization.json)
-    implementation(libs.ktor.client.encoding)
-    implementation(libs.brotli)
-    implementation(libs.newpipeextractor)
-    testImplementation(libs.junit)
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.json)
+            implementation(libs.ktor.client.encoding)
+            implementation(libs.kotlinx.datetime)
+        }
+
+        jvmMain.dependencies {
+            implementation(libs.ktor.client.okhttp)
+            implementation(libs.newpipeextractor)
+            implementation(libs.brotli)
+        }
+
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
+        }
+    }
 }

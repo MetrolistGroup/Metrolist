@@ -119,12 +119,12 @@ class NewPipeUtils(
         }
 }
 
-object NewPipeExtractor {
+actual object NewPipeExtractor {
     private var newPipeDownloader: NewPipeDownloaderImpl? = null
     private var newPipeUtils: NewPipeUtils? = null
     private var isInitialized = false
 
-    fun init() {
+    actual fun init() {
         if (!isInitialized) {
             newPipeDownloader = NewPipeDownloaderImpl(
                 proxy = YouTube.proxy,
@@ -135,13 +135,13 @@ object NewPipeExtractor {
         }
     }
 
-    fun getSignatureTimestamp(videoId: String): Result<Int> {
+    actual fun getSignatureTimestamp(videoId: String): Result<Int> {
         init()
         return newPipeUtils?.getSignatureTimestamp(videoId)
             ?: Result.failure(Exception("NewPipeUtils not initialized"))
     }
 
-    fun getStreamUrl(
+    actual fun getStreamUrl(
         format: PlayerResponse.StreamingData.Format,
         videoId: String
     ): String? {
@@ -149,7 +149,7 @@ object NewPipeExtractor {
         return newPipeUtils?.getStreamUrl(format, videoId)
     }
 
-    fun newPipePlayer(videoId: String): List<Pair<Int, String>> {
+    actual fun newPipePlayer(videoId: String): List<Pair<Int, String>> {
         init()
         return try {
             val streamInfo = StreamInfo.getInfo(
