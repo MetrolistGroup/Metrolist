@@ -321,7 +321,7 @@ class MusicService :
 
     private var discordRpc: DiscordRPC? = null
     private var lastPlaybackSpeed = 1.0f
-    private var discordUpdateJob: kotlinx.coroutines.Job? = null
+    private var discordUpdateJob: Job? = null
 
     private var scrobbleManager: ScrobbleManager? = null
 
@@ -433,7 +433,7 @@ class MusicService :
         playerInitialized.value = true
         Timber.tag(TAG).d("Player successfully initialized")
 
-        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         setupAudioFocusRequest()
 
         mediaLibrarySessionCallback.apply {
@@ -586,7 +586,7 @@ class MusicService :
                 .distinctUntilChanged(),
         ) { format, normalizeAudio ->
             format to normalizeAudio
-        }.collectLatest(scope) { (format, normalizeAudio) -> setupLoudnessEnhancer()}
+        }.collectLatest(scope) { (_, _) -> setupLoudnessEnhancer()}
 
         combine(
             dataStore.data.map { it[AudioOffload] ?: false },
@@ -1152,7 +1152,7 @@ class MusicService :
         currentQueue = queue
         queueTitle = null
         val persistShuffleAcrossQueues = dataStore.get(PersistentShuffleAcrossQueuesKey, false)
-        val previousShuffleEnabled = player.shuffleModeEnabled
+        player.shuffleModeEnabled
         if (!persistShuffleAcrossQueues) {
             player.shuffleModeEnabled = false
         }
@@ -1432,7 +1432,8 @@ class MusicService :
                 val orderAfter = mutableListOf<Int>()
                 var idx = currentIndex
                 while (true) {
-                    idx = timeline.getNextWindowIndex(idx, Player.REPEAT_MODE_OFF, /*shuffleModeEnabled=*/true)
+                    idx = timeline.getNextWindowIndex(idx,
+                        REPEAT_MODE_OFF, /*shuffleModeEnabled=*/true)
                     if (idx == C.INDEX_UNSET) break
                     if (idx != currentIndex) orderAfter.add(idx)
                 }
@@ -1440,7 +1441,8 @@ class MusicService :
                 val prevList = mutableListOf<Int>()
                 var pIdx = currentIndex
                 while (true) {
-                    pIdx = timeline.getPreviousWindowIndex(pIdx, Player.REPEAT_MODE_OFF, /*shuffleModeEnabled=*/true)
+                    pIdx = timeline.getPreviousWindowIndex(pIdx,
+                        REPEAT_MODE_OFF, /*shuffleModeEnabled=*/true)
                     if (pIdx == C.INDEX_UNSET) break
                     if (pIdx != currentIndex) prevList.add(pIdx)
                 }
@@ -1466,7 +1468,7 @@ class MusicService :
                     }
                 }
 
-                player.setShuffleOrder(DefaultShuffleOrder(finalOrder, System.currentTimeMillis()))
+                player.shuffleOrder = DefaultShuffleOrder(finalOrder, System.currentTimeMillis())
             }
         }
     }
@@ -1732,7 +1734,7 @@ class MusicService :
             scheduleCrossfade()
         }
 
-        if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
+        if (playbackState == STATE_IDLE || playbackState == Player.STATE_ENDED) {
             scrobbleManager?.onSongStop()
         }
     }
@@ -1792,7 +1794,7 @@ class MusicService :
             } else {
                 stopWidgetUpdates()
             }
-            if (!player.isPlaying && !events.containsAny(Player.EVENT_POSITION_DISCONTINUITY, Player.EVENT_MEDIA_ITEM_TRANSITION)) {
+            if (!player.isPlaying && !events.containsAny(EVENT_POSITION_DISCONTINUITY, Player.EVENT_MEDIA_ITEM_TRANSITION)) {
                 scope.launch {
                     discordRpc?.close()
                 }
@@ -1891,7 +1893,7 @@ class MusicService :
                 (0 until originalQueueSize).shuffled().forEach { shuffledIndices[pos++] = it }
                 addedIndices.forEach { shuffledIndices[pos++] = it }
             }
-            player.setShuffleOrder(DefaultShuffleOrder(shuffledIndices, System.currentTimeMillis()))
+            player.shuffleOrder = DefaultShuffleOrder(shuffledIndices, System.currentTimeMillis())
         } else {
             val shuffledIndices = IntArray(totalCount) { it }
             shuffledIndices.shuffle()
@@ -1902,7 +1904,7 @@ class MusicService :
                 shuffledIndices[0] = shuffledIndices[currentItemIndexInShuffled]
                 shuffledIndices[currentItemIndexInShuffled] = temp
             }
-            player.setShuffleOrder(DefaultShuffleOrder(shuffledIndices, System.currentTimeMillis()))
+            player.shuffleOrder = DefaultShuffleOrder(shuffledIndices, System.currentTimeMillis())
         }
     }
 
@@ -2705,6 +2707,7 @@ class MusicService :
         // But since we are destroying the service, it's fine.
         player.release()
         discordUpdateJob?.cancel()
+        isRunning = false
         super.onDestroy()
     }
 
@@ -2815,7 +2818,7 @@ class MusicService :
                 ).getOrNull()
                 playbackData?.streamUrl
             } catch (e: Exception) {
-                timber.log.Timber.e(e, "Failed to get stream URL for Cast")
+                Timber.e(e, "Failed to get stream URL for Cast")
                 null
             }
         }
@@ -2829,9 +2832,9 @@ class MusicService :
             try {
                 castConnectionHandler = CastConnectionHandler(this, scope, this)
                 castConnectionHandler?.initialize()
-                timber.log.Timber.d("Google Cast initialized")
+                Timber.d("Google Cast initialized")
             } catch (e: Exception) {
-                timber.log.Timber.e(e, "Failed to initialize Google Cast")
+                Timber.e(e, "Failed to initialize Google Cast")
             }
         }
     }
@@ -2983,7 +2986,7 @@ class MusicService :
         try {
             (mediaSession as MediaSession).player = player
         } catch (e: Exception) {
-            timber.log.Timber.e(e, "Failed to swap player in MediaSession")
+            Timber.e(e, "Failed to swap player in MediaSession")
         }
         
         crossfadeJob = scope.launch {
