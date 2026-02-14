@@ -63,6 +63,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import okio.ByteString
+import java.io.File
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalCoilApi::class, ExperimentalMaterial3Api::class, DelicateCoilApi::class)
@@ -205,17 +207,23 @@ fun StorageSettings(
                 coroutineScope.launch(Dispatchers.IO) {
                     val urlsToPreserve = mutableSetOf<String>()
                     val downloadedSongs = try {
-                        database.dao.downloadedSongsByNameAsc().first()
+                        database.downloadedSongsByNameAsc().first()
                     } catch (e: Exception) {
                         emptyList()
                     }
                     downloadedSongs.forEach { song ->
-                        song.song.thumbnailUrl?.let { urlsToPreserve.add(it) }
-                        song.album?.thumbnailUrl?.let { urlsToPreserve.add(it) }
+                        song.song.thumbnailUrl?.let { urlsToPreserve.add(ByteString.encodeUtf8(it).sha256().hex()) }
+                        song.album?.thumbnailUrl?.let { urlsToPreserve.add(ByteString.encodeUtf8(it).sha256().hex()) }
                     }
-                    imageDiskCache.keys().forEach { key ->
-                        if (key !in urlsToPreserve) {
-                            imageDiskCache.remove(key)
+                    val directory = imageDiskCache.directory.toFile()
+                    if (directory.exists() && directory.isDirectory) {
+                        directory.listFiles()?.forEach { file ->
+                            if (file.isFile && !file.name.startsWith("journal")) {
+                                val isPreserved = urlsToPreserve.any { hash -> file.name.startsWith(hash) }
+                                if (!isPreserved) {
+                                    file.delete()
+                                }
+                            }
                         }
                     }
                 }
