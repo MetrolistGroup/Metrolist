@@ -82,9 +82,6 @@ interface DatabaseDao {
     @Query("SELECT * FROM song WHERE inLibrary IS NOT NULL ORDER BY totalPlayTime")
     fun songsByPlayTimeAsc(): Flow<List<Song>>
 
-    @Transaction
-    @Query("SELECT * FROM song WHERE isDownloaded = 1 ORDER BY title")
-    fun downloadedSongsByNameAsc(): Flow<List<Song>>
 
     fun songs(
         sortType: SongSortType,
@@ -216,6 +213,7 @@ interface DatabaseDao {
                     collator.strength = Collator.PRIMARY
                     artistSongs.sortedWith(compareBy(collator) { it.song.title })
                 }
+
             ArtistSongSortType.PLAY_TIME -> {
                 if (fromTimeStamp != null && toTimeStamp != null) {
                     mostPlayedSongsByArtist(artistId, fromTimeStamp, toTimeStamp)
@@ -471,25 +469,30 @@ interface DatabaseDao {
     @Query("SELECT COUNT(DISTINCT songId) FROM event WHERE timestamp >= :fromTimeStamp AND timestamp <= :toTimeStamp")
     fun getUniqueSongCountInRange(fromTimeStamp: Long, toTimeStamp: Long): Flow<Int>
 
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(DISTINCT artistId)
         FROM event
         JOIN song_artist_map ON event.songId = song_artist_map.songId
         WHERE timestamp >= :fromTimeStamp AND timestamp <= :toTimeStamp
-    """)
+    """
+    )
     fun getUniqueArtistCountInRange(fromTimeStamp: Long, toTimeStamp: Long): Flow<Int>
 
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(DISTINCT albumId)
         FROM event
         JOIN song ON event.songId = song.id
         WHERE timestamp >= :fromTimeStamp AND timestamp <= :toTimeStamp
-    """)
+    """
+    )
     fun getUniqueAlbumCountInRange(fromTimeStamp: Long, toTimeStamp: Long): Flow<Int>
 
     @Transaction
     @SuppressWarnings(RoomWarnings.QUERY_MISMATCH)
-    @Query("""
+    @Query(
+        """
         SELECT album.*, count(song.dateDownload) downloadCount
         FROM album_artist_map
             JOIN album ON album_artist_map.albumId = album.id
@@ -497,13 +500,16 @@ interface DatabaseDao {
         WHERE artistId = :artistId
         GROUP BY album.id
         LIMIT :previewSize
-    """)
+    """
+    )
     fun artistAlbumsPreview(artistId: String, previewSize: Int = 6): Flow<List<Album>>
 
     @Query("SELECT sum(count) from playCount WHERE song = :songId")
     fun getLifetimePlayCount(songId: String?): Flow<Int>
+
     @Query("SELECT sum(count) from playCount WHERE song = :songId AND year = :year")
     fun getPlayCountByYear(songId: String?, year: Int): Flow<Int>
+
     @Query("SELECT count from playCount WHERE song = :songId AND year = :year AND month = :month")
     fun getPlayCountByMonth(songId: String?, year: Int, month: Int): Flow<Int>
 
@@ -803,7 +809,7 @@ interface DatabaseDao {
     )
     fun albumsLikedByPlayTimeAsc(): Flow<List<Album>>
 
-        @Transaction
+    @Transaction
     @SuppressWarnings(RoomWarnings.QUERY_MISMATCH)
     @Query("SELECT * FROM album WHERE isUploaded = 1 ORDER BY rowId")
     fun albumsUploadedByCreateDateAsc(): Flow<List<Album>>
@@ -1018,6 +1024,7 @@ interface DatabaseDao {
             collator.strength = Collator.PRIMARY
             songs.sortedWith(compareBy(collator) { it.song.title })
         }
+
         SongSortType.ARTIST -> downloadedSongsByNameAsc().map { songs ->
             val collator = Collator.getInstance(Locale.getDefault())
             collator.strength = Collator.PRIMARY
@@ -1025,6 +1032,7 @@ interface DatabaseDao {
                 song.artists.joinToString("") { it.name }
             })
         }
+
         SongSortType.PLAY_TIME -> downloadedSongsByPlayTimeAsc()
     }.map { it.reversed(descending) }
 
