@@ -1,0 +1,245 @@
+-- Main tables from Room database migration
+
+CREATE TABLE song (
+    id TEXT PRIMARY KEY NOT NULL,
+    title TEXT NOT NULL,
+    duration INTEGER DEFAULT -1 NOT NULL,
+    thumbnailUrl TEXT,
+    albumId TEXT,
+    albumName TEXT,
+    explicit INTEGER DEFAULT 0 NOT NULL,
+    year INTEGER,
+    date INTEGER, -- timestamp
+    dateModified INTEGER, -- timestamp
+    liked INTEGER DEFAULT 0 NOT NULL,
+    likedDate INTEGER, -- timestamp
+    totalPlayTime INTEGER DEFAULT 0 NOT NULL,
+    inLibrary INTEGER, -- timestamp
+    dateDownload INTEGER, -- timestamp
+    isLocal INTEGER DEFAULT 0 NOT NULL,
+    libraryAddToken TEXT,
+    libraryRemoveToken TEXT,
+    lyricsOffset INTEGER DEFAULT 0 NOT NULL
+);
+
+CREATE INDEX song_albumId ON song(albumId);
+
+CREATE TABLE artist (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    thumbnailUrl TEXT,
+    channelId TEXT,
+    lastUpdateTime INTEGER NOT NULL, -- timestamp
+    bookmarkedAt INTEGER, -- timestamp
+    isLocal INTEGER DEFAULT 0 NOT NULL
+);
+
+CREATE TABLE album (
+    id TEXT PRIMARY KEY NOT NULL,
+    title TEXT NOT NULL,
+    year INTEGER,
+    thumbnailUrl TEXT,
+    songCount INTEGER NOT NULL,
+    duration INTEGER NOT NULL,
+    bookmarkedAt INTEGER, -- timestamp
+    lastUpdateTime INTEGER NOT NULL, -- timestamp
+    isLocal INTEGER DEFAULT 0 NOT NULL,
+    playEndpointParams TEXT,
+    shuffleEndpointParams TEXT,
+    radioEndpointParams TEXT
+);
+
+CREATE TABLE playlist (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    browseId TEXT,
+    createdAt INTEGER, -- timestamp
+    lastUpdateTime INTEGER, -- timestamp
+    isEditable INTEGER DEFAULT 1 NOT NULL,
+    bookmarkedAt INTEGER, -- timestamp
+    remoteSongCount INTEGER,
+    playEndpointParams TEXT,
+    thumbnailUrl TEXT,
+    shuffleEndpointParams TEXT,
+    radioEndpointParams TEXT,
+    isLocal INTEGER DEFAULT 0 NOT NULL,
+    isAutoSync INTEGER DEFAULT 0 NOT NULL
+);
+
+-- Relationship tables
+CREATE TABLE song_artist_map (
+    songId TEXT NOT NULL,
+    artistId TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    PRIMARY KEY (songId, artistId),
+    FOREIGN KEY (songId) REFERENCES song(id) ON DELETE CASCADE,
+    FOREIGN KEY (artistId) REFERENCES artist(id) ON DELETE CASCADE
+);
+
+CREATE INDEX song_artist_map_songId ON song_artist_map(songId);
+CREATE INDEX song_artist_map_artistId ON song_artist_map(artistId);
+
+CREATE TABLE song_album_map (
+    songId TEXT NOT NULL,
+    albumId TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    PRIMARY KEY (songId, albumId),
+    FOREIGN KEY (songId) REFERENCES song(id) ON DELETE CASCADE,
+    FOREIGN KEY (albumId) REFERENCES album(id) ON DELETE CASCADE
+);
+
+CREATE INDEX song_album_map_songId ON song_album_map(songId);
+CREATE INDEX song_album_map_albumId ON song_album_map(albumId);
+
+CREATE TABLE album_artist_map (
+    albumId TEXT NOT NULL,
+    artistId TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    PRIMARY KEY (albumId, artistId),
+    FOREIGN KEY (albumId) REFERENCES album(id) ON DELETE CASCADE,
+    FOREIGN KEY (artistId) REFERENCES artist(id) ON DELETE CASCADE
+);
+
+CREATE TABLE playlist_song_map (
+    playlistId TEXT NOT NULL,
+    songId TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    setVideoId TEXT,
+    PRIMARY KEY (playlistId, songId, position),
+    FOREIGN KEY (playlistId) REFERENCES playlist(id) ON DELETE CASCADE,
+    FOREIGN KEY (songId) REFERENCES song(id) ON DELETE CASCADE
+);
+
+CREATE INDEX playlist_song_map_playlistId ON playlist_song_map(playlistId);
+CREATE INDEX playlist_song_map_songId ON playlist_song_map(songId);
+
+-- Utility tables
+CREATE TABLE search_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    query TEXT NOT NULL,
+    timestamp INTEGER NOT NULL -- timestamp
+);
+
+CREATE UNIQUE INDEX search_history_query ON search_history(query);
+
+CREATE TABLE format (
+    id TEXT PRIMARY KEY NOT NULL,
+    songId TEXT NOT NULL,
+    itag INTEGER NOT NULL,
+    mimeType TEXT NOT NULL,
+    codecs TEXT NOT NULL,
+    bitrate INTEGER NOT NULL,
+    sampleRate INTEGER NOT NULL,
+    contentLength INTEGER NOT NULL,
+    loudnessDb REAL,
+    playbackUrl TEXT,
+    lastModified INTEGER NOT NULL, -- timestamp
+    FOREIGN KEY (songId) REFERENCES song(id) ON DELETE CASCADE
+);
+
+CREATE TABLE lyrics (
+    id TEXT PRIMARY KEY NOT NULL,
+    lyrics TEXT NOT NULL
+);
+
+CREATE TABLE event (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    songId TEXT NOT NULL,
+    timestamp INTEGER NOT NULL, -- timestamp
+    playTime INTEGER NOT NULL,
+    FOREIGN KEY (songId) REFERENCES song(id) ON DELETE CASCADE
+);
+
+CREATE INDEX event_songId ON event(songId);
+CREATE INDEX event_timestamp ON event(timestamp);
+
+CREATE TABLE related_song_map (
+    songId TEXT NOT NULL,
+    relatedSongId TEXT NOT NULL,
+    PRIMARY KEY (songId, relatedSongId)
+);
+
+CREATE TABLE set_video_id (
+    videoId TEXT NOT NULL,
+    setVideoId TEXT NOT NULL,
+    PRIMARY KEY (videoId, setVideoId)
+);
+
+CREATE TABLE play_count (
+    id TEXT PRIMARY KEY NOT NULL,
+    playCount INTEGER NOT NULL
+);
+
+CREATE TABLE recognition_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    songId TEXT,
+    title TEXT NOT NULL,
+    artistName TEXT,
+    duration INTEGER,
+    thumbnail TEXT,
+    timestamp INTEGER NOT NULL, -- timestamp
+    FOREIGN KEY (songId) REFERENCES song(id) ON DELETE SET NULL
+);
+
+CREATE INDEX recognition_history_songId ON recognition_history(songId);
+
+-- Views
+CREATE VIEW sorted_song_artist_map AS
+SELECT * FROM song_artist_map
+ORDER BY songId, position;
+
+CREATE VIEW sorted_song_album_map AS
+SELECT * FROM song_album_map
+ORDER BY songId, position;
+
+CREATE VIEW playlist_song_map_preview AS
+SELECT
+    playlist_song_map.*,
+    song.title,
+    song.duration,
+    song.thumbnailUrl,
+    song.albumId,
+    song.albumName,
+    song.liked,
+    song.totalPlayTime,
+    song.inLibrary,
+    song.explicit
+FROM playlist_song_map
+JOIN song ON playlist_song_map.songId = song.id;
+
+-- Queries
+getAllSongs:
+SELECT * FROM song ORDER BY title;
+
+getSongById:
+SELECT * FROM song WHERE id = ?;
+
+insertSong:
+INSERT OR REPLACE INTO song VALUES ?;
+
+deleteSong:
+DELETE FROM song WHERE id = ?;
+
+getAllArtists:
+SELECT * FROM artist ORDER BY name;
+
+getArtistById:
+SELECT * FROM artist WHERE id = ?;
+
+insertArtist:
+INSERT OR REPLACE INTO artist VALUES ?;
+
+getAllPlaylists:
+SELECT * FROM playlist ORDER BY name;
+
+getPlaylistById:
+SELECT * FROM playlist WHERE id = ?;
+
+insertPlaylist:
+INSERT OR REPLACE INTO playlist VALUES ?;
+
+deletePlaylist:
+DELETE FROM playlist WHERE id = ?;
+
+searchSongs:
+SELECT * FROM song WHERE title LIKE '%' || ? || '%' ORDER BY title LIMIT ?;

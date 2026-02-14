@@ -280,6 +280,9 @@ dependencies {
     implementation(libs.jsoup)
     ksp(libs.hilt.compiler)
 
+    // Shared KMP module (includes database, player, repositories)
+    implementation(project(":shared"))
+
     implementation(project(":innertube"))
     implementation(project(":kugou"))
     implementation(project(":lrclib"))
