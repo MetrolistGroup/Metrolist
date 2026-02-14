@@ -57,7 +57,7 @@
     <string name="default_style">Predeterminado</string>
     <string name="secondary_color_style">Secundario</string>
     <string name="enable_swipe_thumbnail">Habilitar deslizar para cambiar de canción</string>
-    <string name="swipe_song_to_add">Desliza la canción a la derecha para reproducirla a continuación o a la izquierda para añadirla a la cola</string>
+    <string name="swipe_song_to_add">Deslizar la canción a la derecha para reproducirla a continuación o a la izquierda para añadirla a la cola</string>
     <string name="lyrics_click_change">Cambiar letra al hacer clic</string>
     <string name="slim">Delgado</string>
     <string name="slim_navbar">Barra de navegación inferior delgada</string>
@@ -224,7 +224,7 @@
     <string name="scrobble_min_track_duration">Scrobble a canciones más largas que</string>
     <string name="scrobble_delay_percent">Porcentaje de retraso de Scrobble</string>
     <string name="scrobble_delay_minutes">Minutos de retraso de Scrobble</string>
-    <string name="swipe_song_to_remove">Desliza la canción para quitarla de la playlist</string>
+    <string name="swipe_song_to_remove">Deslizar la canción para quitarla de la lista de reproducción</string>
     <string name="last_fm_send_likes">Enviar Me gusta/No me gusta</string>
     <string name="last_fm_send_likes_description">Marcar como Me gusta o No me gusta las canciones en Last.fm cuando aparecen marcadas como Me gusta o No me gusta en Metrolist</string>
     <string name="primary_color_style">Color primario</string>
@@ -259,7 +259,7 @@
     <string name="other_results">Otro</string>
     <string name="download_playlist_desc">Descargar todas las canciones para reproducirlas sin conexión</string>
     <string name="remove_download_playlist_desc">Eliminar todas las canciones descargadas de esta lista de reproducción</string>
-    <string name="download_in_progress_desc">La descarga está en progreso</string>
+    <string name="download_in_progress_desc">La descarga está en proceso</string>
     <string name="share_playlist_desc">Compartir esta lista de reproducción con otros</string>
     <string name="delete_playlist_desc">Eliminar esta lista de reproducción de forma permanente</string>
     <string name="sync_playlist_desc">Sincronizar lista de reproducción con YouTube Music</string>
@@ -416,7 +416,7 @@
     <string name="listen_together_you_are_host">Eres el anfitrión</string>
     <string name="listen_together_you_are_guest">Eres un invitado</string>
     <string name="listen_together_users">%d usuarios en la sala</string>
-    <string name="listen_together_join_requests">Solicitudes para unirse</string>
+    <string name="listen_together_join_requests">Solicitudes de conexión</string>
     <string name="listen_together_view_logs">Ver registros</string>
     <string name="listen_together_view_logs_desc">Depurar conexión y mensajes</string>
     <string name="listen_together_logs">Registros de conexión</string>
@@ -506,8 +506,8 @@
     <string name="listen_together_choose_server">Elegir servidor</string>
     <string name="listen_together_custom_server">Servidor personalizado</string>
     <string name="listen_together_use_custom_server">Usar servidor personalizado</string>
-    <string name="listen_together_auto_approval">Aprobar automáticamente solicitudes de unión</string>
-    <string name="listen_together_auto_approval_desc">Aprobar automáticamente solicitudes de unión en lugar de revisarlas manualmente</string>
+    <string name="listen_together_auto_approval">Aprobar automáticamente solicitudes de conexión</string>
+    <string name="listen_together_auto_approval_desc">Aprobar automáticamente solicitudes de conexión en lugar de revisarlas manualmente</string>
     <string name="listen_together_sync_volume">Sincronizar volumen del anfitrión</string>
     <string name="listen_together_sync_volume_desc">Los invitados siguen el nivel de volumen del anfitrión</string>
     <string name="transfer_host">Transferir anfitrión</string>
@@ -571,7 +571,7 @@
     <string name="map_csv_columns">Mapear columnas CSV</string>
     <string name="column_label">Col %d</string>
     <string name="recognition_error">Error de reconocimiento</string>
-    <string name="enable_high_refresh_rate_desc">Forzar que la pantalla funcione a la frecuencia de actualización más alta admitida (p. ej., 120Hz)</string>
+    <string name="enable_high_refresh_rate_desc">Forzar a la pantalla a funcionar a la frecuencia de actualización más alta permitida (p. ej., 120Hz)</string>
     <string name="first_row_is_header">La primera fila es el encabezado</string>
     <string name="try_again">Inténtalo de nuevo</string>
     <string name="tap_to_recognize">Tap para reconocer</string>
