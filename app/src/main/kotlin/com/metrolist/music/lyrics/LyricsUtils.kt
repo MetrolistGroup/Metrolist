@@ -281,6 +281,30 @@ object LyricsUtils {
         Tokenizer()
     }
 
+    private val HEX_ENTITY_REGEX = "&#x([0-9a-fA-F]+);".toRegex()
+    private val DEC_ENTITY_REGEX = "&#(\\d+);".toRegex()
+
+    private fun decodeHtmlEntities(text: String): String =
+        text
+            .replace(HEX_ENTITY_REGEX) { match ->
+                match.groupValues[1].toIntOrNull(16)
+                    ?.takeIf { it in 0..0x10FFFF }
+                    ?.let { String(Character.toChars(it)) }
+                    ?: match.value
+            }
+            .replace(DEC_ENTITY_REGEX) { match ->
+                match.groupValues[1].toIntOrNull()
+                    ?.takeIf { it in 0..0x10FFFF }
+                    ?.let { String(Character.toChars(it)) }
+                    ?: match.value
+            }
+            .replace("&apos;", "'")
+            .replace("&quot;", "\"")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&nbsp;", " ")
+            .replace("&amp;", "&")
+
     fun parseLyrics(lyrics: String): List<LyricsEntry> {
         // Unescape JSON string if needed
         val unescapedLyrics = lyrics
@@ -291,8 +315,11 @@ object LyricsUtils {
             .replace("\\n", "\n")
             .replace("\\r", "\r")
             .replace("\\t", "\t")
+
+        // Decode HTML entities (e.g. &#x27; -> ', &amp; -> &)
+        val decodedLyrics = decodeHtmlEntities(unescapedLyrics)
         
-        val lines = unescapedLyrics.lines()
+        val lines = decodedLyrics.lines()
             .filter { it.isNotBlank() && !it.trim().startsWith("[offset:") }
         
         // Check if this is rich sync format (contains <MM:SS.mm> patterns)

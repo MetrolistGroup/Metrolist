@@ -166,7 +166,7 @@ object KuGou {
         Keyword(normalizeTitle(title), normalizeArtist(artist), album)
 
     private fun String.normalize(): String =
-        replace("&apos;", "'").lines().filter { line -> line.matches(ACCEPTED_REGEX) }
+        lines().filter { line -> line.matches(ACCEPTED_REGEX) }
             .let { lines ->
                 // Remove useless information such as singer, writer, composer, guitar, etc.
                 var headCutLine = 0
