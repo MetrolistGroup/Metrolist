@@ -79,7 +79,6 @@ import androidx.navigation.NavController
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
 import com.metrolist.music.constants.ListenTogetherAutoApprovalKey
-import com.metrolist.music.constants.ListenTogetherInTopBarKey
 import com.metrolist.music.constants.ListenTogetherServerUrlKey
 import com.metrolist.music.constants.ListenTogetherSyncVolumeKey
 import com.metrolist.music.constants.ListenTogetherUsernameKey
@@ -121,7 +120,6 @@ fun ListenTogetherSettings(
     var username by rememberPreference(ListenTogetherUsernameKey, "")
     var autoApproval by rememberPreference(ListenTogetherAutoApprovalKey, false)
     var syncHostVolume by rememberPreference(ListenTogetherSyncVolumeKey, true)
-    var showInTopBar by rememberPreference(ListenTogetherInTopBarKey, false)
     
     var showServerUrlDialog by rememberSaveable { mutableStateOf(false) }
     var showUsernameDialog by rememberSaveable { mutableStateOf(false) }
@@ -793,29 +791,6 @@ fun ListenTogetherSettings(
                             )
                         },
                         onClick = { syncHostVolume = !syncHostVolume }
-                    ),
-                    IntegrationCardItem(
-                        icon = painterResource(R.drawable.dock_to_top),
-                        title = { Text(stringResource(R.string.listen_together_in_top_bar)) },
-                        description = {
-                            Text(stringResource(R.string.listen_together_in_top_bar_desc))
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = showInTopBar,
-                                onCheckedChange = { showInTopBar = it },
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (showInTopBar) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { showInTopBar = !showInTopBar }
                     ),
                     IntegrationCardItem(
                         icon = painterResource(R.drawable.bug_report),
