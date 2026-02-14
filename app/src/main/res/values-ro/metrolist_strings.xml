@@ -560,13 +560,13 @@
     <string name="recognize_music">Recunoaște muzica</string>
     <string name="youtube_url_column">Coloana cu URL-ul YouTube (opțional)</string>
     <string name="re_listen">Reascultă</string>
-    <string name="clear_recognition_history_confirm">Ești sigur(ă) că vrei să elimini tot istoricul de recunoaștere?</string>
+    <string name="clear_recognition_history_confirm">Ești sigur(ă) că vrei să elimini tot istoricul recunoașterilor?</string>
     <string name="no_match_found">Nicio potrivire găsită</string>
     <string name="delete_from_history">Șterge din istoric</string>
     <string name="artist_name_column">Coloana cu numele artistului</string>
     <string name="csv_preview_failed">Nu s-a putut previzualiza fișierul CSV</string>
     <string name="processing">Se procesează…</string>
-    <string name="clear_recognition_history">Elimină istoricul de recunoaștere</string>
+    <string name="clear_recognition_history">Elimină istoricul recunoașterilor</string>
     <string name="recognized_track">Piesă recunoscută</string>
     <string name="map_csv_columns">Mapează coloanele CSV</string>
     <string name="column_label">Col %d</string>
@@ -575,7 +575,7 @@
     <string name="first_row_is_header">Prima linie este antetul</string>
     <string name="try_again">Încearcă din nou</string>
     <string name="tap_to_recognize">Atinge pentru a recunoaște</string>
-    <string name="recognition_history">Istoric de recunoaștere</string>
+    <string name="recognition_history">Istoricul recunoașterilor</string>
     <string name="enable_high_refresh_rate">Activează rata de reîmprospătare ridicată</string>
     <string name="song_title_column">Coloana cu numele melodiei</string>
     <string name="recognition">Recunoaștere</string>
@@ -586,4 +586,13 @@
     <string name="listening">Se ascultă…</string>
     <string name="continue_action">Continuă</string>
     <string name="hold_to_recognize">Ține apăsat pe pictograma de căutare pentru a recunoaște muzica</string>
+    <string name="enable">Activează</string>
+    <string name="crossfade_beta_title">Caracteristică beta</string>
+    <string name="crossfade">Tranziție lină</string>
+    <string name="crossfade_desc">Tranziție lină între melodii</string>
+    <string name="crossfade_duration">Durata tranziției line</string>
+    <string name="crossfade_gapless">Dezactivează pentru albumele fără pauze</string>
+    <string name="crossfade_gapless_desc">Nu aplica efectul de tranziție lină dacă albumul nu are pauze</string>
+    <string name="crossfade_beta_message">Tranziția lină este o caracteristică nouă și este posibil ca aceasta să aibă bug-uri. Dacă întâmpini orice fel de problenă, te rugăm să ne-o raportezi.\n\nAceastă funcție dezactivează offload-ul audio datorită unor limitări tehnice.</string>
+    <string name="audio_offload_disabled_by_crossfade">Dezactivat, deoarece funcția Tranziție lină este activată</string>
 </resources>
