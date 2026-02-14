@@ -214,7 +214,7 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var syncUtils: SyncUtils
-    
+
     @Inject
     lateinit var listenTogetherManager: com.metrolist.music.listentogether.ListenTogetherManager
 
@@ -282,8 +282,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (dataStore.get(StopMusicOnTaskClearKey, false) && 
-            playerConnection?.isPlaying?.value == true && 
+        if (dataStore.get(StopMusicOnTaskClearKey, false) &&
+            playerConnection?.isPlaying?.value == true &&
             isFinishing
         ) {
             stopService(Intent(this, MusicService::class.java))
@@ -307,7 +307,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         window.decorView.layoutDirection = View.LAYOUT_DIRECTION_LTR
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        
+
         // Initialize Listen Together manager
         listenTogetherManager.initialize()
 
@@ -366,7 +366,7 @@ class MainActivity : ComponentActivity() {
                     val updatesEnabled = dataStore.get(CheckForUpdatesKey, true)
                     val notifEnabled = dataStore.get(UpdateNotificationsEnabledKey, true)
                     if (!updatesEnabled) return@withContext
-                    
+
                     Updater.checkForUpdate().onSuccess { (releaseInfo, hasUpdate) ->
                         if (releaseInfo != null) {
                             onLatestVersionNameChange(releaseInfo.versionName)
@@ -707,7 +707,7 @@ class MainActivity : ComponentActivity() {
                 var shouldShowTopBar by rememberSaveable { mutableStateOf(false) }
 
                 LaunchedEffect(navBackStackEntry) {
-                    shouldShowTopBar = navBackStackEntry?.destination?.route in topLevelScreens && 
+                    shouldShowTopBar = navBackStackEntry?.destination?.route in topLevelScreens &&
                         navBackStackEntry?.destination?.route != "settings"
                 }
 
@@ -856,7 +856,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             }
-                            
+
                             val onSearchLongClick: () -> Unit = remember(navController) {
                                 {
                                     navController.navigate("recognition") {

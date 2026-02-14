@@ -82,6 +82,10 @@ interface DatabaseDao {
     @Query("SELECT * FROM song WHERE inLibrary IS NOT NULL ORDER BY totalPlayTime")
     fun songsByPlayTimeAsc(): Flow<List<Song>>
 
+    @Transaction
+    @Query("SELECT * FROM song WHERE isDownloaded = 1 ORDER BY title")
+    fun downloadedSongsByNameAsc(): Flow<List<Song>>
+
     fun songs(
         sortType: SongSortType,
         descending: Boolean,
@@ -306,7 +310,7 @@ interface DatabaseDao {
             sum(event.playTime) DESC
         LIMIT :limit
         OFFSET :offset
-        
+
         """,
     )
     fun getRecommendationAlbum(
@@ -430,13 +434,13 @@ interface DatabaseDao {
             FROM song_album_map
                      JOIN event e ON song_album_map.songId = e.songId
             WHERE albumId = album.id
-              AND e.timestamp > :fromTimeStamp 
+              AND e.timestamp > :fromTimeStamp
               AND e.timestamp <= :toTimeStamp) AS songCountListened,
            (SELECT SUM(e.playTime)
             FROM song_album_map
                      JOIN event e ON song_album_map.songId = e.songId
             WHERE albumId = album.id
-              AND e.timestamp > :fromTimeStamp 
+              AND e.timestamp > :fromTimeStamp
               AND e.timestamp <= :toTimeStamp) AS timeListened
     FROM album
     JOIN song_album_map ON album.id = song_album_map.albumId
@@ -487,7 +491,7 @@ interface DatabaseDao {
     @SuppressWarnings(RoomWarnings.QUERY_MISMATCH)
     @Query("""
         SELECT album.*, count(song.dateDownload) downloadCount
-        FROM album_artist_map 
+        FROM album_artist_map
             JOIN album ON album_artist_map.albumId = album.id
             JOIN song ON album_artist_map.albumId = song.albumId
         WHERE artistId = :artistId
@@ -565,7 +569,7 @@ interface DatabaseDao {
     @Query("SELECT * FROM song WHERE id IN (:songIds)")
     suspend fun getSongsByIds(songIds: List<String>): List<Song>
 
-    
+
     @Transaction
     @Query("SELECT * FROM song_artist_map WHERE songId = :songId")
     fun songArtistMap(songId: String): List<SongArtistMap>
@@ -594,11 +598,11 @@ interface DatabaseDao {
                       ORDER BY totalPlayTime DESC) AS artistTotalPlayTime
                      ON artist.id = artistId
                      OR artist.bookmarkedAt IS NOT NULL
-                     ORDER BY 
-                      CASE 
-                        WHEN artistTotalPlayTime.artistId IS NULL THEN 1 
-                        ELSE 0 
-                      END, 
+                     ORDER BY
+                      CASE
+                        WHEN artistTotalPlayTime.artistId IS NULL THEN 1
+                        ELSE 0
+                      END,
                       artistTotalPlayTime.totalPlayTime DESC
     """,
     )
@@ -1038,7 +1042,7 @@ interface DatabaseDao {
 
     @Query("UPDATE song SET isDownloaded = :downloaded, dateDownload = :date WHERE id = :songId")
     fun updateDownloadedInfo(songId: String, downloaded: Boolean, date: LocalDateTime?)
-    
+
     @Transaction
     @Query("SELECT * FROM song WHERE isUploaded = 1 ORDER BY dateDownload")
     fun uploadedSongsByCreateDateAsc(): Flow<List<Song>>
@@ -1088,7 +1092,7 @@ interface DatabaseDao {
 
         SongSortType.PLAY_TIME -> uploadedSongsByPlayTimeAsc()
     }.map { it.reversed(descending) }
-    
+
     @Transaction
     @Query("SELECT * FROM song WHERE title LIKE '%' || :query || '%' AND inLibrary IS NOT NULL LIMIT :previewSize")
     fun searchSongs(
@@ -1213,7 +1217,7 @@ interface DatabaseDao {
         libraryAddToken: String?,
         libraryRemoveToken: String?,
     )
-    
+
     @Transaction
     @Query("SELECT COUNT(1) FROM related_song_map WHERE songId = :songId LIMIT 1")
     fun hasRelatedSongs(songId: String): Boolean
@@ -1242,12 +1246,12 @@ interface DatabaseDao {
     @Transaction
     @Query(
         """
-        UPDATE playlist_song_map SET position = 
-            CASE 
+        UPDATE playlist_song_map SET position =
+            CASE
                 WHEN position < :fromPosition THEN position + 1
                 WHEN position > :fromPosition THEN position - 1
                 ELSE :toPosition
-            END 
+            END
         WHERE playlistId = :playlistId AND position BETWEEN MIN(:fromPosition, :toPosition) AND MAX(:fromPosition, :toPosition)
     """,
     )
@@ -1313,7 +1317,7 @@ interface DatabaseDao {
 
         mediaMetadata.artists.forEachIndexed { index, artist ->
             val artistId = artist.id ?: artistByName(artist.name)?.id ?: ArtistEntity.generateArtistId()
-            
+
             insert(
                 ArtistEntity(
                     id = artistId,
@@ -1400,7 +1404,7 @@ interface DatabaseDao {
         songArtistMap(song.id).forEach(::delete)
         mediaMetadata.artists.forEachIndexed { index, artist ->
             val artistId = artist.id ?: artistByName(artist.name)?.id ?: ArtistEntity.generateArtistId()
-            
+
             insert(
                 ArtistEntity(
                     id = artistId,
