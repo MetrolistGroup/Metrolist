@@ -34,7 +34,9 @@ class SleepTimer(
         sleepTimerJob = null
         if (minute == -1) {
             pauseWhenSongEnd = true
+            triggerTime = -1L
         } else {
+            pauseWhenSongEnd = false
             triggerTime = System.currentTimeMillis() + minute.minutes.inWholeMilliseconds
             sleepTimerJob =
                 scope.launch {
@@ -42,6 +44,18 @@ class SleepTimer(
                     player.pause()
                     triggerTime = -1L
                 }
+        }
+    }
+
+    /**
+     * Notify the sleep timer that a song transition has occurred outside of normal
+     * player callbacks (e.g. during crossfade player swap). If "end of song" mode
+     * is active, this will pause the player and deactivate the timer.
+     */
+    fun notifySongTransition() {
+        if (pauseWhenSongEnd) {
+            pauseWhenSongEnd = false
+            player.pause()
         }
     }
 
