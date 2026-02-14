@@ -1351,7 +1351,7 @@ fun AppearanceSettings(
                     onClick = { onSlimNavChange(!slimNav) }
                 ),
                 Material3SettingsItem(
-                    icon = painterResource(R.drawable.dock_to_top),
+                    icon = painterResource(R.drawable.group_outlined),
                     title = { Text(stringResource(R.string.listen_together_in_top_bar)) },
                     description = { Text(stringResource(R.string.listen_together_in_top_bar_desc)) },
                     trailingContent = {

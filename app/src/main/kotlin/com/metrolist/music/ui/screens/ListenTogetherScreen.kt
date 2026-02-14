@@ -448,7 +448,7 @@ private fun HeaderSection(isInRoom: Boolean = false) {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                painter = painterResource(R.drawable.group_filled),
+                painter = painterResource(R.drawable.group_outlined),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(48.dp)
