@@ -130,6 +130,7 @@ import com.metrolist.music.constants.DefaultOpenTabKey
 import com.metrolist.music.constants.DisableScreenshotKey
 import com.metrolist.music.constants.DynamicThemeKey
 import com.metrolist.music.constants.EnableHighRefreshRateKey
+import com.metrolist.music.constants.ListenTogetherInTopBarKey
 import com.metrolist.music.constants.ListenTogetherUsernameKey
 import com.metrolist.music.constants.MiniPlayerBottomSpacing
 import com.metrolist.music.constants.MiniPlayerHeight
@@ -517,7 +518,14 @@ class MainActivity : ComponentActivity() {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val (previousTab, setPreviousTab) = rememberSaveable { mutableStateOf("home") }
 
-                val navigationItems = remember { Screens.MainScreens }
+                val (listenTogetherInTopBar) = rememberPreference(ListenTogetherInTopBarKey, defaultValue = false)
+                val navigationItems = remember(listenTogetherInTopBar) { 
+                    if (listenTogetherInTopBar) {
+                        Screens.MainScreens.filter { it != Screens.ListenTogether }
+                    } else {
+                        Screens.MainScreens
+                    }
+                }
                 val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
                 val (useNewMiniPlayerDesign) = rememberPreference(UseNewMiniPlayerDesignKey, defaultValue = true)
                 val defaultOpenTab = remember {
@@ -788,6 +796,14 @@ class MainActivity : ComponentActivity() {
                                                     painter = painterResource(R.drawable.stats),
                                                     contentDescription = stringResource(R.string.stats)
                                                 )
+                                            }
+                                            if (listenTogetherInTopBar) {
+                                                IconButton(onClick = { navController.navigate(Screens.ListenTogether.route) }) {
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.group_outlined),
+                                                        contentDescription = stringResource(R.string.together)
+                                                    )
+                                                }
                                             }
                                             IconButton(onClick = { showAccountDialog = true }) {
                                                 BadgedBox(badge = {

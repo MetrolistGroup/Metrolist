@@ -510,6 +510,8 @@
     <string name="listen_together_auto_approval_desc">Automatically approve join requests instead of reviewing them manually</string>
     <string name="listen_together_sync_volume">Sync host volume</string>
     <string name="listen_together_sync_volume_desc">Guests follow the host volume level</string>
+    <string name="listen_together_in_top_bar">Show in top bar</string>
+    <string name="listen_together_in_top_bar_desc">Show Listen Together button in top app bar instead of navigation bar</string>
     <string name="listen_together_description">Listen to music with your friends in real-time. Create a room to be the host or join an existing room with a code.</string>
     <string name="listen_together_background_disconnect_note">Note: You may get disconnected if you create a room while no music is playing and then switch to another app.</string>
     <string name="listen_together_not_configured">Listen Together is not configured. Please set up the server URL in Settings → Integrations → Listen Together.</string>
