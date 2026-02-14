@@ -469,7 +469,9 @@ object YouTube {
                     PlaylistPage.fromMusicResponsiveListItemRenderer(it)
                 } ?: emptyList(),
             songsContinuation = response.contents?.twoColumnBrowseResultsRenderer?.secondaryContents?.sectionListRenderer
-                ?.contents?.firstOrNull()?.musicPlaylistShelfRenderer?.contents?.getContinuation(),
+                ?.contents?.firstOrNull()?.musicPlaylistShelfRenderer?.contents?.getContinuation()
+                ?: response.contents?.twoColumnBrowseResultsRenderer?.secondaryContents?.sectionListRenderer
+                    ?.contents?.firstOrNull()?.musicPlaylistShelfRenderer?.continuations?.getContinuation(),
             continuation = response.contents?.twoColumnBrowseResultsRenderer?.secondaryContents?.sectionListRenderer
                 ?.continuations?.getContinuation()
         )
@@ -479,7 +481,6 @@ object YouTube {
         val response = innerTube.browse(
             client = WEB_REMIX,
             continuation = continuation,
-            browseId = "",
             setLogin = true
         ).body<BrowseResponse>()
 
@@ -488,13 +489,16 @@ object YouTube {
             ?.flatten()
             ?: emptyList()
 
+        val shelfContents: List<MusicShelfRenderer.Content> =
+            response.continuationContents?.musicPlaylistShelfContinuation?.contents ?: emptyList()
+
         val appendedContents: List<MusicShelfRenderer.Content> = response.onResponseReceivedActions
             ?.firstOrNull()
             ?.appendContinuationItemsAction
             ?.continuationItems
             .orEmpty()
 
-        val allContents = mainContents + appendedContents
+        val allContents = mainContents + shelfContents + appendedContents
 
         val songs = allContents
             .mapNotNull { content: MusicShelfRenderer.Content -> content.musicResponsiveListItemRenderer }
