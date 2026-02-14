@@ -1025,7 +1025,9 @@ fun AppearanceSettings(
                         Text(
                             when (sliderStyle) {
                                 SliderStyle.DEFAULT -> stringResource(R.string.default_)
-                                SliderStyle.WAVY -> stringResource(R.string.wavy)
+                                SliderStyle.WAVY -> if (squigglySlider) stringResource(R.string.squiggly) else stringResource(
+                                    R.string.wavy
+                                )
                                 SliderStyle.SLIM -> stringResource(R.string.slim)
                             }
                         )
