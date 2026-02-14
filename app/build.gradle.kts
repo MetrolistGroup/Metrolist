@@ -8,6 +8,7 @@ if (localPropertiesFile.exists()) {
 }
 plugins {
     id("com.android.application")
+    id("kotlin-android")
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.compose.compiler)
@@ -35,13 +36,13 @@ android {
 
         buildConfigField("String", "LASTFM_API_KEY", "\"$lastFmKey\"")
         buildConfigField("String", "LASTFM_SECRET", "\"$lastFmSecret\"")
-        
+
         // NDK configuration for vibra_fp library
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
         }
     }
-    
+
     externalNativeBuild {
         cmake {
             path("src/main/cpp/vibrafp/lib/CMakeLists.txt")
@@ -57,13 +58,13 @@ android {
             isDefault = true
             buildConfigField("Boolean", "CAST_AVAILABLE", "false")
         }
-        
+
         // GMS variant - with Google Cast support (requires Google Play Services)
         create("gms") {
             dimension = "variant"
             buildConfigField("Boolean", "CAST_AVAILABLE", "true")
         }
-        
+
         create("universal") {
             dimension = "abi"
             ndk {
