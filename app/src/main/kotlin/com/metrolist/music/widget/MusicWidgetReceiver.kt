@@ -27,11 +27,7 @@ class MusicWidgetReceiver : AppWidgetProvider() {
                 action = ACTION_UPDATE_WIDGET
             }
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(intent)
-                } else {
-                    context.startService(intent)
-                }
+                context.startService(intent)
             } catch (e: Exception) {
                 // Service might be restricted in background
             }
@@ -52,11 +48,7 @@ class MusicWidgetReceiver : AppWidgetProvider() {
                 action = ACTION_UPDATE_WIDGET
             }
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(intent)
-                } else {
-                    context.startService(intent)
-                }
+                context.startService(intent)
             } catch (e: Exception) {
                 // Service might be restricted in background
             }
@@ -76,7 +68,7 @@ class MusicWidgetReceiver : AppWidgetProvider() {
                 }
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        context.startForegroundService(serviceIntent)
+                        context.startService(serviceIntent)
                     } else {
                         context.startService(serviceIntent)
                     }
