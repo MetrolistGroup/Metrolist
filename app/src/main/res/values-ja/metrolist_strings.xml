@@ -113,7 +113,7 @@
     <string name="token_adv_login_description">高度なログイン方法です。ウェブポータルの代わりに、ログイントークンを直接入力・更新できます。複数のデバイスでのログインを高速化できます。無効な形式のトークンは使用できません</string>
     <string name="yt_sync">アカウントと自動で同期</string>
     <string name="more_content">その他のコンテンツ</string>
-    <string name="default_lib_chips">デフォルトのライブラリチップを変更</string>
+    <string name="default_lib_chips">デフォルトのライブラリタブを変更</string>
     <string name="set_quick_picks">ホームタブのおすすめの曲の基準</string>
     <string name="last_song_listened">最後に聴いた曲</string>
     <string name="intent_app_language_not_found">アプリの言語設定が見つかりません。手動で設定してください</string>
@@ -167,7 +167,7 @@
     <string name="starting_radio">ラジオを開始中</string>
     <string name="swipe_song_to_remove">スワイプしてプレイリストから曲を削除</string>
     <string name="show_uploaded_playlist">アップロード済みのプレイリストを表示</string>
-    <string name="edit_playlist_cover">プレイリストのカバーを編集</string>
+    <string name="edit_playlist_cover">カバー画像を変更</string>
     <string name="edit_playlist_cover_note">プレイリストのカバー画像を変更するには、アカウントが電話番号に紐付けられ、YouTube Musicで確認済みである必要があります。</string>
     <string name="edit_playlist_cover_note_wait">新しいカバー画像が反映するまでに時間がかかる場合があります。</string>
     <string name="choose_from_library">写真から選択</string>
@@ -249,8 +249,8 @@
     <string name="shuffle_playlist_first_desc">シャッフル再生時、プレイリストやアルバム内の曲をすべて再生したあとに似た曲を再生します</string>
     <string name="shuffle_playlist_first">プレイリスト/アルバムの曲を優先</string>
     <string name="show_wrapped_card">Wrappedカードを表示</string>
-    <string name="skip_silence_instant">無音部分をスキップ</string>
-    <string name="skip_silence_instant_desc">無音の部分は早送りせず、自動でスキップします</string>
+    <string name="skip_silence_instant">無音の部分をスキップ</string>
+    <string name="skip_silence_instant_desc">無音の部分は早送りせずに自動でスキップします</string>
     <string name="lyrics_romanize_chinese">中国語の歌詞にローマ字を追加</string>
     <string name="google_cast">Google Cast</string>
     <string name="logging_in">ログインしています…</string>
