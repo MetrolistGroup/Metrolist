@@ -83,7 +83,7 @@
     <string name="back_button_desc">Назад</string>
     <string name="no_title">Без назви</string>
     <string name="unknown_item_type">Невідомий тип елементів</string>
-    <string name="loading_charts">Завантаження діаграм…</string>
+    <string name="loading_charts">Завантаження чартiв…</string>
     <string name="retry_button">Спробуй ще раз</string>
     <string name="album_cover_desc">Обкладинка альбому</string>
     <string name="top_music_videos">Найкращі музичні відео</string>
