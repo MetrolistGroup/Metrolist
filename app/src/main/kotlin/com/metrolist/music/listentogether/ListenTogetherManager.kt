@@ -81,6 +81,10 @@ class ListenTogetherManager @Inject constructor(
     
     // Track active sync job to cancel it if a better update arrives
     private var activeSyncJob: Job? = null
+    
+    // Generation ID for track changes - incremented on each new track change
+    // Used to prevent old coroutines from overwriting newer track loads
+    private var currentTrackGeneration: Int = 0
 
     // Pending sync to apply after buffering completes for guest
     private var pendingSyncState: SyncStatePayload? = null
@@ -674,6 +678,7 @@ class ListenTogetherManager @Inject constructor(
         isSyncing = false
         bufferCompleteReceivedForTrack = null
         lastRole = RoomRole.NONE
+        ++currentTrackGeneration  // Increment to invalidate any pending track-change coroutines
     }
 
     private fun updateGuestMuteState() {
@@ -1030,7 +1035,14 @@ class ListenTogetherManager @Inject constructor(
         // If no track, just pause and clear/set queue
         if (currentTrack == null) {
             Timber.tag(TAG).d("No track in state, pausing")
+            val generation = ++currentTrackGeneration
             scope.launch(Dispatchers.Main) {
+                // Verify we're still on the same track generation (no newer track change arrived)
+                if (currentTrackGeneration != generation) {
+                    Timber.tag(TAG).d("Skipping stale track generation: $generation vs current $currentTrackGeneration")
+                    return@launch
+                }
+                
                 if (playerConnection !== connection) return@launch
                 isSyncing = true
                 connection.allowInternalSync = true
@@ -1053,13 +1065,26 @@ class ListenTogetherManager @Inject constructor(
         }
 
         bufferingTrackId = currentTrack.id
+        val generation = ++currentTrackGeneration
         
         scope.launch(Dispatchers.Main) {
+            // Verify we're still on the same track generation (no newer track change arrived)
+            if (currentTrackGeneration != generation) {
+                Timber.tag(TAG).d("Skipping stale track generation: $generation vs current $currentTrackGeneration (track ${currentTrack.id})")
+                return@launch
+            }
+            
             if (playerConnection !== connection) return@launch
             isSyncing = true
             connection.allowInternalSync = true
 
             try {
+                // Re-verify generation before applying media items (critical section)
+                if (currentTrackGeneration != generation) {
+                    Timber.tag(TAG).d("Stale generation detected before setMediaItems: $generation vs $currentTrackGeneration")
+                    return@launch
+                }
+                
                 // Apply queue/media (same)
                 if (queue != null && queue.isNotEmpty()) {
                     val mediaItems = queue.map { it.toMediaMetadata().toMediaItem() }
@@ -1150,14 +1175,29 @@ class ListenTogetherManager @Inject constructor(
 
         // Track which buffer-complete we expect for this load
         bufferingTrackId = track.id
+        val generation = currentTrackGeneration
         
         activeSyncJob?.cancel()
         activeSyncJob = scope.launch(Dispatchers.IO) {
             try {
+                // Check if a newer track change arrived - skip this load if stale
+                if (currentTrackGeneration != generation) {
+                    Timber.tag(TAG).d("Skipping stale syncToTrack for ${track.id} (generation $generation vs $currentTrackGeneration)")
+                    isSyncing = false
+                    return@launch
+                }
+                
                 // Use YouTube API to play the track by ID
                 YouTube.queue(listOf(track.id)).onSuccess { queue ->
                     Timber.tag(TAG).d("Got queue for track ${track.id}")
                     launch(Dispatchers.Main) {
+                        // Final generation check before applying changes
+                        if (currentTrackGeneration != generation) {
+                            Timber.tag(TAG).d("Skipping stale track application for ${track.id} (generation $generation vs $currentTrackGeneration)")
+                            isSyncing = false
+                            return@launch
+                        }
+                        
                         val connection = playerConnection ?: run {
                             isSyncing = false
                             return@launch
@@ -1185,6 +1225,12 @@ class ListenTogetherManager @Inject constructor(
                         // Wait for player to be ready - monitor actual player state
                         var waitCount = 0
                         while (waitCount < 40) { // Max 2 seconds (40 * 50ms)
+                            // Check generation again while waiting
+                            if (currentTrackGeneration != generation) {
+                                Timber.tag(TAG).d("Generation changed while waiting for player ready - aborting sync for ${track.id}")
+                                isSyncing = false
+                                return@launch
+                            }
                             try {
                                 val player = connection.player
                                 if (player.playbackState == Player.STATE_READY) {
