@@ -527,7 +527,6 @@
     <string name="crossfade_gapless">曲間のない曲では無効にする</string>
     <string name="crossfade_gapless_desc">曲間のない曲ではクロスフェードしません</string>
     <string name="audio_offload_disabled_by_crossfade">クロスフェードを使用中は有効にできません</string>
-    <string name="wrapped_year"></string>
     <string name="together">Together</string>
     <string name="ai_lyrics_translation">AI歌詞翻訳</string>
     <string name="ai_translating_lyrics">歌詞を翻訳中...</string>
