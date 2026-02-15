@@ -714,9 +714,13 @@ class MainActivity : ComponentActivity() {
 
                 var shouldShowTopBar by rememberSaveable { mutableStateOf(false) }
 
-                LaunchedEffect(navBackStackEntry) {
-                    shouldShowTopBar = navBackStackEntry?.destination?.route in topLevelScreens &&
-                        navBackStackEntry?.destination?.route != "settings"
+                LaunchedEffect(navBackStackEntry, listenTogetherInTopBar) {
+                    val currentRoute = navBackStackEntry?.destination?.route
+                    val isListenTogetherScreen = currentRoute == Screens.ListenTogether.route || 
+                        currentRoute == "listen_together_from_topbar"
+                    shouldShowTopBar = currentRoute in topLevelScreens &&
+                        currentRoute != "settings" &&
+                        !(isListenTogetherScreen && listenTogetherInTopBar)
                 }
 
                 val coroutineScope = rememberCoroutineScope()
@@ -798,7 +802,7 @@ class MainActivity : ComponentActivity() {
                                                 )
                                             }
                                             if (listenTogetherInTopBar) {
-                                                IconButton(onClick = { navController.navigate(Screens.ListenTogether.route) }) {
+                                                IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
                                                     Icon(
                                                         painter = painterResource(R.drawable.group_outlined),
                                                         contentDescription = stringResource(R.string.together)
