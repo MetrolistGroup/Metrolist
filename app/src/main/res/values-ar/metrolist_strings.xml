@@ -601,4 +601,13 @@
     <string name="ai_language_mismatch_desc">تخطي الترجمة إذا كانت كلمات الأغنية مكتوبة بلغة نظامك</string>
     <string name="play_all">تشغيل الكل</string>
     <string name="hold_to_recognize">اضغط مطولاً على أيقونة البحث للتعرف على الموسيقى</string>
+    <string name="enable">تفعيل</string>
+    <string name="crossfade">التلاشي المتقاطع</string>
+    <string name="crossfade_desc">انتقال تدريجي بين الأغاني</string>
+    <string name="crossfade_duration">مدة التلاشي التدريجي</string>
+    <string name="crossfade_gapless">تعطيل للألبومات بدون فواصل</string>
+    <string name="crossfade_gapless_desc">لا تقم بالتلاشي التدريجي إذا كان الألبوم بدون فواصل</string>
+    <string name="crossfade_beta_title">ميزة تجريبية</string>
+    <string name="crossfade_beta_message">التلاشي التدريجي ميزة جديدة وقد تحتوي على أخطاء إذا واجهت أي مشاكل يُرجى الإبلاغ عنها هذه الميزة تُعطّل إخراج الصوت بسبب قيود تقنية</string>
+    <string name="audio_offload_disabled_by_crossfade">معطل لأن التلاشي المتقاطع نشط</string>
 </resources>
