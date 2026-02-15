@@ -540,59 +540,81 @@ class SyncUtils @Inject constructor(
     }
 
     private suspend fun executeSyncUploadedSongs() = withContext(Dispatchers.IO) {
+        Timber.d("[UPLOAD_DEBUG] executeSyncUploadedSongs() started")
         if (!isLoggedIn()) {
-            Timber.w("Skipping syncUploadedSongs - user not logged in")
+            Timber.w("[UPLOAD_DEBUG] Skipping syncUploadedSongs - user not logged in")
             return@withContext
         }
+        Timber.d("[UPLOAD_DEBUG] User is logged in, proceeding with sync")
 
         updateState { copy(uploadedSongs = SyncStatus.Syncing, currentOperation = "Syncing uploaded songs") }
 
         withRetry {
-            YouTube.library("FEmusic_library_privately_owned_tracks").completed()
+            Timber.d("[UPLOAD_DEBUG] Calling YouTube.library(FEmusic_library_privately_owned_tracks, tabIndex=1)")
+            // Uploaded songs are in Tab 1 ("Uploads"), not Tab 0 ("Library")
+            YouTube.library("FEmusic_library_privately_owned_tracks", tabIndex = 1).completed()
         }.onSuccess { result ->
+            Timber.d("[UPLOAD_DEBUG] withRetry succeeded, result isSuccess=${result.isSuccess}")
             result.onSuccess { page ->
                 try {
+                    Timber.d("[UPLOAD_DEBUG] Page received, total items: ${page.items.size}")
+                    page.items.forEachIndexed { index, item ->
+                        Timber.d("[UPLOAD_DEBUG] Page item $index: type=${item::class.simpleName}, id=${(item as? SongItem)?.id ?: "N/A"}")
+                    }
                     val remoteSongs = page.items.filterIsInstance<SongItem>().reversed()
+                    Timber.d("[UPLOAD_DEBUG] Filtered to ${remoteSongs.size} SongItems")
+                    remoteSongs.forEachIndexed { index, song ->
+                        Timber.d("[UPLOAD_DEBUG] Remote song $index: id=${song.id}, title=${song.title}, artists=${song.artists.map { it.name }}")
+                    }
                     val remoteIds = remoteSongs.map { it.id }.toSet()
                     val localSongs = database.uploadedSongsByNameAsc().first()
+                    Timber.d("[UPLOAD_DEBUG] Local uploaded songs count: ${localSongs.size}")
 
-                    localSongs.filterNot { it.id in remoteIds }.forEach { song ->
+                    val songsToRemove = localSongs.filterNot { it.id in remoteIds }
+                    Timber.d("[UPLOAD_DEBUG] Songs to remove from uploaded: ${songsToRemove.size}")
+                    songsToRemove.forEach { song ->
                         try {
+                            Timber.d("[UPLOAD_DEBUG] Removing uploaded flag from: ${song.id}")
                             database.update(song.song.toggleUploaded())
                             delay(DB_OPERATION_DELAY_MS)
                         } catch (e: Exception) {
-                            Timber.e(e, "Failed to update song: ${song.id}")
+                            Timber.e(e, "[UPLOAD_DEBUG] Failed to update song: ${song.id}")
                         }
                     }
 
                     remoteSongs.forEach { song ->
                         try {
                             val dbSong = database.song(song.id).firstOrNull()
+                            Timber.d("[UPLOAD_DEBUG] Processing remote song ${song.id}: exists in db=${dbSong != null}, isUploaded=${dbSong?.song?.isUploaded}")
                             database.transaction {
                                 if (dbSong == null) {
+                                    Timber.d("[UPLOAD_DEBUG] Inserting new song: ${song.id}")
                                     insert(song.toMediaMetadata()) { it.toggleUploaded() }
                                 } else if (!dbSong.song.isUploaded) {
+                                    Timber.d("[UPLOAD_DEBUG] Updating existing song to uploaded: ${song.id}")
                                     update(dbSong.song.toggleUploaded())
+                                } else {
+                                    Timber.d("[UPLOAD_DEBUG] Song already marked as uploaded: ${song.id}")
                                 }
                             }
                             delay(DB_OPERATION_DELAY_MS)
                         } catch (e: Exception) {
-                            Timber.e(e, "Failed to process song: ${song.id}")
+                            Timber.e(e, "[UPLOAD_DEBUG] Failed to process song: ${song.id}")
                         }
                     }
 
                     updateState { copy(uploadedSongs = SyncStatus.Completed) }
-                    Timber.d("Synced ${remoteSongs.size} uploaded songs")
+                    Timber.d("[UPLOAD_DEBUG] Synced ${remoteSongs.size} uploaded songs successfully")
                 } catch (e: Exception) {
-                    Timber.e(e, "Error processing uploaded songs")
+                    Timber.e(e, "[UPLOAD_DEBUG] Error processing uploaded songs")
                     updateState { copy(uploadedSongs = SyncStatus.Error(e.message ?: "Unknown error")) }
                 }
             }.onFailure { e ->
-                Timber.e(e, "Failed to fetch uploaded songs from YouTube")
+                Timber.e(e, "[UPLOAD_DEBUG] Failed to fetch uploaded songs from YouTube")
                 updateState { copy(uploadedSongs = SyncStatus.Error(e.message ?: "Unknown error")) }
             }
         }.onFailure { e ->
-            Timber.e(e, "Failed to sync uploaded songs after retries")
+            Timber.e(e, "[UPLOAD_DEBUG] Failed to sync uploaded songs after retries")
             updateState { copy(uploadedSongs = SyncStatus.Error(e.message ?: "Unknown error")) }
         }
     }
