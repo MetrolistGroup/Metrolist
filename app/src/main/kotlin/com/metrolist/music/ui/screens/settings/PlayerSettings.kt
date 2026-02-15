@@ -300,8 +300,8 @@ fun PlayerSettings(
                                 Slider(
                                     value = crossfadeDuration,
                                     onValueChange = onCrossfadeDurationChange,
-                                    valueRange = 1f..12f,
-                                    steps = 11
+                                    valueRange = 1f..15f,
+                                    steps = 14
                                 )
                             }
                         }
