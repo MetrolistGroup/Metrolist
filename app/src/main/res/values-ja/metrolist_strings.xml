@@ -578,4 +578,7 @@
     <string name="column_label">列%d</string>
     <string name="csv_import_failed">CSVファイルのインポートに失敗しました</string>
     <string name="csv_preview_failed">CSVファイルのプレビューに失敗しました</string>
+    <string name="hide_youtube_shorts">YouTubeショートを非表示</string>
+    <string name="listen_together_in_top_bar">トップバーにListen Togetherを表示</string>
+    <string name="listen_together_in_top_bar_desc">Listen Togetherをナビゲーションバーから非表示にし、トップバーに表示します</string>
 </resources>
