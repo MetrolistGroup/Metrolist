@@ -582,20 +582,13 @@
     <string name="ai_base_url">Base URL</string>
     <string name="ai_api_key">API Key</string>
     <string name="ai_model">Model</string>
-    <string name="ai_auto_translate">Auto translate all songs</string>
-    <string name="ai_language_mismatch">Translate only on language mismatch</string>
     <string name="ai_translation_mode">Translation Mode</string>
     <string name="ai_target_language">Target Language</string>
-    <string name="ai_setup_guide">Setup Guide</string>
-    <string name="ai_setup_step_1">1. Select your Provider (e.g., OpenRouter, ChatGPT) or \'Custom\'.</string>
-    <string name="ai_setup_step_2">2. Enter your API Key.</string>
-    <string name="ai_setup_step_3">3. If \'Custom\', enter the Base URL provided by your service.</string>
-    <string name="ai_setup_api_need">Need an API Key? Try </string>
-    <string name="ai_setup_api_provider">OpenRouter.ai</string>
-    <string name="ai_setup_api_end"> for access to many models.</string>
-    <string name="ai_language_mismatch_desc">Skip translation if lyrics identify as your system language</string>
-    <string name="ai_translation_literal">Original + Translation</string>
-    <string name="ai_translation_transcribed">Original + Transcribed</string>
+    <string name="ai_setup_guide">API Credentials</string>
+    <string name="ai_translation_literal">Translation</string>
+    <string name="ai_translation_literal_desc">Translate meaning to target language</string>
+    <string name="ai_translation_transcribed">Transcription</string>
+    <string name="ai_translation_transcribed_desc">Convert pronunciation to target script</string>
     <string name="ai_api_key_required">API Key Required</string>
     <string name="ai_error_api_key_required">API key is required</string>
     <string name="ai_error_no_lyrics">No lyrics to translate</string>
@@ -604,6 +597,18 @@
     <string name="ai_error_unexpected">Unexpected translation result</string>
     <string name="ai_error_unknown">Unknown error occurred</string>
     <string name="ai_error_translation_failed">Translation failed</string>
+    <string name="ai_provider_help">Get API Keys</string>
+    <string name="ai_provider_openrouter_help">Visit openrouter.ai for free and paid models</string>
+    <string name="ai_provider_openai_help">Visit platform.openai.com/api-keys</string>
+    <string name="ai_provider_claude_help">Visit console.anthropic.com/settings/keys</string>
+    <string name="ai_provider_gemini_help">Visit aistudio.google.com/apikey</string>
+    <string name="ai_provider_perplexity_help">Visit perplexity.ai/settings/api</string>
+    <string name="ai_provider_xai_help">Visit console.x.ai</string>
+    <string name="ai_provider_deepl_help">Visit deepl.com/pro-api for free and paid keys</string>
+    <string name="ai_deepl_formality">Formality</string>
+    <string name="ai_deepl_formality_default">Default</string>
+    <string name="ai_deepl_formality_more">More Formal</string>
+    <string name="ai_deepl_formality_less">Less Formal</string>
     
     <!-- Crash Handler -->
     <string name="crash_title">App Crashed</string>

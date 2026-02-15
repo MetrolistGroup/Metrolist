@@ -70,8 +70,14 @@ import com.metrolist.music.ui.component.NewAction
 import com.metrolist.music.ui.component.NewActionGrid
 import com.metrolist.music.ui.component.TextFieldDialog
 import com.metrolist.music.viewmodels.LyricsMenuViewModel
-import com.metrolist.music.constants.AutoTranslateLyricsKey
 import com.metrolist.music.constants.OpenRouterApiKey
+import com.metrolist.music.constants.DeeplApiKey
+import com.metrolist.music.constants.AiProviderKey
+import com.metrolist.music.constants.TranslateLanguageKey
+import com.metrolist.music.constants.TranslateModeKey
+import com.metrolist.music.constants.OpenRouterBaseUrlKey
+import com.metrolist.music.constants.OpenRouterModelKey
+import com.metrolist.music.constants.DeeplFormalityKey
 import com.metrolist.music.lyrics.LyricsTranslationHelper
 import com.metrolist.music.utils.rememberPreference
 
@@ -88,8 +94,16 @@ fun LyricsMenu(
     val context = LocalContext.current
     val database = LocalDatabase.current
     
-    val autoTranslateLyrics by rememberPreference(AutoTranslateLyricsKey, false)
     val openRouterApiKey by rememberPreference(OpenRouterApiKey, "")
+    val deeplApiKey by rememberPreference(DeeplApiKey, "")
+    val aiProvider by rememberPreference(AiProviderKey, "OpenRouter")
+    val translateLanguage by rememberPreference(TranslateLanguageKey, "en")
+    val translateMode by rememberPreference(TranslateModeKey, "Literal")
+    val openRouterBaseUrl by rememberPreference(OpenRouterBaseUrlKey, "https://openrouter.ai/api/v1/chat/completions")
+    val openRouterModel by rememberPreference(OpenRouterModelKey, "google/gemini-2.5-flash-lite")
+    val deeplFormality by rememberPreference(DeeplFormalityKey, "default")
+
+    val hasApiKey = if (aiProvider == "DeepL") deeplApiKey.isNotBlank() else openRouterApiKey.isNotBlank()
 
     var showEditDialog by rememberSaveable {
         mutableStateOf(false)
@@ -416,8 +430,8 @@ fun LyricsMenu(
         item {
             Material3MenuGroup(
                 items = buildList {
-                    // Add "Translate with AI" option if auto-translate is disabled
-                    if (!autoTranslateLyrics && openRouterApiKey.isNotBlank()) {
+                    // Add "Translate with AI" option if API key is configured
+                    if (hasApiKey) {
                         add(
                             Material3MenuItemData(
                                 title = { Text(stringResource(R.string.ai_lyrics_translation)) },

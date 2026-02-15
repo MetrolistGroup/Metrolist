@@ -297,6 +297,5 @@ dependencies {
 
     coreLibraryDesugaring(libs.desugaring)
 
-    implementation(libs.mlkit.language.id)
     implementation(libs.timber)
 }

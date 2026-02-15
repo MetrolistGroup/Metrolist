@@ -34,7 +34,6 @@ materialKolor = "4.1.1"
 kuromojiIpadic = "0.9.0"
 newpipeextractor = "8885892764428a3f20eaec014dcc37a21cc209f5"
 tinypinyin = "2.0.3"
-mlkit = "17.0.6"
 protobuf = "4.33.5"
 
 [libraries]
@@ -113,7 +112,6 @@ newpipeextractor = { module = "com.github.mostafaalagamy:NewPipeExtractor", vers
 kuromoji-ipadic = { module = "com.atilika.kuromoji:kuromoji-ipadic", version.ref = "kuromojiIpadic" }
 tinypinyin = { module = "com.github.promeG:tinypinyin", version.ref = "tinypinyin" }
 
-mlkit-language-id = { module = "com.google.mlkit:language-id", version.ref = "mlkit" }
 protobuf-javalite = { module = "com.google.protobuf:protobuf-javalite", version.ref = "protobuf" }
 protobuf-kotlin-lite = { module = "com.google.protobuf:protobuf-kotlin-lite", version.ref = "protobuf" }
 
