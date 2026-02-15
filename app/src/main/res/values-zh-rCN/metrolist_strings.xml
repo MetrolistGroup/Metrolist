@@ -413,7 +413,7 @@
     <string name="listen_together_no_logs">还没有日志</string>
     <string name="listen_together_description">跨越距离，与好友实时共赏音乐。创建房间成为房主,或使用邀请码加入现有房间。</string>
     <string name="listen_together_background_disconnect_note">注意:如果在房间内没有播放音乐的情况下创建房间,然后切换到其他应用程序,则可能会断开连接.</string>
-    <string name="listen_together_not_configured">一起听尚未配置.请在“设置”→“集成”→“一起听”中设置服务器 URL.</string>
+    <string name="listen_together_not_configured">一起听尚未配置。请在“设置”→“集成”→“一起听”中设置服务器网址。</string>
     <string name="listen_together_suggestion_received">%1$s 请求 %2$s</string>
     <string name="listen_together_suggestion_sent">建议已发送给房主!</string>
     <string name="listen_together_join_request_notification">%1$s 人想要加入房间</string>
@@ -515,7 +515,7 @@
     <string name="widget_turntable">虚拟打碟台</string>
     <string name="reconnect">重新连接</string>
     <string name="enter_room_code">输入邀请码</string>
-    <string name="listen_together_settings_desc">配置服务器，用户名等</string>
+    <string name="listen_together_settings_desc">配置服务器、用户名等</string>
     <string name="ai_lyrics_translation">AI歌词翻译</string>
     <string name="ai_translating_lyrics">正在翻译歌词…</string>
     <string name="ai_lyrics_translated">歌词已翻译</string>
@@ -585,4 +585,7 @@
     <string name="crossfade_beta_title">测试功能</string>
     <string name="crossfade_beta_message">淡入淡出是一项新功能，可能存在错误。如果您遇到任何问题，请及时反馈。\n\n由于技术限制，此功能会禁用省电播放。</string>
     <string name="audio_offload_disabled_by_crossfade">因淡入淡出已启用而禁用</string>
+    <string name="hide_youtube_shorts">隐藏 YouTube Shorts 短视频</string>
+    <string name="listen_together_in_top_bar">在顶部栏显示“一起听”</string>
+    <string name="listen_together_in_top_bar_desc">在顶部应用栏显示“一起听”，而非在导航栏显示</string>
 </resources>
