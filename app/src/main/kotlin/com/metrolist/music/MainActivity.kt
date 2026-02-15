@@ -136,6 +136,7 @@ import com.metrolist.music.constants.MiniPlayerBottomSpacing
 import com.metrolist.music.constants.MiniPlayerHeight
 import com.metrolist.music.constants.NavigationBarAnimationSpec
 import com.metrolist.music.constants.NavigationBarHeight
+import com.metrolist.music.constants.PauseListenHistoryKey
 import com.metrolist.music.constants.PauseSearchHistoryKey
 import com.metrolist.music.constants.PureBlackKey
 import com.metrolist.music.constants.SYSTEM_DEFAULT
@@ -759,6 +760,12 @@ class MainActivity : ComponentActivity() {
 
                 var showAccountDialog by remember { mutableStateOf(false) }
 
+                val pauseListenHistory by rememberPreference(PauseListenHistoryKey, defaultValue = false)
+                val eventCount by database.eventCount().collectAsState(initial = 0)
+                val showHistoryButton = remember(pauseListenHistory, eventCount) {
+                    !(pauseListenHistory && eventCount == 0)
+                }
+
                 val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
 
                 CompositionLocalProvider(
@@ -789,11 +796,13 @@ class MainActivity : ComponentActivity() {
                                             )
                                         },
                                         actions = {
-                                            IconButton(onClick = { navController.navigate("history") }) {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.history),
-                                                    contentDescription = stringResource(R.string.history)
-                                                )
+                                            if (showHistoryButton) {
+                                                IconButton(onClick = { navController.navigate("history") }) {
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.history),
+                                                        contentDescription = stringResource(R.string.history)
+                                                    )
+                                                }
                                             }
                                             IconButton(onClick = { navController.navigate("stats") }) {
                                                 Icon(
