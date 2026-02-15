@@ -144,6 +144,8 @@
     <string name="show_uploaded_playlist">Show \"Uploaded\" playlist</string>
     <string name="shuffle_playlist_first">Shuffle playlist/album first</string>
     <string name="shuffle_playlist_first_desc">When shuffling, play all songs from the original playlist/album first, then similar content</string>
+    <string name="prevent_duplicate_tracks_in_queue">Prevent duplicate tracks in queue</string>
+    <string name="prevent_duplicate_tracks_in_queue_desc">When adding a track to queue, remove it from its previous position if already present</string>
     <string name="show_wrapped_card">Show Wrapped card</string>
     <string name="skip_silence_desc">Fast forward through silent parts of songs</string>
     <string name="skip_silence_instant">Instantly skip silence</string>

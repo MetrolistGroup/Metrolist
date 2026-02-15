@@ -55,6 +55,7 @@ import com.metrolist.music.constants.KeepScreenOn
 import com.metrolist.music.constants.PauseOnMute
 import com.metrolist.music.constants.PersistentQueueKey
 import com.metrolist.music.constants.PersistentShuffleAcrossQueuesKey
+import com.metrolist.music.constants.PreventDuplicateTracksInQueueKey
 import com.metrolist.music.constants.RememberShuffleAndRepeatKey
 import com.metrolist.music.constants.SeekExtraSeconds
 import com.metrolist.music.constants.ShufflePlaylistFirstKey
@@ -156,6 +157,10 @@ fun PlayerSettings(
     )
     val (shufflePlaylistFirst, onShufflePlaylistFirstChange) = rememberPreference(
         ShufflePlaylistFirstKey,
+        defaultValue = false
+    )
+    val (preventDuplicateTracksInQueue, onPreventDuplicateTracksInQueueChange) = rememberPreference(
+        PreventDuplicateTracksInQueueKey,
         defaultValue = false
     )
     val (stopMusicOnTaskClear, onStopMusicOnTaskClearChange) = rememberPreference(
@@ -652,6 +657,27 @@ fun PlayerSettings(
                         )
                     },
                     onClick = { onShufflePlaylistFirstChange(!shufflePlaylistFirst) }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.queue_music),
+                    title = { Text(stringResource(R.string.prevent_duplicate_tracks_in_queue)) },
+                    description = { Text(stringResource(R.string.prevent_duplicate_tracks_in_queue_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = preventDuplicateTracksInQueue,
+                            onCheckedChange = onPreventDuplicateTracksInQueueChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (preventDuplicateTracksInQueue) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onPreventDuplicateTracksInQueueChange(!preventDuplicateTracksInQueue) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.skip_next),
