@@ -32,7 +32,7 @@ junit = "4.13.2"
 timber = "5.0.1"
 materialKolor = "4.1.1"
 kuromojiIpadic = "0.9.0"
-newpipeextractor = "8885892764428a3f20eaec014dcc37a21cc209f5"
+newpipeextractor = "v0.25.2"
 tinypinyin = "2.0.3"
 mlkit = "17.0.6"
 protobuf = "4.33.5"
@@ -102,13 +102,13 @@ json = { module = "org.json:json", version.ref = "json" }
 
 brotli = { module = "org.brotli:dec", version.ref = "brotli" }
 
-desugaring = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugaring" }
+desugaring = { module = "com.android.tools:desugar_jdk_libs_nio", version.ref = "desugaring" }
 
 junit = { module = "junit:junit", version.ref = "junit" }
 
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 
-newpipeextractor = { module = "com.github.mostafaalagamy:NewPipeExtractor", version.ref = "newpipeextractor" }
+newpipeextractor = { module = "com.github.TeamNewPipe:NewPipeExtractor", version.ref = "newpipeextractor" }
 
 kuromoji-ipadic = { module = "com.atilika.kuromoji:kuromoji-ipadic", version.ref = "kuromojiIpadic" }
 tinypinyin = { module = "com.github.promeG:tinypinyin", version.ref = "tinypinyin" }
