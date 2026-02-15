@@ -600,4 +600,7 @@
     <string name="crossfade_beta_title">Бета-функция</string>
     <string name="crossfade_beta_message">Кроссфейд - новая функция, которая может работать нестабильно. Пожалуйста, сообщите нам, если столкнётесь с ошибками.\n\nЭта функция отключает аппаратное ускорение аудио из-за технических ограничений.</string>
     <string name="audio_offload_disabled_by_crossfade">Отключено, так как включён кроссфейд</string>
+    <string name="hide_youtube_shorts">Скрыть YouTube Shorts</string>
+    <string name="listen_together_in_top_bar">Совместное прослушивание в верхней панели</string>
+    <string name="listen_together_in_top_bar_desc">Показывать «Совместное прослушивание» на верхней панели вместо панели навигации</string>
 </resources>
