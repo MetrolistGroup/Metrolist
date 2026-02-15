@@ -600,4 +600,7 @@
     <string name="crossfade_beta_title">Beta funkce</string>
     <string name="crossfade_beta_message">Prolnutí je nová funkce, ve které se mohou vyskytnout chyby. Pokud na nějaké narazíte, prosíme nahlaste je.\n\nTato funkce zakáže offload zvuku z důvodu technických omezení.</string>
     <string name="audio_offload_disabled_by_crossfade">Zakázáno z důvodu aktivního prolnutí</string>
+    <string name="hide_youtube_shorts">Skrýt YouTube Shorts</string>
+    <string name="listen_together_in_top_bar">Společný poslech v horní liště</string>
+    <string name="listen_together_in_top_bar_desc">Zobrazit Společný poslech v horní liště namísto navigační lišty</string>
 </resources>
