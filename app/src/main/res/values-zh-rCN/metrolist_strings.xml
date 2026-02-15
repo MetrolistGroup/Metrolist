@@ -389,7 +389,7 @@
     <string name="decryption_library_newpipe_desc">TeamNewPipe 官方库。紧跟 YouTube 最新变化。推荐设为默认选项。请求失败时将自动切换至 PipePipe API。</string>
     <string name="decryption_library_pipepipe_api">PipePipe API</string>
     <string name="decryption_library_pipepipe_api_desc">基于 MetroExtractor 的 API 解密。速度更快，但依赖外部 API。请求失败时将自动切换至 NewPipe 模式。</string>
-    <string name="listen_together">同聆</string>
+    <string name="listen_together">一起听</string>
     <string name="listen_together_desc">跨越距离，与好友实时共赏音乐</string>
     <string name="listen_together_server_url">服务器网址</string>
     <string name="listen_together_username">用户名</string>
@@ -413,12 +413,12 @@
     <string name="listen_together_no_logs">还没有日志</string>
     <string name="listen_together_description">跨越距离，与好友实时共赏音乐。创建房间成为房主,或使用邀请码加入现有房间。</string>
     <string name="listen_together_background_disconnect_note">注意:如果在房间内没有播放音乐的情况下创建房间,然后切换到其他应用程序,则可能会断开连接.</string>
-    <string name="listen_together_not_configured">同聆尚未配置.请在“设置”→“集成”→“同聆”中设置服务器 URL.</string>
+    <string name="listen_together_not_configured">一起听尚未配置.请在“设置”→“集成”→“一起听”中设置服务器 URL.</string>
     <string name="listen_together_suggestion_received">%1$s 请求 %2$s</string>
     <string name="listen_together_suggestion_sent">建议已发送给房主!</string>
     <string name="listen_together_join_request_notification">%1$s 人想要加入房间</string>
-    <string name="listen_together_notification_channel_name">同聆</string>
-    <string name="listen_together_notification_channel_desc">“同聆”活动通知</string>
+    <string name="listen_together_notification_channel_name">一起听</string>
+    <string name="listen_together_notification_channel_desc">“一起听”活动通知</string>
     <string name="listen_together_room_created">房间创建成功 编号:%s</string>
     <string name="listen_together_cannot_edit_username_in_room">在房间内无法编辑用户名</string>
     <string name="waiting_for_approval">等待房主批准</string>
@@ -545,8 +545,8 @@
     <string name="ai_error_unknown">发生未知错误</string>
     <string name="ai_error_translation_failed">翻译失败</string>
     <string name="play_all">播放全部</string>
-    <string name="together">同聆</string>
-    <string name="ai_translation_transcribed">原文 + 逐字翻译</string>
+    <string name="together">一起听</string>
+    <string name="ai_translation_transcribed">原文 + 转写</string>
     <string name="recognize_music">识别音乐</string>
     <string name="youtube_url_column">YouTube 网址列（可选）</string>
     <string name="re_listen">重新识别</string>
