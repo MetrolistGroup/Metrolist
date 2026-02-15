@@ -595,4 +595,7 @@
     <string name="crossfade_beta_title">Funzioni beta</string>
     <string name="crossfade_beta_message">La dissolvenza incrociata è una funzione beta che potrebbe avere errori. Se ne trovi uno, per favore segnalalo.\n\nQuesta funzione disabilita l\'audio di scarico a causa di limitazioni tecniche.</string>
     <string name="audio_offload_disabled_by_crossfade">Disabilitato poiché è attiva la dissolvenza incrociata</string>
+    <string name="hide_youtube_shorts">Nascondi YouTube Shorts</string>
+    <string name="listen_together_in_top_bar">Ascolta insieme nella barra superiore</string>
+    <string name="listen_together_in_top_bar_desc">Mostra Ascolta insieme nella barra superiore dell\'app al posto di mostrarlo nella barra di navigazione</string>
 </resources>
