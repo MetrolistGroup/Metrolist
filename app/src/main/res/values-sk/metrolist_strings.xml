@@ -318,4 +318,16 @@
     <string name="enable_wavy_slider">Povoliť vlnitý posuvník</string>
     <string name="wavy">Vlnitý</string>
     <string name="google_cast">Google Cast</string>
+    <string name="enable_simpmusic">Povoliť texty piesní SimpMusic</string>
+    <string name="artist_page_settings">Stránka interpreta</string>
+    <string name="show_artist_description">Zobraziť popis interpreta</string>
+    <string name="crop_album_art">Orezať obal albumu</string>
+    <string name="show_artist_monthly_listeners">Zobraziť mesačných poslucháčov</string>
+    <string name="show_more">Ukázať viac</string>
+    <string name="crop_album_art_desc">Vynútenie štvorcového pomeru strán orezaním miniatúr videa</string>
+    <string name="enable_simpmusic_desc">Pre synchronizované texty piesní použite poskytovateľa textov SimpMusic</string>
+    <string name="show_artist_subscriber_count">Zobraziť počet odberateľov</string>
+    <string name="show_less">Ukázať menej</string>
+    <string name="about_artist">O umelcovi</string>
+    <string name="enable">Povoliť</string>
 </resources>
