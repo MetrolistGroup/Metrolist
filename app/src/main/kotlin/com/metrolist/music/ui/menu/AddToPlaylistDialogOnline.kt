@@ -61,7 +61,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.net.URLDecoder
-import java.nio.charset.StandardCharsets
 
 @Composable
 fun AddToPlaylistDialogOnline(
@@ -164,7 +163,7 @@ fun AddToPlaylistDialogOnline(
                                 var allArtists = ""
                                 song.artists.forEach {
                                         artist ->
-                                    allArtists += " ${URLDecoder.decode(artist.name, StandardCharsets.UTF_8.toString())}"
+                                    allArtists += " ${URLDecoder.decode(artist.name, "UTF-8")}"
                                 }
                                 val query = "${song.title} - $allArtists"
 
@@ -226,7 +225,7 @@ fun AddToPlaylistDialogOnline(
                                 var allArtists = ""
                                 song.artists.forEach {
                                         artist ->
-                                    allArtists += " ${URLDecoder.decode(artist.name, StandardCharsets.UTF_8.toString())}"
+                                    allArtists += " ${URLDecoder.decode(artist.name, "UTF-8")}"
                                 }
                                 val query = "${song.title} - $allArtists"
 
