@@ -590,4 +590,7 @@
     <string name="crossfade_beta_title">Beta Özellikleri</string>
     <string name="crossfade_beta_message">Çapraz geçiş yeni bir özelliktir ve hatalar içerebilir. Bir hata ile karşılaşırsanız lütfen bildirin.\n\nBu özellik, bazı teknik kısıtlamalar nedeniyle sesin donanıma devredilmesini devre dışı bırakır (ses, DSP yerine CPU üzerinde işlenir).</string>
     <string name="audio_offload_disabled_by_crossfade">Çapraz geçiş aktif olduğu için kapatıldı</string>
+    <string name="hide_youtube_shorts">YouTube Shorts\'u gizle</string>
+    <string name="listen_together_in_top_bar">Üst çubuktan Başkaları İle Dinle</string>
+    <string name="listen_together_in_top_bar_desc">Başkaları ile dinlemeyi navigasyon yerine üst çubukta göster</string>
 </resources>
