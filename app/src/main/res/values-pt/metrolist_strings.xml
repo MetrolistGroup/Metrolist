@@ -386,4 +386,5 @@
     <string name="turntable_widget_description">Acesso rápido para a tua faixa mais reproduzida recentemente</string>
     <string name="skip_silence_instant_desc">Saltar as partes silenciosas das músicas em vez de aumentar a velocidade</string>
     <string name="skip_silence_desc">Avançar durante as partes silenciosas das músicas</string>
+    <string name="enable">Habilitar</string>
 </resources>
