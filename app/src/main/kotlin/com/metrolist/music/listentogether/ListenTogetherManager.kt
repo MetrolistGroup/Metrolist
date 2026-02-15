@@ -47,6 +47,10 @@ class ListenTogetherManager @Inject constructor(
 ) {
     companion object {
         private const val TAG = "ListenTogetherManager"
+        // Debounce threshold for playback syncs - prevents excessive seeking/pausing
+        private const val SYNC_DEBOUNCE_THRESHOLD_MS = 200L
+        // Position tolerance - only seek if difference exceeds this (prevents micro-adjustments)
+        private const val POSITION_TOLERANCE_MS = 500L
     }
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -75,6 +79,9 @@ class ListenTogetherManager @Inject constructor(
     // Track the last state we synced to avoid duplicate events
     private var lastSyncedIsPlaying: Boolean? = null
     private var lastSyncedTrackId: String? = null
+    
+    // Track last sync action time for debouncing (prevents excessive seeking/pausing)
+    private var lastSyncActionTime: Long = 0L
     
     // Track ID being buffered
     private var bufferingTrackId: String? = null
@@ -678,6 +685,7 @@ class ListenTogetherManager @Inject constructor(
         isSyncing = false
         bufferCompleteReceivedForTrack = null
         lastRole = RoomRole.NONE
+        lastSyncActionTime = 0L  // Reset sync debouncing
         ++currentTrackGeneration  // Increment to invalidate any pending track-change coroutines
     }
 
@@ -704,17 +712,22 @@ class ListenTogetherManager @Inject constructor(
     /**
      * Restore the mute state that was saved when joining the room.
      * This is called when leaving the room to ensure the user's
-     * mute preference is restored (unmuted by default if they muted during session).
+     * mute preference is restored to what it was before joining Listen Together.
      */
     private fun restoreGuestMuteState() {
         val connection = playerConnection ?: return
         val savedState = previousMuteState
         
-        // If player is currently muted, unmute it when leaving Listen Together
-        // This addresses the issue where mute state persists after leaving
-        if (connection.isMuted.value) {
-            Timber.tag(TAG).d("Unmuting player on leave (was muted during Listen Together session)")
-            connection.setMuted(false)
+        if (savedState != null) {
+            Timber.tag(TAG).d("Restoring mute state on leave: was muted=$savedState, currently muted=${connection.isMuted.value}")
+            connection.setMuted(savedState)
+        } else {
+            // No saved state means we never properly saved (e.g., player wasn't ready on join)
+            // In this case, if currently muted, unmute as a fallback
+            if (connection.isMuted.value) {
+                Timber.tag(TAG).d("No saved mute state on leave, unmuting player as fallback")
+                connection.setMuted(false)
+            }
         }
         
         previousMuteState = null
@@ -800,16 +813,20 @@ class ListenTogetherManager @Inject constructor(
                         return
                     }
 
-                    // Seek first for precision, then play
-                    if (kotlin.math.abs(player.currentPosition - adjustedPos) > 100) {
+                    // Seek first for precision, then play (use larger position tolerance to reduce stuttering)
+                    if (kotlin.math.abs(player.currentPosition - adjustedPos) > POSITION_TOLERANCE_MS) {
                         connection.seekTo(adjustedPos)
+                        Timber.tag(TAG).d("Guest: PLAY seeking from ${player.currentPosition} to $adjustedPos (diff > ${POSITION_TOLERANCE_MS}ms)")
                     }
                     // Start playback immediately for tighter sync
                     connection.play()
+                    lastSyncActionTime = now
                 }
                 
                 PlaybackActions.PAUSE -> {
                     val pos = action.position ?: 0L
+                    val now = System.currentTimeMillis()
+                    
                     Timber.tag(TAG).d("Guest: PAUSE at position $pos")
 
                     if (bufferingTrackId != null) {
@@ -817,32 +834,51 @@ class ListenTogetherManager @Inject constructor(
                             currentTrack = roomState.value?.currentTrack,
                             isPlaying = false,
                             position = pos,
-                            lastUpdate = System.currentTimeMillis()
+                            lastUpdate = now
                         )).copy(
                             isPlaying = false,
                             position = pos,
-                            lastUpdate = System.currentTimeMillis()
+                            lastUpdate = now
                         )
                         applyPendingSyncIfReady()
                         return
                     }
 
-                    // Pause first, then seek for accuracy
+                    // Pause first, then seek for accuracy (use larger position tolerance)
                     connection.pause()
-                    if (kotlin.math.abs(player.currentPosition - pos) > 100) {
+                    if (kotlin.math.abs(player.currentPosition - pos) > POSITION_TOLERANCE_MS) {
                         connection.seekTo(pos)
+                        Timber.tag(TAG).d("Guest: PAUSE seeking from ${player.currentPosition} to $pos (diff > ${POSITION_TOLERANCE_MS}ms)")
                     }
+                    lastSyncActionTime = now
                 }
 
                 PlaybackActions.SEEK -> {
                     val pos = action.position ?: 0L
-                    Timber.tag(TAG).d("Guest: SEEK to $pos")
-                    connection.seekTo(pos)
+                    val now = System.currentTimeMillis()
+                    
+                    // Debounce SEEK actions - don't seek if one just happened
+                    if (now - lastSyncActionTime < SYNC_DEBOUNCE_THRESHOLD_MS) {
+                        Timber.tag(TAG).d("Guest: SEEK debounced (only ${now - lastSyncActionTime}ms since last sync)")
+                        return
+                    }
+                    
+                    // Use larger position tolerance
+                    if (kotlin.math.abs(player.currentPosition - pos) > POSITION_TOLERANCE_MS) {
+                        Timber.tag(TAG).d("Guest: SEEK to $pos from ${player.currentPosition} (diff > ${POSITION_TOLERANCE_MS}ms)")
+                        connection.seekTo(pos)
+                        lastSyncActionTime = now
+                    } else {
+                        Timber.tag(TAG).d("Guest: SEEK ignored (position diff < ${POSITION_TOLERANCE_MS}ms)")
+                    }
                 }
                 
                 PlaybackActions.CHANGE_TRACK -> {
                     action.trackInfo?.let { track ->
                         Timber.tag(TAG).d("Guest: CHANGE_TRACK to ${track.title}, queue size=${action.queue?.size}")
+                        
+                        // Reset sync debounce timer on track change - this is a fresh sync cycle
+                        lastSyncActionTime = 0L
                         
                         // If we have a queue, use it! This is the "smart" sync path.
                         if (action.queue != null && action.queue.isNotEmpty()) {
