@@ -115,11 +115,11 @@ class HomeViewModel @Inject constructor(
             QuickPicks.QUICK_PICKS -> {
                 val relatedSongs = database.quickPicks().first().filterVideoSongs(hideVideoSongs)
                 val forgotten = database.forgottenFavorites().first().filterVideoSongs(hideVideoSongs).take(8)
-                
+
                 // Get similar songs from YouTube based on recent listening
                 val recentSong = database.events().first().firstOrNull()?.song
                 val ytSimilarSongs = mutableListOf<Song>()
-                
+
                 if (recentSong != null) {
                     val endpoint = YouTube.next(WatchEndpoint(videoId = recentSong.id)).getOrNull()?.relatedEndpoint
                     if (endpoint != null) {
@@ -135,13 +135,13 @@ class HomeViewModel @Inject constructor(
                         }
                     }
                 }
-                
+
                 // Combine all sources and remove duplicates
                 val combined = (relatedSongs + forgotten + ytSimilarSongs)
                     .distinctBy { it.id }
                     .shuffled()
                     .take(20)
-                
+
                 quickPicks.value = combined.ifEmpty { relatedSongs.shuffled().take(20) }
             }
             QuickPicks.LAST_LISTEN -> {
@@ -216,7 +216,7 @@ class HomeViewModel @Inject constructor(
                         .ifEmpty { return@mapNotNull null }
                 )
             }
-        
+
         // Get recommendations from most played albums
         val albumRecommendations = database.mostPlayedAlbums(fromTimeStamp, limit = 10).first()
             .filter { it.album.thumbnailUrl != null }
@@ -244,13 +244,14 @@ class HomeViewModel @Inject constructor(
                         .ifEmpty { return@mapNotNull null }
                 )
             }
-        
+
         similarRecommendations.value = (artistRecommendations + songRecommendations + albumRecommendations).shuffled()
 
         YouTube.home().onSuccess { page ->
             homePage.value = page.copy(
-                sections = page.sections.map { section ->
-                    section.copy(items = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
+                sections = page.sections.mapNotNull { section ->
+                    val filteredItems = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts)
+                    if (filteredItems.isEmpty()) null else section.copy(items = filteredItems)
                 }
             )
         }.onFailure {
@@ -289,8 +290,9 @@ class HomeViewModel @Inject constructor(
 
             homePage.value = nextSections.copy(
                 chips = homePage.value?.chips,
-                sections = (homePage.value?.sections.orEmpty() + nextSections.sections).map { section ->
-                    section.copy(items = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
+                sections = (homePage.value?.sections.orEmpty() + nextSections.sections).mapNotNull { section ->
+                    val filteredItems = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts)
+                    if (filteredItems.isEmpty()) null else section.copy(items = filteredItems)
                 }
             )
             _isLoadingMore.value = false
@@ -359,7 +361,7 @@ class HomeViewModel @Inject constructor(
 
             load()
         }
-        
+
         // Run sync in separate coroutine with cooldown to avoid blocking UI
         viewModelScope.launch(Dispatchers.IO) {
             syncUtils.tryAutoSync()
@@ -391,17 +393,17 @@ class HomeViewModel @Inject constructor(
                 .collect { cookie ->
                     // Avoid processing if already processing
                     if (isProcessingAccountData) return@collect
-                    
+
                     // Always process cookie changes, even if same value (for logout/login scenarios)
                     lastProcessedCookie = cookie
                     isProcessingAccountData = true
-                    
+
                     try {
                         if (cookie != null && cookie.isNotEmpty()) {
-                            
+
                             // Update YouTube.cookie manually to ensure it's set
                             YouTube.cookie = cookie
-                            
+
                             // Fetch new account data
                             YouTube.accountInfo().onSuccess { info ->
                                 accountName.value = info.name
