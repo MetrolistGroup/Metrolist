@@ -1444,28 +1444,27 @@ fun AppearanceSettings(
                         )
                     },
                     onClick = { onShowCachedPlaylistChange(!showCachedPlaylist) }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.backup),
+                    title = { Text(stringResource(R.string.show_uploaded_playlist)) },
+                    trailingContent = {
+                        Switch(
+                            checked = showUploadedPlaylist,
+                            onCheckedChange = onShowUploadedPlaylistChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (showUploadedPlaylist) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onShowUploadedPlaylistChange(!showUploadedPlaylist) }
                 )
-                // Uploaded songs feature is temporarily disabled
-                // Material3SettingsItem(
-                //     icon = painterResource(R.drawable.backup),
-                //     title = { Text(stringResource(R.string.show_uploaded_playlist)) },
-                //     trailingContent = {
-                //         Switch(
-                //             checked = showUploadedPlaylist,
-                //             onCheckedChange = onShowUploadedPlaylistChange,
-                //             thumbContent = {
-                //                 Icon(
-                //                     painter = painterResource(
-                //                         id = if (showUploadedPlaylist) R.drawable.check else R.drawable.close
-                //                     ),
-                //                     contentDescription = null,
-                //                     modifier = Modifier.size(SwitchDefaults.IconSize)
-                //                 )
-                //             }
-                //         )
-                //     },
-                //     onClick = { onShowUploadedPlaylistChange(!showUploadedPlaylist) }
-                // )
             )
         )
         Spacer(modifier = Modifier.height(16.dp))
