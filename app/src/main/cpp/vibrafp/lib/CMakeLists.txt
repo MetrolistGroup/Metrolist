@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 project(vibra_fp LANGUAGES CXX)
 
-# ========== Options ==========
+# ========== Options ==========#
 option(ENABLE_LTO "Enable thin-LTO compile/link flags" ON)
 
 # Optional: user can pass -DFFTW3_PATH=/path/to/install-android-fftw
@@ -14,7 +14,7 @@ endif()
 
 message(STATUS "Project source dir: ${CMAKE_SOURCE_DIR}")
 
-# ========== Sources ==========
+# ========== Sources ==========#
 set(LIBVIBRA_SOURCES
         vibra.cpp
         vibra_jni.cpp
@@ -36,7 +36,7 @@ target_include_directories(vibra_fp
         ${CMAKE_SOURCE_DIR}/utils
 )
 
-# ========== FFTW detection and import ==========
+# ========== FFTW detection and import ==========#
 set(FFTW3_INCLUDE_DIR "")
 set(FFTW3_STATIC_LIB "")
 
@@ -67,9 +67,11 @@ if(ANDROID AND (NOT FFTW3_STATIC_LIB OR NOT EXISTS "${FFTW3_STATIC_LIB}"))
     endif()
 endif()
 
-## Create an IMPORTED target
+# Create an IMPORTED target
 if(FFTW3_STATIC_LIB AND EXISTS "${FFTW3_STATIC_LIB}")
-    add_library(fftw3_static STATIC IMPORTED GLOBAL)
+    if(NOT TARGET fftw3_static)
+        add_library(fftw3_static STATIC IMPORTED GLOBAL)
+    endif()
     set_target_properties(fftw3_static PROPERTIES
             IMPORTED_LOCATION "${FFTW3_STATIC_LIB}"
             INTERFACE_INCLUDE_DIRECTORIES "${FFTW3_INCLUDE_DIR}"
@@ -77,18 +79,20 @@ if(FFTW3_STATIC_LIB AND EXISTS "${FFTW3_STATIC_LIB}")
     message(STATUS "Using FFTW (imported static): ${FFTW3_STATIC_LIB}")
     target_link_libraries(vibra_fp PRIVATE fftw3_static)
 else()
-    message(FATAL_ERROR "FFTW3 static library not found. Build fftw and place prebuilt in third_party/fftw-android/<abi>.")
+    message(WARNING "FFTW3 static library not found. Configuration will continue, but build will fail if vibra_fp is compiled before FFTW is built. Expected location: ${FFTW3_STATIC_LIB}")
+    # Define a dummy macro to avoid compile errors in some headers if possible,
+    # though it's better to let the compiler fail if the library is missing during build.
 endif()
 
-# ========== C++ standard ==========
+# ========== C++ standard ==========#
 set_target_properties(vibra_fp PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED YES)
 
-# ========== Android system libs ==========
+# ========== Android system libs ==========#
 if (ANDROID)
     target_link_libraries(vibra_fp PRIVATE log m)
 endif()
 
-# ========== Compiler / Linker options ==========
+# ========== Compiler / Linker options ==========#
 # Common options (Release vs Debug)
 target_compile_options(vibra_fp PRIVATE
         $<$<CONFIG:Release>:-O2>
@@ -118,7 +122,7 @@ else()
     )
 endif()
 
-# ========== Limit exported symbols ==========
+# ========== Limit exported symbols ==========#
 set(VIBRA_EXPORT_SCRIPT "${CMAKE_SOURCE_DIR}/vibra.sym")
 if(EXISTS "${VIBRA_EXPORT_SCRIPT}")
     message(STATUS "Using version script: ${VIBRA_EXPORT_SCRIPT}")

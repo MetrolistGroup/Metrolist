@@ -6,20 +6,20 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # WEB_REMIX Streaming - WebView JavaScript interfaces
--keepclassmembers class com.metrolist.music.utils.sabr.EjsNTransformSolver$SolverWebView {
+-keepclassmembers class com.meowisai.music.utils.sabr.EjsNTransformSolver$SolverWebView {
     @android.webkit.JavascriptInterface public *;
 }
--keepclassmembers class com.metrolist.music.utils.cipher.CipherWebView {
+-keepclassmembers class com.meowisai.music.utils.cipher.CipherWebView {
     @android.webkit.JavascriptInterface public *;
 }
--keepclassmembers class com.metrolist.music.utils.potoken.PoTokenWebView {
+-keepclassmembers class com.meowisai.music.utils.potoken.PoTokenWebView {
     @android.webkit.JavascriptInterface public *;
 }
 
 # Keep streaming utility classes
--keep class com.metrolist.music.utils.cipher.** { *; }
--keep class com.metrolist.music.utils.sabr.** { *; }
--keep class com.metrolist.music.utils.potoken.** { *; }
+-keep class com.meowisai.music.utils.cipher.** { *; }
+-keep class com.meowisai.music.utils.sabr.** { *; }
+-keep class com.meowisai.music.utils.potoken.** { *; }
 
 # Keep coroutine continuation for WebView callbacks
 -keepclassmembers class * {
@@ -117,11 +117,11 @@
 
 ## Queue Persistence Rules
 # Keep queue-related classes to prevent serialization issues in release builds
--keep class com.metrolist.music.models.PersistQueue { *; }
--keep class com.metrolist.music.models.PersistPlayerState { *; }
--keep class com.metrolist.music.models.QueueData { *; }
--keep class com.metrolist.music.models.QueueType { *; }
--keep class com.metrolist.music.playback.queues.** { *; }
+-keep class com.meowisai.music.models.PersistQueue { *; }
+-keep class com.meowisai.music.models.PersistPlayerState { *; }
+-keep class com.meowisai.music.models.QueueData { *; }
+-keep class com.meowisai.music.models.QueueType { *; }
+-keep class com.meowisai.music.playback.queues.** { *; }
 
 # Keep serialization methods for queue persistence
 -keepclassmembers class * implements java.io.Serializable {
@@ -135,7 +135,7 @@
 -keep interface com.yalantis.ucrop** { *; }
 
 ## Google Cast Rules
--keep class com.metrolist.music.cast.** { *; }
+-keep class com.meowisai.music.cast.** { *; }
 -keep class com.google.android.gms.cast.** { *; }
 -keep class androidx.mediarouter.** { *; }
 
@@ -143,8 +143,8 @@
 -dontwarn com.google.re2j.**
 
 # Vibra fingerprint library
--keep class com.metrolist.music.recognition.VibraSignature { *; }
--keepclassmembers class com.metrolist.music.recognition.VibraSignature {
+-keep class com.meowisai.music.recognition.VibraSignature { *; }
+-keepclassmembers class com.meowisai.music.recognition.VibraSignature {
     native <methods>;
 }
 
@@ -159,16 +159,16 @@
 -dontwarn io.ktor.**
 
 ## Shazam Models
--keep class com.metrolist.shazamkit.models.** { *; }
--keepclassmembers class com.metrolist.shazamkit.models.** {
+-keep class com.meowisai.shazamkit.models.** { *; }
+-keepclassmembers class com.meowisai.shazamkit.models.** {
     *;
 }
 
 ## Kotlinx Serialization
 -keepattributes *Annotation*
--keepclassmembers class com.metrolist.shazamkit.models.** {
+-keepclassmembers class com.meowisai.shazamkit.models.** {
     *** Companion;
 }
--keepclasseswithmembers class com.metrolist.shazamkit.models.** {
+-keepclasseswithmembers class com.meowisai.shazamkit.models.** {
     kotlinx.serialization.KSerializer serializer(...);
 }

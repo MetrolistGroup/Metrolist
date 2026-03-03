@@ -78,7 +78,7 @@ if [[ -z "${NDK_DIR}" ]]; then
 fi
 
 NDK_DIR="$(realpath "${NDK_DIR}")"
-PREBUILD="$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64"
+PREBUILD="$NDK_DIR/toolchains/llvm/prebuilt/windows-x86_64"
 
 if [[ ! -d "$PREBUILD" ]]; then
   echo "ERROR: NDK toolchain not found at $PREBUILD"
@@ -221,26 +221,39 @@ for ARCH in "${ARCHS[@]}"; do
   mkdir -p "${INSTALL_DIR}"
 
   pushd "${BUILD_DIR}" >/dev/null
+  # THE PRE-OP VACCINE: Enforce /bin/sh before any files are generated
+  # THE PHYSIOLOGICAL BYPASS DEFINITION (Must be right here!)
+    SAFE_SHELL="C:/PROGRA~1/Git/usr/bin/sh.exe"
 
-  CONFIG_CMD=(
-    "${SRC_DIR}/configure"
-    --host="${TRIPLE}"
-    --prefix="${INSTALL_DIR}"
-    LIBS="-lc"
-    --enable-static
-    --disable-shared
-    --disable-fortran
-    --disable-maintainer-mode
-    --disable-debug
-  )
+    CONFIG_CMD=(
+      "${SRC_DIR}/configure"
+      --host="${TRIPLE}"
+      --prefix="${INSTALL_DIR}"
+      LIBS="-lc"
+      --enable-static
+      --disable-shared
+      --disable-fortran
+      --disable-maintainer-mode
+      --disable-debug
+      --disable-dependency-tracking
+      "CONFIG_SHELL=${SAFE_SHELL}"
+      "SHELL=${SAFE_SHELL}"
+    )
 
-  echo "Configuring: ${CONFIG_CMD[*]}"
-  "${CONFIG_CMD[@]}"
+    echo "Configuring: ${CONFIG_CMD[*]}"
+    "${SAFE_SHELL}" "${CONFIG_CMD[@]}"
 
-  echo "make -j${CPU_COUNT}"
-  make -j"${CPU_COUNT}"
-  make install
+    # --- THE LOBOTOMY (BINARY-SAFE) ---
+    echo "Severing the autoimmune recheck nerve..."
+    # Replace the restart command with a completely blank file
+    find . -name "Makefile" -exec sed -i 's|./config.status --recheck|/dev/null|g' {} +
 
+    MAKE_CMD="$NDK_DIR/prebuilt/windows-x86_64/bin/make.exe"
+
+    # Use 'echo' instead of 'true' so the Windows terminal doesn't choke
+    "$MAKE_CMD" -j"${CPU_COUNT}" SHELL="${SAFE_SHELL}" AUTOMAKE="echo" AUTOCONF="echo" ACLOCAL="echo" AUTOHEADER="echo" MAKEINFO="echo"
+
+    "$MAKE_CMD" install SHELL="${SAFE_SHELL}" AUTOMAKE="echo" AUTOCONF="echo" ACLOCAL="echo" AUTOHEADER="echo" MAKEINFO="echo"
   echo "Stripping static libs in ${INSTALL_DIR}/lib ..."
   set +e
   $STRIP --strip-unneeded "${INSTALL_DIR}/lib/"*.a 2>/dev/null || true

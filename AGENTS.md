@@ -1,6 +1,6 @@
-# Working with Metrolist as an AI agent
+# Working with Meowisai as an AI agent
 
-Metrolist is a 3rd party YouTube Music client written in Kotlin. It follows material 3 design guidelines closely.
+Meowisai is a 3rd party YouTube Music client written in Kotlin. It follows material 3 design guidelines closely.
 
 ## Rules for working on the project
 
@@ -14,7 +14,7 @@ Metrolist is a 3rd party YouTube Music client written in Kotlin. It follows mate
 3. Always pull the latest changes from `main` before starting your work to minimize merge conflicts.
 4. While working on your feature you should rebase your branch on top of the latest `main` at least once a day to ensure compatibility.
 5. Commit names should be clear and follow the format: `type(scope): short description`. For example: `feat(ui): add dark mode support`. Including the scope is optional.
-6. All string edits should be made to the `Metrolist/app/src/main/res/values/metrolist_strings.xml` file, NOT `Metrolist/app/src/main/res/values/strings.xml`. Do not touch other `strings.xml` or `metrolist_strings.xml` files in the project.
+6. All string edits should be made to the `Meowisai/app/src/main/res/values/meowisai_strings.xml` file, NOT `Meowisai/app/src/main/res/values/strings.xml`. Do not touch other `strings.xml` or `meowisai_strings.xml` files in the project.
 7. You are to follow best practices for Kotlin and Android development.
 
 ## AI-only guidelines

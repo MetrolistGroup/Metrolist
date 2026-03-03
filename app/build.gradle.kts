@@ -6,6 +6,31 @@ val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
 }
+
+// Task to build FFTW3 dependency
+tasks.register<Exec>("buildFftw") {
+    workingDir = file("src/main/cpp/vibrafp/third_party")
+    
+    // Ensure we pass the NDK path from Gradle to the script
+    // Note: On newer AGP versions, we can use the environment variable if defined in local.properties
+    val ndkDir = localProperties.getProperty("ndk.dir") ?: System.getenv("ANDROID_NDK_HOME") ?: ""
+    if (ndkDir.isNotEmpty()) {
+        environment("ANDROID_NDK_HOME", ndkDir)
+    }
+
+    // On Windows, 'bash' must be in PATH (usually provided by Git)
+    commandLine = listOf("bash", "-x", "./build-fftw-android.sh")
+    
+    // Make the task incremental: only run if script changes or output is missing
+    inputs.file(file("src/main/cpp/vibrafp/third_party/build-fftw-android.sh"))
+    outputs.dir(file("src/main/cpp/vibrafp/third_party/fftw-android"))
+}
+
+// Ensure FFTW3 is built before the main build process
+//tasks.named("preBuild") {
+//    dependsOn("buildFftw")
+//}
+
 plugins {
     id("com.android.application")
     alias(libs.plugins.hilt)
@@ -15,12 +40,12 @@ plugins {
 }
 
 android {
-    namespace = "com.metrolist.music"
+    namespace = "com.meowisai.music"
     compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     defaultConfig {
-        applicationId = "com.metrolist.music"
+        applicationId = "com.meowisai.music"
         minSdk = 26
         targetSdk = 36
         versionCode = 141
@@ -33,15 +58,14 @@ android {
         val lastFmKey = localProperties.getProperty("LASTFM_API_KEY") ?: System.getenv("LASTFM_API_KEY") ?: ""
         val lastFmSecret = localProperties.getProperty("LASTFM_SECRET") ?: System.getenv("LASTFM_SECRET") ?: ""
 
-        buildConfigField("String", "LASTFM_API_KEY", "\"$lastFmKey\"")
-        buildConfigField("String", "LASTFM_SECRET", "\"$lastFmSecret\"")
+        buildConfigField("String", "LASTFM_API_KEY", "\"\"$lastFmKey\"\"")
+        buildConfigField("String", "LASTFM_SECRET", "\"\"$lastFmSecret\"\"")
         
         // NDK configuration for vibra_fp library
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+            abiFilters += listOf("arm64-v8a")
         }
     }
-    
     externalNativeBuild {
         cmake {
             path("src/main/cpp/vibrafp/lib/CMakeLists.txt")
@@ -139,11 +163,8 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             isDebuggable = true
-            signingConfig = if (System.getenv("GITHUB_EVENT_NAME") == "pull_request") {
-                signingConfigs.getByName("debug")
-            } else {
-                signingConfigs.getByName("persistentDebug")
-            }
+            signingConfig = signingConfigs.getByName("debug")
+
             externalNativeBuild {
                 cmake {
                     arguments += listOf(

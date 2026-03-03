@@ -1,5 +1,5 @@
-# Metrolist Dev Guide
-This file outlines the process of setting up a local dev environment for Metrolist.
+# Meowisai Dev Guide
+This file outlines the process of setting up a local dev environment for Meowisai.
 
 ## Prerequisites
 - Java JDK 21
@@ -9,8 +9,8 @@ This file outlines the process of setting up a local dev environment for Metroli
 
 ## Basic setup
 ```bash
-git clone https://github.com/MetrolistGroup/Metrolist
-cd Metrolist
+git clone https://github.com/MeowisaiGroup/Meowisai
+cd Meowisai
 git submodule update --init --recursive
 cd app
 bash generate_proto.sh
