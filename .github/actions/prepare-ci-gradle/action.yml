@@ -1,0 +1,98 @@
+name: Prepare CI Gradle
+description: Configure JDK, Gradle caches, and CI-safe Gradle settings
+
+inputs:
+  java-architecture:
+    description: JDK architecture, or empty to use the runner architecture
+    required: false
+    default: ''
+  java-distribution:
+    description: JDK distribution; Temurin has no Windows ARM64 JDK 25
+    required: false
+    default: temurin
+  cache-strict-match:
+    description: Restore Gradle User Home only from the same job and matrix
+    required: false
+    default: 'false'
+  cache-scope:
+    description: >-
+      Stable identifier for this job's Gradle caches. Jobs that build different task graphs
+      must pass different scopes, otherwise they overwrite each other's cache entry.
+    required: true
+  cache-read-only:
+    description: Whether the Gradle caches should be read-only
+    required: false
+    default: 'false'
+  cache-encryption-key:
+    description: Encryption key used when storing Gradle configuration-cache entries
+    required: false
+    default: ''
+  persist-configuration-cache:
+    description: >-
+      Whether to keep the project-local configuration cache across runs. Must stay 'false' for
+      builds that read credentials at configuration time: those values are serialized into the
+      configuration cache, and nothing encrypts the Actions cache entry that holds it.
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    # Missing scopes would let jobs overwrite the same configuration-cache entry.
+    - name: Validate cache scope
+      shell: bash
+      env:
+        CACHE_SCOPE: ${{ inputs.cache-scope }}
+      run: test -n "$CACHE_SCOPE" || { echo "cache-scope is required" >&2; exit 1; }
+
+    - name: Set up JDK 25
+      uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+      with:
+        distribution: ${{ inputs.java-distribution }}
+        java-version: '25'
+        architecture: ${{ inputs.java-architecture }}
+
+    - name: Set up Gradle
+      uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
+      with:
+        cache-read-only: ${{ inputs.cache-read-only }}
+        cache-encryption-key: ${{ inputs.cache-encryption-key }}
+        gradle-home-cache-strict-match: ${{ inputs.cache-strict-match }}
+
+    - name: Fingerprint Gradle configuration inputs
+      id: configuration-fingerprint
+      shell: bash
+      env:
+        FINGERPRINT: ${{ hashFiles('**/*.gradle.kts', 'gradle.properties', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+      run: echo "value=$FINGERPRINT" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Gradle configuration cache
+      if: inputs.persist-configuration-cache != 'false' && inputs.cache-read-only != 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: .gradle/configuration-cache
+        key: gradle-configuration-cache-v1-${{ runner.os }}-${{ runner.arch }}-${{ inputs.cache-scope }}-${{ steps.configuration-fingerprint.outputs.value }}-${{ github.sha }}
+        restore-keys: |
+          gradle-configuration-cache-v1-${{ runner.os }}-${{ runner.arch }}-${{ inputs.cache-scope }}-${{ steps.configuration-fingerprint.outputs.value }}-
+
+    - name: Restore Gradle configuration cache (read-only)
+      if: inputs.persist-configuration-cache != 'false' && inputs.cache-read-only == 'true'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: .gradle/configuration-cache
+        key: gradle-configuration-cache-v1-${{ runner.os }}-${{ runner.arch }}-${{ inputs.cache-scope }}-${{ steps.configuration-fingerprint.outputs.value }}-${{ github.sha }}
+        restore-keys: |
+          gradle-configuration-cache-v1-${{ runner.os }}-${{ runner.arch }}-${{ inputs.cache-scope }}-${{ steps.configuration-fingerprint.outputs.value }}-
+
+    - name: Use CI JDK
+      shell: bash
+      run: sed '/^org.gradle.java.home=/d' gradle.properties > gradle.properties.tmp && mv gradle.properties.tmp gradle.properties
+
+    - name: Set Sentry upload behavior
+      shell: bash
+      run: echo "SENTRY_IGNORE_ERRORS=true" >> "$GITHUB_ENV"
+
+    - name: Grant execute permission for gradlew
+      if: runner.os != 'Windows'
+      shell: bash
+      run: chmod +x ./gradlew

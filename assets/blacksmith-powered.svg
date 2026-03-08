@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="226.80" height="28" role="img" aria-label="CI powered by Blacksmith">
+  <title>CI powered by Blacksmith</title>
+  <g shape-rendering="crispEdges">
+    <rect width="108.20" height="28" fill="#202020"/>
+    <rect x="108.20" width="118.60" height="28" fill="#F0FB29"/>
+  </g>
+  <g fill="#FFFFFF" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="100">
+    <text transform="scale(.1)" x="541.00" y="175" textLength="882.0" lengthAdjust="spacingAndGlyphs" font-weight="bold">CI POWERED BY</text>
+  </g>
+  <g fill="#202020" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="100">
+    <g transform="translate(118.20,7.00)">
+      <path d="M0 0H21V14H7.175A7.175 7.175 0 0 0 0 6.825V0Z"/>
+    </g>
+    <text transform="scale(.1)" x="1810.00" y="175" textLength="716.0" lengthAdjust="spacingAndGlyphs" font-weight="bold">BLACKSMITH</text>
+  </g>
+</svg>

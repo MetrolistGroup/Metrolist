@@ -1,0 +1,21 @@
+name: Cache native Rust toolchain
+description: Restore the pinned WebView compiler without allowing pull requests to save it
+inputs:
+  cache-read-only:
+    description: Restore without saving for untrusted builds
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Cache Rust compiler
+      if: inputs.cache-read-only != 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ~/.rustup/toolchains/1.99.1-*
+        key: rust-toolchain-v1-${{ runner.os }}-${{ runner.arch }}-1.99.1
+    - name: Restore Rust compiler
+      if: inputs.cache-read-only == 'true'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ~/.rustup/toolchains/1.99.1-*
+        key: rust-toolchain-v1-${{ runner.os }}-${{ runner.arch }}-1.99.1

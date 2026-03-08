@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/widget_secondary_container" />
+    <corners android:topLeftRadius="@dimen/widget_group_inner_radius" android:bottomLeftRadius="@dimen/widget_group_inner_radius" android:topRightRadius="100dp" android:bottomRightRadius="100dp" />
+</shape>

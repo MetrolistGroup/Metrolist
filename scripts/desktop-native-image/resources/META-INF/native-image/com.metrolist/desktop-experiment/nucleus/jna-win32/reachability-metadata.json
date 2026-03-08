@@ -1,0 +1,384 @@
+{
+  "reflection": [
+    {
+      "type": "com.sun.jna.platform.win32.Advapi32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Advapi32Util",
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Kernel32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.User32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Shell32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Ole32",
+      "allDeclaredMethods": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.W32APIOptions",
+      "allPublicFields": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinNT$HANDLE",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinNT$HRESULT",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.BaseTSD$ULONG_PTR",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$ATOM",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$HBRUSH",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$HCURSOR",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$HICON",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$HINSTANCE",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$HMODULE",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$HWND",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$LPARAM",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$LRESULT",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$POINT",
+      "fields": [
+        {
+          "name": "x"
+        },
+        {
+          "name": "y"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "com.sun.jna.Pointer"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$WPARAM",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinReg$HKEY",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinReg$HKEYByReference",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinUser$HHOOK",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinUser$LowLevelMouseProc",
+      "methods": [
+        {
+          "name": "callback",
+          "parameterTypes": [
+            "int",
+            "com.sun.jna.platform.win32.WinDef$WPARAM",
+            "com.sun.jna.platform.win32.WinUser$MSLLHOOKSTRUCT"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinUser$MSG",
+      "fields": [
+        {
+          "name": "hWnd"
+        },
+        {
+          "name": "lParam"
+        },
+        {
+          "name": "message"
+        },
+        {
+          "name": "pt"
+        },
+        {
+          "name": "time"
+        },
+        {
+          "name": "wParam"
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinUser$MSLLHOOKSTRUCT",
+      "fields": [
+        {
+          "name": "dwExtraInfo"
+        },
+        {
+          "name": "flags"
+        },
+        {
+          "name": "mouseData"
+        },
+        {
+          "name": "pt"
+        },
+        {
+          "name": "time"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinUser$WNDCLASSEX",
+      "fields": [
+        {
+          "name": "cbClsExtra"
+        },
+        {
+          "name": "cbSize"
+        },
+        {
+          "name": "cbWndExtra"
+        },
+        {
+          "name": "hCursor"
+        },
+        {
+          "name": "hIcon"
+        },
+        {
+          "name": "hIconSm"
+        },
+        {
+          "name": "hInstance"
+        },
+        {
+          "name": "hbrBackground"
+        },
+        {
+          "name": "lpfnWndProc"
+        },
+        {
+          "name": "lpszClassName"
+        },
+        {
+          "name": "lpszMenuName"
+        },
+        {
+          "name": "style"
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinUser$WindowProc",
+      "methods": [
+        {
+          "name": "callback",
+          "parameterTypes": [
+            "com.sun.jna.platform.win32.WinDef$HWND",
+            "int",
+            "com.sun.jna.platform.win32.WinDef$WPARAM",
+            "com.sun.jna.platform.win32.WinDef$LPARAM"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Guid$CLSID",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Guid$GUID",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Guid$GUID$ByReference",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Guid$IID",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Guid$REFIID",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.COM.Unknown",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Advapi32"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Kernel32"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.User32"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Shell32"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Ole32"
+        ]
+      }
+    }
+  ]
+}

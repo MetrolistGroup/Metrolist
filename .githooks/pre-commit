@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+git diff --cached --check
+python3 "$(dirname "$0")/../scripts/check_compose_resource_escapes.py" --staged

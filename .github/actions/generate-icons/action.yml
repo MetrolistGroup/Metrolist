@@ -1,0 +1,21 @@
+name: Generate installer icons
+description: Generate installer icons in an isolated Python environment
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python 3.15
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+      with:
+        python-version: '3.15'
+
+    - name: Generate installer icons
+      shell: bash
+      run: |
+        rm -rf "${RUNNER_TEMP}/metrolist-icon-venv"
+        python -m venv "${RUNNER_TEMP}/metrolist-icon-venv"
+        PYTHON="${RUNNER_TEMP}/metrolist-icon-venv/bin/python"
+        [[ -x "$PYTHON" ]] || PYTHON="${RUNNER_TEMP}/metrolist-icon-venv/Scripts/python.exe"
+        "$PYTHON" -m pip install \
+          --disable-pip-version-check --no-deps --no-cache-dir --only-binary=:all: Pillow==13.0.0
+        "$PYTHON" scripts/gen_icons.py

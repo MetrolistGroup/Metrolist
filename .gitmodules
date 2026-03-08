@@ -1,0 +1,6 @@
+[submodule "metroproto"]
+	path = metroproto
+	url = https://github.com/MetrolistGroup/metroproto.git
+[submodule "opusDecoder/src/main/jni/libopus"]
+	path = opusDecoder/src/main/jni/libopus
+	url = https://github.com/xiph/opus.git

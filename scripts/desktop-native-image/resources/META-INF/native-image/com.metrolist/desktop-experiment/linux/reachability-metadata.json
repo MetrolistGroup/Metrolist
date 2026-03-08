@@ -1,0 +1,137 @@
+{
+  "reflection": [
+    {
+      "type": "com.metrolist.desktop.utils.WindowMoveX11",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.metrolist.desktop.utils.WaylandScale$LibC",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.metrolist.desktop.utils.NativeMemoryTrimmer$LinuxAllocator",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.metrolist.desktop.web.LinuxWebViewCanvas$Gdk",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.metrolist.desktop.web.GLib",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.metrolist.shared.settings.LinuxSecretServiceWriter$Secret",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.metrolist.shared.settings.LinuxSecretServiceWriter$Glib",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.metrolist.shared.settings.LinuxSecretServiceWriter$Gio",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.metrolist.shared.settings.LinuxSecretServiceWriter$Gobject",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.metrolist.desktop.web.GtkTask",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.desktop.utils.WindowMoveX11"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.desktop.utils.WaylandScale$LibC"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.desktop.utils.NativeMemoryTrimmer$LinuxAllocator"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.desktop.web.LinuxWebViewCanvas$Gdk"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.desktop.web.GLib"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.shared.settings.LinuxSecretServiceWriter$Secret"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.shared.settings.LinuxSecretServiceWriter$Glib"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.shared.settings.LinuxSecretServiceWriter$Gio"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.shared.settings.LinuxSecretServiceWriter$Gobject"
+        ]
+      }
+    }
+  ]
+}

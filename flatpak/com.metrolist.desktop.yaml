@@ -1,0 +1,88 @@
+app-id: com.metrolist.desktop
+runtime: org.gnome.Platform
+runtime-version: "51"
+sdk: org.gnome.Sdk
+command: com.metrolist.desktop
+
+build-options:
+  env:
+    JAVA_HOME: /app/jdk
+  build-args:
+    - --share=network
+
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=x11
+  - --socket=pulseaudio
+  - --device=dri
+  - --talk-name=org.freedesktop.secrets
+  - --own-name=org.mpris.MediaPlayer2.metrolist
+  - --filesystem=xdg-download:rw
+  - --filesystem=xdg-music:rw
+
+modules:
+  - name: openjdk
+    buildsystem: simple
+    sources:
+      - type: archive
+        only-arches: [x86_64]
+        url: https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_x64_linux_hotspot_25.0.5_8.tar.gz
+        sha256: 68982529869257d0ee6b824ec5aa270ff8b118bb438670da0b97ebdab178d7fb
+        dest: jdk
+      - type: archive
+        only-arches: [aarch64]
+        url: https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_aarch64_linux_hotspot_25.0.5_8.tar.gz
+        sha256: bb5b2ded252f21c6090cf780b0a408ad0d83bbb557e702955643557f13231880
+        dest: jdk
+    build-commands:
+      - mkdir -p /app/jdk
+      - cp -r jdk/* /app/jdk/
+
+  - name: metrolist
+    buildsystem: simple
+    build-options:
+      env:
+        PATH: /app/jdk/bin:/usr/bin:/bin
+        JAVA_HOME: /app/jdk
+    sources:
+      - type: dir
+        path: ..
+        skip-if-not-changed: false
+      - type: file
+        path: com.metrolist.desktop.desktop
+      - type: file
+        path: com.metrolist.desktop.metainfo.xml
+      - type: file
+        path: com.metrolist.desktop.png
+      - type: file
+        path: com.metrolist.desktop.svg
+    build-commands:
+      - ./gradlew clean :desktopApp:verifyReleaseDistributableJars --no-daemon --no-build-cache --no-configuration-cache
+      - mkdir -p /app
+      - cp -r desktopApp/build/compose/binaries/main-release/app/Metrolist/* /app/
+      - |
+        cat > /app/bin/com.metrolist.desktop <<'LAUNCHER'
+        #!/bin/sh
+        export SKIKO_WAYLAND="${SKIKO_WAYLAND:-1}"
+        export GDK_BACKEND="${GDK_BACKEND:-x11}"
+        export _JAVA_AWT_WM_NONREPARENTING="${_JAVA_AWT_WM_NONREPARENTING:-1}"
+        export MALLOC_ARENA_MAX="${MALLOC_ARENA_MAX:-4}"
+        export WEBKIT_DISABLE_DMABUF_RENDERER=1
+        export WEBKIT_DISABLE_COMPOSITING_MODE=1
+        export LC_NUMERIC=C
+        DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+        exec "$DIR/Metrolist" "$@"
+        LAUNCHER
+      - chmod +x /app/bin/com.metrolist.desktop
+      - mkdir -p /app/share/metainfo
+      - |
+        APP_VERSION="$(grep '^appVersion=' gradle.properties | cut -d= -f2)"
+        BUILD_DATE="$(date +%Y-%m-%d)"
+        sed -e "s/@VERSION@/$APP_VERSION/" -e "s/@DATE@/$BUILD_DATE/" \
+          com.metrolist.desktop.metainfo.xml > /app/share/metainfo/com.metrolist.desktop.metainfo.xml
+      - install -Dm644 com.metrolist.desktop.desktop /app/share/applications/com.metrolist.desktop.desktop
+      - install -Dm644 com.metrolist.desktop.png /app/share/icons/hicolor/512x512/apps/com.metrolist.desktop.png
+      - install -Dm644 com.metrolist.desktop.svg /app/share/icons/hicolor/scalable/apps/com.metrolist.desktop.svg
+    cleanup:
+      - /jdk

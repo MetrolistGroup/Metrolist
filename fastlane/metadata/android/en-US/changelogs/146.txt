@@ -1,0 +1,7 @@
+v13.4.2
+Maintenance mode: bug fixes and minor improvements only.
+- Fixed crashes, memory leaks, song uploads and playback
+- EQ redesign and guided AutoEQ profile import
+- Auto database backups before updates
+- Improved Android Auto; Listen Together fix
+- Account picker on login restored; lyrics fetch improvements

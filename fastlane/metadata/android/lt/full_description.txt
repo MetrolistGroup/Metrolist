@@ -1,0 +1,23 @@
+„YouTube Music” grotuvas, naudojantis „Material 3”, skirtas „Android”
+
+Funkcijos:
+
+- Grok bet kokią dainą ar klipą iš „YT Music” 
+- Grojimas fone 
+- Suasmeninti greitieji pasiūlymai
+- Bibliotekos tvarkymas.
+- Atsisiųsk arba išsaugok podėlyje dainas klausymui be ryšio
+- Ieškok dainų, albumų, kūrėjų ir grojaraščių
+- Dainų tekstas tiesiogiai.
+- „YouTube Music” paskyros prijungimo palaikymas
+- Dainų, albumų, kūrėjų ir grojaraščių sinchronizacija iš ir į tavo paskyrą
+- Tylos praleidimas.
+- Grojaraščių įkėlimas.
+- Garso normalizacija.
+- Tempo ir garso aukščio reguliavimas.
+- Vietinių grojaraščių tvarkymas
+- Dainų tvarkos keitimas grojaraštyje arba grojimo eilėje.
+- Šviesioji - Tamsioji - Juodoji - Prisitaikanti tema
+- Miego laikmatis
+- „Material 3”.
+- ir daugiau.

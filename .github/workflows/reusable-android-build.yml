@@ -1,0 +1,251 @@
+name: Reusable Android Build
+
+on:
+  workflow_call:
+    inputs:
+      run-verification:
+        description: Run tests and launch checks, disabled only after the release gate succeeds
+        required: false
+        default: true
+        type: boolean
+      variant:
+        description: Android build variant
+        required: false
+        default: debug
+        type: string
+      upload-artifact:
+        description: Upload the APK as a workflow artifact
+        required: false
+        default: false
+        type: boolean
+      artifact-name:
+        description: Workflow artifact name
+        required: false
+        default: android-build
+        type: string
+      staging-release-tag:
+        description: Draft release tag used for cross-job package handoff
+        required: false
+        default: ''
+        type: string
+      cache-read-only:
+        description: Keep the Gradle cache read-only
+        required: false
+        default: false
+        type: boolean
+      require-signing:
+        description: Fail unless the release APK is signed
+        required: false
+        default: false
+        type: boolean
+      upload-sentry:
+        description: Require Sentry credentials and upload release mappings
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      GRADLE_ENCRYPTION_KEY:
+        required: false
+      KEYSTORE_PATH:
+        required: false
+      KEYSTORE_PASSWORD:
+        required: false
+      KEY_ALIAS:
+        required: false
+      KEY_PASSWORD:
+        required: false
+      SENTRY_AUTH_TOKEN:
+        required: false
+      LASTFM_API_KEY:
+        required: false
+      LASTFM_SECRET:
+        required: false
+      LYPRIO_BASE_URL:
+        required: false
+      LYPRIO_HMAC_KEY:
+        required: false
+
+jobs:
+  build:
+    name: APK
+    runs-on: ${{ inputs.variant == 'release' && 'blacksmith-8vcpu-ubuntu-2604' || 'blacksmith-4vcpu-ubuntu-2604' }}
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Validate Compose resources and APK collection
+        if: inputs.run-verification
+        run: |
+          python3 scripts/check_compose_resource_escapes.py
+          python3 -m unittest discover -s scripts -p 'test_collect_android_apks.py'
+
+      - name: Validate build configuration
+        id: config
+        shell: bash
+        env:
+          BUILD_VARIANT: ${{ inputs.variant }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          UPLOAD_SENTRY: ${{ inputs.upload-sentry }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+          LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ "$BUILD_VARIANT" != "debug" && "$BUILD_VARIANT" != "release" ]]; then
+            echo "Unsupported Android variant: $BUILD_VARIANT" >&2
+            exit 1
+          fi
+
+          version=""
+          while IFS='=' read -r key value; do
+            if [[ "$key" == "appVersion" ]]; then
+              version="$value"
+              break
+            fi
+          done < gradle.properties
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9][A-Za-z0-9._-]*)?$ ]] || {
+            echo "Invalid appVersion: $version" >&2
+            exit 1
+          }
+
+          if [[ "$UPLOAD_SENTRY" == "true" ]]; then
+            test -n "$SENTRY_AUTH_TOKEN" || { echo "SENTRY_AUTH_TOKEN is required when Sentry upload is enabled" >&2; exit 1; }
+          fi
+          if [[ "$BUILD_VARIANT" == "release" ]]; then
+            test -n "$LASTFM_API_KEY" || { echo "LASTFM_API_KEY is required for release builds" >&2; exit 1; }
+            test -n "$LASTFM_SECRET" || { echo "LASTFM_SECRET is required for release builds" >&2; exit 1; }
+            test -n "$LYPRIO_BASE_URL" || { echo "LYPRIO_BASE_URL is required for release builds" >&2; exit 1; }
+            test -n "$LYPRIO_HMAC_KEY" || { echo "LYPRIO_HMAC_KEY is required for release builds" >&2; exit 1; }
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare CI Gradle
+        uses: ./.github/actions/prepare-ci-gradle
+        with:
+          # Separate task graphs need separate configuration-cache entries.
+          cache-scope: android-${{ inputs.variant }}
+          cache-read-only: ${{ inputs.cache-read-only }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          persist-configuration-cache: 'false'
+
+      - name: Test Android string generation
+        if: inputs.run-verification && inputs.variant == 'debug'
+        run: python3 scripts/test_generate_android_strings.py
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+        with:
+          packages: platform-tools
+
+      - name: Prepare Android signing
+        if: inputs.variant == 'release'
+        id: signing
+        uses: ./.github/actions/prepare-android-signing
+        env:
+          KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Require Android signing
+        if: inputs.variant == 'release' && inputs.require-signing && steps.signing.outputs.signing_available != 'true'
+        shell: bash
+        run: |
+          echo "Android release signing credentials are required" >&2
+          exit 1
+
+      - name: Build Android
+        shell: bash
+        env:
+          BUILD_VARIANT: ${{ inputs.variant }}
+          VERIFICATION_ONLY: ${{ inputs.variant == 'debug' && !inputs.upload-artifact && inputs.staging-release-tag == '' }}
+          KEYSTORE_PATH: ${{ steps.signing.outputs.keystore_path }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+          LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+        run: |
+          set -euo pipefail
+          extra_args=()
+          if [[ "$VERIFICATION_ONLY" == "true" ]]; then
+            extra_args+=(-Pmetrolist.sourceRevision=)
+          fi
+          if [[ "$BUILD_VARIANT" == "release" ]]; then
+            tasks=(":androidApp:assembleRelease")
+            # Matches persist-configuration-cache above: keep credentials out of the entry.
+            extra_args=(--no-configuration-cache)
+            # Keep lint tasks registered for verification; skip release analysis after debug lint passes.
+            extra_args+=(-x :androidApp:lintVitalRelease)
+          else
+            tasks=(
+              ":androidApp:assembleDebug"
+              ":androidApp:lintDebug"
+              ":androidApp:testDebugUnitTest"
+              ":shared:testAndroidHostTest"
+              ":androidApp:ktlintCheck"
+            )
+          fi
+          ./gradlew "${tasks[@]}" --no-daemon "${extra_args[@]}"
+
+      - name: Upload lint report
+        if: failure() && inputs.variant == 'debug'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: android-lint-report
+          path: androidApp/build/reports/lint*
+          if-no-files-found: ignore
+          retention-days: 4
+
+      - name: Collect APK
+        id: apk
+        shell: bash
+        env:
+          BUILD_VARIANT: ${{ inputs.variant }}
+          APP_VERSION: ${{ steps.config.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 scripts/collect_android_apks.py \
+            "androidApp/build/outputs/apk/$BUILD_VARIANT" dist "$APP_VERSION" "$BUILD_VARIANT"
+          if [[ "$BUILD_VARIANT" == release ]]; then
+            cp androidApp/build/outputs/mapping/release/mapping.txt dist/Metrolist-KMP-mapping.txt
+          fi
+
+      - name: Verify APK signature
+        if: inputs.variant == 'release' && inputs.require-signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          apksigners=("$ANDROID_HOME"/build-tools/*/apksigner)
+          test -x "${apksigners[-1]}" || { echo "apksigner was not found" >&2; exit 1; }
+          for apk in dist/*.apk; do
+            "${apksigners[-1]}" verify --verbose --print-certs "$apk"
+          done
+
+      - name: Upload Android artifact
+        if: inputs.upload-artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: |
+            dist/*.apk
+            dist/*-mapping.txt
+          if-no-files-found: error
+          retention-days: 4
+
+      - name: Upload Android staging asset
+        if: inputs.staging-release-tag != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STAGING_RELEASE_TAG: ${{ inputs.staging-release-tag }}
+        run: gh release upload "$STAGING_RELEASE_TAG" dist/*.apk --clobber --repo "$GITHUB_REPOSITORY"

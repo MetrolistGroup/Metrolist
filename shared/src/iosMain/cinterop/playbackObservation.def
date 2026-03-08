@@ -1,0 +1,12 @@
+package = com.metrolist.shared.playback.observation
+language = Objective-C
+---
+#import <Foundation/Foundation.h>
+
+// Expose NSObject's KVO category callback as an overridable Kotlin protocol method.
+@protocol MetrolistKeyValueObserver
+- (void)observeValueForKeyPath:(NSString * _Nullable)keyPath
+                    ofObject:(id _Nullable)object
+                      change:(NSDictionary<NSKeyValueChangeKey, id> * _Nullable)change
+                     context:(void * _Nullable)context;
+@end

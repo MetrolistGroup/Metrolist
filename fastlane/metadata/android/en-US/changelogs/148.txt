@@ -1,0 +1,9 @@
+v13.5.0
+Maintenance mode: bug fixes and minor improvements only.
+- Rewrote Discord RPC integration
+- Fixed random playback pauses
+- Fixed liked songs, playlists, albums, search display
+- Toggle for automatic radio queue generation
+- Automatic tablet UI scaling
+- Repeat(1) to repeat(all) after song change
+- Fixed covers, artist names, crashes, normalization, history sync

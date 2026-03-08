@@ -1,0 +1,23 @@
+Material 3 YouTube Music aplikazioa Android-erako
+
+Ezaugarriak:
+
+- YT Music-eko edozein abesti edo bideo erreproduzitu
+- Atzeko planoan erreprodukzioa
+- Aukera azkarrak pertsonalizatuta
+- Liburutegiaren kudeaketa
+- Abestiak deskargatu eta cachean gorde lineaz kanpoko erreprodukziorako
+- Abestiak, albumak, artistak, bideoak eta zerrenda erreproduzigarriak bilatu
+- Letrak zuzenean
+- YouTube Music kontuarekin saioa hasteko euskarria
+- Abestiak, artistak, albumak eta zerrenda erreproduzigarriak zure kontuarekin sinkronizatzea (eta alderantziz)
+- Isiltasuna saltatu
+- Zerrenda erreproduzigarriak inportatu
+- Audioa normalizatzea
+- Tenpoa/tinbrea doitzea
+- Tokiko zerrenda erreproduzigarriak kudeatzea
+- Zerrenda edo ilarako abestiak berrantolatzea
+- Argi - Ilun - Beltz - Dinamiko gaiak
+- Lo-ordutegia
+- Material 3
+- eta abar.

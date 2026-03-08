@@ -1,0 +1,5 @@
+v13.2.1
+WARNING: Listen Together does not work in v13.2.1. Use v13.2.0 if needed.
+- Fixed interface lag
+- Fixed navigate local playlists pinned in speed dial
+- Removed "cache songs only after playback has started" option

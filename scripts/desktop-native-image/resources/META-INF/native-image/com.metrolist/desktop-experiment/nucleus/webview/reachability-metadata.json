@@ -1,0 +1,305 @@
+{
+  "reflection": [
+    {
+      "type": "dev.nucleusframework.webview.wry.IntegrityCheckingUniffiLib",
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "jniAccessible": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiLib",
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "jniAccessible": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.ForeignBytesStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.ForeignBytesStruct$ByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.RustBufferStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.RustBufferStruct$ByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.RustBufferStruct$ByReference",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiCallbackInterfaceFree",
+      "methods": [
+        {
+          "name": "callback",
+          "parameterTypes": [
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiCallbackInterfaceJavaScriptCallbackMethod0",
+      "methods": [
+        {
+          "name": "callback",
+          "parameterTypes": [
+            "long",
+            "dev.nucleusframework.webview.wry.RustBufferStruct$ByValue",
+            "com.sun.jna.Pointer",
+            "dev.nucleusframework.webview.wry.UniffiRustCallStatusStruct$ByReference"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiCallbackInterfaceNativeLoggerMethod0"
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiCallbackInterfaceNavigationHandlerMethod0",
+      "methods": [
+        {
+          "name": "callback",
+          "parameterTypes": [
+            "long",
+            "dev.nucleusframework.webview.wry.RustBufferStruct$ByValue",
+            "com.sun.jna.ptr.ByteByReference",
+            "dev.nucleusframework.webview.wry.UniffiRustCallStatusStruct$ByReference"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiRustCallStatusStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiRustCallStatusStruct$ByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiRustCallStatusStruct$ByReference",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStruct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructF32Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructF32Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructF64Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructF64Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructI8Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructI8Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructI16Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructI16Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructI32Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructI32Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructI64Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructI64Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructU8Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructU8Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructU16Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructU16Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructU32Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructU32Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructU64Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructU64Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructPointerStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructPointerStruct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructRustBufferStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructRustBufferStruct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructVoidStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiForeignFutureStructVoidStruct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiVTableCallbackInterfaceJavaScriptCallbackStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiVTableCallbackInterfaceJavaScriptCallbackStruct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiVTableCallbackInterfaceNativeLoggerStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiVTableCallbackInterfaceNativeLoggerStruct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiVTableCallbackInterfaceNavigationHandlerStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.UniffiVTableCallbackInterfaceNavigationHandlerStruct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.WryWebViewPanel"
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.uniffiCallbackInterfaceJavaScriptCallback$onResult"
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.uniffiCallbackInterfaceJavaScriptCallback$uniffiFree"
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.uniffiCallbackInterfaceNativeLogger$handleLog"
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.uniffiCallbackInterfaceNativeLogger$uniffiFree"
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.uniffiCallbackInterfaceNavigationHandler$handleNavigation"
+    },
+    {
+      "type": "dev.nucleusframework.webview.wry.uniffiCallbackInterfaceNavigationHandler$uniffiFree"
+    }
+  ],
+  "resources": [
+    {
+      "glob": "linux-x86-64/libcomposewebview_wry.so"
+    },
+    {
+      "glob": "darwin-x86-64/libcomposewebview_wry.dylib"
+    },
+    {
+      "glob": "darwin-aarch64/libcomposewebview_wry.dylib"
+    },
+    {
+      "glob": "win32-x86-64/composewebview_wry.dll"
+    }
+  ]
+}

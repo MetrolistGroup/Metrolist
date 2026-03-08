@@ -1,0 +1,7 @@
+v13.6.2
+- Fixed playback issues from YouTube player changes
+- Fixed playlist sync duplication and OOM crashes
+- Improved automatic player configuration updates
+- KMP update/migration handling
+- Android Auto voice search and radio queue improvements
+- Fixed podcasts, crossfade timing, background linger, shuffle

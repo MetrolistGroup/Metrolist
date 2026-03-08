@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="startup_background">@android:color/background_dark</color>
+    <color name="widget_text_primary">@color/widget_on_surface</color>
+    <color name="widget_text_secondary">@color/widget_on_surface_variant</color>
+</resources>

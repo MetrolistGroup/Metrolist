@@ -1,0 +1,37 @@
+name: Select CI checks
+description: Apply the shared platform path rules to the event diff
+outputs:
+  arch:
+    description: Verify Arch packaging inputs
+    value: ${{ steps.paths.outputs.arch }}
+  android:
+    description: Verify Android
+    value: ${{ steps.paths.outputs.android }}
+  desktop:
+    description: Verify desktop and shared JVM code
+    value: ${{ steps.paths.outputs.desktop }}
+  ios:
+    description: Verify iOS on macOS
+    value: ${{ steps.paths.outputs.ios }}
+  repository:
+    description: Verify repository scripts and catalogs
+    value: ${{ steps.paths.outputs.repository }}
+  shared-only:
+    description: Only common sources, resources or documentation changed
+    value: ${{ steps.paths.outputs.shared-only }}
+runs:
+  using: composite
+  steps:
+    - name: Select platforms
+      id: paths
+      shell: bash
+      env:
+        DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        DIFF_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        EVENT_NAME: ${{ github.event_name }}
+      run: |
+        if [[ "$EVENT_NAME" == 'pull_request' ]]; then
+          DIFF_BASE=$(git merge-base "$DIFF_BASE" "$DIFF_HEAD") || DIFF_BASE=''
+          export DIFF_BASE
+        fi
+        python3 .github/scripts/ci_paths.py

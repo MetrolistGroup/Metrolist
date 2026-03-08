@@ -1,0 +1,46 @@
+{
+  "reflection": [
+    {
+      "type": "com.metrolist.desktop.utils.NativeMemoryTrimmer$MacAllocator",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.metrolist.desktop.utils.MacMenuBarTemplateHelper$LibDispatch",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.metrolist.desktop.utils.MacMenuBarTemplateHelper$LibObjC",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.desktop.utils.NativeMemoryTrimmer$MacAllocator"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.desktop.utils.MacMenuBarTemplateHelper$LibDispatch"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.desktop.utils.MacMenuBarTemplateHelper$LibObjC"
+        ]
+      }
+    }
+  ]
+}

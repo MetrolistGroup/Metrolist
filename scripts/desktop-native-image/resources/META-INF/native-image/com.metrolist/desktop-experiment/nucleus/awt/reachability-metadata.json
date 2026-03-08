@@ -1,0 +1,1907 @@
+{
+  "reflection": [
+    {
+      "type": "sun.lwawt.macosx.CClipboard",
+      "jniAccessible": true,
+      "allDeclaredConstructors": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true
+    },
+    {
+      "type": "com.sun.java.accessibility.internal.AccessBridge",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "activateAccessibleHyperlink",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "javax.accessibility.AccessibleHyperlink"
+          ]
+        },
+        {
+          "name": "addAccessibilityEventNotification",
+          "parameterTypes": [
+            "long"
+          ]
+        },
+        {
+          "name": "addAccessibleSelectionFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "addJavaEventNotification",
+          "parameterTypes": [
+            "long"
+          ]
+        },
+        {
+          "name": "clearAccessibleSelectionFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "decrementReference",
+          "parameterTypes": [
+            "java.lang.Object"
+          ]
+        },
+        {
+          "name": "doAccessibleActions",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "getAccessibleActionFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleActionName",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleActionsCount",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleAttributeSetAtIndexFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleAttributesAtIndexFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleBoundsOnScreenFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleCaretPositionFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleCharCountFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleChildFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleChildrenCountFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleComponentFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleContextAt",
+          "parameterTypes": [
+            "int",
+            "int",
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleContextWithFocus",
+          "parameterTypes": []
+        },
+        {
+          "name": "getAccessibleDescriptionFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleHeightFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleHeightTextRectAtIndexFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleHyperlink",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleHypertext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleHyperlinkCount",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleHyperlinkEndIndex",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleHyperlink"
+          ]
+        },
+        {
+          "name": "getAccessibleHyperlinkStartIndex",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleHyperlink"
+          ]
+        },
+        {
+          "name": "getAccessibleHyperlinkText",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleHyperlink"
+          ]
+        },
+        {
+          "name": "getAccessibleHyperlinkURL",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleHyperlink"
+          ]
+        },
+        {
+          "name": "getAccessibleHypertext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleHypertextLinkIndex",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleHypertext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleIconDescription",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleIconHeight",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleIconWidth",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleIconsCount",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleIndexAtPointFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleIndexInParentFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleKeyBindingChar",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleKeyBindingModifiers",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleKeyBindingsCount",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleLetterAtIndexFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleNameFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleParentFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleRelationCount",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleRelationKey",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleRelationTarget",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleRelationTargetCount",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleRoleStringFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleRoleStringFromContext_en_US",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleSelectionCountFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleSelectionFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleSelectionFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleSentenceAtIndexFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleStatesStringFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleStatesStringFromContext_en_US",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleTableCellAccessibleContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable",
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleTableCellColumnExtent",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable",
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleTableCellIndex",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable",
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleTableCellRowExtent",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable",
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleTableColumn",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleTableColumnCount",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleTableColumnDescription",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleTableColumnHeader",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleTableColumnHeaderColumnCount",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleTableColumnHeaderRowCount",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleTableColumnSelectionCount",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable"
+          ]
+        },
+        {
+          "name": "getAccessibleTableColumnSelections",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleTableFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleTableIndex",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable",
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleTableRow",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleTableRowCount",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleTableRowDescription",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleTableRowHeader",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleTableRowHeaderColumnCount",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleTableRowHeaderRowCount",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleTableRowSelectionCount",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable"
+          ]
+        },
+        {
+          "name": "getAccessibleTableRowSelections",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleTextFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleTextLineLeftBoundsFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleTextLineRightBoundsFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleTextRangeFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleTextRectAtIndexFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleTextSelectedTextFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleTextSelectionEndFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleTextSelectionStartFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleValueFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleWidthFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleWidthTextRectAtIndexFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleWordAtIndexFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleXcoordFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleXcoordTextRectAtIndexFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getAccessibleYcoordFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAccessibleYcoordTextRectAtIndexFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getActiveDescendent",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getAlignmentFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getBackgroundColorFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getBidiLevelFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getBoldFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getCaretLocationHeight",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getCaretLocationWidth",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getCaretLocationX",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getCaretLocationY",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getContextFromAccessibleTable",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable"
+          ]
+        },
+        {
+          "name": "getContextFromNativeWindowHandle",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
+          "name": "getCurrentAccessibleValueFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getFirstLineIndentFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getFontFamilyFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getFontSizeFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getForegroundColorFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getItalicFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getJavaVersionProperty",
+          "parameterTypes": []
+        },
+        {
+          "name": "getLeftIndentFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getLineSpacingFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getMaximumAccessibleValueFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getMinimumAccessibleValueFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getNativeWindowHandleFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getObjectDepth",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getParentWithRole",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "getParentWithRoleElseRoot",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "getRightIndentFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getSpaceAboveFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getSpaceBelowFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getStrikethroughFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getSubscriptFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getSuperscriptFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getTopLevelObject",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getUnderlineFromAttributeSet",
+          "parameterTypes": [
+            "javax.swing.text.AttributeSet"
+          ]
+        },
+        {
+          "name": "getVirtualAccessibleNameFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "getVisibleChild",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "getVisibleChildrenCount",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "isAccessibleChildSelectedFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "isAccessibleTableCellSelected",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable",
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "isAccessibleTableColumnSelected",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable",
+            "int"
+          ]
+        },
+        {
+          "name": "isAccessibleTableRowSelected",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleTable",
+            "int"
+          ]
+        },
+        {
+          "name": "isJavaWindow",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
+          "name": "removeAccessibilityEventNotification",
+          "parameterTypes": [
+            "long"
+          ]
+        },
+        {
+          "name": "removeAccessibleSelectionFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "removeJavaEventNotification",
+          "parameterTypes": [
+            "long"
+          ]
+        },
+        {
+          "name": "requestFocus",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "selectAllAccessibleSelectionFromContext",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext"
+          ]
+        },
+        {
+          "name": "selectTextRange",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "setCaretPosition",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "int"
+          ]
+        },
+        {
+          "name": "setTextContents",
+          "parameterTypes": [
+            "javax.accessibility.AccessibleContext",
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.swing.internal.plaf.basic.resources.basic"
+    },
+    {
+      "type": "com.sun.swing.internal.plaf.metal.resources.metal"
+    },
+    {
+      "type": "java.awt.AWTEvent",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "bdata"
+        },
+        {
+          "name": "consumed"
+        },
+        {
+          "name": "id"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.AlphaComposite",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "extraAlpha"
+        },
+        {
+          "name": "rule"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Canvas",
+      "jniAccessible": true
+    },
+    {
+      "type": "java.awt.Color",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "getRGB",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Container",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "layoutMgr"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Cursor",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "pData"
+        },
+        {
+          "name": "type"
+        }
+      ],
+      "methods": [
+        {
+          "name": "setPData",
+          "parameterTypes": [
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Desktop$Action",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "BROWSE"
+        },
+        {
+          "name": "MAIL"
+        },
+        {
+          "name": "OPEN"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Dialog",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "title"
+        },
+        {
+          "name": "undecorated"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Dimension",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "height"
+        },
+        {
+          "name": "width"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Event",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "target"
+        },
+        {
+          "name": "x"
+        },
+        {
+          "name": "y"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Font",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "name"
+        },
+        {
+          "name": "pData"
+        },
+        {
+          "name": "size"
+        },
+        {
+          "name": "style"
+        }
+      ],
+      "methods": [
+        {
+          "name": "getFont",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "getFontPeer",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.awt.FontMetrics",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "font"
+        }
+      ],
+      "methods": [
+        {
+          "name": "getHeight",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Frame",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "undecorated"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.GraphicsEnvironment",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "getLocalGraphicsEnvironment",
+          "parameterTypes": []
+        },
+        {
+          "name": "isHeadless",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Image"
+    },
+    {
+      "type": "java.awt.Insets",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "bottom"
+        },
+        {
+          "name": "left"
+        },
+        {
+          "name": "right"
+        },
+        {
+          "name": "top"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Point",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "x"
+        },
+        {
+          "name": "y"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.awt.SystemColor",
+      "fields": [
+        {
+          "name": "activeCaption"
+        },
+        {
+          "name": "activeCaptionBorder"
+        },
+        {
+          "name": "activeCaptionText"
+        },
+        {
+          "name": "control"
+        },
+        {
+          "name": "controlDkShadow"
+        },
+        {
+          "name": "controlHighlight"
+        },
+        {
+          "name": "controlLtHighlight"
+        },
+        {
+          "name": "controlShadow"
+        },
+        {
+          "name": "controlText"
+        },
+        {
+          "name": "desktop"
+        },
+        {
+          "name": "inactiveCaption"
+        },
+        {
+          "name": "inactiveCaptionBorder"
+        },
+        {
+          "name": "inactiveCaptionText"
+        },
+        {
+          "name": "info"
+        },
+        {
+          "name": "infoText"
+        },
+        {
+          "name": "menu"
+        },
+        {
+          "name": "menuText"
+        },
+        {
+          "name": "scrollbar"
+        },
+        {
+          "name": "text"
+        },
+        {
+          "name": "textHighlight"
+        },
+        {
+          "name": "textHighlightText"
+        },
+        {
+          "name": "textInactiveText"
+        },
+        {
+          "name": "textText"
+        },
+        {
+          "name": "window"
+        },
+        {
+          "name": "windowBorder"
+        },
+        {
+          "name": "windowText"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Toolkit",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "getDefaultToolkit",
+          "parameterTypes": []
+        },
+        {
+          "name": "getFontMetrics",
+          "parameterTypes": [
+            "java.awt.Font"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Window",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "autoRequestFocus"
+        },
+        {
+          "name": "locationByPlatform"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Window$Type",
+      "jniAccessible": true
+    },
+    {
+      "type": "java.awt.desktop.UserSessionEvent$Reason",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "CONSOLE"
+        },
+        {
+          "name": "LOCK"
+        },
+        {
+          "name": "REMOTE"
+        },
+        {
+          "name": "UNSPECIFIED"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.event.ComponentEvent",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.awt.Component",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.awt.event.InputEvent",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "modifiers"
+        }
+      ],
+      "methods": [
+        {
+          "name": "getButtonDownMasks",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.awt.event.MouseEvent",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "button"
+        },
+        {
+          "name": "causedByTouchEvent"
+        },
+        {
+          "name": "x"
+        },
+        {
+          "name": "y"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.awt.Component",
+            "int",
+            "long",
+            "int",
+            "int",
+            "int",
+            "int",
+            "int",
+            "int",
+            "boolean",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.awt.event.MouseWheelEvent",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.awt.Component",
+            "int",
+            "long",
+            "int",
+            "int",
+            "int",
+            "int",
+            "int",
+            "int",
+            "boolean",
+            "int",
+            "int",
+            "int",
+            "double"
+          ]
+        },
+        {
+          "name": "getWheelRotation",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "javax.accessibility.AccessibleRole",
+      "fields": [
+        {
+          "name": "ALERT"
+        },
+        {
+          "name": "AWT_COMPONENT"
+        },
+        {
+          "name": "CANVAS"
+        },
+        {
+          "name": "CHECK_BOX"
+        },
+        {
+          "name": "COLOR_CHOOSER"
+        },
+        {
+          "name": "COLUMN_HEADER"
+        },
+        {
+          "name": "COMBO_BOX"
+        },
+        {
+          "name": "DATE_EDITOR"
+        },
+        {
+          "name": "DESKTOP_ICON"
+        },
+        {
+          "name": "DESKTOP_PANE"
+        },
+        {
+          "name": "DIALOG"
+        },
+        {
+          "name": "DIRECTORY_PANE"
+        },
+        {
+          "name": "EDITBAR"
+        },
+        {
+          "name": "FILE_CHOOSER"
+        },
+        {
+          "name": "FILLER"
+        },
+        {
+          "name": "FONT_CHOOSER"
+        },
+        {
+          "name": "FOOTER"
+        },
+        {
+          "name": "FRAME"
+        },
+        {
+          "name": "GLASS_PANE"
+        },
+        {
+          "name": "GROUP_BOX"
+        },
+        {
+          "name": "HEADER"
+        },
+        {
+          "name": "HTML_CONTAINER"
+        },
+        {
+          "name": "HYPERLINK"
+        },
+        {
+          "name": "ICON"
+        },
+        {
+          "name": "INTERNAL_FRAME"
+        },
+        {
+          "name": "LABEL"
+        },
+        {
+          "name": "LAYERED_PANE"
+        },
+        {
+          "name": "LIST"
+        },
+        {
+          "name": "LIST_ITEM"
+        },
+        {
+          "name": "MENU"
+        },
+        {
+          "name": "MENU_BAR"
+        },
+        {
+          "name": "MENU_ITEM"
+        },
+        {
+          "name": "OPTION_PANE"
+        },
+        {
+          "name": "PAGE_TAB"
+        },
+        {
+          "name": "PAGE_TAB_LIST"
+        },
+        {
+          "name": "PANEL"
+        },
+        {
+          "name": "PARAGRAPH"
+        },
+        {
+          "name": "PASSWORD_TEXT"
+        },
+        {
+          "name": "POPUP_MENU"
+        },
+        {
+          "name": "PROGRESS_BAR"
+        },
+        {
+          "name": "PROGRESS_MONITOR"
+        },
+        {
+          "name": "PUSH_BUTTON"
+        },
+        {
+          "name": "RADIO_BUTTON"
+        },
+        {
+          "name": "ROOT_PANE"
+        },
+        {
+          "name": "ROW_HEADER"
+        },
+        {
+          "name": "RULER"
+        },
+        {
+          "name": "SCROLL_BAR"
+        },
+        {
+          "name": "SCROLL_PANE"
+        },
+        {
+          "name": "SEPARATOR"
+        },
+        {
+          "name": "SLIDER"
+        },
+        {
+          "name": "SPIN_BOX"
+        },
+        {
+          "name": "SPLIT_PANE"
+        },
+        {
+          "name": "STATUS_BAR"
+        },
+        {
+          "name": "SWING_COMPONENT"
+        },
+        {
+          "name": "TABLE"
+        },
+        {
+          "name": "TEXT"
+        },
+        {
+          "name": "TOGGLE_BUTTON"
+        },
+        {
+          "name": "TOOL_BAR"
+        },
+        {
+          "name": "TOOL_TIP"
+        },
+        {
+          "name": "TREE"
+        },
+        {
+          "name": "UNKNOWN"
+        },
+        {
+          "name": "VIEWPORT"
+        },
+        {
+          "name": "WINDOW"
+        }
+      ]
+    },
+    {
+      "type": "javax.swing.plaf.basic.BasicPanelUI",
+      "methods": [
+        {
+          "name": "createUI",
+          "parameterTypes": [
+            "javax.swing.JComponent"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "javax.swing.plaf.metal.MetalRootPaneUI",
+      "methods": [
+        {
+          "name": "createUI",
+          "parameterTypes": [
+            "javax.swing.JComponent"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "javax.swing.plaf.synth.SynthLookAndFeel",
+      "methods": [
+        {
+          "name": "createUI",
+          "parameterTypes": [
+            "javax.swing.JComponent"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.AWTAccessor",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "getComponentAccessor",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.AWTAccessor$ComponentAccessor",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "getPeer",
+          "parameterTypes": [
+            "java.awt.Component"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.AWTAutoShutdown",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "notifyToolkitThreadBusy",
+          "parameterTypes": []
+        },
+        {
+          "name": "notifyToolkitThreadFree",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.EmbeddedFrame",
+      "jniAccessible": true
+    },
+    {
+      "type": "sun.awt.ExtendedKeyCodes",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "getExtendedKeyCodeForChar",
+          "parameterTypes": [
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.FontDescriptor",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "nativeName"
+        },
+        {
+          "name": "useUnicode"
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.LightweightFrame",
+      "jniAccessible": true
+    },
+    {
+      "type": "sun.awt.PlatformFont",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "componentFonts"
+        },
+        {
+          "name": "fontConfig"
+        }
+      ],
+      "methods": [
+        {
+          "name": "makeConvertedMultiFontString",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.SunHints",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "INTVAL_STROKE_PURE"
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.Symbol",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.TimedWindowEvent",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.awt.Window",
+            "int",
+            "java.awt.Window",
+            "int",
+            "int",
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.dnd.SunDropTargetContextPeer",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "handleDropMessage",
+          "parameterTypes": [
+            "java.awt.Component",
+            "int",
+            "int",
+            "int",
+            "int",
+            "long[]",
+            "long"
+          ]
+        },
+        {
+          "name": "handleEnterMessage",
+          "parameterTypes": [
+            "java.awt.Component",
+            "int",
+            "int",
+            "int",
+            "int",
+            "long[]",
+            "long"
+          ]
+        },
+        {
+          "name": "handleMotionMessage",
+          "parameterTypes": [
+            "java.awt.Component",
+            "int",
+            "int",
+            "int",
+            "int",
+            "long[]",
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.im.InputMethodWindow",
+      "jniAccessible": true
+    },
+    {
+      "type": "sun.awt.image.BufImgSurfaceData$ICMColorData",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "pData"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.image.IntegerComponentRaster",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "data"
+        },
+        {
+          "name": "dataOffsets"
+        },
+        {
+          "name": "pixelStride"
+        },
+        {
+          "name": "scanlineStride"
+        },
+        {
+          "name": "type"
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.image.SunVolatileImage",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "volSurfaceManager"
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.image.VolatileSurfaceManager",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "sdCurrent"
+        }
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "glob": "META-INF/MANIFEST.MF"
+    },
+    {
+      "bundle": "com.sun.swing.internal.plaf.basic.resources.basic"
+    },
+    {
+      "bundle": "sun.awt.resources.awt"
+    },
+    {
+      "module": "java.desktop",
+      "glob": "com/sun/accessibility/internal/resources/*.properties"
+    },
+    {
+      "module": "java.desktop",
+      "glob": "com/sun/java/swing/plaf/*/resources/*.properties"
+    },
+    {
+      "module": "java.desktop",
+      "glob": "com/sun/swing/internal/plaf/*/resources/*.properties"
+    },
+    {
+      "module": "java.desktop",
+      "glob": "sun/awt/resources/*.properties"
+    },
+    {
+      "module": "java.datatransfer",
+      "glob": "sun/datatransfer/resources/flavormap.properties"
+    },
+    {
+      "bundle": "com.sun.swing.internal.plaf.metal.resources.metal"
+    }
+  ]
+}

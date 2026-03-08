@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Metrolist.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/startup_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.Metrolist</item>
+    </style>
+    <style name="Theme.Metrolist" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/startup_background</item>
+        <item name="android:colorBackground">@color/startup_background</item>
+    </style>
+</resources>

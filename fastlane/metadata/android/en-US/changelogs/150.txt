@@ -1,0 +1,7 @@
+v13.6.1
+- Improved playback reliability and YouTube player recovery
+- Fixed black screens, startup crashes, playback freezes
+- Improved Listen Together sync
+- Refreshed branding and optional dynamic app icon
+- Predictive back; landscape scaling
+- Fixed login/logout/backup, metadata, Android Auto, ANRs

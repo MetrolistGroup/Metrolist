@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/app_icon_pride_special_foreground"
+    android:inset="18%" />

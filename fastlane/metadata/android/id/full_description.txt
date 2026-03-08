@@ -1,0 +1,23 @@
+Klien YouTube Music berbasis Material 3 untuk Android
+
+Fitur:
+
+- Putar lagu atau video apa pun dari YouTube Music
+- Pemutaran di latar belakang
+- Pilihan cepat yang dipersonalisasi
+- Pengelolaan pustaka
+- Unduh dan simpan lagu untuk diputar luring
+- Cari lagu, album, artis, video, dan daftar putar
+- Lirik langsung
+- Dukungan masuk akun YouTube Music
+- Sinkronisasi lagu, artis, album, dan daftar putar dari dan ke akun Anda
+- Lewati bagian hening
+- Impor daftar putar
+- Normalisasi audio
+- Atur tempo/tinggi nada
+- Pengelolaan daftar putar lokal
+- Ubah urutan lagu di daftar putar atau antrean
+- Tema terang, gelap, hitam, dan dinamis
+- Pengatur waktu tidur
+- Material 3
+- dan lainnya.

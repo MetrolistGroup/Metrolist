@@ -1,0 +1,21 @@
+Material 3 YouTube Music client for Android
+
+Features:
+
+- Blazingly fast interruption-free YouTube Music playback
+- YouTube Music login support, logged-out users can also fully enjoy the app
+- **Material 3 Expressive** design
+- **Discord Rich Presence**, Scrobbling thru **Last.fm and Listenbrainz**
+- **No ads**, ever
+- Listen Together with other people online in real-time
+- Casting to **Google Cast**, F-Cast, SONOS devices, and over DLNA
+- Importing backups/playlists from 29+ other clients and 6 different services
+- Music recognition thru **Shazam**
+- Fast custom lyrics provider, lyrics translations and romanization support
+- Translations in over 15 languages
+- **Video playback** support
+- Extensive content filtering
+- **Canvas from Apple Music**, Spotify, and YouTube Music
+- Multiple player, thumbnail, miniplayer, and background types to choose from
+- Custom font and app icon support
+- ... and much more!

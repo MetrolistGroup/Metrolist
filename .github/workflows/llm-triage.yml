@@ -1,0 +1,38 @@
+name: LLM triage
+on:
+  issues:
+    types: [opened, reopened]
+  pull_request_target:
+    types: [opened, reopened]
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+concurrency:
+  group: llm-triage-${{ github.repository }}-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  triage:
+    if: >-
+      (github.event.issue.user.type == 'User' || github.event.pull_request.user.type == 'User') &&
+      (!github.event.pull_request ||
+       !contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association))
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+          sparse-checkout: |
+            AGENTS.md
+            .github/scripts/llm-triage.cjs
+          sparse-checkout-cone-mode: false
+      - name: Triage with OpenRouter Decisions
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        with:
+          script: |
+            await require('./.github/scripts/llm-triage.cjs')({ github, context, core });
