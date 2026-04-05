@@ -247,6 +247,11 @@ fun PlayerSettings(
                     onValueChange = { tempHifiApiUrl = it },
                     label = { Text(stringResource(R.string.hifi_api_url)) },
                     modifier = Modifier
+                        .windowInsetsPadding(
+                            LocalPlayerAwareWindowInsets.current.only(
+                                WindowInsetsSides.Horizontal
+                            )
+                        )
                 )
             },
             confirmButton = {
