@@ -111,6 +111,7 @@ import com.metrolist.music.constants.EnableSongCacheKey
 import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.HistoryDuration
+import com.metrolist.music.constants.HifiApiUrlKey
 import com.metrolist.music.constants.LastFMUseNowPlaying
 import com.metrolist.music.constants.MediaSessionConstants
 import com.metrolist.music.constants.MediaSessionConstants.CommandAddToTargetPlaylist
@@ -292,6 +293,7 @@ class MusicService :
     private val isNetworkConnected = MutableStateFlow(false)
 
     private lateinit var audioQuality: com.metrolist.music.constants.AudioQuality
+    private var hifiApiUrl: String = ""
 
     private var currentQueue: Queue = EmptyQueue
     var queueTitle: String? = null
@@ -579,6 +581,7 @@ class MusicService :
         audioManager.registerAudioDeviceCallback(audioDeviceCallback, null)
 
         audioQuality = dataStore.get(AudioQualityKey).toEnum(com.metrolist.music.constants.AudioQuality.AUTO)
+        hifiApiUrl = dataStore.get(HifiApiUrlKey, "")
         playerVolume = MutableStateFlow(dataStore.get(PlayerVolumeKey, 1f).coerceIn(0f, 1f))
 
         // Initialize Google Cast
@@ -682,6 +685,26 @@ class MusicService :
                     if (wasPlaying) {
                         player.play()
                     }
+                }
+        }
+
+        // Watch for HiFi API URL changes
+        var isFirstHiFiUrlEmit = true
+        scope.launch {
+            dataStore.data
+                .map { it[HifiApiUrlKey] ?: "" }
+                .distinctUntilChanged()
+                .collect { newUrl ->
+                    hifiApiUrl = newUrl
+
+                    if (isFirstHiFiUrlEmit) {
+                        isFirstHiFiUrlEmit = false
+                        return@collect
+                    }
+
+                    val mediaId = player.currentMediaItem?.mediaId ?: return@collect
+                    songUrlCache.remove(mediaId)
+                    bypassCacheForQualityChange.add(mediaId)
                 }
         }
 
@@ -2983,6 +3006,7 @@ class MusicService :
                         mediaId,
                         audioQuality = audioQuality,
                         connectivityManager = connectivityManager,
+                        hifiApiUrl = hifiApiUrl,
                     )
                 }.getOrElse { throwable ->
                     when (throwable) {
@@ -3474,6 +3498,7 @@ class MusicService :
                             videoId = mediaId,
                             audioQuality = audioQuality,
                             connectivityManager = connectivityManager,
+                            hifiApiUrl = hifiApiUrl,
                         ).getOrNull()
                 playbackData?.streamUrl
             } catch (e: Exception) {

@@ -136,6 +136,8 @@ import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.HidePlayerThumbnailKey
 import com.metrolist.music.constants.HideStatusBarOnFullscreenKey
 import com.metrolist.music.constants.KeepScreenOn
+import com.metrolist.music.constants.AudioQuality
+import com.metrolist.music.constants.AudioQualityKey
 import com.metrolist.music.constants.PlayerBackgroundStyle
 import com.metrolist.music.constants.PlayerBackgroundStyleKey
 import com.metrolist.music.constants.PlayerButtonsStyle
@@ -160,6 +162,7 @@ import com.metrolist.music.ui.component.BottomSheetState
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
 import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.ui.component.Lyrics
+import com.metrolist.music.ui.component.AudioQualityLabel
 import com.metrolist.music.ui.component.PlayerSliderTrack
 import com.metrolist.music.ui.component.ResizableIconButton
 import com.metrolist.music.ui.component.SquigglySlider
@@ -318,6 +321,7 @@ fun BottomSheetPlayer(
     val isMuted by playerConnection.isMuted.collectAsState()
 
     val sliderStyle by rememberEnumPreference(SliderStyleKey, SliderStyle.DEFAULT)
+    val audioQuality by rememberEnumPreference(AudioQualityKey, AudioQuality.AUTO)
     val squigglySlider by rememberPreference(SquigglySliderKey, defaultValue = false)
 
     // Listen Together state (reactive)
@@ -982,6 +986,11 @@ fun BottomSheetPlayer(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (mediaMetadata.explicit) MIcon.Explicit()
+                        AudioQualityLabel(
+                            audioQuality = audioQuality,
+                            textColor = TextBackgroundColor,
+                            modifier = Modifier.padding(start = if (mediaMetadata.explicit) 8.dp else 0.dp),
+                        )
 
                         if (mediaMetadata.artists.any { it.name.isNotBlank() }) {
                             val annotatedString =
