@@ -393,7 +393,6 @@ object YTPlayerUtils {
             val qualityParam = when (audioQuality) {
                 AudioQuality.HI_RES_LOSSLESS -> "hi_res_lossless"
                 AudioQuality.LOSSLESS -> "lossless"
-                else -> ""
             }
             val hifiStreamUrl = HifiApi.resolveStreamUrlOrNull(
                 apiBaseUrl = hifiApiUrl,

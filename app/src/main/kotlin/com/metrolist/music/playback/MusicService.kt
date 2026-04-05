@@ -689,7 +689,7 @@ class MusicService :
         }
 
         // Watch for HiFi API URL changes
-        var isFirstHifiUrlEmit = true
+        var isFirstHiFiUrlEmit = true
         scope.launch {
             dataStore.data
                 .map { it[HifiApiUrlKey] ?: "" }
@@ -697,8 +697,8 @@ class MusicService :
                 .collect { newUrl ->
                     hifiApiUrl = newUrl
 
-                    if (isFirstHifiUrlEmit) {
-                        isFirstHifiUrlEmit = false
+                    if (isFirstHiFiUrlEmit) {
+                        isFirstHiFiUrlEmit = false
                         return@collect
                     }
 
