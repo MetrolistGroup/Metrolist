@@ -107,11 +107,14 @@ val UpdateNotificationsEnabledKey = booleanPreferencesKey("updateNotifications")
 val LastUpdateCheckTimeKey = longPreferencesKey("lastUpdateCheckTime")
 
 val AudioQualityKey = stringPreferencesKey("audioQuality")
+val HifiApiUrlKey = stringPreferencesKey("hifiApiUrl")
 
 enum class AudioQuality {
     AUTO,
     HIGH,
     LOW,
+    LOSSLESS,
+    HI_RES_LOSSLESS,
 }
 
 val AudioOffload = booleanPreferencesKey("enableOffload")

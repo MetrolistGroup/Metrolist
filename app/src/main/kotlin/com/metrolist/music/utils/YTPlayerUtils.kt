@@ -79,6 +79,7 @@ object YTPlayerUtils {
         playlistId: String? = null,
         audioQuality: AudioQuality,
         connectivityManager: ConnectivityManager,
+        hifiApiUrl: String? = null,
     ): Result<PlaybackData> = runCatching {
         Timber.tag(TAG).d("=== PLAYER RESPONSE FOR PLAYBACK ===")
         Timber.tag(TAG).d("videoId: $videoId")
@@ -385,6 +386,28 @@ object YTPlayerUtils {
             throw Exception("Could not find stream url")
         }
 
+        if (
+            !hifiApiUrl.isNullOrBlank() &&
+            (audioQuality == AudioQuality.LOSSLESS || audioQuality == AudioQuality.HI_RES_LOSSLESS)
+        ) {
+            val qualityParam = when (audioQuality) {
+                AudioQuality.HI_RES_LOSSLESS -> "hi_res_lossless"
+                AudioQuality.LOSSLESS -> "lossless"
+                else -> ""
+            }
+            val hifiStreamUrl = HifiApi.resolveStreamUrlOrNull(
+                apiBaseUrl = hifiApiUrl,
+                videoId = videoId,
+                quality = qualityParam,
+            )
+            if (!hifiStreamUrl.isNullOrBlank() && validateStatus(hifiStreamUrl)) {
+                Timber.tag(logTag).i("Using HiFi API stream URL for quality=$audioQuality")
+                streamUrl = hifiStreamUrl
+            } else {
+                Timber.tag(logTag).w("HiFi URL unavailable or invalid, falling back to YouTube stream")
+            }
+        }
+
         Timber.tag(logTag).d("Successfully obtained playback data with format: ${format.mimeType}, bitrate: ${format.bitrate}")
         if (isUploadedTrack) {
             println("[PLAYBACK_DEBUG] SUCCESS: Got playback data for uploaded track - format=${format.mimeType}, streamUrl=${streamUrl.take(100)}...")
@@ -429,6 +452,8 @@ object YTPlayerUtils {
                     AudioQuality.AUTO -> if (connectivityManager.isActiveNetworkMetered) -1 else 1
                     AudioQuality.HIGH -> 1
                     AudioQuality.LOW -> -1
+                    AudioQuality.LOSSLESS -> 1
+                    AudioQuality.HI_RES_LOSSLESS -> 1
                 } + (if (it.mimeType.startsWith("audio/webm")) 10240 else 0) // prefer opus stream
             }
 
