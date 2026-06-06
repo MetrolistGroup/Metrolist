@@ -740,8 +740,13 @@ class SyncUtils @Inject constructor(
                     localSongs.filterNot { it.id in remoteIds || it.song.isLocal }.forEach { song ->
                         try {
                             val likedDate = song.song.likedDate
-                            if (likedDate != null && likedDate.toEpochSecond(ZoneOffset.UTC) > lastSync) {
-                                YouTube.likeVideo(song.id, true)
+                            if (likedDate == null || likedDate.toEpochSecond(ZoneOffset.UTC) > lastSync) {
+                                // TODO: Schedule a migration/backfill job for songs with null likedDate
+                                withRetry {
+                                    YouTube.likeVideo(song.id, true)
+                                }.onFailure { e ->
+                                    Timber.e(e, "Failed to like song on YouTube: ${song.id}")
+                                }
                             } else {
                                 database.update(song.song.localToggleLike())
                             }
