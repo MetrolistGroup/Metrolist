@@ -734,10 +734,17 @@ class SyncUtils @Inject constructor(
                     val remoteIds = remoteSongs.map { it.id }.toSet()
                     val localSongs = database.likedSongEntitiesByNameAsc()
 
+                    val lastSync = context.dataStore.get(LastFullSyncKey, 0L)
+
                     // Remove likes from songs not in remote
-                    localSongs.filterNot { it.id in remoteIds }.forEach { song ->
+                    localSongs.filterNot { it.id in remoteIds || it.song.isLocal }.forEach { song ->
                         try {
-                            database.update(song.localToggleLike())
+                            val likedDate = song.song.likedDate
+                            if (likedDate != null && likedDate.toEpochSecond(ZoneOffset.UTC) > lastSync) {
+                                YouTube.likeVideo(song.id, true)
+                            } else {
+                                database.update(song.song.localToggleLike())
+                            }
                             delay(DB_OPERATION_DELAY_MS)
                         } catch (e: Exception) {
                             Timber.e(e, "Failed to update song: ${song.id}")
