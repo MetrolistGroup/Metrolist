@@ -732,31 +732,21 @@ class SyncUtils @Inject constructor(
                 try {
                     val remoteSongs = page.songs
                     val remoteIds = remoteSongs.map { it.id }.toSet()
-                    val localSongs = database.likedSongEntitiesByNameAsc()
+                    val localLikedSongs = database.likedSongsByNameAsc().first()
 
-                    val lastSync = context.dataStore.get(LastFullSyncKey, 0L)
-
-                    // Remove likes from songs not in remote
-                    localSongs.filterNot { it.id in remoteIds || it.song.isLocal }.forEach { song ->
+                    localLikedSongs.filterNot { it.id in remoteIds || it.song.isLocal }.forEach { song ->
                         try {
-                            val likedDate = song.song.likedDate
-                            if (likedDate == null || likedDate.toEpochSecond(ZoneOffset.UTC) > lastSync) {
-                                // TODO: Schedule a migration/backfill job for songs with null likedDate
-                                withRetry {
-                                    YouTube.likeVideo(song.id, true)
-                                }.onFailure { e ->
-                                    Timber.e(e, "Failed to like song on YouTube: ${song.id}")
-                                }
-                            } else {
-                                database.update(song.song.localToggleLike())
+                            withRetry {
+                                YouTube.likeVideo(song.id, true)
+                            }.onFailure { e ->
+                                Timber.e(e, "Failed to like song on YouTube: ${song.id}")
                             }
                             delay(DB_OPERATION_DELAY_MS)
                         } catch (e: Exception) {
-                            Timber.e(e, "Failed to update song: ${song.id}")
+                            Timber.e(e, "Failed to push local liked song: ${song.id}")
                         }
                     }
 
-                    // Add/update songs from remote
                     val now = LocalDateTime.now()
                     remoteSongs.forEachIndexed { index, song ->
                         try {
@@ -769,8 +759,12 @@ class SyncUtils @Inject constructor(
                                     insert(song.toMediaMetadata()) {
                                         it.copy(liked = true, likedDate = timestamp, isVideo = isVideoSong)
                                     }
-                                } else if (!dbSong.liked || dbSong.likedDate != timestamp || dbSong.isVideo != isVideoSong) {
-                                    update(dbSong.copy(liked = true, likedDate = timestamp, isVideo = isVideoSong))
+                                } else if (!dbSong.song.liked) {
+                                    update(dbSong.song.copy(
+                                        liked = true,
+                                        likedDate = dbSong.song.likedDate ?: timestamp,
+                                        isVideo = isVideoSong
+                                    ))
                                 }
                             }
                             delay(DB_OPERATION_DELAY_MS)
@@ -780,7 +774,7 @@ class SyncUtils @Inject constructor(
                     }
 
                     updateState { copy(likedSongs = SyncStatus.Completed) }
-                    Timber.d("Synced ${remoteSongs.size} liked songs")
+                    Timber.d("Synced liked songs: ${remoteSongs.size} remote, ${localLikedSongs.size} local")
                 } catch (e: Exception) {
                     Timber.e(e, "Error processing liked songs")
                     updateState { copy(likedSongs = SyncStatus.Error(e.message ?: "Unknown error")) }
