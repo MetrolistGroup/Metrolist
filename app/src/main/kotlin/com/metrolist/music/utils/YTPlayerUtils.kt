@@ -52,8 +52,8 @@ object YTPlayerUtils {
 
     private val poTokenGenerator = PoTokenGenerator()
 
-    // Track videoIds whose WEB_REMIX stream URL 403'd on the ExoPlayer GET, so the next resolution
-    // falls through to the fallback clients instead of skipping HEAD validation and looping.
+    // Track videoIds whose WEB_REMIX (last-resort fallback) stream URL 403'd on the ExoPlayer GET,
+    // so the next resolution falls through the remaining fallback clients earlier.
     private val webRemixFailedIds = java.util.Collections.newSetFromMap(
         java.util.concurrent.ConcurrentHashMap<String, Boolean>(),
     )
@@ -72,24 +72,23 @@ object YTPlayerUtils {
     }
 
     // Fire-and-forget scope for the cipher config self-heal triggered when a cipher client fails
-    // stream validation during resolution. Only WEB_REMIX skips HEAD validation (so its bad URL
-    // 403s on ExoPlayer and hits MusicService's handler); WEB_CREATOR / TVHTML5 / WEB are validated
-    // here and never reach ExoPlayer, so without this trigger a WEB_REMIX-disabled user would never
-    // self-heal a stale/wrong cipher config. Kept off the resolution coroutine so the (network)
-    // refresh never blocks falling through to the next client.
+    // stream validation during resolution. WEB_CREATOR / TVHTML5 / WEB / WEB_REMIX are validated
+    // here and a 403 never reaches ExoPlayer, so without this trigger a stale cipher config would
+    // persist across tracks. Kept off the resolution coroutine so the (network) refresh never
+    // blocks falling through to the next client.
     private val cipherRefreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val MAIN_CLIENT: YouTubeClient = WEB_REMIX
+    private val MAIN_CLIENT: YouTubeClient = ANDROID_VR_1_43_32
 
     // VISIONOS first (its CDN URL has no spc throttle gate, so it streams whole songs with no
     // poToken/cipher — the most reliable fallback), then WEB_CREATOR, TVHTML5, the ANDROID_VR
     // variants, then TVHTML5_SIMPLY_EMBEDDED_PLAYER (login-free, bypasses age-restriction for
-    // logged-out users), then the spc-gated IOS/IPADOS as last-ditch attempts.
+    // logged-out users), then the spc-gated IOS/IPADOS, then WEB_REMIX as a last resort (it
+    // requires signature timestamps, poToken WebView, and n-transform, making it the slowest).
     private val STREAM_FALLBACK_CLIENTS: Array<YouTubeClient> = arrayOf(
         VISIONOS,
         WEB_CREATOR,
         TVHTML5,
-        ANDROID_VR_1_43_32,
         ANDROID_VR_1_61_48,
         TVHTML5_SIMPLY_EMBEDDED_PLAYER,
         IOS,
@@ -98,6 +97,7 @@ object YTPlayerUtils {
         ANDROID_VR_NO_AUTH,
         MOBILE,
         WEB,
+        WEB_REMIX,
     )
 
     /** Client names disabled by the user in Settings → Stream sources. Updated reactively by MusicService. */
@@ -162,22 +162,9 @@ object YTPlayerUtils {
         val signatureTimestamp = getSignatureTimestampOrNull(videoId)
         Timber.tag(logTag).d("Signature timestamp: ${signatureTimestamp.timestamp}")
 
-        // Generate PoToken
-        var poToken: PoTokenResult? = null
-        val sessionId = YouTube.visitorData
-        if (MAIN_CLIENT.useWebPoTokens && sessionId != null) {
-            Timber.tag(logTag).d("Generating PoToken for WEB_REMIX with sessionId")
-            try {
-                poToken = poTokenGenerator.getWebClientPoToken(videoId, sessionId)
-                if (poToken != null) {
-                    Timber.tag(logTag).d("PoToken generated successfully")
-                }
-            } catch (e: Exception) {
-                Timber.tag(logTag).e(e, "PoToken generation failed: ${e.message}")
-            }
-        }
+        val poToken: PoTokenResult? = null
 
-        // Try WEB_REMIX with signature timestamp and poToken (same as before)
+        // Try MAIN_CLIENT
         Timber.tag(logTag).d("Attempting to get player response using MAIN_CLIENT: ${MAIN_CLIENT.clientName}")
         var mainPlayerResponse = YouTube.player(videoId, playlistId, MAIN_CLIENT, signatureTimestamp.timestamp, poToken?.playerRequestPoToken).getOrThrow()
 
@@ -193,7 +180,7 @@ object YTPlayerUtils {
         var usedAgeRestrictedClient: YouTubeClient? = null
         val wasOriginallyAgeRestricted: Boolean
 
-        // Check if WEB_REMIX response indicates age-restricted
+        // Check if MAIN_CLIENT response indicates age-restricted
         val mainStatus = mainPlayerResponse.playabilityStatus.status
         val isAgeRestrictedFromResponse = mainStatus in listOf("AGE_CHECK_REQUIRED", "AGE_VERIFICATION_REQUIRED", "LOGIN_REQUIRED", "CONTENT_CHECK_REQUIRED")
         wasOriginallyAgeRestricted = isAgeRestrictedFromResponse
@@ -446,19 +433,6 @@ object YTPlayerUtils {
                     break
                 }
 
-                // WEB_REMIX authenticated CDN URLs can 403 on HEAD yet serve fine on the byte-range
-                // GET that ExoPlayer makes. Skip HEAD validation for the main client and let ExoPlayer
-                // try directly, UNLESS this videoId already 403'd on GET (markWebRemixFailed) — then
-                // fall through to the fallback clients. Saves a validateStatus round-trip per resolve.
-                if (clientIndex == -1 && currentClient.clientName == "WEB_REMIX" &&
-                    !webRemixFailedIds.contains(videoId)
-                ) {
-                    Timber.tag(logTag).d("WEB_REMIX — skipping HEAD validation, letting ExoPlayer try directly")
-                    Timber.tag(TAG).i("Playback: client=${currentClient.clientName}, videoId=$videoId")
-                    successClient = currentClient.clientName
-                    break
-                }
-
                 if (validateStatus(streamUrl)) {
                     // working stream found
                     Timber.tag(logTag).d("Stream validated successfully with client: ${currentClient.clientName}")
@@ -557,11 +531,11 @@ object YTPlayerUtils {
         videoId: String,
         playlistId: String? = null,
     ): Result<PlayerResponse> {
-        Timber.tag(logTag).d("Fetching metadata player response for videoId: $videoId using MAIN_CLIENT: ${MAIN_CLIENT.clientName}")
+        Timber.tag(logTag).d("Fetching metadata player response for videoId: $videoId using WEB_REMIX")
         val signatureTimestamp = getSignatureTimestampOrNull(videoId)
         val sessionId = YouTube.visitorData
         var poToken: PoTokenResult? = null
-        if (MAIN_CLIENT.useWebPoTokens && sessionId != null) {
+        if (WEB_REMIX.useWebPoTokens && sessionId != null) {
             try {
                 poToken = poTokenGenerator.getWebClientPoToken(videoId, sessionId)
             } catch (_: Exception) { }
