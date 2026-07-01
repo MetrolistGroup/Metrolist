@@ -162,7 +162,7 @@ object YTPlayerUtils {
         val signatureTimestamp = getSignatureTimestampOrNull(videoId)
         Timber.tag(logTag).d("Signature timestamp: ${signatureTimestamp.timestamp}")
 
-        val poToken: PoTokenResult? = null
+        var poToken: PoTokenResult? = null
 
         // Try MAIN_CLIENT
         Timber.tag(logTag).d("Attempting to get player response using MAIN_CLIENT: ${MAIN_CLIENT.clientName}")
@@ -268,6 +268,17 @@ object YTPlayerUtils {
                 }
 
                 Timber.tag(logTag).d("Fetching player response for fallback client: ${client.clientName}")
+                // Generate PoToken lazily for fallback clients that need it
+                if (poToken == null && client.useWebPoTokens) {
+                    val sessionId = YouTube.visitorData
+                    if (sessionId != null) {
+                        try {
+                            poToken = poTokenGenerator.getWebClientPoToken(videoId, sessionId)
+                        } catch (e: Exception) {
+                            Timber.tag(logTag).e(e, "PoToken generation failed: ${e.message}")
+                        }
+                    }
+                }
                 // Only pass poToken for clients that support it
                 val clientPoToken = if (client.useWebPoTokens) poToken?.playerRequestPoToken else null
                 // Skip signature timestamp for age-restricted (faster), use it for normal content
