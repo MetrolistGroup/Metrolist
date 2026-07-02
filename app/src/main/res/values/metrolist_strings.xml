@@ -420,6 +420,15 @@
     <string name="last_fm_send_likes_description">Love or unlove songs in Last.fm when you like or unlike them in Metrolist</string>
     <string name="logging_in">Logging in…</string>
 
+    <!-- Spotify -->
+    <string name="spotify_integration">Spotify</string>
+    <string name="spotify_import_intro">Import your Spotify library into Metrolist using Exportify — no Spotify account link or Premium needed.</string>
+    <string name="spotify_import_steps">1. Open Exportify and log in with your Spotify account.\n2. Export a playlist (or Liked Songs) to a CSV file.\n3. Come back here and select that CSV file.</string>
+    <string name="spotify_open_exportify">Open Exportify</string>
+    <string name="spotify_select_csv">Select exported CSV</string>
+    <string name="spotify_csv_unrecognized">This CSV doesn\'t look like an Exportify export. Make sure it has Track Name and Artist columns.</string>
+    <string name="spotify_csv_empty">No songs found in that file.</string>
+
     <string name="scrobbling_configuration">Scrobbling configuration</string>
     <string name="scrobble_min_track_duration">Scrobble songs longer than (seconds)</string>
     <string name="scrobble_delay_percent">Scrobble delay (percentage)</string>
