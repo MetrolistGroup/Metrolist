@@ -3,19 +3,25 @@ package com.metrolist.music.utils.potoken
 import android.content.Context
 import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebChromeClient
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.annotation.MainThread
 import androidx.collection.ArrayMap
 import com.metrolist.innertube.YouTube
 import com.metrolist.music.BuildConfig
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -23,6 +29,7 @@ import timber.log.Timber
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Collections
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -34,6 +41,22 @@ class PoTokenWebView private constructor(
 ) {
     private val webView = WebView(context)
     private val scope = MainScope()
+
+    // Guards the single-shot init continuation: initialization errors can arrive from several
+    // paths (JS console "Uncaught", botguard request failure, renderer-gone) and a second resume
+    // on a plain Continuation throws IllegalStateException.
+    private val initResumed = AtomicBoolean(false)
+
+    @Volatile
+    private var closed = false
+
+    /**
+     * Set when the renderer died or a generate timed out. The render-gone callback isn't
+     * delivered reliably enough on its own; callers check this to recreate immediately.
+     */
+    @Volatile
+    var isDead: Boolean = false
+        private set
     private val poTokenContinuations =
         Collections.synchronizedMap(ArrayMap<String, Continuation<String>>())
     private val exceptionHandler = CoroutineExceptionHandler { _, t ->
@@ -71,6 +94,26 @@ class PoTokenWebView private constructor(
                     popAllPoTokenContinuations().forEach { (_, cont) -> cont.resumeWithException(exception) }
                 }
                 return super.onConsoleMessage(m)
+            }
+        }
+
+        webView.webViewClient = object : WebViewClient() {
+            // API 26+ callback; on providers that don't deliver it the withTimeout nets in
+            // getNewPoTokenGenerator()/generatePoToken() carry the recovery.
+            @androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.O)
+            override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+                val didCrash = runCatching { detail.didCrash() }.getOrNull()
+                Timber.tag(TAG).e("PoToken WebView render process gone (didCrash=$didCrash)")
+                isDead = true
+                // Transient (OOM kill under memory pressure), NOT a BadWebViewException — that
+                // would permanently disable poTokens for the session in PoTokenGenerator.
+                val exception = PoTokenException("WebView render process gone (didCrash=$didCrash)")
+                onInitializationErrorCloseAndCancel(exception)
+                popAllPoTokenContinuations().forEach { (_, cont) ->
+                    runCatching { cont.resumeWithException(exception) }
+                }
+                // Consume the event so the framework doesn't kill the app process.
+                return true
             }
         }
     }
@@ -188,12 +231,35 @@ class PoTokenWebView private constructor(
     @JavascriptInterface
     fun onMinterCreated() {
         Timber.tag(TAG).d("poToken minter created successfully, initialization complete")
-        continuation.resume(this)
+        if (initResumed.compareAndSet(false, true)) {
+            continuation.resume(this)
+        }
     }
     //endregion
 
     //region Obtaining poTokens
     suspend fun generatePoToken(identifier: String): String {
+        if (isDead || closed) {
+            // Fail fast (no fixed timeout wait): PoTokenGenerator's retry path recreates the
+            // WebView from scratch.
+            throw PoTokenException("PoToken WebView is dead/closed — instance must be recreated")
+        }
+        return try {
+            withTimeout(GENERATE_TIMEOUT_MS) {
+                generatePoTokenInternal(identifier)
+            }
+        } catch (e: TimeoutCancellationException) {
+            // A renderer that never answers is wedged/dead (safety net for providers where
+            // onRenderProcessGone doesn't fire) — drop the pending continuation and fail fast;
+            // PoTokenGenerator's retry recreates the WebView from scratch.
+            isDead = true
+            popPoTokenContinuation(identifier)
+            Timber.tag(TAG).e("generatePoToken($identifier) timed out after ${GENERATE_TIMEOUT_MS}ms")
+            throw PoTokenException("poToken generation timed out after ${GENERATE_TIMEOUT_MS}ms")
+        }
+    }
+
+    private suspend fun generatePoTokenInternal(identifier: String): String {
         return withContext(Dispatchers.Main) {
             suspendCancellableCoroutine { cont ->
                 Timber.tag(TAG).d("generatePoToken() called with identifier $identifier")
@@ -302,21 +368,30 @@ class PoTokenWebView private constructor(
 
     private fun onInitializationErrorCloseAndCancel(error: Throwable) {
         close()
-        continuation.resumeWithException(error)
+        if (initResumed.compareAndSet(false, true)) {
+            // The continuation may have been cancelled by the init timeout.
+            runCatching { continuation.resumeWithException(error) }
+        }
     }
 
     @MainThread
     fun close() {
+        if (closed) return
+        closed = true
+
         scope.cancel()
 
-        webView.clearHistory()
-        webView.clearCache(true)
+        // After a render-process crash some WebView methods can throw — never let teardown crash.
+        runCatching {
+            webView.clearHistory()
+            webView.clearCache(true)
 
-        webView.loadUrl("about:blank")
+            webView.loadUrl("about:blank")
 
-        webView.onPause()
-        webView.removeAllViews()
-        webView.destroy()
+            webView.onPause()
+            webView.removeAllViews()
+            webView.destroy()
+        }.onFailure { Timber.tag(TAG).w("PoToken WebView teardown threw: $it") }
     }
     //endregion
 
@@ -328,16 +403,47 @@ class PoTokenWebView private constructor(
                 "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.3"
         private const val JS_INTERFACE = "PoTokenWebView"
 
+        // Init does network round-trips (botguard Create/GenerateIT) + JS execution; a WebView
+        // that hasn't finished after this long has a dead/wedged renderer or dead network.
+        private const val INIT_TIMEOUT_MS = 45_000L
+
+        // A live renderer mints a poToken in well under a second.
+        private const val GENERATE_TIMEOUT_MS = 15_000L
+
         private val httpClient = OkHttpClient.Builder()
             .proxy(YouTube.proxy)
             .build()
 
         suspend fun getNewPoTokenGenerator(context: Context): PoTokenWebView {
-            return withContext(Dispatchers.Main) {
-                suspendCancellableCoroutine { cont ->
-                    val potWv = PoTokenWebView(context, cont)
-                    potWv.loadHtmlAndObtainBotguard()
+            var created: PoTokenWebView? = null
+            try {
+                return withTimeout(INIT_TIMEOUT_MS) {
+                    withContext(Dispatchers.Main) {
+                        suspendCancellableCoroutine { cont ->
+                            val potWv = PoTokenWebView(context, cont)
+                            created = potWv
+                            potWv.loadHtmlAndObtainBotguard()
+                        }
+                    }
                 }
+            } catch (e: TimeoutCancellationException) {
+                Timber.tag(TAG).e("PoTokenWebView init timed out after ${INIT_TIMEOUT_MS}ms")
+                closeQuietly(created)
+                throw PoTokenException("PoTokenWebView init timed out after ${INIT_TIMEOUT_MS}ms")
+            } catch (e: CancellationException) {
+                // Caller cancelled — don't leak the half-initialized WebView.
+                closeQuietly(created)
+                throw e
+            }
+        }
+
+        private suspend fun closeQuietly(potWv: PoTokenWebView?) {
+            if (potWv == null) return
+            withContext(NonCancellable + Dispatchers.Main) {
+                // Mark init resumed so a late JS/network callback can't resume a cancelled
+                // continuation.
+                potWv.initResumed.set(true)
+                potWv.close()
             }
         }
     }

@@ -202,7 +202,12 @@ object YTPlayerUtils {
             // Age-restricted: use WEB_CREATOR directly (no NewPipe needed from here)
             Timber.tag(logTag).d("Age-restricted detected, using WEB_CREATOR")
             Timber.tag(TAG).i("Age-restricted: using WEB_CREATOR for videoId=$videoId")
-            val creatorResponse = YouTube.player(videoId, playlistId, WEB_CREATOR, null, null).getOrNull()
+            val creatorResponse = YouTube.player(videoId, playlistId, WEB_CREATOR, null, null)
+                .onFailure {
+                    // Distinguish thrown request/parse failures from genuine playability
+                    // rejections (both otherwise surface as a null response downstream).
+                    Timber.tag(logTag).e(it, "player() request FAILED for WEB_CREATOR")
+                }.getOrNull()
             if (creatorResponse?.playabilityStatus?.status == "OK") {
                 Timber.tag(logTag).d("WEB_CREATOR works for age-restricted content")
                 mainPlayerResponse = creatorResponse
@@ -286,7 +291,10 @@ object YTPlayerUtils {
                 // Skip signature timestamp for age-restricted (faster), use it for normal content
                 val clientSigTimestamp = if (wasOriginallyAgeRestricted) null else signatureTimestamp.timestamp
                 streamPlayerResponse =
-                    YouTube.player(videoId, playlistId, client, clientSigTimestamp, clientPoToken).getOrNull()
+                    YouTube.player(videoId, playlistId, client, clientSigTimestamp, clientPoToken)
+                        .onFailure {
+                            Timber.tag(logTag).e(it, "player() request FAILED for %s", client.clientName)
+                        }.getOrNull()
             }
 
             // process current client response

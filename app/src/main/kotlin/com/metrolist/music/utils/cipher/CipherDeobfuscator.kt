@@ -2,6 +2,7 @@ package com.metrolist.music.utils.cipher
 
 import android.content.Context
 import android.net.Uri
+import android.os.SystemClock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -59,6 +60,13 @@ object CipherDeobfuscator {
 
     private val deobfuscateMutex = Mutex()
 
+    // After repeated renderer deaths (low-RAM device under sustained memory pressure OOM-killing
+    // the sandboxed renderer), skip re-parsing ~2.8 MB of player.js per song for a SHORT backoff
+    // window. The window must stay short/half-open: the non-WebView fallbacks are unreliable, so
+    // the cipher WebView is the primary path and we retry it as soon as pressure may have eased.
+    // Guarded by deobfuscateMutex.
+    private val rendererRecoveryPolicy = RendererRecoveryPolicy()
+
     /**
      * SignatureTimestamp of the player JS this cipher actually deciphers with, fetching (or
      * reusing the cached) player JS if needed. API callers must send THIS value in the
@@ -86,7 +94,13 @@ object CipherDeobfuscator {
     suspend fun prewarm() {
         Timber.tag(TAG).d("Prewarming cipher WebView...")
         deobfuscateMutex.withLock {
-            getOrCreateWebView(forceRefresh = false)
+            try {
+                getOrCreateWebView(forceRefresh = false)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: CipherRendererGoneException) {
+                onRendererGone(e, "prewarm")
+            }
         }
     }
 
@@ -103,16 +117,26 @@ object CipherDeobfuscator {
     suspend fun deobfuscateStreamUrl(signatureCipher: String, videoId: String): String? = deobfuscateMutex.withLock {
         try {
             deobfuscateInternal(signatureCipher, videoId, isRetry = false)
+                ?.also { rendererRecoveryPolicy.onSuccess() }
         } catch (e: CancellationException) {
             throw e // request superseded/cancelled — propagate, don't treat as a decipher failure
+        } catch (e: CipherRendererGoneException) {
+            // Renderer died (OOM kill) — a fresh-JS retry would just re-parse ~2.8 MB under the
+            // same memory pressure. Fail fast so playback falls through to the other paths.
+            onRendererGone(e, "deobfuscate")
+            null
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Cipher deobfuscation failed, retrying with fresh JS: ${e.message}")
             try {
                 PlayerJsFetcher.invalidateCache()
                 closeWebView()
                 deobfuscateInternal(signatureCipher, videoId, isRetry = true)
+                    ?.also { rendererRecoveryPolicy.onSuccess() }
             } catch (retryE: CancellationException) {
                 throw retryE
+            } catch (retryE: CipherRendererGoneException) {
+                onRendererGone(retryE, "deobfuscate-retry")
+                null
             } catch (retryE: Exception) {
                 Timber.tag(TAG).e(retryE, "Cipher deobfuscation retry also failed: ${retryE.message}")
                 null
@@ -193,6 +217,9 @@ object CipherDeobfuscator {
             transformNInternal(url)
         } catch (e: CancellationException) {
             throw e // request superseded/cancelled — propagate rather than masking as a no-op transform
+        } catch (e: CipherRendererGoneException) {
+            onRendererGone(e, "n-transform")
+            url
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "N-transform failed, returning original URL: ${e.message}")
             url
@@ -231,6 +258,7 @@ object CipherDeobfuscator {
 
         Timber.tag(TAG).d("Calling webView.transformN()...")
         val transformedN = webView.transformN(nValue)
+        rendererRecoveryPolicy.onSuccess()
 
         Timber.tag(TAG).d("=== N-TRANSFORM SUCCESS ===")
         Timber.tag(TAG).d("N-param: $nValue -> $transformedN")
@@ -245,8 +273,41 @@ object CipherDeobfuscator {
         return transformedUrl
     }
 
+    /**
+     * A renderer death (or renderer-gone-equivalent timeout) was detected: drop the dead
+     * instance so the next call recreates it, and record the failure so repeated deaths open
+     * the [rendererRecoveryPolicy] backoff window. Must be called with [deobfuscateMutex] held.
+     */
+    private suspend fun onRendererGone(e: CipherRendererGoneException, where: String) {
+        rendererRecoveryPolicy.onFailure(SystemClock.elapsedRealtime())
+        Timber.tag(TAG).e(
+            e,
+            "WebView renderer gone during $where (consecutive failures: " +
+                "${rendererRecoveryPolicy.consecutiveFailures}) — dropping cipher WebView"
+        )
+        closeWebView()
+    }
+
     private suspend fun getOrCreateWebView(forceRefresh: Boolean): CipherWebView? {
         Timber.tag(TAG).d("getOrCreateWebView: forceRefresh=$forceRefresh, existing=${cipherWebView != null}")
+
+        // A dead renderer means the cached instance is a zombie — drop it so we rebuild below.
+        if (cipherWebView?.isDead == true) {
+            Timber.tag(TAG).w("Cached cipher WebView renderer is dead — discarding")
+            closeWebView()
+        }
+
+        // Under sustained memory pressure the fresh renderer gets OOM-killed again seconds in;
+        // during the (short, half-open) backoff window skip WebView creation so the current song
+        // fails over fast instead of stalling on a doomed ~2.8 MB player.js parse. The next song
+        // after the window retries the WebView — the fallback paths are too weak to live on.
+        if (!rendererRecoveryPolicy.shouldAttempt(SystemClock.elapsedRealtime())) {
+            Timber.tag(TAG).w(
+                "Skipping cipher WebView creation: ${rendererRecoveryPolicy.consecutiveFailures} " +
+                    "consecutive renderer deaths, in backoff window"
+            )
+            return null
+        }
 
         // Snapshot the epoch BEFORE extracting/building. A refresh that lands on another thread
         // during this (multi-second) build then leaves builtConfigEpoch behind the live epoch,
@@ -341,7 +402,8 @@ object CipherDeobfuscator {
     private suspend fun closeWebView() {
         Timber.tag(TAG).d("closeWebView: existing=${cipherWebView != null}")
         withContext(Dispatchers.Main) {
-            cipherWebView?.close()
+            runCatching { cipherWebView?.close() }
+                .onFailure { Timber.tag(TAG).w("closeWebView threw: $it") }
         }
         cipherWebView = null
         currentPlayerHash = null
