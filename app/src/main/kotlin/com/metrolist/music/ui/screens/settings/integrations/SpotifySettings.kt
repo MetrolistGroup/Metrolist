@@ -48,19 +48,20 @@ import com.metrolist.music.viewmodels.BackupRestoreViewModel
 import com.metrolist.music.viewmodels.CsvImportState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
- * Importación de librería de Spotify — sin usar la API de Spotify.
+ * Spotify library import — without using the Spotify API.
  *
- * La Web API de Spotify ahora exige que el dueño de la app tenga Premium y limita
- * el Development Mode a unos pocos usuarios en allowlist, así que una integración
- * propia no puede servir a todos. En su lugar nos apoyamos en Exportify (que corre
- * en Extended Quota Mode de Spotify y por tanto está exento): el usuario exporta su
- * librería a CSV allí y luego lo importa aquí. El matcher de CSV que ya existe en
- * Metrolist hace el resto.
+ * The Spotify Web API now requires the app owner to have Premium and limits
+ * Development Mode to a few allowlisted users, so a standalone integration
+ * cannot serve everyone. Instead we rely on Exportify (which runs in Spotify's
+ * Extended Quota Mode and is therefore exempt): the user exports their library
+ * to CSV there and then imports it here. The CSV matcher that already exists in
+ * Metrolist does the rest.
  *
- * Como el CSV de Exportify tiene cabecera fija, auto-detectamos las columnas de
- * título/artista y nos saltamos el diálogo de mapeo manual.
+ * Since the Exportify CSV has a fixed header, we auto-detect the title/artist
+ * columns and skip the manual mapping dialog.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,7 +79,7 @@ fun SpotifySettings(
     var currentImportSong by remember { mutableStateOf("") }
     var statusText by remember { mutableStateOf<String?>(null) }
 
-    // Encuentra los índices de columna título/artista en la cabecera de Exportify.
+    // Find the title/artist column indices in the Exportify header.
     fun detectColumns(header: List<String>): CsvImportState? {
         fun idxOf(vararg names: String): Int =
             header.indexOfFirst { cell -> names.any { it.equals(cell.trim(), ignoreCase = true) } }
@@ -99,7 +100,7 @@ fun SpotifySettings(
             if (uri == null) return@rememberLauncherForActivityResult
             coroutineScope.launch(Dispatchers.IO) {
                 statusText = null
-                // Lee solo la cabecera para auto-mapear columnas.
+                // Read only the header to auto-map columns.
                 val header = runCatching {
                     context.contentResolver.openInputStream(uri)?.use { stream ->
                         stream.bufferedReader().readLine()
@@ -109,26 +110,42 @@ fun SpotifySettings(
                 val mapping = header?.let { detectColumns(parseCsvHeader(it)) }
 
                 if (mapping == null) {
-                    statusText = context.getString(R.string.spotify_csv_unrecognized)
+                    withContext(Dispatchers.Main) {
+                        statusText = context.getString(R.string.spotify_csv_unrecognized)
+                    }
                     return@launch
                 }
 
+                withContext(Dispatchers.Main) { isProgressStarted = true }
                 val result = runCatching {
                     viewModel.importPlaylistFromCsv(
                         context = context,
                         uri = uri,
                         columnMapping = mapping,
-                        onProgress = { },
+                        onProgress = { progressPercentage = it },
+                        onLogUpdate = { logs -> logs.firstOrNull()?.let { currentImportSong = it.title } },
                     )
-                }.onFailure { reportException(it) }.getOrNull().orEmpty()
-
-                importedSongs.clear()
-                importedSongs.addAll(result)
-                if (importedSongs.isNotEmpty()) {
-                    showAddDialog = true
-                } else {
-                    statusText = context.getString(R.string.spotify_csv_empty)
                 }
+                withContext(Dispatchers.Main) { isProgressStarted = false }
+
+                result
+                    .onSuccess { songs ->
+                        withContext(Dispatchers.Main) {
+                            importedSongs.clear()
+                            importedSongs.addAll(songs)
+                            if (importedSongs.isNotEmpty()) {
+                                showAddDialog = true
+                            } else {
+                                statusText = context.getString(R.string.spotify_csv_empty)
+                            }
+                        }
+                    }
+                    .onFailure {
+                        reportException(it)
+                        withContext(Dispatchers.Main) {
+                            statusText = context.getString(R.string.spotify_csv_empty)
+                        }
+                    }
             }
         }
 
@@ -172,7 +189,7 @@ fun SpotifySettings(
     AddToPlaylistDialogOnline(
         isVisible = showAddDialog,
         allowSyncing = false,
-        initialTextFieldValue = "Spotify import",
+        initialTextFieldValue = stringResource(R.string.spotify_integration),
         songs = importedSongs,
         onDismiss = { showAddDialog = false },
         onProgressStart = { isProgressStarted = it },
@@ -199,7 +216,7 @@ fun SpotifySettings(
     )
 }
 
-/** Divisor mínimo de cabecera CSV que respeta las celdas entrecomilladas. */
+/** Minimal CSV header parser that respects quoted cells. */
 private fun parseCsvHeader(line: String): List<String> {
     val result = mutableListOf<String>()
     val current = StringBuilder()
