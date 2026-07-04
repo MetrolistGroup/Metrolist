@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Metro list Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -35,11 +35,10 @@ class CoilBitmapLoader(
 
     private fun Bitmap.createIndependentCopy(): Bitmap {
         if (isRecycled) return createFallbackBitmap()
+
         return try {
-            val copy = createBitmap(width, height)
-            val canvas = android.graphics.Canvas(copy)
-            canvas.drawBitmap(this, 0f, 0f, null)
-            copy
+            copy(Bitmap.Config.ARGB_8888, false)
+                ?: createFallbackBitmap()
         } catch (e: Exception) {
             Timber.tag("CoilBitmapLoader").w(e, "Failed to create independent copy")
             createFallbackBitmap()
