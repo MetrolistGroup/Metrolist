@@ -343,7 +343,8 @@ class MusicService :
 
     private lateinit var audioQuality: com.metrolist.music.constants.AudioQuality
 
-    private var currentQueue: Queue = EmptyQueue
+    var currentQueue: Queue = EmptyQueue
+        private set
     var queueTitle: String? = null
 
     val currentMediaMetadata = MutableStateFlow<com.metrolist.music.models.MediaMetadata?>(null)
@@ -4534,6 +4535,7 @@ class MusicService :
                 } else {
                     YouTubePlaylistQueue(
                         playlistId = targetId,
+                        isEditable = cachedPlaylist?.playlist?.isEditable ?: false,
                         playlistTitle = targetTitle,
                     )
                 }
