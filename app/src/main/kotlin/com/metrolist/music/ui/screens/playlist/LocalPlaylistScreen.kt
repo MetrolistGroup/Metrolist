@@ -666,13 +666,22 @@ fun LocalPlaylistScreen(
                                                 playerConnection.togglePlayPause()
                                             } else {
                                                 playerConnection.playQueue(
-                                                    ListQueue(
-                                                        title = playlist!!.playlist.name,
-                                                        items = songs.map { it.song.toMediaItem() },
-                                                        startIndex = songs.indexOfFirst { it.map.id == song.map.id },
-                                                    ),
-                                                )
-                                            }
+                                                ListQueue(
+                                                    title = playlist!!.playlist.name,
+                                                    items = songs.map { it.song.toMediaItem() },
+                                                    startIndex = songs.indexOfFirst { it.map.id == song.map.id },
+                                                    playlistBrowseId = playlist?.playlist?.browseId,
+                                                    playlistId = playlist?.playlist?.id,
+                                                    playlistSetVideoIds = songs
+                                                        .mapNotNull { playlistSong ->
+                                                            playlistSong.map.setVideoId?.let { setVideoId ->
+                                                                playlistSong.map.songId to setVideoId
+                                                            }
+                                                        }
+                                                        .toMap(),
+                                                ),
+                                            )
+                                        }
                                         },
                                         onLongClick = {
                                             if (!inSelectMode) {
@@ -1325,14 +1334,24 @@ fun LocalPlaylistHeader(
         ) {
             // Shuffle Button - Smaller secondary button
             Surface(
-                onClick = {
-                    playerConnection.playQueue(
-                        ListQueue(
-                            title = playlist.playlist.name,
-                            items = songs.shuffled().map { it.song.toMediaItem() },
-                        ),
-                    )
-                },
+              onClick = {
+                  val shuffledSongs = songs.shuffled()
+                  playerConnection.playQueue(
+                      ListQueue(
+                          title = playlist.playlist.name,
+                          items = shuffledSongs.map { it.song.toMediaItem() },
+                          playlistBrowseId = playlist.playlist.browseId,
+                          playlistId = playlist.playlist.id,
+                          playlistSetVideoIds = shuffledSongs
+                              .mapNotNull { playlistSong ->
+                                  playlistSong.map.setVideoId?.let { setVideoId ->
+                                      playlistSong.map.songId to setVideoId
+                                  }
+                              }
+                              .toMap(),
+                      ),
+                  )
+              },
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier.size(48.dp),
@@ -1353,12 +1372,21 @@ fun LocalPlaylistHeader(
             Surface(
                 onClick = {
                     playerConnection.playQueue(
-                        ListQueue(
-                            title = playlist.playlist.name,
-                            items = songs.map { it.song.toMediaItem() },
-                        ),
-                    )
-                },
+                      ListQueue(
+                          title = playlist.playlist.name,
+                          items = songs.map { it.song.toMediaItem() },
+                          playlistBrowseId = playlist.playlist.browseId,
+                          playlistId = playlist.playlist.id,
+                          playlistSetVideoIds = songs
+                              .mapNotNull { playlistSong ->
+                                  playlistSong.map.setVideoId?.let { setVideoId ->
+                                      playlistSong.map.songId to setVideoId
+                                  }
+                              }
+                              .toMap(),
+                      ),
+                  )
+              },
                 color = MaterialTheme.colorScheme.primary,
                 shape = CircleShape,
                 modifier = Modifier.size(72.dp),

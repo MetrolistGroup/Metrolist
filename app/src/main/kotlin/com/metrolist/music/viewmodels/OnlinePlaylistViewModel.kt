@@ -223,7 +223,7 @@ class OnlinePlaylistViewModel @Inject constructor(
                         playlistSongs.value = applySongFilters(currentSongs)
                         currentProactiveToken = playlistContinuationPage.continuation
                         // Update the class-level continuation for manual loadMore if needed
-                        this@OnlinePlaylistViewModel.continuation = currentProactiveToken 
+                        this@OnlinePlaylistViewModel.continuation = currentProactiveToken
                     }.onFailure { throwable ->
                         reportException(throwable)
                         currentProactiveToken = null // Stop proactive loading on error
@@ -263,6 +263,21 @@ class OnlinePlaylistViewModel @Inject constructor(
     fun retry() {
         proactiveLoadJob?.cancel()
         fetchInitialPlaylistData() // This will also restart proactive loading if applicable
+    }
+
+    fun removeSongFromLocalList(songId: String) {
+        playlistSongs.value = playlistSongs.value.filter { it.id != songId }
+        playlist.value = playlist.value?.let { 
+            it.copy(songCountText = it.songCountText?.let { countText ->
+                val match = Regex("""\d+""").find(countText)
+                if (match != null) {
+                    val count = match.value.toIntOrNull() ?: return@let countText
+                    countText.replace(match.value, (count - 1).coerceAtLeast(0).toString())
+                } else {
+                    countText
+                }
+            })
+        }
     }
 
     private fun applySongFilters(songs: List<SongItem>): List<SongItem> {
