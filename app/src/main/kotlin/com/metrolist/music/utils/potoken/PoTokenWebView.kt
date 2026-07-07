@@ -386,11 +386,13 @@ class PoTokenWebView private constructor(
             // otherwise strand its connection).
             val (httpCode, body) = withContext(Dispatchers.IO) {
                 httpClient.newCall(requestBuilder.build()).execute().use { response ->
-                    response.code to if (response.code == 200) response.body!!.string() else null
+                    response.code to if (response.code == 200) response.body?.string() else null
                 }
             }
-            if (body == null) {
-                onInitializationErrorCloseAndCancel(PoTokenException("Invalid response code: $httpCode"))
+            // Treat an empty 200 body as a failure too: handleResponseBody would otherwise pass
+            // "" to parseChallengeData/parseIntegrityTokenData and fail later with a murkier error.
+            if (body.isNullOrEmpty()) {
+                onInitializationErrorCloseAndCancel(PoTokenException("Invalid botguard response (code=$httpCode, empty body)"))
             } else {
                 handleResponseBody(body)
             }
