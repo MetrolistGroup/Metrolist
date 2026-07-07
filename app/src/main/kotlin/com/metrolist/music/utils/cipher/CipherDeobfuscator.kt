@@ -80,7 +80,7 @@ object CipherDeobfuscator {
             Timber.tag(TAG).w("signatureTimestamp: could not fetch player JS")
             return null
         }
-        val sts = FunctionNameExtractor.extractSignatureTimestamp(playerJs)
+        val sts = FunctionNameExtractor.extractSignatureTimestamp(playerJs, hash)
         Timber.tag(TAG).d("Cipher player STS (hash=$hash): $sts")
         return sts
     }
