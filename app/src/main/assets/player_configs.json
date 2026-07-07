@@ -76,6 +76,10 @@
     "6009b507": { "sig": "ST(1,8150,INPUT)", "nClass": "oO", "sts": 20634, "aliases": ["4eab840f"] },
     "f551602d": { "sig": "vR(5,6110,INPUT)", "nClass": "Vg", "sts": 20639, "aliases": ["f474e1c9"] },
     "74ac8690": { "sig": "vR(5,6110,INPUT)", "nClass": "Vg", "sts": 20639, "aliases": ["42275f80"] },
-    "5fa5b166": { "sig": "C3(15,933,INPUT)", "nClass": "WM", "sts": 20640, "aliases": ["605c82cc"] }
+    "5fa5b166": { "sig": "C3(15,933,INPUT)", "nClass": "WM", "sts": 20640, "aliases": ["605c82cc"] },
+    "e43c0a19": { "sig": "C3(15,933,INPUT)", "nClass": "WM", "sts": 20640, "aliases": ["b889c248"] },
+    "f74306f1": { "sig": "C3(15,933,INPUT)", "nClass": "WM", "sts": 20640, "aliases": ["02b9c756"] },
+    "ecd4b80a": { "sig": "C3(15,933,INPUT)", "nClass": "WM", "sts": 20640, "aliases": ["287c3986"] },
+    "63173e4a": { "sig": "C3(15,933,INPUT)", "nClass": "WM", "sts": 20640, "aliases": ["9a6963a1"] }
   }
 }
