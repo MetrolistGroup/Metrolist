@@ -15,11 +15,14 @@ fun getArtistSeparator(context: Context): String = " ${context.getString(R.strin
 fun <T> List<T>.joinToArtistString(
     conjunction: String,
     transform: (T) -> String,
-): String = when (size) {
-    0 -> ""
-    1 -> transform(this[0])
-    2 -> "${transform(this[0])}$conjunction${transform(this[1])}"
-    else -> dropLast(1).joinToString(", ") { transform(it) } + "$conjunction${transform(last())}"
+): String {
+    val strings = map(transform).filter { it.isNotBlank() }
+    return when (strings.size) {
+        0 -> ""
+        1 -> strings[0]
+        2 -> "${strings[0]}$conjunction${strings[1]}"
+        else -> strings.dropLast(1).joinToString(", ") + "$conjunction${strings.last()}"
+    }
 }
 
 fun reportException(throwable: Throwable) {

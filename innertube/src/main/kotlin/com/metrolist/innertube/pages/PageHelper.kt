@@ -171,19 +171,35 @@ object PageHelper {
     }
 
     fun extractArtists(runs: List<Run>?): List<Artist> {
-        val sections = runs.orEmpty().splitBySeparator()
-        val linkedArtists = sections.flatMap { section ->
-            val expandedRuns = section.splitArtistsByConjunction()
-            if (expandedRuns.none { it.isArtistRun() }) return@flatMap emptyList()
-            expandedRuns.mapNotNull { run ->
-                val browseEndpoint = run.navigationEndpoint?.browseEndpoint
-                val browseId = browseEndpoint?.browseId
-                when {
-                    browseId?.startsWith("UC") == true || browseEndpoint?.isArtistEndpoint == true ->
-                        Artist(run.text, browseId)
-                    browseId == null && !run.text.isMetadataText() -> Artist(run.text.trim(), null)
-                    else -> null
-                }
+        if (runs == null) {
+            Timber.d("extractArtists: runs is null")
+            return emptyList()
+        }
+        
+        Timber.d("extractArtists: input runs count=${runs.size}")
+        runs.forEachIndexed { idx, run ->
+            Timber.v("  run[$idx]: text='${run.text}', hasEndpoint=${run.navigationEndpoint != null}, browseId=${run.navigationEndpoint?.browseEndpoint?.browseId}")
+        }
+        
+        val filtered = runs.filter { run ->
+            val trimmed = run.text.trim()
+            trimmed.isNotBlank() && trimmed !in listOf(" • ", ",", ", ")
+        }
+        Timber.d("extractArtists: after separator filter count=${filtered.size}")
+        
+        val result = filtered.map { run ->
+            Artist(
+                name = run.text.trim(),
+                id = run.navigationEndpoint?.browseEndpoint?.browseId
+            )
+        }
+        
+        if (result.isEmpty()) {
+            Timber.w("extractArtists: EMPTY RESULT from ${runs.size} runs")
+        } else {
+            Timber.d("extractArtists: result count=${result.size}")
+            result.forEach { artist ->
+                Timber.v("  artist: name='${artist.name}', id=${artist.id}")
             }
         }
         if (linkedArtists.isNotEmpty()) return linkedArtists

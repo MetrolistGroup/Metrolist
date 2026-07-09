@@ -1040,14 +1040,15 @@ fun BottomSheetPlayer(
                         if (mediaMetadata.artists.any { it.name.isNotBlank() }) {
                             val annotatedString =
                                 buildAnnotatedString {
-                                    mediaMetadata.artists.forEachIndexed { index, artist ->
+                                    val nonEmptyArtists = mediaMetadata.artists.filter { it.name.isNotBlank() }
+                                    nonEmptyArtists.forEachIndexed { index, artist ->
                                         val tag = "artist_${artist.id.orEmpty()}"
                                         pushStringAnnotation(tag = tag, annotation = artist.id.orEmpty())
                                         withStyle(SpanStyle(color = TextBackgroundColor, fontSize = 16.sp)) {
                                             append(artist.name)
                                         }
                                         pop()
-                                        if (index != mediaMetadata.artists.lastIndex) append(", ")
+                                        if (index != nonEmptyArtists.lastIndex) append(", ")
                                     }
                                 }
 

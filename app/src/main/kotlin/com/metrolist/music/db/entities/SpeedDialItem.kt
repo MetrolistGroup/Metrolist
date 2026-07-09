@@ -32,7 +32,7 @@ data class SpeedDialItem(
                 title = title,
                 artists = subtitle?.split(", ")?.mapIndexed { index, name ->
                     Artist(name = name, id = subtitleIds?.split(", ")?.getOrNull(index))
-                } ?: emptyList(),
+                }?.filter { it.name.isNotBlank() } ?: emptyList(),
                 album = if (albumId != null && albumName != null) com.metrolist.innertube.models.Album(name = albumName, id = albumId) else null,
                 thumbnail = thumbnailUrl ?: "",
                 explicit = explicit
@@ -43,7 +43,7 @@ data class SpeedDialItem(
                 title = title,
                 artists = subtitle?.split(", ")?.mapIndexed { index, name ->
                     Artist(name = name, id = subtitleIds?.split(", ")?.getOrNull(index))
-                },
+                }?.filter { it.name.isNotBlank() },
                 thumbnail = thumbnailUrl ?: "",
                 explicit = explicit
             )
@@ -76,8 +76,8 @@ data class SpeedDialItem(
                 is SongItem -> SpeedDialItem(
                     id = item.id,
                     title = item.title,
-                    subtitle = item.artists.joinToString(", ") { it.name },
-                    subtitleIds = item.artists.joinToString(", ") { it.id ?: "" },
+                    subtitle = item.artists.filter { it.name.isNotBlank() }.joinToString(", ") { it.name },
+                    subtitleIds = item.artists.filter { it.name.isNotBlank() }.joinToString(", ") { it.id ?: "" },
                     thumbnailUrl = item.thumbnail,
                     type = "SONG",
                     explicit = item.explicit,
@@ -88,8 +88,8 @@ data class SpeedDialItem(
                     id = item.browseId,
                     secondaryId = item.playlistId,
                     title = item.title,
-                    subtitle = item.artists?.joinToString(", ") { it.name },
-                    subtitleIds = item.artists?.joinToString(", ") { it.id ?: "" },
+                    subtitle = item.artists?.filter { it.name.isNotBlank() }?.joinToString(", ") { it.name },
+                    subtitleIds = item.artists?.filter { it.name.isNotBlank() }?.joinToString(", ") { it.id ?: "" },
                     thumbnailUrl = item.thumbnail,
                     type = "ALBUM",
                     explicit = item.explicit
