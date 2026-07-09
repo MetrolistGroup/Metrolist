@@ -183,7 +183,7 @@ object PageHelper {
         
         val filtered = runs.filter { run ->
             val trimmed = run.text.trim()
-            trimmed.isNotBlank() && trimmed !in listOf(" • ", ",", ", ")
+            trimmed.isNotBlank() && trimmed !in listOf("•", ",")
         }
         Timber.d("extractArtists: after separator filter count=${filtered.size}")
         

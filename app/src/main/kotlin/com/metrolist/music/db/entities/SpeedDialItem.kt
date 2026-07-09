@@ -31,8 +31,10 @@ data class SpeedDialItem(
                 id = id,
                 title = title,
                 artists = subtitle?.split(", ")?.mapIndexed { index, name ->
-                    Artist(name = name, id = subtitleIds?.split(", ")?.getOrNull(index))
-                }?.filter { it.name.isNotBlank() } ?: emptyList(),
+                    name to (subtitleIds?.split(", ")?.getOrNull(index))
+                }?.filter { it.first.isNotBlank() }?.map { (name, id) ->
+                    Artist(name = name, id = id)
+                } ?: emptyList(),
                 album = if (albumId != null && albumName != null) com.metrolist.innertube.models.Album(name = albumName, id = albumId) else null,
                 thumbnail = thumbnailUrl ?: "",
                 explicit = explicit
@@ -42,8 +44,10 @@ data class SpeedDialItem(
                 playlistId = secondaryId ?: "",
                 title = title,
                 artists = subtitle?.split(", ")?.mapIndexed { index, name ->
-                    Artist(name = name, id = subtitleIds?.split(", ")?.getOrNull(index))
-                }?.filter { it.name.isNotBlank() },
+                    name to (subtitleIds?.split(", ")?.getOrNull(index))
+                }?.filter { it.first.isNotBlank() }?.map { (name, id) ->
+                    Artist(name = name, id = id)
+                },
                 thumbnail = thumbnailUrl ?: "",
                 explicit = explicit
             )
@@ -73,27 +77,33 @@ data class SpeedDialItem(
     companion object {
         fun fromYTItem(item: YTItem): SpeedDialItem {
             return when (item) {
-                is SongItem -> SpeedDialItem(
-                    id = item.id,
-                    title = item.title,
-                    subtitle = item.artists.filter { it.name.isNotBlank() }.joinToString(", ") { it.name },
-                    subtitleIds = item.artists.filter { it.name.isNotBlank() }.joinToString(", ") { it.id ?: "" },
-                    thumbnailUrl = item.thumbnail,
-                    type = "SONG",
-                    explicit = item.explicit,
-                    albumId = item.album?.id,
-                    albumName = item.album?.name
-                )
-                is AlbumItem -> SpeedDialItem(
-                    id = item.browseId,
-                    secondaryId = item.playlistId,
-                    title = item.title,
-                    subtitle = item.artists?.filter { it.name.isNotBlank() }?.joinToString(", ") { it.name },
-                    subtitleIds = item.artists?.filter { it.name.isNotBlank() }?.joinToString(", ") { it.id ?: "" },
-                    thumbnailUrl = item.thumbnail,
-                    type = "ALBUM",
-                    explicit = item.explicit
-                )
+                is SongItem -> {
+                    val nonBlankArtists = item.artists.filter { it.name.isNotBlank() }
+                    SpeedDialItem(
+                        id = item.id,
+                        title = item.title,
+                        subtitle = nonBlankArtists.joinToString(", ") { it.name },
+                        subtitleIds = nonBlankArtists.joinToString(", ") { it.id ?: "" },
+                        thumbnailUrl = item.thumbnail,
+                        type = "SONG",
+                        explicit = item.explicit,
+                        albumId = item.album?.id,
+                        albumName = item.album?.name
+                    )
+                }
+                is AlbumItem -> {
+                    val nonBlankArtists = item.artists?.filter { it.name.isNotBlank() }
+                    SpeedDialItem(
+                        id = item.browseId,
+                        secondaryId = item.playlistId,
+                        title = item.title,
+                        subtitle = nonBlankArtists?.joinToString(", ") { it.name },
+                        subtitleIds = nonBlankArtists?.joinToString(", ") { it.id ?: "" },
+                        thumbnailUrl = item.thumbnail,
+                        type = "ALBUM",
+                        explicit = item.explicit
+                    )
+                }
                 is ArtistItem -> SpeedDialItem(
                     id = item.id,
                     title = item.title,
