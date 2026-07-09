@@ -4542,8 +4542,11 @@ class MusicService :
         if (!player.hasNextMediaItem() && player.repeatMode != REPEAT_MODE_ONE) return
 
         val triggerTime = player.duration - crossfadeDuration.toLong()
-        val delayMs = triggerTime - player.currentPosition
-        if (delayMs <= 0) return
+        val mediaTimeRemaining = triggerTime - player.currentPosition
+        if (mediaTimeRemaining <= 0) return
+
+        val speed = player.playbackParameters.speed.coerceAtLeast(0.01f)
+        val delayMs = (mediaTimeRemaining / speed).toLong()
 
         val targetMediaId = player.currentMediaItem?.mediaId
 
@@ -4597,6 +4600,8 @@ class MusicService :
         secPlayer.setMediaItems(items)
         secPlayer.seekTo(targetIndex, 0)
         secPlayer.volume = 0f
+
+        secPlayer.setPlaybackParameters(player.playbackParameters)
 
         secPlayer.repeatMode = savedRepeatMode
         secPlayer.shuffleModeEnabled = savedShuffleEnabled
