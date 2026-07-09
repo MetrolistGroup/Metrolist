@@ -4662,7 +4662,6 @@ class MusicService :
 
         secPlayer.repeatMode = savedRepeatMode
         secPlayer.shuffleModeEnabled = savedShuffleEnabled
-        secPlayer.playbackParameters = player.playbackParameters
 
         try {
             secPlayer.prepare()
