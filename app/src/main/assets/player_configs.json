@@ -95,6 +95,9 @@
     "0d93e75f": { "sig": "xz(5,7018,INPUT)", "nClass": "cY", "sts": 20642, "aliases": ["7e5f9340"] },
     "1278453b": { "sig": "CV(56,1770,INPUT)", "nClass": "WD", "sts": 20643, "aliases": ["f7f1818c"] },
     "16f87be2": { "sig": "CV(56,1770,INPUT)", "nClass": "WD", "sts": 20643, "aliases": ["e37f3d16"] },
-    "fdc0bdd6": { "sig": "CV(56,1770,INPUT)", "nClass": "WD", "sts": 20643, "aliases": ["543aa2f8"] }
+    "fdc0bdd6": { "sig": "CV(56,1770,INPUT)", "nClass": "WD", "sts": 20643, "aliases": ["543aa2f8"] },
+    "5003a06d": { "sig": "CV(56,1770,INPUT)", "nClass": "WD", "sts": 20643, "aliases": ["713a30d3"] },
+    "1d4961ef": { "sig": "CV(56,1770,INPUT)", "nClass": "WD", "sts": 20643, "aliases": ["f71ad451"] },
+    "7f3e53c7": { "sig": "CV(56,1770,INPUT)", "nClass": "WD", "sts": 20643, "aliases": ["8f93b000"] }
   }
 }
