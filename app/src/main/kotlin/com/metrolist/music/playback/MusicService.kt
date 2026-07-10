@@ -35,7 +35,6 @@ import android.os.Looper
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.datastore.preferences.core.Preferences
-import androidx.core.app.ServiceCompat
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
@@ -146,6 +145,7 @@ import com.metrolist.music.constants.PauseListenHistoryKey
 import com.metrolist.music.constants.PauseOnMute
 import com.metrolist.music.constants.PersistentQueueKey
 import com.metrolist.music.constants.PersistentShuffleAcrossQueuesKey
+import com.metrolist.music.constants.PauseAutoStopMinutesKey
 import com.metrolist.music.constants.PlayerVolumeKey
 import com.metrolist.music.constants.PreventDuplicateTracksInQueueKey
 import com.metrolist.music.constants.RememberShuffleAndRepeatKey
@@ -160,7 +160,6 @@ import com.metrolist.music.constants.ShufflePlaylistFirstKey
 import com.metrolist.music.constants.SimilarContent
 import com.metrolist.music.constants.SkipSilenceInstantKey
 import com.metrolist.music.constants.SkipSilenceKey
-import com.metrolist.music.constants.StopMusicOnTaskClearKey
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.Event
 import com.metrolist.music.db.entities.FormatEntity
@@ -448,8 +447,31 @@ class MusicService :
             DiscordRpcManager.disconnect()
         }
     }
-    private var lastPlaybackSpeed = 1.0f
 
+    // Case 2 of the service lifecycle: if playback stays paused (and the app is not
+    // explicitly closed via onTaskRemoved) for longer than the configured timeout, the
+    // service shuts itself down the same way it would for an explicit close. Resuming
+    // playback before the timeout elapses cancels the pending shutdown.
+    private val pauseAutoStopRunnable = Runnable {
+        if (::player.isInitialized && !player.playWhenReady) {
+            Timber.tag(TAG).i("Pause auto-stop timeout reached; shutting down MusicService")
+            performFullShutdown(reason = "pause_timeout")
+        }
+    }
+
+    private fun schedulePauseAutoStop() {
+        screenOffHandler.removeCallbacks(pauseAutoStopRunnable)
+        val timeoutMinutes = dataStore.get(PauseAutoStopMinutesKey, DEFAULT_PAUSE_AUTO_STOP_MINUTES)
+        if (timeoutMinutes <= 0) return
+        screenOffHandler.postDelayed(pauseAutoStopRunnable, timeoutMinutes * 60_000L)
+    }
+
+    private fun cancelPauseAutoStop() {
+        screenOffHandler.removeCallbacks(pauseAutoStopRunnable)
+    }
+
+    private var lastPlaybackSpeed = 1.0f
+    private var isShuttingDown = false
     @Volatile
     private var latestMediaNotification: Notification? = null
 
@@ -591,6 +613,7 @@ class MusicService :
 
     override fun onCreate() {
         super.onCreate()
+        isShuttingDown = false
         isRunning = true
         shutdownDeferred = kotlinx.coroutines.CompletableDeferred<Unit>()
 
@@ -2684,6 +2707,7 @@ class MusicService :
                 discordIntentionalDisconnect = false
                 screenOffHandler.removeCallbacks(screenOffTimeout)
                 screenOffHandler.removeCallbacks(pauseTimeout)
+                cancelPauseAutoStop()
                 startWidgetUpdates()
             } else {
                 stopWidgetUpdates()
@@ -2692,6 +2716,9 @@ class MusicService :
                     screenOffHandler.postDelayed(screenOffTimeout, 600_000)
                 } else {
                     screenOffHandler.postDelayed(pauseTimeout, 60_000)
+                }
+                if (!isShuttingDown) {
+                    schedulePauseAutoStop()
                 }
             }
         }
@@ -4049,6 +4076,7 @@ class MusicService :
         }
         screenOffHandler.removeCallbacks(screenOffTimeout)
         screenOffHandler.removeCallbacks(pauseTimeout)
+        cancelPauseAutoStop()
         if (DiscordRpcManager.isReady()) {
             Timber.tag("DiscordSvc").i("onDestroy: disconnecting Discord RPC")
             DiscordRpcManager.disconnect()
@@ -4073,39 +4101,66 @@ class MusicService :
 
     override fun onBind(intent: Intent?) = super.onBind(intent) ?: binder
 
-    override fun onTaskRemoved(rootIntent: Intent?) {
-        if (dataStore.get(StopMusicOnTaskClearKey, false)) {
-            if (!::player.isInitialized) {
-                stopSelf()
-                return
-            }
-            // Remote playback (Cast) is independent of the local ExoPlayer; ending the session
-            // is required or audio keeps playing on the Cast device.
-            runCatching {
-                if (castConnectionHandler?.isCasting?.value == true) {
-                    castConnectionHandler?.disconnect()
-                }
-                player.stop()
-                ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
-                controllerFuture?.let { MediaController.releaseFuture(it) }
-                controllerFuture = null
-                // Media3: coordinates notification/foreground teardown and stopSelf; required when
-                // playback was ongoing (default super.onTaskRemoved keeps the service alive).
-                pauseAllPlayersAndStopSelf()
-            }.onFailure { e ->
-                Timber.tag(TAG).e(e, "Failed to stop playback on task clear")
-                controllerFuture?.let { MediaController.releaseFuture(it) }
-                controllerFuture = null
-                runCatching { pauseAllPlayersAndStopSelf() }.onFailure { stopSelf() }
-            }
+    /**
+     * Full, unconditional shutdown path shared by both lifecycle cases:
+     *  - Case 1: the app is removed from Recent Apps ([onTaskRemoved]) - always, regardless
+     *    of whether playback is playing or paused.
+     *  - Case 2: playback has been paused for longer than the configured auto-stop timeout
+     *    while the app stays around ([pauseAutoStopRunnable]).
+     *
+     * This stops playback outright and releases the resources this service itself holds a
+     * binding to, then hands off to Media3's own foreground/stopSelf coordination via
+     * [pauseAllPlayersAndStopSelf]. Queue/position persistence and the release of the
+     * player and MediaSession happen in [onDestroy], which this reliably drives the service
+     * into - there is deliberately no separate "notification cleanup" path here.
+     */
+    private fun performFullShutdown(reason: String) {
+        Timber.tag(TAG).i("performFullShutdown: reason=$reason")
+        isShuttingDown = true
+        cancelPauseAutoStop()
+
+        if (!::player.isInitialized) {
+            stopSelf()
             return
         }
-        super.onTaskRemoved(rootIntent)
-        // User removed the task while paused: drop foreground promotion so the process can idle.
-        // Queue/state remain persisted; opening the app restores playback as usual.
-        if (::player.isInitialized && !player.isPlaying) {
-            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_DETACH)
+
+        runCatching {
+            // Remote playback (Cast) is independent of the local ExoPlayer; it must be
+            // explicitly disconnected or audio keeps playing on the Cast device after the
+            // service shuts down.
+            if (castConnectionHandler?.isCasting?.value == true) {
+                castConnectionHandler?.disconnect()
+            }
+
+            // Stop outright rather than merely pausing - both shutdown paths are meant to
+            // end playback, not just suspend it.
+            player.stop()
+
+            // This service holds its own MediaController (used to drive widget updates),
+            // which counts as a bound client of itself. Releasing it here - not only in
+            // onDestroy() - ensures it can't keep the service pinned alive while a stop
+            // request from pauseAllPlayersAndStopSelf() is pending.
+            controllerFuture?.let { MediaController.releaseFuture(it) }
+            controllerFuture = null
+
+            // Coordinates notification/foreground teardown and calls stopSelf(); this is
+            // what actually drives the service through to onDestroy(), where the queue,
+            // playback position, player, and MediaSession are persisted/released.
+            pauseAllPlayersAndStopSelf()
+        }.onFailure { e ->
+            Timber.tag(TAG).e(e, "performFullShutdown failed (reason=$reason)")
+            controllerFuture?.let { MediaController.releaseFuture(it) }
+            controllerFuture = null
+            runCatching { pauseAllPlayersAndStopSelf() }.onFailure { stopSelf() }
         }
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // Removing the app from Recent Apps is treated as an explicit request to close it,
+        // regardless of whether playback is playing or paused. This intentionally replaces
+        // (rather than calls) the base MediaSessionService.onTaskRemoved(), which only stops
+        // the service when no session is playing - here we always want a full stop.
+        performFullShutdown(reason = "task_removed")
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo) = mediaSession
@@ -4754,6 +4809,10 @@ class MusicService :
         const val PERSISTENT_PLAYER_STATE_FILE = "persistent_player_state.data"
         const val MAX_CONSECUTIVE_ERR = 5
         const val MAX_RETRY_COUNT = 10
+
+        // Case 2 of the service lifecycle: default minutes of continuous pause before
+        // MusicService shuts itself down when the app hasn't been explicitly closed.
+        const val DEFAULT_PAUSE_AUTO_STOP_MINUTES = 15
 
         private const val MAX_GAIN_MB = 300 // Maximum gain in millibels (3 dB)
         private const val MIN_GAIN_MB = -1500 // Minimum gain in millibels (-15 dB)

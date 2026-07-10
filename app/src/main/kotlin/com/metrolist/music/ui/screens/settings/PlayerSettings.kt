@@ -55,6 +55,7 @@ import com.metrolist.music.constants.HistoryDuration
 import com.metrolist.music.constants.KeepScreenOn
 import com.metrolist.music.constants.LoudnessLevel
 import com.metrolist.music.constants.LoudnessLevelKey
+import com.metrolist.music.constants.PauseAutoStopMinutesKey
 import com.metrolist.music.constants.PauseOnMute
 import com.metrolist.music.constants.PersistentQueueKey
 import com.metrolist.music.constants.PersistentShuffleAcrossQueuesKey
@@ -66,7 +67,6 @@ import com.metrolist.music.constants.ShufflePlaylistFirstKey
 import com.metrolist.music.constants.SimilarContent
 import com.metrolist.music.constants.SkipSilenceInstantKey
 import com.metrolist.music.constants.SkipSilenceKey
-import com.metrolist.music.constants.StopMusicOnTaskClearKey
 import com.metrolist.music.constants.VarispeedKey
 import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.EnumDialog
@@ -202,9 +202,9 @@ fun PlayerSettings(
         PreventDuplicateTracksInQueueKey,
         defaultValue = false
     )
-    val (stopMusicOnTaskClear, onStopMusicOnTaskClearChange) = rememberPreference(
-        StopMusicOnTaskClearKey,
-        defaultValue = false
+    val (pauseAutoStopMinutes, onPauseAutoStopMinutesChange) = rememberPreference(
+        PauseAutoStopMinutesKey,
+        defaultValue = 15
     )
     val (pauseOnMute, onPauseOnMuteChange) = rememberPreference(
         PauseOnMute,
@@ -1008,23 +1008,24 @@ fun PlayerSettings(
             items = listOf(
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.clear_all),
-                    title = { Text(stringResource(R.string.stop_music_on_task_clear)) },
-                    trailingContent = {
-                        Switch(
-                            checked = stopMusicOnTaskClear,
-                            onCheckedChange = onStopMusicOnTaskClearChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (stopMusicOnTaskClear) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                    title = { Text(stringResource(R.string.pause_auto_stop_timeout)) },
+                    description = {
+                        Column {
+                            Text(stringResource(R.string.pause_auto_stop_timeout_desc))
+                            Text(
+                                stringResource(
+                                    R.string.pause_auto_stop_timeout_minutes,
+                                    pauseAutoStopMinutes
                                 )
-                            }
-                        )
-                    },
-                    onClick = { onStopMusicOnTaskClearChange(!stopMusicOnTaskClear) }
+                            )
+                            Slider(
+                                value = pauseAutoStopMinutes.toFloat(),
+                                onValueChange = { onPauseAutoStopMinutesChange(it.roundToInt()) },
+                                valueRange = 5f..60f,
+                                steps = 10
+                            )
+                        }
+                    }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.volume_off_pause),

@@ -155,7 +155,6 @@ import com.metrolist.music.constants.SelectedThemeColorKey
 import com.metrolist.music.constants.SimpMusicMigrationDoneKey
 import com.metrolist.music.constants.SlimNavBarHeight
 import com.metrolist.music.constants.SlimNavBarKey
-import com.metrolist.music.constants.StopMusicOnTaskClearKey
 import com.metrolist.music.constants.UpdateNotificationsEnabledKey
 import com.metrolist.music.constants.UseNewMiniPlayerDesignKey
 import com.metrolist.music.db.MusicDatabase
@@ -343,23 +342,19 @@ class MainActivity : ComponentActivity() {
             listenTogetherManager.disconnect()
         }
         super.onDestroy()
-        // Use effective playing state so Cast (local player paused, remote playing) is included.
-        val stopServiceOnClear =
-            dataStore.get(StopMusicOnTaskClearKey, false) &&
-                playerConnection?.isEffectivelyPlaying?.value == true &&
-                isFinishing
 
         // Full cleanup - only on actual destroy
         playerConnection?.dispose()
         playerConnection = null
         playerConnectionSnapshot = null
 
-        // Unbind before stopService: a started+bound service does not stop until all clients unbind.
+        // Unbind so this Activity no longer counts as a bound client. When the whole task
+        // is being torn down (app removed from Recent Apps), MusicService.onTaskRemoved()
+        // is responsible for fully stopping itself - it performs an unconditional shutdown
+        // on its own and no longer relies on the Activity to also call stopService(). This
+        // unbind simply lets that pending shutdown complete instead of being held open by
+        // a lingering bound client.
         safeUnbindService("onDestroy()")
-
-        if (stopServiceOnClear) {
-            stopService(Intent(this, MusicService::class.java))
-        }
     }
 
     override fun onNewIntent(intent: Intent) {

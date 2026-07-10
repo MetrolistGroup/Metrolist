@@ -292,7 +292,9 @@
     <string name="audio_normalization">Audio normalization</string>
     <string name="auto_skip_next_on_error">Auto skip to next song when error occurs</string>
     <string name="auto_skip_next_on_error_desc">Ensure your continuous playback experience</string>
-    <string name="stop_music_on_task_clear">Stop music on task clear</string>
+    <string name="pause_auto_stop_timeout">Stop playback service after being paused</string>
+    <string name="pause_auto_stop_timeout_desc">If playback stays paused for this long while the app is in the background, the playback service and notification are shut down</string>
+    <string name="pause_auto_stop_timeout_minutes">%1$d min</string>
     <string name="equalizer">Equalizer</string>
 
     <string name="storage">Storage</string>

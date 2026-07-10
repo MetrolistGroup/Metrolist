@@ -145,7 +145,9 @@ val AutoDownloadOnLikeKey = booleanPreferencesKey("autoDownloadOnLike")
 val SimilarContent = booleanPreferencesKey("similarContent")
 val AutoSkipNextOnErrorKey = booleanPreferencesKey("autoSkipNextOnError")
 val AutoplayKey = booleanPreferencesKey("autoplay")
-val StopMusicOnTaskClearKey = booleanPreferencesKey("stopMusicOnTaskClear")
+// Minutes of continuous pause (while the service is otherwise kept alive) after which
+// MusicService performs a full shutdown. See MusicService's pause-auto-stop mechanism.
+val PauseAutoStopMinutesKey = intPreferencesKey("pauseAutoStopMinutes")
 val ShufflePlaylistFirstKey = booleanPreferencesKey("shufflePlaylistFirst")
 val PreventDuplicateTracksInQueueKey = booleanPreferencesKey("preventDuplicateTracksInQueue")
 val CrossfadeEnabledKey = booleanPreferencesKey("crossfadeEnabled")
