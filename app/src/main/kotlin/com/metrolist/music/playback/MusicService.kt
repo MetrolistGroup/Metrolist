@@ -4537,15 +4537,18 @@ class MusicService :
     private fun scheduleCrossfade() {
         crossfadeTriggerJob?.cancel()
         crossfadeTriggerJob = null
-        if (!crossfadeEnabled || crossfadeDuration <= 0f || player.duration == C.TIME_UNSET || player.duration <= crossfadeDuration) return
+        
+        val speed = player.playbackParameters.speed.coerceAtLeast(0.01f)
+        val mediaCrossfadeDuration = (crossfadeDuration * speed).toLong()
+
+        if (!crossfadeEnabled || crossfadeDuration <= 0f || player.duration == C.TIME_UNSET || player.duration <= mediaCrossfadeDuration) return
         if (crossfadeGapless && isNextItemGapless()) return
         if (!player.hasNextMediaItem() && player.repeatMode != REPEAT_MODE_ONE) return
 
-        val triggerTime = player.duration - crossfadeDuration.toLong()
+        val triggerTime = player.duration - mediaCrossfadeDuration
         val mediaTimeRemaining = triggerTime - player.currentPosition
         if (mediaTimeRemaining <= 0) return
 
-        val speed = player.playbackParameters.speed.coerceAtLeast(0.01f)
         val delayMs = (mediaTimeRemaining / speed).toLong()
 
         val targetMediaId = player.currentMediaItem?.mediaId
