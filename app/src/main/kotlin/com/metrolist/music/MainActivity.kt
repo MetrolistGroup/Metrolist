@@ -304,6 +304,7 @@ class MainActivity : ComponentActivity() {
         // when the framework expects a fresh foreground promotion for that start request.
         if (!MusicService.isRunning) {
             val serviceIntent = Intent(this, MusicService::class.java)
+                .putExtra(MusicService.EXTRA_USER_INITIATED_LAUNCH, true)
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     ContextCompat.startForegroundService(this, serviceIntent)

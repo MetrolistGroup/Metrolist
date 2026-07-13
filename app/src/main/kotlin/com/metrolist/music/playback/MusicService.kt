@@ -401,6 +401,12 @@ class MusicService :
     @Volatile
     private var startupPrefs: Preferences? = null
 
+    // Guards restorePersistedQueueAndState() so it only ever runs once per service
+    // instance, even if onStartCommand() is invoked multiple times with the
+    // user-launch extra (e.g. redelivery, or MainActivity racing bindService()).
+    @Volatile
+    private var persistedQueueRestored = false
+
     private val _playerFlow = MutableStateFlow<ExoPlayer?>(null)
     val playerFlow = _playerFlow.asStateFlow()
 
@@ -1211,6 +1217,66 @@ class MusicService :
                 .collect { YTPlayerUtils.disabledStreamClients = it }
         }
 
+        // Persisted queue/automix/player-state restoration is no longer performed
+        // unconditionally here. onCreate() runs for every service start, including
+        // passive framework-triggered starts (e.g. the Bluetooth-connect media-button
+        // broadcast forwarded by the manifest-registered MediaButtonReceiver), and has
+        // no information about *why* the service was started. Restoration now happens
+        // in restorePersistedQueueAndState(), invoked from onStartCommand() only when
+        // the starting Intent carries EXTRA_USER_INITIATED_LAUNCH - set solely by
+        // MainActivity when the user actually opens the app. See that function for
+        // the moved logic.
+
+        // Save queue periodically to prevent queue loss from crash or force kill
+        scope.launch {
+            while (isActive) {
+                delay(15.seconds)
+                if (cachedPersistentQueue) {
+                    saveQueueToDisk()
+                }
+                val currentMetadata = player.currentMediaItem?.metadata
+                if (currentMetadata?.isEpisode == true && player.isPlaying && player.currentPosition > 0) {
+                    previousEpisodePosition = player.currentPosition
+                    saveEpisodePosition(currentMetadata.id, player.currentPosition)
+                }
+            }
+        }
+
+        scope.launch {
+            while (isActive) {
+                delay(10.seconds)
+                if (cachedPersistentQueue && player.isPlaying) {
+                    saveQueueToDisk()
+                }
+            }
+        }
+    }
+
+    /**
+     * Restores the persisted queue, automix queue, and player position/volume from disk.
+     *
+     * This used to run unconditionally inside onCreate(), which meant it fired for *every*
+     * reason MusicService's process could be spun up - including passive, non-user-initiated
+     * starts such as the media-button broadcast that some OEMs/Android versions send via the
+     * manifest-registered MediaButtonReceiver when a Bluetooth device connects. onCreate() has
+     * no access to the Intent that triggered the start, so it could not distinguish that case
+     * from the user actually opening the app - it unconditionally called playQueue(), which
+     * prepares the player and, as a side effect, causes MediaSessionService to surface a media
+     * notification even though nothing was ever played.
+     *
+     * It is now invoked from onStartCommand() only when the starting Intent carries
+     * EXTRA_USER_INITIATED_LAUNCH, which MainActivity sets exclusively on the Intent it uses to
+     * explicitly start this service when the user opens the app (see MainActivity.onStart()).
+     * No other caller of startService()/startForegroundService() on this service (widgets, the
+     * alarm receiver, MediaButtonReceiver) sets this extra, so none of them trigger restoration.
+     *
+     * [persistedQueueRestored] makes this idempotent in case onStartCommand() runs more than
+     * once for the same service instance.
+     */
+    private fun restorePersistedQueueAndState() {
+        if (persistedQueueRestored) return
+        persistedQueueRestored = true
+
         if (startupPrefs!![PersistentQueueKey] ?: true) {
             val queueFile = filesDir.resolve(PERSISTENT_QUEUE_FILE)
             if (queueFile.exists()) {
@@ -1286,30 +1352,6 @@ class MusicService :
                 }.onFailure { error ->
                     Timber.tag(TAG).w(error, "Failed to read player state, clearing data")
                     clearPersistedQueueFiles()
-                }
-            }
-        }
-
-        // Save queue periodically to prevent queue loss from crash or force kill
-        scope.launch {
-            while (isActive) {
-                delay(15.seconds)
-                if (cachedPersistentQueue) {
-                    saveQueueToDisk()
-                }
-                val currentMetadata = player.currentMediaItem?.metadata
-                if (currentMetadata?.isEpisode == true && player.isPlaying && player.currentPosition > 0) {
-                    previousEpisodePosition = player.currentPosition
-                    saveEpisodePosition(currentMetadata.id, player.currentPosition)
-                }
-            }
-        }
-
-        scope.launch {
-            while (isActive) {
-                delay(10.seconds)
-                if (cachedPersistentQueue && player.isPlaying) {
-                    saveQueueToDisk()
                 }
             }
         }
@@ -4197,6 +4239,14 @@ class MusicService :
             }
         }
 
+        // Restore the persisted queue/automix/player-state only for the Intent that
+        // MainActivity uses to explicitly start this service when the user opens the app.
+        // See restorePersistedQueueAndState() for why this can't be done unconditionally
+        // in onCreate() instead.
+        if (intent?.getBooleanExtra(EXTRA_USER_INITIATED_LAUNCH, false) == true) {
+            restorePersistedQueueAndState()
+        }
+
         when (intent?.action) {
             ACTION_ALARM_TRIGGER -> {
                 handleAlarmTrigger(intent)
@@ -4790,6 +4840,13 @@ class MusicService :
         const val EXTRA_ALARM_ID = "extra_alarm_id"
         const val EXTRA_ALARM_PLAYLIST_ID = "extra_alarm_playlist_id"
         const val EXTRA_ALARM_RANDOM_SONG = "extra_alarm_random_song"
+
+        // Set only by MainActivity, on the Intent it uses to explicitly start this service
+        // when the user opens the app. Framework/passive starts of this service (the
+        // Bluetooth-connect media-button broadcast via MediaButtonReceiver, widget taps, the
+        // alarm receiver) never set this extra, so they never trigger persisted-queue
+        // restoration. See MusicService.restorePersistedQueueAndState().
+        const val EXTRA_USER_INITIATED_LAUNCH = "com.metrolist.music.extra.USER_INITIATED_LAUNCH"
 
         const val ROOT = "root"
         const val SONG = "song"
