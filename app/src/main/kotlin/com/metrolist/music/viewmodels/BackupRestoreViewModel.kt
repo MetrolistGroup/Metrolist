@@ -80,11 +80,13 @@ class BackupRestoreViewModel @Inject constructor(
         runCatching {
             context.applicationContext.contentResolver.openOutputStream(uri)?.use {
                 it.buffered().zipOutputStream().use { outputStream ->
-                    (context.filesDir / "datastore" / SETTINGS_FILENAME).inputStream().buffered()
-                        .use { inputStream ->
+                    val settingsFile = context.filesDir / "datastore" / SETTINGS_FILENAME
+                    if (settingsFile.exists()) {
+                        settingsFile.inputStream().buffered().use { inputStream ->
                             outputStream.putNextEntry(ZipEntry(SETTINGS_FILENAME))
                             inputStream.copyTo(outputStream)
                         }
+                    }
                     runBlocking(Dispatchers.IO) {
                         database.checkpoint()
                     }
@@ -151,10 +153,12 @@ class BackupRestoreViewModel @Inject constructor(
                             when (entry.name) {
                                 SETTINGS_FILENAME -> {
                                     foundSettings = true
+                                    tempSettings.parentFile?.mkdirs()
                                     tempSettings.outputStream().use { it.write(inputStream.readBytes()) }
                                 }
                                 InternalDatabase.DB_NAME -> {
                                     foundDb = true
+                                    File(restoreDbPath).parentFile?.mkdirs()
                                     FileOutputStream(restoreDbPath).use { inputStream.copyTo(it) }
                                 }
                                 "${InternalDatabase.DB_NAME}-wal" -> {
