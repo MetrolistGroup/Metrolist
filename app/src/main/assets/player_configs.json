@@ -108,6 +108,9 @@
     "1274d073": { "sig": "xX(47,2728,INPUT)", "nClass": "tA", "sts": 20646, "aliases": ["e1038253"] },
     "acfff5b9": { "sig": "AV(31,1870,INPUT)", "nClass": "p_", "sts": 20647, "aliases": ["3c484617"] },
     "143198d7": { "sig": "AV(31,1870,INPUT)", "nClass": "p_", "sts": 20647, "aliases": ["be894515"] },
-    "ddef8357": { "sig": "qL(31,1870,INPUT)", "nClass": "i5", "sts": 20647, "aliases": ["73629366"] }
+    "ddef8357": { "sig": "qL(31,1870,INPUT)", "nClass": "i5", "sts": 20647, "aliases": ["73629366"] },
+    "d0343706": { "sig": "Ch(31,1870,INPUT)", "nClass": "zH", "sts": 20647, "aliases": ["05e6a7d6"] },
+    "73913e73": { "sig": "Ch(31,1870,INPUT)", "nClass": "zH", "sts": 20647, "aliases": ["318f426f"] },
+    "3da2b377": { "sig": "Ch(31,1870,INPUT)", "nClass": "zH", "sts": 20647, "aliases": ["1794a138"] }
   }
 }
