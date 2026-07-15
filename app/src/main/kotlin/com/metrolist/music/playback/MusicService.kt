@@ -3739,6 +3739,7 @@ class MusicService :
                         mediaId,
                         audioQuality = audioQuality,
                         connectivityManager = connectivityManager,
+                        offloadEnabled = currentOffloadEnabled,
                         contentHints = ContentHints(
                             isExplicit = song?.explicit,
                             isUploaded = song?.isUploaded,
@@ -4604,6 +4605,7 @@ class MusicService :
                             videoId = mediaId,
                             audioQuality = audioQuality,
                             connectivityManager = connectivityManager,
+                            offloadEnabled = currentOffloadEnabled,
                             contentHints = ContentHints(
                                 isExplicit = song?.explicit,
                                 isUploaded = song?.isUploaded,

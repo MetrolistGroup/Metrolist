@@ -5,8 +5,12 @@
 
 package com.metrolist.music.utils
 
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.Uri
+import android.os.Build
 import androidx.media3.common.PlaybackException
 import com.metrolist.innertube.NewPipeExtractor
 import com.metrolist.innertube.YouTube
@@ -138,6 +142,7 @@ object YTPlayerUtils {
         audioQuality: AudioQuality,
         connectivityManager: ConnectivityManager,
         contentHints: ContentHints = ContentHints(),
+        offloadEnabled: Boolean = false,
     ): Result<PlaybackData> = runCatching {
         Timber.tag(TAG).d("Player response for playback")
         Timber.tag(TAG).d("videoId: $videoId")
@@ -306,6 +311,7 @@ object YTPlayerUtils {
                         responseToUse,
                         audioQuality,
                         connectivityManager,
+                        offloadEnabled,
                     )
 
                 if (format == null) {
@@ -546,19 +552,51 @@ object YTPlayerUtils {
             .onFailure { Timber.tag(logTag).e(it, "Failed to fetch metadata player response") }
     }
 
+    private fun isOffloadCompatible(format: PlayerResponse.StreamingData.Format): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        val encoding = when {
+            format.mimeType.contains("opus", ignoreCase = true) -> AudioFormat.ENCODING_OPUS
+            format.mimeType.contains("mp4a", ignoreCase = true) -> AudioFormat.ENCODING_AAC_LC
+            else -> return false
+        }
+        val sampleRate = format.audioSampleRate ?: return false
+        val channelCount = format.audioChannels ?: 2
+        val channelMask = if (channelCount == 1) AudioFormat.CHANNEL_OUT_MONO else AudioFormat.CHANNEL_OUT_STEREO
+        val audioFormat = AudioFormat.Builder()
+            .setEncoding(encoding)
+            .setSampleRate(sampleRate)
+            .setChannelMask(channelMask)
+            .build()
+        val attributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_MEDIA)
+            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+            .build()
+        return AudioManager.isOffloadedPlaybackSupported(audioFormat, attributes)
+    }
+
     private fun findFormat(
         playerResponse: PlayerResponse,
         audioQuality: AudioQuality,
         connectivityManager: ConnectivityManager,
+        offloadEnabled: Boolean = false,
     ): PlayerResponse.StreamingData.Format? {
-        Timber.tag(logTag).d("Finding format with audioQuality: $audioQuality, network metered: ${connectivityManager.isActiveNetworkMetered}")
+        Timber.tag(logTag).d("Finding format with audioQuality: $audioQuality, network metered: ${connectivityManager.isActiveNetworkMetered}, offload: $offloadEnabled")
 
         val adaptiveFormats = playerResponse.streamingData?.adaptiveFormats ?: return null
 
         val audioCapableFormats = adaptiveFormats.filter { it.isAudio }
         if (audioCapableFormats.isEmpty()) return null
 
-        val maxBitrate = audioCapableFormats.maxOfOrNull { it.bitrate } ?: return null
+        val offloadFormats = if (offloadEnabled) {
+            audioCapableFormats.filter { isOffloadCompatible(it) }.ifEmpty {
+                Timber.tag(logTag).w("No offload-compatible formats found, falling back to all formats")
+                audioCapableFormats
+            }
+        } else {
+            audioCapableFormats
+        }
+
+        val maxBitrate = offloadFormats.maxOfOrNull { it.bitrate } ?: return null
 
         fun scoreCodec(mimeType: String): Int = when {
             mimeType.contains("opus", ignoreCase = true) -> 2
@@ -568,7 +606,7 @@ object YTPlayerUtils {
 
         val format = when (audioQuality) {
             AudioQuality.HIGH -> {
-                audioCapableFormats.maxWithOrNull(
+                offloadFormats.maxWithOrNull(
                     compareBy<PlayerResponse.StreamingData.Format> { format ->
                         when (format.audioQuality) {
                             "AUDIO_QUALITY_HIGH" -> 3
@@ -583,15 +621,15 @@ object YTPlayerUtils {
             }
 
             AudioQuality.LOW -> {
-                val cappedFormats = audioCapableFormats.filter { it.bitrate <= 128000 }
+                val cappedFormats = offloadFormats.filter { it.bitrate <= 128000 }
                 val lowFormat = cappedFormats
                     .filter { it.isOriginal }
                     .maxByOrNull { it.bitrate }
                     ?: cappedFormats.maxByOrNull { it.bitrate }
-                    ?: audioCapableFormats
+                    ?: offloadFormats
                         .filter { it.isOriginal }
                         .minByOrNull { kotlin.math.abs(it.bitrate.toDouble() - 128000.0) }
-                    ?: audioCapableFormats.maxByOrNull { it.bitrate }
+                    ?: offloadFormats.maxByOrNull { it.bitrate }
 
                 if (lowFormat != null) {
                     Timber.tag(logTag).d("Selected LOW format: itag=${lowFormat.itag}, bitrate: ${lowFormat.bitrate}")
@@ -602,15 +640,15 @@ object YTPlayerUtils {
 
             AudioQuality.AUTO -> {
                 val targetBitrate = if (connectivityManager.isActiveNetworkMetered) 128000.0 else maxBitrate.toDouble()
-                val cappedFormats = audioCapableFormats.filter { it.bitrate <= targetBitrate }
+                val cappedFormats = offloadFormats.filter { it.bitrate <= targetBitrate }
                 val autoFormat = cappedFormats
                     .filter { it.isOriginal }
                     .maxByOrNull { it.bitrate }
                     ?: cappedFormats.maxByOrNull { it.bitrate }
-                    ?: audioCapableFormats
+                    ?: offloadFormats
                         .filter { it.isOriginal }
                         .minByOrNull { kotlin.math.abs(it.bitrate - targetBitrate) }
-                    ?: audioCapableFormats.maxByOrNull { it.bitrate }
+                    ?: offloadFormats.maxByOrNull { it.bitrate }
 
                 if (autoFormat != null) {
                     Timber.tag(logTag).d("Selected AUTO format: itag=${autoFormat.itag}, bitrate: ${autoFormat.bitrate}")
