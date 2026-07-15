@@ -490,35 +490,40 @@ class PoTokenWebView private constructor(
             }
         }
 
-        private val YOUTUBE_COOKIE_DOMAINS = listOf(
-            ".youtube.com", "youtube.com",
-            ".google.com", "google.com",
-            ".youtube-nocookie.com", "youtube-nocookie.com",
+        private val YOUTUBE_COOKIE_URLS = listOf(
+            "https://youtube.com",
+            "https://google.com",
+            "https://youtube-nocookie.com",
         )
 
-        private fun clearYouTubeCookiesForBotguard(): Map<String, String> {
+        private fun clearYouTubeCookiesForBotguard(): Map<String, List<String>> {
             val cookieManager = CookieManager.getInstance()
-            val saved = mutableMapOf<String, String>()
-            for (domain in YOUTUBE_COOKIE_DOMAINS) {
-                val cookies = cookieManager.getCookie(domain)
-                if (!cookies.isNullOrEmpty()) {
-                    saved[domain] = cookies
-                    cookieManager.setCookie(domain, "")
+            val saved = mutableMapOf<String, List<String>>()
+            for (url in YOUTUBE_COOKIE_URLS) {
+                val raw = cookieManager.getCookie(url) ?: continue
+                val cookies = raw.split("; ").filter { it.isNotEmpty() }
+                if (cookies.isEmpty()) continue
+                saved[url] = cookies
+                for (cookie in cookies) {
+                    val name = cookie.substringBefore("=")
+                    cookieManager.setCookie(url, "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/")
                 }
             }
             if (saved.isNotEmpty()) {
-                Timber.tag(TAG).d("Cleared ${saved.size} YouTube cookie domains for BotGuard")
+                Timber.tag(TAG).d("Cleared cookies from ${saved.size} YouTube URLs for BotGuard")
             }
             return saved
         }
 
-        private fun restoreYouTubeCookies(saved: Map<String, String>) {
+        private fun restoreYouTubeCookies(saved: Map<String, List<String>>) {
             if (saved.isEmpty()) return
             val cookieManager = CookieManager.getInstance()
-            for ((domain, cookies) in saved) {
-                cookieManager.setCookie(domain, cookies)
+            for ((url, cookies) in saved) {
+                for (cookie in cookies) {
+                    cookieManager.setCookie(url, cookie)
+                }
             }
-            Timber.tag(TAG).d("Restored ${saved.size} YouTube cookie domains after BotGuard")
+            Timber.tag(TAG).d("Restored cookies to ${saved.size} YouTube URLs after BotGuard")
         }
 
         private suspend fun closeQuietly(potWv: PoTokenWebView?) {

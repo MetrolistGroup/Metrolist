@@ -897,6 +897,16 @@ object YTPlayerUtils {
 
             val expiry = responseToUse.streamingData?.expiresInSeconds ?: continue
 
+            val isLastFallback = clientIndex == STREAM_FALLBACK_CLIENTS.lastIndex
+            if (isLastFallback) {
+                Timber.tag(TAG).d("Using last fallback client without validation: ${currentClient.clientName}")
+            } else if (currentClient.clientName == "WEB_REMIX" && !webRemixFailedIds.contains(videoId)) {
+                Timber.tag(TAG).d("WEB_REMIX — skipping HEAD validation for video stream")
+            } else if (!validateStatus(finalUrl)) {
+                Timber.tag(TAG).d("Video stream validation failed for client: ${currentClient.clientName}")
+                continue
+            }
+
             bestFormat = format
             bestUrl = finalUrl
             bestExpiry = expiry
