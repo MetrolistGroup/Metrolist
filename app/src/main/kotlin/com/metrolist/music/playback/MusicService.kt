@@ -466,6 +466,8 @@ class MusicService :
     private var originalQueueSize: Int = 0
 
     private var consecutivePlaybackErr = 0
+    private var currentOffloadEnabled = false
+    private var offloadStallJob: Job? = null
     private var retryJob: Job? = null
     private var retryCount = 0
     // True only when stopOnError() paused playback purely because of a network outage
@@ -540,6 +542,7 @@ class MusicService :
     private var currentMediaIdRetryCount = mutableMapOf<String, Int>()
     private val MAX_RETRY_PER_SONG = 3
     private val RETRY_DELAY_MS = 1000L
+    private val OFFLOAD_STALL_TIMEOUT_MS = 10_000L
 
     // Track failed songs to prevent infinite retry loops
     private val recentlyFailedSongs = mutableSetOf<String>()
@@ -931,6 +934,7 @@ class MusicService :
             if (crossfadeEnabled) false else offloadPref
         }.distinctUntilChanged()
             .collectLatest(scope) { useOffload ->
+                currentOffloadEnabled = useOffload
                 player.setOffloadEnabled(useOffload)
                 secondaryPlayer?.setOffloadEnabled(useOffload)
                 playerSilenceProcessors.values.forEach { it.offloadMode = useOffload }
@@ -2612,12 +2616,32 @@ class MusicService :
             retryCount = 0
             waitingForNetworkConnection.value = false
             retryJob?.cancel()
+            offloadStallJob?.cancel()
 
             player.currentMediaItem?.mediaId?.let { mediaId ->
                 resetRetryCount(mediaId)
                 Timber.tag(TAG).d("Playback successful for $mediaId, reset retry count")
             }
             scheduleCrossfade()
+        }
+
+        if (playbackState == Player.STATE_BUFFERING && currentOffloadEnabled && player.playWhenReady) {
+            offloadStallJob?.cancel()
+            offloadStallJob = scope.launch {
+                delay(OFFLOAD_STALL_TIMEOUT_MS)
+                if (player.playbackState == Player.STATE_BUFFERING && currentOffloadEnabled) {
+                    Timber.tag(TAG).w("Offload stall detected — disabling offload")
+                    player.setOffloadEnabled(false)
+                    secondaryPlayer?.setOffloadEnabled(false)
+                    currentOffloadEnabled = false
+                    playerSilenceProcessors.values.forEach { it.offloadMode = false }
+                    safeDataStoreEdit { settings -> settings[AudioOffload] = false }
+                    val idx = player.currentMediaItemIndex
+                    val pos = player.currentPosition
+                    player.seekTo(idx, pos)
+                    player.prepare()
+                }
+            }
         }
 
         if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
