@@ -461,12 +461,7 @@ class PoTokenWebView private constructor(
 
         suspend fun getNewPoTokenGenerator(context: Context): PoTokenWebView {
             var created: PoTokenWebView? = null
-            // BotGuard runs inside a WebView that shares the process-global CookieManager.
-            // After login, YouTube/Google auth cookies (SID, SAPISID, ...) are visible to the
-            // WebView's JS engine via document.cookie. BotGuard uses this browser state as part
-            // of its attestation, but the botguard HTTP requests go through OkHttp with NO
-            // cookies — a mismatch that causes attestation to fail. Temporarily clear these
-            // cookies so BotGuard sees an anonymous state consistent with the API calls.
+            // Clear YouTube cookies so BotGuard attestation matches the anonymous HTTP requests
             val savedCookies = clearYouTubeCookiesForBotguard()
             try {
                 return withTimeout(INIT_TIMEOUT_MS) {

@@ -928,12 +928,12 @@ class MusicService :
             dataStore.data.map { it[AudioOffload] ?: false },
             dataStore.data.map { it[CrossfadeEnabledKey] ?: false },
         ) { offloadPref, crossfadeEnabled ->
-            // Force disable offload if crossfade is enabled to prevent volume ramp issues
             if (crossfadeEnabled) false else offloadPref
         }.distinctUntilChanged()
             .collectLatest(scope) { useOffload ->
                 player.setOffloadEnabled(useOffload)
                 secondaryPlayer?.setOffloadEnabled(useOffload)
+                playerSilenceProcessors.values.forEach { it.offloadMode = useOffload }
             }
 
         var isFirstAudioTrackParamsEmit = true
@@ -1351,14 +1351,18 @@ class MusicService :
         if (prefs != null) {
             val offload = prefs[AudioOffload] ?: false
             val crossfade = prefs[CrossfadeEnabledKey] ?: false
-            player.setOffloadEnabled(if (crossfade) false else offload)
+            val effectiveOffload = if (crossfade) false else offload
+            player.setOffloadEnabled(effectiveOffload)
+            silenceProcessor.offloadMode = effectiveOffload
             player.skipSilenceEnabled = prefs[SkipSilenceKey] ?: false
         } else {
             player.apply {
                 runBlocking {
                     val offload = dataStore.get(AudioOffload, false)
                     val crossfade = dataStore.get(CrossfadeEnabledKey, false)
-                    setOffloadEnabled(if (crossfade) false else offload)
+                    val effectiveOffload = if (crossfade) false else offload
+                    setOffloadEnabled(effectiveOffload)
+                    silenceProcessor.offloadMode = effectiveOffload
                     skipSilenceEnabled = dataStore.get(SkipSilenceKey, false)
                 }
             }

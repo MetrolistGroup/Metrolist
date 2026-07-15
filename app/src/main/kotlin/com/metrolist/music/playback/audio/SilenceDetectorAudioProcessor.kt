@@ -36,6 +36,13 @@ class SilenceDetectorAudioProcessor(
     var instantModeEnabled: Boolean = false
 
     @Volatile
+    var offloadMode: Boolean = false
+        set(value) {
+            field = value
+            if (value) clearSilenceState()
+        }
+
+    @Volatile
     private var consecutiveSilentFrames: Long = 0
 
     @Volatile
@@ -44,6 +51,8 @@ class SilenceDetectorAudioProcessor(
     private var notifiedThisSilence = false
 
     override fun configure(inputAudioFormat: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat {
+        if (offloadMode) return inputAudioFormat
+
         sampleRate = inputAudioFormat.sampleRate
         channelCount = inputAudioFormat.channelCount
         encoding = inputAudioFormat.encoding
@@ -55,7 +64,7 @@ class SilenceDetectorAudioProcessor(
         return inputAudioFormat
     }
 
-    override fun isActive(): Boolean = true
+    override fun isActive(): Boolean = !offloadMode
 
     override fun queueInput(inputBuffer: ByteBuffer) {
         if (!inputBuffer.hasRemaining()) {
@@ -63,7 +72,13 @@ class SilenceDetectorAudioProcessor(
             return
         }
 
-        // Analyze the incoming PCM for silence without mutating the buffer position.
+        if (offloadMode) {
+            val out = replaceOutputBuffer(inputBuffer.remaining())
+            out.put(inputBuffer)
+            out.flip()
+            return
+        }
+
         if (instantModeEnabled && sampleRate > 0 && channelCount > 0) {
             detectSilence(inputBuffer)
         } else {
