@@ -29,12 +29,18 @@ class PoTokenGenerator {
             return null
         }
 
+        val deadlineMs = System.currentTimeMillis() + POTOKEN_TIMEOUT_MS
         repeat(POTOKEN_MAX_RETRIES) { attempt ->
+            val remainingMs = deadlineMs - System.currentTimeMillis()
+            if (remainingMs <= 0) {
+                Timber.tag(TAG).w("PoToken deadline exceeded; aborting retry loop")
+                return null
+            }
             val isLastAttempt = attempt == POTOKEN_MAX_RETRIES - 1
             try {
-                Timber.tag(TAG).d("PoToken attempt ${attempt + 1}/$POTOKEN_MAX_RETRIES (timeout=${POTOKEN_TIMEOUT_MS}ms)")
+                Timber.tag(TAG).d("PoToken attempt ${attempt + 1}/$POTOKEN_MAX_RETRIES (${remainingMs}ms remaining)")
                 val result = runBlocking {
-                    withTimeout(POTOKEN_TIMEOUT_MS) {
+                    withTimeout(remainingMs) {
                         getWebClientPoToken(videoId, sessionId, forceRecreate = attempt > 0)
                     }
                 }
@@ -51,8 +57,11 @@ class PoTokenGenerator {
                 return null
             } catch (e: BadWebViewException) {
                 Timber.tag(TAG).e(e, "WebView broken; disabling PoToken")
+                resetWebViewState()
                 webViewBadImpl = true
                 return null
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.tag(TAG).e(e, "PoToken attempt ${attempt + 1} failed: ${e.message}")
                 if (!isLastAttempt) {

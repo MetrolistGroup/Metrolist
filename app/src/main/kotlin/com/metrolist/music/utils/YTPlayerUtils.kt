@@ -819,13 +819,17 @@ object YTPlayerUtils {
         if (MAIN_CLIENT.useWebPoTokens && sessionId != null) {
             try {
                 poToken = poTokenGenerator.getWebClientPoToken(videoId, sessionId)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (_: Exception) { }
         }
 
-        var mainPlayerResponse = YouTube.player(videoId, playlistId, MAIN_CLIENT, signatureTimestamp.timestamp, poToken?.playerRequestPoToken).getOrThrow()
+        var mainPlayerResponse = YouTube.player(videoId, playlistId, MAIN_CLIENT, signatureTimestamp.timestamp, poToken?.playerRequestPoToken)
+            .onFailure { Timber.tag(TAG).w(it, "Main client failed for video stream; continuing with fallbacks") }
+            .getOrNull()
 
         val isLoggedIn = YouTube.cookie != null
-        val currentStatus = mainPlayerResponse.playabilityStatus.status
+        val currentStatus = mainPlayerResponse?.playabilityStatus?.status
         val isAgeRestricted = currentStatus in listOf("AGE_CHECK_REQUIRED", "AGE_VERIFICATION_REQUIRED", "LOGIN_REQUIRED", "CONTENT_CHECK_REQUIRED")
 
         if (isAgeRestricted && isLoggedIn) {
@@ -886,6 +890,8 @@ object YTPlayerUtils {
                         val separator = if ("?" in finalUrl) "&" else "?"
                         finalUrl = "${finalUrl}${separator}pot=${Uri.encode(poToken.streamingDataPoToken)}"
                     }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
                 } catch (_: Exception) { }
             }
 
@@ -923,10 +929,14 @@ object YTPlayerUtils {
         if (MAIN_CLIENT.useWebPoTokens && sessionId != null) {
             try {
                 poToken = poTokenGenerator.getWebClientPoToken(videoId, sessionId)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (_: Exception) { }
         }
         val response = YouTube.player(videoId, null, MAIN_CLIENT, signatureTimestamp.timestamp, poToken?.playerRequestPoToken).getOrNull()
         response?.playabilityStatus?.status == "OK" && findVideoFormat(response) != null
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
     } catch (_: Exception) {
         false
     }
