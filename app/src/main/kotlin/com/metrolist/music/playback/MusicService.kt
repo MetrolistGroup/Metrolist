@@ -492,13 +492,7 @@ class MusicService :
     private var cachedAutoLoadMore = true
 
     // URL cache for stream URLs - class-level so it can be invalidated on errors
-    private val songUrlCache = Collections.synchronizedMap(
-        object : LinkedHashMap<String, Pair<String, Long>>(0, 0.75f, true) {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<String, Long>>): Boolean {
-                return size > 500
-            }
-        }
-    )
+    private val songUrlCache = StreamUrlCache()
 
     // Tracks mediaIds for which a recoverSong() coroutine is currently in flight.
     //
@@ -808,7 +802,7 @@ class MusicService :
 
                     Timber.tag(TAG).i("RELOADING STREAM: $mediaId at position ${currentPosition}ms")
 
-                    songUrlCache.remove(mediaId)
+                    songUrlCache.invalidate(mediaId)
 
                     // CRITICAL: Clear caches synchronously to prevent format parsing errors
                     runBlocking(Dispatchers.IO) {
@@ -3010,7 +3004,7 @@ class MusicService :
     private fun performAggressiveCacheClear(mediaId: String) {
         Timber.tag(TAG).d("Performing aggressive cache clear for $mediaId")
 
-        songUrlCache.remove(mediaId)
+        songUrlCache.invalidate(mediaId)
 
         try {
             playerCache.removeResource(mediaId)
@@ -3194,7 +3188,7 @@ class MusicService :
 
         incrementRetryCount(mediaId)
 
-        songUrlCache.remove(mediaId)
+        songUrlCache.invalidate(mediaId)
         // A 403/410 on GET means the (HEAD-unvalidated) WEB_REMIX stream URL was bad — mark it so the
         // re-resolution falls through to the fallback clients instead of retrying WEB_REMIX.
         YTPlayerUtils.markWebRemixFailed(mediaId)
@@ -3670,9 +3664,9 @@ class MusicService :
                     return@Factory dataSpec
                 }
 
-                songUrlCache[mediaId]?.takeIf { it.second > System.currentTimeMillis() }?.let {
+                songUrlCache[mediaId]?.let { streamUrl ->
                     recoverSongDeduped(mediaId)
-                    return@Factory dataSpec.withUri(it.first.toUri())
+                    return@Factory dataSpec.withUri(streamUrl.toUri())
                 }
             } else {
                 Timber.tag(TAG).i("BYPASSING CACHE for $mediaId due to quality change")
@@ -3764,8 +3758,7 @@ class MusicService :
                 val streamUrl = nonNullPlayback.streamUrl
                 currentStreamClient.value = nonNullPlayback.streamClient
 
-                songUrlCache[mediaId] =
-                    streamUrl to System.currentTimeMillis() + (nonNullPlayback.streamExpiresInSeconds * 1000L)
+                songUrlCache.put(mediaId, streamUrl, nonNullPlayback.streamExpiresInSeconds)
 
                 nonNullPlayback.playbackTracking?.videostatsPlaybackUrl?.baseUrl?.let {
                     playbackUrlCache[cacheKey(mediaId)] = it

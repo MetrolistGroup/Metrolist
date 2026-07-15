@@ -10,6 +10,7 @@ import android.net.ConnectivityManager
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
 import androidx.media3.database.DatabaseProvider
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSource
@@ -61,7 +62,7 @@ constructor(
     private val TAG = "DownloadUtil"
     private val connectivityManager = context.getSystemService<ConnectivityManager>()!!
     private val audioQuality by enumPreference(context, AudioQualityKey, AudioQuality.AUTO)
-    private val songUrlCache = HashMap<String, Pair<String, Long>>()
+    private val songUrlCache = StreamUrlCache()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -94,8 +95,8 @@ constructor(
                 return@Factory dataSpec
             }
 
-            songUrlCache[mediaId]?.takeIf { it.second < System.currentTimeMillis() }?.let {
-                return@Factory dataSpec.withUri(it.first.toUri())
+            songUrlCache[mediaId]?.let { streamUrl ->
+                return@Factory dataSpec.withUri(streamUrl.toUri())
             }
 
             val playbackData = runBlocking(Dispatchers.IO) {
@@ -172,7 +173,7 @@ constructor(
                 "${it}&range=0-${actualContentLength}"
             }
 
-            songUrlCache[mediaId] = streamUrl to playbackData.streamExpiresInSeconds * 1000L
+            songUrlCache.put(mediaId, streamUrl, playbackData.streamExpiresInSeconds)
             dataSpec.withUri(streamUrl.toUri())
         }
 
@@ -196,6 +197,10 @@ constructor(
                         download: Download,
                         finalException: Exception?,
                     ) {
+                        if (download.state == Download.STATE_FAILED && finalException.isExpiredStreamError()) {
+                            songUrlCache.invalidate(download.request.id)
+                        }
+
                         downloads.update { map ->
                             map.toMutableMap().apply {
                                 set(download.request.id, download)
@@ -223,6 +228,7 @@ constructor(
                         download: Download,
                     ) {
                         val downloadId = download.request.id
+                        songUrlCache.invalidate(downloadId)
 
                         runCatching {
                             database.updateDownloadedInfo(downloadId, false, null)
@@ -254,5 +260,18 @@ constructor(
 
     fun release() {
         scope.cancel()
+    }
+
+    private fun Throwable?.isExpiredStreamError(): Boolean {
+        var current = this
+        while (current != null) {
+            if (current is HttpDataSource.InvalidResponseCodeException &&
+                (current.responseCode == 403 || current.responseCode == 410)
+            ) {
+                return true
+            }
+            current = current.cause
+        }
+        return false
     }
 }
