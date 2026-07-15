@@ -139,7 +139,7 @@ object YTPlayerUtils {
         connectivityManager: ConnectivityManager,
         contentHints: ContentHints = ContentHints(),
     ): Result<PlaybackData> = runCatching {
-        Timber.tag(TAG).d("=== PLAYER RESPONSE FOR PLAYBACK ===")
+        Timber.tag(TAG).d("Player response for playback")
         Timber.tag(TAG).d("videoId: $videoId")
         Timber.tag(TAG).d("playlistId: $playlistId")
         Timber.tag(TAG).d("audioQuality: $audioQuality")
@@ -326,7 +326,7 @@ object YTPlayerUtils {
 
                 val musicVideoType = streamPlayerResponse.videoDetails?.musicVideoType
 
-                Timber.tag(TAG).d("=== N-TRANSFORM DECISION ===")
+                Timber.tag(TAG).d("N-transform decision")
                 Timber.tag(TAG).d("Content type analysis:")
                 Timber.tag(TAG).d("  musicVideoType: $musicVideoType")
                 Timber.tag(TAG).d("  isUploadedTrack (from playlistId): $isUploadedTrack")
@@ -437,7 +437,7 @@ object YTPlayerUtils {
                 if (currentClient.clientName == "WEB_REMIX" &&
                     !webRemixFailedIds.contains(videoId)
                 ) {
-                    Timber.tag(logTag).d("WEB_REMIX — skipping HEAD validation, letting ExoPlayer try directly")
+                    Timber.tag(logTag).d("WEB_REMIX skipping HEAD validation, letting ExoPlayer try directly")
                     Timber.tag(TAG).i("Playback: client=${currentClient.clientName}, videoId=$videoId")
                     successClient = currentClient.clientName
                     break
@@ -810,7 +810,7 @@ object YTPlayerUtils {
         playlistId: String? = null,
         connectivityManager: ConnectivityManager,
     ): Result<VideoStreamData> = runCatching {
-        Timber.tag(TAG).d("=== VIDEO STREAM FOR PLAYBACK ===")
+        Timber.tag(TAG).d("Video stream for playback")
         Timber.tag(TAG).d("videoId: $videoId")
 
         val signatureTimestamp = getSignatureTimestampOrNull(videoId)
@@ -901,7 +901,7 @@ object YTPlayerUtils {
             if (isLastFallback) {
                 Timber.tag(TAG).d("Using last fallback client without validation: ${currentClient.clientName}")
             } else if (currentClient.clientName == "WEB_REMIX" && !webRemixFailedIds.contains(videoId)) {
-                Timber.tag(TAG).d("WEB_REMIX — skipping HEAD validation for video stream")
+                Timber.tag(TAG).d("WEB_REMIX skipping HEAD validation for video stream")
             } else if (!validateStatus(finalUrl)) {
                 Timber.tag(TAG).d("Video stream validation failed for client: ${currentClient.clientName}")
                 continue

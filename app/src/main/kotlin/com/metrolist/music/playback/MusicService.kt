@@ -543,6 +543,8 @@ class MusicService :
     private val MAX_RETRY_PER_SONG = 3
     private val RETRY_DELAY_MS = 1000L
     private val OFFLOAD_STALL_TIMEOUT_MS = 10_000L
+    private val OFFLOAD_POSITION_CHECK_INTERVAL_MS = 2_000L
+    private val OFFLOAD_STALE_CHECKS_THRESHOLD = 3
 
     // Track failed songs to prevent infinite retry loops
     private val recentlyFailedSongs = mutableSetOf<String>()
@@ -2623,29 +2625,51 @@ class MusicService :
                 Timber.tag(TAG).d("Playback successful for $mediaId, reset retry count")
             }
             scheduleCrossfade()
+            startOffloadPositionMonitor()
         }
 
-        if (playbackState == Player.STATE_BUFFERING && currentOffloadEnabled && player.playWhenReady) {
+        if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
             offloadStallJob?.cancel()
-            offloadStallJob = scope.launch {
-                delay(OFFLOAD_STALL_TIMEOUT_MS)
-                if (player.playbackState == Player.STATE_BUFFERING && currentOffloadEnabled) {
-                    Timber.tag(TAG).w("Offload stall detected — disabling offload")
-                    player.setOffloadEnabled(false)
-                    secondaryPlayer?.setOffloadEnabled(false)
-                    currentOffloadEnabled = false
-                    playerSilenceProcessors.values.forEach { it.offloadMode = false }
-                    safeDataStoreEdit { settings -> settings[AudioOffload] = false }
-                    val idx = player.currentMediaItemIndex
-                    val pos = player.currentPosition
-                    player.seekTo(idx, pos)
-                    player.prepare()
-                }
-            }
         }
 
         if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
             scrobbleManager?.onSongStop()
+        }
+    }
+
+    private fun disableOffload() {
+        Timber.tag(TAG).w("Offload stall detected, disabling offload")
+        player.setOffloadEnabled(false)
+        secondaryPlayer?.setOffloadEnabled(false)
+        currentOffloadEnabled = false
+        playerSilenceProcessors.values.forEach { it.offloadMode = false }
+        scope.launch { safeDataStoreEdit { settings -> settings[AudioOffload] = false } }
+    }
+
+    private fun startOffloadPositionMonitor() {
+        offloadStallJob?.cancel()
+        if (!currentOffloadEnabled || !player.playWhenReady) return
+        offloadStallJob = scope.launch {
+            var lastPosition = player.currentPosition
+            var staleChecks = 0
+            while (currentOffloadEnabled && player.isPlaying) {
+                delay(OFFLOAD_POSITION_CHECK_INTERVAL_MS)
+                if (!currentOffloadEnabled || !player.isPlaying) break
+                val currentPosition = player.currentPosition
+                if (currentPosition == lastPosition) {
+                    staleChecks++
+                    if (staleChecks >= OFFLOAD_STALE_CHECKS_THRESHOLD) {
+                        disableOffload()
+                        val idx = player.currentMediaItemIndex
+                        player.seekTo(idx, currentPosition)
+                        player.prepare()
+                        break
+                    }
+                } else {
+                    staleChecks = 0
+                    lastPosition = currentPosition
+                }
+            }
         }
     }
 
