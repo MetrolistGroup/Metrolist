@@ -71,6 +71,19 @@ object YTPlayerUtils {
     private val MAIN_CLIENT: YouTubeClient = WEB_REMIX
     private val fallbackStrategy = ContentAwareFallbackStrategy()
 
+    /** Client fallback chain used by [videoStreamForPlayback] to resolve a video-capable stream. */
+    private val STREAM_FALLBACK_CLIENTS: Array<YouTubeClient> = arrayOf(
+        YouTubeClient.VISIONOS,
+        YouTubeClient.WEB_CREATOR,
+        YouTubeClient.TVHTML5,
+        YouTubeClient.IOS,
+        YouTubeClient.IPADOS,
+        YouTubeClient.ANDROID_CREATOR,
+        YouTubeClient.ANDROID_VR_NO_AUTH,
+        YouTubeClient.MOBILE,
+        YouTubeClient.WEB,
+    )
+
     /** Client names disabled by the user in Settings → Stream sources. Updated reactively by MusicService. */
     @Volatile
     var disabledStreamClients: Set<String> = emptySet()
@@ -104,6 +117,15 @@ object YTPlayerUtils {
         val streamUrl: String,
         val streamExpiresInSeconds: Int,
         val streamClient: String = "unknown",
+    )
+
+    data class VideoStreamData(
+        val streamUrl: String,
+        val streamExpiresInSeconds: Int,
+        val width: Int,
+        val height: Int,
+        val mimeType: String,
+        val streamClient: String,
     )
     /**
      * Custom player response intended to use for playback.
@@ -466,17 +488,8 @@ object YTPlayerUtils {
 
         if (streamPlayerResponse.playabilityStatus.status != "OK") {
             val errorReason = streamPlayerResponse.playabilityStatus.reason
-            // YouTube often surfaces generic reasons (e.g. "error 2000") for restricted or
-            // unavailable streams; Metrolist cannot recover those without official playback.
-            Timber.tag(logTag).e("Playability status not OK: $errorReason")
-            if (isUploadedTrack) {
-                println("[PLAYBACK_DEBUG] FAILURE: Playability not OK for uploaded track - status=${streamPlayerResponse.playabilityStatus.status}, reason=$errorReason")
-            }
-            throw PlaybackException(
-                errorReason,
-                null,
-                PlaybackException.ERROR_CODE_REMOTE_ERROR
-            )
+            Timber.tag(logTag).e("Playability not OK: $errorReason (status=${streamPlayerResponse.playabilityStatus.status})")
+            throw PlaybackException(errorReason, null, PlaybackException.ERROR_CODE_REMOTE_ERROR)
         }
 
         if (streamExpiresInSeconds == null) {
@@ -769,5 +782,152 @@ object YTPlayerUtils {
 
     fun forceRefreshForVideo(videoId: String) {
         Timber.tag(logTag).d("Force refreshing for videoId: $videoId")
+    }
+
+    /**
+     * Find a video-capable format (muxed audio+video or video-only) from the player response.
+     * Prefers muxed formats to avoid A/V sync issues.
+     */
+    private fun findVideoFormat(
+        playerResponse: PlayerResponse,
+    ): PlayerResponse.StreamingData.Format? {
+        val muxedFormats = playerResponse.streamingData?.formats
+            ?.filter { !it.isAudio && it.width != null }
+        if (!muxedFormats.isNullOrEmpty()) {
+            return muxedFormats.maxByOrNull { (it.height ?: 0) * (it.bitrate) }
+        }
+        val videoAdaptive = playerResponse.streamingData?.adaptiveFormats
+            ?.filter { !it.isAudio && it.width != null }
+        return videoAdaptive?.maxByOrNull { (it.height ?: 0) * (it.bitrate) }
+    }
+
+    /**
+     * Resolves a video stream URL for the given videoId.
+     * Reuses the same client fallback chain and cipher/poToken infrastructure as audio playback.
+     */
+    suspend fun videoStreamForPlayback(
+        videoId: String,
+        playlistId: String? = null,
+        connectivityManager: ConnectivityManager,
+    ): Result<VideoStreamData> = runCatching {
+        Timber.tag(TAG).d("=== VIDEO STREAM FOR PLAYBACK ===")
+        Timber.tag(TAG).d("videoId: $videoId")
+
+        val signatureTimestamp = getSignatureTimestampOrNull(videoId)
+        val sessionId = YouTube.visitorData
+        var poToken: PoTokenResult? = null
+        if (MAIN_CLIENT.useWebPoTokens && sessionId != null) {
+            try {
+                poToken = poTokenGenerator.getWebClientPoToken(videoId, sessionId)
+            } catch (_: Exception) { }
+        }
+
+        var mainPlayerResponse = YouTube.player(videoId, playlistId, MAIN_CLIENT, signatureTimestamp.timestamp, poToken?.playerRequestPoToken).getOrThrow()
+
+        val isLoggedIn = YouTube.cookie != null
+        val currentStatus = mainPlayerResponse.playabilityStatus.status
+        val isAgeRestricted = currentStatus in listOf("AGE_CHECK_REQUIRED", "AGE_VERIFICATION_REQUIRED", "LOGIN_REQUIRED", "CONTENT_CHECK_REQUIRED")
+
+        if (isAgeRestricted && isLoggedIn) {
+            val creatorResponse = YouTube.player(videoId, playlistId, YouTubeClient.WEB_CREATOR, null, null).getOrNull()
+            if (creatorResponse?.playabilityStatus?.status == "OK") {
+                mainPlayerResponse = creatorResponse
+            }
+        }
+
+        var bestFormat: PlayerResponse.StreamingData.Format? = null
+        var bestUrl: String? = null
+        var bestExpiry: Int? = null
+        var bestClient: String? = null
+
+        val startIndex = if (isAgeRestricted) 0 else -1
+
+        for (clientIndex in (startIndex until STREAM_FALLBACK_CLIENTS.size)) {
+            val client: YouTubeClient
+            val streamPlayerResponse: PlayerResponse?
+            if (clientIndex == -1) {
+                client = MAIN_CLIENT
+                if (client.clientName in disabledStreamClients) continue
+                streamPlayerResponse = mainPlayerResponse
+            } else {
+                client = STREAM_FALLBACK_CLIENTS[clientIndex]
+                if (client.clientName in disabledStreamClients) continue
+                if (client.loginRequired && !isLoggedIn && YouTube.cookie == null) continue
+                val clientPoToken = if (client.useWebPoTokens) poToken?.playerRequestPoToken else null
+                val clientSigTimestamp = if (isAgeRestricted) null else signatureTimestamp.timestamp
+                streamPlayerResponse = YouTube.player(videoId, playlistId, client, clientSigTimestamp, clientPoToken).getOrNull()
+            }
+
+            if (streamPlayerResponse?.playabilityStatus?.status != "OK") continue
+
+            val responseToUse = if (isAgeRestricted) {
+                streamPlayerResponse
+            } else {
+                YouTube.newPipePlayer(videoId, streamPlayerResponse) ?: streamPlayerResponse
+            }
+
+            val format = findVideoFormat(responseToUse) ?: continue
+            val streamUrl = findUrlOrNull(format, videoId, responseToUse, skipNewPipe = isAgeRestricted) ?: continue
+
+            val currentClient = if (clientIndex == -1) {
+                MAIN_CLIENT
+            } else {
+                STREAM_FALLBACK_CLIENTS[clientIndex]
+            }
+
+            val needsNTransform = currentClient.useWebPoTokens ||
+                currentClient.clientName in listOf("WEB", "WEB_REMIX", "WEB_CREATOR", "TVHTML5")
+
+            var finalUrl = streamUrl
+            if (needsNTransform) {
+                try {
+                    finalUrl = CipherDeobfuscator.transformNParamInUrl(streamUrl)
+                    if (currentClient.useWebPoTokens && poToken?.streamingDataPoToken != null) {
+                        val separator = if ("?" in finalUrl) "&" else "?"
+                        finalUrl = "${finalUrl}${separator}pot=${Uri.encode(poToken.streamingDataPoToken)}"
+                    }
+                } catch (_: Exception) { }
+            }
+
+            val expiry = responseToUse.streamingData?.expiresInSeconds ?: continue
+
+            bestFormat = format
+            bestUrl = finalUrl
+            bestExpiry = expiry
+            bestClient = currentClient.clientName
+            break
+        }
+
+        if (bestUrl == null || bestFormat == null || bestExpiry == null) {
+            throw Exception("No video stream found for videoId=$videoId")
+        }
+
+        VideoStreamData(
+            streamUrl = bestUrl,
+            streamExpiresInSeconds = bestExpiry,
+            width = bestFormat.width ?: 0,
+            height = bestFormat.height ?: 0,
+            mimeType = bestFormat.mimeType,
+            streamClient = bestClient ?: "unknown",
+        )
+    }
+
+    /**
+     * Quick check if a video stream is available for the given videoId.
+     * Does a lightweight player response check without resolving the full stream URL.
+     */
+    suspend fun hasVideoStream(videoId: String): Boolean = try {
+        val signatureTimestamp = getSignatureTimestampOrNull(videoId)
+        val sessionId = YouTube.visitorData
+        var poToken: PoTokenResult? = null
+        if (MAIN_CLIENT.useWebPoTokens && sessionId != null) {
+            try {
+                poToken = poTokenGenerator.getWebClientPoToken(videoId, sessionId)
+            } catch (_: Exception) { }
+        }
+        val response = YouTube.player(videoId, null, MAIN_CLIENT, signatureTimestamp.timestamp, poToken?.playerRequestPoToken).getOrNull()
+        response?.playabilityStatus?.status == "OK" && findVideoFormat(response) != null
+    } catch (_: Exception) {
+        false
     }
 }

@@ -2511,6 +2511,7 @@ class MusicService :
 
         lastPlaybackSpeed = -1.0f // force update song
 
+        playerSilenceProcessors[player]?.resetTracking()
         setupAudioNormalization()
 
         scrobbleManager?.onSongStop()

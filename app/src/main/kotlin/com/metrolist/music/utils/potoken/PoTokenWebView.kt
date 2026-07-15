@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.webkit.ConsoleMessage
+import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebChromeClient
@@ -460,6 +461,13 @@ class PoTokenWebView private constructor(
 
         suspend fun getNewPoTokenGenerator(context: Context): PoTokenWebView {
             var created: PoTokenWebView? = null
+            // BotGuard runs inside a WebView that shares the process-global CookieManager.
+            // After login, YouTube/Google auth cookies (SID, SAPISID, ...) are visible to the
+            // WebView's JS engine via document.cookie. BotGuard uses this browser state as part
+            // of its attestation, but the botguard HTTP requests go through OkHttp with NO
+            // cookies — a mismatch that causes attestation to fail. Temporarily clear these
+            // cookies so BotGuard sees an anonymous state consistent with the API calls.
+            val savedCookies = clearYouTubeCookiesForBotguard()
             try {
                 return withTimeout(INIT_TIMEOUT_MS) {
                     withContext(Dispatchers.Main) {
@@ -475,10 +483,42 @@ class PoTokenWebView private constructor(
                 closeQuietly(created)
                 throw PoTokenException("PoTokenWebView init timed out after ${INIT_TIMEOUT_MS}ms")
             } catch (e: CancellationException) {
-                // Caller cancelled — don't leak the half-initialized WebView.
                 closeQuietly(created)
                 throw e
+            } finally {
+                restoreYouTubeCookies(savedCookies)
             }
+        }
+
+        private val YOUTUBE_COOKIE_DOMAINS = listOf(
+            ".youtube.com", "youtube.com",
+            ".google.com", "google.com",
+            ".youtube-nocookie.com", "youtube-nocookie.com",
+        )
+
+        private fun clearYouTubeCookiesForBotguard(): Map<String, String> {
+            val cookieManager = CookieManager.getInstance()
+            val saved = mutableMapOf<String, String>()
+            for (domain in YOUTUBE_COOKIE_DOMAINS) {
+                val cookies = cookieManager.getCookie(domain)
+                if (!cookies.isNullOrEmpty()) {
+                    saved[domain] = cookies
+                    cookieManager.setCookie(domain, "")
+                }
+            }
+            if (saved.isNotEmpty()) {
+                Timber.tag(TAG).d("Cleared ${saved.size} YouTube cookie domains for BotGuard")
+            }
+            return saved
+        }
+
+        private fun restoreYouTubeCookies(saved: Map<String, String>) {
+            if (saved.isEmpty()) return
+            val cookieManager = CookieManager.getInstance()
+            for ((domain, cookies) in saved) {
+                cookieManager.setCookie(domain, cookies)
+            }
+            Timber.tag(TAG).d("Restored ${saved.size} YouTube cookie domains after BotGuard")
         }
 
         private suspend fun closeQuietly(potWv: PoTokenWebView?) {

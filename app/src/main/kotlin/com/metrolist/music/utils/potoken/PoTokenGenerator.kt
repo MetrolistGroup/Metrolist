@@ -24,49 +24,61 @@ class PoTokenGenerator {
 
     fun getWebClientPoToken(videoId: String, sessionId: String): PoTokenResult? {
         Timber.tag(TAG).d("getWebClientPoToken called: videoId=$videoId, sessionId=$sessionId")
-        Timber.tag(TAG).d("WebView state: supported=$webViewSupported, badImpl=$webViewBadImpl")
         if (!webViewSupported || webViewBadImpl) {
             Timber.tag(TAG).d("WebView not available: supported=$webViewSupported, badImpl=$webViewBadImpl")
             return null
         }
 
-        return try {
-            Timber.tag(TAG).d("Calling runBlocking to generate poToken (timeout=${POTOKEN_TIMEOUT_MS}ms)...")
-            runBlocking {
-                withTimeout(POTOKEN_TIMEOUT_MS) {
-                    getWebClientPoToken(videoId, sessionId, forceRecreate = false)
-                }
-            }
-        } catch (e: TimeoutCancellationException) {
-            // The WebView's sandboxed process can be culled by the OS (storage pressure, low
-            // memory, etc.) which leaves the PoToken WebView call hung indefinitely. Cap it so
-            // playerResponseForPlayback can fall through to non-PoToken fallback clients (e.g.
-            // ANDROID_VR) instead of blocking the entire playback path.
-            Timber.tag(TAG).w("poToken generation timed out after ${POTOKEN_TIMEOUT_MS}ms; proceeding without PoToken")
-            runBlocking {
-                webPoTokenGenLock.withLock {
-                    try {
-                        withContext(Dispatchers.Main) {
-                            webPoTokenGenerator?.close()
-                        }
-                    } catch (closeEx: Exception) {
-                        Timber.tag(TAG).e(closeEx, "Exception closing PoTokenWebView during timeout cleanup")
+        repeat(POTOKEN_MAX_RETRIES) { attempt ->
+            val isLastAttempt = attempt == POTOKEN_MAX_RETRIES - 1
+            try {
+                Timber.tag(TAG).d("PoToken attempt ${attempt + 1}/$POTOKEN_MAX_RETRIES (timeout=${POTOKEN_TIMEOUT_MS}ms)")
+                val result = runBlocking {
+                    withTimeout(POTOKEN_TIMEOUT_MS) {
+                        getWebClientPoToken(videoId, sessionId, forceRecreate = attempt > 0)
                     }
-                    webPoTokenGenerator = null
-                    webPoTokenStreamingPot = null
-                    webPoTokenSessionId = null
                 }
+                if (result != null) return result
+                Timber.tag(TAG).w("PoToken returned null on attempt ${attempt + 1}; not retrying")
+                return null
+            } catch (e: TimeoutCancellationException) {
+                Timber.tag(TAG).w("PoToken timed out on attempt ${attempt + 1}/${POTOKEN_MAX_RETRIES}")
+                resetWebViewState()
+                if (!isLastAttempt) {
+                    Timber.tag(TAG).d("Retrying PoToken after timeout...")
+                    return@repeat
+                }
+                return null
+            } catch (e: BadWebViewException) {
+                Timber.tag(TAG).e(e, "WebView broken; disabling PoToken")
+                webViewBadImpl = true
+                return null
+            } catch (e: Exception) {
+                Timber.tag(TAG).e(e, "PoToken attempt ${attempt + 1} failed: ${e.message}")
+                if (!isLastAttempt) {
+                    Timber.tag(TAG).d("Retrying PoToken after failure...")
+                    resetWebViewState()
+                    return@repeat
+                }
+                throw e
             }
-            null
-        } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "poToken generation exception: ${e.javaClass.simpleName}: ${e.message}")
-            when (e) {
-                is BadWebViewException -> {
-                    Timber.tag(TAG).e(e, "Could not obtain poToken because WebView is broken")
-                    webViewBadImpl = true
-                    null
+        }
+        return null
+    }
+
+    private fun resetWebViewState() {
+        runBlocking {
+            webPoTokenGenLock.withLock {
+                try {
+                    withContext(Dispatchers.Main) {
+                        webPoTokenGenerator?.close()
+                    }
+                } catch (e: Exception) {
+                    Timber.tag(TAG).w(e, "Exception closing PoTokenWebView during reset")
                 }
-                else -> throw e // includes PoTokenException
+                webPoTokenGenerator = null
+                webPoTokenStreamingPot = null
+                webPoTokenSessionId = null
             }
         }
     }
@@ -76,6 +88,7 @@ class PoTokenGenerator {
         // 8s leaves slack for a slow device without making the user wait too long before the
         // fallback chain (ANDROID_VR, etc.) takes over when the WebView hangs.
         const val POTOKEN_TIMEOUT_MS = 8_000L
+        const val POTOKEN_MAX_RETRIES = 2
     }
 
     /**
