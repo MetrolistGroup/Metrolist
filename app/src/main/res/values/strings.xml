@@ -295,6 +295,7 @@
     <string name="pause_auto_stop_timeout">Stop playback service after being paused</string>
     <string name="pause_auto_stop_timeout_desc">If playback stays paused for this duration, the playback service and notification are shut down.</string>
     <string name="pause_auto_stop_timeout_minutes">%1$d min</string>
+    <string name="pause_auto_stop_duration">Auto-stop delay</string>
     <string name="equalizer">Equalizer</string>
 
     <string name="storage">Storage</string>

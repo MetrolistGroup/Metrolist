@@ -145,6 +145,10 @@ import com.metrolist.music.constants.MiniPlayerBottomSpacing
 import com.metrolist.music.constants.MiniPlayerHeight
 import com.metrolist.music.constants.NavigationBarAnimationSpec
 import com.metrolist.music.constants.NavigationBarHeight
+import com.metrolist.music.constants.PauseAutoStopEnabledKey
+import com.metrolist.music.constants.PauseAutoStopMigrationDoneKey
+import com.metrolist.music.constants.PauseAutoStopMinutesKey
+import com.metrolist.music.constants.PauseAutoStopTimeoutSecondsKey
 import com.metrolist.music.constants.PauseListenHistoryKey
 import com.metrolist.music.constants.PauseSearchHistoryKey
 import com.metrolist.music.constants.PreferredLyricsProvider
@@ -430,6 +434,23 @@ class MainActivity : ComponentActivity() {
                     }
                     settings[SimpMusicMigrationDoneKey] = true
                     settings[LastSeenVersionKey] = currentVersion
+                }
+            }
+
+            // Pause Auto Stop Enabled-Toggle Migration
+            if (preferences[PauseAutoStopMigrationDoneKey] != true) {
+                safeDataStoreEdit { settings ->
+                    // Only users who already had the legacy minutes-only preference set are
+                    // "existing users" of this feature; for them we preserve their configured
+                    // timeout and turn the new toggle on so behavior is unchanged after the
+                    // update. Fresh installs never had this key, so they simply keep the
+                    // OFF/15-minute defaults applied wherever the new keys are read.
+                    val legacyMinutes = settings[PauseAutoStopMinutesKey]
+                    if (legacyMinutes != null) {
+                        settings[PauseAutoStopTimeoutSecondsKey] = legacyMinutes * 60
+                        settings[PauseAutoStopEnabledKey] = true
+                    }
+                    settings[PauseAutoStopMigrationDoneKey] = true
                 }
             }
         }

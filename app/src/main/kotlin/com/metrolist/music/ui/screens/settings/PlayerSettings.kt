@@ -55,7 +55,8 @@ import com.metrolist.music.constants.HistoryDuration
 import com.metrolist.music.constants.KeepScreenOn
 import com.metrolist.music.constants.LoudnessLevel
 import com.metrolist.music.constants.LoudnessLevelKey
-import com.metrolist.music.constants.PauseAutoStopMinutesKey
+import com.metrolist.music.constants.PauseAutoStopEnabledKey
+import com.metrolist.music.constants.PauseAutoStopTimeoutSecondsKey
 import com.metrolist.music.constants.PauseOnMute
 import com.metrolist.music.constants.PersistentQueueKey
 import com.metrolist.music.constants.PersistentShuffleAcrossQueuesKey
@@ -89,6 +90,24 @@ import com.metrolist.music.ui.component.encodeDayTimes
 import com.metrolist.music.constants.SleepTimerFadeOutKey
 import com.metrolist.music.constants.SleepTimerStopAfterCurrentSongKey
 import com.metrolist.music.ui.utils.getLoudnessLevelLabel
+
+// Discrete timeout options (in seconds) offered by the Pause Auto Stop slider below.
+// Keeps the existing default (15 minutes) and maximum (60 minutes), while adding
+// several shorter, second-granularity options.
+private val PAUSE_AUTO_STOP_TIMEOUT_OPTIONS_SECONDS = listOf(
+    5, 10, 15, 30, // seconds
+    60, 120, 300, 600, 900, 1800, 2700, 3600, // 1, 2, 5, 10, 15, 30, 45, 60 minutes
+)
+private const val DEFAULT_PAUSE_AUTO_STOP_TIMEOUT_SECONDS = 900 // 15 minutes
+
+@Composable
+private fun pauseAutoStopTimeoutLabel(seconds: Int): String =
+    if (seconds < 60) {
+        pluralStringResource(R.plurals.seconds, seconds, seconds)
+    } else {
+        val minutes = seconds / 60
+        pluralStringResource(R.plurals.minute, minutes, minutes)
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -202,9 +221,13 @@ fun PlayerSettings(
         PreventDuplicateTracksInQueueKey,
         defaultValue = false
     )
-    val (pauseAutoStopMinutes, onPauseAutoStopMinutesChange) = rememberPreference(
-        PauseAutoStopMinutesKey,
-        defaultValue = 15
+    val (pauseAutoStopEnabled, onPauseAutoStopEnabledChange) = rememberPreference(
+        PauseAutoStopEnabledKey,
+        defaultValue = false
+    )
+    val (pauseAutoStopTimeoutSeconds, onPauseAutoStopTimeoutSecondsChange) = rememberPreference(
+        PauseAutoStopTimeoutSecondsKey,
+        defaultValue = DEFAULT_PAUSE_AUTO_STOP_TIMEOUT_SECONDS
     )
     val (pauseOnMute, onPauseOnMuteChange) = rememberPreference(
         PauseOnMute,
@@ -1005,29 +1028,54 @@ fun PlayerSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.misc),
-            items = listOf(
-                Material3SettingsItem(
+            items = buildList {
+                add(Material3SettingsItem(
                     icon = painterResource(R.drawable.clear_all),
                     title = { Text(stringResource(R.string.pause_auto_stop_timeout)) },
-                    description = {
-                        Column {
-                            Text(stringResource(R.string.pause_auto_stop_timeout_desc))
-                            Text(
-                                stringResource(
-                                    R.string.pause_auto_stop_timeout_minutes,
-                                    pauseAutoStopMinutes
+                    description = { Text(stringResource(R.string.pause_auto_stop_timeout_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = pauseAutoStopEnabled,
+                            onCheckedChange = onPauseAutoStopEnabledChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (pauseAutoStopEnabled) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
                                 )
-                            )
-                            Slider(
-                                value = pauseAutoStopMinutes.toFloat(),
-                                onValueChange = { onPauseAutoStopMinutesChange(it.roundToInt()) },
-                                valueRange = 5f..60f,
-                                steps = 10
-                            )
+                            }
+                        )
+                    },
+                    onClick = { onPauseAutoStopEnabledChange(!pauseAutoStopEnabled) }
+                ))
+                if (pauseAutoStopEnabled) {
+                    val timeoutIndex = PAUSE_AUTO_STOP_TIMEOUT_OPTIONS_SECONDS
+                        .indexOf(pauseAutoStopTimeoutSeconds)
+                        .takeIf { it >= 0 }
+                        ?: PAUSE_AUTO_STOP_TIMEOUT_OPTIONS_SECONDS.indexOf(DEFAULT_PAUSE_AUTO_STOP_TIMEOUT_SECONDS)
+                    add(Material3SettingsItem(
+                        icon = painterResource(R.drawable.timer),
+                        title = { Text(stringResource(R.string.pause_auto_stop_duration)) },
+                        description = {
+                            Column {
+                                Text(pauseAutoStopTimeoutLabel(pauseAutoStopTimeoutSeconds))
+                                Slider(
+                                    value = timeoutIndex.toFloat(),
+                                    onValueChange = {
+                                        onPauseAutoStopTimeoutSecondsChange(
+                                            PAUSE_AUTO_STOP_TIMEOUT_OPTIONS_SECONDS[it.roundToInt()]
+                                        )
+                                    },
+                                    valueRange = 0f..(PAUSE_AUTO_STOP_TIMEOUT_OPTIONS_SECONDS.lastIndex).toFloat(),
+                                    steps = PAUSE_AUTO_STOP_TIMEOUT_OPTIONS_SECONDS.size - 2
+                                )
+                            }
                         }
-                    }
-                ),
-                Material3SettingsItem(
+                    ))
+                }
+                add(Material3SettingsItem(
                     icon = painterResource(R.drawable.volume_off_pause),
                     title = { Text(stringResource(R.string.pause_music_when_media_is_muted)) },
                     trailingContent = {
@@ -1046,8 +1094,8 @@ fun PlayerSettings(
                         )
                     },
                     onClick = { onPauseOnMuteChange(!pauseOnMute) }
-                ),
-                Material3SettingsItem(
+                ))
+                add(Material3SettingsItem(
                     icon = painterResource(R.drawable.bluetooth),
                     title = { Text(stringResource(R.string.resume_on_bluetooth_connect)) },
                     trailingContent = {
@@ -1066,8 +1114,8 @@ fun PlayerSettings(
                         )
                     },
                     onClick = { onResumeOnBluetoothConnectChange(!resumeOnBluetoothConnect) }
-                ),
-                Material3SettingsItem(
+                ))
+                add(Material3SettingsItem(
                     icon = painterResource(R.drawable.screenshot),
                     title = { Text(stringResource(R.string.keep_screen_on_when_player_is_expanded)) },
                     trailingContent = {
@@ -1086,8 +1134,8 @@ fun PlayerSettings(
                         )
                     },
                     onClick = { onKeepScreenOnChange(!keepScreenOn) }
-                )
-            )
+                ))
+            }
         )
         Spacer(modifier = Modifier.height(16.dp))
     }

@@ -145,9 +145,24 @@ val AutoDownloadOnLikeKey = booleanPreferencesKey("autoDownloadOnLike")
 val SimilarContent = booleanPreferencesKey("similarContent")
 val AutoSkipNextOnErrorKey = booleanPreferencesKey("autoSkipNextOnError")
 val AutoplayKey = booleanPreferencesKey("autoplay")
-// Minutes of continuous pause (while the service is otherwise kept alive) after which
-// MusicService performs a full shutdown. See MusicService's pause-auto-stop mechanism.
+// Whether the pause-auto-stop mechanism (below) is active at all. OFF means the timer
+// is never scheduled and any pending timer is cancelled immediately.
+val PauseAutoStopEnabledKey = booleanPreferencesKey("pauseAutoStopEnabled")
+
+// Legacy minutes-only timeout key. Superseded by [PauseAutoStopTimeoutSecondsKey] so that
+// sub-minute options can be supported; kept only so existing values can be migrated once
+// (see MainActivity's onCreate migration block) into the new seconds-based key.
 val PauseAutoStopMinutesKey = intPreferencesKey("pauseAutoStopMinutes")
+
+// Seconds of continuous pause (while the service is otherwise kept alive) after which
+// MusicService performs a full shutdown, when [PauseAutoStopEnabledKey] is on. See
+// MusicService's pause-auto-stop mechanism.
+val PauseAutoStopTimeoutSecondsKey = intPreferencesKey("pauseAutoStopTimeoutSeconds")
+
+// One-shot migration flag: once true, MainActivity's pause-auto-stop migration (which
+// copies [PauseAutoStopMinutesKey] into [PauseAutoStopTimeoutSecondsKey] and enables
+// [PauseAutoStopEnabledKey] for existing users) will not run again.
+val PauseAutoStopMigrationDoneKey = booleanPreferencesKey("pauseAutoStopMigrationDone")
 val ShufflePlaylistFirstKey = booleanPreferencesKey("shufflePlaylistFirst")
 val PreventDuplicateTracksInQueueKey = booleanPreferencesKey("preventDuplicateTracksInQueue")
 val CrossfadeEnabledKey = booleanPreferencesKey("crossfadeEnabled")

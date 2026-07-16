@@ -145,7 +145,8 @@ import com.metrolist.music.constants.PauseListenHistoryKey
 import com.metrolist.music.constants.PauseOnMute
 import com.metrolist.music.constants.PersistentQueueKey
 import com.metrolist.music.constants.PersistentShuffleAcrossQueuesKey
-import com.metrolist.music.constants.PauseAutoStopMinutesKey
+import com.metrolist.music.constants.PauseAutoStopEnabledKey
+import com.metrolist.music.constants.PauseAutoStopTimeoutSecondsKey
 import com.metrolist.music.constants.PlayerVolumeKey
 import com.metrolist.music.constants.PreventDuplicateTracksInQueueKey
 import com.metrolist.music.constants.RememberShuffleAndRepeatKey
@@ -467,9 +468,10 @@ class MusicService :
 
     private fun schedulePauseAutoStop() {
         screenOffHandler.removeCallbacks(pauseAutoStopRunnable)
-        val timeoutMinutes = dataStore.get(PauseAutoStopMinutesKey, DEFAULT_PAUSE_AUTO_STOP_MINUTES)
-        if (timeoutMinutes <= 0) return
-        screenOffHandler.postDelayed(pauseAutoStopRunnable, timeoutMinutes * 60_000L)
+        if (!cachedPauseAutoStopEnabled) return
+        val timeoutSeconds = dataStore.get(PauseAutoStopTimeoutSecondsKey, DEFAULT_PAUSE_AUTO_STOP_SECONDS)
+        if (timeoutSeconds <= 0) return
+        screenOffHandler.postDelayed(pauseAutoStopRunnable, timeoutSeconds * 1000L)
     }
 
     private fun cancelPauseAutoStop() {
@@ -513,6 +515,8 @@ class MusicService :
     private var cachedShufflePlaylistFirst = false
     @Volatile
     private var cachedAutoLoadMore = true
+    @Volatile
+    private var cachedPauseAutoStopEnabled = false
 
     // URL cache for stream URLs - class-level so it can be invalidated on errors
     private val songUrlCache = Collections.synchronizedMap(
@@ -1193,6 +1197,16 @@ class MusicService :
         }
         scope.launch {
             dataStore.data.map { it[AutoLoadMoreKey] ?: true }.distinctUntilChanged().collect { cachedAutoLoadMore = it }
+        }
+        scope.launch {
+            dataStore.data.map { it[PauseAutoStopEnabledKey] ?: false }.distinctUntilChanged().collect {
+                cachedPauseAutoStopEnabled = it
+                // Turning the toggle off must cancel any timer that's already scheduled,
+                // not just prevent future ones from being scheduled.
+                if (!it) {
+                    cancelPauseAutoStop()
+                }
+            }
         }
         // Keep YTPlayerUtils in sync with the stream source toggles (Settings → Stream sources).
         // Map to the derived set + distinctUntilChanged so an unrelated preference write doesn't
@@ -4870,6 +4884,7 @@ class MusicService :
         // Case 2 of the service lifecycle: default minutes of continuous pause before
         // MusicService shuts itself down when the app hasn't been explicitly closed.
         const val DEFAULT_PAUSE_AUTO_STOP_MINUTES = 15
+        const val DEFAULT_PAUSE_AUTO_STOP_SECONDS = DEFAULT_PAUSE_AUTO_STOP_MINUTES * 60
 
         private const val MAX_GAIN_MB = 300 // Maximum gain in millibels (3 dB)
         private const val MIN_GAIN_MB = -1500 // Minimum gain in millibels (-15 dB)
