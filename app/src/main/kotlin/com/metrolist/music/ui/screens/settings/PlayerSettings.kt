@@ -77,6 +77,7 @@ import com.metrolist.music.ui.component.Material3SettingsItem
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import com.metrolist.music.ui.component.SleepTimerDialog
 import com.metrolist.music.constants.SleepTimerEnabledKey
@@ -1051,10 +1052,17 @@ fun PlayerSettings(
                     onClick = { onPauseAutoStopEnabledChange(!pauseAutoStopEnabled) }
                 ))
                 if (pauseAutoStopEnabled) {
+                    // pauseAutoStopTimeoutSeconds may not be one of the presets below (e.g. a
+                    // value migrated from the old free-form minutes preference, such as 7
+                    // minutes). In that case position the thumb at the closest preset by value
+                    // rather than falling back to the default - the stored value itself is left
+                    // untouched and only changes once the user actually moves the slider.
                     val timeoutIndex = PAUSE_AUTO_STOP_TIMEOUT_OPTIONS_SECONDS
                         .indexOf(pauseAutoStopTimeoutSeconds)
                         .takeIf { it >= 0 }
-                        ?: PAUSE_AUTO_STOP_TIMEOUT_OPTIONS_SECONDS.indexOf(DEFAULT_PAUSE_AUTO_STOP_TIMEOUT_SECONDS)
+                        ?: (PAUSE_AUTO_STOP_TIMEOUT_OPTIONS_SECONDS.indices.minByOrNull {
+                            abs(PAUSE_AUTO_STOP_TIMEOUT_OPTIONS_SECONDS[it] - pauseAutoStopTimeoutSeconds)
+                        } ?: 0)
                     add(Material3SettingsItem(
                         icon = painterResource(R.drawable.timer),
                         title = { Text(stringResource(R.string.pause_auto_stop_duration)) },
