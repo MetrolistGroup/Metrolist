@@ -2760,6 +2760,12 @@ class MusicService :
         if (events.containsAny(Player.EVENT_IS_PLAYING_CHANGED)) {
             updateWidgetUI(player.isPlaying)
             if (player.isPlaying) {
+                // Actually playing again supersedes any shutdown that was previously
+                // initiated (e.g. a Pause Auto Stop timeout) - whether or not that
+                // shutdown ran to completion and recreated this service via onCreate().
+                // Without this, a stale isShuttingDown=true here would permanently block
+                // schedulePauseAutoStop() below on every future pause.
+                isShuttingDown = false
                 discordIntentionalDisconnect = false
                 screenOffHandler.removeCallbacks(screenOffTimeout)
                 screenOffHandler.removeCallbacks(pauseTimeout)
