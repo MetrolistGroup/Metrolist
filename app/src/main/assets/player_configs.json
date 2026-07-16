@@ -121,6 +121,9 @@
     "6b9be5bf": { "sig": "iX(26,5331,INPUT)", "nClass": "HB", "sts": 20648, "aliases": ["65e7e465"] },
     "a0ea272e": { "sig": "vQ(34,7320,INPUT)", "nClass": "pY", "sts": 20649, "aliases": ["f355dfc7"] },
     "6c1879cc": { "sig": "Jf(34,7320,INPUT)", "nClass": "XU", "sts": 20649, "aliases": ["f885f976"] },
-    "82d09d56": { "sig": "XP(34,7320,INPUT)", "nClass": "vF", "sts": 20649, "aliases": ["86c52fcf"] }
+    "82d09d56": { "sig": "XP(34,7320,INPUT)", "nClass": "vF", "sts": 20649, "aliases": ["86c52fcf"] },
+    "2de960cb": { "sig": "FL(34,7320,INPUT)", "nClass": "c3", "sts": 20649, "aliases": ["d9c6fb40"] },
+    "3241c7eb": { "sig": "OI(34,7320,INPUT)", "nClass": "uS", "sts": 20649, "aliases": ["98083e42"] },
+    "dfc3d2b2": { "sig": "OI(34,7320,INPUT)", "nClass": "uS", "sts": 20649, "aliases": ["99640c8c"] }
   }
 }
