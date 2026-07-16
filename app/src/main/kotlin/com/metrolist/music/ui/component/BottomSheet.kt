@@ -97,8 +97,9 @@ fun BottomSheet(
                         state.dispatchRawDelta(dragAmount)
                     },
                     onDragCancel = {
+                        val velocity = -velocityTracker.calculateVelocity().y
                         velocityTracker.resetTracking()
-                        state.snapTo(state.collapsedBound)
+                        state.performFling(velocity, onDismiss)
                     },
                     onDragEnd = {
                         val velocity = -velocityTracker.calculateVelocity().y
