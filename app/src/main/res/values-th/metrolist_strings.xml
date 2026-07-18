@@ -239,7 +239,6 @@
     <string name="delete_desc">ลบรายการนี้อย่างถาวร</string>
     <string name="advanced_desc">ปรับความเร็วและคีย์เสียงของเพลง</string>
     <string name="equalizer_desc">เปิดอีควอไลเซอร์เสียง</string>
-    <string name="enable_dynamic_icon">เปิดใช้งานไอคอนไดนามิก</string>
     <string name="mini_player">มินิเพลเยอร์</string>
     <string name="pure_black_mini_player">มินิเพลเยอร์สีดำสนิท</string>
     <string name="cache_size_warning_title">เดี๋ยวก่อน!</string>
@@ -624,7 +623,7 @@
     </plurals>
     <string name="restore_confirm_title">กู้คืนข้อมูลจากแบ็กอัป?</string>
     <string name="restore_confirm_message">การดำเนินการนี้จะกู้คืนข้อมูลแอปจากไฟล์แบ็กอัปที่เลือก</string>
-    <string name="restore_account_warning">หลังการกู้คืน คุณจะต้องเข้าสู่ระบบอีกครั้ง บัญชีต่อไปนี้จะถูกออกจากระบบ:</string>
+    <string name="restore_account_warning">ข้อมูลบัญชีต่อไปนี้จะได้รับการกู้คืนและเก็บรักษาไว้:</string>
     <string name="restore">กู้คืน</string>
     <string name="checking_previous_account">กำลังตรวจสอบบัญชีเดิม…</string>
     <string name="no_account_found">ไม่พบบัญชี</string>
@@ -883,4 +882,8 @@
     <string name="stream_source_web_creator_desc">ไคลเอนต์เว็บสำหรับครีเอเตอร์</string>
     <string name="stream_source_android_creator">ANDROID_CREATOR</string>
     <string name="stream_source_android_creator_desc">ไคลเอนต์ Android สำหรับครีเอเตอร์ ปิดใช้งานไว้ตามค่าเริ่มต้น และต้องใช้ DroidGuard</string>
+    <string name="error_job_cancelled">ไม่สามารถเล่นวิดีโอได้ โปรดลองใหม่อีกครั้งหรือข้ามไปยังเพลงถัดไป</string>
+    <string name="enable_landscape_scaling">การปรับขนาดภูมิทัศน์</string>
+    <string name="enable_landscape_scaling_desc">ปรับขนาด UI ในโหมดแนวนอนสำหรับหน้าจอขนาดใหญ่</string>
+    <string name="dynamic_theme">ธีมแบบไดนามิก</string>
 </resources>

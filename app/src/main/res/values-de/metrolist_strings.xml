@@ -209,7 +209,6 @@
     <string name="delete_desc">Diese Playlist dauerhaft entfernen</string>
     <string name="advanced_desc">Passe das Tempo und die Tonhöhe des Songs an</string>
     <string name="equalizer_desc">Audio-Equalizer öffnen</string>
-    <string name="enable_dynamic_icon">Dynamische Symbole aktivieren</string>
     <string name="mini_player">Mini-Player</string>
     <string name="pure_black_mini_player">Rein schwarzer Mini-Player</string>
     <string name="cache_size_warning_title">Warte mal!</string>
@@ -634,7 +633,7 @@
     </plurals>
     <string name="restore_confirm_title">Sicherung wiederherstellen?</string>
     <string name="restore_confirm_message">Dadurch werden Ihre App-Daten aus der ausgewählten Sicherung wiederhergestellt</string>
-    <string name="restore_account_warning">Nach der Wiederherstellung müssen Sie sich erneut anmelden. Das folgende Konto wird abgemeldet:</string>
+    <string name="restore_account_warning">Die folgenden Kontoinformationen werden wiederhergestellt und beibehalten:</string>
     <string name="restore">Wiederherstellen</string>
     <string name="checking_previous_account">Auf vorherigen Account prüfen …</string>
     <string name="no_account_found">Kein Account gefunden</string>
@@ -890,4 +889,10 @@
     <string name="stream_source_web_creator_desc">Creator-Webclient.</string>
     <string name="stream_source_android_creator">ANDROID_CREATOR</string>
     <string name="stream_source_android_creator_desc">Android-Ersteller-Client. Standardmäßig deaktiviert; erfordert DroidGuard.</string>
+    <string name="error_job_cancelled">Das Video kann nicht abgespielt werden. Versuchen Sie es erneut oder springen Sie zum nächsten Titel.</string>
+    <string name="dynamic_theme">Dynamisches Design</string>
+    <string name="enable_landscape_scaling_desc">Benutzeroberfläche im Querformat für größere Bildschirme skalieren</string>
+    <string name="enable_dynamic_icon">Dynamische Symbolfarben</string>
+    <string name="enable_dynamic_icon_desc">Verwenden Sie dynamische Designfarben für das App-Symbol. Wenn diese Option deaktiviert ist, wird das Symbol in Volltonfarben angezeigt.</string>
+    <string name="enable_landscape_scaling">Skalierung im Querformat</string>
 </resources>

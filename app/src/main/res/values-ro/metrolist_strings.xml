@@ -200,7 +200,6 @@
     <string name="delete_desc">Elimină acest element permanent</string>
     <string name="advanced_desc">Ajustează tempo-ul și înălțimea melodiei</string>
     <string name="equalizer_desc">Deschide egalizatorul audio</string>
-    <string name="enable_dynamic_icon">Activează pictograma dinamică</string>
     <string name="mini_player">Mini-player</string>
     <string name="pure_black_mini_player">Mini-player complet negru</string>
     <string name="cache_size_warning_title">Stai!</string>
@@ -654,7 +653,7 @@
     </plurals>
     <string name="restore_confirm_title">Restaurezi backupul?</string>
     <string name="restore_confirm_message">Acest proces îți va restaura datele aplicației din backupul selectat</string>
-    <string name="restore_account_warning">Trebuie să te autentifici din nou după restaurare. Următorul cont va fi deconectat:</string>
+    <string name="restore_account_warning">Următoarele informații ale contului vor fi restaurate și păstrate:</string>
     <string name="restore">Restaurează</string>
     <string name="checking_previous_account">Se verifică pentru conturi anterioare…</string>
     <string name="no_account_found">Niciun cont găsit</string>
@@ -897,4 +896,10 @@
     <string name="stream_source_android_creator">ANDROID_CREATOR</string>
     <string name="stream_source_android_creator_desc">Clientul creator Android. Dezactivat în mod prestabilit; necesită DroidGuard.</string>
     <string name="format_cipher_support_added">Suport pentru cifru adăugat</string>
+    <string name="error_job_cancelled">Videoclipul nu este disponibil pentru redare. Încearcă din nou sau treci la următoarea melodie.</string>
+    <string name="enable_landscape_scaling">Scalare mod peisaj</string>
+    <string name="enable_landscape_scaling_desc">Scalează interfața grafică în modul peisaj pentru ecrane mari</string>
+    <string name="dynamic_theme">Temă dinamică</string>
+    <string name="enable_dynamic_icon">Culori dinamice pentru pictogramă</string>
+    <string name="enable_dynamic_icon_desc">Folosește culori dinamice pentru pictograma aplicației. Atunci când această opțiune este dezactivată, pictograma folosește culori solide.</string>
 </resources>

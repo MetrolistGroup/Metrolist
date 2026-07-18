@@ -311,7 +311,6 @@
     <string name="lyrics_romanize_as_main">Átírt dalszövegek mutatása alapértelmezetten</string>
     <string name="hide_youtube_shorts">YouTube Short-ok elrejtése</string>
     <string name="equalizer_desc">Hangszínszabályzó megnyitása</string>
-    <string name="enable_dynamic_icon">Dinamikus ikon bekapcsolása</string>
     <string name="mini_player">Mini-lejátszó</string>
     <string name="pure_black_mini_player">OLED fekete mini-lejátszó</string>
     <string name="cache_size_warning_title">Várjon!</string>

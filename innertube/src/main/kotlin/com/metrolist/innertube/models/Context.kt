@@ -13,6 +13,7 @@ data class Context(
     data class Client(
         val clientName: String,
         val clientVersion: String,
+        val userAgent: String? = null,
         val osName: String? = null,
         val osVersion: String? = null,
         val deviceMake: String? = null,

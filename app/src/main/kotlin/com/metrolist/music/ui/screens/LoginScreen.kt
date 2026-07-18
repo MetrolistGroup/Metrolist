@@ -29,7 +29,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.datastore.preferences.core.edit
 import androidx.navigation.NavController
 import com.metrolist.innertube.YouTube
 import com.metrolist.music.LocalPlayerAwareWindowInsets
@@ -42,8 +41,8 @@ import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.constants.VisitorDataKey
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.utils.backToMain
-import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.reportException
+import com.metrolist.music.utils.safeDataStoreEdit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -100,10 +99,10 @@ fun LoginScreen(navController: NavController) {
 
                     // Save ALL credentials atomically to DataStore, then restart the app.
                     // This replicates the exact token login pattern (saveTokenAndRestart) that
-                    // works reliably: write atomically via dataStore.edit, then start the
+                    // works reliably: write atomically, then start the
                     // launch intent and exit the process so all services reinitialize cleanly.
-                    withContext(Dispatchers.IO) {
-                        context.dataStore.edit { settings ->
+                    val saved = withContext(Dispatchers.IO) {
+                        context.safeDataStoreEdit { settings ->
                             settings[InnerTubeCookieKey] = currentCookie
                             settings[VisitorDataKey] = savedVisitorData
                             settings[DataSyncIdKey] = savedDataSyncId
@@ -111,6 +110,12 @@ fun LoginScreen(navController: NavController) {
                             settings[AccountEmailKey] = info.email.orEmpty()
                             settings[AccountChannelHandleKey] = info.channelHandle.orEmpty()
                         }
+                    }
+
+                    if (!saved) {
+                        Timber.e("Login: Failed to persist account data")
+                        isCompletingLogin = false
+                        return@onSuccess
                     }
 
                     withContext(Dispatchers.Main) {

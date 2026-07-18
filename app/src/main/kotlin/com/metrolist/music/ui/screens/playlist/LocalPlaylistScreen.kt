@@ -579,14 +579,6 @@ fun LocalPlaylistScreen(
                                 songId,
                                 playlistId
                             ) {
-                                var setVideoId: String? = setVideoId  // already captured before deletion
-                                if (setVideoId == null) {
-                                    for (attempt in 0 until 10) {
-                                        setVideoId = database.getSetVideoId(songId)?.setVideoId
-                                        if (setVideoId != null) break
-                                        delay(3_000L)
-                                    }
-                                }
                                 setVideoId
                             }
                         }

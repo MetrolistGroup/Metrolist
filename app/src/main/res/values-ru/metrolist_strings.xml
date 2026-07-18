@@ -200,7 +200,6 @@
     <string name="delete_desc">Безвозвратно удалить этот элемент</string>
     <string name="advanced_desc">Настроить темп и высоту тона трека</string>
     <string name="equalizer_desc">Открыть эквалайзер</string>
-    <string name="enable_dynamic_icon">Включить динамическую иконку</string>
     <string name="mini_player">Мини-плеер</string>
     <string name="pure_black_mini_player">Чисто чёрный мини-плеер</string>
     <string name="cache_size_warning_title">Внимание!</string>
@@ -638,7 +637,7 @@
     </plurals>
     <string name="restore_confirm_title">Восстановить из резервной копии?</string>
     <string name="restore_confirm_message">Данные приложения будут восстановлены из выбранной резервной копии</string>
-    <string name="restore_account_warning">Вам потребуется снова войти в аккаунт после восстановления. Будет выполнен выход из следующего аккаунта:</string>
+    <string name="restore_account_warning">Данные следующего аккаунта будут восстановлены и сохранены:</string>
     <string name="restore">Восстановить</string>
     <string name="checking_previous_account">Поиск предыдущего аккаунта…</string>
     <string name="no_account_found">Аккаунт не найден</string>
@@ -904,4 +903,10 @@
     <string name="stream_source_web_creator_desc">Веб-клиент для авторов.</string>
     <string name="stream_source_android_creator">ANDROID_CREATOR</string>
     <string name="stream_source_android_creator_desc">Android-клиент для авторов. По умолчанию отключен; требуется DroidGuard.</string>
+    <string name="error_job_cancelled">Видео недоступно для воспроизведения. Попробуйте еще раз или перейдите к следующему треку.</string>
+    <string name="enable_landscape_scaling">Масштабирование в альбомной ориентации</string>
+    <string name="enable_landscape_scaling_desc">Масштабировать интерфейс в альбомной ориентации на больших экранах</string>
+    <string name="dynamic_theme">Динамическая тема</string>
+    <string name="enable_dynamic_icon">Динамические цвета значка</string>
+    <string name="enable_dynamic_icon_desc">Использовать динамические цвета темы для значка приложения. Если отключено, используются сплошные цвета.</string>
 </resources>
