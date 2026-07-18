@@ -214,7 +214,7 @@ class PlaylistWidgetManager @Inject constructor(
                     )
                 }
             },
-            database.mostPlayedSongs(LocalDateTime.of(1970, 1, 1, 0, 0), limit = 50).map { songs ->
+            database.mostPlayedSongs(fromTimeStamp = LocalDateTime.of(1970, 1, 1, 0, 0), limit = 50, offset = 0, toTimeStamp = LocalDateTime.now()).map { songs ->
                 songs.map { song ->
                     SongSnapshot(
                         id = song.id,
@@ -375,7 +375,7 @@ class PlaylistWidgetManager @Inject constructor(
         val savedPlaylistsDeferred = async { database.playlistsByCreateDateAsc().first() }
         val likedSongsDeferred = async { database.likedSongsByCreateDateAsc().first() }
         val downloadedSongsDeferred = async { database.downloadedSongsByCreateDateAsc().first() }
-        val topSongsDeferred = async { database.mostPlayedSongs(LocalDateTime.of(1970, 1, 1, 0, 0), limit = 50).first() }
+        val topSongsDeferred = async { database.mostPlayedSongs(fromTimeStamp = LocalDateTime.of(1970, 1, 1, 0, 0), limit = 50, offset = 0, toTimeStamp = LocalDateTime.now()).first() }
 
         val result = mutableListOf<QuickPick>()
         val seen = mutableSetOf<String>()

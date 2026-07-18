@@ -52,9 +52,18 @@ fun PlaybackError(
             rawErrorMessage.contains("403", ignoreCase = true) ||
             rawErrorMessage.contains("Response code: 403", ignoreCase = true) ||
             error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS
+
+    // Check if this is a "job cancelled" error from YouTube
+    // YouTube returns this when the playback job cannot be started (often transient)
+    val isJobCancelled = rawErrorMessage.contains("job", ignoreCase = true) &&
+            (rawErrorMessage.contains("cancelled", ignoreCase = true) ||
+                    rawErrorMessage.contains("canceled", ignoreCase = true) ||
+                    rawErrorMessage.contains("cancellat", ignoreCase = true))
     
     val errorMessage = if (isAgeRestricted) {
         "This app does not support playing age-restricted songs. We are working on fixing this issue."
+    } else if (isJobCancelled) {
+        stringResource(R.string.error_job_cancelled)
     } else {
         rawErrorMessage
     }

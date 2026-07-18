@@ -30,6 +30,11 @@
 </div>
 
 > [!WARNING]
+> # MAINTENANCE MODE
+> Metrolist is currently in maintenance mode. This means we will only be fixing bugs and making minor improvements. Please do not submit PRs for new features or major changes, as they will not be accepted.  
+> The app is **NOT** dead, please stay tuned for updates on our discord (found above).
+
+> [!WARNING]
 > **Regional Restriction** - If YouTube Music is unavailable in your region, this app will not work without a **VPN or proxy** connecting to a supported region.
 
 ---
@@ -279,6 +284,10 @@
     <tr>
       <td align="center"><a href="https://github.com/aleksey-saenko/MusicRecognizer"><strong>MusicRecognizer</strong></a></td>
       <td>Music recognition feature & Shazam API integration</td>
+    </tr>
+    <tr>
+      <td align="center"><a href="https://github.com/ZemerTeam/zemer-cipher"><strong>zemer-cipher</strong></a></td>
+      <td>YouTube cipher deobfuscation and PoToken generation</td>
     </tr>
   </tbody>
 </table>

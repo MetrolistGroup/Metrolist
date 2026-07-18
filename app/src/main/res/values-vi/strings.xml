@@ -221,13 +221,11 @@
     <string name="delete_playlist_confirm">Bạn có thực sự muốn xóa \"%s\" danh sách phát không?</string>
     <string name="not_logged_in">Chưa đăng nhập</string>
     <string name="enable_lrclib">Bật nhà cung cấp lời bài hát LrcLib</string>
-    <string name="discord_integration">Tích hợp Discord</string>
     <string name="dismiss">Bỏ qua</string>
     <string name="options">Tùy chọn</string>
     <string name="preview">Xem trước</string>
     <string name="login_failed">Đăng nhập không thành công</string>
     <string name="action_logout">Đăng xuất</string>
-    <string name="enable_discord_rpc">Kích hoạt Rich Presence</string>
     <string name="sided">Cạnh bên</string>
     <string name="player_text_alignment">Căn chỉnh văn bản của trình phát</string>
     <string name="hide_explicit">Ẩn nội dung phản cảm</string>

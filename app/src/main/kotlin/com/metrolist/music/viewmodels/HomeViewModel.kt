@@ -6,7 +6,6 @@
 package com.metrolist.music.viewmodels
 
 import android.content.Context
-import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.metrolist.innertube.YouTube
@@ -45,6 +44,7 @@ import com.metrolist.music.ui.screens.wrapped.WrappedAudioService
 import com.metrolist.music.ui.screens.wrapped.WrappedManager
 import com.metrolist.music.utils.SyncUtils
 import com.metrolist.music.utils.dataStore
+import com.metrolist.music.utils.safeDataStoreEdit
 import com.metrolist.music.utils.get
 import com.metrolist.music.utils.reportException
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -279,7 +279,7 @@ class HomeViewModel @Inject constructor(
 
     fun markWrappedAsSeen() {
         viewModelScope.launch(Dispatchers.IO) {
-            context.dataStore.edit {
+            context.safeDataStoreEdit {
                 it[WrappedSeenKey] = true
             }
         }
@@ -386,7 +386,7 @@ class HomeViewModel @Inject constructor(
         val artistSeeds = database.mostPlayedArtists(fromTimeStamp, limit = 10).first()
             .filter { it.artist.isYouTubeArtist }
             .shuffled().take(3)
-        val songSeeds = database.mostPlayedSongs(fromTimeStamp, limit = 5).first()
+        val songSeeds = database.mostPlayedSongs(fromTimeStamp = fromTimeStamp, limit = 5, offset = 0, toTimeStamp = LocalDateTime.now()).first()
             .shuffled().take(2)
 
         val candidatePlaylists = java.util.Collections.synchronizedList(mutableListOf<PlaylistItem>())
@@ -474,7 +474,7 @@ class HomeViewModel @Inject constructor(
             }
 
             launch(Dispatchers.IO) {
-                val songs = database.mostPlayedSongs(fromTimeStamp, limit = 15, offset = 5).first()
+                val songs = database.mostPlayedSongs(fromTimeStamp = fromTimeStamp, limit = 15, offset = 5, toTimeStamp = LocalDateTime.now()).first()
                     .filterVideoSongs(hideVideoSongs).shuffled().take(10)
                 val albums = database.mostPlayedAlbums(fromTimeStamp, limit = 8, offset = 2).first()
                     .filter { it.album.thumbnailUrl != null }.shuffled().take(5)
@@ -488,6 +488,7 @@ class HomeViewModel @Inject constructor(
                     homePage.value = page.copy(
                         sections = page.sections.mapNotNull { section ->
                             val filtered = section.items
+                                .filterOutNulls()
                                 .filterExplicit(hideExplicit)
                                 .filterVideoSongs(hideVideoSongs)
                                 .filterYoutubeShorts(hideYoutubeShorts)
@@ -514,7 +515,8 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             YouTube.explore().onSuccess { page ->
                 explorePage.value = page.copy(
-                    newReleaseAlbums = page.newReleaseAlbums.filterExplicit(hideExplicit)
+                    newReleaseAlbums = page.newReleaseAlbums.filterOutNulls().filterExplicit(hideExplicit),
+                    moodAndGenres = page.moodAndGenres.filterOutNulls()
                 )
             }.onFailure { reportException(it) }
         }
@@ -539,7 +541,7 @@ class HomeViewModel @Inject constructor(
                     )
                 }
 
-            val songRecommendations = database.mostPlayedSongs(fromTimeStamp, limit = 15).first()
+            val songRecommendations = database.mostPlayedSongs(fromTimeStamp = fromTimeStamp, limit = 15, offset = 0, toTimeStamp = LocalDateTime.now()).first()
                 .filter { it.album != null }
                 .shuffled().take(3)
                 .mapNotNull { song ->
@@ -607,7 +609,11 @@ class HomeViewModel @Inject constructor(
             homePage.value = nextSections.copy(
                 chips = homePage.value?.chips,
                 sections = (homePage.value?.sections.orEmpty() + nextSections.sections).mapNotNull { section ->
-                    val filteredItems = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts)
+                    val filteredItems = section.items
+                        .filterOutNulls()
+                        .filterExplicit(hideExplicit)
+                        .filterVideoSongs(hideVideoSongs)
+                        .filterYoutubeShorts(hideYoutubeShorts)
                     if (filteredItems.isEmpty()) null else section.copy(items = filteredItems)
                 }
             )
@@ -635,8 +641,8 @@ class HomeViewModel @Inject constructor(
 
             homePage.value = nextSections.copy(
                 chips = homePage.value?.chips,
-                sections = nextSections.sections.map { section ->
-                    section.copy(items = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
+                sections = nextSections.sections.mapNotNull { section ->
+                    section.copy(items = section.items.filterOutNulls().filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
                 }
             )
             selectedChip.value = chip
@@ -651,14 +657,14 @@ class HomeViewModel @Inject constructor(
     private suspend fun fetchPodcastData() {
         // Fetch saved podcast shows from official API
         YouTube.savedPodcastShows().onSuccess { shows ->
-            savedPodcastShows.value = shows
+            savedPodcastShows.value = shows.filterOutNulls()
         }.onFailure {
             reportException(it)
         }
 
         // Fetch episodes for later from official API
         YouTube.episodesForLater().onSuccess { episodes ->
-            episodesForLater.value = episodes
+            episodesForLater.value = episodes.filterOutNulls()
         }.onFailure {
             reportException(it)
         }
@@ -668,12 +674,21 @@ class HomeViewModel @Inject constructor(
         val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
         YouTube.library("FEmusic_liked_playlists").completed().onSuccess {
             accountPlaylists.value = it.items.filterIsInstance<PlaylistItem>()
+                .filterOutNulls()
                 .filterNot { it.id == "SE" }
                 .filterYoutubeShorts(hideYoutubeShorts)
         }.onFailure {
             reportException(it)
         }
     }
+
+    /**
+     * Safely filters out null items from a list whose type says non-null
+     * but may contain nulls at runtime due to JSON parsing.
+     */
+    @Suppress("UNCHECKED_CAST")
+    private fun <T : Any> List<T>.filterOutNulls(): List<T> =
+        (this as List<T?>).filterNotNull()
 
     fun refresh() {
         if (isRefreshing.value) return
@@ -689,8 +704,8 @@ class HomeViewModel @Inject constructor(
                 if (nextSections != null) {
                     homePage.value = nextSections.copy(
                         chips = homePage.value?.chips,
-                        sections = nextSections.sections.map { section ->
-                            section.copy(items = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
+                        sections = nextSections.sections.mapNotNull { section ->
+                            section.copy(items = section.items.filterOutNulls().filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
                         }
                     )
                 }

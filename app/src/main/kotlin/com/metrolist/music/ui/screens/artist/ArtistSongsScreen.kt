@@ -127,7 +127,7 @@ fun ArtistSongsScreen(
 
             itemsIndexed(
                 items = songs,
-                key = { _, item -> item.id },
+                key = { index, item -> "${item.id}_$index" },
             ) { index, song ->
                 SongListItem(
                     song = song,

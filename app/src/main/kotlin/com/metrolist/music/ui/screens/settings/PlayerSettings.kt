@@ -21,7 +21,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -276,28 +275,6 @@ fun PlayerSettings(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
     ) {
-        var showCrossfadeBetaDialog by remember { mutableStateOf(false) }
-
-        if (showCrossfadeBetaDialog) {
-            DefaultDialog(
-                onDismiss = { showCrossfadeBetaDialog = false },
-                title = { Text(stringResource(R.string.crossfade_beta_title)) },
-                buttons = {
-                    TextButton(onClick = { showCrossfadeBetaDialog = false }) {
-                        Text(stringResource(R.string.cancel))
-                    }
-                    TextButton(onClick = {
-                        showCrossfadeBetaDialog = false
-                        onCrossfadeEnabledChange(true)
-                    }) {
-                        Text(stringResource(R.string.enable))
-                    }
-                }
-            ) {
-                Text(stringResource(R.string.crossfade_beta_message))
-            }
-        }
-
         Spacer(
             Modifier.windowInsetsPadding(
                 LocalPlayerAwareWindowInsets.current.only(
@@ -327,17 +304,10 @@ fun PlayerSettings(
                     icon = painterResource(R.drawable.linear_scale),
                     title = { Text(stringResource(R.string.crossfade)) },
                     description = { Text(stringResource(R.string.crossfade_desc)) },
-                    showBadge = true,
                     trailingContent = {
                         Switch(
                             checked = crossfadeEnabled,
-                            onCheckedChange = {
-                                if (!crossfadeEnabled) {
-                                    showCrossfadeBetaDialog = true
-                                } else {
-                                    onCrossfadeEnabledChange(false)
-                                }
-                            },
+                            onCheckedChange = onCrossfadeEnabledChange,
                             thumbContent = {
                                 Icon(
                                     painter = painterResource(
@@ -349,13 +319,7 @@ fun PlayerSettings(
                             }
                         )
                     },
-                    onClick = {
-                        if (!crossfadeEnabled) {
-                            showCrossfadeBetaDialog = true
-                        } else {
-                            onCrossfadeEnabledChange(false)
-                        }
-                    }
+                    onClick = { onCrossfadeEnabledChange(!crossfadeEnabled) }
                 ))
                 if (crossfadeEnabled) {
                     add(Material3SettingsItem(

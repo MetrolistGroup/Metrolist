@@ -253,14 +253,12 @@
     <string name="backup_create_success">Δημιουργία αντιγράφου ασφ. με επιτυχία</string>
     <string name="backup_create_failed">Αδυναμία δημιουργίας αντιγράφων ασφαλείας</string>
     <string name="restore_failed">Αποτυχία επαναφοράς αντιγράφου ασφαλείας</string>
-    <string name="discord_integration">Ενσωμάτωση Discord</string>
     <string name="discord_information">Το Metrolist χρησιμοποιεί τη βιβλιοθήκη KizzyRPC για να ρυθμίσει την κατάσταση του λογαριασμού σας στο Discord. Αυτό περιλαμβάνει τη χρήση της σύνδεσης Discord Gateway, η οποία μπορεί να θεωρηθεί παραβίαση των TOS του Discord. Ωστόσο, δεν υπάρχουν γνωστές περιπτώσεις αναστολής λογαριασμών χρηστών για αυτόν τον λόγο. Η χρήση γίνεται με δική σας ευθύνη.\n\nΤο Metrolist θα εξάγει μόνο το token σας και όλα τα υπόλοιπα αποθηκεύονται τοπικά.</string>
     <string name="dismiss">Απόρριψη</string>
     <string name="options">Επιλογές</string>
     <string name="preview">Προεπισκόπηση</string>
     <string name="login_failed">Η σύνδεση απέτυχε</string>
     <string name="action_logout">Αποσύνδεση</string>
-    <string name="enable_discord_rpc">Ενεργοποίηση Πλούσιας Παρουσίας</string>
     <string name="about">Σχετικά</string>
     <string name="app_version">Έκδοση εφαρμογής</string>
     <string name="new_version_available">Νέα διαθέσιμη έκδοση</string>

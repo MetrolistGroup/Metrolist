@@ -270,11 +270,9 @@
     <string name="backup_create_success">బ్యాకప్ విజయవంతంగా సృష్టించబడింది</string>
     <string name="backup_create_failed">బ్యాకప్‌ను సృష్టించలేకపోయింది</string>
     <string name="restore_failed">బ్యాకప్‌ను పునరుద్ధరించడంలో విఫలమైంది</string>
-    <string name="discord_integration">డిస్కార్డ్ ఇంటిగ్రేషన్</string>
     <string name="discord_information">ఇన్నర్‌ట్యూన్ మీ డిస్కార్డ్ తా స్థితిని సెట్ చేసేందుకు కిజ్జీఆర్‌పిసి లైబ్రరీని ఉపయోగిస్తుంది. ఇది డిస్కార్డ్ Gateway కనెక్షన్ ఉపయోగించడం ద్వారా జరుగుతుంది, ఇది Discord యొక్క TOSను ఉల్లంఘించడం గా పరిగణించబడవచ్చు. అయితే, ఈ కారణం వల్ల వినియోగదారుల ఖాతాలు సస్పెండ్ అయిన సందర్భాలు ఎవ్వా తెలిసినవి కాదు. మీ ధైర్యంతో ఉపయోగించండి.\n\nఇన్నర్‌ట్యూన్ మీ టోకెన్ ను మాత్రమే తీసుకుందని, మిగతా అన్ని విషయాలు స్థానికంగా నిల్వ చేయబడ్డాయి.</string>
     <string name="dismiss">తొలగించు</string>
     <string name="preview">పరిదృశ్యం</string>
-    <string name="enable_discord_rpc">రిచ్ ప్రెజెన్స్‌ను ఎనేబుల్ చేయండి</string>
     <string name="app_version">యాప్ వెర్షన్</string>
     <string name="new_version_available">కొత్త వెర్షన్ అందుబాటులో ఉంది</string>
     <string name="translation_models">అనువాద మోడల్స్</string>

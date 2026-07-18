@@ -253,7 +253,7 @@ fun CachePlaylistScreen(
                     }
                 }
 
-                itemsIndexed(filteredSongs, key = { _, song -> song.id }) { index, song ->
+                itemsIndexed(filteredSongs, key = { index, song -> "${song.id}_$index" }) { index, song ->
                     val onCheckedChange: (Boolean) -> Unit = {
                         if (it) {
                             selection.add(song.id)

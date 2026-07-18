@@ -29,6 +29,7 @@ dependencies {
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.json)
     implementation(libs.ktor.client.encoding)
+    implementation(libs.timber)
     testImplementation(libs.junit)
 
     coreLibraryDesugaring(libs.desugaring)

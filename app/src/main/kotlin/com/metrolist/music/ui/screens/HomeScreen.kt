@@ -1225,7 +1225,7 @@ fun HomeScreen(
                                         .only(WindowInsetsSides.Horizontal)
                                         .asPaddingValues(),
                             ) {
-                                items(savedPodcastShows, key = { it.id }) { podcast ->
+                                items(savedPodcastShows.distinctBy { it.id }, key = { "home_saved_podcast_${it.id}" }) { podcast ->
                                     ytGridItem(podcast)
                                 }
                             }
@@ -1250,7 +1250,7 @@ fun HomeScreen(
                                         .only(WindowInsetsSides.Horizontal)
                                         .asPaddingValues(),
                             ) {
-                                items(episodesForLater, key = { it.id }) { episode ->
+                                items(episodesForLater.distinctBy { it.id }, key = { "home_episode_later_${it.id}" }) { episode ->
                                     ytGridItem(episode)
                                 }
                             }
@@ -1273,7 +1273,7 @@ fun HomeScreen(
                                         .only(WindowInsetsSides.Horizontal)
                                         .asPaddingValues(),
                             ) {
-                                items(featuredPodcasts, key = { it.id }) { podcast ->
+                                items(featuredPodcasts.distinctBy { it.id }, key = { "home_featured_podcast_${it.id}" }) { podcast ->
                                     ytGridItem(podcast)
                                 }
                             }
@@ -1355,7 +1355,7 @@ fun HomeScreen(
                                             .only(WindowInsetsSides.Horizontal)
                                             .asPaddingValues(),
                                 ) {
-                                    items(sectionData.items, key = { it.id }) { item ->
+                                    items(sectionData.items.distinctBy { it.id }, key = { "home_chip_section_${it.id}" }) { item ->
                                         ytGridItem(item)
                                     }
                                 }
@@ -1792,7 +1792,7 @@ fun HomeScreen(
                                             items(
                                                 items = quickPicks.distinctBy { it.id },
                                                 key = { "home_quickpick_${it.id}" },
-                                        ) { originalSong ->
+                                            ) { originalSong ->
                                             // fetch song from database to keep updated
                                             val song by database
                                                 .song(originalSong.id)
@@ -2005,7 +2005,7 @@ fun HomeScreen(
                                                     ) * rows,
                                                 ),
                                     ) {
-                                        items(keepListening, key = { it.id }) {
+                                        items(keepListening.distinctBy { it.id }, key = { "home_keep_listening_${it.id}" }) {
                                             localGridItem(it)
                                         }
                                     }
@@ -2114,8 +2114,8 @@ fun HomeScreen(
                                         ) {
                                             items(
                                                 items = forgottenFavorites.distinctBy { it.id },
-                                            key = { "home_forgotten_${it.id}" },
-                                        ) { originalSong ->
+                                                key = { "home_forgotten_${it.id}" },
+                                            ) { originalSong ->
                                             val song by database
                                                 .song(originalSong.id)
                                                 .collectAsStateWithLifecycle(initialValue = originalSong)
@@ -2240,7 +2240,7 @@ fun HomeScreen(
                                                 .only(WindowInsetsSides.Horizontal)
                                                 .asPaddingValues(),
                                     ) {
-                                        items(recommendation.items, key = { it.id }) { item ->
+                                        items(recommendation.items.distinctBy { it.id }, key = { "home_similar_${it.id}" }) { item ->
                                             ytGridItem(item)
                                         }
                                     }
@@ -2450,7 +2450,7 @@ fun HomeScreen(
                                             Modifier
                                                 .height((MoodAndGenresButtonHeight + 12.dp) * 4 + 12.dp),
                                     ) {
-                                        items(moodAndGenres, key = { "${it.title}_${it.endpoint.browseId}_${it.endpoint.params}" }) {
+                                        items(moodAndGenres.distinctBy { "${it.title}_${it.endpoint.browseId}_${it.endpoint.params}" }, key = { "${it.title}_${it.endpoint.browseId}_${it.endpoint.params}" }) {
                                             MoodAndGenresButton(
                                                 title = it.title,
                                                 onClick = {

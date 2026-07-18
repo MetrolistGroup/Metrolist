@@ -45,12 +45,14 @@ class RecognitionForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Timber.tag(TAG).d("onStartCommand: flags=%d, startId=%d", flags, startId)
         if (!startInForeground()) return START_NOT_STICKY
         startRecognitionIfNeeded()
         return START_NOT_STICKY
     }
 
     override fun onDestroy() {
+        Timber.tag(TAG).d("Service destroyed (keepNotification=%b)", keepNotificationOnStop)
         recognitionJob?.cancel()
         statusJob?.cancel()
         serviceScope.cancel()
@@ -103,10 +105,12 @@ class RecognitionForegroundService : Service() {
 
     private fun startRecognitionIfNeeded() {
         if (recognitionJob?.isActive == true) return
+        Timber.tag(TAG).d("Starting recognition flow")
 
         keepNotificationOnStop = false
         terminalStateHandled = false
         MusicRecognitionService.reset()
+        Timber.tag(TAG).d("MusicRecognitionService reset")
 
         statusJob?.cancel()
         statusJob =
@@ -133,6 +137,7 @@ class RecognitionForegroundService : Service() {
     private fun renderStatus(status: RecognitionStatus) {
         when (status) {
             is RecognitionStatus.Listening -> {
+                Timber.tag(TAG).d("Status: Listening")
                 updateNotification(
                     title = getString(R.string.recognize_music),
                     contentText = getString(R.string.recognition_notification_listening),
@@ -145,6 +150,7 @@ class RecognitionForegroundService : Service() {
             }
 
             is RecognitionStatus.Processing -> {
+                Timber.tag(TAG).d("Status: Processing")
                 updateNotification(
                     title = getString(R.string.recognize_music),
                     contentText = getString(R.string.recognition_notification_processing),
@@ -157,12 +163,14 @@ class RecognitionForegroundService : Service() {
             }
 
             is RecognitionStatus.Success -> {
+                Timber.tag(TAG).i("Status: Success — '%s' by %s", status.result.title, status.result.artist)
                 handleSuccess(status.result)
             }
 
             is RecognitionStatus.NoMatch -> {
                 if (terminalStateHandled) return
                 terminalStateHandled = true
+                Timber.tag(TAG).i("Status: No match")
                 updateNotification(
                     title = getString(R.string.recognize_music),
                     contentText = getString(R.string.recognition_notification_no_match),
@@ -178,6 +186,7 @@ class RecognitionForegroundService : Service() {
             is RecognitionStatus.Error -> {
                 if (terminalStateHandled) return
                 terminalStateHandled = true
+                Timber.tag(TAG).w("Status: Error — %s", status.message)
                 updateNotification(
                     title = getString(R.string.recognize_music),
                     contentText = getString(R.string.recognition_notification_failed),
@@ -286,6 +295,7 @@ class RecognitionForegroundService : Service() {
 
     private suspend fun loadBitmap(url: String): Bitmap? =
         withContext(Dispatchers.IO) {
+            Timber.tag(TAG).d("Loading cover art bitmap from %s", url)
             runCatching {
                 val connection = (URL(url).openConnection() as? HttpURLConnection)
                     ?: return@runCatching null
@@ -321,6 +331,7 @@ class RecognitionForegroundService : Service() {
     }
 
     private fun finishWithPersistentResult() {
+        Timber.tag(TAG).d("Finishing with persistent notification")
         keepNotificationOnStop = true
         stopForeground(STOP_FOREGROUND_DETACH)
         stopSelf()

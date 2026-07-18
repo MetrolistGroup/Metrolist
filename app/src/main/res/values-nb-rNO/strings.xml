@@ -164,11 +164,9 @@
     <string name="enable_lrclib">Slå på LrcLib-sangteksttilbyder</string>
     <string name="enable_kugou">Slå på KuGou-sangteksttilbyder</string>
     <string name="action_backup">Sikkerhetskopier</string>
-    <string name="discord_integration">Discord-integrasjon</string>
     <string name="dismiss">Avvis</string>
     <string name="options">Innstillinger</string>
     <string name="login_failed">Innlogging mislyktes</string>
-    <string name="enable_discord_rpc">Slå på rik tilstedeværelse</string>
     <string name="app_version">Programversjon</string>
     <string name="new_version_available">Ny versjon tilgjengelig</string>
     <string name="translation_models">Oversettingsmodeller</string>

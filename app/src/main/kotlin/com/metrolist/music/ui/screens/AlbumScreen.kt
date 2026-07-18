@@ -238,9 +238,10 @@ fun AlbumScreen(
                         artists = albumWithSongs.artists,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Normal,
-                            color = MaterialTheme.colorScheme.secondary,
                             textAlign = TextAlign.Center,
                         ),
+                        color = MaterialTheme.colorScheme.secondary,
+                        maxLines = Int.MAX_VALUE,
                         modifier = Modifier.fillMaxWidth(),
                     )
 
@@ -394,7 +395,7 @@ fun AlbumScreen(
             if (filteredSongs.isNotEmpty()) {
                 itemsIndexed(
                     items = filteredSongs,
-                    key = { _, song -> song.id },
+                    key = { index, song -> "${song.id}_$index" },
                 ) { index, song ->
                     val onCheckedChange: (Boolean) -> Unit = {
                         if (it) {

@@ -2,7 +2,6 @@ package com.metrolist.music.playback.alarm
 
 import android.content.Context
 import android.os.Build
-import androidx.datastore.preferences.core.edit
 import com.metrolist.music.constants.AlarmEnabledKey
 import com.metrolist.music.constants.AlarmEntriesKey
 import com.metrolist.music.constants.AlarmHourKey
@@ -11,6 +10,7 @@ import com.metrolist.music.constants.AlarmNextTriggerAtKey
 import com.metrolist.music.constants.AlarmPlaylistIdKey
 import com.metrolist.music.constants.AlarmRandomSongKey
 import com.metrolist.music.utils.dataStore
+import com.metrolist.music.utils.safeDataStoreEdit
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
@@ -72,7 +72,7 @@ object MusicAlarmStore {
 
     suspend fun save(context: Context, entries: List<MusicAlarmEntry>) {
         saveProtected(context, entries)
-        context.dataStore.edit { prefs ->
+        context.safeDataStoreEdit { prefs ->
             prefs[AlarmEntriesKey] = serialize(entries)
             prefs[AlarmNextTriggerAtKey] = entries.filter { it.enabled }.minOfOrNull { it.nextTriggerAt.takeIf { time -> time > 0L } ?: Long.MAX_VALUE }
                 ?.takeIf { it != Long.MAX_VALUE } ?: -1L

@@ -13,6 +13,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.AlbumItem
+import com.metrolist.innertube.models.EpisodeItem
+import com.metrolist.innertube.models.PlaylistItem
+import com.metrolist.innertube.models.PodcastItem
+import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.filterExplicit
 import com.metrolist.innertube.models.filterVideoSongs
 import com.metrolist.innertube.models.filterYoutubeShorts
@@ -44,6 +49,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
 import com.metrolist.music.extensions.filterVideoSongs as filterVideoSongsLocal
@@ -113,7 +119,7 @@ class ArtistViewModel @Inject constructor(
         try {
             val cachedJson = database.artist(artistId).firstOrNull()?.artist?.cachedPageJson
             if (cachedJson != null) {
-                val cachedDto = deserializeArtistPage(cachedJson)
+                val cachedDto = withContext(Dispatchers.IO) { deserializeArtistPage(cachedJson) }
                 val page = cachedDto.toArtistPage()
                 val hideExplicit = context.dataStore.get(HideExplicitKey, false)
                 val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
@@ -140,10 +146,67 @@ class ArtistViewModel @Inject constructor(
             val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
             YouTube.artist(artistId)
                 .onSuccess { page ->
-                    val resolvedSections = page.sections.map { section ->
-                        section.copy(items = YouTube.resolveArtistIds(section.items))
+                    // Collect all items from all sections and resolve artist IDs once
+                    val allItems = page.sections.flatMap { it.items }
+                    val resolvedIdMap = if (allItems.isNotEmpty()) {
+                        YouTube.resolveArtistIdMap(allItems)
+                    } else {
+                        emptyMap()
                     }
-                    val resolvedPage = page.copy(sections = resolvedSections)
+
+                    fun com.metrolist.innertube.models.Artist.resolve() =
+                        if (id == null) resolvedIdMap[name]?.let { copy(id = it) } ?: this else this
+
+                    // Resolve artist IDs and fetch durations from more endpoint
+                    val resolvedSections = page.sections.map { section ->
+                        section.copy(items = section.items.map { item ->
+                            when (item) {
+                                is SongItem -> item.copy(artists = item.artists.map { it.resolve() })
+                                is AlbumItem -> item.copy(artists = item.artists?.map { it.resolve() })
+                                is PlaylistItem -> item.copy(author = item.author?.resolve())
+                                is EpisodeItem -> item.copy(author = item.author?.resolve())
+                                is PodcastItem -> item.copy(author = item.author?.resolve())
+                                else -> item
+                            }
+                        })
+                    }
+
+                    // Fetch song durations from the more endpoint if the first section has songs without duration
+                    var sectionsWithDurations = resolvedSections
+                    if (resolvedSections.isNotEmpty()) {
+                        val needDurations = resolvedSections.first().items.any {
+                            it is SongItem && it.duration == null
+                        }
+                        if (needDurations) {
+                            val moreEndpoint = resolvedSections.first().moreEndpoint
+                            if (moreEndpoint != null) {
+                                try {
+                                    val moreResult = withContext(Dispatchers.IO) {
+                                        YouTube.artistItems(moreEndpoint)
+                                    }
+                                    moreResult
+                                        .onSuccess { moreItems ->
+                                            val durationById = moreItems.items.filterIsInstance<SongItem>()
+                                                .associate { it.id to it.duration }
+                                            if (durationById.isNotEmpty()) {
+                                                sectionsWithDurations = listOf(resolvedSections.first().copy(
+                                                    items = resolvedSections.first().items.map { item ->
+                                                        if (item is SongItem && item.duration == null) {
+                                                            item.copy(duration = durationById[item.id] ?: item.duration)
+                                                        } else item
+                                                    }
+                                                )) + resolvedSections.drop(1)
+                                            }
+                                        }
+                                        .onFailure { e -> reportException(e) }
+                                } catch (e: Exception) {
+                                    reportException(e)
+                                }
+                            }
+                        }
+                    }
+
+                    val resolvedPage = page.copy(sections = sectionsWithDurations)
                     val filteredSections = resolvedPage.sections
                         .map { section ->
                             section.copy(items = section.items.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
@@ -170,6 +233,7 @@ class ArtistViewModel @Inject constructor(
                                         channelId = resolvedPage.artist.channelId ?: existingArtist.channelId,
                                         thumbnailUrl = resolvedPage.artist.thumbnail ?: existingArtist.thumbnailUrl,
                                         cachedPageJson = cachedJson,
+                                        lastUpdateTime = java.time.LocalDateTime.now(),
                                     )
                                 )
                             } else {

@@ -332,7 +332,7 @@ fun BackupAndRestore(
                     onClick = {
                         showRestoreConfirmDialog = false
                         pendingRestoreUri?.let { uri ->
-                            viewModel.restore(context, uri, clearAuthData = true)
+                            viewModel.restore(context, uri, clearAuthData = false)
                         }
                         pendingRestoreUri = null
                         backupPreviewInfo = null

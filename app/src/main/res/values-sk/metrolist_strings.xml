@@ -214,7 +214,6 @@
     <string name="delete_desc">Natrvalo odstrániť túto položku</string>
     <string name="advanced_desc">Zmeňte tempo a výšku tónu skladby</string>
     <string name="equalizer_desc">Úprava zvukového ekvalizéra</string>
-    <string name="enable_dynamic_icon">Povoliť dynamickú ikonu</string>
     <string name="mini_player">Mini-prehrávač</string>
     <string name="pure_black_mini_player">Čisto čierny mini prehrávač</string>
     <string name="cache_size_warning_title">Počkajte!</string>

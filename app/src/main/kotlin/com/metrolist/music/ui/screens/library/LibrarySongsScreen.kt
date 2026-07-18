@@ -459,7 +459,7 @@ fun LibrarySongsScreen(
 
             itemsIndexed(
                 items = filteredSongs,
-                key = { _, item -> item.song.id },
+                key = { index, item -> "${item.song.id}_$index" },
                 contentType = { _, _ -> CONTENT_TYPE_SONG },
             ) { index, song ->
                 SongListItem(

@@ -85,6 +85,7 @@ import com.metrolist.music.R
 import com.metrolist.music.db.entities.RecognitionHistory
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.utils.backToMain
+import com.metrolist.music.utils.SearchRoutes
 import com.metrolist.shazamkit.models.RecognitionResult
 import com.metrolist.shazamkit.models.RecognitionStatus
 import kotlinx.coroutines.Dispatchers
@@ -263,7 +264,7 @@ fun RecognitionScreen(
                             onPlayOnApp = { result ->
                                 // Search for the track on YouTube Music
                                 val searchQuery = "${result.title} ${result.artist}"
-                                navController.navigate("search/${java.net.URLEncoder.encode(searchQuery, "UTF-8")}")
+                                navController.navigate(SearchRoutes.resultRoute(searchQuery))
                             },
                             onTryAgain = {
                                 startRecognition()

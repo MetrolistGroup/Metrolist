@@ -65,11 +65,11 @@ import com.metrolist.music.constants.SearchSourceKey
 import com.metrolist.music.db.entities.SearchHistory
 import com.metrolist.music.playback.queues.YouTubeQueue
 import com.metrolist.music.ui.component.HideOnScrollFAB
+import com.metrolist.music.utils.SearchRoutes
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.net.URLEncoder
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -159,7 +159,7 @@ fun SearchScreen(
             }
 
             null -> {
-                navController.navigate("search/${URLEncoder.encode(searchQuery, "UTF-8")}")
+                navController.navigate(SearchRoutes.resultRoute(searchQuery))
             }
         }
 
@@ -279,38 +279,29 @@ fun SearchScreen(
         },
         containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.background,
     ) { paddingValues ->
-        val bottomPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues().calculateBottomPadding()
-
         Box(
             modifier =
                 Modifier
-                    .padding(paddingValues)
+                    .padding(top = paddingValues.calculateTopPadding())
                     .fillMaxSize(),
         ) {
-            Box(
-                modifier =
-                    Modifier
-                        .padding(bottom = bottomPadding)
-                        .fillMaxSize(),
-            ) {
-                when (searchSource) {
-                    SearchSource.LOCAL -> {
-                        LocalSearchScreen(
-                            query = query.text,
-                            onDismiss = { navController.navigateUp() },
-                            pureBlack = pureBlack,
-                        )
-                    }
+            when (searchSource) {
+                SearchSource.LOCAL -> {
+                    LocalSearchScreen(
+                        query = query.text,
+                        onDismiss = { navController.navigateUp() },
+                        pureBlack = pureBlack,
+                    )
+                }
 
-                    SearchSource.ONLINE -> {
-                        OnlineSearchScreen(
-                            query = query.text,
-                            onQueryChange = { query = it },
-                            onSearch = onSearchFromSuggestion,
-                            onDismiss = { /* Don't dismiss when searching from suggestions */ },
-                            pureBlack = pureBlack,
-                        )
-                    }
+                SearchSource.ONLINE -> {
+                    OnlineSearchScreen(
+                        query = query.text,
+                        onQueryChange = { query = it },
+                        onSearch = onSearchFromSuggestion,
+                        onDismiss = { /* Don't dismiss when searching from suggestions */ },
+                        pureBlack = pureBlack,
+                    )
                 }
             }
 

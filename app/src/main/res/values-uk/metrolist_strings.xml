@@ -121,11 +121,11 @@
     <string name="seek_forward_dynamic">+%1$d сек. вперед</string>
     <string name="seek_backward_dynamic">-%1$d сек. назад</string>
     <string name="seek_seconds_addup">Прогресивний пошук</string>
-    <string name="seek_seconds_addup_description">Якщо ввімкнено, додає 5 додаткових секунд при кожному пропусканні пошуку</string>
+    <string name="seek_seconds_addup_description">Якщо ввімкнено, з кожною перемоткою додається на 5 секунд більше</string>
     <string name="close">Закрити</string>
     <string name="disable_load_more_when_repeat_all">Вимкнути завантаження додаткових параметрів під час повторення всіх</string>
     <string name="disable_load_more_when_repeat_all_desc">Не завантажувати автоматично більше пісень та подібного контенту, коли ввімкнено режим повторення всіх</string>
-    <string name="hide_player_thumbnail">Приховати мініатюру програвача</string>
+    <string name="hide_player_thumbnail">Приховати обкладинку програвача</string>
     <string name="hide_player_thumbnail_desc">Замінити обкладинку альбому логотипом додатка в програвачі</string>
     <string name="settings_section_ui">Інтерфейс</string>
     <string name="settings_section_privacy">Конфіденційність та безпека</string>
@@ -200,7 +200,6 @@
     <string name="delete_desc">Вилучити цей елемент назавжди</string>
     <string name="advanced_desc">Змінити темп і висоту тону пісні</string>
     <string name="equalizer_desc">Налаштування аудіоеквалайзера</string>
-    <string name="enable_dynamic_icon">Увімкнути динамічний значок</string>
     <string name="mini_player">Міні-плеєр</string>
     <string name="pure_black_mini_player">Чисто чорний міні-плеєр</string>
     <string name="cache_size_warning_title">Тримайся!</string>
@@ -210,13 +209,13 @@
     <string name="logging_in">Вхід до…</string>
     <string name="download_playlist_desc">Завантажте всі пісні для відтворення офлайн</string>
     <string name="remove_download_playlist_desc">Видалити всі завантажені пісні з цього списку відтворення</string>
-    <string name="download_in_progress_desc">Триває завантаження</string>
+    <string name="download_in_progress_desc">Йде завантаження</string>
     <string name="share_playlist_desc">Поділіться цим списком відтворення з іншими</string>
     <string name="delete_playlist_desc">Видалити цей плейлист назавжди</string>
     <string name="sync_playlist_desc">Синхронізуйте цей список відтворення з YouTube Music</string>
     <string name="enable_better_lyrics">Увімкнути кращі тексти пісень</string>
-    <string name="enable_better_lyrics_desc">Використовуйте постачальника Better Lyrics для синхронізованих текстів пісень слово за словом</string>
-    <string name="lyrics_animation_style">Стиль анімації слово за словом</string>
+    <string name="enable_better_lyrics_desc">Тексти пісень, синхронізовані за складами — ідеально для караоке</string>
+    <string name="lyrics_animation_style">Стиль анімації тексту пісні</string>
     <string name="none">Жоден</string>
     <string name="fade">Згасання</string>
     <string name="glow">Сяйво</string>
@@ -228,7 +227,7 @@
     <string name="shuffle_playlist_first">Спочатку перемішати список відтворення або альбом</string>
     <string name="shuffle_playlist_first_desc">Під час перемішування спочатку відтворювати всі пісні з оригінального списку відтворення/альбому, а потім схожий контент</string>
     <string name="lyrics_glow_effect">Увімкнути ефект сяйва тексту пісень</string>
-    <string name="lyrics_glow_effect_desc">Додайте анімацію сяйва та ефект відскоку до активних текстів пісень</string>
+    <string name="lyrics_glow_effect_desc">Додає анімацію світіння та ефект відскоку для активного рядка пісні</string>
     <string name="show_wrapped_card">Показати обгорнуту картку</string>
     <string name="album_art_for">Обкладинка альбому для %s</string>
     <string name="wrapped_total_albums_title">Ви слухали</string>
@@ -642,4 +641,6 @@
     <string name="ai_provider_mistral_help">Відвідайте https://console.mistral.ai/api-keys</string>
     <string name="ai_deepl_formality_default">За замовчуванням</string>
     <string name="ai_system_prompt_default">За замовчуванням</string>
+    <string name="and">і</string>
+    <string name="show_most_stats_playlists_desc">Створювати та показувати списки відтворення найбільш прослуховуваних пісень у розділах Статистика та Бібліотека</string>
 </resources>

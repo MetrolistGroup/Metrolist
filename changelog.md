@@ -1,3 +1,29 @@
+---v13.6.1
+# THE FUTURE OF METROLIST
+The new Kotlin Multiplatform version of Metrolist is now in a good state, and we are aiming to release it within the next month. Until then, the current app will remain in maintenance mode and receive bug fixes and minor improvements.
+
+# Major changes
+- Improved playback reliability and recovery from YouTube player failures (@alltechdev @JASK625 @kairosci @mostafaalagamy @nyxiereal)
+- Fixed black screens, startup crashes, and playback freezes (@kairosci @mostafaalagamy @nyxiereal)
+- Improved Listen Together synchronization (@nyxiereal)
+
+## Notable new features
+- Added refreshed branding and an optional dynamic app icon (@mostafaalagamy)
+- Added predictive back support and improved landscape scaling (@HansHolz09 @kairosci)
+
+## Other improvements
+- Fixed login, logout, and backup restoration issues (@mostafaalagamy @kairosci @nyxiereal)
+- Fixed incorrect artist names, song durations, podcast metadata, and missing artwork (@alltechdev @kairosci @mostafaalagamy @nyxiereal)
+- Fixed Android Auto freezes and playback delays (@kairosci)
+- Fixed foreground service ANRs and multiple other crashes (@kairosci @mostafaalagamy)
+- Fixed sleep timer crashes and restored saved defaults (@johannesbrauer @mostafaalagamy)
+- Improved library sync performance and YouTube player compatibility (@mostafaalagamy @nyxiereal)
+
+## New Contributors
+* @HansHolz09 made their first contribution in https://github.com/MetrolistGroup/Metrolist/pull/3837
+
+**Full Changelog**: https://github.com/MetrolistGroup/Metrolist/compare/v13.6.0...v13.6.1
+
 ---v13.5.0
 # MAINTENANCE MODE
 Metrolist is currently in maintenance mode. This means we will only be fixing bugs and making minor improvements. Please do not submit PRs for new features or major changes, as they will not be accepted.

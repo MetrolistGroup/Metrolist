@@ -38,6 +38,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import com.metrolist.music.utils.reportException
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -149,10 +150,17 @@ fun AccountSettings(
                         onClick = {
                             Timber.d("[LOGOUT_CLEAR] User chose to clear data")
                             scope.launch {
-                                Timber.d("[LOGOUT_CLEAR] Starting clear and logout process")
-                                accountSettingsViewModel.clearAllLibraryData()
-                                Timber.d("[LOGOUT_CLEAR] Library data cleared, now logging out")
-                                accountSettingsViewModel.logoutKeepData(context, onInnerTubeCookieChange)
+                                try {
+                                    Timber.d("[LOGOUT_CLEAR] Starting clear and logout process")
+                                    // Forget account first (stops all sync), then clear data.
+                                    // This prevents background syncs from re-adding songs.
+                                    accountSettingsViewModel.logoutAndClearLibraryData(context)
+                                    Timber.d("[LOGOUT_CLEAR] Library data cleared and account forgotten")
+                                } catch (e: Exception) {
+                                    Timber.e(e, "[LOGOUT_CLEAR] Error clearing library data, proceeding with logout")
+                                    reportException(e)
+                                }
+                                onInnerTubeCookieChange("")
                                 Timber.d("[LOGOUT_CLEAR] Logout complete")
                                 showLogoutDialog = false
                                 onClose()

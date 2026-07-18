@@ -31,7 +31,7 @@ jobs:
 
       - name: Restore PR debug keystore
         id: pr_keystore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: app/pr-debug.keystore
           key: pr-debug-keystore-${{ github.event.number }}
@@ -51,7 +51,7 @@ jobs:
 
       - name: Save PR debug keystore
         if: steps.pr_keystore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: app/pr-debug.keystore
           key: ${{ steps.pr_keystore.outputs.cache-primary-key }}

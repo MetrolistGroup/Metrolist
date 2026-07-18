@@ -11,13 +11,14 @@ import androidx.core.content.getSystemService
 import androidx.core.net.toUri
 import androidx.media3.database.DatabaseProvider
 import androidx.media3.datasource.ResolvingDataSource
+import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSource
-import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadNotificationHelper
 import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.strategy.ContentHints
 import com.metrolist.music.constants.AudioQuality
 import com.metrolist.music.constants.AudioQualityKey
 import com.metrolist.music.db.MusicDatabase
@@ -54,8 +55,8 @@ constructor(
     @ApplicationContext context: Context,
     val database: MusicDatabase,
     val databaseProvider: DatabaseProvider,
-    @DownloadCache val downloadCache: SimpleCache,
-    @PlayerCache val playerCache: SimpleCache,
+    @DownloadCache val downloadCache: Cache,
+    @PlayerCache val playerCache: Cache,
 ) {
     private val TAG = "DownloadUtil"
     private val connectivityManager = context.getSystemService<ConnectivityManager>()!!
@@ -98,13 +99,40 @@ constructor(
             }
 
             val playbackData = runBlocking(Dispatchers.IO) {
+                val song = database.songEntity(mediaId)
                 YTPlayerUtils.playerResponseForPlayback(
                     mediaId,
                     audioQuality = audioQuality,
                     connectivityManager = connectivityManager,
+                    contentHints = ContentHints(
+                        isExplicit = song?.explicit,
+                        isUploaded = song?.isUploaded,
+                    ),
                 )
             }.getOrThrow()
             val format = playbackData.format
+
+            val actualContentLength = format.contentLength ?: run {
+                var length: Long? = null
+                val client = OkHttpClient.Builder()
+                    .proxy(YouTube.proxy)
+                    .proxyAuthenticator { _, response ->
+                        YouTube.proxyAuth?.let { auth ->
+                            response.request.newBuilder()
+                                .header("Proxy-Authorization", auth)
+                                .build()
+                        } ?: response.request
+                    }
+                    .build()
+                val request = okhttp3.Request.Builder()
+                    .head()
+                    .url(playbackData.streamUrl)
+                    .build()
+                client.newCall(request).execute().use { response ->
+                    length = response.header("Content-Length")?.toLongOrNull()
+                }
+                length ?: error("Failed to retrieve content length")
+            }
 
             database.query {
                 upsert(
@@ -115,38 +143,33 @@ constructor(
                         codecs = format.mimeType.split("codecs=")[1].removeSurrounding("\""),
                         bitrate = format.bitrate,
                         sampleRate = format.audioSampleRate,
-                        contentLength = format.contentLength!!,
+                        contentLength = actualContentLength,
                         loudnessDb = playbackData.audioConfig?.loudnessDb,
                         perceptualLoudnessDb = playbackData.audioConfig?.perceptualLoudnessDb,
                         playbackUrl = playbackData.playbackTracking?.videostatsPlaybackUrl?.baseUrl
                     ),
                 )
 
-                val now = LocalDateTime.now()
+                // Metadata registration only — dateDownload is intentionally NOT set here.
+                // It belongs solely to onDownloadChanged()'s STATE_COMPLETED branch below,
+                // which only fires once the download has actually finished. Setting it here
+                // (at URL-resolve time, i.e. the moment the download merely *starts*) would
+                // mark the song as "cached" before a single byte is written.
                 val existing = getSongByIdBlocking(mediaId)?.song
-
-                val updatedSong = if (existing != null) {
-                    if (existing.dateDownload == null) {
-                        existing.copy(dateDownload = now)
-                    } else {
-                        existing
-                    }
-                } else {
-                    SongEntity(
-                        id = mediaId,
-                        title = playbackData.videoDetails?.title ?: "Unknown",
-                        duration = playbackData.videoDetails?.lengthSeconds?.toIntOrNull() ?: 0,
-                        thumbnailUrl = playbackData.videoDetails?.thumbnail?.thumbnails?.lastOrNull()?.url,
-                        dateDownload = now,
-                        isDownloaded = false
-                    )
-                }
+                val updatedSong = existing ?: SongEntity(
+                    id = mediaId,
+                    title = playbackData.videoDetails?.title ?: "Unknown",
+                    duration = playbackData.videoDetails?.lengthSeconds?.toIntOrNull() ?: 0,
+                    thumbnailUrl = playbackData.videoDetails?.thumbnail?.thumbnails?.lastOrNull()?.url,
+                    dateDownload = null,
+                    isDownloaded = false
+                )
 
                 upsert(updatedSong)
             }
 
             val streamUrl = playbackData.streamUrl.let {
-                "${it}&range=0-${format.contentLength ?: 10000000}"
+                "${it}&range=0-${actualContentLength}"
             }
 
             songUrlCache[mediaId] = streamUrl to playbackData.streamExpiresInSeconds * 1000L

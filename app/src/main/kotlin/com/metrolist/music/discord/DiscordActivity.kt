@@ -18,10 +18,8 @@ data class DiscordActivity(
 ) {
     companion object {
         const val TYPE_PLAYING = 0
-        const val TYPE_STREAMING = 1
         const val TYPE_LISTENING = 2
         const val TYPE_WATCHING = 3
-        const val TYPE_CUSTOM_STATUS = 4
         const val TYPE_COMPETING = 5
     }
 }

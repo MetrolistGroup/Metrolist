@@ -58,8 +58,8 @@ import com.metrolist.music.ui.component.ActionPromptDialog
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
+import android.text.format.Formatter
 import com.metrolist.music.ui.utils.backToMain
-import com.metrolist.music.ui.utils.formatFileSize
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -254,7 +254,7 @@ fun StorageSettings(
                 Text(
                     stringResource(
                         R.string.cache_size_warning_message,
-                        formatFileSize(cacheUsage),
+                        Formatter.formatShortFileSize(context, cacheUsage),
                         cacheType,
                     ),
                 )
@@ -304,7 +304,7 @@ fun StorageSettings(
                         icon = painterResource(R.drawable.storage),
                         title = { Text(stringResource(R.string.downloaded_songs)) },
                         description = {
-                            Text(text = formatFileSize(downloadCacheSize))
+                            Text(text = Formatter.formatShortFileSize(context, downloadCacheSize))
                         },
                     ),
                     Material3SettingsItem(
@@ -353,7 +353,7 @@ fun StorageSettings(
                                 text = when (maxSongCacheSize) {
                                     0 -> stringResource(R.string.disable)
                                     -1 -> stringResource(R.string.unlimited)
-                                    else -> formatFileSize(maxSongCacheSize * 1024 * 1024L)
+                                    else -> Formatter.formatShortFileSize(context, maxSongCacheSize * 1024 * 1024L)
                                 }
                             )
                             Slider(
@@ -388,10 +388,10 @@ fun StorageSettings(
                                 Text(
                                     text =
                                         if (maxSongCacheSize == -1) {
-                                            formatFileSize(playerCacheSize)
+                                            Formatter.formatShortFileSize(context, playerCacheSize)
                                         } else {
-                                            "${formatFileSize(playerCacheSize)} / ${
-                                                formatFileSize(
+                                            "${Formatter.formatShortFileSize(context, playerCacheSize)} / ${
+                                                Formatter.formatShortFileSize(context, 
                                                     maxSongCacheSize * 1024 * 1024L,
                                                 )
                                             }"
@@ -426,7 +426,7 @@ fun StorageSettings(
                                     text =
                                         when (maxImageCacheSize) {
                                             0 -> stringResource(R.string.disable)
-                                            else -> formatFileSize(maxImageCacheSize * 1024 * 1024L)
+                                            else -> Formatter.formatShortFileSize(context, maxImageCacheSize * 1024 * 1024L)
                                         },
                                 )
                                 Slider(
@@ -454,8 +454,8 @@ fun StorageSettings(
                                 )
                                 Spacer(modifier = Modifier.padding(2.dp))
                                 Text(
-                                    text = "${formatFileSize(imageCacheSize)} / ${
-                                        formatFileSize(
+                                    text = "${Formatter.formatShortFileSize(context, imageCacheSize)} / ${
+                                        Formatter.formatShortFileSize(context, 
                                             maxImageCacheSize * 1024 * 1024L,
                                         )
                                     }",

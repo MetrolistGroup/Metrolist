@@ -27,6 +27,11 @@ object PlayerJsFetcher {
     // Regex to extract player hash from iframe_api response
     private val PLAYER_HASH_REGEX = Regex("""\\?/s\\?/player\\?/([a-zA-Z0-9_-]+)\\?/""")
 
+    // Serializes cache mutations: getPlayerJs has unsynchronized concurrent callers, and an
+    // unlocked writeToCache purge racing another writer's writeAtomic tmp window would delete
+    // the tmp mid-write and silently degrade to a truncating non-atomic write.
+    private val cacheWriteLock = Any()
+
     private fun getCacheDir(): File = File(CipherDeobfuscator.appContext.filesDir, "cipher_cache")
 
     private fun getCacheFile(hash: String): File = File(getCacheDir(), "player_$hash.js")
@@ -99,11 +104,17 @@ object PlayerJsFetcher {
      */
     fun invalidateCache() {
         Timber.tag(TAG).d("Invalidating cache...")
-        try {
+        synchronized(cacheWriteLock) { try {
             val cacheDir = getCacheDir()
             if (cacheDir.exists()) {
-                val files = cacheDir.listFiles()
-                Timber.tag(TAG).d("Deleting ${files?.size ?: 0} cache files")
+                // Only the player.js cache (player_*.js + current_hash.txt) belongs to this fetcher.
+                // The dir is shared with PlayerConfigStore (configs_remote.json/.meta) — do NOT wipe
+                // those, or every decipher retry destroys the config ETag and forces a full
+                // non-conditional re-download of the config file.
+                val files = cacheDir.listFiles()?.filter {
+                    it.name.startsWith("player_") || it.name == "current_hash.txt"
+                }
+                Timber.tag(TAG).d("Deleting ${files?.size ?: 0} player-JS cache files")
                 files?.forEach {
                     Timber.tag(TAG).v("Deleting: ${it.name}")
                     it.delete()
@@ -112,7 +123,7 @@ object PlayerJsFetcher {
             Timber.tag(TAG).d("Cache invalidated successfully")
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Failed to invalidate cache: ${e.message}")
-        }
+        } }
     }
 
     private fun readFromCache(): Pair<String, String>? {
@@ -141,8 +152,9 @@ object PlayerJsFetcher {
             val ageHours = ageMs / (1000 * 60 * 60)
             Timber.tag(TAG).d("Cache age: ${ageHours}h (TTL: ${CACHE_TTL_MS / (1000 * 60 * 60)}h)")
 
-            // Check TTL
-            if (ageMs > CACHE_TTL_MS) {
+            // Check TTL (in-range: a future timestamp from a backward clock step counts as
+            // expired, not fresh — see PlayerConfigStore.withinWindow).
+            if (!PlayerConfigStore.withinWindow(System.currentTimeMillis(), timestamp, CACHE_TTL_MS)) {
                 Timber.tag(TAG).d("Cache expired (hash=$hash, age=${ageHours}h)")
                 return null
             }
@@ -169,20 +181,25 @@ object PlayerJsFetcher {
 
     private fun writeToCache(hash: String, playerJs: String) {
         Timber.tag(TAG).d("Writing to cache: hash=$hash, length=${playerJs.length}")
-        try {
-            val cacheDir = getCacheDir()
+        synchronized(cacheWriteLock) {
+            try {
+                val cacheDir = getCacheDir()
 
-            // Clean old cache files
-            val oldFiles = cacheDir.listFiles()?.filter { it.name.startsWith("player_") }
-            Timber.tag(TAG).d("Cleaning ${oldFiles?.size ?: 0} old cache files")
-            oldFiles?.forEach { it.delete() }
+                // Clean old cache files
+                val oldFiles = cacheDir.listFiles()?.filter { it.name.startsWith("player_") }
+                Timber.tag(TAG).d("Cleaning ${oldFiles?.size ?: 0} old cache files")
+                oldFiles?.forEach { it.delete() }
 
-            getCacheFile(hash).writeText(playerJs)
-            getHashFile().writeText("$hash\n${System.currentTimeMillis()}")
+                // Atomic (temp + rename): a plain writeText truncates first, so process death
+                // during a same-hash force-refresh rewrite would leave a truncated player.js
+                // that readFromCache happily serves until the TTL expires.
+                PlayerConfigStore.writeAtomic(getCacheFile(hash), playerJs)
+                PlayerConfigStore.writeAtomic(getHashFile(), "$hash\n${System.currentTimeMillis()}")
 
-            Timber.tag(TAG).d("Cache written successfully")
-        } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "Error writing cache: ${e.message}")
+                Timber.tag(TAG).d("Cache written successfully")
+            } catch (e: Exception) {
+                Timber.tag(TAG).e(e, "Error writing cache: ${e.message}")
+            }
         }
     }
 
@@ -194,15 +211,16 @@ object PlayerJsFetcher {
             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
             .build()
 
-        val response = httpClient.newCall(request).execute()
-        Timber.tag(TAG).d("iframe_api response: HTTP ${response.code}")
-
-        if (!response.isSuccessful) {
-            Timber.tag(TAG).e("iframe_api HTTP ${response.code}")
-            return null
+        // .use{} so the response is closed on the error path too (an unread body would
+        // otherwise strand its connection).
+        val body = httpClient.newCall(request).execute().use { response ->
+            Timber.tag(TAG).d("iframe_api response: HTTP ${response.code}")
+            if (!response.isSuccessful) {
+                Timber.tag(TAG).e("iframe_api HTTP ${response.code}")
+                return null
+            }
+            response.body?.string()
         }
-
-        val body = response.body?.string()
         if (body == null) {
             Timber.tag(TAG).e("iframe_api response body is null")
             return null
@@ -232,15 +250,14 @@ object PlayerJsFetcher {
             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
             .build()
 
-        val response = httpClient.newCall(request).execute()
-        Timber.tag(TAG).d("player.js response: HTTP ${response.code}")
-
-        if (!response.isSuccessful) {
-            Timber.tag(TAG).e("player.js download HTTP ${response.code}")
-            return null
+        val body = httpClient.newCall(request).execute().use { response ->
+            Timber.tag(TAG).d("player.js response: HTTP ${response.code}")
+            if (!response.isSuccessful) {
+                Timber.tag(TAG).e("player.js download HTTP ${response.code}")
+                return null
+            }
+            response.body?.string()
         }
-
-        val body = response.body?.string()
         if (body == null) {
             Timber.tag(TAG).e("player.js response body is null")
             return null

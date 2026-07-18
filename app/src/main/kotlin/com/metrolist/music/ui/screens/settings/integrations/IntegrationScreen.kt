@@ -20,7 +20,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.metrolist.music.BuildConfig
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
 import com.metrolist.music.ui.component.IconButton
@@ -45,12 +44,7 @@ fun IntegrationScreen(
                 IntegrationCardItem(
                     icon = painterResource(R.drawable.discord),
                     title = { Text(stringResource(R.string.discord_integration)) },
-                    description = if (!BuildConfig.DISCORD_RPC_AVAILABLE) {
-                        { Text(stringResource(R.string.discord_gms_only)) }
-                    } else null,
-                    onClick = if (BuildConfig.DISCORD_RPC_AVAILABLE) {
-                        { navController.navigate("settings/integrations/discord") }
-                    } else null
+                    onClick = { navController.navigate("settings/integrations/discord") }
                 ),
                 IntegrationCardItem(
                     icon = painterResource(R.drawable.music_note),

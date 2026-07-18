@@ -16,6 +16,7 @@ import com.metrolist.innertube.models.Run
 import com.metrolist.innertube.models.SectionListRenderer
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
+import com.metrolist.innertube.utils.parseTime
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.models.filterExplicit
 import com.metrolist.innertube.models.getItems
@@ -71,12 +72,15 @@ data class ArtistPage(
         }
 
         private fun fromMusicResponsiveListItemRenderer(renderer: MusicResponsiveListItemRenderer): SongItem? {
-            val artistRuns = renderer.flexColumns
+            val subtitleLine = renderer.flexColumns
                 .getOrNull(1)
                 ?.musicResponsiveListItemFlexColumnRenderer
                 ?.text
                 ?.runs
-                ?.splitBySeparator()
+
+            val subtitleGroups = subtitleLine?.splitBySeparator()
+
+            val artistRuns = subtitleGroups
                 ?.getOrNull(0)
                 ?.splitArtistsByConjunction()
                 ?.filter { it.text.isNotBlank() && it.text != "&" && it.text != "," }
@@ -98,6 +102,16 @@ data class ArtistPage(
                     } else null
                 }
 
+            // Duration is in the last group after "•" separator in the subtitle line
+            val durationFromSubtitle = subtitleGroups
+                ?.drop(1)
+                ?.firstOrNull { group ->
+                    group.firstOrNull()?.text?.parseTime() != null
+                }
+                ?.firstOrNull()
+                ?.text
+                ?.parseTime()
+
             val libraryTokens = PageHelper.extractLibraryTokensFromMenuItems(renderer.menu?.menuRenderer?.items)
 
             return SongItem(
@@ -116,9 +130,13 @@ data class ArtistPage(
                     ?.text ?: return null,
                 artists = artistRuns ?: return null,
                 album = album,
-                duration = null,
+                duration = durationFromSubtitle
+                    ?: renderer.fixedColumns?.firstOrNull()
+                        ?.musicResponsiveListItemFlexColumnRenderer?.text
+                        ?.runs?.firstOrNull()
+                        ?.text?.parseTime(),
                 musicVideoType = renderer.musicVideoType,
-                thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: return null,
                 explicit = renderer.badges?.find {
                     it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
                 } != null,
@@ -134,9 +152,11 @@ data class ArtistPage(
                 renderer.isSong -> {
                     val subtitleRuns = renderer.subtitle?.runs ?: return null
                     val expandedRuns = subtitleRuns.splitArtistsByConjunction()
-                    val artistRuns = expandedRuns.filter { 
-                        it.text.isNotBlank() && it.text != "&" && it.text != "," 
+                    val artistRuns = expandedRuns.filter { run ->
+                        run.text.isNotBlank() && run.text != "&" && run.text != "," &&
+                        run.navigationEndpoint?.browseEndpoint?.browseId?.startsWith("UC") == true
                     }
+                    val subtitleGroups = subtitleRuns.splitBySeparator()
                     SongItem(
                         id = renderer.navigationEndpoint.watchEndpoint?.videoId ?: return null,
                         title = renderer.title.runs?.firstOrNull()?.text ?: return null,
@@ -147,9 +167,12 @@ data class ArtistPage(
                             )
                         }.ifEmpty { null } ?: return null,
                         album = null,
-                        duration = null,
+                        duration = subtitleGroups.lastOrNull()
+                            ?.firstOrNull()
+                            ?.takeIf { it.navigationEndpoint == null }
+                            ?.text?.parseTime(),
                         musicVideoType = renderer.musicVideoType,
-                        thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                        thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         explicit = renderer.subtitleBadges?.find {
                             it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
                         } != null
@@ -165,7 +188,7 @@ data class ArtistPage(
                         title = renderer.title.runs?.firstOrNull()?.text ?: return null,
                         artists = null,
                         year = renderer.subtitle?.runs?.lastOrNull()?.text?.toIntOrNull(),
-                        thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                        thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         explicit = renderer.subtitleBadges?.find {
                             it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
                         } != null
@@ -182,7 +205,7 @@ data class ArtistPage(
                             id = null
                         ),
                         songCountText = null,
-                        thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                        thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         playEndpoint = renderer.thumbnailOverlay
                             ?.musicItemThumbnailOverlayRenderer?.content
                             ?.musicPlayButtonRenderer?.playNavigationEndpoint
@@ -200,7 +223,7 @@ data class ArtistPage(
                     ArtistItem(
                         id = renderer.navigationEndpoint.browseEndpoint?.browseId ?: return null,
                         title = renderer.title.runs?.lastOrNull()?.text ?: return null,
-                        thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                        thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         channelId = renderer.menu?.menuRenderer?.items?.find {
                             it.toggleMenuServiceItemRenderer?.defaultIcon?.iconType == "SUBSCRIBE"
                         }?.toggleMenuServiceItemRenderer?.defaultServiceEndpoint?.subscribeEndpoint?.channelIds?.firstOrNull(),
@@ -224,7 +247,7 @@ data class ArtistPage(
                         author = renderer.subtitle?.runs?.firstOrNull()?.let {
                             Artist(name = it.text, id = it.navigationEndpoint?.browseEndpoint?.browseId)
                         },
-                        thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                        thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         endpoint = WatchEndpoint(videoId = videoId),
                         publishDateText = renderer.subtitle?.runs?.lastOrNull()?.text,
                     )
@@ -238,7 +261,7 @@ data class ArtistPage(
                             Artist(name = it.text, id = it.navigationEndpoint?.browseEndpoint?.browseId)
                         },
                         episodeCountText = renderer.subtitle?.runs?.lastOrNull()?.text,
-                        thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl(),
+                        thumbnail = renderer.thumbnailRenderer.getThumbnailUrl(),
                         playEndpoint = renderer.thumbnailOverlay
                             ?.musicItemThumbnailOverlayRenderer?.content
                             ?.musicPlayButtonRenderer?.playNavigationEndpoint

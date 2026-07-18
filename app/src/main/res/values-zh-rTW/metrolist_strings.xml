@@ -230,7 +230,6 @@
     <string name="delete_profile_desc">刪除設定檔</string>
     <string name="delete_profile_confirmation">確定要刪除 %1$s 嗎？刪除後將無法恢復</string>
     <string name="wavy">波浪</string>
-    <string name="enable_dynamic_icon">啟用動態 icon</string>
     <string name="skip_silence_instant">跳過靜音片段</string>
     <string name="skip_silence_desc">快轉歌曲中的靜音片段</string>
     <string name="skip_silence_instant_desc">在靜音片段時直接跳轉，而非加速快轉</string>
@@ -376,7 +375,7 @@
     <string name="randomize_home_order_desc">隨機重新排列主螢幕各部分的順序，並賦予其不同的優先順序</string>
     <string name="randomize_home_order">隨機排列主頁順序</string>
     <string name="unpin_from_speed_dial">從快速撥號中取消固定</string>
-    <string name="discord_advanced_mode_description">顯示 Rich Presence 的更多自訂選項</string>
+    <string name="discord_advanced_mode_description">使用佔位字元自訂Rich Presence的所有字段</string>
     <string name="discord_advanced_mode">詳細設定</string>
     <string name="discord_activity_name">活動名稱</string>
     <string name="discord_connect_description">使用 Discord 登錄，分享你正在收聽的內容</string>
@@ -829,4 +828,15 @@
     <string name="mixes">合輯</string>
     <string name="widget_playlists">播放清單</string>
     <string name="choose_something_below">在下方選擇</string>
+    <string name="and">和</string>
+    <string name="discord_error_banner_title">Discord錯誤</string>
+    <string name="discord_details">詳情</string>
+    <string name="discord_state">狀態</string>
+    <string name="discord_enable_button_1">顯示按鈕1</string>
+    <string name="discord_enable_button_2">顯示按鈕2</string>
+    <string name="discord_button_label">標簽</string>
+    <string name="discord_button_url">URL</string>
+    <string name="discord_placeholder_song">歌曲名稱</string>
+    <string name="discord_placeholder_artist">音樂人名稱</string>
+    <string name="discord_placeholder_album">專輯名稱</string>
 </resources>

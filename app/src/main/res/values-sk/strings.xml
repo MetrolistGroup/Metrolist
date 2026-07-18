@@ -286,12 +286,10 @@
     <string name="backup_create_success">Záloha bola úspešne vytvorená</string>
     <string name="backup_create_failed">Nepodarilo sa vytvoriť zálohu</string>
     <string name="restore_failed">Nepodarilo sa obnoviť zálohu</string>
-    <string name="discord_integration">Integrácia Discordu</string>
     <string name="discord_information">Metrolist používa knižnicu KizzyRPC na nastavenie stavu vášho účtu Discord. To zahŕňa použitie pripojenia Discord Gateway, čo môže byť považované za porušenie TOS Discordu. Zatiaľ však nie sú známe prípady pozastavenia účtov používateľov z tohto dôvodu. Používanie na vlastné riziko.\n\nMetrolist bude extrahovať iba váš token, všetko ostatné sa ukladá lokálne.</string>
     <string name="dismiss">Zatvoriť</string>
     <string name="options">Možnosťi</string>
     <string name="preview">Náhľad</string>
-    <string name="enable_discord_rpc">Zapnúť Rich Presence</string>
     <string name="about">Informácie</string>
     <string name="app_version">Verzia aplikácie</string>
     <string name="new_version_available">Nová verzia je dostupná</string>

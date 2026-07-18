@@ -1,8 +1,13 @@
 package com.metrolist.innertube.pages
 
+import com.metrolist.innertube.models.Artist
 import com.metrolist.innertube.models.Menu
 import com.metrolist.innertube.models.MusicResponsiveListItemRenderer.FlexColumn
 import com.metrolist.innertube.models.Run
+import com.metrolist.innertube.models.splitArtistsByConjunction
+import com.metrolist.innertube.models.splitBySeparator
+import com.metrolist.innertube.utils.parseTime
+import timber.log.Timber
 
 object PageHelper {
     // Icon types for library management (YouTube changed these in Feb 2026)
@@ -164,4 +169,60 @@ object PageHelper {
             else -> if (iconType == type) defaultToken else toggledToken
         }
     }
+
+    fun extractArtists(runs: List<Run>?): List<Artist> {
+        val sections = runs.orEmpty().splitBySeparator()
+        val linkedArtists = sections.flatMap { section ->
+            val expandedRuns = section.splitArtistsByConjunction()
+            if (expandedRuns.none { it.isArtistRun() }) return@flatMap emptyList()
+            expandedRuns.mapNotNull { run ->
+                val browseEndpoint = run.navigationEndpoint?.browseEndpoint
+                val browseId = browseEndpoint?.browseId
+                when {
+                    browseId?.startsWith("UC") == true || browseEndpoint?.isArtistEndpoint == true ->
+                        Artist(run.text, browseId)
+                    browseId == null && !run.text.isMetadataText() -> Artist(run.text.trim(), null)
+                    else -> null
+                }
+            }
+        }
+        if (linkedArtists.isNotEmpty()) return linkedArtists
+
+        return sections.firstNotNullOfOrNull { section ->
+            section
+                .splitArtistsByConjunction()
+                .filter { run ->
+                    run.navigationEndpoint?.browseEndpoint == null &&
+                        run.text.isNotBlank() &&
+                        run.text.trim() != "," &&
+                        !run.text.isMetadataText()
+                }
+                .map { Artist(it.text.trim(), null) }
+                .takeIf { it.isNotEmpty() }
+        }.orEmpty()
+    }
+
+    fun extractDuration(runs: List<Run>?): Int? =
+        runs.orEmpty().firstNotNullOfOrNull { run ->
+            run.text.trim().takeIf { it.isDurationText() }?.parseTime()
+        }
+
+    private fun Run.isArtistRun(): Boolean {
+        val browseEndpoint = navigationEndpoint?.browseEndpoint
+        return browseEndpoint?.browseId?.startsWith("UC") == true || browseEndpoint?.isArtistEndpoint == true
+    }
+
+    private fun String.isMetadataText(): Boolean {
+        val value = trim()
+        val lower = value.lowercase().replace('\u00a0', ' ')
+        return value.isDurationText() ||
+            value.matches(Regex("""(?:19|20)\d{2}""")) ||
+            lower in setOf("song", "video", "single", "album", "episode", "playlist", "podcast") ||
+            lower.contains("monthly audience") ||
+            lower.matches(Regex("""\d[\d.,]*[kmb]?\s*(?:views?|plays?|likes?|subscribers?)"""))
+    }
+
+    private fun String.isDurationText(): Boolean =
+        matches(Regex("""\d{1,2}[:.,]\d{2}(?:[:.,]\d{2})?"""))
+
 }

@@ -277,7 +277,6 @@
     <string name="disable_screenshot">Disabilita screenshot</string>
     <string name="disable_screenshot_desc">Quando questa opzione è attiva, gli screenshot e la visualizzazione dell\'app nei Recenti sono disabilitati.</string>
     <string name="hide_explicit">Nascondi contenuti espliciti</string>
-    <string name="discord_integration">Integrazione Discord</string>
     <string name="discord_information">Metrolist usa la libreria KizzyRPC per impostare lo stato del tuo account Discord. Ciò comporta l\'uso della connessione Discord Gateway, che può essere considerata una violazione dei TOS di Discord. Tuttavia, non ci sono casi noti di account utente sospesi per questo motivo. Usalo a tuo rischio e pericolo.\n\nMetrolist estrarrà solo il tuo token e tutto il resto verrà archiviato localmente.</string>
     <string name="options">Opzioni</string>
     <string name="use_login_for_browse">Usa il login per navigare nei contenuti</string>
@@ -285,7 +284,6 @@
     <string name="login_failed">Login fallito</string>
     <string name="action_logout">Esci</string>
     <string name="use_login_for_browse_desc">Ciò può influenzare il contenuto che vedi e ad esempio mostra album solo premium se hai effettuato l\'accesso con un account Premium</string>
-    <string name="enable_discord_rpc">Abilita Rich Presence</string>
     <string name="dismiss">Ignorare</string>
     <string name="action_login">Accedi</string>
 </resources>

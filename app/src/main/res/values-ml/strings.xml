@@ -274,8 +274,6 @@
     <string name="enable_lrclib">LrcLib വരികൾ ഓൺ ആക്കുക</string>
     <string name="enable_kugou">KuGou വരികൾ ഓൺ ആക്കുക</string>
     <string name="imported_playlist">കൊണ്ടുവന്ന പ്ലേലിസ്റ്റ്</string>
-    <string name="discord_integration">Discord യോജിപ്പിക്കുക</string>
-    <string name="enable_discord_rpc">റിച്ഛ് പ്രെസെൻസ് ഓൺ ആക്കുക</string>
     <string name="new_version_available">പുതിയ വേർഷൻ ലഭ്യമാണ്</string>
     <string name="translation_models">വിവർത്തന പദ്ധതികൾ</string>
     <string name="clear_translation_models">വിവർത്തന പദ്ധതികൾ കളയുക</string>

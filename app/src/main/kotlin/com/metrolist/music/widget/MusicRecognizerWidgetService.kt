@@ -45,6 +45,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
 import java.io.FileOutputStream
 
@@ -78,6 +79,7 @@ class MusicRecognizerWidgetService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Timber.tag(TAG).d("onStartCommand: action=%s", intent?.action)
         when (intent?.action) {
             ACTION_START_RECOGNITION -> {
                 startForegroundNotification()
@@ -131,6 +133,7 @@ class MusicRecognizerWidgetService : Service() {
     // ─── Recognition flow ─────────────────────────────────────────────────────
 
     private fun startRecognition() {
+        Timber.tag(TAG).d("Starting widget music recognition")
         saveState(STATE_LISTENING)
         updateAllWidgets()
 
@@ -153,6 +156,7 @@ class MusicRecognizerWidgetService : Service() {
                 val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 when (result) {
                     is RecognitionStatus.Success -> {
+                        Timber.tag(TAG).i("Widget recognition success: '%s' by %s", result.result.title, result.result.artist)
                         val artPath = downloadAndCacheAlbumArt(
                             result.result.coverArtHqUrl ?: result.result.coverArtUrl
                         )?.absolutePath ?: ""
@@ -191,11 +195,12 @@ class MusicRecognizerWidgetService : Service() {
                             )
                             // Tell RecognitionScreen not to save again (avoid duplicate entry)
                             MusicRecognitionService.resultSavedExternally = true
-                        } catch (_: Exception) {
-                            // Non-fatal – widget result is still displayed
+                        } catch (e: Exception) {
+                            Timber.tag(TAG).e(e, "Failed to save recognition result to database")
                         }
                     }
                     is RecognitionStatus.NoMatch -> {
+                        Timber.tag(TAG).i("Widget recognition: no match — %s", result.message)
                         prefs.edit()
                             .putInt(PREF_STATE, STATE_NO_MATCH)
                             .putString(PREF_ERROR_MESSAGE, result.message)
@@ -204,6 +209,7 @@ class MusicRecognizerWidgetService : Service() {
                             .apply()
                     }
                     is RecognitionStatus.Error -> {
+                        Timber.tag(TAG).w("Widget recognition error: %s", result.message)
                         prefs.edit()
                             .putInt(PREF_STATE, STATE_ERROR)
                             .putString(PREF_ERROR_MESSAGE, result.message)
@@ -220,6 +226,7 @@ class MusicRecognizerWidgetService : Service() {
                     }
                 }
             } catch (e: Exception) {
+                Timber.tag(TAG).e(e, "Widget recognition crashed")
                 pulseJob?.cancel()
                 getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                     .edit()
@@ -242,7 +249,10 @@ class MusicRecognizerWidgetService : Service() {
      * Returns the file on success or null on any failure.
      */
     private suspend fun downloadAndCacheAlbumArt(url: String?): File? {
-        if (url.isNullOrBlank()) return null
+        if (url.isNullOrBlank()) {
+            Timber.tag(TAG).d("No album art URL provided, skipping download")
+            return null
+        }
         return withContext(Dispatchers.IO) {
             try {
                 val request = ImageRequest.Builder(this@MusicRecognizerWidgetService)
@@ -254,8 +264,10 @@ class MusicRecognizerWidgetService : Service() {
                 val rounded = getRoundedCornerBitmap(bitmap, 24f)
                 val file = File(cacheDir, ALBUM_ART_CACHE_FILE)
                 FileOutputStream(file).use { rounded.compress(Bitmap.CompressFormat.PNG, 90, it) }
+                Timber.tag(TAG).d("Album art downloaded and cached from %s", url)
                 file
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Timber.tag(TAG).e(e, "Failed to download album art from %s", url)
                 null
             }
         }
@@ -279,6 +291,7 @@ class MusicRecognizerWidgetService : Service() {
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     private fun stopRecognitionAndService() {
+        Timber.tag(TAG).d("Stopping recognition and service")
         recognitionJob?.cancel()
         pulseJob?.cancel()
         saveState(STATE_IDLE)
@@ -311,6 +324,7 @@ class MusicRecognizerWidgetService : Service() {
     }
 
     override fun onDestroy() {
+        Timber.tag(TAG).d("Service destroyed")
         super.onDestroy()
         serviceScope.cancel()
     }
@@ -354,5 +368,6 @@ class MusicRecognizerWidgetService : Service() {
         private const val PULSE_INTERVAL_MS = 600L
         private const val CHANNEL_ID = "music_recognizer_widget"
         private const val NOTIFICATION_ID = 9001
+        private const val TAG = "WidgetRecognizer"
     }
 }

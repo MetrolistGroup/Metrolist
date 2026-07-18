@@ -360,8 +360,8 @@ fun LibraryPlaylistsScreen(
             Text(
                 text = pluralStringResource(
                     R.plurals.n_playlist,
-                    visibleResults.size,
-                    visibleResults.size,
+                    visibleResults.count { !it.autoPlaylist },
+                    visibleResults.count { !it.autoPlaylist },
                 ),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.secondary,

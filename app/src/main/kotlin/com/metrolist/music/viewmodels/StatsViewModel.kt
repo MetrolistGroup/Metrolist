@@ -22,8 +22,8 @@ import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.PlaylistEntity
 import com.metrolist.music.ui.screens.OptionStats
 import com.metrolist.music.utils.dataStore
+import com.metrolist.music.utils.safeDataStoreEdit
 import com.metrolist.music.utils.reportException
-import androidx.datastore.preferences.core.edit
 import com.metrolist.music.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -295,7 +295,7 @@ constructor(
 
                 // Only write "last sync" when it was a scheduled sync, not a forced rebuild
                 if (!force) {
-                    context.dataStore.edit { settings ->
+                    context.safeDataStoreEdit { settings ->
                         if (shouldSyncWeekly) settings[LastWeeklyMostPlaylistSyncKey] = nowEpochMillis
                         if (shouldSyncMonthly) settings[LastMonthlyMostPlaylistSyncKey] = nowEpochMillis
                     }

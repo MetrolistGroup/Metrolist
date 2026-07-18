@@ -386,7 +386,7 @@ fun LibraryPodcastsScreen(
 
                     itemsIndexed(
                         items = downloadedEpisodes,
-                        key = { _, item -> item.song.id },
+                        key = { index, item -> "${item.song.id}_$index" },
                         contentType = { _, _ -> CONTENT_TYPE_SONG },
                     ) { index, episode ->
                         // Always show channel name: use artists if available,

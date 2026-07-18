@@ -1,0 +1,65 @@
+name: Sync Player Configs
+
+on:
+  schedule:
+    - cron: '0 0,12 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Fetch latest player_configs.json
+        run: |
+          curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 \
+            "https://raw.githubusercontent.com/ZemerTeam/zemer-cipher/master/library/src/main/assets/player_configs.json" \
+            -o /tmp/player_configs_new.json
+          jq empty /tmp/player_configs_new.json
+
+      - name: Fetch latest player_dates.json
+        run: |
+          curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 \
+            "https://raw.githubusercontent.com/ZemerTeam/zemer-cipher/master/player_dates.json" \
+            -o /tmp/player_dates_new.json
+          jq empty /tmp/player_dates_new.json
+
+      - name: Compare and Update
+        id: check_sync
+        run: |
+          changed=false
+
+          if ! diff -q "app/src/main/assets/player_configs.json" /tmp/player_configs_new.json > /dev/null; then
+            mv /tmp/player_configs_new.json "app/src/main/assets/player_configs.json"
+            echo "configs changed"
+            changed=true
+          fi
+
+          if ! diff -q "app/src/main/assets/player_dates.json" /tmp/player_dates_new.json > /dev/null; then
+            mv /tmp/player_dates_new.json "app/src/main/assets/player_dates.json"
+            echo "dates changed"
+            changed=true
+          fi
+
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and Push
+        if: steps.check_sync.outputs.changed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "mostafaalagamy"
+          git config --global user.email "mostafaalagamy@email.com"
+
+          git add app/src/main/assets/player_configs.json app/src/main/assets/player_dates.json
+          git commit -m "chore: update player configs from upstream"
+
+          git push origin main

@@ -202,10 +202,8 @@
     <string name="backup_create_success">Sigurnosna kopija je uspješno izrađena</string>
     <string name="backup_create_failed">Nije bilo moguće stvoriti sigurnosnu kopiju</string>
     <string name="restore_failed">Neuspjelo obnavljanje sigurnosne kopije</string>
-    <string name="discord_integration">Ugradnja Discord-u</string>
     <string name="dismiss">Odbaci</string>
     <string name="action_logout">Odjavi se</string>
-    <string name="enable_discord_rpc">Uključi prikaz aktivnosti</string>
     <string name="about">Informacije</string>
     <string name="app_version">Verzija aplikacije</string>
     <string name="clear_translation_models">Izbriši modele prevođenja</string>

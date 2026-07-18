@@ -202,7 +202,7 @@ private fun CachedItem.toYTItem(): YTItem {
             explicit = explicit,
             artists = artists.map { com.metrolist.innertube.models.Artist(it.name, it.id) },
             album = album?.let { com.metrolist.innertube.models.Album(it.name, it.id) },
-            duration = duration ?: 0,
+            duration = duration,
             setVideoId = videoId,
         )
         is CachedItem.Album -> AlbumItem(

@@ -5,7 +5,7 @@
 
 package com.metrolist.music.ui.component
 
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.AnimationVector1D
@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.metrolist.music.constants.NavigationBarAnimationSpec
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.pow
@@ -113,7 +114,20 @@ fun BottomSheet(
             }
     ) {
         if (!state.isCollapsed && !state.isDismissed) {
-            BackHandler(onBack = state::collapseSoft)
+            PredictiveBackHandler { progress ->
+                val initialValue = state.value
+                try {
+                    val range = initialValue - state.collapsedBound
+                    progress.collect { event ->
+                        state.snapToAndWait(
+                            initialValue - range * event.progress.coerceIn(0f, 1f)
+                        )
+                    }
+                    state.collapseSoft()
+                } catch (_: CancellationException) {
+                    state.expandSoft()
+                }
+            }
         }
 
         // main content
@@ -226,6 +240,10 @@ class BottomSheetState(
         coroutineScope.launch {
             animatable.snapTo(value)
         }
+    }
+
+    suspend fun snapToAndWait(value: Dp) {
+        animatable.snapTo(value)
     }
 
     fun performFling(velocity: Float, onDismiss: (() -> Unit)?) {

@@ -6,7 +6,6 @@
 package com.metrolist.music.ui.screens
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -18,6 +17,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,10 +41,11 @@ import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.constants.VisitorDataKey
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.utils.backToMain
-import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.utils.reportException
-import kotlinx.coroutines.delay
+import com.metrolist.music.utils.safeDataStoreEdit
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -53,15 +54,11 @@ import timber.log.Timber
 fun LoginScreen(navController: NavController) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    var visitorData by rememberPreference(VisitorDataKey, "")
-    var dataSyncId by rememberPreference(DataSyncIdKey, "")
-    var innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
-    var accountName by rememberPreference(AccountNameKey, "")
-    var accountEmail by rememberPreference(AccountEmailKey, "")
-    var accountChannelHandle by rememberPreference(AccountChannelHandleKey, "")
     var isCompletingLogin by remember { mutableStateOf(false) }
 
     var webView: WebView? = null
+    var visitorDataFromWeb by remember { mutableStateOf("") }
+    var dataSyncIdFromWeb by remember { mutableStateOf("") }
 
     fun completeLogin(onClose: () -> Unit) {
         if (isCompletingLogin) return
@@ -76,26 +73,21 @@ fun LoginScreen(navController: NavController) {
                 return@launch
             }
 
-            innerTubeCookie = currentCookie
-
-            // Small delay to ensure preferences are saved
-            delay(500)
+            // Save extracted values from the WebView before validating
+            val savedVisitorData = visitorDataFromWeb
+            val savedDataSyncId = dataSyncIdFromWeb
 
             // Initialize YouTube object with selected authentication data
-            YouTube.cookie = innerTubeCookie
-            YouTube.dataSyncId = dataSyncId
-            YouTube.visitorData = visitorData
+            YouTube.cookie = currentCookie
+            YouTube.dataSyncId = savedDataSyncId
+            YouTube.visitorData = savedVisitorData
 
             Timber.d("Login: Manual close detected, validating selected account...")
 
             YouTube
                 .accountInfo()
-                .onSuccess {
-                    accountName = it.name
-                    accountEmail = it.email.orEmpty()
-                    accountChannelHandle = it.channelHandle.orEmpty()
-
-                    Timber.d("Login: Successfully logged in as ${it.name}, restarting app...")
+                .onSuccess { info ->
+                    Timber.d("Login: Successfully logged in as ${info.name}, restarting app...")
 
                     // Clean up WebView
                     webView?.apply {
@@ -105,11 +97,33 @@ fun LoginScreen(navController: NavController) {
                         clearFormData()
                     }
 
-                    // Restart app to apply login state throughout
-                    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-                    intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                    context.startActivity(intent)
-                    Runtime.getRuntime().exit(0)
+                    // Save ALL credentials atomically to DataStore, then restart the app.
+                    // This replicates the exact token login pattern (saveTokenAndRestart) that
+                    // works reliably: write atomically, then start the
+                    // launch intent and exit the process so all services reinitialize cleanly.
+                    val saved = withContext(Dispatchers.IO) {
+                        context.safeDataStoreEdit { settings ->
+                            settings[InnerTubeCookieKey] = currentCookie
+                            settings[VisitorDataKey] = savedVisitorData
+                            settings[DataSyncIdKey] = savedDataSyncId
+                            settings[AccountNameKey] = info.name
+                            settings[AccountEmailKey] = info.email.orEmpty()
+                            settings[AccountChannelHandleKey] = info.channelHandle.orEmpty()
+                        }
+                    }
+
+                    if (!saved) {
+                        Timber.e("Login: Failed to persist account data")
+                        isCompletingLogin = false
+                        return@onSuccess
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                        intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        context.startActivity(intent)
+                        Runtime.getRuntime().exit(0)
+                    }
                 }.onFailure {
                     Timber.e(it, "Login: Authentication validation failed after manual close")
                     reportException(it)
@@ -134,6 +148,17 @@ fun LoginScreen(navController: NavController) {
                         ) {
                             loadUrl("javascript:Android.onRetrieveVisitorData(window.yt.config_.VISITOR_DATA)")
                             loadUrl("javascript:Android.onRetrieveDataSyncId(window.yt.config_.DATASYNC_ID)")
+
+                            // Auto-detect login completion: when the WebView lands on
+                            // music.youtube.com with a valid cookie, complete the login.
+                            if (url?.contains("music.youtube.com") == true &&
+                                !isCompletingLogin &&
+                                CookieManager.getInstance().getCookie("https://music.youtube.com").orEmpty()
+                                    .isNotBlank()
+                            ) {
+                                Timber.d("Login: Detected authenticated session on music.youtube.com, completing login...")
+                                completeLogin(navController::navigateUp)
+                            }
                         }
                     }
                 settings.apply {
@@ -147,14 +172,14 @@ fun LoginScreen(navController: NavController) {
                         @JavascriptInterface
                         fun onRetrieveVisitorData(newVisitorData: String?) {
                             if (newVisitorData != null) {
-                                visitorData = newVisitorData
+                                visitorDataFromWeb = newVisitorData
                             }
                         }
 
                         @JavascriptInterface
                         fun onRetrieveDataSyncId(newDataSyncId: String?) {
                             if (newDataSyncId != null) {
-                                dataSyncId = newDataSyncId.substringBefore("||")
+                                dataSyncIdFromWeb = newDataSyncId.substringBefore("||")
                             }
                         }
                     },

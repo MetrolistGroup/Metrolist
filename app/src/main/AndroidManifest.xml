@@ -158,6 +158,10 @@
                 android:resource="@xml/shortcuts" />
         </activity>
 
+        <!-- Legacy launcher alias kept for upgrade compatibility.
+             Users upgrading from older builds may have this component
+             pinned as a home-screen icon. Removing it would leave a
+             dead icon, so we preserve it as a compatibility shim. -->
         <activity-alias
             android:name=".MainActivityAlias"
             android:enabled="true"
@@ -187,14 +191,19 @@
         </activity-alias>
 
         <activity
-            android:name="com.discord.socialsdk.AuthenticationActivity"
+            android:name=".discord.DiscordOAuthActivity"
             android:exported="true"
-            android:launchMode="singleTask">
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.AppCompat.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
+
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="discord-${discordAppId}" />
+
+                <data android:scheme="metrolistdiscord" />
+                <data android:host="oauth2" />
+                <data android:pathPrefix="/callback" />
             </intent-filter>
         </activity>
 

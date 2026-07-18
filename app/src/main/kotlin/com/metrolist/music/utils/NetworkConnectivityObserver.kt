@@ -26,11 +26,15 @@ class NetworkConnectivityObserver(context: Context) {
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
-            _networkStatus.trySend(true)
+            _networkStatus.trySend(isCurrentlyConnected())
         }
 
         override fun onLost(network: Network) {
-            _networkStatus.trySend(false)
+            _networkStatus.trySend(isCurrentlyConnected())
+        }
+
+        override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+            _networkStatus.trySend(isCurrentlyConnected())
         }
     }
 
@@ -65,9 +69,7 @@ class NetworkConnectivityObserver(context: Context) {
             val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
             
             // Check if we have internet capability
-            val hasInternet = networkCapabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
-            
-            hasInternet
+            networkCapabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
         } catch (e: Exception) {
             false
         }

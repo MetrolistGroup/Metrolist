@@ -259,12 +259,10 @@
     <string name="backup_create_success">สร้างไฟล์สำรองข้อมูลสำเร็จ</string>
     <string name="backup_create_failed">ไม่สามารถสร้างไฟล์สำรองข้อมูลได้</string>
     <string name="restore_failed">ไม่สามารถกู้คืนข้อมูลสำรองได้</string>
-    <string name="discord_integration">การเชื่อมต่อกับ Discord</string>
     <string name="discord_information">Metrolist ใช้ไลบรารี KizzyRPC เพื่อแสดงสถานะบนบัญชี Discord ของคุณ ซึ่งต้องใช้การเชื่อมต่อผ่าน Discord Gateway และอาจถือว่าเป็นการละเมิดข้อกำหนดการใช้งาน (ToS) ของ Discord อย่างไรก็ตาม ยังไม่มีรายงานว่ามีบัญชีผู้ใช้ถูกระงับจากสาเหตุนี้ โปรดใช้งานด้วยความระมัดระวังและยอมรับความเสี่ยงเอง\n\nMetrolist จะดึงเฉพาะโทเคนของคุณเท่านั้น และข้อมูลอื่น ๆ ทั้งหมดจะถูกจัดเก็บไว้ในอุปกรณ์ของคุณ</string>
     <string name="dismiss">ปิด</string>
     <string name="options">ตัวเลือก</string>
     <string name="preview">ตัวอย่าง</string>
-    <string name="enable_discord_rpc">เปิดใช้งาน Rich Presence</string>
     <string name="about">เกี่ยวกับ</string>
     <string name="app_version">เวอร์ชันแอป</string>
     <string name="new_version_available">มีเวอร์ชันใหม่พร้อมใช้งาน</string>

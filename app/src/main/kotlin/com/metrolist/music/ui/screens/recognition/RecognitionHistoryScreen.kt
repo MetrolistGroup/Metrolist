@@ -60,6 +60,7 @@ import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.ui.utils.backToMain
+import com.metrolist.music.utils.SearchRoutes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
@@ -218,7 +219,7 @@ fun RecognitionHistoryScreen(navController: NavController) {
                         onClick = {
                             // Search for the track on YouTube Music
                             val searchQuery = "${item.title} ${item.artist}"
-                            navController.navigate("search/${java.net.URLEncoder.encode(searchQuery, "UTF-8")}")
+                            navController.navigate(SearchRoutes.resultRoute(searchQuery))
                         },
                         onDelete = {
                             itemToDelete = item

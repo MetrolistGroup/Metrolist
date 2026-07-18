@@ -11,6 +11,7 @@ import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.models.splitArtistsByConjunction
 import com.metrolist.innertube.models.splitBySeparator
 import com.metrolist.innertube.utils.parseTime
+import timber.log.Timber
 
 data class ArtistItemsPage(
     val title: String,
@@ -71,7 +72,7 @@ data class ArtistItemsPage(
                     ?.runs?.firstOrNull()
                     ?.text?.parseTime(),
                 musicVideoType = renderer.musicVideoType,
-                thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: return null,
                 explicit = renderer.badges?.find {
                     it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
                 } != null,
@@ -92,31 +93,40 @@ data class ArtistItemsPage(
                     title = renderer.title.runs?.firstOrNull()?.text ?: return null,
                     artists = null,
                     year = renderer.subtitle?.runs?.lastOrNull()?.text?.toIntOrNull(),
-                    thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                    thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                     explicit = renderer.subtitleBadges?.find {
                         it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
                     } != null
                 )
                 // Video
                 renderer.isSong -> {
+                    val title = renderer.title.runs?.firstOrNull()?.text ?: return null
+                    val videoId = renderer.navigationEndpoint.watchEndpoint?.videoId ?: return null
                     val subtitleRuns = renderer.subtitle?.runs ?: return null
                     val expandedRuns = subtitleRuns.splitArtistsByConjunction()
-                    val artistRuns = expandedRuns.filter { 
-                        it.text.isNotBlank() && it.text != "&" && it.text != "," 
+                    val artistRuns = expandedRuns.filter { run ->
+                        run.text.isNotBlank() && run.text != "&" && run.text != "," &&
+                        run.navigationEndpoint?.browseEndpoint?.browseId?.startsWith("UC") == true
                     }
+                    val artists = artistRuns.map { run ->
+                        Artist(
+                            name = run.text.trim(),
+                            id = run.navigationEndpoint?.browseEndpoint?.browseId
+                        )
+                    }
+                    
+                    if (artists.isEmpty() && renderer.subtitle?.runs != null) {
+                        Timber.w("ArtistItemsPage.fromMusicTwoRowItemRenderer: Song '$title' (id=$videoId) - SUBTITLE RUNS EXIST but parsing returned EMPTY")
+                    }
+
                     SongItem(
-                        id = renderer.navigationEndpoint.watchEndpoint?.videoId ?: return null,
-                        title = renderer.title.runs?.firstOrNull()?.text ?: return null,
-                        artists = artistRuns.map { run ->
-                            Artist(
-                                name = run.text.trim(),
-                                id = run.navigationEndpoint?.browseEndpoint?.browseId
-                            )
-                        }.ifEmpty { null } ?: return null,
+                        id = videoId,
+                        title = title,
+                        artists = artists.ifEmpty { null } ?: return null,
                         album = null,
                         duration = null,
                         musicVideoType = renderer.musicVideoType,
-                        thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                        thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         endpoint = renderer.navigationEndpoint.watchEndpoint
                     )
                 }
@@ -130,7 +140,7 @@ data class ArtistItemsPage(
                         )
                     },
                     songCountText = renderer.subtitle?.runs?.getOrNull(4)?.text,
-                    thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                    thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                     playEndpoint = renderer.thumbnailOverlay
                         ?.musicItemThumbnailOverlayRenderer?.content
                         ?.musicPlayButtonRenderer?.playNavigationEndpoint

@@ -454,7 +454,7 @@ fun StatsScreen(
                     ) {
                         itemsIndexed(
                             items = mostPlayedSongsStats,
-                            key = { _, song -> song.id },
+                            key = { index, song -> "${song.id}_$index" },
                         ) { index, song ->
                             LocalSongsGrid(
                                 title = "${index + 1}. ${song.title}",

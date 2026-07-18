@@ -268,12 +268,10 @@
     <string name="backup_create_success">Trykkleikskopiering oppretta med lukke</string>
     <string name="backup_create_failed">Klarte ikkje å oppretta tryggleikskopiering</string>
     <string name="restore_failed">Klarte ikkje å atteroppretta frå tryggleikskopiering</string>
-    <string name="discord_integration">Hopfletting med Discord</string>
     <string name="discord_information">Metrolist nøyter KizzyRPC for å stilla inn statusen på Discord-kontoen din. Dette inneber bruk av Discord Gateway-tilkoplinga, som kan verta sett på som eit brud på tenestevilkåra til Discord. Det finst då ingen kjende tilfelle av suspenderte nøytarkontoar på denne grunnen. Nøyt på eigen risiko.\n\nMetrolist hentar berre lykelen din, og alt anna vert lagra lokalt.</string>
     <string name="dismiss">Avvis</string>
     <string name="options">Innstillingar</string>
     <string name="preview">Førehandsvisning</string>
-    <string name="enable_discord_rpc">Slå på rik tilstadarvera</string>
     <string name="about">Om</string>
     <string name="app_version">Apputgåve</string>
     <string name="new_version_available">Ny utgåve tilgjegeleg</string>

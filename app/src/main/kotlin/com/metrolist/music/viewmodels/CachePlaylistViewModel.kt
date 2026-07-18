@@ -8,7 +8,7 @@ package com.metrolist.music.viewmodels
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.media3.datasource.cache.SimpleCache
+import androidx.media3.datasource.cache.Cache
 import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.db.MusicDatabase
@@ -25,7 +25,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.time.LocalDateTime
 import javax.inject.Inject
 
 @HiltViewModel
@@ -34,8 +33,8 @@ class CachePlaylistViewModel
     constructor(
         @ApplicationContext private val context: Context,
         private val database: MusicDatabase,
-        @PlayerCache private val playerCache: SimpleCache,
-        @DownloadCache private val downloadCache: SimpleCache,
+        @PlayerCache private val playerCache: Cache,
+        @DownloadCache private val downloadCache: Cache,
     ) : ViewModel() {
         private val _cachedSongs = MutableStateFlow<List<Song>>(emptyList())
         val cachedSongs: StateFlow<List<Song>> = _cachedSongs
@@ -45,36 +44,46 @@ class CachePlaylistViewModel
                 while (true) {
                     val hideExplicit = context.dataStore.get(HideExplicitKey, false)
                     val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
-                    val cachedIds = playerCache.keys.toSet()
-                    val downloadedIds = downloadCache.keys.toSet()
-                    val pureCacheIds = cachedIds.subtract(downloadedIds)
 
+                    // Candidate set: anything currently present in either cache. We no longer
+                    // SET dateDownload here — that decision belongs solely to MusicService's
+                    // markCachedIfFullyDownloaded(), which only fires once a track actually
+                    // finishes playing naturally (MEDIA_ITEM_TRANSITION_REASON_AUTO). This loop
+                    // only displays already-flagged songs and self-heals: if a song's dateDownload
+                    // is set but its backing cache data is gone now (evicted, or manually removed
+                    // via removeSongFromCache), the flag gets cleared so the list — and the DB —
+                    // stay honest.
+                    val candidateIds = playerCache.keys.toSet() + downloadCache.keys.toSet()
                     val songs =
-                        if (pureCacheIds.isNotEmpty()) {
-                            database.getSongsByIds(pureCacheIds.toList())
+                        if (candidateIds.isNotEmpty()) {
+                            database.getSongsByIds(candidateIds.toList())
                         } else {
                             emptyList()
                         }
 
-                    val completeSongs =
-                        songs.filter {
-                            val contentLength = it.format?.contentLength
-                            contentLength != null && playerCache.isCached(it.song.id, 0, contentLength)
-                        }
+                    val flagged = songs.filter { it.song.dateDownload != null }
+                    val stillValid = mutableListOf<Song>()
 
-                    if (completeSongs.isNotEmpty()) {
-                        database.query {
-                            completeSongs.forEach {
-                                if (it.song.dateDownload == null) {
-                                    update(it.song.copy(dateDownload = LocalDateTime.now()))
-                                }
-                            }
+                    for (song in flagged) {
+                        val contentLength = song.format?.contentLength
+                        val stillCached =
+                            song.song.isDownloaded ||
+                                (
+                                    contentLength != null &&
+                                        (
+                                            downloadCache.isCached(song.song.id, 0, contentLength) ||
+                                                playerCache.isCached(song.song.id, 0, contentLength)
+                                        )
+                                )
+                        if (stillCached) {
+                            stillValid += song
+                        } else {
+                            database.query { update(song.song.copy(dateDownload = null)) }
                         }
                     }
 
                     _cachedSongs.value =
-                        completeSongs
-                            .filter { it.song.dateDownload != null }
+                        stillValid
                             .sortedByDescending { it.song.dateDownload }
                             .filterExplicit(hideExplicit)
                             .filterVideoSongs(hideVideoSongs)

@@ -653,7 +653,6 @@
     <string name="scrobble_delay_percent">Scrobble বিলম্ব (শতাংশ)</string>
     <string name="scrobble_delay_minutes">Scrobble বিলম্ব (মিনিট)</string>
     <string name="equalizer_desc">অডিও equalizer খুলুন</string>
-    <string name="enable_dynamic_icon">ডায়নামিক আইকন সক্রিয় করুন</string>
     <string name="mini_player">মিনি-প্লেয়ার</string>
     <string name="pure_black_mini_player">বিশুদ্ধ কালো মিনি-প্লেয়ার</string>
     <string name="mini_player_background_style">মিনি-প্লেয়ার ব্যাকগ্রাউন্ড স্টাইল</string>

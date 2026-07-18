@@ -161,7 +161,7 @@ private fun ContributorAvatar(
     contentDescription: String? = null,
     onClick: (() -> Unit)? = null
 ) {
-    val fallback = painterResource(R.drawable.small_icon)
+    val fallback = painterResource(R.drawable.about_icon)
     Surface(
         onClick = onClick ?: {},
         enabled = onClick != null,
@@ -252,15 +252,18 @@ fun AboutScreen(
                     .fillMaxWidth()
                     .padding(24.dp)
             ) {
-                Image(
-                    painter = painterResource(R.drawable.small_icon),
-                    contentDescription = stringResource(R.string.metrolist),
-                    colorFilter = ColorFilter.tint(
-                        color = MaterialTheme.colorScheme.primary,
-                        blendMode = BlendMode.SrcIn,
-                    ),
-                    modifier = Modifier.size(64.dp)
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_logo_oval),
+                        contentDescription = null,
+                        modifier = Modifier.size(84.dp)
+                    )
+                    Image(
+                        painter = painterResource(R.drawable.about_icon),
+                        contentDescription = stringResource(R.string.metrolist),
+                        modifier = Modifier.size(64.dp)
+                    )
+                }
         
                 Spacer(Modifier.width(20.dp))
         

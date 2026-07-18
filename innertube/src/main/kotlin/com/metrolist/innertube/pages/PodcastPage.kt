@@ -32,7 +32,7 @@ data class PodcastPage(
                 },
                 duration = subtitleRuns?.lastOrNull()?.firstOrNull()?.text?.parseTime(),
                 publishDateText = subtitleRuns?.firstOrNull()?.firstOrNull()?.text,
-                thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: return null,
                 explicit = false,
                 endpoint = renderer.onTap.watchEndpoint,
                 libraryAddToken = libraryTokens.addToken,
@@ -68,7 +68,7 @@ data class PodcastPage(
                 },
                 duration = secondaryLineRuns?.lastOrNull()?.firstOrNull()?.text?.parseTime(),
                 publishDateText = secondaryLineRuns?.getOrNull(1)?.firstOrNull()?.text,
-                thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: return null,
                 explicit = renderer.badges?.find {
                     it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
                 } != null,

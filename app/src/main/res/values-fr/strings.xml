@@ -240,12 +240,10 @@
     <string name="sided">Sur le côté</string>
     <string name="enable_lrclib">Activer le fournisseur de paroles LrcLib</string>
     <string name="hide_explicit">Masquer le contenu explicite</string>
-    <string name="discord_integration">Intégration Discord</string>
     <string name="dismiss">Abandonner</string>
     <string name="options">Options</string>
     <string name="preview">Prévisualisation</string>
     <string name="action_logout">Se déconnecter</string>
-    <string name="enable_discord_rpc">Activer la présence riche</string>
     <string name="login_failed">Échec de la connexion</string>
     <string name="delete_playlist_confirm">Voulez-vous vraiment supprimer la playlist « %s » ?</string>
     <string name="listen_history">Historique d\'écoute</string>

@@ -440,7 +440,6 @@
     <string name="delete_desc">Permanently remove this item</string>
     <string name="advanced_desc">Adjust the song\'s tempo and pitch</string>
     <string name="equalizer_desc">Open the audio equalizer</string>
-    <string name="enable_dynamic_icon">Enable dynamic icon</string>
     <string name="mini_player">Mini-player</string>
     <string name="pure_black_mini_player">Pure black mini-player</string>
     <string name="mini_player_background_style">Mini-player background style</string>
@@ -548,6 +547,7 @@
 
     <!-- Playback errors -->
     <string name="error_playback_failed">Playback failed</string>
+    <string name="error_job_cancelled">The video is not available for playback. Try again or skip to the next song.</string>
     <string name="error_episode_save">Failed to save episode</string>
     <string name="error_episode_remove">Failed to remove episode</string>
     <string name="error_podcast_subscribe">Failed to subscribe to podcast</string>
@@ -765,6 +765,9 @@
     <string name="play_all">Play all</string>
     <string name="enable_high_refresh_rate">Enable high refresh rate</string>
     <string name="enable_high_refresh_rate_desc">Forces the display to run at its highest supported refresh rate (e.g. 120Hz)</string>
+    <string name="enable_landscape_scaling">Landscape Scaling</string>
+    <string name="enable_landscape_scaling_desc">Scale UI in landscape mode for larger screens</string>
+    <string name="dynamic_theme">Dynamic Theme</string>
 
     <!-- Music Recognition -->
     <string name="recognize_music">Recognize music</string>
@@ -803,8 +806,19 @@
     <string name="column_label">Column %d</string>
 
     <string name="discord_connect_description">Sign in with Discord to share what you\'re listening to</string>
-    <string name="discord_gms_only">Discord Rich Presence is only available in the GMS build. Download the GMS variant to use this feature.</string>
-    <string name="discord_information_warning">Metrolist uses Discord\'s official OAuth2 SDK to share what you\'re listening to. All data goes directly from your device to Discord — no third-party servers involved. Your token stays on your device and is never shared. Discord\'s SDK bundles permissions together, so you\'ll see requests like friends list and profile access — this is normal and does not give Metrolist access to manage your friends or edit your profile.</string>
+    <string name="discord_information_warning">Metrolist uses Discord\'s public OAuth2 and Gateway APIs to share what you\'re listening to. Authorization happens through a local browser session that closes itself after capturing the code — nothing is sent to third-party servers. Your token is stored on this device in encrypted preferences and is never shared. Metrolist connects directly to wss://gateway.discord.gg to publish your activity, and only requests the minimum scope required (sdk.social_layer_presence).</string>
+    <string name="discord_status_connecting">Connecting to Discord…</string>
+    <string name="discord_status_reconnecting">Reconnecting to Discord…</string>
+    <string name="discord_status_connected">Connected</string>
+    <string name="discord_status_authorizing">Authorizing…</string>
+    <string name="discord_status_authorized">Authorized</string>
+    <string name="discord_status_not_initialized">Not initialized</string>
+    <string name="discord_error_loopback_timeout">Discord didn\'t respond in time. Please try again.</string>
+    <string name="discord_error_loopback_unbound">Couldn\'t open a local callback port. Please free one and try again.</string>
+    <string name="discord_error_no_browser">No browser was found to complete Discord authorization.</string>
+    <string name="discord_error_token_refresh_failed">Discord session expired. Please reconnect.</string>
+    <string name="discord_error_invalid_scope">Discord rejected the connection. Please reconnect and grant the required permission.</string>
+    <string name="discord_error_banner_title">Discord error</string>
     <string name="discord_rpc_preview">Rich Presence preview</string>
     <string name="discord_integration">Discord Integration</string>
     <string name="enable_discord_rpc">Enable Rich Presence</string>
@@ -908,7 +922,7 @@
     <!-- Restore confirmation dialog -->
     <string name="restore_confirm_title">Restore backup?</string>
     <string name="restore_confirm_message">This will restore your app data from the selected backup</string>
-    <string name="restore_account_warning">You will need to log in again after restoring. The following account will be signed out:</string>
+    <string name="restore_account_warning">The following account information will be restored and preserved:</string>
     <string name="restore">Restore</string>
     <string name="restore_database_incompatible">Cannot restore backup: database version incompatible. Your current data has been preserved.</string>
     <string name="checking_previous_account">Checking for previous account…</string>
@@ -975,4 +989,31 @@
     <string name="widget_playlists">Playlists</string>
     <string name="widget_playlists_description">Playlist shortcuts with mini-player controls</string>
     <string name="choose_something_below">Choose something below</string>
+    <string name="stream_client">Stream client</string>
+    <string name="format_player_hash">Player hash</string>
+    <string name="format_cipher_support_added">Cipher support added</string>
+    <string name="not_applicable">N/A</string>
+
+    <!-- Stream sources -->
+    <string name="enable_dynamic_icon">Dynamic icon colors</string>
+    <string name="enable_dynamic_icon_desc">Use dynamic theme colors for the app icon. When disabled, the icon uses solid colors.</string>
+    <string name="stream_sources">Stream sources</string>
+    <string name="stream_source_order">Stream order</string>
+    <string name="stream_source_web_clients">Web clients</string>
+    <string name="stream_source_native_clients">Native clients</string>
+    <string name="stream_source_creator_clients">Creator clients</string>
+    <string name="stream_source_web_remix">WEB_REMIX</string>
+    <string name="stream_source_web_remix_desc">Primary client. Authenticated; covers most tracks.</string>
+    <string name="stream_source_tvhtml5">TVHTML5</string>
+    <string name="stream_source_tvhtml5_desc">TV client. Reliable fallback.</string>
+    <string name="stream_source_visionos">visionOS</string>
+    <string name="stream_source_visionos_desc">Apple Vision. No throttle gate; very reliable.</string>
+    <string name="stream_source_android_vr">Android VR</string>
+    <string name="stream_source_android_vr_desc">Android VR clients (all versions).</string>
+    <string name="stream_source_ios">iOS / iPadOS</string>
+    <string name="stream_source_ios_desc">Apple iOS and iPadOS clients. Off by default; throttle-gated past ~1 MiB.</string>
+    <string name="stream_source_web_creator">WEB_CREATOR</string>
+    <string name="stream_source_web_creator_desc">Creator web client.</string>
+    <string name="stream_source_android_creator">ANDROID_CREATOR</string>
+    <string name="stream_source_android_creator_desc">Android creator client. Off by default; needs DroidGuard.</string>
 </resources>

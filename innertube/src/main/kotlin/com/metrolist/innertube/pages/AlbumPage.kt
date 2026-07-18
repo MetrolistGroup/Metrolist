@@ -39,8 +39,8 @@ data class AlbumPage(
         }
 
         fun getThumbnail(response: BrowseResponse): String? {
-            return response.background?.musicThumbnailRenderer?.getThumbnailUrl() ?: response.header?.musicDetailHeaderRenderer?.thumbnail
-                ?.croppedSquareThumbnailRenderer?.getThumbnailUrl()
+            return response.background?.getThumbnailUrl() ?: response.header?.musicDetailHeaderRenderer?.thumbnail
+                ?.getThumbnailUrl()
         }
 
         fun getArtists(response: BrowseResponse): List<Artist> {
@@ -101,8 +101,18 @@ data class AlbumPage(
                         id = it.navigationEndpoint?.browseEndpoint?.browseId
                     )
                 }.ifEmpty {
-                    // Fallback to album artists if no artists found in song data
-                    album?.artists ?: emptyList()
+                    // Label-uploaded albums (e.g. "OLAK5uy_…" art tracks) name the performing
+                    // artist as a plain-text run with no artist link, while the album header
+                    // strapline is the record label / distributor channel. Prefer that
+                    // plain-text artist over inheriting the label as the track artist.
+                    renderer.flexColumns.getOrNull(1)
+                        ?.musicResponsiveListItemFlexColumnRenderer?.text?.runs
+                        ?.splitBySeparator()?.firstOrNull()?.oddElements()
+                        ?.map { Artist(name = it.text, id = it.navigationEndpoint?.browseEndpoint?.browseId) }
+                        ?.filter { it.name.isNotBlank() }
+                        ?.takeIf { it.isNotEmpty() }
+                    // Final fallback: inherit the album artist when the row has no artist at all.
+                        ?: album?.artists ?: emptyList()
                 },
                 album = album?.let {
                     Album(it.title, it.browseId)
@@ -116,7 +126,7 @@ data class AlbumPage(
                     ?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.firstOrNull()
                     ?.text?.parseTime() ?: return null,
                 musicVideoType = renderer.musicVideoType,
-                thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: album?.thumbnail!!,
+                thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: album?.thumbnail!!,
                 explicit = renderer.badges?.find {
                     it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
                 } != null,

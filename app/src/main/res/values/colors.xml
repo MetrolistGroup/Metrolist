@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_static_background">#000000</color>
+    <color name="ic_launcher_static_background">#FFFFFF</color>
     
     <!-- Widget colors for light mode -->
     <color name="widget_text_primary">#1C1B1F</color>

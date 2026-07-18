@@ -1,12 +1,9 @@
 package com.metrolist.music.recognition
 
-import androidx.annotation.OptIn
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.common.audio.AudioProcessor
-import androidx.media3.common.audio.SonicAudioProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -39,76 +36,67 @@ data class DecodedAudio(
 }
 
 /**
- * Audio resampler using Media3 SonicAudioProcessor.
- * Resamples audio to the required sample rate for fingerprinting.
+ * Audio resampler using linear interpolation.
+ * Resamples mono 16-bit PCM audio to the required sample rate for fingerprinting.
  */
-@OptIn(UnstableApi::class)
 object AudioResampler {
+    private const val TAG = "AudioResampler"
 
     suspend fun resample(
         decodedAudio: DecodedAudio,
         outputSampleRate: Int
     ): Result<DecodedAudio> = withContext(Dispatchers.Default) {
         if (decodedAudio.sampleRate == outputSampleRate) {
+            Timber.tag(TAG).d("Sample rate already matches (%dHz), skipping resample", outputSampleRate)
             return@withContext Result.success(decodedAudio)
         }
-        
-        var sonicRef: AudioProcessor? = null
+
         try {
-            val sonic: AudioProcessor = SonicAudioProcessor().apply {
-                setOutputSampleRateHz(outputSampleRate)
-            }
-            sonicRef = sonic
-            
-            val inputFormat = AudioProcessor.AudioFormat(
-                decodedAudio.sampleRate,
-                decodedAudio.channelCount,
-                decodedAudio.pcmEncoding
-            )
-            val outputFormat = sonic.configure(inputFormat)
-            sonic.flush()
+            Timber.tag(TAG).d("Resampling: %dHz → %dHz, %d bytes input", decodedAudio.sampleRate, outputSampleRate, decodedAudio.data.size)
 
-            val inputBuf = ByteBuffer.wrap(decodedAudio.data).order(ByteOrder.nativeOrder())
-            sonic.queueInput(inputBuf)
-            sonic.queueEndOfStream()
+            val inputSamples = shortArrayFromByteArray(decodedAudio.data)
+            val ratio = outputSampleRate.toDouble() / decodedAudio.sampleRate
+            val outputLength = (inputSamples.size * ratio).toInt()
+            val outputSamples = ShortArray(outputLength)
 
-            val outputChunks = mutableListOf<ByteArray>()
-            var outputChunksByteSize = 0
-
-            while (!sonic.isEnded) {
+            for (i in 0 until outputLength) {
                 ensureActive()
-                val outputBuffer = sonic.output
-                if (!outputBuffer.hasRemaining()) continue
-                val chunk = ByteArray(outputBuffer.remaining())
-                outputBuffer.get(chunk)
-                outputChunks.add(chunk)
-                outputChunksByteSize += chunk.size
-            }
-            sonic.reset()
-
-            val resampledData = if (outputChunks.size == 1) {
-                outputChunks[0]
-            } else {
-                ByteArray(outputChunksByteSize).also {
-                    var dest = 0
-                    for (chunk in outputChunks) {
-                        System.arraycopy(chunk, 0, it, dest, chunk.size)
-                        dest += chunk.size
-                    }
+                val srcPos = i / ratio
+                val srcIndex = srcPos.toInt()
+                val fraction = srcPos - srcIndex
+                val sample = if (srcIndex + 1 < inputSamples.size) {
+                    (inputSamples[srcIndex] * (1.0 - fraction) + inputSamples[srcIndex + 1] * fraction).toInt().toShort()
+                } else {
+                    inputSamples[srcIndex]
                 }
+                outputSamples[i] = sample
             }
-            
+
+            val resampledData = byteArrayFromShortArray(outputSamples)
+            Timber.tag(TAG).d("Resampling complete: %d bytes output, %dHz, %d channels", resampledData.size, outputSampleRate, decodedAudio.channelCount)
+
             Result.success(DecodedAudio(
                 data = resampledData,
-                channelCount = outputFormat.channelCount,
-                sampleRate = outputFormat.sampleRate,
-                pcmEncoding = outputFormat.encoding,
+                channelCount = decodedAudio.channelCount,
+                sampleRate = outputSampleRate,
+                pcmEncoding = decodedAudio.pcmEncoding,
             ))
         } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Audio resampling failed")
             ensureActive()
             Result.failure(e)
-        } finally {
-            sonicRef?.reset()
         }
+    }
+
+    private fun shortArrayFromByteArray(data: ByteArray): ShortArray {
+        val shorts = ShortArray(data.size / 2)
+        ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts)
+        return shorts
+    }
+
+    private fun byteArrayFromShortArray(shorts: ShortArray): ByteArray {
+        val bytes = ByteArray(shorts.size * 2)
+        ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(shorts)
+        return bytes
     }
 }

@@ -493,7 +493,7 @@ object Paxsenix {
                 val indexJsResponse = httpClient.get("https://beta.music.apple.com$indexJsUri")
                 val indexJsBody = indexJsResponse.bodyAsText()
 
-                val tokenRegex = Regex("""eyJh([^"]*)""")
+                val tokenRegex = Regex("""eyJ[A-Za-z0-9\-_=]+\.[A-Za-z0-9\-_=]+\.[A-Za-z0-9\-_=]+""")
                 val tokenMatch = tokenRegex.find(indexJsBody)
                     ?: throw Exception("Could not find token")
 

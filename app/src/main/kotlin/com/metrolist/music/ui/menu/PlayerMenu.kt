@@ -283,23 +283,6 @@ fun PlayerMenu(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                FilledTonalButton(
-                    onClick = {
-                        navController.navigate("equalizer")
-                        onDismiss()
-                    },
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                    modifier = Modifier.height(40.dp),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.equalizer),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("EQ", style = MaterialTheme.typography.labelMedium)
-                }
-                Spacer(modifier = Modifier.width(8.dp))
                 VolumeSlider(
                     value = if (isCasting) castVolume else playerVolume.value,
                     onValueChange = { volume ->

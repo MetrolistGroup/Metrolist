@@ -237,8 +237,6 @@
     <string name="preview">预览</string>
     <string name="login_failed">登录失败</string>
     <string name="action_logout">登出</string>
-    <string name="discord_integration">Discord 集成</string>
-    <string name="enable_discord_rpc">启用 Rich Presence</string>
     <string name="action_like_all">喜欢全部</string>
     <string name="library_song_empty">媒体库歌曲将显示在此处</string>
     <string name="duplicates_description_single">这首歌曲已在您的播放列表中</string>

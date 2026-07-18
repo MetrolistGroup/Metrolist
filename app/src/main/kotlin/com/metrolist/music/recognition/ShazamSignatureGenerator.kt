@@ -1,6 +1,7 @@
 package com.metrolist.music.recognition
 
 import android.util.Base64
+import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -19,6 +20,7 @@ import kotlin.math.max
  * This replaces the native C++ + FFTW3 implementation with a pure JVM solution.
  */
 internal object ShazamSignatureGenerator {
+    private const val TAG = "ShazamSigGen"
 
     private const val SAMPLE_RATE = 16_000
     private const val FFT_SIZE = 2048
@@ -56,6 +58,7 @@ internal object ShazamSignatureGenerator {
         }
         val pcm = ShortArray(samples.size / 2)
         ByteBuffer.wrap(samples).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(pcm)
+        Timber.tag(TAG).d("Generating fingerprint from %d bytes of PCM data", samples.size)
         return SignatureGeneratorState().process(pcm)
     }
 
@@ -94,6 +97,7 @@ internal object ShazamSignatureGenerator {
                 doPeakSpreadingAndRecognition()
                 offset += 128
             }
+            Timber.tag(TAG).d("Fingerprint processing complete: %d samples, %d peaks", numSamples, totalPeaks)
             return encodeSignature()
         }
 
