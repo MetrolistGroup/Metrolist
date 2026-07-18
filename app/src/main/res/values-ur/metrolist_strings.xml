@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="local_history">مقامی</string>
+    <string name="remote_history">ریموٹ</string>
+    <string name="charts">چارٹس</string>
+    <string name="mixes">میوزک مکسز</string>
+    <string name="back_button_desc">واپس</string>
+    <string name="album_cover_desc">البم کور</string>
+    <string name="top_music_videos">سرفہرست میوزک ویڈیوز</string>
+    <string name="trending">رجحان سازی</string>
+    <string name="parsed_from_link">لنک سے تجزیہ کیا گیا</string>
+    <string name="weeks">ہفتے</string>
+    <string name="months">مہینوں</string>
+    <string name="years">سال</string>
+    <string name="continuous">مسلسل</string>
+    <string name="liked">پسند آیا</string>
+    <string name="offline">ڈاؤن لوڈ</string>
+    <string name="my_top">میری پسند</string>
+    <string name="weekly_most_playlist_name">ہفتہ وار زیادہ تر</string>
+    <string name="monthly_most_playlist_name">ماہانہ زیادہ تر</string>
+    <string name="cached_playlist">کیش شدہ</string>
+    <string name="uploaded_playlist">اپ لوڈ کیا گیا</string>
+    <string name="filter_uploaded">اپ لوڈ کیا گیا</string>
+</resources>

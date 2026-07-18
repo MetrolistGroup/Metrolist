@@ -27,7 +27,6 @@ import coil3.imageLoader
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
@@ -123,13 +122,14 @@ constructor(
         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
     }
 
-    @Deprecated("Deprecated in MediaLibrarySession.Callback")
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun onPlaybackResumption(
         mediaSession: MediaSession,
         controller: MediaSession.ControllerInfo
-    ): ListenableFuture<MediaItemsWithStartPosition> {
-        return SettableFuture.create<MediaItemsWithStartPosition>()
-    }
+    ): ListenableFuture<MediaItemsWithStartPosition> =
+        Futures.immediateFuture(
+            MediaItemsWithStartPosition(emptyList(), 0, C.TIME_UNSET),
+        )
 
     override fun onGetLibraryRoot(
         session: MediaLibrarySession,
@@ -584,7 +584,7 @@ constructor(
         startIndex: Int,
         startPositionMs: Long,
     ): ListenableFuture<MediaItemsWithStartPosition> =
-        scope.future {
+        scope.future(Dispatchers.IO) {
             val defaultResult = MediaItemsWithStartPosition(emptyList(), startIndex, startPositionMs)
             val voiceQuery = mediaItems.firstOrNull()?.requestMetadata?.searchQuery
 

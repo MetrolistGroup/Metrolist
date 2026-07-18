@@ -424,7 +424,6 @@
     <string name="scrobble_delay_minutes">Phút chờ Scrobble (phút)</string>
     <string name="hide_youtube_shorts">Ẩn YouTube Shorts</string>
     <string name="start_radio_desc">Bắt đầu phát radio dựa trên mục này</string>
-    <string name="enable_dynamic_icon">Biểu tượng ứng dụng thích ứng</string>
     <string name="mini_player">Trình phát mini</string>
     <string name="pure_black_mini_player">Trình phát mini đen thuần</string>
     <string name="cache_size_warning_title">Khoan đã!</string>
@@ -471,7 +470,7 @@
     </plurals>
     <string name="restore_confirm_title">Phục hồi sao lưu?</string>
     <string name="restore_confirm_message">Thao tác này sẽ khôi phục dữ liệu ứng dụng từ bản sao lưu đã chọn</string>
-    <string name="restore_account_warning">Bạn sẽ cần đăng nhập lại sau khi khôi phục. Tài khoản sau đây sẽ bị đăng xuất:</string>
+    <string name="restore_account_warning">Thông tin tài khoản sau đây sẽ được khôi phục và lưu lại:</string>
     <string name="restore">Phục hồi</string>
     <string name="checking_previous_account">Kiểm tra tài khoản trước đây…</string>
     <string name="enable_automatic_sleeptimer">Kích hoạt hẹn giờ ngủ tự động</string>
@@ -733,7 +732,7 @@
     <string name="discord_buttons">Nút</string>
     <string name="discord_button_1">Nút 1</string>
     <string name="discord_button_2">Nút 2</string>
-    <string name="discord_information_warning">Metrolist gửi thông tin bài hát bạn đang phát đến Discord Gateway để cập nhật Trạng thái hoạt động (Rich Presence). Mọi dữ liệu được truyền trực tiếp từ thiết bị của bạn đến Discord — không qua bất kỳ máy chủ bên thứ ba nào. Mã token của bạn được lưu trữ ngay trên thiết bị và không bao giờ bị chia sẻ. Tuy nhiên, việc sử dụng token người dùng (user token) để kết nối Gateway không được hỗ trợ chính thức và có thể vi phạm Điều khoản dịch vụ của Discord. Hãy cân nhắc trước khi tiếp tục!</string>
+    <string name="discord_information_warning">Metrolist sử dụng API OAuth2 công khai và Gateway của Discord để chia sẻ nội dung bạn đang nghe. Quá trình ủy quyền diễn ra thông qua một phiên trình duyệt cục bộ và tự động đóng sau khi nhận mã — không có dữ liệu nào được gửi đến máy chủ bên thứ ba. Mã token của bạn được lưu trữ trên thiết bị này trong phần cài đặt bảo mật mã hóa và không bao giờ được chia sẻ. Metrolist kết nối trực tiếp đến wss://gateway.discord.gg để cập nhật hoạt động của bạn, và chỉ yêu cầu các quyền tối thiểu cần thiết (sdk.social_layer_presence).</string>
     <string name="discord_activity_type">Loại hoạt động</string>
     <string name="discord_activity_playing">Đang phát</string>
     <string name="discord_activity_listening">Đang nghe</string>
@@ -860,13 +859,13 @@
     <string name="discord_placeholder_artist">Tên nghệ sĩ</string>
     <string name="discord_placeholder_album">Tên Album</string>
     <string name="restore_database_incompatible">Không thể khôi phục bản sao lưu: phiên bản cơ sở dữ liệu không tương thích. Dữ liệu hiện tại của bạn đã được giữ nguyên.</string>
-    <string name="stream_client">Trình khách truyền dữ liệu</string>
+    <string name="stream_client">Ứng dụng phát trực tuyến</string>
     <string name="format_player_hash">Mã người dùng</string>
-    <string name="format_cipher_support_added">Đã thêm hỗ trợ thuật toán mã hóa</string>
+    <string name="format_cipher_support_added">Đã thêm thuật toán mã hóa lúc</string>
     <string name="not_applicable">N/A</string>
     <string name="stream_sources">Nguồn phát</string>
     <string name="stream_source_order">Thứ tự luồng dữ liệu</string>
-    <string name="stream_source_web_clients">Máy khách web</string>
+    <string name="stream_source_web_clients">Ứng dụng khách web</string>
     <string name="stream_source_native_clients">Ứng dụng khách gốc</string>
     <string name="stream_source_creator_clients">Ứng dụng khách của nhà sáng tạo</string>
     <string name="stream_source_web_remix">WEB_REMIX</string>
@@ -883,4 +882,10 @@
     <string name="stream_source_web_creator_desc">Ứng dụng web cho nhà sáng tạo</string>
     <string name="stream_source_android_creator">ANDROID_CREATOR</string>
     <string name="stream_source_android_creator_desc">Ứng dụng Android cho Nhà sáng tạo. Mặc định tắt; cần có DroidGuard.</string>
+    <string name="error_job_cancelled">Video không thể phát lúc này. Vui lòng thử lại hoặc chuyển sang bài tiếp theo.</string>
+    <string name="enable_landscape_scaling">Tỷ lệ màn hình ngang</string>
+    <string name="enable_landscape_scaling_desc">Phóng to giao diện khi xoay ngang trên màn hình lớn</string>
+    <string name="dynamic_theme">Chủ đề động</string>
+    <string name="enable_dynamic_icon">Biểu tượng theo chủ đề</string>
+    <string name="enable_dynamic_icon_desc">Sử dụng biểu tượng theo chủ đề. Khi tắt, biểu tượng sẽ sử dụng màu đơn sắc.</string>
 </resources>

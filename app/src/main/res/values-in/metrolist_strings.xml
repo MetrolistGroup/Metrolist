@@ -188,7 +188,6 @@
     <string name="delete_desc">Hapus item ini secara permanen</string>
     <string name="advanced_desc">Sesuaikan tempo dan nada lagu</string>
     <string name="equalizer_desc">Buka ekualiser audio</string>
-    <string name="enable_dynamic_icon">Aktifkan ikon dinamis</string>
     <string name="mini_player">Pemutar mini</string>
     <string name="pure_black_mini_player">Pemutar mini berwarna hitam murni</string>
     <string name="cache_size_warning_title">Tunggu dulu!</string>
@@ -515,7 +514,7 @@
     <string name="discord_buttons">Tombol</string>
     <string name="discord_button_1">Tombol 1</string>
     <string name="discord_button_2">Tombol 2</string>
-    <string name="discord_information_warning">Metrolist mengirimkan lagu yang sedang Anda putar ke Gateway Discord untuk memperbarui Rich Presence Anda. Semua data dikirim langsung dari perangkat Anda ke Discord — tanpa melibatkan server pihak ketiga. Token Anda tetap tersimpan di perangkat dan tidak pernah dibagikan. Namun, penggunaan token pengguna untuk koneksi Gateway tidak didukung secara resmi dan mungkin melanggar Ketentuan Layanan Discord. Lanjutkan dengan risiko Anda sendiri!</string>
+    <string name="discord_information_warning">Metrolist mengirimkan lagu yang sedang Anda putar ke Gateway Discord untuk memperbarui Rich Presence Anda. Semua data dikirim langsung dari perangkat Anda ke Discord (wss://gateway.discord.gg) — tanpa melibatkan server pihak ketiga. Token Anda tetap tersimpan di perangkat dan tidak pernah dibagikan. Namun, penggunaan token pengguna untuk koneksi Gateway tidak didukung secara resmi dan mungkin melanggar Ketentuan Layanan Discord. Lanjutkan dengan risiko Anda sendiri!</string>
     <string name="discord_activity_type">Jenis aktivitas</string>
     <string name="discord_activity_playing">Bermain</string>
     <string name="discord_activity_listening">Mendengarkan</string>
@@ -649,9 +648,9 @@
     <string name="new_episodes">Episode baru</string>
     <string name="episodes_for_later">Episode untuk nanti</string>
     <string name="save_episode_for_later">Simpan untuk nanti</string>
-    <string name="save_episode_for_later_desc">Tambahkan ke playlist Episode untuk nanti Anda</string>
-    <string name="remove_episode_from_saved">Hapus dari tersimpan</string>
-    <string name="subscribe_to_podcast">Simpan podcast ke perpustakaan</string>
+    <string name="save_episode_for_later_desc">Tambahkan ke Episode Anda untuk nanti</string>
+    <string name="remove_episode_from_saved">Hapus dari daftar tersimpan</string>
+    <string name="subscribe_to_podcast">Simpan podcast ke pustaka</string>
     <plurals name="n_episode">
         <item quantity="other">%d episode</item>
     </plurals>
@@ -667,7 +666,7 @@
     </plurals>
     <string name="restore_confirm_title">Pulihkan cadangan?</string>
     <string name="restore_confirm_message">Ini akan memulihkan data aplikasi Anda dari cadangan yang dipilih</string>
-    <string name="restore_account_warning">Anda perlu masuk kembali setelah memulihkan. Akun berikut akan keluar:</string>
+    <string name="restore_account_warning">Informasi akun berikut akan dipulihkan dan dipertahankan:</string>
     <string name="restore">Pulihkan</string>
     <string name="checking_previous_account">Memeriksa akun sebelumnya…</string>
     <string name="no_account_found">Tidak ada akun yang ditemukan</string>
@@ -725,7 +724,7 @@
     <string name="time_transfer_source_song">Sumber lagu</string>
     <string name="time_transfer_target_song">Target lagu</string>
     <string name="time_transfer_listen_time_label">Waktu mendengarkan:</string>
-    <string name="time_transfer_convert">Mengubah</string>
+    <string name="time_transfer_convert">Ubah</string>
     <string name="song_dropdown_more_results">Terus mengetik untuk mempersempit hasil (%d lebih banyak)</string>
     <string name="alarm">Alarm</string>
     <string name="alarm_enabled">Menyalakan alarm</string>
@@ -795,7 +794,7 @@
     <string name="varispeed">Aktifkan varispeed</string>
     <string name="varispeed_description">Kaitkan nada dengan kecepatan pemutaran, menghasilkan efek percepatan dan perlambatan ala kaset</string>
     <string name="autoplay">Putar otomatis</string>
-    <string name="autoplay_desc">Secara otomatis memutar lagu berikutnya ketika lagu saat ini selesai</string>
+    <string name="autoplay_desc">Otomatis memutar lagu berikutnya ketika lagu saat ini selesai</string>
     <string name="back">Kembali</string>
     <string name="clear_search">Hapus pencarian</string>
     <string name="close_chip">Tutup</string>
@@ -826,10 +825,10 @@
     <string name="show_most_stats_playlists">Tampilkan playlist Terpopuler Mingguan dan Bulanan</string>
     <string name="show_most_stats_playlists_desc">Buat dan tampilkan playlist berdasarkan statistik Paling Sering Diputar di bagian Statistik dan Pustaka</string>
     <string name="pin">Pin</string>
-    <string name="unpin">Unpin</string>
+    <string name="unpin">Lepas pin</string>
     <string name="widget_playlists">Daftar putar</string>
     <string name="widget_playlists_description">Pintasan daftar putar dengan kontrol pemutar mini</string>
-    <string name="choose_something_below">PIlih salah satu di bawah ini</string>
+    <string name="choose_something_below">Pilih salah satu di bawah ini</string>
     <string name="and">dan</string>
     <string name="auto_radio_queue">Antrean radio otomatis</string>
     <string name="auto_radio_queue_desc">Otomatis buat antrean radio saat memutar lagu dari pencarian atau beranda</string>
@@ -859,7 +858,7 @@
     <string name="discord_placeholder_song">Nama lagu</string>
     <string name="discord_placeholder_artist">Nama artis</string>
     <string name="discord_placeholder_album">Nama album</string>
-    <string name="restore_database_incompatible">Tidak dapat memulihkan cadangan: versi database tidak kompatibel. Data Anda saat ini tetap dipertahankan.</string>
+    <string name="restore_database_incompatible">Tidak dapat memulihkan cadangan: versi database tidak cocok. Data Anda saat ini tetap dipertahankan.</string>
     <string name="stream_client">Klien stream</string>
     <string name="format_player_hash">Hash pemutar</string>
     <string name="format_cipher_support_added">Dukungan cipher ditambahkan</string>
@@ -883,4 +882,10 @@
     <string name="stream_source_web_creator_desc">Klien web kreator.</string>
     <string name="stream_source_android_creator">ANDROID_CREATOR</string>
     <string name="stream_source_android_creator_desc">Klien kreator Android. Nonaktif secara default; memerlukan DroidGuard.</string>
+    <string name="error_job_cancelled">Video tidak tersedia untuk diputar. Coba lagi atau lewati ke lagu berikutnya.</string>
+    <string name="enable_landscape_scaling_desc">Ukuran tampilan mode landscape untuk layar lebih besar</string>
+    <string name="enable_dynamic_icon_desc">Gunakan tema dinamis untuk ikon app. Saat dimatikan, ikon menggunakan warna polos.</string>
+    <string name="enable_landscape_scaling">Pengukuran landscape</string>
+    <string name="dynamic_theme">Tema Dinamis</string>
+    <string name="enable_dynamic_icon">Warna ikon dinamis</string>
 </resources>

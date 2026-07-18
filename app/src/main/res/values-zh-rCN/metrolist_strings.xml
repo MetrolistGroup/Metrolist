@@ -209,7 +209,6 @@
     <string name="delete_desc">完全移除此歌曲</string>
     <string name="advanced_desc">调整歌曲的节奏和音高</string>
     <string name="equalizer_desc">打开音频均衡器</string>
-    <string name="enable_dynamic_icon">开启动态图标</string>
     <string name="mini_player">迷你播放器</string>
     <string name="pure_black_mini_player">纯黑迷你播放器</string>
     <string name="cache_size_warning_title">且慢！</string>
@@ -624,7 +623,7 @@
     </plurals>
     <string name="restore_confirm_title">恢复备份？</string>
     <string name="restore_confirm_message">这将从所选备份中恢复您的应用数据</string>
-    <string name="restore_account_warning">恢复后，您需要重新登录。以下账号将退出登录：</string>
+    <string name="restore_account_warning">以下账号信息将被恢复并保留：</string>
     <string name="restore">恢复</string>
     <string name="checking_previous_account">正在检查先前账号…</string>
     <string name="no_account_found">未找到账号</string>
@@ -883,4 +882,10 @@
     <string name="discord_error_token_refresh_failed">Discord 会话已过期。请重新连接。</string>
     <string name="discord_error_invalid_scope">Discord 已拒绝连接。请重新连接并授予所需权限。</string>
     <string name="discord_error_banner_title">Discord 错误</string>
+    <string name="error_job_cancelled">视频无法播放。请重试或跳到下一首歌曲。</string>
+    <string name="enable_landscape_scaling_desc">在横屏模式下缩放界面以适应更大的屏幕</string>
+    <string name="enable_landscape_scaling">横屏缩放</string>
+    <string name="dynamic_theme">动态主题</string>
+    <string name="enable_dynamic_icon">动态图标颜色</string>
+    <string name="enable_dynamic_icon_desc">为应用图标使用动态主题颜色。禁用后，图标将使用纯色。</string>
 </resources>

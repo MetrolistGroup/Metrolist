@@ -196,7 +196,6 @@
     <string name="delete_desc">Bu öğeyi kalıcı olarak kaldır</string>
     <string name="advanced_desc">Şarkının temposunu ve perdesini ayarla</string>
     <string name="equalizer_desc">Ses ekolayzırını aç</string>
-    <string name="enable_dynamic_icon">Dinamik simgeyi etkinleştir</string>
     <string name="mini_player">Mini oynatıcı</string>
     <string name="pure_black_mini_player">Saf siyah mini oynatıcı</string>
     <string name="cache_size_warning_title">Bekle!</string>
@@ -628,7 +627,7 @@
     </plurals>
     <string name="restore_confirm_title">Yedek geri yüklensin mi?</string>
     <string name="restore_confirm_message">Bu, uygulama verilerinizi seçilen yedekten geri yükleyecektir</string>
-    <string name="restore_account_warning">Geri yüklemeden sonra tekrar giriş yapmanız gerekecek. Şu hesaptan çıkış yapılacak:</string>
+    <string name="restore_account_warning">Aşağıdaki hesap bilgileri geri yüklenecek ve korunacaktır:</string>
     <string name="restore">Geri yükle</string>
     <string name="checking_previous_account">Önceki hesap kontrol ediliyor…</string>
     <string name="no_account_found">Hesap bulunamadı</string>
@@ -890,4 +889,10 @@
     <string name="stream_source_web_creator_desc">Creator web istemcisi.</string>
     <string name="stream_source_android_creator">ANDROID_CREATOR</string>
     <string name="stream_source_android_creator_desc">Android Creator istemcisi. Varsayılan olarak kapalıdır; DroidGuard gerekir.</string>
+    <string name="error_job_cancelled">Video oynatılamıyor. Tekrar deneyin veya sonraki şarkıya geçin.</string>
+    <string name="enable_landscape_scaling">Yatay Ölçekleme</string>
+    <string name="enable_landscape_scaling_desc">Büyük ekranlarda yatay mod için arayüzü ölçeklendir</string>
+    <string name="dynamic_theme">Dinamik Tema</string>
+    <string name="enable_dynamic_icon">Dinamik ikon renkleri</string>
+    <string name="enable_dynamic_icon_desc">Uygulama ikonu için dinamik tema renklerini kullan. Eğer kapatılırsa, ikon sabit renkleri kullanır.</string>
 </resources>

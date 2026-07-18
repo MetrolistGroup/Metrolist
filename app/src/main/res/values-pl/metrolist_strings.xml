@@ -199,7 +199,6 @@
     <string name="delete_desc">Trwale usuń ten element</string>
     <string name="advanced_desc">Zmień tempo i wysokość dźwięku utworu</string>
     <string name="equalizer_desc">Dostosuj korektor dźwięku</string>
-    <string name="enable_dynamic_icon">Włącz ikonę dynamiczną</string>
     <string name="mini_player">Miniodtwarzacz</string>
     <string name="cache_size_warning_title">Czekaj!</string>
     <string name="cache_size_warning_message">Wybrano limit rozmiaru pamięci podręcznej mniejszy niż ten, którego aplikacja aktualnie używa (%1$s). Jeśli będziesz kontynuować, aplikacja może usunąć część pamięci podręcznej %2$s, aby dopasować ją do nowego limitu. Czy mimo to kontynuować?</string>

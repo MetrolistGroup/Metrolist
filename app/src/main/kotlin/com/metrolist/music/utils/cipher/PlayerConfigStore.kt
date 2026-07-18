@@ -77,9 +77,20 @@ object PlayerConfigStore {
     // The two cooldown gates read DIFFERENT stamps on purpose (see above). Routed through these
     // functions — which forceRefresh / refreshAfterStreamRejection actually call — so a unit test
     // can prove neither path is gated by the other's cooldown without touching the network.
-    internal fun forcedCooldownActive(now: Long) = now - lastForcedAttemptMs < FORCE_REFRESH_COOLDOWN_MS
+    /**
+     * True iff [stampMs] lies within [windowMs] of [now]. The in-range check (not a plain
+     * `now - stamp < window`) matters: these are wall-clock stamps, and a backward clock
+     * adjustment (NTP correction, manual change) makes the delta negative — a plain
+     * less-than would then hold the window for the entire skew duration, wedging
+     * cooldowns/TTLs exactly while playback is broken. Every wall-clock window check in
+     * this module MUST go through this helper.
+     */
+    internal fun withinWindow(now: Long, stampMs: Long, windowMs: Long) =
+        (now - stampMs) in 0 until windowMs
 
-    internal fun rejectionCooldownActive(now: Long) = now - lastRejectionAttemptMs < FORCE_REFRESH_COOLDOWN_MS
+    internal fun forcedCooldownActive(now: Long) = withinWindow(now, lastForcedAttemptMs, FORCE_REFRESH_COOLDOWN_MS)
+
+    internal fun rejectionCooldownActive(now: Long) = withinWindow(now, lastRejectionAttemptMs, FORCE_REFRESH_COOLDOWN_MS)
 
     // Test-only: arm a cooldown stamp without invoking the network refresh paths.
     internal fun armForcedCooldownForTest(ms: Long) { lastForcedAttemptMs = ms }
@@ -231,7 +242,9 @@ object PlayerConfigStore {
 
     private suspend fun refreshIfStale() {
         val lastFetchMs = readMeta()?.second ?: 0L
-        if (System.currentTimeMillis() - lastFetchMs < REFRESH_TTL_MS) {
+        // lastFetchMs is persisted, so a future stamp (wall clock stepped back after the
+        // write) must count as stale, not fresh — withinWindow handles that.
+        if (withinWindow(System.currentTimeMillis(), lastFetchMs, REFRESH_TTL_MS)) {
             Timber.tag(TAG).d("Remote configs fresh (fetched ${System.currentTimeMillis() - lastFetchMs} ms ago)")
             return
         }
@@ -391,9 +404,14 @@ object PlayerConfigStore {
         val tmp = File(file.parentFile, "${file.name}.tmp")
         tmp.writeText(content)
         if (!tmp.renameTo(file)) {
-            // renameTo can fail on some filesystems — fall back to a direct write.
-            file.writeText(content)
-            tmp.delete()
+            // renameTo won't overwrite an existing target on some filesystems — retry after
+            // deleting it (two cheap metadata ops, still atomic) before the last-resort direct
+            // write, which is both non-atomic and a second full write of the content.
+            file.delete()
+            if (!tmp.renameTo(file)) {
+                file.writeText(content)
+                tmp.delete()
+            }
         }
     }
 }

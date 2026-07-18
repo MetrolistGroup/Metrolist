@@ -331,7 +331,6 @@
     <string name="delete_desc">הסר פריט זה לצמיתות</string>
     <string name="advanced_desc">שינוי הקצב והגובה של השיר</string>
     <string name="equalizer_desc">כוונון אקולייזר השמע</string>
-    <string name="enable_dynamic_icon">הפעל סמל דינמי</string>
     <string name="mini_player">מיני נגן</string>
     <string name="pure_black_mini_player">מיני-נגן שחור טהור</string>
     <string name="cache_size_warning_title">אחיזה!</string>

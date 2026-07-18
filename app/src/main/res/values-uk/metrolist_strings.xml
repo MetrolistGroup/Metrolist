@@ -200,7 +200,6 @@
     <string name="delete_desc">Вилучити цей елемент назавжди</string>
     <string name="advanced_desc">Змінити темп і висоту тону пісні</string>
     <string name="equalizer_desc">Налаштування аудіоеквалайзера</string>
-    <string name="enable_dynamic_icon">Увімкнути динамічний значок</string>
     <string name="mini_player">Міні-плеєр</string>
     <string name="pure_black_mini_player">Чисто чорний міні-плеєр</string>
     <string name="cache_size_warning_title">Тримайся!</string>

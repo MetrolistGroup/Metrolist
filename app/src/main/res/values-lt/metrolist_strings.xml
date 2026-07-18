@@ -166,7 +166,6 @@
     <string name="delete_desc">Panaikinti šį elementą visam laikui</string>
     <string name="advanced_desc">Pakeisti dainos tempą ir aukštį</string>
     <string name="equalizer_desc">Koreguoti garso ekvalaizerį</string>
-    <string name="enable_dynamic_icon">Įjungti prisitaikančią ikonėlę</string>
     <string name="mini_player">Mini-grotuvas</string>
     <string name="pure_black_mini_player">Juodas mini-grotuvas</string>
     <string name="cache_size_warning_title">Palaukite!</string>

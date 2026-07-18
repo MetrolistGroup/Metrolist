@@ -198,7 +198,6 @@
     <string name="delete_desc">Eliminar este elemento de forma permanente</string>
     <string name="advanced_desc">Ajustar el tempo y el tono de la canción</string>
     <string name="equalizer_desc">Abrir el ecualizador de audio</string>
-    <string name="enable_dynamic_icon">Habilitar icono dinámico</string>
     <string name="mini_player">Minirreproductor</string>
     <string name="pure_black_mini_player">Minirreproductor negro puro</string>
     <string name="cache_size_warning_title">¡Espera!</string>
@@ -634,7 +633,7 @@
     </plurals>
     <string name="restore_confirm_title">¿Restaurar copia de seguridad?</string>
     <string name="restore_confirm_message">Esto restaurará los datos de la aplicación desde la copia de seguridad</string>
-    <string name="restore_account_warning">Deberás iniciar sesión de nuevo tras la restauración. Se cerrará la sesión de la siguiente cuenta:</string>
+    <string name="restore_account_warning">La siguiente información de la cuenta será restaurada y conservada:</string>
     <string name="restore">Restaurar</string>
     <string name="checking_previous_account">Buscando una cuenta anterior…</string>
     <string name="no_account_found">No se encontró ninguna cuenta</string>
@@ -897,4 +896,10 @@
     <string name="stream_source_web_creator_desc">Cliente web de creador.</string>
     <string name="stream_source_android_creator">ANDROID_CREATOR</string>
     <string name="stream_source_android_creator_desc">Cliente de creador para Android. Desactivado por defecto; requiere DroidGuard.</string>
+    <string name="error_job_cancelled">El vídeo no está disponible para su reproducción. Inténtalo de nuevo o salta a la siguiente canción.</string>
+    <string name="enable_landscape_scaling">Escalado en modo horizontal</string>
+    <string name="enable_landscape_scaling_desc">Escala la interfaz en modo horizontal para pantallas grandes</string>
+    <string name="dynamic_theme">Tema dinámico</string>
+    <string name="enable_dynamic_icon">Colores dinámicos del icono</string>
+    <string name="enable_dynamic_icon_desc">Usa los colores dinámicos del tema para el icono de la app. Cuando está desactivado, el icono utiliza colores sólidos.</string>
 </resources>
