@@ -1415,6 +1415,8 @@ class SyncUtils @Inject constructor(
                         .distinctBy { it.id }
                     val remoteIds = remotePlaylists.map { it.id }.toSet()
 
+                    executeCleanupDuplicatePlaylists()
+
                     val localPlaylists = database.playlistEntitiesByNameAsc().toMutableList()
                     localPlaylists.filterNot { it.browseId in remoteIds }
                         .filterNot { it.browseId == null }
@@ -1466,7 +1468,6 @@ class SyncUtils @Inject constructor(
                     }
 
                     updateState { copy(playlists = SyncStatus.Completed) }
-                    executeCleanupDuplicatePlaylists()
                     Timber.d("Synced ${remotePlaylists.size} saved playlists")
                 } catch (e: Exception) {
                     Timber.e(e, "Error processing saved playlists")
