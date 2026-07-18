@@ -389,7 +389,6 @@ class MusicService :
     private var fadingPlayer: ExoPlayer? = null
     private var isCrossfading = false
     private var crossfadeJob: Job? = null
-    private var isRunning = false
     private var mediaSession: MediaLibrarySession? = null
     private var controllerFuture: com.google.common.util.concurrent.ListenableFuture<MediaController>? = null
 
@@ -624,7 +623,7 @@ class MusicService :
     override fun onCreate() {
         super.onCreate()
         isShuttingDown = false
-        isRunning = true
+        MusicService.isRunning = true
         shutdownDeferred = kotlinx.coroutines.CompletableDeferred<Unit>()
 
         setListener(
@@ -642,9 +641,6 @@ class MusicService :
         // On some OEMs (e.g. MIUI), even a DataStore read can be slow
         // enough to miss the window, so we promote before any I/O.
         ensureForegroundChannelExists()
-        if (!ensureStartedAsForegroundOrStop()) {
-            return
-        }
 
         // Read ALL startup preferences in one shot so that subsequent code
         // never calls dataStore.get() (which does runBlocking internally).
@@ -4108,7 +4104,7 @@ class MusicService :
         }
 
     override fun onDestroy() {
-        isRunning = false
+        MusicService.isRunning = false
 
         if (!::player.isInitialized) {
             try {
