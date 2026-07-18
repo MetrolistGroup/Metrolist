@@ -2521,6 +2521,8 @@ class MusicService :
 
         lastPlaybackSpeed = -1.0f // force update song
 
+        silenceSkipJob?.cancel()
+        isSilenceSkipping = false
         playerSilenceProcessors[player]?.resetTracking()
         setupAudioNormalization()
 
@@ -3420,17 +3422,26 @@ class MusicService :
 
     private fun handleLongSilenceDetected() {
         if (!instantSilenceSkipEnabled.value) return
-        if (silenceSkipJob?.isActive == true) return
 
-        silenceSkipJob =
-            scope.launch {
+        scope.launch(Dispatchers.Main) {
+            if (silenceSkipJob?.isActive == true) return@launch
+            
+            if (player.currentPosition < 2000) {
+                Timber.tag(TAG).d("Ignoring silence detected at start of track (bleed-over)")
+                return@launch
+            }
+
+            val expectedMediaItemIndex = player.currentMediaItemIndex
+
+            silenceSkipJob = launch {
                 // Debounce so short fades or transitions do not trigger a jump.
                 delay(200)
-                performInstantSilenceSkip()
+                performInstantSilenceSkip(expectedMediaItemIndex)
             }
+        }
     }
 
-    private suspend fun performInstantSilenceSkip() {
+    private suspend fun performInstantSilenceSkip(expectedMediaItemIndex: Int) {
         val duration = player.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: return
         if (duration <= INSTANT_SILENCE_SKIP_STEP_MS) return
 
@@ -3439,6 +3450,11 @@ class MusicService :
             var hops = 0
             val silenceProcessor = playerSilenceProcessors[player] ?: return
             while (coroutineContext.isActive && instantSilenceSkipEnabled.value && silenceProcessor.isCurrentlySilent()) {
+                if (player.currentMediaItemIndex != expectedMediaItemIndex) {
+                    Timber.tag(TAG).d("Media item changed, aborting silence skip")
+                    break
+                }
+
                 val current = player.currentPosition
                 val target = (current + INSTANT_SILENCE_SKIP_STEP_MS).coerceAtMost(duration - 500)
 

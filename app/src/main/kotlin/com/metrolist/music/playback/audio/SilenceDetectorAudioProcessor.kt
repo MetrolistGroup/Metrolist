@@ -71,6 +71,8 @@ class SilenceDetectorAudioProcessor(
             outputBuffer = EMPTY_BUFFER
             return
         }
+        
+        inputEnded = false
 
         if (offloadMode) {
             val out = replaceOutputBuffer(inputBuffer.remaining())
@@ -137,6 +139,7 @@ class SilenceDetectorAudioProcessor(
 
     override fun queueEndOfStream() {
         inputEnded = true
+        clearSilenceState()
     }
 
     override fun getOutput(): ByteBuffer {
