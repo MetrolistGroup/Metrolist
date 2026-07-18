@@ -64,6 +64,7 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.PlayerMessage
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.analytics.PlaybackStats
 import androidx.media3.exoplayer.analytics.PlaybackStatsListener
@@ -299,7 +300,7 @@ class MusicService :
     private var crossfadeEnabled = false
     private var crossfadeDuration = 5000f
     private var crossfadeGapless = true
-    private var crossfadeTriggerJob: Job? = null
+    private var crossfadeMessage: PlayerMessage? = null
 
     private val secondaryPlayerListener =
         object : Player.Listener {
@@ -4535,8 +4536,8 @@ class MusicService :
     }
 
     private fun scheduleCrossfade() {
-        crossfadeTriggerJob?.cancel()
-        crossfadeTriggerJob = null
+        crossfadeMessage?.cancel()
+        crossfadeMessage = null
         
         val speed = player.playbackParameters.speed.coerceAtLeast(0.01f)
         val mediaCrossfadeDuration = (crossfadeDuration * speed).toLong()
@@ -4549,18 +4550,17 @@ class MusicService :
         val mediaTimeRemaining = triggerTime - player.currentPosition
         if (mediaTimeRemaining <= 0) return
 
-        val delayMs = (mediaTimeRemaining / speed).toLong()
-
         val targetMediaId = player.currentMediaItem?.mediaId
 
-        crossfadeTriggerJob =
-            scope.launch {
-                delay(delayMs)
-                val timer = sleepTimer
-                if (isActive && player.isPlaying && player.currentMediaItem?.mediaId == targetMediaId && (timer == null || !timer.pauseWhenSongEnd)) {
-                    startCrossfade()
-                }
+        crossfadeMessage = player.createMessage { _, _ ->
+            val timer = sleepTimer
+            if (player.isPlaying && player.currentMediaItem?.mediaId == targetMediaId && (timer == null || !timer.pauseWhenSongEnd)) {
+                startCrossfade()
             }
+        }.apply {
+            setPosition(triggerTime)
+            send()
+        }
     }
 
     private fun isNextItemGapless(): Boolean {
