@@ -4612,6 +4612,7 @@ class MusicService :
                 startCrossfade()
             }
         }.apply {
+            setLooper(Looper.getMainLooper())
             setPosition(triggerTime)
             send()
         }
