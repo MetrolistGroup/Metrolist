@@ -24,7 +24,7 @@
     <string name="share_lyrics">Compartir lletres</string>
     <string name="share_as_text">Compartir com a text</string>
     <string name="share_as_image">Compartir com a imatge</string>
-    <string name="max_selection_limit">Límit màxim de selecció</string>
+    <string name="max_selection_limit">Límit màxim de selecció sobrepassat</string>
     <string name="share_selected">Compartir seleccionat</string>
     <string name="customize_colors">Personalitzar colors</string>
     <string name="text_color">Color del text</string>
@@ -41,7 +41,7 @@
     <string name="now_playing">Reproduïnt</string>
     <string name="lyrics">Lletres</string>
     <string name="close">Tanca</string>
-    <string name="hide_player_thumbnail">Amaga la Imatge del Reproductor</string>
+    <string name="hide_player_thumbnail">Amaga l\'icona del reproductor</string>
     <string name="hide_player_thumbnail_desc">Substitueix l\'art de l\'àlbum pel logotip de la app en el reproductor</string>
     <string name="already_in_playlist">Ja a la llista:</string>
     <plurals name="n_time">
@@ -67,7 +67,7 @@
     <string name="filter_uploaded">Pujat</string>
     <string name="download_playlist_desc">Descarrega les cançons per a reproduir-les sense xarxa</string>
     <string name="remove_download_playlist_desc">Elimina les cançons descarregades d\'aquesta llista</string>
-    <string name="download_in_progress_desc">Descàrrega en procés</string>
+    <string name="download_in_progress_desc">La descàrrega es troba en procés</string>
     <string name="share_playlist_desc">Comparteix la llista amb altres</string>
     <string name="delete_playlist_desc">Elimina aquesta llista de manera permanent</string>
     <string name="sync_playlist_desc">Sincronitza aquesta llista amb YouTube Music</string>
@@ -209,7 +209,6 @@
     <string name="delete_desc">Eliminar element de manera permanent</string>
     <string name="advanced_desc">Canviar tempo i to de la cançó</string>
     <string name="equalizer_desc">Ajustar l\'equalitzador d\'àudio</string>
-    <string name="enable_dynamic_icon">Habilitar icona dinàmica</string>
     <string name="mini_player">Mini Reproductor</string>
     <string name="pure_black_mini_player">Mini reproductor negre pur</string>
     <string name="cache_size_warning_title">Espera!</string>
@@ -546,7 +545,7 @@
     <string name="display_density">Densitat de pantalla</string>
     <string name="restart">Reinicia</string>
     <string name="restart_required">Cal reiniciar!</string>
-    <string name="density_restart_message">En canvi de densitat de pantalla es farà efectiu després de reiniciar l\'aplicació. La vol reiniciar ara?</string>
+    <string name="density_restart_message">En canvi de densitat de pantalla es farà efectiu després de reiniciar l\'aplicació. Reiniciar ara?</string>
     <string name="found_in_settings_content">Es troba a Configuració &gt; Contingut</string>
     <string name="plays">reproduccions</string>
     <string name="speed_dial">Accés ràpid</string>
@@ -704,4 +703,19 @@
     <string name="monthly_most_playlist_name">Els més escoltats del mes</string>
     <string name="and">i</string>
     <string name="lyrics_from_provider">Lletra de %s</string>
+    <string name="hide_status_bar_fullscreen">Amaga la barra d’estat a pantalla completa</string>
+    <string name="hide_status_bar_fullscreen_desc">Amaga la barra d’estat quan el mode de pantalla completa de les lletres està actiu</string>
+    <string name="show_interval_indicator">Mostra l’indicator d’interval</string>
+    <string name="show_interval_indicator_desc">Mostra una barra de progrés durant els intervals instrumentals llargs</string>
+    <string name="respect_agent_positioning">Respetae el posicionament de l’agent</string>
+    <string name="respect_agent_positioning_desc">Alinear les lletres segons el rol de l’agent(p. ex. veus de fons)</string>
+    <string name="lyrics_animation_none">Cap</string>
+    <string name="lyrics_animation_fade">Esvaïment</string>
+    <string name="lyrics_animation_glow">Resplendor</string>
+    <string name="lyrics_animation_slide">Lliscar</string>
+    <string name="lyrics_animation_karaoke">Karaoke</string>
+    <string name="lyrics_animation_apple">Estil d’Apple Music</string>
+    <string name="enable_paxsenix">Habilitar Paxsenix</string>
+    <string name="enable_paxsenix_desc">Lletres sincronitzades d’alta qualitat per l’API Paxsenix</string>
+    <string name="enable_song_cache">Activar memòria cau de cançons</string>
 </resources>

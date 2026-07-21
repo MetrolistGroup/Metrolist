@@ -1412,9 +1412,12 @@ class SyncUtils @Inject constructor(
                     val remotePlaylists = page.items.filterIsInstance<PlaylistItem>()
                         .filterNot { it.id == "LM" || it.id == "SE" }
                         .reversed()
+                        .distinctBy { it.id }
                     val remoteIds = remotePlaylists.map { it.id }.toSet()
 
-                    val localPlaylists = database.playlistEntitiesByNameAsc()
+                    executeCleanupDuplicatePlaylists()
+
+                    val localPlaylists = database.playlistEntitiesByNameAsc().toMutableList()
                     localPlaylists.filterNot { it.browseId in remoteIds }
                         .filterNot { it.browseId == null }
                         .forEach { playlist ->
@@ -1445,6 +1448,7 @@ class SyncUtils @Inject constructor(
                                     radioEndpointParams = playlist.radioEndpoint?.params
                                 )
                                 database.insert(playlistEntity)
+                                localPlaylists.add(playlistEntity)
                                 Timber.d("syncSavedPlaylists: Created new playlist ${playlist.title} (${playlist.id})")
                             } else {
                                 database.update(playlistEntity, playlist)
@@ -1589,21 +1593,21 @@ class SyncUtils @Inject constructor(
 
     private suspend fun executeCleanupDuplicatePlaylists() = withContext(Dispatchers.IO) {
         try {
-            val allPlaylists = database.playlistsByNameAsc().first()
+            val allPlaylists = database.playlistEntitiesByNameAsc()
             val browseIdGroups = allPlaylists
-                .filter { it.playlist.browseId != null }
-                .groupBy { it.playlist.browseId }
+                .filter { it.browseId != null }
+                .groupBy { it.browseId }
 
             for ((browseId, playlists) in browseIdGroups) {
                 if (playlists.size > 1) {
                     Timber.w("Found ${playlists.size} duplicate playlists for browseId: $browseId")
-                    val toKeep = playlists.maxByOrNull { it.songCount } ?: playlists.first()
+                    val toKeep = playlists.maxByOrNull { it.remoteSongCount ?: 0 } ?: playlists.first()
 
                     playlists.filter { it.id != toKeep.id }.forEach { duplicate ->
                         try {
-                            Timber.d("Removing duplicate playlist: ${duplicate.playlist.name} (${duplicate.id})")
+                            Timber.d("Removing duplicate playlist: ${duplicate.name} (${duplicate.id})")
                             database.clearPlaylist(duplicate.id)
-                            database.delete(duplicate.playlist)
+                            database.delete(duplicate)
                             delay(DB_OPERATION_DELAY_MS)
                         } catch (e: Exception) {
                             Timber.e(e, "Failed to remove duplicate playlist: ${duplicate.id}")

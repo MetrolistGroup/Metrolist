@@ -395,7 +395,6 @@
     <string name="delete_desc">Betirako kendu elementu hau</string>
     <string name="advanced_desc">Abestiaren tenpoa eta tonua aldatu</string>
     <string name="equalizer_desc">Audio-ekualizadorea ireki</string>
-    <string name="enable_dynamic_icon">Ikur dinamikoa gaitu</string>
     <string name="mini_player">Minierreproduzitzailea</string>
     <string name="pure_black_mini_player">Minierreproduzitzaile beltza purua</string>
     <string name="mini_player_background_style">Minierreproduzitzailearen hondoaren estiloa</string>

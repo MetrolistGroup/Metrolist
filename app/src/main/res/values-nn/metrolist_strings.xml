@@ -226,7 +226,6 @@
     <string name="delete_desc">Tak bort denne songen permanent</string>
     <string name="advanced_desc">Brigd snøggleiken og tonehøgd på songen</string>
     <string name="equalizer_desc">Juster audioutjamnaren</string>
-    <string name="enable_dynamic_icon">Slå på dynamisk ikon</string>
     <string name="mini_player">Minispelar</string>
     <string name="pure_black_mini_player">Reinsvart minispelar</string>
     <string name="cache_size_warning_title">Vent no då!</string>

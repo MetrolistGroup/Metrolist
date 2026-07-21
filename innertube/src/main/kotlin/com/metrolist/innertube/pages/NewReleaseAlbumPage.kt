@@ -34,7 +34,7 @@ object NewReleaseAlbumPage {
                     .lastOrNull()
                     ?.text
                     ?.toIntOrNull(),
-            thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+            thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
             explicit =
                 renderer.subtitleBadges?.find {
                     it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"

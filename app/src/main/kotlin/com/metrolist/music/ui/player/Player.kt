@@ -618,12 +618,11 @@ fun BottomSheetPlayer(
     }
 
     val sleepTimerDefault by rememberPreference(SleepTimerDefaultKey, 30f)
-    var sleepTimerValue by remember {
-        mutableFloatStateOf(sleepTimerDefault)
-    }
+    var sleepTimerValue by remember { mutableFloatStateOf(sleepTimerDefault) }
     val isAtDefault by remember {
         derivedStateOf { sleepTimerValue.roundToInt() == sleepTimerDefault.roundToInt() }
     }
+    LaunchedEffect(sleepTimerDefault) { sleepTimerValue = sleepTimerDefault }
     val sleepTimerStopAfterCurrentSong by rememberPreference(SleepTimerStopAfterCurrentSongKey, false)
     val sleepTimerFadeOut by rememberPreference(SleepTimerFadeOutKey, false)
 

@@ -1500,7 +1500,7 @@ object YouTube {
                 Timber.d("Episode[$idx] title: ${renderer.title?.runs?.firstOrNull()?.text}")
                 Timber.d("Episode[$idx] subtitle: ${renderer.subtitle?.runs?.map { it.text }}")
                 Timber.d("Episode[$idx] videoId: ${renderer.onTap?.watchEndpoint?.videoId}")
-                Timber.d("Episode[$idx] thumbnail: ${renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl()}")
+                Timber.d("Episode[$idx] thumbnail: ${renderer.thumbnail?.getThumbnailUrl()}")
             }
 
             val episodes =
@@ -2134,7 +2134,7 @@ object YouTube {
                         id = renderer.videoId!!,
                         title = title,
                         artists = artists,
-                        thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                        thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: return null,
                         musicVideoType = renderer.musicVideoType,
                         explicit =
                             renderer.badges?.any {
@@ -2177,7 +2177,7 @@ object YouTube {
                         id = videoId,
                         title = title,
                         artists = artists,
-                        thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                        thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         musicVideoType = renderer.musicVideoType,
                         explicit =
                             renderer.subtitleBadges?.any {
@@ -2213,7 +2213,7 @@ object YouTube {
                                 ?.lastOrNull()
                                 ?.text
                                 ?.toIntOrNull(),
-                        thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                        thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         explicit =
                             renderer.subtitleBadges?.any {
                                 it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
@@ -2660,7 +2660,7 @@ object YouTube {
                                 artists = artists,
                                 album = null,
                                 duration = duration,
-                                thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: "",
+                                thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: "",
                                 isEpisode = true,
                             )
                         )
@@ -2708,7 +2708,7 @@ object YouTube {
                                     artists = artists,
                                     album = null,
                                     duration = duration,
-                                    thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: "",
+                                    thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: "",
                                     isEpisode = true,
                                 )
                             )
@@ -2905,7 +2905,7 @@ object YouTube {
                                 ?: emptyList(),
                         album = null,
                         duration = duration,
-                        thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: "",
+                        thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: "",
                         setVideoId = setVideoId,
                         isEpisode = true,
                     )
@@ -2962,7 +2962,7 @@ object YouTube {
                                         ?: emptyList(),
                                 album = null,
                                 duration = null,
-                                thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: "",
+                                thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: "",
                                 isEpisode = true,
                             )
                         }

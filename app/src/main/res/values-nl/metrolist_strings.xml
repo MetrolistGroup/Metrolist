@@ -157,7 +157,6 @@
     <string name="refetch_desc">Opnieuw YouTube Music metadata ophalen</string>
     <string name="advanced_desc">Nummer tempo en toonhoogte aanpassen</string>
     <string name="equalizer_desc">Audio equalizer aanpassen</string>
-    <string name="enable_dynamic_icon">Dynamisch app pictogram</string>
     <string name="mini_player">Mini-speler</string>
     <string name="pure_black_mini_player">OLED mini-speler</string>
     <string name="tertiary_color_style">Tertiaire kleur</string>

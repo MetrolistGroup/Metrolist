@@ -39,8 +39,8 @@ data class AlbumPage(
         }
 
         fun getThumbnail(response: BrowseResponse): String? {
-            return response.background?.musicThumbnailRenderer?.getThumbnailUrl() ?: response.header?.musicDetailHeaderRenderer?.thumbnail
-                ?.croppedSquareThumbnailRenderer?.getThumbnailUrl()
+            return response.background?.getThumbnailUrl() ?: response.header?.musicDetailHeaderRenderer?.thumbnail
+                ?.getThumbnailUrl()
         }
 
         fun getArtists(response: BrowseResponse): List<Artist> {
@@ -126,7 +126,7 @@ data class AlbumPage(
                     ?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.firstOrNull()
                     ?.text?.parseTime() ?: return null,
                 musicVideoType = renderer.musicVideoType,
-                thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: album?.thumbnail!!,
+                thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: album?.thumbnail!!,
                 explicit = renderer.badges?.find {
                     it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
                 } != null,

@@ -227,7 +227,6 @@
     <string name="delete_desc">Trajno odstrani ta element</string>
     <string name="advanced_desc">Spremeni tempo in višino tona skladbe</string>
     <string name="equalizer_desc">Prilagodi izenačevalnik zvoka</string>
-    <string name="enable_dynamic_icon">Omogoči dinamično ikono</string>
     <string name="mini_player">Mini predvajalnik</string>
     <string name="pure_black_mini_player">Popolnoma črn mini predvajalnik</string>
     <string name="cache_size_warning_title">Pozor!</string>
