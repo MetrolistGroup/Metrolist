@@ -150,6 +150,8 @@
     "5121b595": { "sig": "LV(22,571,INPUT)", "nClass": "az", "sts": 20655, "aliases": ["bf88d680"] },
     "f23073e8": { "sig": "Zr(22,571,INPUT)", "nClass": "A_", "sts": 20655, "aliases": ["6b2839a5"] },
     "7a7969c2": { "sig": "Zr(22,571,INPUT)", "nClass": "A_", "sts": 20655, "aliases": ["c3d8efcb"] },
-    "ce9835fa": { "sig": "Zr(22,571,INPUT)", "nClass": "A_", "sts": 20655, "aliases": ["b425cddc"] }
+    "ce9835fa": { "sig": "Zr(22,571,INPUT)", "nClass": "A_", "sts": 20655, "aliases": ["b425cddc"] },
+    "4b5d9fa9": { "sig": "Zi(72,5647,INPUT)", "nClass": "on", "sts": 20656, "aliases": ["e5c30810"] },
+    "00fd7bc3": { "sig": "Zi(72,5647,INPUT)", "nClass": "on", "sts": 20656, "aliases": ["27b238f4"] }
   }
 }
