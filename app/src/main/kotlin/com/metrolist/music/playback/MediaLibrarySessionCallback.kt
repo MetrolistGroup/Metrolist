@@ -703,28 +703,25 @@ constructor(
                     // ranked match to be first (index 0) so it is what actually plays.
                     val isVoicePlay = songId.isBlank()
 
-                    val searchResults = mutableListOf<Song>()
-
-                    // YouTube's relevance-ranked Songs shelf. Placed first for voice
-                    // playback so the best match plays even for misspelled/loose queries.
+                    // YouTube's relevance-ranked Songs shelf. We build MediaItems
+                    // straight from the SongItems (they already carry the tag metadata
+                    // the player needs) instead of inserting and reading back from the
+                    // DB: that read-back races the async insert and would intermittently
+                    // return null, dropping the top match and making the wrong song
+                    // play. The insert stays as a background write for later playback.
                     val onlineSongItems = try {
                         searchOnlineSongs(searchQuery)
                     } catch (e: Exception) {
                         reportException(e)
                         emptyList()
                     }
-                    val onlineSongs = onlineSongItems.mapNotNull { songItem ->
+                    onlineSongItems.forEach { songItem ->
                         try {
                             database.query { insert(songItem.toMediaMetadata()) }
-                            database.song(songItem.id).first()
                         } catch (e: Exception) {
-                            null
                         }
                     }
-
-                    if (isVoicePlay) {
-                        searchResults.addAll(onlineSongs)
-                    }
+                    val onlineItems = onlineSongItems.map { it.toMediaItem() }
 
                     val localSongs = database.allSongs().first().filter { song ->
                         song.song.title.contains(searchQuery, ignoreCase = true) ||
@@ -744,25 +741,28 @@ constructor(
                         database.playlistSongs(playlist.id).first().map { it.song }
                     }
 
-                    val allLocalSongs = (localSongs + artistSongs + albumSongs + playlistSongs)
+                    val localItems = (localSongs + artistSongs + albumSongs + playlistSongs)
                         .distinctBy { it.id }
+                        .map { it.toMediaItem() }
 
-                    searchResults.addAll(allLocalSongs)
-
-                    if (!isVoicePlay) {
-                        searchResults.addAll(onlineSongs)
+                    // Voice play puts the ranked online match first (index 0 plays);
+                    // taps keep local results first and jump to the tapped songId.
+                    val orderedItems = if (isVoicePlay) {
+                        onlineItems + localItems
+                    } else {
+                        localItems + onlineItems
                     }
 
-                    val distinctResults = searchResults.distinctBy { it.id }
+                    val distinctItems = orderedItems.distinctBy { it.mediaId }
 
-                    if (distinctResults.isEmpty()) {
+                    if (distinctItems.isEmpty()) {
                         return@future defaultResult
                     }
 
-                    val targetIndex = distinctResults.indexOfFirst { it.id == songId }
+                    val targetIndex = distinctItems.indexOfFirst { it.mediaId == songId }
 
                     MediaItemsWithStartPosition(
-                        distinctResults.map { it.toMediaItem() },
+                        distinctItems,
                         if (targetIndex >= 0) targetIndex else 0,
                         C.TIME_UNSET
                     )
