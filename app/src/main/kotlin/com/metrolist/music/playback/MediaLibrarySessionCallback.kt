@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.YouTubeConstants
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.filterExplicit
@@ -523,13 +524,8 @@ constructor(
                 }
 
                 try {
-                    val onlineResults = YouTube.search(query, YouTube.SearchFilter.FILTER_SONG)
-                        .getOrNull()
-                        ?.items
-                        ?.filterIsInstance<SongItem>()
-                        ?.filterExplicit(context.dataStore.get(HideExplicitKey, false))
-                        ?.filterVideoSongs(context.dataStore.get(HideVideoSongsKey, false))
-                        ?.filter { onlineSong ->
+                    val onlineResults = searchOnlineSongs(query)
+                        .filter { onlineSong ->
                             !allLocalSongs.any { localSong ->
                                 localSong.id == onlineSong.id ||
                                 (localSong.song.title.equals(onlineSong.title, ignoreCase = true) &&
@@ -539,7 +535,7 @@ constructor(
                                      }
                                  })
                             }
-                        } ?: emptyList()
+                        }
 
                     onlineResults.forEach { songItem ->
                         try {
@@ -701,72 +697,72 @@ constructor(
                 MusicService.SEARCH -> {
                     val songId = path.getOrNull(2) ?: return@future defaultResult
                     val searchQuery = path.getOrNull(1) ?: return@future defaultResult
-                    
+
+                    // A blank songId means this is a voice/"play X" request rather than
+                    // a tap on a specific result. In that case we want YouTube's best
+                    // ranked match to be first (index 0) so it is what actually plays.
+                    val isVoicePlay = songId.isBlank()
+
                     val searchResults = mutableListOf<Song>()
+
+                    // YouTube's relevance-ranked Songs shelf. Placed first for voice
+                    // playback so the best match plays even for misspelled/loose queries.
+                    val onlineSongItems = try {
+                        searchOnlineSongs(searchQuery)
+                    } catch (e: Exception) {
+                        reportException(e)
+                        emptyList()
+                    }
+                    val onlineSongs = onlineSongItems.mapNotNull { songItem ->
+                        try {
+                            database.query { insert(songItem.toMediaMetadata()) }
+                            database.song(songItem.id).first()
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+
+                    if (isVoicePlay) {
+                        searchResults.addAll(onlineSongs)
+                    }
 
                     val localSongs = database.allSongs().first().filter { song ->
                         song.song.title.contains(searchQuery, ignoreCase = true) ||
                         song.artists.any { it.name.contains(searchQuery, ignoreCase = true) } ||
                         song.album?.title?.contains(searchQuery, ignoreCase = true) == true
                     }
-                    
+
                     val artistSongs = database.searchArtists(searchQuery).first().flatMap { artist ->
                         database.artistSongsByCreateDateAsc(artist.id).first()
                     }
-                    
+
                     val albumSongs = database.searchAlbums(searchQuery).first().flatMap { album ->
                         database.albumSongs(album.id).first()
                     }
-                    
+
                     val playlistSongs = database.searchPlaylists(searchQuery).first().flatMap { playlist ->
                         database.playlistSongs(playlist.id).first().map { it.song }
                     }
 
                     val allLocalSongs = (localSongs + artistSongs + albumSongs + playlistSongs)
                         .distinctBy { it.id }
-                    
-                    searchResults.addAll(allLocalSongs)
-                    
-                    try {
-                        val onlineResults = YouTube.search(searchQuery, YouTube.SearchFilter.FILTER_SONG)
-                            .getOrNull()
-                            ?.items
-                            ?.filterIsInstance<SongItem>()
-                            ?.filterExplicit(context.dataStore.get(HideExplicitKey, false))
-                            ?.filterVideoSongs(context.dataStore.get(HideVideoSongsKey, false))
-                            ?.filter { onlineSong ->
-                                !allLocalSongs.any { localSong ->
-                                    localSong.id == onlineSong.id ||
-                                    (localSong.song.title.equals(onlineSong.title, ignoreCase = true) &&
-                                     localSong.artists.any { artist ->
-                                         onlineSong.artists.any {
-                                             it.name.equals(artist.name, ignoreCase = true)
-                                         }
-                                     })
-                                }
-                            } ?: emptyList()
 
-                        onlineResults.forEach { songItem ->
-                            try {
-                                database.query { insert(songItem.toMediaMetadata()) }
-                                database.song(songItem.id).first()?.let { newSong ->
-                                    searchResults.add(newSong)
-                                }
-                            } catch (e: Exception) {
-                            }
-                        }
-                    } catch (e: Exception) {
-                        reportException(e)
+                    searchResults.addAll(allLocalSongs)
+
+                    if (!isVoicePlay) {
+                        searchResults.addAll(onlineSongs)
                     }
-                    
-                    if (searchResults.isEmpty()) {
+
+                    val distinctResults = searchResults.distinctBy { it.id }
+
+                    if (distinctResults.isEmpty()) {
                         return@future defaultResult
                     }
-                    
-                    val targetIndex = searchResults.indexOfFirst { it.id == songId }
-                    
+
+                    val targetIndex = distinctResults.indexOfFirst { it.id == songId }
+
                     MediaItemsWithStartPosition(
-                        searchResults.map { it.toMediaItem() },
+                        distinctResults.map { it.toMediaItem() },
                         if (targetIndex >= 0) targetIndex else 0,
                         C.TIME_UNSET
                     )
@@ -775,6 +771,28 @@ constructor(
                 else -> defaultResult
             }
         }
+
+    /**
+     * Resolves a voice/search query to YouTube's ranked "Songs" shelf.
+     *
+     * Unlike [YouTube.search] with FILTER_SONG (which ranks mostly by literal
+     * spelling similarity), the unfiltered search summary is ordered by
+     * YouTube's own relevance/popularity ranking, so it plays the right track
+     * even when the query is misspelled or loosely named (e.g. "mashuka" ->
+     * Cocktail's "Mashooqa"). We deliberately skip the "Top result" card
+     * (it is often a full-length *video* upload) and drop video songs, keeping
+     * only the clean audio tracks from the Songs list.
+     */
+    private suspend fun searchOnlineSongs(query: String): List<SongItem> {
+        val page = YouTube.searchSummary(query).getOrNull() ?: return emptyList()
+        return page.summaries
+            .filterNot { it.title == YouTubeConstants.DEFAULT_TOP_RESULT }
+            .flatMap { it.items }
+            .filterIsInstance<SongItem>()
+            .filterExplicit(context.dataStore.get(HideExplicitKey, false))
+            .filterVideoSongs(true)
+            .distinctBy { it.id }
+    }
 
     private fun drawableUri(
         @DrawableRes id: Int,
