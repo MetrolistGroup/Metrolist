@@ -41,6 +41,7 @@ import com.metrolist.music.constants.SongSortType
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.PlaylistEntity
 import com.metrolist.music.db.entities.Song
+import com.metrolist.music.extensions.metadata
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.extensions.toggleRepeatMode
 import com.metrolist.music.models.toMediaMetadata
@@ -757,6 +758,17 @@ constructor(
 
                     if (distinctItems.isEmpty()) {
                         return@future defaultResult
+                    }
+
+                    // Voice "play X": play the top match, then continue with a YouTube song
+                    // radio (related/recommended) so playback never stops when the search
+                    // matches run out — like YT Music. Falls back to the static list below
+                    // if the radio can't be resolved.
+                    if (isVoicePlay) {
+                        val seed = distinctItems.firstOrNull()?.metadata
+                        if (seed != null) {
+                            service.buildVoiceRadioQueue(seed)?.let { return@future it }
+                        }
                     }
 
                     val targetIndex = distinctItems.indexOfFirst { it.mediaId == songId }

@@ -1833,6 +1833,43 @@ class MusicService :
         }
     }
 
+    /**
+     * Builds a song-radio queue seeded on [seed] and installs it as [currentQueue] so the
+     * auto-load-more watcher (see onMediaItemTransition) keeps pulling related songs forever.
+     * Used by voice "play X": instead of handing back the raw search list (which stops when the
+     * matches run out), we play the top match and then continue with YouTube's related songs,
+     * matching YT Music. Returns the initial queue for the caller to hand back to Media3, or null
+     * if the radio couldn't be resolved (caller should then fall back to the static list).
+     */
+    suspend fun buildVoiceRadioQueue(
+        seed: com.metrolist.music.models.MediaMetadata,
+    ): MediaSession.MediaItemsWithStartPosition? {
+        val radioQueue = YouTubeQueue.radio(seed)
+        val initialStatus =
+            try {
+                withContext(Dispatchers.IO) {
+                    radioQueue
+                        .getInitialStatus()
+                        .filterExplicit(dataStore.get(HideExplicitKey, false))
+                        .filterVideoSongs(dataStore.get(HideVideoSongsKey, false))
+                }
+            } catch (e: Exception) {
+                reportException(e)
+                return null
+            }
+
+        if (initialStatus.items.isEmpty()) return null
+
+        currentQueue = radioQueue
+        queueTitle = initialStatus.title
+
+        return MediaSession.MediaItemsWithStartPosition(
+            initialStatus.items,
+            if (initialStatus.mediaItemIndex > 0) initialStatus.mediaItemIndex else 0,
+            C.TIME_UNSET,
+        )
+    }
+
     fun startRadioSeamlessly() {
         if (!playerInitialized.value) {
             Timber.tag(TAG).w("startRadioSeamlessly called before player initialization")
