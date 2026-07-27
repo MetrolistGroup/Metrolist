@@ -4828,6 +4828,11 @@ class MusicService :
         const val EXTRA_ALARM_RANDOM_SONG = "extra_alarm_random_song"
 
         const val ROOT = "root"
+        const val HOME = "home"
+        const val HOME_QUICK_PICKS = "home/quick_picks"
+        const val HOME_LISTEN_AGAIN = "home/listen_again"
+        const val HOME_SPEED_DIAL = "home/speed_dial"
+        const val HOME_RECOMMENDED = "home/recommended"
         const val SONG = "song"
         const val ARTIST = "artist"
         const val ALBUM = "album"

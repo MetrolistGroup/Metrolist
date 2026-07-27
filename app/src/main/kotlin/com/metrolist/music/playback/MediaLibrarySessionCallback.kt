@@ -41,6 +41,8 @@ import com.metrolist.music.constants.SongSortType
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.PlaylistEntity
 import com.metrolist.music.db.entities.Song
+import com.metrolist.music.extensions.filterExplicit
+import com.metrolist.music.extensions.filterVideoSongs
 import com.metrolist.music.extensions.metadata
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.extensions.toggleRepeatMode
@@ -165,8 +167,7 @@ constructor(
     ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> =
         scope.future(Dispatchers.IO) {
             try {
-            LibraryResult.ofItemList(
-                when (parentId) {
+            val items = when (parentId) {
                     MusicService.ROOT -> {
                         val sectionsRaw = context.dataStore.get(
                             AndroidAutoSectionsOrderKey,
@@ -179,6 +180,17 @@ constructor(
                             .ifEmpty { listOf(AndroidAutoSection.LIKED to true) }
                             .map { (section, _) ->
                                 when (section) {
+                                    // Home is a browsable tab; its children are the playable
+                                    // song tiles (built in the MusicService.HOME branch below).
+                                    // Root children become the Android Auto tab bar, so tiles
+                                    // can't live here directly — they live inside this tab.
+                                    AndroidAutoSection.HOME -> browsableMediaItem(
+                                        MusicService.HOME,
+                                        context.getString(R.string.home),
+                                        null,
+                                        drawableUri(R.drawable.home_outlined),
+                                        MediaMetadata.MEDIA_TYPE_FOLDER_MIXED,
+                                    )
                                     AndroidAutoSection.LIKED -> browsableMediaItem(
                                         "${MusicService.PLAYLIST}/${PlaylistEntity.LIKED_PLAYLIST_ID}",
                                         context.getString(R.string.liked_songs),
@@ -229,6 +241,59 @@ constructor(
                         }
                     }
 
+                    // "Home" tab: rows of directly-playable song tiles (Speed dial / Quick
+                    // picks / Listen again), grouped under section headers so the car renders
+                    // them like the phone home carousels — as close as Auto's fixed UI allows.
+                    MusicService.HOME -> buildHomeTiles()
+
+                    // Quick picks: personalized songs (same source as the phone home screen).
+                    MusicService.HOME_QUICK_PICKS ->
+                        database.quickPicks().first()
+                            .filterExplicit(context.dataStore.get(HideExplicitKey, false))
+                            .filterVideoSongs(context.dataStore.get(HideVideoSongsKey, false))
+                            .map { it.toMediaItem(MusicService.HOME_QUICK_PICKS) }
+
+                    // Listen again: most-played songs from local history.
+                    MusicService.HOME_LISTEN_AGAIN ->
+                        database.mostPlayedSongs(
+                            fromTimeStamp = java.time.LocalDateTime.now().minusMonths(3),
+                            limit = 100,
+                        ).first()
+                            .filterExplicit(context.dataStore.get(HideExplicitKey, false))
+                            .filterVideoSongs(context.dataStore.get(HideVideoSongsKey, false))
+                            .map { it.toMediaItem(MusicService.HOME_LISTEN_AGAIN) }
+
+                    // Recommended: playlists/mixes from the online home feed.
+                    MusicService.HOME_RECOMMENDED -> {
+                        try {
+                            val allSections = mutableListOf<com.metrolist.innertube.pages.HomePage.Section>()
+                            var continuation: String? = null
+                            for (p in 0 until 4) {
+                                val result = YouTube.home(continuation)
+                                    .onFailure { reportException(it) }
+                                    .getOrNull() ?: break
+                                allSections.addAll(result.sections)
+                                continuation = result.continuation
+                                if (continuation == null) break
+                            }
+                            allSections
+                                .flatMap { it.items }
+                                .filterIsInstance<PlaylistItem>()
+                                .distinctBy { it.id }
+                                .map { playlist ->
+                                    browsableMediaItem(
+                                        "${MusicService.YOUTUBE_PLAYLIST}/${playlist.id}",
+                                        playlist.title,
+                                        playlist.author?.name,
+                                        playlist.thumbnail?.toUri(),
+                                        MediaMetadata.MEDIA_TYPE_PLAYLIST,
+                                    )
+                                }
+                        } catch (e: Exception) {
+                            reportException(e)
+                            emptyList()
+                        }
+                    }
 
                     MusicService.SONG -> database.songsByCreateDateAsc().first()
                         .map { it.toMediaItem(parentId) }
@@ -444,9 +509,27 @@ constructor(
 
                             else -> emptyList()
                         }
-                },
-                params,
-            )
+                }
+            // Inside the Home tab, tell the car to render the playable song tiles as a grid,
+            // like the phone home carousels. Other nodes keep the default list style.
+            val resultParams = if (parentId == MusicService.HOME) {
+                val extras = Bundle(params?.extras ?: Bundle.EMPTY).apply {
+                    putInt(
+                        androidx.media3.session.MediaConstants.EXTRAS_KEY_CONTENT_STYLE_PLAYABLE,
+                        androidx.media3.session.MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM,
+                    )
+                    putInt(
+                        androidx.media3.session.MediaConstants.EXTRAS_KEY_CONTENT_STYLE_BROWSABLE,
+                        androidx.media3.session.MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_LIST_ITEM,
+                    )
+                }
+                MediaLibraryService.LibraryParams.Builder()
+                    .setExtras(extras)
+                    .build()
+            } else {
+                params
+            }
+            LibraryResult.ofItemList(items, resultParams)
             } catch (e: Exception) {
                 reportException(e)
                 LibraryResult.ofItemList(emptyList(), params)
@@ -598,6 +681,31 @@ constructor(
                     MediaItemsWithStartPosition(
                         allSongs.map { it.toMediaItem() },
                         allSongs.indexOfFirst { it.id == songId }.takeIf { it != -1 } ?: 0,
+                        startPositionMs
+                    )
+                }
+
+                // Home sub-folders (mediaId like "home/quick_picks/<songId>"): play the
+                // matching list starting from the tapped song. path = [home, <sub>, songId].
+                MusicService.HOME -> {
+                    val songId = path.getOrNull(2) ?: return@future defaultResult
+                    val subFolder = "${MusicService.HOME}/${path.getOrNull(1)}"
+                    val songs = when (subFolder) {
+                        MusicService.HOME_SPEED_DIAL -> database.speedDialDao.getAll().first()
+                            .filter { it.type == "SONG" }
+                            .mapNotNull { database.song(it.id).first() }
+                        MusicService.HOME_QUICK_PICKS -> database.quickPicks().first()
+                        MusicService.HOME_LISTEN_AGAIN -> database.mostPlayedSongs(
+                            fromTimeStamp = java.time.LocalDateTime.now().minusMonths(3),
+                            limit = 100,
+                        ).first()
+                        else -> return@future defaultResult
+                    }
+                        .filterExplicit(context.dataStore.get(HideExplicitKey, false))
+                        .filterVideoSongs(context.dataStore.get(HideVideoSongsKey, false))
+                    MediaItemsWithStartPosition(
+                        songs.map { it.toMediaItem() },
+                        songs.indexOfFirst { it.id == songId }.takeIf { it != -1 } ?: 0,
                         startPositionMs
                     )
                 }
@@ -837,6 +945,82 @@ constructor(
                 .setMediaType(mediaType)
                 .build(),
         ).build()
+
+    /**
+     * A directly-playable song tile for the Android Auto home. [groupTitle] becomes the
+     * section header the car groups tiles under (e.g. "Quick picks"); with the grid
+     * content-style set on the browse result this renders as titled rows of artwork tiles,
+     * mimicking the phone home carousels within Android Auto's fixed UI. The [path] prefix
+     * routes taps back to the matching list in [onSetMediaItems] (e.g. HOME_QUICK_PICKS).
+     */
+    private fun Song.toHomeTile(path: String, groupTitle: String): MediaItem {
+        val extras = Bundle().apply {
+            putString(
+                androidx.media3.session.MediaConstants.EXTRAS_KEY_CONTENT_STYLE_GROUP_TITLE,
+                groupTitle,
+            )
+        }
+        return MediaItem.Builder()
+            .setMediaId("$path/$id")
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(song.title)
+                    .setSubtitle(artists.joinToArtistString(getArtistSeparator(context)) { it.name })
+                    .setArtist(artists.joinToArtistString(getArtistSeparator(context)) { it.name })
+                    .setArtworkUri(song.thumbnailUrl?.toUri())
+                    .setIsPlayable(true)
+                    .setIsBrowsable(false)
+                    .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                    .setExtras(extras)
+                    .build(),
+            ).build()
+    }
+
+    /**
+     * Builds the playable song tiles shown inline on the Android Auto root for the Home
+     * section: Speed dial, Quick picks and Listen again. All local/DB-backed so the first
+     * screen loads fast; each returns empty gracefully if there's no data yet.
+     */
+    private suspend fun buildHomeTiles(): List<MediaItem> {
+        val hideExplicit = context.dataStore.get(HideExplicitKey, false)
+        val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
+
+        val speedDialSongs = try {
+            database.speedDialDao.getAll().first()
+                .filter { it.type == "SONG" }
+                .mapNotNull { database.song(it.id).first() }
+                .filterExplicit(hideExplicit)
+                .filterVideoSongs(hideVideoSongs)
+                .take(12)
+                .map { it.toHomeTile(MusicService.HOME_SPEED_DIAL, context.getString(R.string.speed_dial)) }
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        val quickPickTiles = try {
+            database.quickPicks().first()
+                .filterExplicit(hideExplicit)
+                .filterVideoSongs(hideVideoSongs)
+                .take(12)
+                .map { it.toHomeTile(MusicService.HOME_QUICK_PICKS, context.getString(R.string.quick_picks)) }
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        val listenAgainTiles = try {
+            database.mostPlayedSongs(
+                fromTimeStamp = java.time.LocalDateTime.now().minusMonths(3),
+                limit = 12,
+            ).first()
+                .filterExplicit(hideExplicit)
+                .filterVideoSongs(hideVideoSongs)
+                .map { it.toHomeTile(MusicService.HOME_LISTEN_AGAIN, context.getString(R.string.listen_again)) }
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        return speedDialSongs + quickPickTiles + listenAgainTiles
+    }
 
     private fun Song.toMediaItem(path: String, isPlayable: Boolean = true, isBrowsable: Boolean = false): MediaItem {
         val artworkBytes = try {

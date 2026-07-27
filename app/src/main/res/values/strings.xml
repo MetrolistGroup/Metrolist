@@ -26,6 +26,8 @@
     <string name="account">Account</string>
     <string name="quick_picks">Quick picks</string>
     <string name="quick_picks_empty">Listen to songs to generate your quick picks</string>
+    <string name="listen_again">Listen again</string>
+    <string name="recommended">Recommended</string>
     <string name="forgotten_favorites">Forgotten favorites</string>
     <string name="keep_listening">Keep listening</string>
     <string name="your_youtube_playlists">Your YouTube playlists</string>

@@ -60,6 +60,7 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 enum class AndroidAutoSection(val id: String) {
+    HOME("home"),
     LIKED("liked"),
     SONGS("songs"),
     ARTISTS("artists"),
@@ -69,6 +70,7 @@ enum class AndroidAutoSection(val id: String) {
 
 @Composable
 fun AndroidAutoSection.label(): String = when (this) {
+    AndroidAutoSection.HOME -> stringResource(R.string.home)
     AndroidAutoSection.LIKED -> stringResource(R.string.liked_songs)
     AndroidAutoSection.SONGS -> stringResource(R.string.songs)
     AndroidAutoSection.ARTISTS -> stringResource(R.string.artists)
@@ -81,13 +83,18 @@ fun serializeSections(sections: List<Pair<AndroidAutoSection, Boolean>>): String
 
 fun deserializeSections(raw: String): List<Pair<AndroidAutoSection, Boolean>> {
     if (raw.isBlank()) return AndroidAutoSection.values().map { it to true }
-    return raw.split(",").mapNotNull { token ->
+    val saved = raw.split(",").mapNotNull { token ->
         val parts = token.split(":")
         if (parts.size != 2) return@mapNotNull null
         val section = AndroidAutoSection.values().find { it.id == parts[0] } ?: return@mapNotNull null
         val enabled = parts[1].toBooleanStrictOrNull() ?: true
         section to enabled
     }
+    // Append any sections not present in a previously saved order (e.g. HOME added in an
+    // update) so existing users still get new sections instead of them silently missing.
+    val savedIds = saved.mapTo(mutableSetOf()) { it.first }
+    val missing = AndroidAutoSection.values().filterNot { it in savedIds }.map { it to true }
+    return saved + missing
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -178,6 +185,7 @@ fun AndroidAutoSettings(
                             Material3SettingsItem(
                                 icon = painterResource(
                                     when (section) {
+                                        AndroidAutoSection.HOME -> R.drawable.home_outlined
                                         AndroidAutoSection.LIKED -> R.drawable.favorite
                                         AndroidAutoSection.SONGS -> R.drawable.music_note
                                         AndroidAutoSection.ARTISTS -> R.drawable.artist
