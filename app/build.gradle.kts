@@ -162,9 +162,12 @@ android {
         }
         create("release") {
             storeFile = file("keystore/release.keystore")
-            storePassword = System.getenv("STORE_PASSWORD")
-            keyAlias = System.getenv("KEY_ALIAS")
-            keyPassword = System.getenv("KEY_PASSWORD")
+            // Fall back to the personal-use defaults baked into the keystore we generated,
+            // so a local release build works without exporting env vars. CI/official builds
+            // can still override via STORE_PASSWORD/KEY_ALIAS/KEY_PASSWORD.
+            storePassword = System.getenv("STORE_PASSWORD")?.takeIf { it.isNotBlank() } ?: "metrolist-release"
+            keyAlias = System.getenv("KEY_ALIAS")?.takeIf { it.isNotBlank() } ?: "metrolist"
+            keyPassword = System.getenv("KEY_PASSWORD")?.takeIf { it.isNotBlank() } ?: "metrolist-release"
         }
         getByName("debug") {
             keyAlias = "androiddebugkey"
@@ -184,6 +187,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // Sign with our own release key when the keystore is present (personal builds).
+            // Without it, the release APK would be unsigned and won't install.
+            if (file("keystore/release.keystore").exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             if (applicationIdOverride == null) {
