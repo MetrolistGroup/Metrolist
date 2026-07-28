@@ -1032,7 +1032,7 @@ fun BottomSheetPlayer(
                     }
 
                     Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (mediaMetadata.explicit) MIcon.Explicit()
@@ -1054,7 +1054,7 @@ fun BottomSheetPlayer(
                             Box(
                                 modifier =
                                     Modifier
-                                        .fillMaxWidth()
+                                        .weight(1f, fill = false)
                                         .basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
                                         .padding(end = 12.dp),
                             ) {
