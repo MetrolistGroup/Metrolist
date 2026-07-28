@@ -1056,7 +1056,8 @@ fun BottomSheetPlayer(
                                     Modifier
                                         .weight(1f, fill = false)
                                         .basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
-                                        .padding(end = 12.dp, bottom = 8.dp),
+                                        .offset(y = (-8).dp)
+                                        .padding(end = 12.dp),
                             ) {
                                 var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
                                 var clickOffset by remember { mutableStateOf<Offset?>(null) }
