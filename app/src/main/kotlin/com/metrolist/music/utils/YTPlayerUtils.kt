@@ -412,8 +412,15 @@ object YTPlayerUtils {
                 // GET that ExoPlayer makes. Skip HEAD validation for the main client and let ExoPlayer
                 // try directly, UNLESS this videoId already 403'd on GET (markWebRemixFailed) — then
                 // fall through to the fallback clients. Saves a validateStatus round-trip per resolve.
+                
+                val musicVideoType = streamPlayerResponse?.videoDetails?.musicVideoType
+                val isUgcOrPodcast = musicVideoType == "MUSIC_VIDEO_TYPE_UGC" ||
+                                     musicVideoType?.contains("PODCAST") == true ||
+                                     musicVideoType == null
+
                 if (currentClient.clientName == "WEB_REMIX" &&
-                    !webRemixFailedIds.contains(videoId)
+                    !webRemixFailedIds.contains(videoId) &&
+                    !isUgcOrPodcast
                 ) {
                     Timber.tag(logTag).d("WEB_REMIX — skipping HEAD validation, letting ExoPlayer try directly")
                     Timber.tag(TAG).i("Playback: client=${currentClient.clientName}, videoId=$videoId")
