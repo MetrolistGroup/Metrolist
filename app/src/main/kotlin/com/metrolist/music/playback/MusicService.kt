@@ -4593,8 +4593,7 @@ class MusicService :
         crossfadeMessage?.cancel()
         crossfadeMessage = null
         
-        val speed = player.playbackParameters.speed.coerceAtLeast(0.01f)
-        val mediaCrossfadeDuration = (crossfadeDuration * speed).toLong()
+        val mediaCrossfadeDuration = crossfadeDuration.toLong()
 
         if (!crossfadeEnabled || crossfadeDuration <= 0f || player.duration == C.TIME_UNSET || player.duration <= mediaCrossfadeDuration) return
         if (crossfadeGapless && isNextItemGapless()) return
@@ -4629,7 +4628,7 @@ class MusicService :
     private fun startCrossfade() {
         if (isCrossfading) return
 
-        playerNormalizationProcessors.values.forEach { it.enabled = false }
+
 
         // Preserve player state before creating the secondary player
         // Use runBlocking to ensure we get the correct state from DataStore
@@ -4694,6 +4693,14 @@ class MusicService :
         _playerFlow.value = player
         secondaryPlayer = null
 
+        fadingPlayer?.repeatMode = Player.REPEAT_MODE_OFF
+        fadingPlayer?.let {
+            val currentIndex = it.currentMediaItemIndex
+            if (currentIndex < it.mediaItemCount - 1) {
+                it.removeMediaItems(currentIndex + 1, it.mediaItemCount)
+            }
+        }
+
         fadingPlayer?.removeListener(this)
         sleepTimer?.let { timer -> fadingPlayer?.removeListener(timer) }
 
@@ -4737,7 +4744,8 @@ class MusicService :
 
         crossfadeJob =
             scope.launch {
-                val duration = crossfadeDuration.toLong()
+                val speed = fadingPlayer?.playbackParameters?.speed?.coerceAtLeast(0.01f) ?: 1f
+                val duration = (crossfadeDuration / speed).toLong()
                 val steps = 20
                 val stepTime = duration / steps
                 val startVolume =
