@@ -413,7 +413,6 @@ object YTPlayerUtils {
                 // try directly, UNLESS this videoId already 403'd on GET (markWebRemixFailed) — then
                 // fall through to the fallback clients. Saves a validateStatus round-trip per resolve.
                 
-                val musicVideoType = streamPlayerResponse?.videoDetails?.musicVideoType
                 val isUgcOrPodcast = musicVideoType == "MUSIC_VIDEO_TYPE_UGC" ||
                                      musicVideoType?.contains("PODCAST") == true ||
                                      musicVideoType == null
@@ -640,10 +639,11 @@ object YTPlayerUtils {
                 println("[PLAYBACK_DEBUG] Added cookie to validation request")
             }
 
-            val response = httpClient.newCall(requestBuilder.build()).execute()
-            val isSuccessful = response.isSuccessful
-            Timber.tag(logTag).d("Stream URL validation result: ${if (isSuccessful) "Success" else "Failed"} (${response.code})")
-            return isSuccessful
+            httpClient.newCall(requestBuilder.build()).execute().use { response ->
+                val isSuccessful = response.isSuccessful
+                Timber.tag(logTag).d("Stream URL validation result: ${if (isSuccessful) "Success" else "Failed"} (${response.code})")
+                return isSuccessful
+            }
         } catch (e: Exception) {
             Timber.tag(logTag).e(e, "Stream URL validation failed with exception")
             reportException(e)
