@@ -1721,7 +1721,9 @@ fun BottomSheetPlayer(
                                             .size(32.dp)
                                             .padding(4.dp)
                                             .align(Alignment.Center)
-                                            .alpha(if (isListenTogetherGuest) 0.5f else 1f),
+                                            .alpha(
+                                                if (isListenTogetherGuest || repeatMode == Player.REPEAT_MODE_OFF) 0.5f else 1f,
+                                            ),
                                     enabled = !isListenTogetherGuest,
                                     onClick = {
                                         playerConnection.player.toggleRepeatMode()
