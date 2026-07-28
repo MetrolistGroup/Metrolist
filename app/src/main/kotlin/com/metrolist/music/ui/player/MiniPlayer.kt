@@ -668,7 +668,7 @@ private fun NewMiniPlayerSongInfo(
                 modifier = Modifier.basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
             )
             Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (metadata.explicit) MIcon.Explicit()
@@ -679,7 +679,7 @@ private fun NewMiniPlayerSongInfo(
                         fontSize = 12.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Clip,
-                        modifier = Modifier.weight(1f, fill = false).basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
+                        modifier = Modifier.padding(bottom = 8.dp).weight(1f, fill = false).basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
                     )
                 }
             }
