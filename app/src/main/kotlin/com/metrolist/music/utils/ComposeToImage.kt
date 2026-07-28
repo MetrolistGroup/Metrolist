@@ -67,6 +67,17 @@ object ComposeToImage {
 
             val bitmap = createBitmap(imageWidth, imageHeight)
             val canvas = Canvas(bitmap)
+            val backgroundRect = RectF(0f, 0f, imageWidth.toFloat(), imageHeight.toFloat())
+
+            // Base scale on width relative to the reference design (340dp)
+            // 2160 / 340 ≈ 6.35
+            val scale = imageWidth / 340f
+            val cornerRadius = 20f * scale
+            val exportPath =
+                Path().apply {
+                    addRoundRect(backgroundRect, cornerRadius, cornerRadius, Path.Direction.CW)
+                }
+            canvas.clipPath(exportPath)
 
             val defaultBackgroundColor = 0xFF121212.toInt()
             val defaultTextColor = 0xFFFFFFFF.toInt()
@@ -95,7 +106,6 @@ object ComposeToImage {
             }
 
             // Draw Background
-            val backgroundRect = RectF(0f, 0f, imageWidth.toFloat(), imageHeight.toFloat())
             val backgroundPaint =
                 Paint().apply {
                     isAntiAlias = true
@@ -164,12 +174,6 @@ object ComposeToImage {
                     }
                 }
             }
-
-            // Base scale on width relative to the reference design (340dp)
-            // 2160 / 340 ≈ 6.35
-            val scale = imageWidth / 340f
-
-            val cornerRadius = 20f * scale
 
             // Draw inner border
             val borderPaint =
