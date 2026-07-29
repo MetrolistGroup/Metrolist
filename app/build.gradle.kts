@@ -395,6 +395,7 @@ dependencies {
     implementation(project(":betterlyrics"))
     implementation(project(":shazamkit"))
     implementation(project(":paxsenix"))
+    implementation(project(":sponsorblock"))
 
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)

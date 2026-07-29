@@ -1016,4 +1016,31 @@
     <string name="stream_source_web_creator_desc">Creator web client.</string>
     <string name="stream_source_android_creator">ANDROID_CREATOR</string>
     <string name="stream_source_android_creator_desc">Android creator client. Off by default; needs DroidGuard.</string>
+    <!-- SponsorBlock -->
+    <string name="sponsorblock">SponsorBlock</string>
+    <string name="sponsorblock_desc">Skip sponsors and non-music sections automatically</string>
+    <string name="sponsorblock_enable">Enable SponsorBlock</string>
+    <string name="sponsorblock_enable_desc">Look up community-submitted segments and skip them during playback. Only the first four characters of a hashed video ID are sent, so the server never learns what you are listening to.</string>
+    <string name="sponsorblock_notify_on_skip">Show a message when skipping</string>
+    <string name="sponsorblock_notify_on_skip_desc">Briefly confirm each skip so a jump in playback is not mistaken for a glitch</string>
+    <string name="sponsorblock_skipped">Segment skipped</string>
+    <string name="sponsorblock_categories">Categories to skip</string>
+    <string name="sponsorblock_category_sponsor">Sponsor</string>
+    <string name="sponsorblock_category_sponsor_desc">Paid promotion, paid referrals and direct advertisements</string>
+    <string name="sponsorblock_category_selfpromo">Unpaid or self promotion</string>
+    <string name="sponsorblock_category_selfpromo_desc">Merchandise, donation appeals and shout-outs to other creators</string>
+    <string name="sponsorblock_category_interaction">Reminder to subscribe</string>
+    <string name="sponsorblock_category_interaction_desc">A short reminder to like, subscribe or follow</string>
+    <string name="sponsorblock_category_intro">Intro</string>
+    <string name="sponsorblock_category_intro_desc">An intro animation or a pause with no content</string>
+    <string name="sponsorblock_category_outro">Outro</string>
+    <string name="sponsorblock_category_outro_desc">Credits or an endcard after the content has finished</string>
+    <string name="sponsorblock_category_preview">Preview or recap</string>
+    <string name="sponsorblock_category_preview_desc">A recap of earlier content, or a preview of what is coming later</string>
+    <string name="sponsorblock_category_filler">Filler</string>
+    <string name="sponsorblock_category_filler_desc">Tangential scenes added only as filler or humour</string>
+    <string name="sponsorblock_category_music_offtopic">Non-music</string>
+    <string name="sponsorblock_category_music_offtopic_desc">Sections of a music video that are not music. The most useful category for a music app.</string>
+    <string name="sponsorblock_attribution">Data from SponsorBlock</string>
+    <string name="sponsorblock_attribution_desc">Segments are contributed by the SponsorBlock community and licensed under CC BY-NC-SA 4.0.</string>
 </resources>
