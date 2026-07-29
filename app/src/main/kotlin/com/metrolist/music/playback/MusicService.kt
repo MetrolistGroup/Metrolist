@@ -225,6 +225,7 @@ import com.metrolist.music.widget.MusicWidgetReceiver
 import com.metrolist.music.widget.PlaylistWidgetReceiver
 import com.metrolist.music.ui.utils.resize
 import com.metrolist.sponsorblock.SponsorBlock
+import com.metrolist.sponsorblock.models.Segment
 import com.metrolist.sponsorblock.models.nextSegmentAfter
 import com.metrolist.sponsorblock.models.segmentAt
 import dagger.hilt.android.AndroidEntryPoint
@@ -430,6 +431,15 @@ class MusicService :
     private val instantSilenceSkipEnabled = MutableStateFlow(false)
 
     private var sponsorBlockJob: Job? = null
+    private var sponsorBlockSegments: List<Segment> = emptyList()
+    private var sponsorBlockVideoId: String? = null
+    private var sponsorBlockNotifyOnSkip: Boolean = true
+
+    /**
+     * Set immediately before the watcher's own seek, so the resulting
+     * discontinuity is not mistaken for the user scrubbing.
+     */
+    private var sponsorBlockSelfSeek = false
 
     private var isAudioEffectSessionOpened = false
     private var openedAudioEffectSessionId: Int = C.AUDIO_SESSION_ID_UNSET
@@ -903,10 +913,16 @@ class MusicService :
             }
         }
 
-        // Re-read segments when SponsorBlock is toggled or its categories change,
-        // so a change takes effect on the current track instead of the next one.
+        // Re-read segments when any SponsorBlock preference changes, so a change
+        // takes effect on the current track instead of only the next one.
         dataStore.data
-            .map { (it[SponsorBlockEnabledKey] ?: false) to it.enabledSponsorBlockCategories() }
+            .map {
+                Triple(
+                    it[SponsorBlockEnabledKey] ?: false,
+                    it.enabledSponsorBlockCategories(),
+                    it[SponsorBlockNotifyOnSkipKey] ?: true,
+                )
+            }
             .distinctUntilChanged()
             .collectLatest(scope) { setupSponsorBlock() }
 
@@ -2324,6 +2340,9 @@ class MusicService :
      */
     private fun setupSponsorBlock() {
         sponsorBlockJob?.cancel()
+        sponsorBlockSegments = emptyList()
+        sponsorBlockVideoId = null
+
         sponsorBlockJob = scope.launch {
             val videoId = player.currentMediaItem?.mediaId ?: return@launch
 
@@ -2331,7 +2350,7 @@ class MusicService :
             if (prefs[SponsorBlockEnabledKey] != true) return@launch
             val categories = prefs.enabledSponsorBlockCategories()
             if (categories.isEmpty()) return@launch
-            val notifyOnSkip = prefs[SponsorBlockNotifyOnSkipKey] ?: true
+            sponsorBlockNotifyOnSkip = prefs[SponsorBlockNotifyOnSkipKey] ?: true
 
             val segments = withContext(Dispatchers.IO) {
                 SponsorBlock.getSegments(videoId, categories).getOrElse { throwable ->
@@ -2342,39 +2361,64 @@ class MusicService :
             // Most tracks have nothing submitted; leave playback completely alone.
             if (segments.isEmpty()) return@launch
 
+            sponsorBlockVideoId = videoId
+            sponsorBlockSegments = segments
             Timber.tag(TAG).d("SponsorBlock: %d segment(s) for %s", segments.size, videoId)
 
-            while (isActive) {
-                // The track changed under us; the new one gets its own watcher.
-                if (player.currentMediaItem?.mediaId != videoId) return@launch
+            watchSponsorBlockSegments(videoId, segments)
+        }
+    }
 
-                if (!player.isPlaying) {
-                    delay(SPONSORBLOCK_IDLE_POLL_MS)
-                    continue
-                }
+    /**
+     * Restarts the watcher against the segments already in hand.
+     *
+     * A seek or a speed change invalidates the sleep the watcher is sitting in,
+     * because that delay was derived from the old position and rate. Recomputing
+     * it needs no network round trip, so this deliberately reuses the cached
+     * segments rather than calling [setupSponsorBlock].
+     */
+    private fun restartSponsorBlockWatch() {
+        val videoId = sponsorBlockVideoId ?: return
+        val segments = sponsorBlockSegments
+        if (segments.isEmpty()) return
+        if (player.currentMediaItem?.mediaId != videoId) return
 
-                val position = player.currentPosition
-                val current = segments.segmentAt(position)
-                if (current != null) {
-                    player.seekTo(current.endMs)
-                    if (notifyOnSkip) {
-                        Toast.makeText(
-                            this@MusicService,
-                            getString(R.string.sponsorblock_skipped),
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    }
-                    // seekTo is asynchronous; give the player a moment to report
-                    // the new position so the next pass does not re-skip.
-                    delay(SPONSORBLOCK_POST_SEEK_SETTLE_MS)
-                    continue
-                }
+        sponsorBlockJob?.cancel()
+        sponsorBlockJob = scope.launch { watchSponsorBlockSegments(videoId, segments) }
+    }
 
-                val next = segments.nextSegmentAfter(position) ?: return@launch
-                val speed = player.playbackParameters.speed.coerceAtLeast(0.1f)
-                val waitMs = ((next.startMs - position) / speed).toLong()
-                delay(waitMs.coerceAtLeast(SPONSORBLOCK_MIN_WAIT_MS))
+    private suspend fun watchSponsorBlockSegments(videoId: String, segments: List<Segment>) {
+        while (coroutineContext.isActive) {
+            // The track changed under us; the new one gets its own watcher.
+            if (player.currentMediaItem?.mediaId != videoId) return
+
+            if (!player.isPlaying) {
+                delay(SPONSORBLOCK_IDLE_POLL_MS)
+                continue
             }
+
+            val position = player.currentPosition
+            val current = segments.segmentAt(position)
+            if (current != null) {
+                sponsorBlockSelfSeek = true
+                player.seekTo(current.endMs)
+                if (sponsorBlockNotifyOnSkip) {
+                    Toast.makeText(
+                        this@MusicService,
+                        getString(R.string.sponsorblock_skipped),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+                // seekTo is asynchronous; give the player a moment to report
+                // the new position so the next pass does not re-skip.
+                delay(SPONSORBLOCK_POST_SEEK_SETTLE_MS)
+                continue
+            }
+
+            val next = segments.nextSegmentAfter(position) ?: return
+            val speed = player.playbackParameters.speed.coerceAtLeast(0.1f)
+            val waitMs = ((next.startMs - position) / speed).toLong()
+            delay(waitMs.coerceAtLeast(SPONSORBLOCK_MIN_WAIT_MS))
         }
     }
 
@@ -2887,6 +2931,8 @@ class MusicService :
         if (playbackParameters.speed != lastPlaybackSpeed) {
             Timber.tag("DiscordSvc").d("onPlaybackParametersChanged: speed changed %s -> %s", lastPlaybackSpeed, playbackParameters.speed)
             lastPlaybackSpeed = playbackParameters.speed
+            // The pending SponsorBlock wait was scaled by the old speed.
+            restartSponsorBlockWatch()
             DiscordRpcManager.notifySettingsChanged()
             scope.launch {
                 delay(1000)
@@ -4670,6 +4716,15 @@ class MusicService :
     ) {
         if (reason == Player.DISCONTINUITY_REASON_SEEK) {
             scheduleCrossfade()
+
+            // Our own skip also lands here. Restarting on it would cancel the
+            // watcher mid-skip and could bounce it straight back into the
+            // segment it just left, so only a user seek recomputes the wait.
+            if (sponsorBlockSelfSeek) {
+                sponsorBlockSelfSeek = false
+            } else {
+                restartSponsorBlockWatch()
+            }
         }
     }
 

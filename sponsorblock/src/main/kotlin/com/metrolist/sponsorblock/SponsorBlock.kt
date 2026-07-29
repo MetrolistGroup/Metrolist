@@ -15,6 +15,7 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.json.Json
@@ -62,28 +63,40 @@ object SponsorBlock {
     suspend fun getSegments(
         videoId: String,
         categories: Set<SponsorBlockCategory>,
-    ): Result<List<Segment>> = runCatching {
-        if (videoId.isBlank() || categories.isEmpty()) return@runCatching emptyList()
+    ): Result<List<Segment>> {
+        if (videoId.isBlank() || categories.isEmpty()) return Result.success(emptyList())
 
-        val response: HttpResponse = client.get("api/skipSegments/${hashPrefixOf(videoId)}") {
-            parameter("categories", categories.toJsonArray { it.apiName })
-            parameter("actionTypes", listOf("skip").toJsonArray { it })
+        return try {
+            val response: HttpResponse = client.get("api/skipSegments/${hashPrefixOf(videoId)}") {
+                parameter("categories", categories.toJsonArray { it.apiName })
+                parameter("actionTypes", listOf("skip").toJsonArray { it })
+            }
+
+            currentCoroutineContext().ensureActive()
+
+            // The API answers 404 when nothing is submitted for the whole prefix.
+            if (response.status == HttpStatusCode.NotFound) return Result.success(emptyList())
+            if (!response.status.isSuccess()) {
+                return Result.failure(
+                    IllegalStateException("SponsorBlock request failed: ${response.status}"),
+                )
+            }
+
+            Result.success(
+                response.body<List<VideoSegments>>()
+                    .filter { it.videoId == videoId }
+                    .flatMap { it.segments }
+                    .mapNotNull { it.toSegment() }
+                    .filter { it.category in categories }
+                    .sanitized(),
+            )
+        } catch (cancellation: CancellationException) {
+            // Must propagate: swallowing this into a failed Result would let a
+            // cancelled lookup carry on as an ordinary "no segments" answer.
+            throw cancellation
+        } catch (throwable: Throwable) {
+            Result.failure(throwable)
         }
-
-        currentCoroutineContext().ensureActive()
-
-        // The API answers 404 when nothing is submitted for the whole prefix.
-        if (response.status == HttpStatusCode.NotFound) return@runCatching emptyList()
-        if (!response.status.isSuccess()) {
-            throw IllegalStateException("SponsorBlock request failed: ${response.status}")
-        }
-
-        response.body<List<VideoSegments>>()
-            .filter { it.videoId == videoId }
-            .flatMap { it.segments }
-            .mapNotNull { it.toSegment() }
-            .filter { it.category in categories }
-            .sanitized()
     }
 
     /** First [HASH_PREFIX_LENGTH] hex characters of the SHA-256 of [videoId]. */

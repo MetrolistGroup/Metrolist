@@ -103,6 +103,19 @@ class SegmentTest {
     }
 
     @Test
+    fun `seeking backward into a segment is still detected`() {
+        // A user scrubbing back into a stretch that was already skipped must be
+        // skipped again, so the lookup has to be position-driven rather than
+        // remembering what it has already passed.
+        val segments = listOf(segment(5_000, 9_000), segment(30_000, 40_000)).sanitized()
+
+        assertEquals(5_000L, segments.segmentAt(7_000)?.startMs)
+        assertEquals(30_000L, segments.segmentAt(35_000)?.startMs)
+        // And seeking past everything leaves nothing pending.
+        assertNull(segments.nextSegmentAfter(45_000))
+    }
+
+    @Test
     fun `an empty segment list never reports a skip`() {
         val empty = emptyList<Segment>().sanitized()
 
