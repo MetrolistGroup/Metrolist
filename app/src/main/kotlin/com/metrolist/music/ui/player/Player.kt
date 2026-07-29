@@ -1052,25 +1052,25 @@ fun BottomSheetPlayer(
                                     }
                                 }
 
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .weight(1f)
-                                        .basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
-                                        .offset(y = (-8).dp)
-                                        .padding(end = 12.dp),
-                            ) {
+                             Box(
+                                 modifier =
+                                     Modifier
+                                         .weight(1f)
+                                         .offset(y = (-8).dp)
+                                         .padding(end = 12.dp),
+                             ) {
                                 var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
                                 var clickOffset by remember { mutableStateOf<Offset?>(null) }
                                 Text(
                                     text = annotatedString,
                                     style = MaterialTheme.typography.titleMedium.copy(color = TextBackgroundColor),
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    onTextLayout = { layoutResult = it },
-                                    modifier =
-                                        Modifier
-                                            .pointerInput(Unit) {
+                                    overflow = TextOverflow.Clip,
+                                     onTextLayout = { layoutResult = it },
+                                     modifier =
+                                         Modifier
+                                             .basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
+                                             .pointerInput(Unit) {
                                                 awaitPointerEventScope {
                                                     while (true) {
                                                         val event = awaitPointerEvent()
