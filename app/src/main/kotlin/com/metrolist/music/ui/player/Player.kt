@@ -1056,7 +1056,7 @@ fun BottomSheetPlayer(
                                  modifier =
                                      Modifier
                                          .weight(1f)
-                                         .offset(y = (-8).dp)
+                                         .offset(y = (-4).dp)
                                          .padding(end = 12.dp),
                              ) {
                                 var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
