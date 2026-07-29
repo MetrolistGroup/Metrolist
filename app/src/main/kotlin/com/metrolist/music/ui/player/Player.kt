@@ -1055,7 +1055,7 @@ fun BottomSheetPlayer(
                             Box(
                                 modifier =
                                     Modifier
-                                        .weight(1f, fill = false)
+                                        .weight(1f)
                                         .basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
                                         .offset(y = (-8).dp)
                                         .padding(end = 12.dp),

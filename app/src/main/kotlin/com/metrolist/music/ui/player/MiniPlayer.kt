@@ -679,7 +679,7 @@ private fun NewMiniPlayerSongInfo(
                         fontSize = 12.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Clip,
-                        modifier = Modifier.offset(y = (-8).dp).weight(1f, fill = false).basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
+                        modifier = Modifier.offset(y = (-8).dp).weight(1f).basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
                     )
                 }
             }
