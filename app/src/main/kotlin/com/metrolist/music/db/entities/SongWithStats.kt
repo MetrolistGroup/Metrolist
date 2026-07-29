@@ -24,7 +24,7 @@ data class SongWithStats(
             entityColumn = "artistId"           // Foreign key to the Artist table
         )
     )
-    val artists: List<ArtistEntity>,
+    val artists: List<ArtistRef>,
     val thumbnailUrl: String,
     val artistName: String?,
     val songCountListened: Int,
