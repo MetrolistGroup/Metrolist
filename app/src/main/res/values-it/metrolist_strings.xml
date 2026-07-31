@@ -198,7 +198,6 @@
     <string name="delete_desc">Rimuovi definitivamente questo elemento</string>
     <string name="advanced_desc">Regola il tempo e l\'intonazione della canzone</string>
     <string name="equalizer_desc">Apri l\'equalizzatore audio</string>
-    <string name="enable_dynamic_icon">Attiva l\'icona dinamica</string>
     <string name="mini_player">Mini lettore</string>
     <string name="pure_black_mini_player">Mini lettore nero puro</string>
     <string name="cache_size_warning_title">Aspetta!</string>
@@ -517,7 +516,7 @@
     <string name="ai_deepl_formality_default">Predefinito</string>
     <string name="ai_deepl_formality_more">Più formale</string>
     <string name="ai_deepl_formality_less">Meno formale</string>
-    <string name="discord_status">Stato</string>
+    <string name="discord_status">Condizione</string>
     <string name="discord_status_online">Online</string>
     <string name="discord_status_idle">Inattivo</string>
     <string name="discord_status_dnd">Non disturbare</string>
@@ -582,7 +581,7 @@
     <string name="listen_together_auto_approval_suggestions">Approvazione automatica dei brani suggeriti</string>
     <string name="listen_together_auto_approval_suggestions_desc">Approva automaticamente e inserisci in coda le richieste di brani da parte degli ospiti</string>
     <string name="importing_playlist">Importazione di playlist…</string>
-    <string name="randomize_home_order">Randomizza l\'ordine della schermata Iniziale</string>
+    <string name="randomize_home_order">Randomizza l\'ordine della schermata home</string>
     <string name="randomize_home_order_desc">Riordina in modo casuale le sezioni della schermata iniziale utilizzando le priorità ponderate</string>
     <string name="daily_discover_sounds_like">Sembra %1$s</string>
     <string name="daily_discover_because_you_listen_to">Perché ascolti %1$s</string>
@@ -630,7 +629,7 @@
     </plurals>
     <string name="restore_confirm_title">Vuoi ripristinare il backup?</string>
     <string name="restore_confirm_message">Questo ripristinerà i dati dell\'app dal backup</string>
-    <string name="restore_account_warning">Sarà necessario accedere nuovamente dopo il ripristino. Verrà disconnesso il seguente account:</string>
+    <string name="restore_account_warning">Le seguenti informazioni sull\'account verranno ripristinate e conservate:</string>
     <string name="restore">Ripristina</string>
     <string name="checking_previous_account">Verifica account precedente…</string>
     <string name="no_account_found">Nessun account trovato</string>
@@ -660,8 +659,8 @@
         <item quantity="other">%d canali</item>
     </plurals>
     <string name="speed_dial">Selezione rapida</string>
-    <string name="pin_to_speed_dial">Fissa nella composizione rapida</string>
-    <string name="unpin_from_speed_dial">Sblocca dalla composizione rapida</string>
+    <string name="pin_to_speed_dial">Fissa nella selezione rapida</string>
+    <string name="unpin_from_speed_dial">Sblocca dalla selezione rapida</string>
     <string name="your_shows">I tuoi spettacoli</string>
     <string name="view_channel">Visualizza canale</string>
     <string name="filter_profiles">Profili</string>
@@ -857,4 +856,50 @@
     <string name="discord_status_not_initialized">Non inizializzato</string>
     <string name="discord_error_loopback_timeout">Discord non ha inviato la risposta in tempo. Per favore riprova.</string>
     <string name="discord_error_loopback_unbound">Non è stato possibile aprire una porta callback locale. Per favore liberane una e riprova.</string>
+    <string name="format_player_hash">Hash lettore</string>
+    <string name="format_cipher_support_added">Aggiunto supporto crittografia</string>
+    <string name="not_applicable">Non applicabile</string>
+    <string name="stream_sources">Fonti streaming</string>
+    <string name="stream_source_order">Ordine streaming</string>
+    <string name="stream_source_web_clients">Client web</string>
+    <string name="stream_source_native_clients">Client nativi</string>
+    <string name="stream_source_creator_clients">Clienti creatori</string>
+    <string name="stream_source_web_remix">WEB_REMIX</string>
+    <string name="stream_source_web_remix_desc">Cliente primario. Autenticato; copre la maggior parte delle tracce.</string>
+    <string name="stream_source_tvhtml5">TVHTML5</string>
+    <string name="stream_source_tvhtml5_desc">Client TV. Backup affidabile.</string>
+    <string name="stream_source_visionos">visionOS</string>
+    <string name="stream_source_visionos_desc">Apple Vision. Nessuna porta acceleratore; molto affidabile.</string>
+    <string name="stream_source_android_vr">Android VR</string>
+    <string name="stream_source_android_vr_desc">Client Android VR (tutte le versioni).</string>
+    <string name="stream_source_ios">iOS / iPadOS</string>
+    <string name="stream_source_ios_desc">Client Apple iOS e iPadOS. Disattivato per impostazione predefinita; limitato oltre ~1 MiB.</string>
+    <string name="stream_source_web_creator">WEB_CREATOR</string>
+    <string name="stream_source_web_creator_desc">Client web creator.</string>
+    <string name="stream_source_android_creator">ANDROID_CREATOR</string>
+    <string name="stream_source_android_creator_desc">Client creator Android. Disattivato per impostazione predefinita; necessita di DroidGuard.</string>
+    <string name="error_job_cancelled">Il video non è disponibile per la riproduzione. Riprova o passa al brano successivo.</string>
+    <string name="discord_error_no_browser">Nessun browser trovato per completare l\'autorizzazione Discord.</string>
+    <string name="discord_error_token_refresh_failed">La sessione Discord è scaduta. Per favore riconnettiti.</string>
+    <string name="discord_error_invalid_scope">Discord ha rifiutato la connessione. Riconnettiti e concedi l\'autorizzazione richiesta.</string>
+    <string name="discord_error_banner_title">Errore Discord</string>
+    <string name="discord_integration">Integrazione Discord</string>
+    <string name="enable_discord_rpc">Abilita Rich Presence</string>
+    <string name="discord_state">Stato</string>
+    <string name="discord_details">Dettagli</string>
+    <string name="discord_enable_button_1">Mostra pulsante 1</string>
+    <string name="discord_enable_button_2">Mostra pulsante 2</string>
+    <string name="discord_button_label">Etichetta</string>
+    <string name="discord_button_url">URL</string>
+    <string name="discord_placeholders">Segnaposto disponibili</string>
+    <string name="discord_placeholder_song">Titolo brano</string>
+    <string name="discord_placeholder_artist">Nome artista</string>
+    <string name="discord_placeholder_album">Titolo album</string>
+    <string name="restore_database_incompatible">Impossibile ripristinare il backup: versione del database incompatibile. I tuoi dati attuali sono stati conservati.</string>
+    <string name="stream_client">Client streaming</string>
+    <string name="enable_landscape_scaling">Ridimensionamento Paesaggio</string>
+    <string name="enable_landscape_scaling_desc">Ridimensiona l\'interfaccia utente in modalità orizzontale per schermi più grandi</string>
+    <string name="dynamic_theme">Tema Dinamico</string>
+    <string name="enable_dynamic_icon">Colori dinamici delle icone</string>
+    <string name="enable_dynamic_icon_desc">Utilizza i colori del tema dinamico per l\'icona dell\'app. Quando disabilitata, l\'icona utilizza colori solidi.</string>
 </resources>

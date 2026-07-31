@@ -41,13 +41,17 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -61,6 +65,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.contentColorFor
@@ -190,6 +195,7 @@ import com.metrolist.music.ui.theme.MetrolistTheme
 import com.metrolist.music.ui.theme.extractThemeColor
 import com.metrolist.music.ui.utils.appBarScrollBehavior
 import com.metrolist.music.ui.utils.resetHeightOffset
+import com.metrolist.music.utils.ReleaseInfo
 import com.metrolist.music.utils.SearchRoutes
 import com.metrolist.music.utils.SyncUtils
 import com.metrolist.music.utils.Updater
@@ -468,6 +474,8 @@ class MainActivity : ComponentActivity() {
         syncUtils: SyncUtils,
     ) {
         val checkForUpdates by rememberPreference(CheckForUpdatesKey, defaultValue = true)
+        var kmpRelease by remember { mutableStateOf<ReleaseInfo?>(null) }
+        var kmpUpgradeDismissed by rememberSaveable { mutableStateOf(false) }
 
         if (BuildConfig.UPDATER_AVAILABLE) {
             LaunchedEffect(checkForUpdates) {
@@ -510,9 +518,14 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
+
+                        Updater.getLatestKmpRelease().onSuccess { releaseInfo ->
+                            kmpRelease = releaseInfo
+                        }
                     }
                 } else {
                     onLatestVersionNameChange(BuildConfig.VERSION_NAME)
+                    kmpRelease = null
                 }
             }
         }
@@ -1388,6 +1401,56 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    if (!showChangelog.value && !kmpUpgradeDismissed) {
+                        kmpRelease?.let { release ->
+                            val downloadUrl = release.assets.first { it.name == Updater.KMP_APK_NAME }.downloadUrl
+                            AlertDialog(
+                                onDismissRequest = { kmpUpgradeDismissed = true },
+                                title = {
+                                    Text(stringResource(R.string.kmp_upgrade_title, release.versionName))
+                                },
+                                text = {
+                                    Column(
+                                        modifier =
+                                            Modifier
+                                                .heightIn(max = 480.dp)
+                                                .verticalScroll(rememberScrollState()),
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.kmp_upgrade_warning),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.error,
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.changelog),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
+                                        )
+                                        Text(
+                                            text = release.description.ifBlank { stringResource(R.string.changelog_empty) },
+                                            style = MaterialTheme.typography.bodySmall,
+                                        )
+                                    }
+                                },
+                                confirmButton = {
+                                    TextButton(
+                                        onClick = {
+                                            kmpUpgradeDismissed = true
+                                            startActivity(Intent(Intent.ACTION_VIEW, downloadUrl.toUri()))
+                                        },
+                                    ) {
+                                        Text(stringResource(R.string.kmp_upgrade_action))
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { kmpUpgradeDismissed = true }) {
+                                        Text(stringResource(R.string.kmp_upgrade_later))
+                                    }
+                                },
+                            )
                         }
                     }
                 }

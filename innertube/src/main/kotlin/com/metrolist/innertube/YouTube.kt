@@ -176,12 +176,24 @@ object YouTube {
                 ?.forEach { section ->
                     if (section.musicCardShelfRenderer != null) {
                         // Top result card - keep as single section
+                        val cardRenderer = section.musicCardShelfRenderer
+                        val cardArtists = if (cardRenderer.onTap.browseEndpoint?.isArtistEndpoint == true) {
+                            listOfNotNull(
+                                cardRenderer.title.runs?.firstOrNull()?.text?.let { name ->
+                                    Artist(name, cardRenderer.onTap.browseEndpoint.browseId)
+                                },
+                            )
+                        } else {
+                            PageHelper.extractArtists(cardRenderer.subtitle.runs)
+                        }
                         val items =
-                            listOfNotNull(SearchSummaryPage.fromMusicCardShelfRenderer(section.musicCardShelfRenderer))
+                            listOfNotNull(SearchSummaryPage.fromMusicCardShelfRenderer(cardRenderer))
                                 .plus(
-                                    section.musicCardShelfRenderer.contents
+                                    cardRenderer.contents
                                         ?.mapNotNull { it.musicResponsiveListItemRenderer }
-                                        ?.mapNotNull(SearchSummaryPage.Companion::fromMusicResponsiveListItemRenderer)
+                                        ?.mapNotNull { renderer ->
+                                            SearchSummaryPage.fromMusicResponsiveListItemRenderer(renderer, cardArtists)
+                                        }
                                         .orEmpty(),
                                 ).distinctBy { it.id }
 
@@ -189,7 +201,7 @@ object YouTube {
                             allSummaries.add(
                                 SearchSummary(
                                     title =
-                                        section.musicCardShelfRenderer.header
+                                        cardRenderer.header
                                             ?.musicCardShelfHeaderBasicRenderer
                                             ?.title
                                             ?.runs
@@ -1488,7 +1500,7 @@ object YouTube {
                 Timber.d("Episode[$idx] title: ${renderer.title?.runs?.firstOrNull()?.text}")
                 Timber.d("Episode[$idx] subtitle: ${renderer.subtitle?.runs?.map { it.text }}")
                 Timber.d("Episode[$idx] videoId: ${renderer.onTap?.watchEndpoint?.videoId}")
-                Timber.d("Episode[$idx] thumbnail: ${renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl()}")
+                Timber.d("Episode[$idx] thumbnail: ${renderer.thumbnail?.getThumbnailUrl()}")
             }
 
             val episodes =
@@ -1820,46 +1832,67 @@ object YouTube {
                         setLogin = true,
                     ).body<BrowseResponse>()
 
-            val tabs = response.contents?.singleColumnBrowseResultsRenderer?.tabs
-            val contents =
-                if (tabs != null && tabs.size > tabIndex) {
-                    tabs[tabIndex]
-                        .tabRenderer.content
-                        ?.sectionListRenderer
-                        ?.contents
-                        ?.firstOrNull()
-                } else {
-                    null
+            val tab = response.contents?.singleColumnBrowseResultsRenderer?.tabs?.getOrNull(tabIndex)
+                ?: response.contents?.twoColumnBrowseResultsRenderer?.tabs?.getOrNull(tabIndex)
+            val contents = tab
+                ?.tabRenderer
+                ?.content
+                ?.sectionListRenderer
+                ?.contents
+                ?.firstOrNull {
+                    it.gridRenderer != null ||
+                        it.musicShelfRenderer != null ||
+                        it.musicPlaylistShelfRenderer != null ||
+                        it.itemSectionRenderer?.contents.orEmpty().any { child ->
+                            child.gridRenderer != null ||
+                                child.musicShelfRenderer != null ||
+                                child.musicPlaylistShelfRenderer != null
+                        }
                 }
+            val nestedContents = contents?.itemSectionRenderer?.contents.orEmpty()
+            val gridRenderer = contents?.gridRenderer
+                ?: nestedContents.firstNotNullOfOrNull { it.gridRenderer }
+            val playlistShelfRenderer = contents?.musicPlaylistShelfRenderer
+                ?: nestedContents.firstNotNullOfOrNull { it.musicPlaylistShelfRenderer }
+            val musicShelfRenderer = contents?.musicShelfRenderer
+                ?: nestedContents.firstNotNullOfOrNull { it.musicShelfRenderer }
 
             when {
-                contents?.gridRenderer != null -> {
-                    val gridItems = contents.gridRenderer.items
+                gridRenderer != null -> {
+                    val gridItems = gridRenderer.items
                     val parsedItems =
                         gridItems
                             .mapNotNull(GridRenderer.Item::musicTwoRowItemRenderer)
                             .mapNotNull { LibraryPage.fromMusicTwoRowItemRenderer(it) }
                     LibraryPage(
                         items = parsedItems,
-                        continuation = contents.gridRenderer.continuations?.getContinuation(),
+                        continuation = gridRenderer.continuations?.getContinuation(),
                     )
                 }
 
-                else -> {
-                    val shelfContents = contents?.musicShelfRenderer?.contents
-                    if (shelfContents == null) {
-                        throw IllegalStateException("No content found for browseId=$browseId")
-                    }
-                    val listItemRenderers = shelfContents.mapNotNull(MusicShelfRenderer.Content::musicResponsiveListItemRenderer)
+                playlistShelfRenderer != null -> {
+                    LibraryPage(
+                        items = playlistShelfRenderer.contents
+                            .getItems()
+                            .mapNotNull(LibraryPage.Companion::fromMusicResponsiveListItemRenderer),
+                        continuation = playlistShelfRenderer.continuations?.getContinuation(),
+                    )
+                }
+
+                musicShelfRenderer != null -> {
+                    val listItemRenderers = musicShelfRenderer.contents.orEmpty()
+                        .mapNotNull(MusicShelfRenderer.Content::musicResponsiveListItemRenderer)
                     val parsedItems =
                         listItemRenderers.mapNotNull { renderer ->
                             LibraryPage.fromMusicResponsiveListItemRenderer(renderer)
                         }
                     LibraryPage(
                         items = parsedItems,
-                        continuation = contents.musicShelfRenderer.continuations?.getContinuation(),
+                        continuation = musicShelfRenderer.continuations?.getContinuation(),
                     )
                 }
+
+                else -> LibraryPage(items = emptyList(), continuation = null)
             }
         }
 
@@ -2101,7 +2134,7 @@ object YouTube {
                         id = renderer.videoId!!,
                         title = title,
                         artists = artists,
-                        thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                        thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: return null,
                         musicVideoType = renderer.musicVideoType,
                         explicit =
                             renderer.badges?.any {
@@ -2144,7 +2177,7 @@ object YouTube {
                         id = videoId,
                         title = title,
                         artists = artists,
-                        thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                        thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         musicVideoType = renderer.musicVideoType,
                         explicit =
                             renderer.subtitleBadges?.any {
@@ -2180,7 +2213,7 @@ object YouTube {
                                 ?.lastOrNull()
                                 ?.text
                                 ?.toIntOrNull(),
-                        thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                        thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         explicit =
                             renderer.subtitleBadges?.any {
                                 it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
@@ -2627,7 +2660,7 @@ object YouTube {
                                 artists = artists,
                                 album = null,
                                 duration = duration,
-                                thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: "",
+                                thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: "",
                                 isEpisode = true,
                             )
                         )
@@ -2675,7 +2708,7 @@ object YouTube {
                                     artists = artists,
                                     album = null,
                                     duration = duration,
-                                    thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: "",
+                                    thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: "",
                                     isEpisode = true,
                                 )
                             )
@@ -2872,7 +2905,7 @@ object YouTube {
                                 ?: emptyList(),
                         album = null,
                         duration = duration,
-                        thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: "",
+                        thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: "",
                         setVideoId = setVideoId,
                         isEpisode = true,
                     )
@@ -2929,7 +2962,7 @@ object YouTube {
                                         ?: emptyList(),
                                 album = null,
                                 duration = null,
-                                thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: "",
+                                thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: "",
                                 isEpisode = true,
                             )
                         }

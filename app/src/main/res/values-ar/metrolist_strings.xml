@@ -204,7 +204,6 @@
     <string name="delete_desc">قم بإزالة هذا العنصر نهائيا</string>
     <string name="advanced_desc">إضبط إيقاع الأغنية و درجة الجهير</string>
     <string name="equalizer_desc">إفتح معادل الصوت</string>
-    <string name="enable_dynamic_icon">تفعيل الأيقونات الديناميكية</string>
     <string name="mini_player">مشغل مصغر</string>
     <string name="pure_black_mini_player">مشغل صغير أسود نقي</string>
     <string name="cache_size_warning_title">انتظر!</string>

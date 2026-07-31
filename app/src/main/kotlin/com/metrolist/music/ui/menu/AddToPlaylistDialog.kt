@@ -30,7 +30,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.R
@@ -126,12 +125,7 @@ fun AddToPlaylistDialog(
         database.addSongsToPlaylist(targetPlaylist, ids.map { it to null }, prepend = true)
         targetPlaylist.playlist.browseId?.let { plist ->
             ids.forEach { songId ->
-                syncUtils.registerPendingAdd(plist, songId)
-                try {
-                    YouTube.addToPlaylist(plist, songId)
-                } finally {
-                    syncUtils.unregisterPendingAdd(plist, songId)
-                }
+                syncUtils.addToPlaylist(plist, targetPlaylist.id, songId)
             }
         }
     }

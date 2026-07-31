@@ -1,7 +1,6 @@
 package com.metrolist.music.utils.cipher
 
 import android.content.Context
-import android.util.Base64
 import com.metrolist.innertube.YouTube
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -10,7 +9,6 @@ import timber.log.Timber
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
-import java.nio.charset.StandardCharsets
 
 /**
  * Cosmetic "when did we add cipher support for this player" dates, shown in the song-details
@@ -30,10 +28,8 @@ import java.nio.charset.StandardCharsets
 object PlayerDatesStore {
     private const val TAG = "Metrolist_CipherDates"
 
-    private val REMOTE_URL by lazy {
-        val encoded = "aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL01ldHJvbGlzdEdyb3VwL01ldHJvbGlzdC9tYWluL2FwcC9zcmMvbWFpbi9hc3NldHMvcGxheWVyX2RhdGVzLmpzb24="
-        String(Base64.decode(encoded, Base64.DEFAULT), StandardCharsets.UTF_8)
-    }
+    private const val REMOTE_URL =
+        "https://raw.githubusercontent.com/ZemerTeam/zemer-cipher/master/player_dates.json"
 
     // Own dir, NOT the shared cipher_cache (PlayerJsFetcher purges/wipes that one).
     private const val CACHE_DIR = "cipher_dates"

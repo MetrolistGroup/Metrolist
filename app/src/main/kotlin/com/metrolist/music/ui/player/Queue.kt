@@ -231,6 +231,7 @@ fun Queue(
     val isAtDefault by remember {
         derivedStateOf { sleepTimerValue.roundToInt() == sleepTimerDefault.roundToInt() }
     }
+    LaunchedEffect(sleepTimerDefault) { sleepTimerValue = sleepTimerDefault }
     val sleepTimerStopAfterCurrentSong by rememberPreference(SleepTimerStopAfterCurrentSongKey, false)
     val sleepTimerFadeOut by rememberPreference(SleepTimerFadeOutKey, false)
     val sleepTimerEnabled = remember(
@@ -592,9 +593,9 @@ fun Queue(
 
                             Spacer(Modifier.height(8.dp))
 
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 if (isAtDefault) {
                                     Button(

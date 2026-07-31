@@ -78,6 +78,48 @@ import java.util.Locale
  */
 @Dao
 interface DatabaseDao {
+    @Query("SELECT * FROM song WHERE id = :songId LIMIT 1")
+    suspend fun songEntity(songId: String): SongEntity?
+
+    @Query("SELECT * FROM song WHERE liked ORDER BY title")
+    suspend fun likedSongEntitiesByNameAsc(): List<SongEntity>
+
+    @Query("SELECT * FROM song WHERE inLibrary IS NOT NULL ORDER BY title")
+    suspend fun librarySongEntitiesByNameAsc(): List<SongEntity>
+
+    @Query("SELECT * FROM song WHERE isUploaded = 1 ORDER BY title")
+    suspend fun uploadedSongEntitiesByNameAsc(): List<SongEntity>
+
+    @Query(
+        """
+        SELECT songId FROM playlist_song_map
+        WHERE playlistId = :playlistId
+        ORDER BY position
+        """,
+    )
+    suspend fun playlistSongIds(playlistId: String): List<String>
+
+    @Query("SELECT * FROM album WHERE id = :albumId LIMIT 1")
+    suspend fun albumEntity(albumId: String): AlbumEntity?
+
+    @Query("SELECT * FROM album WHERE bookmarkedAt IS NOT NULL ORDER BY title")
+    suspend fun likedAlbumEntitiesByNameAsc(): List<AlbumEntity>
+
+    @Query("SELECT * FROM album WHERE isUploaded = 1 ORDER BY title")
+    suspend fun uploadedAlbumEntitiesByNameAsc(): List<AlbumEntity>
+
+    @Query("SELECT * FROM artist WHERE id = :artistId LIMIT 1")
+    suspend fun artistEntity(artistId: String): ArtistEntity?
+
+    @Query("SELECT * FROM artist WHERE bookmarkedAt IS NOT NULL ORDER BY name")
+    suspend fun bookmarkedArtistEntitiesByNameAsc(): List<ArtistEntity>
+
+    @Query("SELECT * FROM playlist ORDER BY name")
+    suspend fun playlistEntitiesByNameAsc(): List<PlaylistEntity>
+
+    @Query("SELECT * FROM song WHERE isEpisode = 1 AND inLibrary IS NOT NULL ORDER BY inLibrary")
+    suspend fun savedEpisodeEntitiesByCreateDateAsc(): List<SongEntity>
+
     @Transaction
     @Query("SELECT * FROM song WHERE inLibrary IS NOT NULL ORDER BY rowId")
     fun songsByRowIdAsc(): Flow<List<Song>>

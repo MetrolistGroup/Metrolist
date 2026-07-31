@@ -39,9 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
-import com.metrolist.music.constants.StreamSourceAndroidCreatorKey
 import com.metrolist.music.constants.StreamSourceAndroidVRKey
-import com.metrolist.music.constants.StreamSourceIOSKey
 import com.metrolist.music.constants.StreamSourceTVHTML5Key
 import com.metrolist.music.constants.StreamSourceVisionOSKey
 import com.metrolist.music.constants.StreamSourceWebCreatorKey
@@ -61,20 +59,14 @@ fun StreamSourcesSettings(
     val (tvhtml5, onTvhtml5Change) = rememberPreference(StreamSourceTVHTML5Key, defaultValue = true)
     val (visionOS, onVisionOSChange) = rememberPreference(StreamSourceVisionOSKey, defaultValue = true)
     val (androidVR, onAndroidVRChange) = rememberPreference(StreamSourceAndroidVRKey, defaultValue = true)
-    val (ios, onIosChange) = rememberPreference(StreamSourceIOSKey, defaultValue = false)
     val (webCreator, onWebCreatorChange) = rememberPreference(StreamSourceWebCreatorKey, defaultValue = true)
-    val (androidCreator, onAndroidCreatorChange) = rememberPreference(StreamSourceAndroidCreatorKey, defaultValue = false)
 
-    // Effective resolution order: WEB_REMIX (main client) then the fallback clients, mirroring the
-    // order in YTPlayerUtils. Only enabled clients appear; the ANDROID_VR variants collapse to one.
+    // Default resolution order. Content-specific playback can prioritize authenticated clients.
     val streamOrder = listOf(
-        stringResource(R.string.stream_source_web_remix) to webRemix,
         stringResource(R.string.stream_source_visionos) to visionOS,
-        stringResource(R.string.stream_source_web_creator) to webCreator,
-        stringResource(R.string.stream_source_tvhtml5) to tvhtml5,
         stringResource(R.string.stream_source_android_vr) to androidVR,
-        stringResource(R.string.stream_source_ios) to ios,
-        stringResource(R.string.stream_source_android_creator) to androidCreator,
+        stringResource(R.string.stream_source_web_remix) to webRemix,
+        stringResource(R.string.stream_source_tvhtml5) to tvhtml5,
     ).filter { it.second }.map { it.first }
 
     Column(
@@ -138,7 +130,6 @@ fun StreamSourcesSettings(
             items = listOf(
                 streamClientItem(R.string.stream_source_visionos, R.string.stream_source_visionos_desc, visionOS, onVisionOSChange),
                 streamClientItem(R.string.stream_source_android_vr, R.string.stream_source_android_vr_desc, androidVR, onAndroidVRChange),
-                streamClientItem(R.string.stream_source_ios, R.string.stream_source_ios_desc, ios, onIosChange),
             )
         )
 
@@ -148,7 +139,6 @@ fun StreamSourcesSettings(
             title = stringResource(R.string.stream_source_creator_clients),
             items = listOf(
                 streamClientItem(R.string.stream_source_web_creator, R.string.stream_source_web_creator_desc, webCreator, onWebCreatorChange),
-                streamClientItem(R.string.stream_source_android_creator, R.string.stream_source_android_creator_desc, androidCreator, onAndroidCreatorChange),
             )
         )
 

@@ -372,7 +372,6 @@
     <string name="delete_desc">이 항목을 영구 삭제</string>
     <string name="advanced_desc">곡의 속도와 피치 조절</string>
     <string name="equalizer_desc">오디오 이퀄라이저 열기</string>
-    <string name="enable_dynamic_icon">다이내믹 아이콘 활성화</string>
     <string name="mini_player_background_style">미니 플레이어 배경 스타일</string>
     <string name="transparent">투명</string>
     <string name="mini_player_background_not_available">\'새로운 미니 플레이어 디자인\'이 활성화된 경우에만 사용할 수 있습니다</string>

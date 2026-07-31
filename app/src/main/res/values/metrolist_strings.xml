@@ -386,6 +386,10 @@
     <string name="update_available_title">Update available</string>
     <string name="update_channel_name">App updates</string>
     <string name="update_channel_desc">Notifications about new app versions</string>
+    <string name="kmp_upgrade_title">Metrolist KMP %s is available</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP is in early access. Features may be broken, incomplete, or change without notice.</string>
+    <string name="kmp_upgrade_action">Upgrade to KMP</string>
+    <string name="kmp_upgrade_later">Not now</string>
 
     <!-- Offload -->
     <string name="audio_offload">Enable audio offload</string>

@@ -40,6 +40,7 @@ import androidx.core.content.getSystemService
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
@@ -64,11 +65,17 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.PlayerMessage
+import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.analytics.PlaybackStats
 import androidx.media3.exoplayer.analytics.PlaybackStatsListener
 import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.AudioRendererEventListener
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer
 import androidx.media3.exoplayer.audio.SilenceSkippingAudioProcessor
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
 import androidx.media3.extractor.ExtractorsFactory
@@ -86,6 +93,7 @@ import androidx.media3.session.SessionToken
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.MoreExecutors
 import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.strategy.ContentHints
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.lastfm.LastFM
@@ -99,9 +107,7 @@ import com.metrolist.music.constants.AudioTrackPlaybackParamsKey
 import com.metrolist.music.constants.AutoDownloadOnLikeKey
 import com.metrolist.music.constants.AutoLoadMoreKey
 import com.metrolist.music.constants.AutoSkipNextOnErrorKey
-import com.metrolist.music.constants.StreamSourceAndroidCreatorKey
 import com.metrolist.music.constants.StreamSourceAndroidVRKey
-import com.metrolist.music.constants.StreamSourceIOSKey
 import com.metrolist.music.constants.StreamSourceTVHTML5Key
 import com.metrolist.music.constants.StreamSourceVisionOSKey
 import com.metrolist.music.constants.StreamSourceWebCreatorKey
@@ -299,7 +305,7 @@ class MusicService :
     private var crossfadeEnabled = false
     private var crossfadeDuration = 5000f
     private var crossfadeGapless = true
-    private var crossfadeTriggerJob: Job? = null
+    private var crossfadeMessage: PlayerMessage? = null
 
     private val secondaryPlayerListener =
         object : Player.Listener {
@@ -1175,13 +1181,8 @@ class MusicService :
                         if (prefs[StreamSourceWebRemixKey] == false) add("WEB_REMIX")
                         if (prefs[StreamSourceTVHTML5Key] == false) add("TVHTML5")
                         if (prefs[StreamSourceAndroidVRKey] == false) add("ANDROID_VR")
-                        // The IOS toggle covers both the iOS and iPadOS clients (they share clientName
-                        // "IOS"); ANDROID_CREATOR needs DroidGuard — these default OFF (`!= true`: unset
-                        // or false both disable; only an explicit toggle enables them).
-                        if (prefs[StreamSourceIOSKey] != true) add("IOS")
                         if (prefs[StreamSourceVisionOSKey] == false) add("VISIONOS")
                         if (prefs[StreamSourceWebCreatorKey] == false) add("WEB_CREATOR")
-                        if (prefs[StreamSourceAndroidCreatorKey] != true) add("ANDROID_CREATOR")
                     }
                 }
                 .distinctUntilChanged()
@@ -1206,6 +1207,7 @@ class MusicService :
                                 playQueue(
                                     queue = restoredQueue,
                                     playWhenReady = false,
+                                    restoringQueue = true,
                                 )
                             }
                         }
@@ -1761,6 +1763,7 @@ class MusicService :
     fun playQueue(
         queue: Queue,
         playWhenReady: Boolean = true,
+        restoringQueue: Boolean = false,
     ) {
         if (!playerInitialized.value) {
             Timber.tag(TAG).w("playQueue called before player initialization, queuing request")
@@ -1774,8 +1777,7 @@ class MusicService :
         currentQueue = queue
         queueTitle = null
         val persistShuffleAcrossQueues = dataStore.get(PersistentShuffleAcrossQueuesKey, false)
-        val previousShuffleEnabled = player.shuffleModeEnabled
-        if (!persistShuffleAcrossQueues) {
+        if (!persistShuffleAcrossQueues && !restoringQueue) {
             player.shuffleModeEnabled = false
         }
         originalQueueSize = 0
@@ -2985,10 +2987,8 @@ class MusicService :
             }
         }
 
-        // For IO_UNSPECIFIED and IO_BAD_HTTP_STATUS, try recovery first
-        if (error.errorCode == PlaybackException.ERROR_CODE_IO_UNSPECIFIED ||
-            error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS
-        ) {
+        // For IO_BAD_HTTP_STATUS, try recovery first
+        if (error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS) {
             Timber.tag(TAG).d("IO error detected (${error.errorCode}), attempting recovery")
             handleGenericIOError(mediaId)
             return
@@ -3681,10 +3681,15 @@ class MusicService :
             Timber.tag(TAG).i("FETCHING STREAM: $mediaId | quality=$audioQuality")
             val playbackData =
                 runBlocking(Dispatchers.IO) {
+                    val song = database.songEntity(mediaId)
                     YTPlayerUtils.playerResponseForPlayback(
                         mediaId,
                         audioQuality = audioQuality,
                         connectivityManager = connectivityManager,
+                        contentHints = ContentHints(
+                            isExplicit = song?.explicit,
+                            isUploaded = song?.isUploaded,
+                        ),
                     )
                 }.getOrElse { throwable ->
                     when (throwable) {
@@ -3785,6 +3790,50 @@ class MusicService :
         silenceProcessor: SilenceDetectorAudioProcessor,
         useAudioTrackPlaybackParams: Boolean,
     ) = object : DefaultRenderersFactory(this) {
+        override fun buildAudioRenderers(
+            context: Context,
+            extensionRendererMode: Int,
+            mediaCodecSelector: MediaCodecSelector,
+            enableDecoderFallback: Boolean,
+            audioSink: AudioSink,
+            eventHandler: Handler,
+            eventListener: AudioRendererEventListener,
+            out: ArrayList<Renderer>,
+        ) {
+            super.buildAudioRenderers(
+                context,
+                extensionRendererMode,
+                mediaCodecSelector,
+                enableDecoderFallback,
+                audioSink,
+                eventHandler,
+                eventListener,
+                out,
+            )
+            val coreRendererIndex = out.indexOfFirst { it is MediaCodecAudioRenderer }
+            if (coreRendererIndex == -1) return
+            out[coreRendererIndex] =
+                object : MediaCodecAudioRenderer(
+                    context,
+                    mediaCodecSelector,
+                    enableDecoderFallback,
+                    eventHandler,
+                    eventListener,
+                    audioSink,
+                ) {
+                    override fun getCodecOperatingRateV23(
+                        targetPlaybackSpeed: Float,
+                        format: Format,
+                        streamFormats: Array<Format>,
+                    ): Float =
+                        super.getCodecOperatingRateV23(
+                            if (targetPlaybackSpeed in 0.95f..1.05f) 1f else targetPlaybackSpeed,
+                            format,
+                            streamFormats,
+                        )
+                }
+        }
+
         override fun buildAudioSink(
             context: Context,
             enableFloatOutput: Boolean,
@@ -4101,11 +4150,6 @@ class MusicService :
             return
         }
         super.onTaskRemoved(rootIntent)
-        // User removed the task while paused: drop foreground promotion so the process can idle.
-        // Queue/state remain persisted; opening the app restores playback as usual.
-        if (::player.isInitialized && !player.isPlaying) {
-            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_DETACH)
-        }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo) = mediaSession
@@ -4495,12 +4539,17 @@ class MusicService :
     suspend fun getStreamUrl(mediaId: String): String? =
         withContext(Dispatchers.IO) {
             try {
+                val song = database.songEntity(mediaId)
                 val playbackData =
                     YTPlayerUtils
                         .playerResponseForPlayback(
                             videoId = mediaId,
                             audioQuality = audioQuality,
                             connectivityManager = connectivityManager,
+                            contentHints = ContentHints(
+                                isExplicit = song?.explicit,
+                                isUploaded = song?.isUploaded,
+                            ),
                         ).getOrNull()
                 playbackData?.streamUrl
             } catch (e: Exception) {
@@ -4535,26 +4584,31 @@ class MusicService :
     }
 
     private fun scheduleCrossfade() {
-        crossfadeTriggerJob?.cancel()
-        crossfadeTriggerJob = null
-        if (!crossfadeEnabled || crossfadeDuration <= 0f || player.duration == C.TIME_UNSET || player.duration <= crossfadeDuration) return
+        crossfadeMessage?.cancel()
+        crossfadeMessage = null
+        
+        val mediaCrossfadeDuration = crossfadeDuration.toLong()
+
+        if (!crossfadeEnabled || crossfadeDuration <= 0f || player.duration == C.TIME_UNSET || player.duration <= mediaCrossfadeDuration) return
         if (crossfadeGapless && isNextItemGapless()) return
         if (!player.hasNextMediaItem() && player.repeatMode != REPEAT_MODE_ONE) return
 
-        val triggerTime = player.duration - crossfadeDuration.toLong()
-        val delayMs = triggerTime - player.currentPosition
-        if (delayMs <= 0) return
+        val triggerTime = player.duration - mediaCrossfadeDuration
+        val mediaTimeRemaining = triggerTime - player.currentPosition
+        if (mediaTimeRemaining <= 0) return
 
         val targetMediaId = player.currentMediaItem?.mediaId
 
-        crossfadeTriggerJob =
-            scope.launch {
-                delay(delayMs)
-                val timer = sleepTimer
-                if (isActive && player.isPlaying && player.currentMediaItem?.mediaId == targetMediaId && (timer == null || !timer.pauseWhenSongEnd)) {
-                    startCrossfade()
-                }
+        crossfadeMessage = player.createMessage { _, _ ->
+            val timer = sleepTimer
+            if (player.isPlaying && player.currentMediaItem?.mediaId == targetMediaId && (timer == null || !timer.pauseWhenSongEnd)) {
+                startCrossfade()
             }
+        }.apply {
+            setLooper(Looper.getMainLooper())
+            setPosition(triggerTime)
+            send()
+        }
     }
 
     private fun isNextItemGapless(): Boolean {
@@ -4568,7 +4622,7 @@ class MusicService :
     private fun startCrossfade() {
         if (isCrossfading) return
 
-        playerNormalizationProcessors.values.forEach { it.enabled = false }
+
 
         // Preserve player state before creating the secondary player
         // Use runBlocking to ensure we get the correct state from DataStore
@@ -4598,8 +4652,11 @@ class MusicService :
         secPlayer.seekTo(targetIndex, 0)
         secPlayer.volume = 0f
 
+        secPlayer.setPlaybackParameters(player.playbackParameters)
+
         secPlayer.repeatMode = savedRepeatMode
         secPlayer.shuffleModeEnabled = savedShuffleEnabled
+        secPlayer.playbackParameters = player.playbackParameters
 
         try {
             secPlayer.prepare()
@@ -4629,6 +4686,14 @@ class MusicService :
         player = nextPlayer
         _playerFlow.value = player
         secondaryPlayer = null
+
+        fadingPlayer?.repeatMode = Player.REPEAT_MODE_OFF
+        fadingPlayer?.let {
+            val currentIndex = it.currentMediaItemIndex
+            if (currentIndex < it.mediaItemCount - 1) {
+                it.removeMediaItems(currentIndex + 1, it.mediaItemCount)
+            }
+        }
 
         fadingPlayer?.removeListener(this)
         sleepTimer?.let { timer -> fadingPlayer?.removeListener(timer) }
@@ -4673,7 +4738,8 @@ class MusicService :
 
         crossfadeJob =
             scope.launch {
-                val duration = crossfadeDuration.toLong()
+                val speed = fadingPlayer?.playbackParameters?.speed?.coerceAtLeast(0.01f) ?: 1f
+                val duration = (crossfadeDuration / speed).toLong()
                 val steps = 20
                 val stepTime = duration / steps
                 val startVolume =

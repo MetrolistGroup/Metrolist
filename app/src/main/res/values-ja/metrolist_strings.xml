@@ -230,7 +230,6 @@
     <string name="delete_desc">このコンテンツを完全に削除します</string>
     <string name="advanced_desc">曲の再生速度と音程を調整します</string>
     <string name="equalizer_desc">オーディオイコライザーを調整します</string>
-    <string name="enable_dynamic_icon">動的アイコン</string>
     <string name="pure_black_mini_player">ピュアブラックのミニプレーヤー</string>
     <string name="listen_together">Listen Together</string>
     <string name="play_pause">再生/停止</string>
