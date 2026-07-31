@@ -328,9 +328,7 @@ fun SearchScreen(
                     }
 
                     Lifecycle.Event.ON_PAUSE -> {
-                        // Do not manually hide keyboard here — Android dismisses the IME
-                        // automatically during back navigation. Hiding it explicitly races
-                        // with the nav transition and causes the keyboard to flicker.
+                        // Do not manually hide keyboard here — Android dismisses it automatically during back navigation, and doing it manually races with that and causes flicker.
                         if (isHandlingScrollToTop) return@LifecycleEventObserver
                         focusManager.clearFocus()
                     }
