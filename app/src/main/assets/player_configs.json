@@ -185,6 +185,10 @@
     "9d46652d": { "sig": "hS(12,3157,INPUT)", "nClass": "Qt", "sts": 20663, "aliases": ["f2f7feec"] },
     "292d23a7": { "sig": "KZ(12,3157,INPUT)", "nClass": "m$", "sts": 20663, "aliases": ["50de74dc"] },
     "7f1636e3": { "sig": "KZ(12,3157,INPUT)", "nClass": "m$", "sts": 20663, "aliases": ["9f4fea42"] },
-    "ce48a839": { "sig": "KZ(12,3157,INPUT)", "nClass": "m$", "sts": 20663, "aliases": ["48e075e2"] }
+    "ce48a839": { "sig": "KZ(12,3157,INPUT)", "nClass": "m$", "sts": 20663, "aliases": ["48e075e2"] },
+    "ca042962": { "sig": "KZ(12,3157,INPUT)", "nClass": "m$", "sts": 20663, "aliases": ["353e258e"] },
+    "946a9db2": { "sig": "KZ(12,3157,INPUT)", "nClass": "m$", "sts": 20663, "aliases": ["ac2c865d"] },
+    "dc5384b1": { "sig": "KZ(12,3157,INPUT)", "nClass": "m$", "sts": 20663, "aliases": ["813b0579"] },
+    "bb09e5fd": { "sig": "KZ(12,3157,INPUT)", "nClass": "m$", "sts": 20663, "aliases": ["347e990a"] }
   }
 }
