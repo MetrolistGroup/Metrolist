@@ -785,81 +785,19 @@ constructor(
 
                     //Check if the voiceQuery is about a specific song and plays only that
                     if (isVoiceSearch) {
-                        val firstSong = searchResults.first()
-                        val query = searchQuery.lowercase().trim()
-                        val title = firstSong.title.lowercase().trim()
-
-                        if (title == query) {
+                        val snapshot: List<Song> = synchronized(searchResults) { searchResults.toList() }
+                        val bestMatch = VoiceSearchMatcher.findBest(searchQuery, snapshot)
+                        if (bestMatch != null) {
                             return@future MediaItemsWithStartPosition(
-                                listOf(firstSong.toMediaItem()), 0, startPositionMs
+                                listOf(bestMatch.toMediaItem()),
+                                0,
+                                startPositionMs,
                             )
                         }
-
-                        //Tries to remove artists from the query, in order to match if artists are used
-                        val punctuationRegex = Regex("[^\\p{L}\\p{N}\\s]")
-                        val pureQuery = query.replace(punctuationRegex, " ")
-                        val queryTokens = pureQuery.split(" ").filter { it.isNotBlank() }.toMutableSet()
-
-                        firstSong.artists.forEach { artist ->
-                            val pureArtist = artist.name.lowercase().replace(punctuationRegex, " ")
-                            val artistTokens = pureArtist.split(Regex("\\s+")).filter { it.isNotBlank() }
-
-                            queryTokens.removeIf { queryToken ->
-                                if (queryToken.length < 4) {
-                                    artistTokens.contains(queryToken)
-                                } else {
-                                    artistTokens.any { artistToken ->
-                                        tokenSimilarity(queryToken, artistToken) >= 0.85
-                                    }
-                                }
-                            }
-                        }
-                        val cleanedQuery = queryTokens.joinToString(" ")
-                        if (cleanedQuery.isNotBlank()) {
-                            if (title == cleanedQuery) {
-                                return@future MediaItemsWithStartPosition(
-                                    listOf(firstSong.toMediaItem()), 0, startPositionMs
-                                )
-                            }
-
-                            val pureTitle = title.replace(punctuationRegex, " ")
-                            val titleTokens = pureTitle.split(" ").filter { it.isNotBlank() }.toSet()
-
-                            if (queryTokens.isNotEmpty() && titleTokens.isNotEmpty()) {
-                                val isTooGeneric = when {
-                                    queryTokens.size == 1 && queryTokens.first().length < 4 -> true
-                                    cleanedQuery.length < 5 -> true
-                                    else -> false
-                                }
-
-                                if (!isTooGeneric) {
-                                    //Count fuzzy matching in title and query
-                                    val fuzzyThreshold = 0.85
-                                    val matchedQueryCount = queryTokens.count { q ->
-                                        titleTokens.any { t -> q == t || tokenSimilarity(q, t) >= fuzzyThreshold }
-                                    }
-                                    val matchedTitleCount = titleTokens.count { t ->
-                                        queryTokens.any { q -> q == t || tokenSimilarity(q, t) >= fuzzyThreshold }
-                                    }
-
-                                    if (matchedQueryCount > 0 && matchedTitleCount > 0) {
-                                        val titleCoverage = matchedTitleCount.toDouble() / titleTokens.size
-                                        val queryCoverage = matchedQueryCount.toDouble() / queryTokens.size
-                                        val isStrongMatch = titleCoverage >= 0.60 && queryCoverage >= 0.60
-
-                                        if (isStrongMatch) {
-                                            return@future MediaItemsWithStartPosition(
-                                                listOf(firstSong.toMediaItem()), 0, startPositionMs
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
-                    
+
                     val targetIndex = searchResults.indexOfFirst { it.id == songId }
-                    
+
                     MediaItemsWithStartPosition(
                         searchResults.map { it.toMediaItem() },
                         if (targetIndex >= 0) targetIndex else 0,
@@ -870,54 +808,6 @@ constructor(
                 else -> defaultResult
             }
         }
-
-    /**
-     * Token Similarity based on Jaro-Winkler Distance Algorithm
-     */
-    private fun tokenSimilarity(s1: String, s2: String): Double {
-        if (s1 == s2) return 1.0
-        if (s1.isEmpty() || s2.isEmpty()) return 0.0
-
-        val maxDist = (maxOf(s1.length, s2.length) / 2) - 1
-        if (maxDist < 0) return 0.0
-
-        var matches = 0
-        val s1Matches = BooleanArray(s1.length)
-        val s2Matches = BooleanArray(s2.length)
-
-        for (i in s1.indices) {
-            val start = maxOf(0, i - maxDist)
-            val end = minOf(s2.length - 1, i + maxDist)
-
-            for (j in start..end) {
-                if (!s2Matches[j] && s1[i] == s2[j]) {
-                    s1Matches[i] = true
-                    s2Matches[j] = true
-                    matches++
-                    break
-                }
-            }
-        }
-        if (matches == 0) return 0.0
-
-        var transpositions = 0
-        var k = 0
-        for (i in s1.indices) {
-            if (s1Matches[i]) {
-                while (!s2Matches[k]) k++
-                if (s1[i] != s2[k++]) transpositions++
-            }
-        }
-
-        val jaro = ((matches.toDouble() / s1.length) +
-                (matches.toDouble() / s2.length) +
-                ((matches - transpositions / 2.0) / matches)) / 3.0
-
-        val prefix = s1.commonPrefixWith(s2).length.coerceAtMost(4)
-        val p = 0.1
-        val boostThreshold = 0.7
-        return if (jaro > boostThreshold) jaro + (prefix * p * (1.0 - jaro)) else jaro
-    }
 
     private fun drawableUri(
         @DrawableRes id: Int,
