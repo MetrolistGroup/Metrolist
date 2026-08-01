@@ -716,7 +716,7 @@ constructor(
                                 return@future MediaItemsWithStartPosition(
                                     playlistSongs.map { it.song.toMediaItem() },
                                     0,
-                                    startPositionMs
+                                    C.TIME_UNSET
                                 )
                             }
                         }
@@ -791,7 +791,7 @@ constructor(
                             return@future MediaItemsWithStartPosition(
                                 listOf(bestMatch.toMediaItem()),
                                 0,
-                                startPositionMs,
+                                C.TIME_UNSET,
                             )
                         }
                     }
