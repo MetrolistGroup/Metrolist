@@ -1441,6 +1441,32 @@ interface DatabaseDao {
     ): Flow<List<Song>>
 
     @Transaction
+    @Query(
+        """
+    SELECT * FROM song 
+    WHERE (
+        title LIKE '%' || :query || '%' 
+        OR EXISTS (
+            SELECT 1 FROM song_artist_map 
+            JOIN artist ON song_artist_map.artistId = artist.id 
+            WHERE song_artist_map.songId = song.id 
+            AND artist.name LIKE '%' || :query || '%'
+        ) 
+        OR EXISTS (
+            SELECT 1 FROM album 
+            WHERE album.id = song.albumId 
+            AND album.title LIKE '%' || :query || '%'
+        )
+    )
+    LIMIT :previewSize
+    """
+    )
+    fun searchSongsExtended(
+        query: String,
+        previewSize: Int = Int.MAX_VALUE,
+    ): Flow<List<Song>>
+
+    @Transaction
     @SuppressWarnings(RoomWarnings.QUERY_MISMATCH)
     @Query(
         "SELECT *, (SELECT COUNT(1) FROM song_artist_map JOIN song ON song_artist_map.songId = song.id WHERE artistId = artist.id AND song.inLibrary IS NOT NULL) AS songCount FROM artist WHERE name LIKE '%' || :query || '%' AND songCount > 0 LIMIT :previewSize",
