@@ -265,8 +265,10 @@ class OnlinePlaylistViewModel @Inject constructor(
         fetchInitialPlaylistData() // This will also restart proactive loading if applicable
     }
 
-    fun removeSongFromLocalList(songId: String) {
-        playlistSongs.value = playlistSongs.value.filter { it.id != songId }
+    fun removeSongFromLocalList(songId: String, setVideoId: String) {
+        playlistSongs.value = playlistSongs.value.filter {
+            it.id != songId || it.setVideoId != setVideoId
+        }
         playlist.value = playlist.value?.let { 
             it.copy(songCountText = it.songCountText?.let { countText ->
                 val match = Regex("""\d+""").find(countText)
@@ -283,7 +285,6 @@ class OnlinePlaylistViewModel @Inject constructor(
     private fun applySongFilters(songs: List<SongItem>): List<SongItem> {
         val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
         return songs
-            .distinctBy { it.id }
             .filterVideoSongs(hideVideoSongs)
     }
 
