@@ -43,8 +43,8 @@ jobs:
       - name: Build Release APK (No Lint)
         run: ./gradlew --console=plain assembleFossRelease --warning-mode summary -x lint -x lintFossRelease
         env:
-          METROLIST_APPLICATION_ID: com.metrolist.music.test
-          METROLIST_APP_NAME: Metrolist Testing
+          METROLIST_APPLICATION_ID: id.pagaska.music.test
+          METROLIST_APP_NAME: Pagaska Music Testing
           PULL_REQUEST: "false"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}

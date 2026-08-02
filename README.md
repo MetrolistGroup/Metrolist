@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="https://github.com/MetrolistGroup/Metrolist/blob/main/fastlane/metadata/android/en-US/images/icon.png" alt="Metrolist app icon" width="200" />
+<img src="https://github.com/MetrolistGroup/Metrolist/blob/main/fastlane/metadata/android/en-US/images/icon.png" alt="Pagaska Music app icon" width="200" />
 
-# Metrolist
+# Pagaska Music
 
 ### YouTube Music client for Android
 
@@ -31,7 +31,7 @@
 
 > [!WARNING]
 > # MAINTENANCE MODE
-> Metrolist is currently in maintenance mode. This means we will only be fixing bugs and making minor improvements. Please do not submit PRs for new features or major changes, as they will not be accepted.  
+> Pagaska Music is currently in maintenance mode. This means we will only be fixing bugs and making minor improvements. Please do not submit PRs for new features or major changes, as they will not be accepted.  
 > The app is **NOT** dead, please stay tuned for updates on our discord (found above).
 
 > [!WARNING]
@@ -200,7 +200,7 @@
 
 [![Translation status](https://img.shields.io/weblate/progress/metrolist?style=for-the-badge&labelColor=0d1117)](https://hosted.weblate.org/engage/metrolist/)
 
-<h3>We use Weblate to translate Metrolist. <a href="https://hosted.weblate.org/projects/Metrolist/">Help us bring Metrolist to more people!</a></h3>
+<h3>We use Weblate to translate Pagaska Music. <a href="https://hosted.weblate.org/projects/Metrolist/">Help us bring Pagaska Music to more people!</a></h3>
 
 <a href="https://hosted.weblate.org/projects/Metrolist/">
   <img src="https://hosted.weblate.org/widget/Metrolist/horizontal-auto.svg" alt="Translation status" />
@@ -216,7 +216,7 @@
 
 <h1><a id="support-the-project"></a>Support the Project</h1>
 
-<h3>Metrolist is free and open-source. If it brings you joy, consider supporting its development!</h3>
+<h3>Pagaska Music is free and open-source. If it brings you joy, consider supporting its development!</h3>
 
 #### Monero (XMR)
 

@@ -60,8 +60,8 @@ jobs:
         run: ./gradlew --console=plain assembleFossDebug :app:lintFossDebug --warning-mode summary
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
-          METROLIST_APPLICATION_ID: com.metrolist.music.pr.p${{ github.event.number }}
-          METROLIST_APP_NAME: Metrolist PR ${{ github.event.number }}
+          METROLIST_APPLICATION_ID: id.pagaska.music.pr.p${{ github.event.number }}
+          METROLIST_APP_NAME: Pagaska Music PR ${{ github.event.number }}
           METROLIST_DEBUG_KEYSTORE_PATH: pr-debug.keystore
           PULL_REQUEST: "true"
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}

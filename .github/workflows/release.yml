@@ -106,8 +106,8 @@ jobs:
       - name: Build and Lint Release APK
         run: ./gradlew --console=plain clean assemble${{ matrix.variantName }}Release :app:lint${{ matrix.variantName }}Release --warning-mode summary
         env:
-          METROLIST_APPLICATION_ID: com.metrolist.music
-          METROLIST_APP_NAME: Metrolist
+          METROLIST_APPLICATION_ID: id.pagaska.music
+          METROLIST_APP_NAME: Pagaska Music
           PULL_REQUEST: "false"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
