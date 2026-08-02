@@ -136,3 +136,22 @@ jobs:
             
             👇 Yahan click karke direct Artifacts (APK) download karein:
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      # --- YAHAN TUMHARI BASEKEY WHATSAPP API INTEGRATION ADD KI HAI ---
+      - name: Send WhatsApp Notification via BaseKey
+        if: always() # Build pass ho ya fail, ye step hamesha chalega
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            BUILD_STATUS="Success ✅"
+          else
+            BUILD_STATUS="Failed ❌"
+          fi
+
+          curl -X POST https://superkey-app.vercel.app/api/v1/trigger \
+            -H "Authorization: Bearer ${{ secrets.BASEKEY_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"template\": \"apk_build_status\",
+              \"phone\": \"${{ secrets.MY_PHONE_NUMBER }}\",
+              \"variables\": [\"$BUILD_STATUS\", \"${{ matrix.variantName }} - Build #${{ github.run_number }}\"]
+            }"
