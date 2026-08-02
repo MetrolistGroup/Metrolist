@@ -701,6 +701,26 @@ constructor(
                 MusicService.SEARCH -> {
                     val songId = path.getOrNull(2) ?: return@future defaultResult
                     val searchQuery = path.getOrNull(1) ?: return@future defaultResult
+
+                    val isVoiceSearch = songId.isBlank() && searchQuery.isNotBlank()
+
+                    if (isVoiceSearch) {
+                        //Search if the voiceQuery is about a local playlist and play only the songs in that playlist
+                        val localPlaylists = database.searchPlaylists(searchQuery).first()
+                        val exactLocalPlaylist = localPlaylists.firstOrNull {
+                            it.playlist.name.equals(searchQuery, ignoreCase = true)
+                        }
+                        if (exactLocalPlaylist != null) {
+                            val playlistSongs = database.playlistSongs(exactLocalPlaylist.playlist.id).first()
+                            if (playlistSongs.isNotEmpty()) {
+                                return@future MediaItemsWithStartPosition(
+                                    playlistSongs.map { it.song.toMediaItem() },
+                                    0,
+                                    C.TIME_UNSET
+                                )
+                            }
+                        }
+                    }
                     
                     val searchResults = mutableListOf<Song>()
 
@@ -762,9 +782,22 @@ constructor(
                     if (searchResults.isEmpty()) {
                         return@future defaultResult
                     }
-                    
+
+                    //Check if the voiceQuery is about a specific song and plays only that
+                    if (isVoiceSearch) {
+                        val snapshot: List<Song> = synchronized(searchResults) { searchResults.toList() }
+                        val bestMatch = VoiceSearchMatcher.findBest(searchQuery, snapshot)
+                        if (bestMatch != null) {
+                            return@future MediaItemsWithStartPosition(
+                                listOf(bestMatch.toMediaItem()),
+                                0,
+                                C.TIME_UNSET,
+                            )
+                        }
+                    }
+
                     val targetIndex = searchResults.indexOfFirst { it.id == songId }
-                    
+
                     MediaItemsWithStartPosition(
                         searchResults.map { it.toMediaItem() },
                         if (targetIndex >= 0) targetIndex else 0,

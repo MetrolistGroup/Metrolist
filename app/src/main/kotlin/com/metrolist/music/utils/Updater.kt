@@ -40,6 +40,8 @@ object Updater {
     
     private const val CHECK_INTERVAL_MILLIS = 2 * 60 * 60 * 1000L // 2 hours
     private const val GITHUB_API_BASE = "https://api.github.com/repos/MetrolistGroup/Metrolist"
+    private const val KMP_RELEASES_URL = "https://api.github.com/repos/MetrolistGroup/Metrolist-KMP/releases?per_page=30"
+    const val KMP_APK_NAME = "Metrolist.apk"
 
     /**
      * Compares two version strings.
@@ -186,6 +188,33 @@ object Updater {
                 
                 cachedAllReleases = releases
                 releases
+            }
+        }
+
+    /**
+     * Returns the newest KMP release that provides the migration APK.
+     */
+    suspend fun getLatestKmpRelease(): Result<ReleaseInfo?> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val releases = JSONArray(client.get(KMP_RELEASES_URL).bodyAsText())
+
+                for (i in 0 until releases.length()) {
+                    val release = releases.getJSONObject(i)
+                    val assets = parseAssets(release.getJSONArray("assets"))
+                    if (assets.none { it.name == KMP_APK_NAME }) continue
+
+                    val tagName = release.getString("tag_name")
+                    return@runCatching ReleaseInfo(
+                        tagName = tagName,
+                        versionName = release.optString("name").takeIf { it.isNotBlank() } ?: tagName,
+                        description = release.optString("body"),
+                        releaseDate = release.getString("published_at"),
+                        assets = assets,
+                    )
+                }
+
+                null
             }
         }
 

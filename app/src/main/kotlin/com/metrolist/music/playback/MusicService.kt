@@ -1207,6 +1207,7 @@ class MusicService :
                                 playQueue(
                                     queue = restoredQueue,
                                     playWhenReady = false,
+                                    restoringQueue = true,
                                 )
                             }
                         }
@@ -1762,6 +1763,7 @@ class MusicService :
     fun playQueue(
         queue: Queue,
         playWhenReady: Boolean = true,
+        restoringQueue: Boolean = false,
     ) {
         if (!playerInitialized.value) {
             Timber.tag(TAG).w("playQueue called before player initialization, queuing request")
@@ -1775,8 +1777,7 @@ class MusicService :
         currentQueue = queue
         queueTitle = null
         val persistShuffleAcrossQueues = dataStore.get(PersistentShuffleAcrossQueuesKey, false)
-        val previousShuffleEnabled = player.shuffleModeEnabled
-        if (!persistShuffleAcrossQueues) {
+        if (!persistShuffleAcrossQueues && !restoringQueue) {
             player.shuffleModeEnabled = false
         }
         originalQueueSize = 0
