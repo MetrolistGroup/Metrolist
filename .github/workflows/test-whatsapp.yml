@@ -1,0 +1,27 @@
+name: Test WhatsApp API
+
+# workflow_dispatch का मतलब है कि तुम इसे GitHub Actions टैब से बटन दबाकर मैन्युअली चला सकते हो
+on:
+  workflow_dispatch: 
+
+jobs:
+  test_basekey_api:
+    name: Quick WhatsApp Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send WhatsApp Notification via BaseKey
+        run: |
+          # BaseKey API को सीधा cURL रिक्वेस्ट भेज रहे हैं
+          curl -X POST https://superkey-app.vercel.app/api/v1/trigger \
+            -H "Authorization: Bearer ${{ secrets.BASEKEY_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"template\": \"apk_build_status\",
+              \"phone\": \"${{ secrets.MY_PHONE_NUMBER }}\",
+              \"variables\": [
+                \"${{ github.repository }} (Quick Test)\", 
+                \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\", 
+                \"Test Success ✅\"
+              ]
+            }"
