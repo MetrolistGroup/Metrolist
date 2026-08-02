@@ -79,6 +79,7 @@ import com.metrolist.music.constants.QuickPicksKey
 import com.metrolist.music.constants.RandomizeHomeOrderKey
 import com.metrolist.music.constants.SYSTEM_DEFAULT
 import com.metrolist.music.constants.ShowArtistDescriptionKey
+import com.metrolist.music.constants.ShowDailyDiscoverKey
 import com.metrolist.music.constants.ShowMostStatsPlaylistsKey
 import com.metrolist.music.constants.ShowArtistSubscriberCountKey
 import com.metrolist.music.constants.ShowMonthlyListenersKey
@@ -135,6 +136,10 @@ fun ContentSettings(
         rememberPreference(key = ShowMostStatsPlaylistsKey, defaultValue = true)
     val (randomizeHomeOrder, onRandomizeHomeOrderChange) = rememberPreference(
         RandomizeHomeOrderKey,
+        defaultValue = true
+    )
+    val (showDailyDiscover, onShowDailyDiscoverChange) = rememberPreference(
+        ShowDailyDiscoverKey,
         defaultValue = true
     )
 
@@ -999,6 +1004,27 @@ fun ContentSettings(
                         )
                     },
                     onClick = { onRandomizeHomeOrderChange(!randomizeHomeOrder) }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.explore_outlined),
+                    title = { Text(stringResource(R.string.show_daily_discover)) },
+                    description = { Text(stringResource(R.string.show_daily_discover_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = showDailyDiscover,
+                            onCheckedChange = onShowDailyDiscoverChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (showDailyDiscover) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onShowDailyDiscoverChange(!showDailyDiscover) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.trending_up),

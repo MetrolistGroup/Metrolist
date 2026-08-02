@@ -866,6 +866,8 @@
     <string name="daily_discover_similar_to">Similar to %1$s</string>
     <string name="daily_discover_based_on">Based on %1$s</string>
     <string name="daily_discover_for_fans_of">For fans of %1$s</string>
+    <string name="show_daily_discover">Show Daily Discover</string>
+    <string name="show_daily_discover_desc">Show the Daily Discover section on the home screen</string>
     <string name="from_the_community">From the community</string>
 
     <!-- Logout dialog -->
