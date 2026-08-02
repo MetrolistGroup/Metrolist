@@ -1863,7 +1863,7 @@ class MusicService :
     }
 
     fun adoptQueue(queue: Queue, title: String? = null, initialQueueSize: Int = 0) {
-        currentQueue = queue
+        _currentQueue.value = queue
         queueTitle = title
         originalQueueSize = initialQueueSize
     }
@@ -4516,10 +4516,13 @@ class MusicService :
                 if (targetId.isBlank()) return null
                 val songs = database.playlistSongs(targetId).first()
                 if (songs.isEmpty()) return null
-                val playlistName = database.playlist(targetId).first()?.playlist?.name ?: targetTitle
+                val playlist = database.playlist(targetId).first()?.playlist
                 ListQueue(
-                    title = playlistName,
+                    title = playlist?.name ?: targetTitle,
                     items = songs.map { it.song.toMediaItem() },
+                    playlistBrowseId = playlist?.browseId,
+                    playlistId = playlist?.id,
+                    playlistIsEditable = playlist?.isEditable == true,
                 )
             }
 
@@ -4531,6 +4534,9 @@ class MusicService :
                     ListQueue(
                         title = cachedPlaylist?.playlist?.name ?: targetTitle,
                         items = cachedSongs.map { it.song.toMediaItem() },
+                        playlistBrowseId = cachedPlaylist?.playlist?.browseId,
+                        playlistId = cachedPlaylist?.playlist?.id,
+                        playlistIsEditable = cachedPlaylist?.playlist?.isEditable == true,
                     )
                 } else {
                     YouTubePlaylistQueue(
@@ -4621,13 +4627,9 @@ class MusicService :
                     return@launch
                 }
                 val items = playlistSongs.map { it.song.toMediaItem() }
-                val playlistName =
+                val playlist =
                     withContext(Dispatchers.IO) {
-                        database
-                            .playlist(playlistId)
-                            .first()
-                            ?.playlist
-                            ?.name
+                        database.playlist(playlistId).first()?.playlist
                     }
                 withContext(Dispatchers.IO) {
                     MusicAlarmScheduler.scheduleFromPreferences(this@MusicService)
@@ -4650,10 +4652,13 @@ class MusicService :
                 player.clearMediaItems()
                 playQueue(
                     ListQueue(
-                        title = playlistName,
+                        title = playlist?.name,
                         items = alarmItems,
                         startIndex = 0,
                         position = 0L,
+                        playlistBrowseId = playlist?.browseId,
+                        playlistId = playlist?.id,
+                        playlistIsEditable = playlist?.isEditable == true,
                     ),
                     playWhenReady = true,
                 )
