@@ -57,7 +57,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -154,37 +153,23 @@ fun PlayerMenu(
     val librarySong by database.song(mediaMetadata.id).collectAsStateWithLifecycle(initialValue = null)
     val coroutineScope = rememberCoroutineScope()
     val downloadUtil = LocalDownloadUtil.current
-    val playlistRemovalTarget by produceState<PlaylistRemovalTarget?>(
-        initialValue = null,
-        mediaMetadata.id,
-        mediaMetadata.setVideoId,
-    ) {
-        val queue = playerConnection.service.currentQueue as? YouTubePlaylistQueue
-        val queueSetVideoId = queue?.getSetVideoId(mediaMetadata.id)
-        if (queue?.isEditable == true && !queueSetVideoId.isNullOrBlank()) {
-            value = PlaylistRemovalTarget(
-                playlistId = queue.playlistId,
-                setVideoId = queueSetVideoId,
-                localPlaylistId = null,
-                source = "queue",
-            )
-            return@produceState
-        }
-
-        val listQueue = playerConnection.service.currentQueue as? ListQueue
-        val listQueueBrowseId = listQueue?.playlistBrowseId
-        val listQueueSetVideoId = listQueue?.playlistSetVideoIds?.get(mediaMetadata.id)
-        if (!listQueueBrowseId.isNullOrBlank() && !listQueueSetVideoId.isNullOrBlank()) {
-            value = PlaylistRemovalTarget(
-                playlistId = listQueueBrowseId,
-                setVideoId = listQueueSetVideoId,
-                localPlaylistId = listQueue.playlistId,
-                source = "listQueue",
-            )
-            return@produceState
-        }
-
-        value = null
+    val currentQueue by playerConnection.service.currentQueue.collectAsStateWithLifecycle()
+    val playlistRemovalTarget = when (val queue = currentQueue) {
+        is YouTubePlaylistQueue -> mediaMetadata.setVideoId
+            ?.takeIf { queue.isEditable && it.isNotBlank() }
+            ?.let {
+                PlaylistRemovalTarget(queue.playlistId, it, null, "queue")
+            }
+        is ListQueue -> mediaMetadata.setVideoId
+            ?.takeIf {
+                queue.playlistIsEditable &&
+                    !queue.playlistBrowseId.isNullOrBlank() &&
+                    it.isNotBlank()
+            }
+            ?.let {
+                PlaylistRemovalTarget(queue.playlistBrowseId!!, it, queue.playlistId, "listQueue")
+            }
+        else -> null
     }
 
     val download by downloadUtil

@@ -13,6 +13,7 @@ import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.playback.queues.LocalAlbumRadio
 import com.metrolist.music.playback.queues.Queue
 import com.metrolist.music.playback.queues.YouTubeAlbumRadio
+import com.metrolist.music.playback.queues.YouTubePlaylistQueue
 import com.metrolist.music.playback.queues.YouTubeQueue
 
 fun Queue.toPersistQueue(
@@ -27,7 +28,19 @@ fun Queue.toPersistQueue(
             items = items,
             mediaItemIndex = mediaItemIndex,
             position = position,
-            queueType = QueueType.LIST
+            queueType = QueueType.LIST,
+            playlistBrowseId = playlistBrowseId,
+            playlistId = playlistId,
+            playlistIsEditable = playlistIsEditable,
+        )
+        is YouTubePlaylistQueue -> PersistQueue(
+            title = title,
+            items = items,
+            mediaItemIndex = mediaItemIndex,
+            position = position,
+            queueType = QueueType.LIST,
+            playlistBrowseId = playlistId,
+            playlistIsEditable = isEditable,
         )
         is YouTubeQueue -> {
             // Since endpoint is private, we'll store a simplified version
@@ -84,7 +97,10 @@ fun PersistQueue.toQueue(): Queue {
             title = title,
             items = items.map { it.toMediaItem() },
             startIndex = mediaItemIndex,
-            position = position
+            position = position,
+            playlistBrowseId = playlistBrowseId,
+            playlistId = playlistId,
+            playlistIsEditable = playlistIsEditable,
         )
         is QueueType.YOUTUBE -> {
             // For now, fallback to ListQueue since we can't reconstruct YouTubeQueue properly
@@ -92,7 +108,7 @@ fun PersistQueue.toQueue(): Queue {
                 title = title,
                 items = items.map { it.toMediaItem() },
                 startIndex = mediaItemIndex,
-                position = position
+                position = position,
             )
         }
         is QueueType.YOUTUBE_ALBUM_RADIO -> {
@@ -101,7 +117,7 @@ fun PersistQueue.toQueue(): Queue {
                 title = title,
                 items = items.map { it.toMediaItem() },
                 startIndex = mediaItemIndex,
-                position = position
+                position = position,
             )
         }
         is QueueType.LOCAL_ALBUM_RADIO -> {
@@ -110,7 +126,7 @@ fun PersistQueue.toQueue(): Queue {
                 title = title,
                 items = items.map { it.toMediaItem() },
                 startIndex = mediaItemIndex,
-                position = position
+                position = position,
             )
         }
     }

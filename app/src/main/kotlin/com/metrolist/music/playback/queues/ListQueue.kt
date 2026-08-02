@@ -15,7 +15,7 @@ class ListQueue(
     val position: Long = 0L,
     val playlistBrowseId: String? = null,
     val playlistId: String? = null,
-    val playlistSetVideoIds: Map<String, String> = emptyMap(),
+    val playlistIsEditable: Boolean = false,
 ) : Queue {
     override val preloadItem: MediaMetadata? = null
 

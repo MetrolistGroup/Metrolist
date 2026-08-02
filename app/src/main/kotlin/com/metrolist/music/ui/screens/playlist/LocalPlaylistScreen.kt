@@ -668,17 +668,15 @@ fun LocalPlaylistScreen(
                                                 playerConnection.playQueue(
                                                 ListQueue(
                                                     title = playlist!!.playlist.name,
-                                                    items = songs.map { it.song.toMediaItem() },
+                                                    items = songs.map {
+                                                        it.song.toMediaMetadata()
+                                                            .copy(setVideoId = it.map.setVideoId)
+                                                            .toMediaItem()
+                                                    },
                                                     startIndex = songs.indexOfFirst { it.map.id == song.map.id },
                                                     playlistBrowseId = playlist?.playlist?.browseId,
                                                     playlistId = playlist?.playlist?.id,
-                                                    playlistSetVideoIds = songs
-                                                        .mapNotNull { playlistSong ->
-                                                            playlistSong.map.setVideoId?.let { setVideoId ->
-                                                                playlistSong.map.songId to setVideoId
-                                                            }
-                                                        }
-                                                        .toMap(),
+                                                    playlistIsEditable = playlist?.playlist?.isEditable == true,
                                                 ),
                                             )
                                         }
@@ -1339,16 +1337,14 @@ fun LocalPlaylistHeader(
                   playerConnection.playQueue(
                       ListQueue(
                           title = playlist.playlist.name,
-                          items = shuffledSongs.map { it.song.toMediaItem() },
+                          items = shuffledSongs.map {
+                              it.song.toMediaMetadata()
+                                  .copy(setVideoId = it.map.setVideoId)
+                                  .toMediaItem()
+                          },
                           playlistBrowseId = playlist.playlist.browseId,
                           playlistId = playlist.playlist.id,
-                          playlistSetVideoIds = shuffledSongs
-                              .mapNotNull { playlistSong ->
-                                  playlistSong.map.setVideoId?.let { setVideoId ->
-                                      playlistSong.map.songId to setVideoId
-                                  }
-                              }
-                              .toMap(),
+                          playlistIsEditable = playlist.playlist.isEditable,
                       ),
                   )
               },
@@ -1374,16 +1370,14 @@ fun LocalPlaylistHeader(
                     playerConnection.playQueue(
                       ListQueue(
                           title = playlist.playlist.name,
-                          items = songs.map { it.song.toMediaItem() },
+                          items = songs.map {
+                              it.song.toMediaMetadata()
+                                  .copy(setVideoId = it.map.setVideoId)
+                                  .toMediaItem()
+                          },
                           playlistBrowseId = playlist.playlist.browseId,
                           playlistId = playlist.playlist.id,
-                          playlistSetVideoIds = songs
-                              .mapNotNull { playlistSong ->
-                                  playlistSong.map.setVideoId?.let { setVideoId ->
-                                      playlistSong.map.songId to setVideoId
-                                  }
-                              }
-                              .toMap(),
+                          playlistIsEditable = playlist.playlist.isEditable,
                       ),
                   )
               },

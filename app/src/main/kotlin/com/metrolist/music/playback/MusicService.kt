@@ -337,8 +337,8 @@ class MusicService :
 
     private lateinit var audioQuality: com.metrolist.music.constants.AudioQuality
 
-    var currentQueue: Queue = EmptyQueue
-        private set
+    private val _currentQueue = MutableStateFlow<Queue>(EmptyQueue)
+    val currentQueue = _currentQueue.asStateFlow()
     var queueTitle: String? = null
 
     val currentMediaMetadata = MutableStateFlow<com.metrolist.music.models.MediaMetadata?>(null)
@@ -1754,7 +1754,7 @@ class MusicService :
             return
         }
 
-        currentQueue = queue
+        _currentQueue.value = queue
         queueTitle = null
         val persistShuffleAcrossQueues = dataStore.get(PersistentShuffleAcrossQueuesKey, false)
         if (!persistShuffleAcrossQueues && !restoringQueue) {
@@ -1874,7 +1874,7 @@ class MusicService :
                     }
                 }
 
-                currentQueue = radioQueue
+                _currentQueue.value = radioQueue
             } catch (e: Exception) {
                 try {
                     val nextResult =
@@ -2528,13 +2528,13 @@ class MusicService :
         if (cachedAutoLoadMore &&
             reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT &&
             player.mediaItemCount - player.currentMediaItemIndex <= 5 &&
-            currentQueue.hasNextPage() &&
+            _currentQueue.value.hasNextPage() &&
             !(cachedDisableLoadMoreWhenRepeatAll && player.repeatMode == REPEAT_MODE_ALL)
         ) {
             scope.launch(SilentHandler) {
                 val mediaItems =
                     withContext(Dispatchers.IO) {
-                        currentQueue
+                        _currentQueue.value
                             .nextPage()
                             .filterExplicit(cachedHideExplicit)
                             .filterVideoSongs(cachedHideVideoSongs)
@@ -3996,7 +3996,7 @@ class MusicService :
 
         try {
             val persistQueue =
-                currentQueue.toPersistQueue(
+                _currentQueue.value.toPersistQueue(
                     title = queueTitle,
                     items = player.mediaItems.mapNotNull { it.metadata },
                     mediaItemIndex = player.currentMediaItemIndex,

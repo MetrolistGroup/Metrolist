@@ -338,7 +338,9 @@ fun OnlinePlaylistScreen(
                                                 playlistId = playlist.id,
                                                 isEditable = playlist.isEditable,
                                                 onSongRemovedFromPlaylist = {
-                                                    viewModel.removeSongFromLocalList(songItem.id)
+                                                    songItem.setVideoId?.let { setVideoId ->
+                                                        viewModel.removeSongFromLocalList(songItem.id, setVideoId)
+                                                    }
                                                 },
                                                 onDismiss = menuState::dismiss
                                             )

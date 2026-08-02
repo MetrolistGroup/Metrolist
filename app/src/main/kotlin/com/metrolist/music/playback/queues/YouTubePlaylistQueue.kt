@@ -25,21 +25,14 @@ class YouTubePlaylistQueue(
     private var continuation: String? = initialContinuation
     private var retryCount = 0
     private val maxRetries = 3
-    private val setVideoIds = mutableMapOf<String, String>()
-
-    fun getSetVideoId(videoId: String): String? = setVideoIds[videoId]
-
-    private fun SongItem.toPlaylistItem(playlistId: String): MediaItem {
-        setVideoId?.takeIf { it.isNotBlank() }?.let { setVideoIds[id] = it }
-        return this.toMediaItem()
-    }
+    private fun SongItem.toPlaylistItem(): MediaItem = toMediaItem()
 
     override suspend fun getInitialStatus(): Queue.Status {
         return withContext(IO) {
             if (initialSongs.isNotEmpty()) {
                 Queue.Status(
                     title = playlistTitle,
-                    items = initialSongs.map { it.toPlaylistItem(playlistId) },
+                    items = initialSongs.map { it.toPlaylistItem() },
                     mediaItemIndex = startIndex,
                 )
             } else {
@@ -47,7 +40,7 @@ class YouTubePlaylistQueue(
                 continuation = playlistPage.songsContinuation
                 Queue.Status(
                     title = playlistPage.playlist.title,
-                    items = playlistPage.songs.map { it.toPlaylistItem(playlistId) },
+                    items = playlistPage.songs.map { it.toPlaylistItem() },
                     mediaItemIndex = startIndex,
                 )
             }
@@ -66,7 +59,7 @@ class YouTubePlaylistQueue(
                     val continuationPage = YouTube.playlistContinuation(currentContinuation).getOrThrow()
                     continuation = continuationPage.continuation
                     retryCount = 0
-                    return@withContext continuationPage.songs.map { it.toPlaylistItem(playlistId) }
+                    return@withContext continuationPage.songs.map { it.toPlaylistItem() }
                 } catch (e: Exception) {
                     lastException = e
                     retryCount++
