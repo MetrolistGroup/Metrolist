@@ -1457,6 +1457,12 @@ interface DatabaseDao {
             WHERE album.id = song.albumId 
             AND album.title LIKE '%' || :query || '%'
         )
+        OR EXISTS (
+            SELECT 1 FROM playlist_song_map 
+            JOIN playlist ON playlist_song_map.playlistId = playlist.id 
+            WHERE playlist_song_map.songId = song.id 
+            AND playlist.name LIKE '%' || :query || '%'
+        )
     )
     LIMIT :previewSize
     """

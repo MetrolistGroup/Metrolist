@@ -495,23 +495,7 @@ constructor(
                 val searchResults = mutableListOf<MediaItem>()
                 val limit = context.dataStore.get(AndroidAutoSearchLocalLimitKey, 75)
 
-                val localSongs = database.searchSongsExtended(query, limit).first()
-                
-                val artistSongs = database.searchArtists(query, limit).first().flatMap { artist ->
-                    database.artistSongsByCreateDateAsc(artist.id).first()
-                }
-                
-                val albumSongs = database.searchAlbums(query, limit).first().flatMap { album ->
-                    database.albumSongs(album.id).first()
-                }
-                
-                val playlistSongs = database.searchPlaylists(query, limit).first().flatMap { playlist ->
-                    database.playlistSongs(playlist.id).first().map { it.song }
-                }
-
-                val allLocalSongs = (localSongs + artistSongs + albumSongs + playlistSongs)
-                    .distinctBy { it.id }
-                
+                val allLocalSongs = database.searchSongsExtended(query, limit).first()
                 allLocalSongs.forEach { song ->
                     searchResults.add(song.toMediaItem(
                         path = "${MusicService.SEARCH}/$query",
@@ -723,23 +707,7 @@ constructor(
                     val searchResults = mutableListOf<Song>()
                     val limit = context.dataStore.get(AndroidAutoSearchLocalLimitKey, 75)
 
-                    val localSongs = database.searchSongsExtended(searchQuery, limit).first()
-                    
-                    val artistSongs = database.searchArtists(searchQuery, limit).first().flatMap { artist ->
-                        database.artistSongsByCreateDateAsc(artist.id).first()
-                    }
-                    
-                    val albumSongs = database.searchAlbums(searchQuery, limit).first().flatMap { album ->
-                        database.albumSongs(album.id).first()
-                    }
-                    
-                    val playlistSongs = database.searchPlaylists(searchQuery, limit).first().flatMap { playlist ->
-                        database.playlistSongs(playlist.id).first().map { it.song }
-                    }
-
-                    val allLocalSongs = (localSongs + artistSongs + albumSongs + playlistSongs)
-                        .distinctBy { it.id }
-                    
+                    val allLocalSongs = database.searchSongsExtended(searchQuery, limit).first()
                     searchResults.addAll(allLocalSongs)
                     
                     try {
