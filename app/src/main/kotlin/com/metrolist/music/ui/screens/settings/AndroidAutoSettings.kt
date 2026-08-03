@@ -28,7 +28,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
@@ -97,7 +96,6 @@ fun deserializeSections(raw: String): List<Pair<AndroidAutoSection, Boolean>> {
 @Composable
 fun AndroidAutoSettings(
     navController: NavController,
-    scrollBehavior: TopAppBarScrollBehavior,
 ) {
     val haptic = LocalHapticFeedback.current
     val database = LocalDatabase.current
@@ -383,6 +381,5 @@ fun AndroidAutoSettings(
                 )
             }
         },
-        scrollBehavior = scrollBehavior,
     )
 }
