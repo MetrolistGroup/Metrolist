@@ -1464,6 +1464,7 @@ interface DatabaseDao {
             AND playlist.name LIKE '%' || :query || '%'
         )
     )
+    ORDER BY totalPlayTime DESC, id ASC
     LIMIT :previewSize
     """
     )
