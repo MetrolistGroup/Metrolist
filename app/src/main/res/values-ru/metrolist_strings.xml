@@ -30,7 +30,7 @@
         <item quantity="many">%d секунд</item>
         <item quantity="other">%d секунд</item>
     </plurals>
-    <string name="allows_for_sync_witch_youtube">ПРИМЕЧАНИЕ: Эта опция включает синхронизацию с YouTube Music, и её НЕЛЬЗЯ изменить позже</string>
+    <string name="allows_for_sync_witch_youtube">ПРИМЕЧАНИЕ: Этот параметр включает синхронизацию с YouTube Music, и его НЕЛЬЗЯ изменить позже</string>
     <string name="player_background_blur">Размытие</string>
     <string name="slim_navbar">Тонкая панель навигации</string>
     <string name="dislikes">Дизлайки</string>
@@ -38,13 +38,13 @@
     <string name="likes">Лайки</string>
     <string name="charts">Чарты</string>
     <string name="album_cover_desc">Обложка альбома</string>
-    <string name="top_music_videos">Лучшие музыкальные клипы</string>
+    <string name="top_music_videos">Самые популярные клипы</string>
     <string name="weeks">Недели</string>
     <string name="months">Месяцы</string>
     <string name="years">Годы</string>
     <string name="liked">Понравившиеся</string>
     <string name="offline">Скачанные</string>
-    <string name="my_top">Топ</string>
+    <string name="my_top">Мой топ</string>
     <string name="cached_playlist">Кэшированные</string>
     <string name="sync_playlist">Синхронизировать плейлист</string>
     <string name="sync_disabled">Синхронизация выключена</string>
@@ -53,7 +53,7 @@
     <string name="trending">Тренды</string>
     <string name="generating_image">Генерация изображения…</string>
     <string name="local_history">Локальная</string>
-    <string name="remote_history">Удаленная</string>
+    <string name="remote_history">Удалённая</string>
     <string name="text_color">Цвет текста</string>
     <string name="background_color">Цвет фона</string>
     <string name="continuous">Непрерывно</string>
@@ -92,7 +92,7 @@
     <string name="percentage_format">%d%%</string>
     <string name="import_online">Импортировать плейлист M3U</string>
     <string name="import_csv">Импортировать плейлист CSV</string>
-    <string name="playlist_add_local_to_synced_note">ПРИМЕЧАНИЕ: Добавление локальных треков в синхронизированные или удаленные плейлисты не поддерживается. Любые другие комбинации допустимы</string>
+    <string name="playlist_add_local_to_synced_note">ПРИМЕЧАНИЕ: Добавление локальных треков в синхронизированные или удалённые плейлисты не поддерживается. Любые другие комбинации допустимы</string>
     <string name="auto_download_on_like">Автоскачивание при отметке «Нравится»</string>
     <string name="auto_download_on_like_desc">Автоматически скачивать треки, отмечаемые как понравившиеся</string>
     <string name="clear_song_cache_dialog">Вы уверены, что хотите очистить все закэшированные треки?</string>
@@ -125,8 +125,8 @@
     <string name="seek_backward_dynamic">-%1$d секунд назад</string>
     <string name="seek_seconds_addup">Накопительная перемотка</string>
     <string name="seek_seconds_addup_description">Если включено, при каждом пропуске перемотки добавляется ещё 5 секунд</string>
-    <string name="disable_load_more_when_repeat_all">Отключить автозагрузку в режиме повтора всех треков</string>
-    <string name="disable_load_more_when_repeat_all_desc">Отключить автоматическую подгрузку треков или похожего контента, когда включён повтор всего</string>
+    <string name="disable_load_more_when_repeat_all">Отключить автоподгрузку при повторе всех треков</string>
+    <string name="disable_load_more_when_repeat_all_desc">Не подгружать треки и похожий контент, если включён режим повтора</string>
     <string name="settings_section_ui">Интерфейс</string>
     <string name="settings_section_privacy">Конфиденциальность и безопасность</string>
     <string name="settings_section_player_content">Плеер и контент</string>
@@ -192,7 +192,7 @@
     <string name="start_radio_desc">Запустить радио на основе этого элемента</string>
     <string name="play_next_desc">Воспроизвести следующим в очереди</string>
     <string name="add_to_queue_desc">Добавить в конец очереди</string>
-    <string name="add_to_library_desc">Сохранить в вашу библиотеку</string>
+    <string name="add_to_library_desc">Сохранить в библиотеку</string>
     <string name="download_desc">Скачать для офлайн-прослушивания</string>
     <string name="add_to_playlist_desc">Добавить в плейлист</string>
     <string name="refetch_desc">Обновить метаданные из YouTube Music</string>
@@ -214,7 +214,7 @@
     <string name="delete_playlist_desc">Удалить этот плейлист навсегда</string>
     <string name="sync_playlist_desc">Синхронизировать этот плейлист с YouTube Music</string>
     <string name="enable_better_lyrics">Включить Better Lyrics</string>
-    <string name="enable_better_lyrics_desc">Синхронизация текста по слогам для любой песни, идеально для караоке</string>
+    <string name="enable_better_lyrics_desc">Послоговая синхронизация текстов — идеально для караоке</string>
     <string name="lyrics_animation_style">Стиль анимации текста</string>
     <string name="none">Нет</string>
     <string name="fade">Затухание</string>
@@ -223,7 +223,7 @@
     <string name="karaoke">Караоке</string>
     <string name="apple_music_style">Apple Music</string>
     <string name="lyrics_text_size">Размер текста песни</string>
-    <string name="lyrics_line_spacing">Межстрочный интервал текста</string>
+    <string name="lyrics_line_spacing">Межстрочный интервал</string>
     <string name="shuffle_playlist_first">Сначала перемешать плейлист или альбом</string>
     <string name="shuffle_playlist_first_desc">При перемешивании проигрывать все треки из текущего плейлиста или альбома перед переходом к похожему контенту</string>
     <string name="lyrics_glow_effect">Включить эффект свечения текста</string>
@@ -342,7 +342,7 @@
     <string name="listen_together_you_are_host">Вы — ведущий</string>
     <string name="listen_together_you_are_guest">Вы — участник</string>
     <string name="listen_together_join_requests">Запросы на вход</string>
-    <string name="listen_together_view_logs">Посмотреть логи</string>
+    <string name="listen_together_view_logs">Просмотреть логи</string>
     <string name="listen_together_view_logs_desc">Отладка событий подключения и сообщений</string>
     <string name="listen_together_logs">Логи подключения</string>
     <string name="listen_together_no_logs">Логов пока нет</string>
@@ -482,7 +482,7 @@
     <string name="map_csv_columns">Сопоставление столбцов CSV</string>
     <string name="column_label">Столбец %d</string>
     <string name="recognition_error">Ошибка распознавания</string>
-    <string name="enable_high_refresh_rate_desc">Принудительно использует максимальную поддерживаемую частоту обновления экрана (напр., 120 Гц)</string>
+    <string name="enable_high_refresh_rate_desc">Принудительно использует максимальную поддерживаемую частоту обновления экрана (например, 120 Гц)</string>
     <string name="first_row_is_header">Первая строка — заголовок</string>
     <string name="try_again">Попробовать снова</string>
     <string name="tap_to_recognize">Нажмите, чтобы распознать</string>
@@ -512,7 +512,7 @@
     <string name="discord_activity_watching">Смотрит</string>
     <string name="discord_activity_competing">Соревнуется</string>
     <string name="discord_rpc_preview">Предпросмотр Rich Presence</string>
-    <string name="discord_presence">Присутствие</string>
+    <string name="discord_presence">Presence</string>
     <string name="discord_connect_description">Войдите через Discord, чтобы делиться тем, что вы слушаете</string>
     <string name="prevent_duplicate_tracks_in_queue">Исключать дубликаты в очереди</string>
     <string name="prevent_duplicate_tracks_in_queue_desc">Если трек уже есть в очереди, он будет перемещён, а не добавлен повторно</string>
@@ -550,15 +550,15 @@
     <string name="restart">Перезапустить</string>
     <string name="restart_required">Требуется перезапуск!</string>
     <string name="density_restart_message">Изменение плотности интерфейса вступит в силу после перезапуска приложения. Перезапустить сейчас?</string>
-    <string name="enable_lrclib_desc">База синхронизированных текстов песен, поддерживаемая сообществом</string>
-    <string name="enable_kugou_desc">Загружает тексты песен из KuGou, популярной китайской музыкальной платформы</string>
-    <string name="youtube_music_lyrics_note">ПРИМЕЧАНИЕ: Тексты из YouTube Music будут показываться автоматически, если нет других источников. Обычно они не синхронизированы</string>
+    <string name="enable_lrclib_desc">База синхронизированных текстов от сообщества</string>
+    <string name="enable_kugou_desc">Загружает тексты из популярной китайской платформы KuGou</string>
+    <string name="youtube_music_lyrics_note">ПРИМЕЧАНИЕ: Тексты из YouTube Music отображаются автоматически при отсутствии других источников. Обычно они не синхронизированы</string>
     <string name="enable_lyricsplus">Включить LyricsPlus</string>
     <string name="enable_lyricsplus_desc">Синхронизированные тексты из нескольких источников</string>
-    <string name="lyrics_provider_selection">Выбор поставщиков</string>
-    <string name="lyrics_provider_selection_desc">Выберите, какие поставщики текстов будут включены</string>
-    <string name="lyrics_provider_priority">Приоритет поставщиков текстов</string>
-    <string name="lyrics_provider_priority_desc">Перетащите, чтобы изменить порядок поставщиков. Чем выше позиция, тем выше приоритет</string>
+    <string name="lyrics_provider_selection">Выбор источников</string>
+    <string name="lyrics_provider_selection_desc">Выберите, какие источники текстов использовать</string>
+    <string name="lyrics_provider_priority">Приоритет источников текстов</string>
+    <string name="lyrics_provider_priority_desc">Перетащите для изменения порядка. Чем выше источник в списке, тем выше его приоритет</string>
     <string name="changelog">Список изменений</string>
     <string name="changelog_empty">Список изменений недоступен</string>
     <string name="github_releases_url">https://github.com/MetrolistGroup/Metrolist/releases</string>
@@ -671,8 +671,8 @@
     <string name="view_channel">Перейти к каналу</string>
     <string name="filter_profiles">Профили</string>
     <string name="enable_automatic_sleeptimer">Включить автоматический таймер сна</string>
-    <string name="sleeptimer_description">Автоматически запускает таймер сна в заданное время со стандартной длительностью</string>
-    <string name="sleep_timer_repeat_description">Установите день и время для автоматического включения таймера сна</string>
+    <string name="sleeptimer_description">Автоматически запускает таймер сна в заданное время с длительностью по умолчанию</string>
+    <string name="sleep_timer_repeat_description">Настройте расписание для автоматического запуска таймера</string>
     <string name="sleep_timer_repeat">Повтор</string>
     <string name="sleep_timer_daily">Ежедневно</string>
     <string name="sleep_timer_weekdays">Понедельник – Пятница</string>
@@ -712,8 +712,8 @@
     <string name="export_option_save">Сохранить в «Документы»</string>
     <string name="qs_tile_music_recognizer">Распознать музыку</string>
     <string name="ai_provider_mistral_help">Откройте https://console.mistral.ai/api-keys</string>
-    <string name="weekly_most_playlist_name">Самые прослушиваемые за неделю</string>
-    <string name="monthly_most_playlist_name">Самые прослушиваемые за месяц</string>
+    <string name="weekly_most_playlist_name">Топ за неделю</string>
+    <string name="monthly_most_playlist_name">Топ за месяц</string>
     <string name="enable_song_cache">Включить кэширование аудио</string>
     <string name="enable_song_cache_desc">Автоматически кэшировать аудио для более быстрого последующего воспроизведения</string>
     <string name="sleep_timer_stop_after_current_song_title">Остановить в конце текущего трека</string>
@@ -755,7 +755,7 @@
     <string name="alarm_time_picker_value">Время: %s</string>
     <string name="alarm_delete">Удалить будильник</string>
     <string name="alarm_duplicate_time_warning">На это время уже установлен другой будильник. Если они сработают одновременно, включится только один</string>
-    <string name="alarm_random_song">Играть случайный трек из плейлиста</string>
+    <string name="alarm_random_song">Включать случайный трек из плейлиста</string>
     <string name="alarm_next_trigger">Следующее срабатывание</string>
     <string name="alarm_not_scheduled">Не запланировано</string>
     <string name="alarm_exact_permission_title">Разрешить точные будильники</string>
@@ -770,7 +770,7 @@
     <string name="ai_system_prompt_default">По умолчанию</string>
     <string name="ai_system_prompt_reset">Сбросить по умолчанию</string>
     <string name="recognition_notification_channel_name">Распознавание музыки</string>
-    <string name="recognition_notification_channel_desc">Показывать уведомление во время распознавания трека из панели быстрых настроек</string>
+    <string name="recognition_notification_channel_desc">Показывает уведомление во время распознавания трека из панели быстрых настроек</string>
     <string name="recognition_notification_listening">Слушаем музыку…</string>
     <string name="recognition_notification_processing">Определяем…</string>
     <string name="recognition_notification_no_match">Совпадений не найдено</string>
@@ -793,10 +793,10 @@
     <string name="lyrics_from_provider">Текст песни из %s</string>
     <string name="hide_status_bar_fullscreen">Скрывать строку состояния в полноэкранном режиме</string>
     <string name="hide_status_bar_fullscreen_desc">Скрывать строку состояния, когда включён полноэкранный режим текста</string>
-    <string name="show_interval_indicator">Показывать индикатор пауз</string>
-    <string name="show_interval_indicator_desc">Показывает полосу прогресса во время длинных инструментальных пауз</string>
+    <string name="show_interval_indicator">Показывать индикатор проигрыша</string>
+    <string name="show_interval_indicator_desc">Показывает индикатор прогресса во время длинных инструментальных проигрышей</string>
     <string name="respect_agent_positioning">Учитывать позиционирование исполнителя</string>
-    <string name="respect_agent_positioning_desc">Выравнивать текст в зависимости от роли исполнителя (напр., бэк-вокал)</string>
+    <string name="respect_agent_positioning_desc">Выравнивать текст в зависимости от роли исполнителя (например, бэк-вокал)</string>
     <string name="lyrics_animation_none">Нет</string>
     <string name="lyrics_animation_fade">Затухание</string>
     <string name="lyrics_animation_glow">Свечение</string>
@@ -804,7 +804,7 @@
     <string name="lyrics_animation_karaoke">Караоке</string>
     <string name="lyrics_animation_apple">В стиле Apple Music</string>
     <string name="enable_paxsenix">Включить Paxsenix</string>
-    <string name="enable_paxsenix_desc">Высококачественные синхронизированные тексты из API Paxsenix</string>
+    <string name="enable_paxsenix_desc">Высококачественные синхронизированные тексты через API Paxsenix</string>
     <string name="experimental_lyrics">Экспериментальный текст</string>
     <string name="experimental_lyrics_desc">Включить новый экспериментальный компонент текста с улучшенной анимацией и производительностью</string>
     <string name="experimental_lyrics_beta_title">Экспериментальная функция</string>
@@ -837,14 +837,14 @@
     <string name="wizard_multiple_variants">Доступно несколько вариантов</string>
     <string name="wizard_select_eq_profiles">Выберите профили эквалайзера для %s</string>
     <string name="wizard_save_profiles">Сохранить профили</string>
-    <string name="loudness_level">Уровень громкости</string>
+    <string name="loudness_level">Уровень нормализации</string>
     <string name="loudness_level_aggressive">Агрессивный (-7 дБ)</string>
     <string name="loudness_level_loud">Громкий (-11 дБ)</string>
     <string name="loudness_level_balanced">Сбалансированный (-14 дБ)</string>
     <string name="loudness_level_quiet">Тихий (-19 дБ)</string>
     <string name="mixes">Миксы</string>
     <string name="show_most_stats_playlists">Еженедельные и ежемесячные выпуски плейлистов</string>
-    <string name="show_most_stats_playlists_desc">Создавать и показывать плейлисты «Самые прослушиваемые» на основе статистики в разделах «Статистика» и «Библиотека»</string>
+    <string name="show_most_stats_playlists_desc">Создавать и показывать плейлисты «Топ» на основе статистики в разделах «Статистика» и «Библиотека»</string>
     <string name="pin">Закрепить</string>
     <string name="unpin">Открепить</string>
     <string name="widget_playlists">Плейлисты</string>
@@ -909,4 +909,8 @@
     <string name="dynamic_theme">Динамическая тема</string>
     <string name="enable_dynamic_icon">Динамические цвета значка</string>
     <string name="enable_dynamic_icon_desc">Использовать динамические цвета темы для значка приложения. Если отключено, используются сплошные цвета.</string>
+    <string name="kmp_upgrade_title">Доступен Metrolist KMP %s</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP находится в раннем доступе. Функции могут работать нестабильно, быть неполными или изменяться без предупреждения.</string>
+    <string name="kmp_upgrade_action">Обновить до KMP</string>
+    <string name="kmp_upgrade_later">Не сейчас</string>
 </resources>

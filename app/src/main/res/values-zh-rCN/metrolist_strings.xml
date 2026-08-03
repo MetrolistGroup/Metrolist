@@ -863,7 +863,7 @@
     <string name="stream_source_native_clients">原生客户端</string>
     <string name="stream_source_creator_clients">创作者客户端</string>
     <string name="stream_source_web_remix">WEB_REMIX</string>
-    <string name="stream_source_web_remix_desc">主客户端。已经过身份验证；覆盖大部分曲目。</string>
+    <string name="stream_source_web_remix_desc">主客户端。已验证；覆盖大部分曲目。</string>
     <string name="stream_source_tvhtml5">TVHTML5</string>
     <string name="stream_source_tvhtml5_desc">电视客户端。可靠的备选方案。</string>
     <string name="stream_source_visionos">visionOS</string>
@@ -888,4 +888,8 @@
     <string name="dynamic_theme">动态主题</string>
     <string name="enable_dynamic_icon">动态图标颜色</string>
     <string name="enable_dynamic_icon_desc">为应用图标使用动态主题颜色。禁用后，图标将使用纯色。</string>
+    <string name="kmp_upgrade_title">Metrolist KMP %s 现已推出</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP 目前处于抢先体验阶段。功能可能存在缺陷、不完整或变更，恕不另行通知。</string>
+    <string name="kmp_upgrade_action">升级到 KMP</string>
+    <string name="kmp_upgrade_later">暂不升级</string>
 </resources>

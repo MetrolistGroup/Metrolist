@@ -19,7 +19,7 @@
     <string name="liked">Disukai</string>
     <string name="offline">Diunduh</string>
     <string name="sync_playlist">Sinkronkan playlist</string>
-    <string name="allows_for_sync_witch_youtube">CATATAN: Ini memungkinkan sinkronisasi dengan YouTube Music. Pengaturan ini TIDAK dapat diubah di kemudian hari.</string>
+    <string name="allows_for_sync_witch_youtube">CATATAN: Ini memungkinkan sinkronisasi dengan YouTube Music dan TIDAK DAPAT diubah lagi</string>
     <string name="share_lyrics">Bagikan lirik</string>
     <string name="share_as_text">Bagikan sebagai teks</string>
     <string name="share_as_image">Bagikan sebagai gambar</string>
@@ -540,7 +540,7 @@
     <string name="density_restart_message">Perubahan kepadatan tampilan akan berlaku setelah aplikasi di-restart. Restart sekarang?</string>
     <string name="enable_lrclib_desc">Database lirik sinkron dari komunitas</string>
     <string name="enable_kugou_desc">Mengambil lirik dari KuGou, platform musik populer asal Cina</string>
-    <string name="youtube_music_lyrics_note">CATATAN: Lirik dari YouTube Music akan otomatis ditampilkan jika lirik lain tidak tersedia. Biasanya lirik tidak sinkron.</string>
+    <string name="youtube_music_lyrics_note">CATATAN: Lirik dari YouTube Music akan otomatis ditampilkan jika lirik lain tidak tersedia. Biasanya lirik tidak sinkron</string>
     <string name="enable_lyricsplus">Aktifkan LyricsPlus</string>
     <string name="enable_lyricsplus_desc">Lirik sinkron dari berbagai sumber</string>
     <string name="lyrics_provider_selection">Pilih Penyedia</string>
@@ -888,4 +888,8 @@
     <string name="enable_landscape_scaling">Pengukuran landscape</string>
     <string name="dynamic_theme">Tema Dinamis</string>
     <string name="enable_dynamic_icon">Warna ikon dinamis</string>
+    <string name="kmp_upgrade_title">Metrolist KMP %s sudah tersedia</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP saat ini masih dalam tahap akses awal. Beberapa fitur mungkin belum berfungsi dengan baik, belum lengkap, atau dapat berubah tanpa pemberitahuan sebelumnya.</string>
+    <string name="kmp_upgrade_later">Jangan sekarang</string>
+    <string name="kmp_upgrade_action">Perbarui ke KMP</string>
 </resources>

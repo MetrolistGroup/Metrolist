@@ -17,8 +17,8 @@
     <string name="cached_playlist">Vo vyrovnávacej pamäti</string>
     <string name="sync_playlist">Synchronizácia playlistu</string>
     <string name="sync_disabled">Synchronizácia zakázaná</string>
-    <string name="allows_for_sync_witch_youtube">Poznámka: Toto umožňuje synchronizáciu s YouTube Music. Toto sa neskôr NEDÁ zmeniť.</string>
-    <string name="generating_image">Generovanie obrázka</string>
+    <string name="allows_for_sync_witch_youtube">Poznámka: Toto umožňuje synchronizáciu s YouTube Music. Toto sa neskôr NEDÁ zmeniť</string>
+    <string name="generating_image">Generovanie obrázka…</string>
     <string name="please_wait">Prosím, počkajte</string>
     <string name="cancel">Zrušiť</string>
     <string name="share_lyrics">Zdieľať texty piesní</string>
@@ -37,7 +37,7 @@
     <string name="dislike_all">Nepáči sa mi všetko</string>
     <string name="sort_by_last_updated">Dátum aktualizácie</string>
     <string name="link_copied">Odkaz skopírovaný do schránky</string>
-    <string name="starting_radio">Spustenie rádia</string>
+    <string name="starting_radio">Spustenie rádia…</string>
     <string name="now_playing">Práve sa prehráva</string>
     <string name="lyrics">Text piesne</string>
     <string name="close">Zatvoriť</string>
@@ -319,4 +319,29 @@
         <item quantity="other">%d pásiem</item>
     </plurals>
     <string name="delete_profile_desc">Odstrániť profil</string>
+    <string name="mixes">Mixy</string>
+    <string name="parsed_from_link">Získané z odkazu</string>
+    <string name="and">a</string>
+    <string name="weekly_most_playlist_name">Najlepšie tento týždeň</string>
+    <string name="monthly_most_playlist_name">Najlepšie tento mesiac</string>
+    <string name="metrolist">METROLIST</string>
+    <string name="upload_songs">Nahrať skladby</string>
+    <string name="turntable_widget_description">Kruhový hudobný widget s ovládacími prvkami pre prehrávanie a označenie „Páči sa mi“</string>
+    <string name="view_changelog">Zobraziť zoznam zmien</string>
+    <string name="error_title">Chyba</string>
+    <string name="import_error_title">Chyba pri importe</string>
+    <string name="restart">Reštartovať</string>
+    <string name="restart_required">Vyžadovaný reštart!</string>
+    <string name="density_restart_message">Zmena hustoty zobrazenia sa prejaví po reštartovaní aplikácie. Reštartovať teraz?</string>
+    <string name="lyrics_from_provider">Text z %s</string>
+    <string name="hide_status_bar_fullscreen">Skryť stavový riadok v zobrazení na celú obrazovku</string>
+    <string name="hide_status_bar_fullscreen_desc">Skryť stavový riadok, keď je text skladby v režime na celú obrazovku</string>
+    <string name="show_interval_indicator">Zobraziť indikátor intervalu</string>
+    <string name="show_interval_indicator_desc">Zobrazuje indikátor priebehu počas dlhých inštrumentálnych prestávok</string>
+    <string name="lyrics_animation_none">Žiadne</string>
+    <string name="lyrics_animation_glow">Žiara</string>
+    <string name="lyrics_animation_slide">Posun</string>
+    <string name="lyrics_animation_karaoke">Karaoke</string>
+    <string name="lyrics_animation_apple">Štýl Apple Music</string>
+    <string name="enable_lrclib_desc">Komunitne riadená databáza synchronizovaných textov piesní</string>
 </resources>

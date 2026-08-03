@@ -265,4 +265,43 @@
     <string name="casting_to">Predvajanje na %s</string>
     <string name="progress_percent">Napredek: %s%%</string>
     <string name="listening_to_metrolist">Poslušaš Metrolist</string>
+    <string name="more_options">Več opcij</string>
+    <string name="loudness_level">Nivo glasnosti</string>
+    <string name="loudness_level_loud">Glasno</string>
+    <string name="loudness_level_quiet">Tiho</string>
+    <string name="widget_playlists">Seznami predvajanja</string>
+    <string name="choose_something_below">Izberite nekaj spodaj</string>
+    <string name="not_applicable">N/A</string>
+    <string name="enable_dynamic_icon">Dinamične barve ikon</string>
+    <string name="stream_source_tvhtml5">TVHTML5</string>
+    <string name="stream_source_visionos">VisionOS</string>
+    <string name="stream_source_android_vr">Android VR</string>
+    <string name="stream_source_ios">iOS / iPadOS</string>
+    <string name="filter_podcasts">Podkasti</string>
+    <string name="view_podcast">Poglej podkast</string>
+    <string name="podcast_channels">Podkast kanali</string>
+    <string name="latest_episodes">Zadnje epizode</string>
+    <string name="new_episodes">Nove epizode</string>
+    <string name="episodes_for_later">Epizode za kasneje</string>
+    <string name="save_episode_for_later">Shrani za kasneje</string>
+    <string name="save_episode_for_later_desc">Dodaj med Epizode za kasneje</string>
+    <string name="subscribe_to_podcast">Shrani podkast v knjižnico</string>
+    <plurals name="n_episode">
+        <item quantity="one">%d epizoda</item>
+        <item quantity="two">%d epizodi</item>
+        <item quantity="few">%d epizode</item>
+        <item quantity="other">%d epizod</item>
+    </plurals>
+    <string name="filter_episodes">Epizode</string>
+    <string name="filter_channels">Kanali</string>
+    <string name="downloaded_episodes">Prenešene epizode</string>
+    <string name="no_downloaded_episodes">Ni prenešenih epizod</string>
+    <plurals name="n_channel">
+        <item quantity="one">%d kanal</item>
+        <item quantity="two">%d kanala</item>
+        <item quantity="few">%d kanali</item>
+        <item quantity="other">%d kanalov</item>
+    </plurals>
+    <string name="restore_confirm_title">Obnovi varnostno kopijo?</string>
+    <string name="restore">Obnovi</string>
 </resources>

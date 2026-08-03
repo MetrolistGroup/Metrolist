@@ -902,4 +902,8 @@
     <string name="dynamic_theme">Thème dynamique</string>
     <string name="enable_dynamic_icon">Couleurs dynamiques des icônes</string>
     <string name="enable_dynamic_icon_desc">Utilisez les couleurs dynamiques du thème pour l\'icône de l\'application. Lorsque cette option est désactivée, l\'icône affiche des couleurs unies.</string>
+    <string name="kmp_upgrade_title">Metrolist KMP %s est disponible</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP est en phase d\'accès anticipé. Certaines fonctionnalités peuvent présenter des dysfonctionnements, être incomplètes ou faire l\'objet de modifications sans préavis.</string>
+    <string name="kmp_upgrade_action">Passer à KMP</string>
+    <string name="kmp_upgrade_later">Pas maintenant</string>
 </resources>
