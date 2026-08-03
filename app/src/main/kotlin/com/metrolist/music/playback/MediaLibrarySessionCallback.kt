@@ -709,6 +709,9 @@ constructor(
 
                     val allLocalSongs = database.searchSongsExtended(searchQuery, limit).first()
                     searchResults.addAll(allLocalSongs)
+                    if (!isVoiceSearch && songId.isNotBlank() && searchResults.indexOfFirst { it.id == songId } == -1) {
+                        database.song(songId).first()?.let { searchResults.add(it) }
+                    }
                     
                     try {
                         val onlineResults = YouTube.search(searchQuery, YouTube.SearchFilter.FILTER_SONG)
