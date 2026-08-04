@@ -1835,6 +1835,11 @@ class MusicService :
         }
     }
 
+    fun adoptQueue(queue: Queue, title: String? = null) {
+        currentQueue = queue
+        queueTitle = title
+    }
+
     fun startRadioSeamlessly() {
         if (!playerInitialized.value) {
             Timber.tag(TAG).w("startRadioSeamlessly called before player initialization")
