@@ -23,11 +23,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
@@ -45,6 +45,7 @@ import androidx.navigation.NavController
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
+import com.metrolist.music.constants.AndroidAutoSearchLocalLimitKey
 import com.metrolist.music.constants.AndroidAutoSectionsOrderKey
 import com.metrolist.music.constants.AndroidAutoTargetPlaylistKey
 import com.metrolist.music.constants.AndroidAutoYouTubePlaylistsKey
@@ -58,6 +59,7 @@ import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.flow.map
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import kotlin.math.roundToInt
 
 enum class AndroidAutoSection(val id: String) {
     LIKED("liked"),
@@ -94,7 +96,6 @@ fun deserializeSections(raw: String): List<Pair<AndroidAutoSection, Boolean>> {
 @Composable
 fun AndroidAutoSettings(
     navController: NavController,
-    scrollBehavior: TopAppBarScrollBehavior,
 ) {
     val haptic = LocalHapticFeedback.current
     val database = LocalDatabase.current
@@ -116,6 +117,11 @@ fun AndroidAutoSettings(
     val (targetPlaylist, onTargetPlaylistChange) = rememberPreference(
         key = AndroidAutoTargetPlaylistKey,
         defaultValue = MediaSessionConstants.TARGET_PLAYLIST_AUTO
+    )
+
+    val (androidAutoSearchLocalLimit, onAndroidAutoSearchLocalLimitChange) = rememberPreference(
+        AndroidAutoSearchLocalLimitKey,
+        defaultValue = 75
     )
 
     var sections by remember(sectionsRaw) {
@@ -322,6 +328,44 @@ fun AndroidAutoSettings(
         )
 
         Spacer(Modifier.height(27.dp))
+
+        // Search options
+        Material3SettingsGroup(
+            title = stringResource(R.string.android_auto_search_options),
+            items = listOf(
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.manage_search),
+                    title = { Text(stringResource(R.string.android_auto_search_local_songs_limit)) },
+                    description = {
+                        val limitValues =
+                            remember { listOf(10, 25, 50, 75, 100, 150, 200, -1) }
+                        Column {
+                            Text(stringResource(R.string.android_auto_search_local_songs_limit_desc))
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text =
+                                    when (androidAutoSearchLocalLimit) {
+                                        -1 -> stringResource(R.string.unlimited)
+                                        else -> "$androidAutoSearchLocalLimit ${stringResource(R.string.songs)}"
+                                    },
+                            )
+                            Slider(
+                                value = limitValues.indexOf(androidAutoSearchLocalLimit).toFloat(),
+                                enabled = true,
+                                onValueChange = {
+                                    val newValue = limitValues[it.roundToInt()]
+                                    onAndroidAutoSearchLocalLimitChange(newValue)
+                                },
+                                steps = limitValues.size - 2,
+                                valueRange = 0f..(limitValues.size - 1).toFloat(),
+                            )
+                        }
+                    }
+                )
+            )
+        )
+
+        Spacer(Modifier.height(27.dp))
     }
 
     TopAppBar(
@@ -337,6 +381,5 @@ fun AndroidAutoSettings(
                 )
             }
         },
-        scrollBehavior = scrollBehavior,
     )
 }

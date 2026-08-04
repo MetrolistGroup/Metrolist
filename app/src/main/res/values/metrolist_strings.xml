@@ -962,6 +962,9 @@
     <string name="android_auto_target_playlist_auto">Not set</string>
     <string name="added_to_playlist">Added to playlist</string>
     <string name="android_auto_target_playlist_not_set">No playlist selected. Choose one in Android Auto settings</string>
+    <string name="android_auto_search_options">Search options</string>
+    <string name="android_auto_search_local_songs_limit">Songs search limit</string>
+    <string name="android_auto_search_local_songs_limit_desc">Limit the number of local songs shown in the search results. It is recommended to not set unlimited to prevent memory crashes</string>
 
     <!-- Stats time transfer -->
     <string name="time_transfer_title">Time transfer</string>

@@ -448,6 +448,6 @@ fun NavGraphBuilder.navigationBuilder(
         RecognitionHistoryScreen(navController)
     }
     composable("settings/android_auto") {
-        AndroidAutoSettings(navController, scrollBehavior)
+        AndroidAutoSettings(navController)
     }
 }
