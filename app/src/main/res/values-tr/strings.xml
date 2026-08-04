@@ -277,4 +277,10 @@
     <string name="use_login_for_browse">İçerikleri görmek için Giriş yap\'ı kullanın</string>
     <string name="use_login_for_browse_desc">Bu gördüğünüz içerikleri etkileyebilir ve örnek olarak Premium\'a özel içerikleri Premium\'a sahip bir hesapla giriş yaptıysanız size sunabilir</string>
     <string name="action_login">Giriş Yap</string>
+    <string name="top_result">Öne Çıkan</string>
+    <string name="other">Diğer</string>
+    <string name="videos">Videolar</string>
+    <string name="episodes">Bölümler</string>
+    <string name="podcasts">Podcastler</string>
+    <string name="profiles">Profiller</string>
 </resources>
