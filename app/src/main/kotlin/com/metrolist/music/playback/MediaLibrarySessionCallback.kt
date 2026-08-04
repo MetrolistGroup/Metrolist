@@ -764,19 +764,25 @@ constructor(
 
                     if(context.dataStore.get(AutoRadioQueueKey, true)) {
                         val radioQueue = YouTubeQueue.radio(selectedSong?.toMediaMetadata() ?: return@future defaultResult)
-                        val radioStatus = radioQueue
-                            .getInitialStatus()
-                            .filterExplicit(context.dataStore.get(HideExplicitKey, false))
-                            .filterVideoSongs(context.dataStore.get(HideVideoSongsKey, false))
+                        val radioStatus = runCatching {
+                            withContext(Dispatchers.IO) {
+                                radioQueue
+                                    .getInitialStatus()
+                                    .filterExplicit(context.dataStore.get(HideExplicitKey, false))
+                                    .filterVideoSongs(context.dataStore.get(HideVideoSongsKey, false))
+                            }
+                        }.getOrNull()
 
-                        withContext(Dispatchers.Main) {
-                            service.adoptQueue(radioQueue, radioStatus.title) //Used to make the radio queue load more songs when near the end
+                        if (radioStatus != null && radioStatus.items.isNotEmpty()) {
+                            withContext(Dispatchers.Main) {
+                                service.adoptQueue(radioQueue, radioStatus.title, radioStatus.items.size) //Used to make the radio queue load more songs when near the end
+                            }
+                            return@future MediaItemsWithStartPosition(
+                                radioStatus.items,
+                                radioStatus.items.indexOfFirst { it.mediaId == selectedSong.id }.coerceAtLeast(0),
+                                C.TIME_UNSET,
+                            )
                         }
-                        return@future MediaItemsWithStartPosition(
-                            radioStatus.items,
-                            radioStatus.items.indexOfFirst { it.mediaId == selectedSong.id }.coerceAtLeast(0),
-                            C.TIME_UNSET,
-                        )
                     }
 
                     val items = listOf(selectedSong?.toMediaItem() ?: return@future defaultResult)

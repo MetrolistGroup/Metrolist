@@ -1835,9 +1835,10 @@ class MusicService :
         }
     }
 
-    fun adoptQueue(queue: Queue, title: String? = null) {
+    fun adoptQueue(queue: Queue, title: String? = null, initialQueueSize: Int = 0) {
         currentQueue = queue
         queueTitle = title
+        originalQueueSize = initialQueueSize
     }
 
     fun startRadioSeamlessly() {
