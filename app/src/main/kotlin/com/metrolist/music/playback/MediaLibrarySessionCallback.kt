@@ -63,9 +63,13 @@ import kotlinx.coroutines.plus
 import javax.inject.Inject
 import com.metrolist.music.constants.AndroidAutoSectionsOrderKey
 import com.metrolist.music.constants.AndroidAutoYouTubePlaylistsKey
+import com.metrolist.music.constants.AutoRadioQueueKey
+import com.metrolist.music.playback.queues.ListQueue
+import com.metrolist.music.playback.queues.YouTubeQueue
 import com.metrolist.music.ui.screens.settings.AndroidAutoSection
 import com.metrolist.music.ui.screens.settings.deserializeSections
 import com.metrolist.music.ui.screens.settings.serializeSections
+import kotlinx.coroutines.withContext
 
 class MediaLibrarySessionCallback
 @Inject
@@ -749,24 +753,51 @@ constructor(
                         return@future defaultResult
                     }
 
-                    //Check if the voiceQuery is about a specific song and plays only that
-                    if (isVoiceSearch) {
-                        val snapshot: List<Song> = synchronized(searchResults) { searchResults.toList() }
-                        val bestMatch = VoiceSearchMatcher.findBest(searchQuery, snapshot)
-                        if (bestMatch != null) {
+                    val selectedSong =
+                        if (isVoiceSearch) {    //Check if the voiceQuery is about a specific song
+                            val snapshot: List<Song> =
+                                synchronized(searchResults) { searchResults.toList() }
+                            VoiceSearchMatcher.findBest(searchQuery, snapshot)
+                        } else {
+                            searchResults.firstOrNull { it.id == songId }
+                        }
+
+                    if(context.dataStore.get(AutoRadioQueueKey, true)) {
+                        val radioQueue = YouTubeQueue.radio(selectedSong?.toMediaMetadata() ?: return@future defaultResult)
+                        val radioStatus = runCatching {
+                            withContext(Dispatchers.IO) {
+                                radioQueue
+                                    .getInitialStatus()
+                                    .filterExplicit(context.dataStore.get(HideExplicitKey, false))
+                                    .filterVideoSongs(context.dataStore.get(HideVideoSongsKey, false))
+                            }
+                        }.getOrNull()
+
+                        if (radioStatus != null && radioStatus.items.isNotEmpty()) {
+                            withContext(Dispatchers.Main) {
+                                service.adoptQueue(radioQueue, radioStatus.title, radioStatus.items.size) //Used to make the radio queue load more songs when near the end
+                            }
                             return@future MediaItemsWithStartPosition(
-                                listOf(bestMatch.toMediaItem()),
-                                0,
+                                radioStatus.items,
+                                radioStatus.items.indexOfFirst { it.mediaId == selectedSong.id }.coerceAtLeast(0),
                                 C.TIME_UNSET,
                             )
                         }
                     }
 
-                    val targetIndex = searchResults.indexOfFirst { it.id == songId }
-
+                    val items = listOf(selectedSong?.toMediaItem() ?: return@future defaultResult)
+                    withContext(Dispatchers.Main) {
+                        service.adoptQueue(
+                            ListQueue(
+                                title = selectedSong.song.title,
+                                items = items,
+                            ),
+                            title = selectedSong.song.title,
+                        )
+                    }
                     MediaItemsWithStartPosition(
-                        searchResults.map { it.toMediaItem() },
-                        if (targetIndex >= 0) targetIndex else 0,
+                        items,
+                        0,
                         C.TIME_UNSET
                     )
                 }
