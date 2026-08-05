@@ -1,5 +1,5 @@
 [versions]
-androidGradlePlugin = "9.3.0"
+androidGradlePlugin = "9.3.1"
 browser = "1.10.0"
 robolectric = "4.16.1"
 androidxTestCore = "1.7.0"

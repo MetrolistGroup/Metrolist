@@ -75,7 +75,7 @@ constructor(
                 database
                     .mostPlayedSongsStats(
                         fromTimeStamp = statToPeriod(selection, t),
-                        limit = -1,
+                        limit = 100,
                         toTimeStamp =
                         if (selection == OptionStats.CONTINUOUS || t == 0) {
                             LocalDateTime.now()
@@ -97,7 +97,7 @@ constructor(
                 database
                     .mostPlayedSongs(
                         fromTimeStamp = statToPeriod(selection, t),
-                        limit = -1,
+                        limit = 100,
                         toTimeStamp =
                         if (selection == OptionStats.CONTINUOUS || t == 0) {
                             LocalDateTime.now()
@@ -118,7 +118,7 @@ constructor(
                 database
                     .mostPlayedArtists(
                         statToPeriod(selection, t),
-                        limit = -1,
+                        limit = 100,
                         toTimeStamp =
                         if (selection == OptionStats.CONTINUOUS || t == 0) {
                             LocalDateTime.now()
@@ -138,7 +138,7 @@ constructor(
             .flatMapLatest { (selection, t) ->
                 database.mostPlayedAlbums(
                     statToPeriod(selection, t),
-                    limit = -1,
+                    limit = 100,
                     toTimeStamp =
                     if (selection == OptionStats.CONTINUOUS || t == 0) {
                         LocalDateTime.now()
@@ -354,7 +354,7 @@ constructor(
             database
                 .mostPlayedSongs(
                     fromTimeStamp = fromTimeStamp,
-                    limit = -1,
+                    limit = 100,
                     toTimeStamp = now,
                 ).first()
                 .let { mostPlayedSongs ->
