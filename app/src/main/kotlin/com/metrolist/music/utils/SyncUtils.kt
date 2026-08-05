@@ -350,12 +350,6 @@ class SyncUtils @Inject constructor(
             }
 
             enqueue(SyncOperation.FullSync)
-
-            val now = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)
-            cachedLastSyncEpoch = now
-            context.safeDataStoreEdit { settings ->
-                settings[LastFullSyncKey] = now
-            }
         }
     }
 
@@ -623,6 +617,12 @@ class SyncUtils @Inject constructor(
             executeSyncSavedPlaylists()
             delay(DB_OPERATION_DELAY_MS)
 
+            val now = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)
+            cachedLastSyncEpoch = now
+            context.safeDataStoreEdit { settings ->
+                settings[LastFullSyncKey] = now
+            }
+
             updateState { copy(overallStatus = SyncStatus.Completed, currentOperation = "") }
             Timber.d("Full sync completed successfully")
         } catch (e: CancellationException) {
@@ -734,16 +734,23 @@ class SyncUtils @Inject constructor(
                     val remoteIds = remoteSongs.map { it.id }.toSet()
                     val localLikedSongs = database.likedSongsByNameAsc().first()
 
+                    val lastSync = context.dataStore.get(LastFullSyncKey, 0L)
+
                     localLikedSongs.filterNot { it.id in remoteIds || it.song.isLocal }.forEach { song ->
                         try {
-                            withRetry {
-                                YouTube.likeVideo(song.id, true)
-                            }.onFailure { e ->
-                                Timber.e(e, "Failed to like song on YouTube: ${song.id}")
+                            val likedDate = song.song.likedDate
+                            if (likedDate == null || likedDate.toEpochSecond(ZoneOffset.UTC) > lastSync) {
+                                withRetry {
+                                    YouTube.likeVideo(song.id, true)
+                                }.onFailure { e ->
+                                    Timber.e(e, "Failed to like song on YouTube: ${song.id}")
+                                }
+                            } else {
+                                database.update(song.song.localToggleLike())
                             }
                             delay(DB_OPERATION_DELAY_MS)
                         } catch (e: Exception) {
-                            Timber.e(e, "Failed to push local liked song: ${song.id}")
+                            Timber.e(e, "Failed to update song: ${song.id}")
                         }
                     }
 
@@ -759,10 +766,10 @@ class SyncUtils @Inject constructor(
                                     insert(song.toMediaMetadata()) {
                                         it.copy(liked = true, likedDate = timestamp, isVideo = isVideoSong)
                                     }
-                                } else if (!dbSong.song.liked) {
-                                    update(dbSong.song.copy(
+                                } else if (!dbSong.liked) {
+                                    update(dbSong.copy(
                                         liked = true,
-                                        likedDate = dbSong.song.likedDate ?: timestamp,
+                                        likedDate = dbSong.likedDate ?: timestamp,
                                         isVideo = isVideoSong
                                     ))
                                 }
