@@ -21,6 +21,7 @@ jobs:
     name: Build Release (${{ matrix.variant }})
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
 
     strategy:
       matrix:
@@ -91,6 +92,7 @@ jobs:
     name: Build Debug (${{ matrix.variant }})
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
 
     strategy:
       matrix:
