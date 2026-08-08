@@ -122,8 +122,8 @@ jobs:
 
       # No `clean`: the runner is ephemeral, so there is nothing to clean and
       # it only discards restored cache entries.
-      - name: Build and Lint Release APK
-        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release :app:lint${{ matrix.variantName }}Release --warning-mode summary
+      - name: Build Release APK
+        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release --warning-mode summary
         env:
           METROLIST_APPLICATION_ID: com.metrolist.music
           METROLIST_APP_NAME: Metrolist

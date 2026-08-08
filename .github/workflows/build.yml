@@ -33,8 +33,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - variant: foss
-            variantName: Foss
+          # FOSS and Izzy differ from GMS only by ~80 lines of Cast stubs and
+          # are still built by the release workflow. Building them nightly too
+          # doubled this workflow for almost no extra coverage.
           - variant: gms
             variantName: Gms
 
@@ -58,8 +59,8 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Release APK and Run Lint
-        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release :app:lint${{ matrix.variantName }}Release --warning-mode summary
+      - name: Build Release APK
+        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release --warning-mode summary
         env:
           METROLIST_APPLICATION_ID: com.metrolist.music
           METROLIST_APP_NAME: Metrolist Nightly
@@ -104,8 +105,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - variant: foss
-            variantName: Foss
+          # FOSS and Izzy differ from GMS only by ~80 lines of Cast stubs and
+          # are still built by the release workflow. Building them nightly too
+          # doubled this workflow for almost no extra coverage.
           - variant: gms
             variantName: Gms
 

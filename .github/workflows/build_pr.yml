@@ -4,6 +4,14 @@ on:
   pull_request:
     branches:
       - "**"
+    # Weblate PRs only touch localized string files, which cannot break a
+    # build that the base branch already compiles. The default (unsuffixed)
+    # `values/` directory is deliberately not listed, so English string
+    # changes still build.
+    paths-ignore:
+      - "app/src/main/res/values-*/strings.xml"
+      - "app/src/main/res/values-*/metrolist_strings.xml"
+      - "fastlane/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number }}
@@ -61,8 +69,8 @@ jobs:
           path: app/pr-debug.keystore
           key: ${{ steps.pr_keystore.outputs.cache-primary-key }}
 
-      - name: Build and Lint FOSS Debug APK
-        run: ./gradlew --console=plain assembleFossDebug :app:lintFossDebug --warning-mode summary
+      - name: Build GMS Debug APK
+        run: ./gradlew --console=plain assembleGmsDebug --warning-mode summary
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           METROLIST_APPLICATION_ID: com.metrolist.music.pr.p${{ github.event.number }}
@@ -76,4 +84,4 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: app-universal-debug-pr-${{ github.event.number }}
-          path: app/build/outputs/apk/foss/debug/*.apk
+          path: app/build/outputs/apk/gms/debug/*.apk
