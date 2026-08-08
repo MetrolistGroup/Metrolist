@@ -3,7 +3,10 @@ name: Build APKs
 on:
   workflow_dispatch:
   push:
-    branches: ["**"]
+    # Feature branches are covered by "Build PR". Building them here too added
+    # four more APK builds on top of it for every push. Use workflow_dispatch
+    # when a branch needs nightly artifacts.
+    branches: ["main"]
     paths-ignore:
       - "README.md"
       - "fastlane/**"
@@ -15,6 +18,10 @@ on:
 permissions:
   contents: write
   discussions: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build_release:
@@ -126,8 +133,10 @@ jobs:
         run: |
           echo "${{ secrets.DEBUG_KEYSTORE }}" | base64 -d > ./app/persistent-debug.keystore
 
-      - name: Build Debug APK and Run Lint
-        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Debug :app:lint${{ matrix.variantName }}Debug --warning-mode summary
+      # Lint runs in the release job for the same variant, so it is not
+      # repeated here.
+      - name: Build Debug APK
+        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Debug --warning-mode summary
         env:
           METROLIST_APPLICATION_ID: com.metrolist.music
           METROLIST_APP_NAME: Metrolist Nightly

@@ -7,6 +7,10 @@ on:
       - "app/build.gradle.kts"
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   check-version:
     if: "!contains(github.ref, 'refs/tags')"
@@ -17,10 +21,11 @@ jobs:
       new_version: ${{ steps.check_version.outputs.new_version }}
       version_code: ${{ steps.check_version.outputs.version_code }}
     steps:
+      # Only HEAD and HEAD^ are read below, and no submodule or Gradle work
+      # happens in this job.
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
-          submodules: recursive
+          fetch-depth: 2
 
       - name: Check if version changed
         id: check_version
@@ -107,14 +112,18 @@ jobs:
       - name: Set Up Gradle
         uses: gradle/actions/setup-gradle@v5
         with:
-          cache-disabled: true
+          # Read-only: release builds reuse the dependency and build caches
+          # written by main without publishing entries of their own.
+          cache-read-only: true
           cache-cleanup: on-success
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # No `clean`: the runner is ephemeral, so there is nothing to clean and
+      # it only discards restored cache entries.
       - name: Build and Lint Release APK
-        run: ./gradlew --console=plain clean assemble${{ matrix.variantName }}Release :app:lint${{ matrix.variantName }}Release --warning-mode summary
+        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release :app:lint${{ matrix.variantName }}Release --warning-mode summary
         env:
           METROLIST_APPLICATION_ID: com.metrolist.music
           METROLIST_APP_NAME: Metrolist
