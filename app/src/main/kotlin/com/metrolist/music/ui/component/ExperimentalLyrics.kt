@@ -386,12 +386,17 @@ fun ExperimentalLyrics(
         }
     }
 
-    val activeListIndex by remember(mergedLyricsList, activeLineIndices) {
+    val anchoredLineIndex by remember(lines, activeLineIndices) {
         derivedStateOf {
-            val activeLine = activeLineIndices
+            activeLineIndices
                 .filter { lines.getOrNull(it)?.isBackground == false }
                 .maxOrNull() ?: activeLineIndices.maxOrNull() ?: 0
-            mergedLyricsList.indexOfFirst { it is LyricsListItem.Line && it.index == activeLine }
+        }
+    }
+
+    val activeListIndex by remember(mergedLyricsList, anchoredLineIndex) {
+        derivedStateOf {
+            mergedLyricsList.indexOfFirst { it is LyricsListItem.Line && it.index == anchoredLineIndex }
                 .coerceAtLeast(0)
         }
     }
@@ -438,14 +443,19 @@ fun ExperimentalLyrics(
             scrollOffset.updateBounds(scrollClampMin, scrollClampMax)
         }
 
-        LaunchedEffect(activeListIndex, isAutoScrollEnabled, scrollClampMax) {
-            if (isAutoScrollEnabled && positions.isNotEmpty()) {
-                val target = ((positions[activeListIndex] ?: 0f) + contentTop - anchorY)
-                    .coerceIn(scrollClampMin, scrollClampMax)
+        val autoScrollTarget = if (positions.isEmpty()) {
+            null
+        } else {
+            ((positions[activeListIndex] ?: 0f) + contentTop - anchorY)
+                .coerceIn(scrollClampMin, scrollClampMax)
+        }
+
+        LaunchedEffect(autoScrollTarget, isAutoScrollEnabled) {
+            if (isAutoScrollEnabled && autoScrollTarget != null) {
                 if (hasAutoPositioned) {
-                    scrollOffset.animateTo(target, tween(450, easing = FastOutSlowInEasing))
+                    scrollOffset.animateTo(autoScrollTarget, tween(450, easing = FastOutSlowInEasing))
                 } else {
-                    scrollOffset.snapTo(target)
+                    scrollOffset.snapTo(autoScrollTarget)
                     hasAutoPositioned = true
                 }
             }
@@ -516,6 +526,7 @@ fun ExperimentalLyrics(
                                         if (!dragging && abs(accumulatedDrag) > viewConfiguration.touchSlop) {
                                             dragging = true
                                             isAutoScrollEnabled = false
+                                            targetOffset = scrollOffset.value
                                             gestureScope.launch { scrollOffset.stop() }
                                         }
                                         if (dragging && delta != 0f) {
@@ -589,7 +600,7 @@ fun ExperimentalLyrics(
                                         playerConnection = playerConnection, lyricsTextSize = 36f, lyricsLineSpacing = 1.3f,
                                         expressiveAccent = expressiveAccent, lyricsTextPosition = lyricsTextPosition,
                                         respectAgentPositioning = respectAgentPositioning, isAutoScrollEnabled = isAutoScrollEnabled,
-                                        displayedCurrentLineIndex = if (isAutoScrollEnabled) activeLineIndices.maxOrNull() ?: 0 else index, romanizeAsMain = romanizeAsMain,
+                                        displayedCurrentLineIndex = if (isAutoScrollEnabled) anchoredLineIndex else index, romanizeAsMain = romanizeAsMain,
                                         enabledLanguages = enabledLanguages, romanizeLyrics = currentSong?.romanizeLyrics == true,
                                         onSizeChanged = { itemHeights[listIndex] = it },
                                         onClick = {
