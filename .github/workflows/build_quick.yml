@@ -1,24 +1,22 @@
 name: Quick Test Build
 
+# Manual only: on push this built exactly the same FOSS release APK as the
+# "Build Release (foss)" job in build.yml, doubling the cost of every push.
 on:
   workflow_dispatch:
-  push:
-    branches: ["**"]
-    paths-ignore:
-      - "README.md"
-      - "fastlane/**"
-      - "assets/**"
-      - ".github/**/*.md"
-      - ".github/FUNDING.yml"
-      - ".github/ISSUE_TEMPLATE/**"
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build_quick:
     name: Quick Universal Release Build
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v6

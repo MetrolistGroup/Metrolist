@@ -906,4 +906,7 @@
     <string name="kmp_upgrade_warning">Metrolist KMP est en phase d\'accès anticipé. Certaines fonctionnalités peuvent présenter des dysfonctionnements, être incomplètes ou faire l\'objet de modifications sans préavis.</string>
     <string name="kmp_upgrade_action">Passer à KMP</string>
     <string name="kmp_upgrade_later">Pas maintenant</string>
+    <string name="android_auto_search_options">Options de recherche</string>
+    <string name="android_auto_search_local_songs_limit">Limite de recherche de titres</string>
+    <string name="android_auto_search_local_songs_limit_desc">Limitez le nombre de morceaux locaux affichés dans les résultats de recherche. Il est recommandé de ne pas choisir l\'option « illimité » afin d\'éviter les plantages liés à la mémoire.</string>
 </resources>

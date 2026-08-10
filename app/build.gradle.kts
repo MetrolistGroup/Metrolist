@@ -102,8 +102,8 @@ android {
         applicationId = applicationIdOverride ?: baseApplicationId
         minSdk = 26
         targetSdk = 36
-        versionCode = 150
-        versionName = "13.6.1"
+        versionCode = 152
+        versionName = "13.6.3"
         resValue("string", "app_name", appNameOverride ?: "Metrolist")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -234,6 +234,10 @@ android {
         warningsAsErrors = false
         abortOnError = false
         checkDependencies = false
+        // Lint never gated anything here (abortOnError = false), so the
+        // lintVital pass that assembleRelease implicitly triggers was pure
+        // build time. Run lint on demand with ./gradlew :app:lintGmsRelease.
+        checkReleaseBuilds = false
     }
 
     androidResources {

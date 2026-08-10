@@ -892,4 +892,7 @@
     <string name="kmp_upgrade_warning">Metrolist KMP saat ini masih dalam tahap akses awal. Beberapa fitur mungkin belum berfungsi dengan baik, belum lengkap, atau dapat berubah tanpa pemberitahuan sebelumnya.</string>
     <string name="kmp_upgrade_later">Jangan sekarang</string>
     <string name="kmp_upgrade_action">Perbarui ke KMP</string>
+    <string name="android_auto_search_options">Opsi Pencarian</string>
+    <string name="android_auto_search_local_songs_limit">Batas Pencarian Musik</string>
+    <string name="android_auto_search_local_songs_limit_desc">Batasi jumlah lagu lokal yang ditampilkan dalam hasil pencarian. Disarankan untuk tidak mengaturnya menjadi tanpa batas agar aplikasi tidak mengalami crash karena kehabisan memori.</string>
 </resources>

@@ -913,4 +913,6 @@
     <string name="kmp_upgrade_warning">Metrolist KMP je v předběžném přístupu. Funkce mohou být rozbité, nedokončené nebo se bez upozornění změnit.</string>
     <string name="kmp_upgrade_action">Aktualizovat na KMP</string>
     <string name="kmp_upgrade_later">Nezobrazovat</string>
+    <string name="android_auto_search_options">Vyhledat možnosti</string>
+    <string name="android_auto_search_local_songs_limit">Limit vyhledání skladeb</string>
 </resources>

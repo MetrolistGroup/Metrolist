@@ -864,4 +864,6 @@
     <string name="restore_database_incompatible">バックアップを復元できません: データベースのバージョンに互換性がありません。現在のデータは保存されています。</string>
     <string name="enable_dynamic_icon_desc">アプリのアイコンにダイナミックテーマカラーを使用します。無効になっている場合、アイコンは単色を使用します。</string>
     <string name="enable_dynamic_icon">ダイナミックアイコンカラー</string>
+    <string name="stream_client">ストリームクライアント</string>
+    <string name="stream_source_web_clients">ウェブクライアント</string>
 </resources>

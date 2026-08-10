@@ -325,4 +325,5 @@
     <string name="weekly_most_playlist_name">Τα πιο δημοφιλή της εβδομάδας</string>
     <string name="monthly_most_playlist_name">Τα πιο δημοφιλή του μήνα</string>
     <string name="enable">Ενεργοποίηση</string>
+    <string name="and">και</string>
 </resources>

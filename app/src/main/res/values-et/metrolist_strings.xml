@@ -38,8 +38,8 @@
     <string name="cached_playlist">Puhverdatud</string>
     <string name="sync_playlist">Sünkroniseeri esitusloend</string>
     <string name="sync_disabled">Sünkroniseerimine pole kasutusel</string>
-    <string name="allows_for_sync_witch_youtube">Märkus: see võimaldab sünkroonimist YouTube Musicuga. Sa EI SAA seda seadistust hiljem muuta.</string>
-    <string name="generating_image">Loon pilti</string>
+    <string name="allows_for_sync_witch_youtube">Märkus: see võimaldab sünkroonimist YouTube Musicuga. Sa EI SAA seda seadistust hiljem muuta</string>
+    <string name="generating_image">Loon pilti…</string>
     <string name="max_selection_limit">Valiku ülempiir</string>
     <string name="share_selected">Jaga valitut</string>
     <string name="customize_colors">Kohenda värve</string>
@@ -69,8 +69,8 @@
     <string name="token_hidden">Tunnusloaga vaatamiseks klõpsi</string>
     <string name="token_shown">Klõpsi muutmiseks või kopeerimiseks</string>
     <string name="percentage_format">%d%%</string>
-    <string name="import_online">Impordi m3u vormingus esitusloendeid</string>
-    <string name="import_csv">Impordi csv vormingus esitusloendeid</string>
+    <string name="import_online">Impordi M3U vormingus esitusloend</string>
+    <string name="import_csv">Impordi CSV-vormingus esitusloend</string>
     <string name="all_time">Läbi aegade</string>
     <string name="past_24_hours">Viimase 24 tunni jooksul</string>
     <string name="past_week">Viimase nädala jooksul</string>
@@ -78,7 +78,7 @@
     <string name="past_year">Viimase aasta jooksul</string>
     <string name="app_language">Rakenduse keel</string>
     <string name="auto_playlists">Automaatsed esitusloendid</string>
-    <string name="last_song_listened">Põhineb viimasel kuulatud lool</string>
+    <string name="last_song_listened">Põhineb sinu viimasel kuulatud lool</string>
     <string name="open_app_settings_error">Rakenduse seadistuste avamine ei õnnestunud</string>
     <string name="release_notes">Muudatuste logi</string>
     <string name="history_duration">Ajaloo kestus</string>
@@ -90,7 +90,7 @@
     <string name="subscribe">Telli</string>
     <string name="subscribed">Tellitud</string>
     <string name="top_length">Minu parimate lugude loendi pikkus</string>
-    <string name="starting_radio">Käivitan raadiot</string>
+    <string name="starting_radio">Käivitan raadiot…</string>
     <string name="now_playing">Praegu esitamisel</string>
     <string name="close">Sulge</string>
     <string name="seek_forward_dynamic">+%1$d sekundit edasi</string>
@@ -120,8 +120,8 @@
     <string name="password">Salasõna</string>
     <string name="lastfm_integration">Last.fm-i lõiming</string>
     <string name="enable_scrobbling">Lülita kraasimine sisse</string>
-    <string name="lastfm_now_playing">Saada hetkel esitatava loo andmed</string>
-    <string name="last_fm_send_likes">Saada meeldimised/mittemeeldimised</string>
+    <string name="lastfm_now_playing">Saada hetkel esitatava loo olek</string>
+    <string name="last_fm_send_likes">Sünkrooni meeldimised/mittemeeldimised</string>
     <string name="scrobbling_configuration">Kraasimise seadistused</string>
     <string name="show_artist_description">Kuva artisti kirjeldust</string>
     <string name="show_artist_subscriber_count">Kuva tellijate arvu</string>
@@ -136,4 +136,6 @@
     <string name="share_playlist_desc">Jaga esitlusloendit teistega</string>
     <string name="delete_playlist_desc">Kustuta see esitlusloend jäädavalt</string>
     <string name="sync_playlist_desc">Sünkroniseeri esitlusloend Youtube Music\'ga</string>
+    <string name="mixes">Miksid</string>
+    <string name="parsed_from_link">Parsitud lingist</string>
 </resources>

@@ -892,4 +892,7 @@
     <string name="kmp_upgrade_warning">Metrolist KMP 目前处于抢先体验阶段。功能可能存在缺陷、不完整或变更，恕不另行通知。</string>
     <string name="kmp_upgrade_action">升级到 KMP</string>
     <string name="kmp_upgrade_later">暂不升级</string>
+    <string name="android_auto_search_options">搜索选项</string>
+    <string name="android_auto_search_local_songs_limit">歌曲搜索限制</string>
+    <string name="android_auto_search_local_songs_limit_desc">限制搜索结果中显示的本地歌曲数量。建议不要设置为无限制，以防止内存崩溃</string>
 </resources>

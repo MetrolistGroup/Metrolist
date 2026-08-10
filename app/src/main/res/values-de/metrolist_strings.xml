@@ -895,4 +895,11 @@
     <string name="enable_dynamic_icon">Dynamische Symbolfarben</string>
     <string name="enable_dynamic_icon_desc">Verwenden Sie dynamische Designfarben für das App-Symbol. Wenn diese Option deaktiviert ist, wird das Symbol in Volltonfarben angezeigt.</string>
     <string name="enable_landscape_scaling">Skalierung im Querformat</string>
+    <string name="kmp_upgrade_title">Metrolist KMP %s ist verfügbar</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP befindet sich in der Früh-Zugangs-Phase. Funktionen können fehlerhaft oder unvollständig sein oder sich ohne Vorankündigung ändern.</string>
+    <string name="kmp_upgrade_action">Auf KMP aktualisieren</string>
+    <string name="kmp_upgrade_later">Nicht jetzt</string>
+    <string name="android_auto_search_options">Suchoptionen</string>
+    <string name="android_auto_search_local_songs_limit">Suchlimit für Songs</string>
+    <string name="android_auto_search_local_songs_limit_desc">Begrenzen Sie die Anzahl der lokalen Titel, die in den Suchergebnissen angezeigt werden. Es wird empfohlen, nicht „unbegrenzt“ einzustellen, um Speicherabstürze zu vermeiden.</string>
 </resources>

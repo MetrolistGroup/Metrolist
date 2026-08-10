@@ -895,4 +895,11 @@
     <string name="dynamic_theme">Dinamik Tema</string>
     <string name="enable_dynamic_icon">Dinamik ikon renkleri</string>
     <string name="enable_dynamic_icon_desc">Uygulama ikonu için dinamik tema renklerini kullan. Eğer kapatılırsa, ikon sabit renkleri kullanır.</string>
+    <string name="kmp_upgrade_title">Metrolist %s KMP sürümü kullanılabilir</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP şu anda erken erişimdedir. Özellikler hatalı çalışabilir, eksik olabilir veya haber verilmeksizin değişebilir.</string>
+    <string name="kmp_upgrade_action">KMP\'ye yükselt</string>
+    <string name="kmp_upgrade_later">Şimdi değil</string>
+    <string name="android_auto_search_options">Arama seçenekleri</string>
+    <string name="android_auto_search_local_songs_limit">Şarkı arama sınırı</string>
+    <string name="android_auto_search_local_songs_limit_desc">Arama sonuçlarında gösterilen yerel şarkıların sayısını sınırlandırın. Bellek çökmelerini önlemek için sınırsız olarak ayarlamamanız önerilir</string>
 </resources>

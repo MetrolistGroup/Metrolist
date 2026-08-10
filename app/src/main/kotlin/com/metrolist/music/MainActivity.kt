@@ -18,6 +18,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.view.View
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
@@ -1542,22 +1543,26 @@ class MainActivity : ComponentActivity() {
 
         when (val path = uri.pathSegments.firstOrNull()) {
             "playlist" -> {
-                uri.getQueryParameter("list")?.let { playlistId ->
-                    if (playlistId.startsWith("OLAK5uy_")) {
-                        coroutineScope.launch(Dispatchers.IO) {
-                            YouTube
-                                .albumSongs(playlistId)
-                                .onSuccess { songs ->
-                                    songs.firstOrNull()?.album?.id?.let { browseId ->
-                                        withContext(Dispatchers.Main) {
-                                            navController.navigate("album/$browseId")
-                                        }
+                val playlistId = uri.getQueryParameter("list")
+                if (playlistId.isNullOrBlank() || playlistId.equals("null", ignoreCase = true)) {
+                    Toast.makeText(this, R.string.playlist_unavailable, Toast.LENGTH_SHORT).show()
+                    return
+                }
+
+                if (playlistId.startsWith("OLAK5uy_")) {
+                    coroutineScope.launch(Dispatchers.IO) {
+                        YouTube
+                            .albumSongs(playlistId)
+                            .onSuccess { songs ->
+                                songs.firstOrNull()?.album?.id?.let { browseId ->
+                                    withContext(Dispatchers.Main) {
+                                        navController.navigate("album/$browseId")
                                     }
-                                }.onFailure { reportException(it) }
-                        }
-                    } else {
-                        navController.navigate("online_playlist/$playlistId")
+                                }
+                            }.onFailure { reportException(it) }
                     }
+                } else {
+                    navController.navigate("online_playlist/$playlistId")
                 }
             }
 

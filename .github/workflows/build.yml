@@ -3,7 +3,10 @@ name: Build APKs
 on:
   workflow_dispatch:
   push:
-    branches: ["**"]
+    # Feature branches are covered by "Build PR". Building them here too added
+    # four more APK builds on top of it for every push. Use workflow_dispatch
+    # when a branch needs nightly artifacts.
+    branches: ["main"]
     paths-ignore:
       - "README.md"
       - "fastlane/**"
@@ -16,17 +19,25 @@ permissions:
   contents: write
   discussions: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build_release:
     name: Build Release (${{ matrix.variant }})
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
 
     strategy:
       matrix:
         include:
-          - variant: foss
-            variantName: Foss
+          # FOSS and Izzy differ from GMS only by ~80 lines of Cast stubs,
+          # plus the updater flag for Izzy (GMS and FOSS enable the updater,
+          # Izzy disables it). Both are still built by the release workflow,
+          # so building them nightly too doubled this workflow for almost no
+          # extra coverage.
           - variant: gms
             variantName: Gms
 
@@ -50,8 +61,8 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Release APK and Run Lint
-        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release :app:lint${{ matrix.variantName }}Release --warning-mode summary
+      - name: Build Release APK
+        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release --warning-mode summary
         env:
           METROLIST_APPLICATION_ID: com.metrolist.music
           METROLIST_APP_NAME: Metrolist Nightly
@@ -90,13 +101,17 @@ jobs:
   build_debug:
     name: Build Debug (${{ matrix.variant }})
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
 
     strategy:
       matrix:
         include:
-          - variant: foss
-            variantName: Foss
+          # FOSS and Izzy differ from GMS only by ~80 lines of Cast stubs,
+          # plus the updater flag for Izzy (GMS and FOSS enable the updater,
+          # Izzy disables it). Both are still built by the release workflow,
+          # so building them nightly too doubled this workflow for almost no
+          # extra coverage.
           - variant: gms
             variantName: Gms
 
@@ -124,8 +139,10 @@ jobs:
         run: |
           echo "${{ secrets.DEBUG_KEYSTORE }}" | base64 -d > ./app/persistent-debug.keystore
 
-      - name: Build Debug APK and Run Lint
-        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Debug :app:lint${{ matrix.variantName }}Debug --warning-mode summary
+      # Lint is intentionally not run in CI: it never gated a merge and added
+      # several minutes to every build. Run :app:lintGmsRelease locally.
+      - name: Build Debug APK
+        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Debug --warning-mode summary
         env:
           METROLIST_APPLICATION_ID: com.metrolist.music
           METROLIST_APP_NAME: Metrolist Nightly

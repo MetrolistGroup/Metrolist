@@ -25,12 +25,12 @@
     <string name="share_lyrics">שתף את מילות שיר</string>
     <string name="share_as_text">שתף כטקסט</string>
     <string name="share_as_image">שתף כתמונה</string>
-    <string name="max_selection_limit">מגבלת בחירה מקסימלית</string>
+    <string name="max_selection_limit">הגעת להגבלת בחירה מקסימלית</string>
     <string name="share_selected">שתף את הנבחרים</string>
     <string name="customize_colors">התאמה אישית של צבעים</string>
     <string name="text_color">צבע טקסט</string>
     <string name="secondary_text_color">צבע טקסט משני</string>
-    <string name="sync_playlist_desc">סנכרון רשימת ההשמעה עם יוטיוב מיוזיק</string>
+    <string name="sync_playlist_desc">סנכרון רשימת ההשמעה הנוכחית עם יוטיוב מיוזיק</string>
     <string name="description">תיאור</string>
     <string name="lyrics">מילות השיר</string>
     <string name="close">סגור</string>
@@ -42,9 +42,9 @@
     <string name="dislike_all">סלוד הכל</string>
     <string name="sort_by_last_updated">מחיקת רשימת ההשמעה הזו סופית</string>
     <string name="link_copied">הקישור הועתק ללוח</string>
-    <string name="starting_radio">הפעלת הרדיו</string>
+    <string name="starting_radio">מפעיל רדיו…</string>
     <string name="now_playing">מתנגן כעת</string>
-    <string name="hide_player_thumbnail">הסתרת צלמית הנגן</string>
+    <string name="hide_player_thumbnail">הסתר תמונה ממוזערת של הנגן</string>
     <string name="hide_player_thumbnail_desc">החלפת תמונת האלבום בסמל היישום בנגן</string>
     <string name="crop_album_art">חיתוך תמונת האלבום</string>
     <string name="crop_album_art_desc">כפיית יחס אורך-רוחב ריבועי ע\"י חיתוך צלמיות הוידאו</string>
@@ -108,7 +108,7 @@
     <string name="show_artist_monthly_listeners">הצג מאזינים חודשיים</string>
     <string name="download_playlist_desc">הורד את כל השירים להשמעה לא מקוונת</string>
     <string name="remove_download_playlist_desc">הסר את כל השירים שהורדו מרשימת השמעה זו</string>
-    <string name="download_in_progress_desc">הורדה בתהליך</string>
+    <string name="download_in_progress_desc">ההורדה מתבצעת</string>
     <string name="share_playlist_desc">שתף רשימת השמעה זו עם אחרים</string>
     <string name="display_density">דחיסות תצוגה</string>
     <string name="restart">הפעלה מחדש</string>
@@ -660,4 +660,9 @@
     <string name="discord_presence">נוכחות</string>
     <string name="parsed_from_link">מנותח מהקישור</string>
     <string name="more_options">אפשרויות נוספות</string>
+    <string name="mixes">מיקסים</string>
+    <string name="and">וכן</string>
+    <string name="hide_status_bar_fullscreen_desc">הסתרת סרגל הסטטוס כשמצב מסך מלא של המילים מופעל</string>
+    <string name="show_interval_indicator">הצג מחוון מרווחים</string>
+    <string name="show_interval_indicator_desc">מציג סרגל התקדמות במהלך פערים ארוכים אינסטרומנטלים</string>
 </resources>

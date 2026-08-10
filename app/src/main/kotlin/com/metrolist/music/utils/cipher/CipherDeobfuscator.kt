@@ -153,7 +153,7 @@ object CipherDeobfuscator {
      * rebuilds the WebView from the corrected config, recovering playback without an app restart.
      * Returns whether the config table changed.
      */
-    suspend fun onStreamRejected(): Boolean = PlayerConfigStore.refreshAfterStreamRejection()
+    suspend fun onStreamRejected(): Boolean = PlayerConfigStore.refreshAfterStreamRejection(currentPlayerHash)
 
     private suspend fun deobfuscateInternal(signatureCipher: String, videoId: String, isRetry: Boolean): String? {
         Timber.tag(TAG).d("deobfuscateInternal: videoId=$videoId, isRetry=$isRetry")

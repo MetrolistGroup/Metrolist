@@ -106,7 +106,7 @@
     <string name="past_week">Прошедшую неделю</string>
     <string name="past_month">Последний месяц</string>
     <string name="past_year">Прошлый год</string>
-    <string name="top_length">Длина моего топ-листа</string>
+    <string name="top_length">Размер моего топ-листа</string>
     <string name="history_duration">Длительность истории</string>
     <string name="information">Информация</string>
     <string name="description">Описание</string>
@@ -615,7 +615,7 @@
     <string name="buy_mo_a_coffee">Угостить меня кофе!</string>
     <string name="community_and_info">Сообщество и информация</string>
     <string name="metrolist">METROLIST</string>
-    <string name="wanna_play_favorite_song">Хотите включить их любимую песню?</string>
+    <string name="wanna_play_favorite_song">Включить его любимую песню?</string>
     <string name="yeah">Да!</string>
     <string name="stands_with_palestine">Этот проект поддерживает Палестину 🇵🇸</string>
     <string name="filter_podcasts">Подкасты</string>
@@ -913,4 +913,7 @@
     <string name="kmp_upgrade_warning">Metrolist KMP находится в раннем доступе. Функции могут работать нестабильно, быть неполными или изменяться без предупреждения.</string>
     <string name="kmp_upgrade_action">Обновить до KMP</string>
     <string name="kmp_upgrade_later">Не сейчас</string>
+    <string name="android_auto_search_options">Настройки поиска</string>
+    <string name="android_auto_search_local_songs_limit">Лимит поиска треков</string>
+    <string name="android_auto_search_local_songs_limit_desc">Ограничение количества локальных треков, отображаемых в результатах поиска. Не рекомендуется устанавливать значение \"Неограниченно\" во избежание сбоев из-за нехватки памяти</string>
 </resources>

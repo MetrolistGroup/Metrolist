@@ -149,4 +149,11 @@
     <string name="enable_lrclib_desc">Gemenskapsdriven databas med synkroniserade låttexter</string>
     <string name="enable_kugou_desc">Hämta låttexter från KuGou, en populär kinesisk musikplattform</string>
     <string name="youtube_music_lyrics_note">Obs! Låttexter från YouTube Music används när andra låttexttjänster inte är tillgängliga. Låttexter från YouTube Music är oftast inte synkroniserade.</string>
+    <string name="mixes">Mixar</string>
+    <string name="parsed_from_link">Hämtat från länk</string>
+    <string name="and">och</string>
+    <string name="display_density">Visningstäthet</string>
+    <string name="density_restart_message">Ändringen av visningstäthet träder i kraft när appen startas om. Starta om nu?</string>
+    <string name="lyrics_from_provider">Text från %s</string>
+    <string name="hide_status_bar_fullscreen">Dölj statusfältet i helskärmsläge</string>
 </resources>

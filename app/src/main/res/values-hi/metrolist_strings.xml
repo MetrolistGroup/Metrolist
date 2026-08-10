@@ -2,9 +2,9 @@
 <resources>
     <string name="local_history">स्थानीय</string>
     <string name="back_button_desc">पीछे</string>
-    <string name="album_cover_desc">एल्बम आवरण</string>
+    <string name="album_cover_desc">एल्बम का चित्र</string>
     <string name="top_music_videos">शीर्ष संगीत वीडियो</string>
-    <string name="trending">प्रचलित</string>
+    <string name="trending">ट्रेंडिंग</string>
     <string name="weeks">सप्ताह</string>
     <string name="months">महीने</string>
     <string name="years">साल</string>
@@ -39,4 +39,6 @@
     <string name="show_less">कम दिखाएं</string>
     <string name="artist_page_settings">कलाकार पृष्ठ</string>
     <string name="show_artist_description">कलाकार का वर्णन दिखाएं</string>
+    <string name="charts">आरेख</string>
+    <string name="mixes">मिश्रण</string>
 </resources>

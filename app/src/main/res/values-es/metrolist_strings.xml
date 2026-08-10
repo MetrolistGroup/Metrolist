@@ -147,7 +147,7 @@
     <string name="line_by_line_option_title">Detectar idioma línea por línea</string>
     <string name="line_by_line_option_desc">El idioma cirílico se detectará línea por línea en lugar de toda la canción</string>
     <string name="line_by_line_dialog_title">¿Está seguro?</string>
-    <string name="line_by_line_dialog_desc">Esta función es experimental y puede tener sus fallos.\n\nPor defecto, el idioma se determina a partir de la canción completa, pero con esta opción activada, se determinará línea por línea. Esto permitirá que las canciones multilingües funcionen, PERO el idioma podría no ser siempre correcto (por ejemplo, si hay una letra en ucraniano que no contiene letras específicas del idioma, podría romanizarse al ruso).\n\nSi no tienes problemas, se recomienda desactivar esta opción</string>
+    <string name="line_by_line_dialog_desc">Esta función es experimental y puede tener sus fallos...\n\n Por defecto, el idioma se determina a partir de la canción completa, pero con esta opción activada, se determinará línea por línea.\n\n Esto permitirá que las canciones multilingües funcionen, PERO el idioma podría no ser siempre correcto (por ejemplo, si hay una letra en ucraniano que no contiene letras específicas del idioma, podría romanizarse al ruso). \n\nSi no tienes problemas, se recomienda desactivar esta opción</string>
     <string name="romanize_current_track">Romanizar la pista actual</string>
     <string name="edit_playlist_cover">Editar la portada de la lista de reproducción</string>
     <string name="edit_playlist_cover_note">Nota: Tu cuenta debe estar vinculada a un número de teléfono y verificada en YouTube Music para cambiar la portada de la lista de reproducción</string>
@@ -902,4 +902,7 @@
     <string name="dynamic_theme">Tema dinámico</string>
     <string name="enable_dynamic_icon">Colores dinámicos del icono</string>
     <string name="enable_dynamic_icon_desc">Usa los colores dinámicos del tema para el icono de la app. Cuando está desactivado, el icono utiliza colores sólidos.</string>
+    <string name="kmp_upgrade_title">Metrolist KMP %s está disponible!</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP está en etapa temprana. Puede que funciones estén dañadas, incompletas, o cambiadas sin previo aviso.</string>
+    <string name="kmp_upgrade_action">Mejora a KMP</string>
 </resources>
