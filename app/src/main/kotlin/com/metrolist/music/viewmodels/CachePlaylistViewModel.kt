@@ -97,3 +97,39 @@ class CachePlaylistViewModel
             playerCache.removeResource(songId)
         }
     }
+
+/**
+ * Result of checking which Cache Playlist entries still have their bytes on disk.
+ */
+internal data class CachedSongPartition(
+    val stillCached: List<Song>,
+    val stale: List<Song>,
+)
+
+/**
+ * Splits songs flagged as belonging to the Cache Playlist into those whose data is still
+ * present and those whose flag must be cleared.
+ *
+ * A downloaded song is always considered present: its file is managed by the download service
+ * rather than the player cache. A song whose content length is unknown cannot be checked, so it
+ * is treated as stale rather than assumed present.
+ *
+ * [isCached] receives the song id and its content length, and reports whether the complete file
+ * is available in either cache.
+ */
+internal fun partitionCachedSongs(
+    flagged: List<Song>,
+    isCached: (songId: String, contentLength: Long) -> Boolean,
+): CachedSongPartition {
+    val stillCached = mutableListOf<Song>()
+    val stale = mutableListOf<Song>()
+
+    for (song in flagged) {
+        val contentLength = song.format?.contentLength
+        val present = song.song.isDownloaded ||
+            (contentLength != null && isCached(song.song.id, contentLength))
+        if (present) stillCached += song else stale += song
+    }
+
+    return CachedSongPartition(stillCached, stale)
+}
