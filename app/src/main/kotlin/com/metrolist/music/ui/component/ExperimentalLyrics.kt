@@ -38,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -394,10 +395,40 @@ fun ExperimentalLyrics(
         }
     }
 
-    val activeListIndex by remember(mergedLyricsList, anchoredLineIndex) {
+    val scrollTargetListIndex by remember(
+        mergedLyricsList,
+        activeLineIndices,
+        anchoredLineIndex,
+        currentPositionState,
+    ) {
         derivedStateOf {
-            mergedLyricsList.indexOfFirst { it is LyricsListItem.Line && it.index == anchoredLineIndex }
-                .coerceAtLeast(0)
+            val activeLineListIndex = if (activeLineIndices.isEmpty()) {
+                -1
+            } else {
+                mergedLyricsList.indexOfFirst {
+                    it is LyricsListItem.Line && it.index == anchoredLineIndex
+                }
+            }
+
+            if (activeLineListIndex >= 0) {
+                activeLineListIndex
+            } else {
+                mergedLyricsList.indexOfFirst { item ->
+                    item is LyricsListItem.Indicator &&
+                        currentPositionState >= item.gapStartMs &&
+                        currentPositionState <= item.gapEndMs - 650L
+                }.takeIf { it >= 0 }
+            }
+        }
+    }
+    var activeListIndex by remember(lyrics) { mutableIntStateOf(0) }
+
+    LaunchedEffect(scrollTargetListIndex, mergedLyricsList.lastIndex) {
+        val targetListIndex = scrollTargetListIndex
+        if (targetListIndex != null) {
+            activeListIndex = targetListIndex
+        } else if (mergedLyricsList.isNotEmpty()) {
+            activeListIndex = activeListIndex.coerceIn(0, mergedLyricsList.lastIndex)
         }
     }
 
