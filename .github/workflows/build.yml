@@ -62,7 +62,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Release APK
-        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release --warning-mode summary
+        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release --warning-mode summary --no-build-cache --no-configuration-cache
         env:
           METROLIST_APPLICATION_ID: com.metrolist.music
           METROLIST_APP_NAME: Metrolist Nightly
@@ -147,7 +147,7 @@ jobs:
       # Lint is intentionally not run in CI: it never gated a merge and added
       # several minutes to every build. Run :app:lintGmsRelease locally.
       - name: Build Debug APK
-        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Debug --warning-mode summary
+        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Debug --warning-mode summary --no-build-cache --no-configuration-cache
         env:
           METROLIST_APPLICATION_ID: com.metrolist.music
           METROLIST_APP_NAME: Metrolist Nightly
