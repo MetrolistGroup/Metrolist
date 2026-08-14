@@ -1,0 +1,163 @@
+name: Build APKs
+
+on:
+  workflow_dispatch:
+  push:
+    # Feature branches are covered by "Build PR". Building them here too added
+    # four more APK builds on top of it for every push. Use workflow_dispatch
+    # when a branch needs nightly artifacts.
+    branches: ["main"]
+    paths-ignore:
+      - "README.md"
+      - "fastlane/**"
+      - "assets/**"
+      - ".github/**/*.md"
+      - ".github/FUNDING.yml"
+      - ".github/ISSUE_TEMPLATE/**"
+
+permissions:
+  contents: write
+  discussions: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_release:
+    name: Build Release (${{ matrix.variant }})
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        include:
+          # FOSS and Izzy differ from GMS only by ~80 lines of Cast stubs,
+          # plus the updater flag for Izzy (GMS and FOSS enable the updater,
+          # Izzy disables it). Both are still built by the release workflow,
+          # so building them nightly too doubled this workflow for almost no
+          # extra coverage.
+          - variant: gms
+            variantName: Gms
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Set Up Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_CACHE_KEY }}
+          cache-cleanup: on-success
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Release APK
+        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release --warning-mode summary --no-build-cache --no-configuration-cache
+        env:
+          METROLIST_APPLICATION_ID: com.metrolist.music
+          METROLIST_APP_NAME: Metrolist Nightly
+          PULL_REQUEST: "false"
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+
+      - name: Sign APK
+        uses: ilharp/sign-android-release@v2.0.0
+        with:
+          releaseDir: app/build/outputs/apk/${{ matrix.variant }}/release/
+          signingKey: ${{ secrets.KEYSTORE }}
+          keyAlias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+          buildToolsVersion: 35.0.0
+
+      - name: Move signed APK
+        run: |
+          OUTPUT_DIR="app/build/outputs/apk/${{ matrix.variant }}/release"
+          mkdir -p "$OUTPUT_DIR/out"
+          if [ "${{ matrix.variant }}" = "gms" ]; then
+            TARGET_NAME="app-universal-with-Google-Cast.apk"
+          else
+            TARGET_NAME="app-universal-release.apk"
+          fi
+          find "$OUTPUT_DIR" -name "*-signed.apk" -o -name "*-unsigned-signed.apk" | xargs -I{} mv {} "$OUTPUT_DIR/out/$TARGET_NAME"
+
+      - name: Upload Signed APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.variant == 'gms' && 'app-with-Google-Cast' || 'app-release' }}
+          path: app/build/outputs/apk/${{ matrix.variant }}/release/out/*
+
+  build_debug:
+    name: Build Debug (${{ matrix.variant }})
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        include:
+          # FOSS and Izzy differ from GMS only by ~80 lines of Cast stubs,
+          # plus the updater flag for Izzy (GMS and FOSS enable the updater,
+          # Izzy disables it). Both are still built by the release workflow,
+          # so building them nightly too doubled this workflow for almost no
+          # extra coverage.
+          - variant: gms
+            variantName: Gms
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Set Up Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_CACHE_KEY }}
+          cache-cleanup: on-success
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Generate Debug Keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore app/persistent-debug.keystore \
+            -storepass android -keypass android \
+            -alias androiddebugkey -keyalg RSA -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      # Lint is intentionally not run in CI: it never gated a merge and added
+      # several minutes to every build. Run :app:lintGmsRelease locally.
+      - name: Build Debug APK
+        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Debug --warning-mode summary --no-build-cache --no-configuration-cache
+        env:
+          METROLIST_APPLICATION_ID: com.metrolist.music
+          METROLIST_APP_NAME: Metrolist Nightly
+          PULL_REQUEST: "false"
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.variant == 'gms' && 'app-debug-gms' || 'app-debug' }}
+          path: app/build/outputs/apk/${{ matrix.variant }}/debug/*.apk
