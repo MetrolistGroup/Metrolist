@@ -74,6 +74,7 @@ import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
+import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
@@ -473,7 +474,8 @@ private fun CachePlaylistHeader(
     modifier: Modifier = Modifier
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
-    
+    val downloadUtil = LocalDownloadUtil.current
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -598,8 +600,11 @@ private fun CachePlaylistHeader(
                                 )
                             },
                             onDownload = {
-                                // Download all cached songs
-                                songs.forEach { song ->
+                                // Download all cached songs that aren't downloaded yet
+                                val currentDownloads = downloadUtil.downloads.value
+                                songs.filter {
+                                    currentDownloads[it.song.id]?.state != Download.STATE_COMPLETED
+                                }.forEach { song ->
                                     val downloadRequest = DownloadRequest
                                         .Builder(song.song.id, song.song.id.toUri())
                                         .setCustomCacheKey(song.song.id)

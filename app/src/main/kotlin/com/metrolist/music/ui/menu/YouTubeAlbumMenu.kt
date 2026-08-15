@@ -506,7 +506,10 @@ fun YouTubeAlbumMenu(
                                         )
                                     },
                                     onClick = {
-                                        album?.songs?.forEach { song ->
+                                        val currentDownloads = downloadUtil.downloads.value
+                                        album?.songs?.filter {
+                                            currentDownloads[it.id]?.state != Download.STATE_COMPLETED
+                                        }?.forEach { song ->
                                             val downloadRequest =
                                                 DownloadRequest
                                                     .Builder(song.id, song.id.toUri())

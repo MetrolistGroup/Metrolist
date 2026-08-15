@@ -534,7 +534,8 @@ private fun TopPlaylistHeader(
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val context = LocalContext.current
-    
+    val downloadUtil = LocalDownloadUtil.current
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -678,7 +679,10 @@ private fun TopPlaylistHeader(
                                         }
                                     }
                                     else -> {
-                                        songs.forEach { song ->
+                                        val currentDownloads = downloadUtil.downloads.value
+                                        songs.filter {
+                                            currentDownloads[it.id]?.state != Download.STATE_COMPLETED
+                                        }.forEach { song ->
                                             val downloadRequest = DownloadRequest
                                                 .Builder(song.id, song.id.toUri())
                                                 .setCustomCacheKey(song.id)

@@ -1427,7 +1427,10 @@ fun LocalPlaylistHeader(
                                     }
 
                                     else -> {
-                                        songs.forEach { song ->
+                                        val currentDownloads = downloadUtil.downloads.value
+                                        songs.filter {
+                                            currentDownloads[it.song.id]?.state != Download.STATE_COMPLETED
+                                        }.forEach { song ->
                                             val downloadRequest =
                                                 DownloadRequest
                                                     .Builder(song.song.id, song.song.id.toUri())

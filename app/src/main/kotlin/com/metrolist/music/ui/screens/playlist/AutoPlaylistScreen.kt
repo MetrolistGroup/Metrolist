@@ -876,6 +876,7 @@ private fun AutoPlaylistHeader(
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val context = LocalContext.current
+    val downloadUtil = LocalDownloadUtil.current
 
     Column(
         modifier =
@@ -1028,7 +1029,10 @@ private fun AutoPlaylistHeader(
                                     }
 
                                     else -> {
-                                        songs.forEach { song ->
+                                        val currentDownloads = downloadUtil.downloads.value
+                                        songs.filter {
+                                            currentDownloads[it.song.id]?.state != Download.STATE_COMPLETED
+                                        }.forEach { song ->
                                             val downloadRequest =
                                                 DownloadRequest
                                                     .Builder(song.song.id, song.song.id.toUri())

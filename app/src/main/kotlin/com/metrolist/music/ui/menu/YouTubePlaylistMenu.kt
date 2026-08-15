@@ -647,7 +647,10 @@ fun YouTubePlaylistMenu(
                                                 )
                                             },
                                             onClick = {
-                                                songs.forEach { song ->
+                                                val currentDownloads = downloadUtil.downloads.value
+                                                songs.filter {
+                                                    currentDownloads[it.id]?.state != Download.STATE_COMPLETED
+                                                }.forEach { song ->
                                                     val downloadRequest =
                                                         DownloadRequest
                                                             .Builder(song.id, song.id.toUri())
