@@ -127,6 +127,17 @@ val SkipSilenceKey = booleanPreferencesKey("skipSilence")
 val SkipSilenceInstantKey = booleanPreferencesKey("skipSilenceInstant")
 val AudioNormalizationKey = booleanPreferencesKey("audioNormalization")
 
+val SponsorBlockEnabledKey = booleanPreferencesKey("sponsorBlockEnabled")
+val SponsorBlockNotifyOnSkipKey = booleanPreferencesKey("sponsorBlockNotifyOnSkip")
+val SponsorBlockCategorySponsorKey = booleanPreferencesKey("sponsorBlockCategorySponsor")
+val SponsorBlockCategorySelfPromoKey = booleanPreferencesKey("sponsorBlockCategorySelfPromo")
+val SponsorBlockCategoryInteractionKey = booleanPreferencesKey("sponsorBlockCategoryInteraction")
+val SponsorBlockCategoryIntroKey = booleanPreferencesKey("sponsorBlockCategoryIntro")
+val SponsorBlockCategoryOutroKey = booleanPreferencesKey("sponsorBlockCategoryOutro")
+val SponsorBlockCategoryPreviewKey = booleanPreferencesKey("sponsorBlockCategoryPreview")
+val SponsorBlockCategoryFillerKey = booleanPreferencesKey("sponsorBlockCategoryFiller")
+val SponsorBlockCategoryMusicOfftopicKey = booleanPreferencesKey("sponsorBlockCategoryMusicOfftopic")
+
 val LoudnessLevelKey = stringPreferencesKey("loudnessLevel")
 
 enum class LoudnessLevel(
