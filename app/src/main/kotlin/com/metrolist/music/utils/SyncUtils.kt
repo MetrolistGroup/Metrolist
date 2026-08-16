@@ -1577,38 +1577,44 @@ class SyncUtils @Inject constructor(
 
                     val remoteIdSet = remoteIds.toSet()
                     val localIdSet = localIds.toSet()
-                    val downloadedSongIds = database.downloadedPlaylistSongIds(playlistId).toSet()
                     val metadataInserts = songs.filter {
                         it.id !in localIdSet || it.id in songIdsWithoutArtists
                     }
+                    // Every local song the remote does not list, not just the downloaded ones. A
+                    // song that exists only here is one this device never managed to upload, and
+                    // rebuilding the playlist from the remote alone is what used to discard it.
+                    val preservedSongIds = localIds.filter { it !in remoteIdSet }
 
                     database.withTransaction {
                         database.clearPlaylist(playlistId)
                         metadataInserts.forEach(database::insert)
-
-                        downloadedSongIds.forEach { songId ->
-                            if (songId !in remoteIdSet) {
-                                val existingSong = database.getSongByIdBlocking(songId)
-                                if (existingSong != null) {
-                                    val maxPosition = database.playlistSongsBlocking(playlistId)
-                                        .maxOfOrNull { it.map.position } ?: -1
-                                    database.insert(
-                                        PlaylistSongMap(
-                                            songId = songId,
-                                            playlistId = playlistId,
-                                            position = maxPosition + 1
-                                        )
-                                    )
-                                    Timber.d("syncPlaylist: Preserved downloaded song $songId in playlist")
-                                }
-                            }
-                        }
 
                         val playlistEntity = database.playlistBlocking(playlistId)
                         if (playlistEntity != null) {
                             database.addSongsToPlaylist(
                                 playlistEntity,
                                 songs.map { it.id to it.setVideoId }
+                            )
+                        }
+
+                        // Appended after the remote ordering, so a sync never reshuffles the
+                        // playlist the user already knows.
+                        preservedSongIds.forEach { songId ->
+                            if (database.getSongByIdBlocking(songId) != null) {
+                                val maxPosition = database.playlistSongsBlocking(playlistId)
+                                    .maxOfOrNull { it.map.position } ?: -1
+                                database.insert(
+                                    PlaylistSongMap(
+                                        songId = songId,
+                                        playlistId = playlistId,
+                                        position = maxPosition + 1
+                                    )
+                                )
+                            }
+                        }
+                        if (preservedSongIds.isNotEmpty()) {
+                            Timber.d(
+                                "syncPlaylist: Preserved ${preservedSongIds.size} songs absent from the remote playlist"
                             )
                         }
                     }
