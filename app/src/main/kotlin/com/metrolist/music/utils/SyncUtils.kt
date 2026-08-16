@@ -459,6 +459,8 @@ class SyncUtils @Inject constructor(
     suspend fun syncPodcastSubscriptionsSuspend() = syncExecutionMutex.withLock { executeSyncPodcastSubscriptions() }
     suspend fun syncEpisodesForLaterSuspend() = syncExecutionMutex.withLock { executeSyncEpisodesForLater() }
     suspend fun syncSavedPlaylistsSuspend() = syncExecutionMutex.withLock { executeSyncSavedPlaylists() }
+    suspend fun syncPlaylistSuspend(browseId: String, playlistId: String) =
+        syncExecutionMutex.withLock { executeSyncPlaylist(browseId, playlistId) }
     suspend fun syncAutoSyncPlaylistsSuspend() = syncExecutionMutex.withLock { executeSyncAutoSyncPlaylists() }
     suspend fun cleanupDuplicatePlaylistsSuspend() = syncExecutionMutex.withLock { executeCleanupDuplicatePlaylists() }
     suspend fun clearAllSyncedContentSuspend() = syncExecutionMutex.withLock { executeClearAllSyncedContent() }

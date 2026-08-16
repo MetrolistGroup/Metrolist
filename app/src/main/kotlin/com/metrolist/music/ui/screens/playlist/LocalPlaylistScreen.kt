@@ -104,7 +104,6 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.PlaylistItem
-import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.utils.completed
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalDownloadUtil
@@ -124,7 +123,6 @@ import com.metrolist.music.db.entities.PlaylistSong
 import com.metrolist.music.db.entities.PlaylistSongMap
 import com.metrolist.music.extensions.move
 import com.metrolist.music.extensions.toMediaItem
-import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.playback.ExoDownloadService
 import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.ui.component.ActionPromptDialog
@@ -1390,19 +1388,10 @@ fun LocalPlaylistHeader(
                             onEdit = onShowEditDialog,
                             onSync = {
                                 scope.launch(Dispatchers.IO) {
-                                    val playlistPage =
-                                        YouTube
-                                            .playlist(playlist.playlist.browseId!!)
-                                            .completed()
-                                            .getOrNull() ?: return@launch
-                                    database.transaction {
-                                        clearPlaylist(playlist.id)
-                                        val songIds = playlistPage.songs
-                                            .map(SongItem::toMediaMetadata)
-                                            .onEach(::insert)
-                                            .map { it.id to it.setVideoId }
-                                        addSongsToPlaylist(playlist, songIds)
-                                    }
+                                    syncUtils.syncPlaylistSuspend(
+                                        playlist.playlist.browseId!!,
+                                        playlist.id,
+                                    )
                                     withContext(Dispatchers.Main) {
                                         snackbarHostState.showSnackbar(playlistSyncedStr)
                                     }
