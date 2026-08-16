@@ -167,6 +167,7 @@ import com.metrolist.music.constants.UseNewMiniPlayerDesignKey
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.SearchHistory
 import com.metrolist.music.extensions.toEnum
+import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.lyrics.LyricsProviderRegistry
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.playback.DownloadUtil
@@ -270,6 +271,7 @@ class MainActivity : ComponentActivity() {
                     playerConnection = PlayerConnection(this@MainActivity, service, database, lifecycleScope)
                     playerConnectionSnapshot = playerConnection
                     listenTogetherManager.setPlayerConnection(playerConnection)
+                    handleAudioIntent(intent, playerConnection)
                 }
             }
 
@@ -371,6 +373,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        handleAudioIntent(intent, playerConnection)
         if (::navController.isInitialized) {
             handleWidgetTargetIntent(intent, navController)
             handleDeepLinkIntent(intent, navController)
@@ -1519,6 +1522,84 @@ class MainActivity : ComponentActivity() {
         } ?: return
 
         navController.navigate(targetRoute.route)
+    }
+
+    private fun handleAudioIntent(
+        intent: Intent,
+        playerConnection: PlayerConnection?,
+    ) {
+        val action = intent.action
+        if (action != Intent.ACTION_VIEW && action != Intent.ACTION_SEND) return
+
+        val uri = if (action == Intent.ACTION_SEND) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(Intent.EXTRA_STREAM, android.net.Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(Intent.EXTRA_STREAM)
+            }
+        } else {
+            intent.data
+        } ?: return
+
+        intent.action = null
+        intent.data = null
+        intent.removeExtra(Intent.EXTRA_STREAM)
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val contentResolver = contentResolver
+            var title: String? = null
+            var artist: String? = null
+            var durationSec = 0
+            var mediaStoreId: Long? = null
+
+            if (uri.scheme == "content" && uri.authority == "media") {
+                val projection = arrayOf(
+                    android.provider.MediaStore.Audio.Media._ID,
+                    android.provider.MediaStore.Audio.Media.TITLE,
+                    android.provider.MediaStore.Audio.Media.ARTIST,
+                    android.provider.MediaStore.Audio.Media.DURATION,
+                )
+                runCatching {
+                    contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val idCol = cursor.getColumnIndex(android.provider.MediaStore.Audio.Media._ID)
+                            val titleCol = cursor.getColumnIndex(android.provider.MediaStore.Audio.Media.TITLE)
+                            val artistCol = cursor.getColumnIndex(android.provider.MediaStore.Audio.Media.ARTIST)
+                            val durCol = cursor.getColumnIndex(android.provider.MediaStore.Audio.Media.DURATION)
+
+                            if (idCol != -1) mediaStoreId = cursor.getLong(idCol)
+                            if (titleCol != -1) title = cursor.getString(titleCol)
+                            if (artistCol != -1) artist = cursor.getString(artistCol)
+                            if (durCol != -1) durationSec = (cursor.getLong(durCol) / 1000).toInt()
+                        }
+                    }
+                }
+            }
+
+            val fallbackTitle = uri.lastPathSegment?.substringAfterLast('/')?.substringBeforeLast('.') ?: "Audio File"
+            val effectiveTitle = title?.takeIf { it.isNotBlank() } ?: fallbackTitle
+            val effectiveArtist = artist?.takeIf { it.isNotBlank() && it != "<unknown>" } ?: "Local Audio"
+            val songId = if (mediaStoreId != null) "local:$mediaStoreId" else uri.toString()
+
+            val mediaMetadata = com.metrolist.music.models.MediaMetadata(
+                id = songId,
+                title = effectiveTitle,
+                artists = listOf(com.metrolist.music.models.MediaMetadata.Artist(id = null, name = effectiveArtist)),
+                duration = durationSec,
+            )
+
+            val mediaItem = mediaMetadata.toMediaItem()
+            val queue = com.metrolist.music.playback.queues.ListQueue(
+                title = effectiveTitle,
+                items = listOf(mediaItem),
+                startIndex = 0,
+            )
+
+            withContext(Dispatchers.Main) {
+                playerConnection?.playQueue(queue)
+            }
+        }
     }
 
     private fun handleDeepLinkIntent(

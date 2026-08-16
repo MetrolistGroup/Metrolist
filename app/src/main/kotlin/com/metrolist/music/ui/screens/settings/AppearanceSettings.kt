@@ -92,6 +92,7 @@ import com.metrolist.music.constants.SelectedThemeColorKey
 import com.metrolist.music.constants.ShowCachedPlaylistKey
 import com.metrolist.music.constants.ShowDownloadedPlaylistKey
 import com.metrolist.music.constants.ShowLikedPlaylistKey
+import com.metrolist.music.constants.ShowLocalPlaylistKey
 import com.metrolist.music.constants.ShowTopPlaylistKey
 import com.metrolist.music.constants.ShowUploadedPlaylistKey
 import com.metrolist.music.constants.SliderStyle
@@ -337,6 +338,11 @@ fun AppearanceSettings(
     val (showUploadedPlaylist, onShowUploadedPlaylistChange) =
         rememberPreference(
             ShowUploadedPlaylistKey,
+            defaultValue = true,
+        )
+    val (showLocalPlaylist, onShowLocalPlaylistChange) =
+        rememberPreference(
+            ShowLocalPlaylistKey,
             defaultValue = true,
         )
 
@@ -643,6 +649,7 @@ fun AppearanceSettings(
                     LibraryFilter.ALBUMS -> stringResource(R.string.albums)
                     LibraryFilter.PLAYLISTS -> stringResource(R.string.playlists)
                     LibraryFilter.PODCASTS -> stringResource(R.string.filter_podcasts)
+                    LibraryFilter.LOCAL -> stringResource(R.string.filter_local)
                     LibraryFilter.LIBRARY -> stringResource(R.string.filter_library)
                 }
             },
@@ -1641,6 +1648,7 @@ fun AppearanceSettings(
                                     LibraryFilter.ALBUMS -> stringResource(R.string.albums)
                                     LibraryFilter.PLAYLISTS -> stringResource(R.string.playlists)
                                     LibraryFilter.PODCASTS -> stringResource(R.string.filter_podcasts)
+                                    LibraryFilter.LOCAL -> stringResource(R.string.filter_local)
                                     LibraryFilter.LIBRARY -> stringResource(R.string.filter_library)
                                 },
                             )
@@ -1866,6 +1874,27 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { onShowUploadedPlaylistChange(!showUploadedPlaylist) },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.storage),
+                        title = { Text(stringResource(R.string.show_local_playlist)) },
+                        trailingContent = {
+                            Switch(
+                                checked = showLocalPlaylist,
+                                onCheckedChange = onShowLocalPlaylistChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter =
+                                            painterResource(
+                                                id = if (showLocalPlaylist) R.drawable.check else R.drawable.close,
+                                            ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onShowLocalPlaylistChange(!showLocalPlaylist) },
                     ),
                 ),
         )

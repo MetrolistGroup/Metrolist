@@ -70,6 +70,7 @@ import com.metrolist.music.constants.PlaylistViewTypeKey
 import com.metrolist.music.constants.ShowCachedPlaylistKey
 import com.metrolist.music.constants.ShowDownloadedPlaylistKey
 import com.metrolist.music.constants.ShowLikedPlaylistKey
+import com.metrolist.music.constants.ShowLocalPlaylistKey
 import com.metrolist.music.constants.ShowTopPlaylistKey
 import com.metrolist.music.constants.ShowUploadedPlaylistKey
 import com.metrolist.music.constants.YtmSyncKey
@@ -194,11 +195,22 @@ fun LibraryPlaylistsScreen(
             songThumbnails = emptyList(),
         )
 
+    val localPlaylist =
+        Playlist(
+            playlist = PlaylistEntity(
+                id = UUID.randomUUID().toString(),
+                name = stringResource(R.string.local_playlist)
+            ),
+            songCount = 0,
+            songThumbnails = emptyList(),
+        )
+
     val (showLiked) = rememberPreference(ShowLikedPlaylistKey, true)
     val (showDownloaded) = rememberPreference(ShowDownloadedPlaylistKey, true)
     val (showTop) = rememberPreference(ShowTopPlaylistKey, true)
     val (showUploaded) = rememberPreference(ShowUploadedPlaylistKey, true)
     val (showCached) = rememberPreference(ShowCachedPlaylistKey, true)
+    val (showLocal) = rememberPreference(ShowLocalPlaylistKey, true)
     val showLikedPlaylist = showLiked && matchesNormalizedQuery(normalizedQuery, likedPlaylist.playlist.name)
     val showDownloadedPlaylist =
         showDownloaded && matchesNormalizedQuery(normalizedQuery, downloadPlaylist.playlist.name)
@@ -206,6 +218,8 @@ fun LibraryPlaylistsScreen(
     val showTopPlaylists = showTop && matchesNormalizedQuery(normalizedQuery, topPlaylist.playlist.name)
     val showUploadedPlaylists =
         showUploaded && matchesNormalizedQuery(normalizedQuery, uploadedPlaylist.playlist.name)
+    val showLocalPlaylists =
+        showLocal && matchesNormalizedQuery(normalizedQuery, localPlaylist.playlist.name)
 
     val visibleResults = remember(
         filteredPlaylists,
@@ -214,6 +228,7 @@ fun LibraryPlaylistsScreen(
         showCachedPlaylists,
         showTopPlaylists,
         showUploadedPlaylists,
+        showLocalPlaylists,
         topSize,
     ) {
         buildList {
@@ -244,6 +259,16 @@ fun LibraryPlaylistsScreen(
                         playlist = cachedPlaylist,
                         autoPlaylist = true,
                         route = "cache_playlist/cached",
+                    ),
+                )
+            }
+            if (showLocalPlaylists) {
+                add(
+                    VisiblePlaylistItem(
+                        key = "localPlaylist",
+                        playlist = localPlaylist,
+                        autoPlaylist = true,
+                        route = "auto_playlist/local",
                     ),
                 )
             }

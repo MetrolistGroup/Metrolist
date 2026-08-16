@@ -24,6 +24,10 @@
     <string name="cached_playlist">Cached</string>
     <string name="uploaded_playlist">Uploaded</string>
     <string name="filter_uploaded">Uploaded</string>
+    <string name="filter_local">Device files</string>
+    <string name="scan_local_media">Scan device files</string>
+    <string name="permission_audio_desc">Metrolist needs permission to read audio files from your device storage to play local music.</string>
+    <string name="grant_permission">Grant permission</string>
     <string name="sync_playlist">Sync playlist</string>
     <string name="sync_disabled">Sync disabled</string>
     <string name="allows_for_sync_witch_youtube">NOTE: This option enables syncing with YouTube Music and CANNOT be changed later</string>
@@ -1024,4 +1028,8 @@
     <string name="stream_source_web_creator_desc">Creator web client.</string>
     <string name="stream_source_android_creator">ANDROID_CREATOR</string>
     <string name="stream_source_android_creator_desc">Android creator client. Off by default; needs DroidGuard.</string>
+
+    <!-- Local Media Strings -->
+    <string name="local_playlist">Device files</string>
+    <string name="show_local_playlist">Show device files</string>
 </resources>

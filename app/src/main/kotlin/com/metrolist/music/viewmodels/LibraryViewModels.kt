@@ -51,6 +51,7 @@ import com.metrolist.music.extensions.matchesNormalizedQuery
 import com.metrolist.music.extensions.normalizeForSearch
 import com.metrolist.music.extensions.toEnum
 import com.metrolist.music.playback.DownloadUtil
+import com.metrolist.music.playback.scanner.LocalMediaScanner
 import com.metrolist.music.utils.PodcastRefreshTrigger
 import com.metrolist.music.utils.SyncUtils
 import com.metrolist.music.utils.dataStore
@@ -82,7 +83,10 @@ constructor(
     database: MusicDatabase,
     downloadUtil: DownloadUtil,
     private val syncUtils: SyncUtils,
+    private val localMediaScanner: LocalMediaScanner,
 ) : ViewModel() {
+    val isScanningLocalMedia = localMediaScanner.isScanning
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
     val debouncedSearchQuery = _searchQuery
@@ -91,6 +95,12 @@ constructor(
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    fun scanLocalMedia() {
+        viewModelScope.launch {
+            localMediaScanner.scan()
+        }
     }
 
     val allSongs =
@@ -113,6 +123,7 @@ constructor(
                     SongFilter.LIKED -> database.likedSongs(sortType, descending).map { it.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs) }
                     SongFilter.DOWNLOADED -> database.downloadedSongs(sortType, descending).map { it.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs) }
                     SongFilter.UPLOADED -> database.uploadedSongs(sortType, descending).map { it.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs) }
+                    SongFilter.LOCAL -> database.localSongs(sortType, descending).map { it.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs) }
                 }
             }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 

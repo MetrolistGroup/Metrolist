@@ -90,6 +90,12 @@ interface DatabaseDao {
     @Query("SELECT * FROM song WHERE isUploaded = 1 ORDER BY title")
     suspend fun uploadedSongEntitiesByNameAsc(): List<SongEntity>
 
+    @Query("SELECT * FROM song WHERE isLocal = 1")
+    suspend fun localSongEntities(): List<SongEntity>
+
+    @Query("SELECT id FROM song WHERE isLocal = 1")
+    suspend fun localSongIds(): List<String>
+
     @Query(
         """
         SELECT songId FROM playlist_song_map
@@ -1315,6 +1321,56 @@ interface DatabaseDao {
     }.map { it.reversed(descending) }
 
     @Transaction
+    @Query("SELECT * FROM song WHERE isLocal = 1 ORDER BY inLibrary")
+    fun localSongsByCreateDateAsc(): Flow<List<Song>>
+
+    @Transaction
+    @Query("SELECT * FROM song WHERE isLocal = 1 ORDER BY title")
+    fun localSongsByNameAsc(): Flow<List<Song>>
+
+    @Transaction
+    @Query("SELECT * FROM song WHERE isLocal = 1 ORDER BY totalPlayTime")
+    fun localSongsByPlayTimeAsc(): Flow<List<Song>>
+
+    @Transaction
+    @Query("SELECT * FROM song WHERE isLocal = 1 ORDER BY rowId")
+    fun localSongsByRowIdAsc(): Flow<List<Song>>
+
+    fun localSongs(
+        sortType: SongSortType,
+        descending: Boolean,
+    ) = when (sortType) {
+        SongSortType.CREATE_DATE -> localSongsByCreateDateAsc()
+        SongSortType.NAME ->
+            localSongsByNameAsc().map { songs ->
+                val collator = Collator.getInstance(Locale.getDefault())
+                collator.strength = Collator.PRIMARY
+                songs.sortedWith(compareBy(collator) { it.song.title })
+            }
+
+        SongSortType.ARTIST ->
+            localSongsByRowIdAsc().map { songs ->
+                val collator = Collator.getInstance(Locale.getDefault())
+                collator.strength = Collator.PRIMARY
+                songs
+                    .sortedWith(
+                        compareBy(collator) { song ->
+                            song.orderedArtists.joinToString("") { it.name }
+                        },
+                    ).groupBy { it.album?.title }
+                    .flatMap { (_, songsByAlbum) ->
+                        songsByAlbum.sortedBy { album ->
+                            album.orderedArtists.joinToString(
+                                "",
+                            ) { it.name }
+                        }
+                    }
+            }
+
+        SongSortType.PLAY_TIME -> localSongsByPlayTimeAsc()
+    }.map { it.reversed(descending) }
+
+    @Transaction
     @Query("SELECT * FROM song WHERE isEpisode = 1 ORDER BY inLibrary")
     fun podcastEpisodesByCreateDateAsc(): Flow<List<Song>>
 
@@ -1647,6 +1703,12 @@ interface DatabaseDao {
 
     @Query("SELECT * FROM artist WHERE id = :id LIMIT 1")
     fun getArtistById(id: String): ArtistEntity?
+
+    @Query("SELECT * FROM album WHERE id = :id LIMIT 1")
+    fun getAlbumById(id: String): AlbumEntity?
+
+    @Query("SELECT * FROM song WHERE id = :id LIMIT 1")
+    fun getSongEntityById(id: String): SongEntity?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insert(song: SongEntity): Long
@@ -2003,4 +2065,10 @@ interface DatabaseDao {
 
     @Delete
     fun delete(podcast: PodcastEntity)
+
+    @Query("DELETE FROM song WHERE isLocal = 1 AND id NOT IN (:validLocalSongIds)")
+    fun deleteMissingLocalSongs(validLocalSongIds: List<String>)
+
+    @Query("DELETE FROM song WHERE isLocal = 1")
+    fun deleteAllLocalSongs()
 }

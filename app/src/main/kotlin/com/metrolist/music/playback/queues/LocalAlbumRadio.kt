@@ -37,9 +37,17 @@ class LocalAlbumRadio(
         )
     }
 
-    override fun hasNextPage(): Boolean = !firstTimeLoaded || continuation != null
+    override fun hasNextPage(): Boolean =
+        if (albumWithSongs.album.isLocal || albumWithSongs.album.id.startsWith("local")) {
+            false
+        } else {
+            !firstTimeLoaded || continuation != null
+        }
 
     override suspend fun nextPage(): List<MediaItem> = withContext(IO) {
+        if (albumWithSongs.album.isLocal || albumWithSongs.album.id.startsWith("local")) {
+            return@withContext emptyList()
+        }
         if (!firstTimeLoaded) {
             playlistId = YouTube.album(albumWithSongs.album.id).getOrThrow().album.playlistId
             val nextResult = YouTube.next(endpoint, continuation).getOrThrow()

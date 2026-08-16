@@ -73,6 +73,7 @@ import com.metrolist.music.constants.MixSortTypeKey
 import com.metrolist.music.constants.ShowCachedPlaylistKey
 import com.metrolist.music.constants.ShowDownloadedPlaylistKey
 import com.metrolist.music.constants.ShowLikedPlaylistKey
+import com.metrolist.music.constants.ShowLocalPlaylistKey
 import com.metrolist.music.constants.ShowTopPlaylistKey
 import com.metrolist.music.constants.ShowUploadedPlaylistKey
 import com.metrolist.music.constants.YtmSyncKey
@@ -217,12 +218,24 @@ fun LibraryMixScreen(
             songThumbnails = emptyList(),
         )
 
+    val localPlaylist =
+        Playlist(
+            playlist =
+                PlaylistEntity(
+                    id = UUID.randomUUID().toString(),
+                    name = stringResource(R.string.local_playlist),
+                ),
+            songCount = 0,
+            songThumbnails = emptyList(),
+        )
+
     val (showLiked) = rememberPreference(ShowLikedPlaylistKey, true)
     val (showDownloaded) = rememberPreference(ShowDownloadedPlaylistKey, true)
     val (showTop) = rememberPreference(ShowTopPlaylistKey, true)
     val (showCached) = rememberPreference(ShowCachedPlaylistKey, true)
     val (showUploaded) = rememberPreference(ShowUploadedPlaylistKey, true)
-    
+    val (showLocal) = rememberPreference(ShowLocalPlaylistKey, true)
+
     val showLikedPlaylist = showLiked && matchesNormalizedQuery(normalizedQuery, likedPlaylist.playlist.name)
     val showDownloadedPlaylist =
         showDownloaded && matchesNormalizedQuery(normalizedQuery, downloadPlaylist.playlist.name)
@@ -230,6 +243,7 @@ fun LibraryMixScreen(
     val showUploadedPlaylists =
         showUploaded && matchesNormalizedQuery(normalizedQuery, uploadedPlaylist.playlist.name)
     val showCachedPlaylists = showCached && matchesNormalizedQuery(normalizedQuery, cachedPlaylist.playlist.name)
+    val showLocalPlaylists = showLocal && matchesNormalizedQuery(normalizedQuery, localPlaylist.playlist.name)
 
 
     val albums = viewModel.albums.collectAsStateWithLifecycle()
@@ -530,6 +544,25 @@ fun LibraryMixScreen(
                         }
                     }
 
+                    if (showLocalPlaylists) {
+                        item(
+                            key = "localPlaylist",
+                            contentType = { CONTENT_TYPE_PLAYLIST },
+                        ) {
+                            PlaylistListItem(
+                                playlist = localPlaylist,
+                                autoPlaylist = true,
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            navController.navigate("auto_playlist/local")
+                                        }
+                                        .animateItem(),
+                            )
+                        }
+                    }
+
                     if (showTopPlaylists) {
                         item(
                             key = "TopPlaylist",
@@ -768,6 +801,7 @@ fun LibraryMixScreen(
                         !showLikedPlaylist &&
                         !showDownloadedPlaylist &&
                         !showCachedPlaylists &&
+                        !showLocalPlaylists &&
                         !showTopPlaylists &&
                         !showUploadedPlaylists &&
                         searchQuery.isNotBlank()
@@ -865,6 +899,28 @@ fun LibraryMixScreen(
                                         },
                                     )
                                     .animateItem(),
+                            )
+                        }
+                    }
+
+                    if (showLocalPlaylists) {
+                        item(
+                            key = "localPlaylist",
+                            contentType = { CONTENT_TYPE_PLAYLIST },
+                        ) {
+                            PlaylistGridItem(
+                                playlist = localPlaylist,
+                                fillMaxWidth = true,
+                                autoPlaylist = true,
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .combinedClickable(
+                                            onClick = {
+                                                navController.navigate("auto_playlist/local")
+                                            },
+                                        )
+                                        .animateItem(),
                             )
                         }
                     }
@@ -1046,6 +1102,7 @@ fun LibraryMixScreen(
                         !showLikedPlaylist &&
                         !showDownloadedPlaylist &&
                         !showCachedPlaylists &&
+                        !showLocalPlaylists &&
                         !showTopPlaylists &&
                         !showUploadedPlaylists &&
                         searchQuery.isNotBlank()

@@ -283,7 +283,8 @@ fun getProtocUrl(): String {
         else -> "x86_64"
     }
 
-    return "https://repo1.maven.org/maven2/com/google/protobuf/protoc/$protocVersion/protoc-$protocVersion-$osName-$archName.exe"
+    val extension = if (osName == "windows") ".exe" else ""
+    return "https://repo1.maven.org/maven2/com/google/protobuf/protoc/$protocVersion/protoc-$protocVersion-$osName-$archName$extension"
 }
 
 val protoDir = rootProject.file("metroproto")

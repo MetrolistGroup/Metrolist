@@ -5,7 +5,13 @@
 
 package com.metrolist.music.ui.screens.library
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import androidx.core.content.ContextCompat
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -101,6 +107,7 @@ import kotlinx.coroutines.withContext
 fun LibrarySongsScreen(
     navController: NavController,
     onDeselect: () -> Unit,
+    initialFilter: SongFilter = SongFilter.LIKED,
     viewModel: LibrarySongsViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -132,7 +139,27 @@ fun LibrarySongsScreen(
     val debouncedSearchQuery by viewModel.debouncedSearchQuery.collectAsStateWithLifecycle()
     val normalizedQuery = remember(debouncedSearchQuery) { debouncedSearchQuery.normalizeForSearch() }
 
-    var filter by rememberEnumPreference(SongFilterKey, SongFilter.LIKED)
+    var filter by rememberEnumPreference(SongFilterKey, initialFilter)
+
+    val isScanningLocalMedia by viewModel.isScanningLocalMedia.collectAsStateWithLifecycle()
+    val audioPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_AUDIO
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+    var hasAudioPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, audioPermission) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasAudioPermission = isGranted
+        if (isGranted) {
+            viewModel.scanLocalMedia()
+        }
+    }
 
     // Upload state
     var showUploadDialog by remember { mutableStateOf(false) }
@@ -278,6 +305,15 @@ fun LibrarySongsScreen(
         }
     }
 
+    LaunchedEffect(filter) {
+        if (filter == SongFilter.LOCAL) {
+            hasAudioPermission = ContextCompat.checkSelfPermission(context, audioPermission) == PackageManager.PERMISSION_GRANTED
+            if (hasAudioPermission) {
+                viewModel.scanLocalMedia()
+            }
+        }
+    }
+
     val lazyListState = rememberLazyListState()
 
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -383,6 +419,7 @@ fun LibrarySongsScreen(
                                 SongFilter.LIBRARY to stringResource(R.string.filter_library),
                                 SongFilter.UPLOADED to stringResource(R.string.filter_uploaded),
                                 SongFilter.DOWNLOADED to stringResource(R.string.filter_downloaded),
+                                SongFilter.LOCAL to stringResource(R.string.filter_local),
                             ),
                         currentValue = filter,
                         onValueUpdate = {
@@ -445,6 +482,63 @@ fun LibrarySongsScreen(
                             contentDescription = stringResource(R.string.search),
                         )
                     }
+
+                    if (filter == SongFilter.LOCAL) {
+                        IconButton(
+                            onClick = {
+                                if (hasAudioPermission) {
+                                    viewModel.scanLocalMedia()
+                                } else {
+                                    permissionLauncher.launch(audioPermission)
+                                }
+                            },
+                            modifier = Modifier.padding(end = 8.dp).size(40.dp),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.sync),
+                                contentDescription = stringResource(R.string.scan_local_media),
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (filter == SongFilter.LOCAL && !hasAudioPermission) {
+                item(
+                    key = "permission_request",
+                    contentType = CONTENT_TYPE_HEADER,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.permission_audio_desc),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { permissionLauncher.launch(audioPermission) },
+                            shape = RoundedCornerShape(16.dp),
+                        ) {
+                            Text(stringResource(R.string.grant_permission))
+                        }
+                    }
+                }
+            } else if (filter == SongFilter.LOCAL && isScanningLocalMedia) {
+                item(
+                    key = "scanning_indicator",
+                    contentType = CONTENT_TYPE_HEADER,
+                ) {
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
                 }
             }
 
