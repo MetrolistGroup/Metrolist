@@ -139,7 +139,10 @@ fun LibrarySongsScreen(
     val debouncedSearchQuery by viewModel.debouncedSearchQuery.collectAsStateWithLifecycle()
     val normalizedQuery = remember(debouncedSearchQuery) { debouncedSearchQuery.normalizeForSearch() }
 
-    var filter by rememberEnumPreference(SongFilterKey, initialFilter)
+    val (prefFilter, onFilterChange) = rememberEnumPreference(SongFilterKey, initialFilter)
+    var filter by remember(initialFilter, prefFilter) {
+        mutableStateOf(if (initialFilter == SongFilter.LOCAL) SongFilter.LOCAL else prefFilter)
+    }
 
     val isScanningLocalMedia by viewModel.isScanningLocalMedia.collectAsStateWithLifecycle()
     val audioPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -424,6 +427,9 @@ fun LibrarySongsScreen(
                         currentValue = filter,
                         onValueUpdate = {
                             filter = it
+                            if (it != SongFilter.LOCAL) {
+                                onFilterChange(it)
+                            }
                         },
                         modifier = Modifier.weight(1f),
                     )

@@ -250,6 +250,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var navController: NavHostController
     private var pendingIntent: Intent? = null
+    private var pendingAudioIntent: Intent? = null
     private var latestVersionName by mutableStateOf(BuildConfig.VERSION_NAME)
 
     // Keep PlayerConnection as regular property - NOT mutableStateOf to prevent UI recomposition
@@ -271,7 +272,9 @@ class MainActivity : ComponentActivity() {
                     playerConnection = PlayerConnection(this@MainActivity, service, database, lifecycleScope)
                     playerConnectionSnapshot = playerConnection
                     listenTogetherManager.setPlayerConnection(playerConnection)
-                    handleAudioIntent(intent, playerConnection)
+                    val audioIntentToHandle = pendingAudioIntent ?: intent
+                    pendingAudioIntent = null
+                    handleAudioIntent(audioIntentToHandle, playerConnection)
                 }
             }
 
@@ -373,6 +376,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
         handleAudioIntent(intent, playerConnection)
         if (::navController.isInitialized) {
             handleWidgetTargetIntent(intent, navController)
@@ -1541,6 +1545,24 @@ class MainActivity : ComponentActivity() {
         } else {
             intent.data
         } ?: return
+
+        val type = intent.type ?: contentResolver.getType(uri)
+        val isAudio = type?.startsWith("audio/") == true ||
+            type == "application/ogg" ||
+            type == "application/x-ogg" ||
+            type == "application/flac" ||
+            uri.path?.lowercase()?.let { path ->
+                path.endsWith(".mp3") || path.endsWith(".flac") || path.endsWith(".wav") ||
+                path.endsWith(".aac") || path.endsWith(".m4a") || path.endsWith(".ogg") ||
+                path.endsWith(".opus")
+            } == true
+
+        if (!isAudio) return
+
+        if (playerConnection == null) {
+            pendingAudioIntent = Intent(intent)
+            return
+        }
 
         intent.action = null
         intent.data = null

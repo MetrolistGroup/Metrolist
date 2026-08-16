@@ -283,7 +283,7 @@ fun getProtocUrl(): String {
         else -> "x86_64"
     }
 
-    val extension = if (osName == "windows") ".exe" else ""
+    val extension = ".exe"
     return "https://repo1.maven.org/maven2/com/google/protobuf/protoc/$protocVersion/protoc-$protocVersion-$osName-$archName$extension"
 }
 

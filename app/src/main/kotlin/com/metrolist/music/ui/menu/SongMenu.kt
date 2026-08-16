@@ -119,6 +119,17 @@ fun SongMenu(
     val playerConnection = LocalPlayerConnection.current ?: return
     val songState = database.song(originalSong.id).collectAsStateWithLifecycle(initialValue = originalSong)
     val song = songState.value ?: originalSong
+
+    LaunchedEffect(originalSong.id) {
+        withContext(Dispatchers.IO) {
+            val existing = database.getSongById(originalSong.id)
+            if (existing == null && originalSong.song.isLocal) {
+                database.query {
+                    insert(originalSong.song)
+                }
+            }
+        }
+    }
     val download by LocalDownloadUtil.current
         .getDownload(originalSong.id)
         .collectAsStateWithLifecycle(initialValue = null)
@@ -551,7 +562,10 @@ fun SongMenu(
                             onClick = {
                                 onDismiss()
                                 val shareText = if (song.song.isLocal) {
-                                    "${song.song.title} - ${orderedArtists.joinToString { it.name }}"
+                                    val artistList = orderedArtists.ifEmpty { song.artists }
+                                    val artistNames = artistList.joinToString { it.name }.takeIf { it.isNotBlank() }
+                                    val titleName = song.song.title.takeIf { it.isNotBlank() }
+                                    listOfNotNull(titleName, artistNames).joinToString(" - ")
                                 } else {
                                     "https://music.youtube.com/watch?v=${song.id}"
                                 }
@@ -788,11 +802,7 @@ fun SongMenu(
                                         val isLocal = song.song.isLocal
                                         if (isLocal) {
                                             database.query {
-                                                update(
-                                                    song.song.copy(
-                                                        inLibrary = if (song.song.inLibrary == null) java.time.LocalDateTime.now() else null
-                                                    )
-                                                )
+                                                update(song.song.toggleLibrary(syncToYouTube = false))
                                             }
                                         } else {
                                             val currentSong = song.song

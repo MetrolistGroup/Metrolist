@@ -173,6 +173,16 @@ class LocalMediaScanner @Inject constructor(
                                     order = 0,
                                 )
                             )
+                        } else {
+                            update(
+                                existingAlbum.copy(
+                                    title = albumName,
+                                    year = year ?: existingAlbum.year,
+                                    thumbnailUrl = thumbnail ?: existingAlbum.thumbnailUrl,
+                                    isLocal = true,
+                                    lastUpdateTime = LocalDateTime.now(),
+                                )
+                            )
                         }
 
                         // 3. Song
@@ -222,6 +232,22 @@ class LocalMediaScanner @Inject constructor(
                                     isLocal = true,
                                 )
                             )
+                            deleteSongArtistMapBySongId(songId)
+                            deleteSongAlbumMapBySongId(songId)
+                            insert(
+                                SongArtistMap(
+                                    songId = songId,
+                                    artistId = artistId,
+                                    position = 0,
+                                )
+                            )
+                            insert(
+                                SongAlbumMap(
+                                    songId = songId,
+                                    albumId = localAlbumId,
+                                    index = trackNumber,
+                                )
+                            )
                         }
                     }
 
@@ -229,10 +255,13 @@ class LocalMediaScanner @Inject constructor(
                 }
             }
 
-            // Cleanup removed files
+            // Cleanup removed files in bounded batches
             database.query {
                 if (scannedIds.isNotEmpty()) {
-                    deleteMissingLocalSongs(scannedIds)
+                    val staleIds = localSongIds().filter { it !in scannedIds }
+                    staleIds.chunked(500).forEach { batch ->
+                        deleteLocalSongsByIds(batch)
+                    }
                 } else {
                     deleteAllLocalSongs()
                 }

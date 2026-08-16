@@ -2066,8 +2066,17 @@ interface DatabaseDao {
     @Delete
     fun delete(podcast: PodcastEntity)
 
-    @Query("DELETE FROM song WHERE isLocal = 1 AND id NOT IN (:validLocalSongIds)")
-    fun deleteMissingLocalSongs(validLocalSongIds: List<String>)
+    @Query("DELETE FROM song_artist_map WHERE songId = :songId")
+    fun deleteSongArtistMapBySongId(songId: String)
+
+    @Query("DELETE FROM song_album_map WHERE songId = :songId")
+    fun deleteSongAlbumMapBySongId(songId: String)
+
+    @Query("SELECT id FROM song WHERE isLocal = 1")
+    fun localSongIds(): List<String>
+
+    @Query("DELETE FROM song WHERE isLocal = 1 AND id IN (:songIds)")
+    fun deleteLocalSongsByIds(songIds: List<String>)
 
     @Query("DELETE FROM song WHERE isLocal = 1")
     fun deleteAllLocalSongs()
