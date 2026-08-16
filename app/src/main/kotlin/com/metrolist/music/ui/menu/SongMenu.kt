@@ -125,7 +125,9 @@ fun SongMenu(
             val existing = database.getSongById(originalSong.id)
             if (existing == null && originalSong.song.isLocal) {
                 database.query {
-                    insert(originalSong.song)
+                    insert(originalSong.toMediaMetadata()) {
+                        it.copy(isLocal = true)
+                    }
                 }
             }
         }
