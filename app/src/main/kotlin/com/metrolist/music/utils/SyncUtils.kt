@@ -7,6 +7,7 @@
 package com.metrolist.music.utils
 
 import android.content.Context
+import android.widget.Toast
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.ArtistItem
@@ -19,6 +20,7 @@ import com.metrolist.lastfm.LastFM
 import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.constants.LastFMUseSendLikes
 import com.metrolist.music.constants.LastFullSyncKey
+import com.metrolist.music.R
 import com.metrolist.music.constants.SYNC_COOLDOWN
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.ArtistEntity
@@ -155,7 +157,7 @@ class SyncUtils @Inject constructor(
             .flatMap(database::songIdsWithoutArtists)
             .toSet()
 
-    private suspend fun runQueuedPlaylistEdit(block: suspend () -> Unit) {
+    private suspend fun <T> runQueuedPlaylistEdit(block: suspend () -> T): T =
         playlistEditMutex.withLock {
             val remainingDelay = PLAYLIST_EDIT_THROTTLE_MS -
                 (System.currentTimeMillis() - lastPlaylistEditAtMs)
@@ -166,7 +168,6 @@ class SyncUtils @Inject constructor(
                 lastPlaylistEditAtMs = System.currentTimeMillis()
             }
         }
-    }
 
     init {
         context.dataStore.data
@@ -1753,22 +1754,49 @@ class SyncUtils @Inject constructor(
         }
     }
 
-    suspend fun addToPlaylist(
+    // Runs on syncScope, not on the caller's scope: the menu that starts an upload is dismissed
+    // long before a throttled batch finishes, and dismissing it cancels a composition scope.
+    fun addSongsToPlaylist(
         browseId: String,
         playlistId: String,
-        songId: String,
-    ): Boolean {
+        playlistName: String,
+        songIds: List<String>,
+    ) {
+        if (songIds.isEmpty()) return
         markPlaylistModifying(playlistId)
-        return try {
-            runQueuedPlaylistEdit {
-                YouTube.addToPlaylist(browseId, songId).getOrThrow()
+        syncScope.launch {
+            var failedCount = 0
+            try {
+                songIds.forEach { songId ->
+                    // withRetry stays outside the queue so a backoff never holds playlistEditMutex.
+                    withRetry {
+                        runQueuedPlaylistEdit {
+                            YouTube.addToPlaylist(browseId, songId).getOrThrow()
+                        }
+                    }.onSuccess { setVideoId ->
+                        if (setVideoId != null) {
+                            database.updatePlaylistSongSetVideoId(playlistId, songId, setVideoId)
+                        }
+                    }.onFailure { e ->
+                        failedCount++
+                        Timber.e(e, "Failed to add song $songId to playlist $browseId")
+                    }
+                }
+            } finally {
+                unmarkPlaylistModifying(playlistId)
             }
-            true
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to add song $songId to playlist $browseId")
-            false
-        } finally {
-            unmarkPlaylistModifying(playlistId)
+
+            if (failedCount > 0) {
+                val message = context.resources.getQuantityString(
+                    R.plurals.playlist_upload_failed,
+                    failedCount,
+                    failedCount,
+                    playlistName,
+                )
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 

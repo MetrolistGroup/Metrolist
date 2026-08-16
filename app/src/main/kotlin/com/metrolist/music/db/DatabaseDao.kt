@@ -1240,6 +1240,21 @@ interface DatabaseDao {
     @Query("UPDATE playlist_song_map SET position = position + :delta WHERE playlistId = :playlistId")
     fun shiftPlaylistSongPositions(playlistId: String, delta: Int)
 
+    // The subselect matters: adding a song that is already in the playlist leaves two rows for it,
+    // and only the one still awaiting confirmation should take the new setVideoId.
+    @Query(
+        """
+        UPDATE playlist_song_map SET setVideoId = :setVideoId
+        WHERE id = (
+            SELECT id FROM playlist_song_map
+            WHERE playlistId = :playlistId AND songId = :songId AND setVideoId IS NULL
+            ORDER BY position
+            LIMIT 1
+        )
+        """
+    )
+    fun updatePlaylistSongSetVideoId(playlistId: String, songId: String, setVideoId: String)
+
     @Transaction
     fun addSongToPlaylist(playlist: Playlist, songIds: List<String>) {
         var position = playlist.songCount

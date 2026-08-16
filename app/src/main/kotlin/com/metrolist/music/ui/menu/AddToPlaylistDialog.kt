@@ -123,10 +123,16 @@ fun AddToPlaylistDialog(
 
     suspend fun addSongsAndSync(targetPlaylist: Playlist, ids: List<String>) {
         database.addSongsToPlaylist(targetPlaylist, ids.map { it to null }, prepend = true)
-        targetPlaylist.playlist.browseId?.let { plist ->
-            ids.forEach { songId ->
-                syncUtils.addToPlaylist(plist, targetPlaylist.id, songId)
-            }
+        // Handed to syncUtils, which uploads on its own application-lifetime scope: a throttled
+        // batch outlives this dialog, and dismissing it used to cancel the pending uploads while
+        // the local rows were already committed.
+        targetPlaylist.playlist.browseId?.let { browseId ->
+            syncUtils.addSongsToPlaylist(
+                browseId,
+                targetPlaylist.id,
+                targetPlaylist.playlist.name,
+                ids,
+            )
         }
     }
 
@@ -303,8 +309,8 @@ fun AddToPlaylistDialog(
                             if (duplicates.isNotEmpty()) {
                                 showDuplicateDialog = true
                             } else {
-                                onDismiss()
                                 addSongsAndSync(playlist, songIds!!)
+                                onDismiss()
                             }
                         }
                     }
@@ -329,12 +335,12 @@ fun AddToPlaylistDialog(
                     TextButton(
                         onClick = {
                             showDuplicateDialog = false
-                            onDismiss()
                             coroutineScope.launch(Dispatchers.IO) {
                                 addSongsAndSync(
                                     selectedPlaylist!!,
                                     songIds!!.filter { !duplicates.contains(it) }
                                 )
+                                onDismiss()
                             }
                         }
                     ) {
@@ -344,9 +350,9 @@ fun AddToPlaylistDialog(
                     TextButton(
                         onClick = {
                             showDuplicateDialog = false
-                            onDismiss()
                             coroutineScope.launch(Dispatchers.IO) {
                                 addSongsAndSync(selectedPlaylist!!, songIds!!)
+                                onDismiss()
                             }
                         }
                     ) {
