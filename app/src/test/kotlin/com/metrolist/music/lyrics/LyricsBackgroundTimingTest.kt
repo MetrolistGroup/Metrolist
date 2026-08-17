@@ -81,6 +81,30 @@ class LyricsBackgroundTimingTest {
     }
 
     @Test
+    fun `a background line whose timings sit on a continuation line is skipped whole`() {
+        // A [bg: ...] line without inline timestamps carries its timings on the
+        // following standalone <word:start:end> line. That continuation belongs to
+        // the background, so it must be skipped along with it.
+        val withContinuation = """
+            [00:10.00]<00:10.00>Main <00:10.50>line
+            [bg: ooh]
+            <ooh:10.2:11.0>
+            [00:12.00]<00:12.00>Next <00:12.40>line
+        """.trimIndent()
+
+        val parsed = LyricsUtils.parseLyrics(withContinuation)
+        val lastWord = mainLines(parsed).first().words!!.last()
+
+        assertEquals("line", lastWord.text)
+        assertEquals(12.0, lastWord.endTime, 0.001)
+
+        // The background entry still gets its timings from the continuation line.
+        val background = parsed.filter { it.isBackground }
+        assertEquals(1, background.size)
+        assertEquals(10.2, background.first().words!!.first().startTime, 0.001)
+    }
+
+    @Test
     fun `a line followed by a normal line is unaffected`() {
         val plain = """
             [00:10.00]<00:10.00>Main <00:10.50>line

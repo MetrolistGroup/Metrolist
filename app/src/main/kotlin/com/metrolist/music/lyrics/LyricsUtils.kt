@@ -671,6 +671,12 @@ object LyricsUtils {
         var nextIndex = currentIndex + 1
         while (nextIndex < allLines.size && isBackgroundLine(allLines[nextIndex].trim())) {
             nextIndex++
+            // A background line without inline timestamps carries its word timings on
+            // the following standalone <word:start:end> line. That continuation belongs
+            // to the background, so it has to be stepped over as well.
+            if (nextIndex < allLines.size && isTimingContinuationLine(allLines[nextIndex].trim())) {
+                nextIndex++
+            }
         }
         if (nextIndex >= allLines.size) return null
 
@@ -694,6 +700,13 @@ object LyricsUtils {
         val content = RICH_SYNC_LINE_REGEX.matchEntire(line)?.groupValues?.get(4) ?: return false
         return BACKGROUND_REGEX.containsMatchIn(content.trim())
     }
+
+    /**
+     * A standalone `<word:start:end|...>` line holding the previous line's word
+     * timings, matching the continuation form [parseRichSyncLyrics] falls back to.
+     */
+    private fun isTimingContinuationLine(line: String): Boolean =
+        line.startsWith("<") && line.endsWith(">")
 
     /**
      * Parse standard synced lyrics format: [MM:SS.mm] text
