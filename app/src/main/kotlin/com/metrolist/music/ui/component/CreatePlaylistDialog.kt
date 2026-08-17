@@ -27,8 +27,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import com.metrolist.innertube.YouTube
-import com.metrolist.music.LocalDatabase
+import com.metrolist.music.LocalSyncUtils
 import com.metrolist.music.R
 import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.db.entities.PlaylistEntity
@@ -38,7 +37,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
-import java.util.logging.Logger
 
 @Composable
 fun CreatePlaylistDialog(
@@ -47,7 +45,7 @@ fun CreatePlaylistDialog(
     allowSyncing: Boolean = true,
     onPlaylistCreated: ((String) -> Unit)? = null,
 ) {
-    val database = LocalDatabase.current
+    val syncUtils = LocalSyncUtils.current
     val coroutineScope = rememberCoroutineScope()
     var syncedPlaylist by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -64,33 +62,18 @@ fun CreatePlaylistDialog(
         initialTextFieldValue = TextFieldValue(initialTextFieldValue ?: ""),
         onDismiss = onDismiss,
         onDone = { playlistName ->
-            coroutineScope.launch(Dispatchers.IO) {
-                val browseId =
-                    if (syncedPlaylist && isSignedIn) {
-                        YouTube.createPlaylist(playlistName)
-                    } else if (syncedPlaylist) {
-                        Logger.getLogger("CreatePlaylistDialog").warning("Not signed in")
-                        return@launch
-                    } else {
-                        null
-                    }
-
-                val playlistEntity =
-                    PlaylistEntity(
-                        name = playlistName,
-                        browseId = browseId,
-                        bookmarkedAt = LocalDateTime.now(),
-                        isEditable = true,
-                    )
-
-                database.query {
-                    insert(playlistEntity)
-                }
-
-                withContext(Dispatchers.Main) {
-                    onPlaylistCreated?.invoke(playlistEntity.id)
-                }
-            }
+            // The dialog is already dismissed by the time this runs, so the work is handed to
+            // SyncUtils and its application-lifetime scope: the playlist is written locally first
+            // and only then offered to YouTube, which may fail or be unreachable.
+            syncUtils.createPlaylist(
+                PlaylistEntity(
+                    name = playlistName,
+                    bookmarkedAt = LocalDateTime.now(),
+                    isEditable = true,
+                    isAutoSync = syncedPlaylist && isSignedIn,
+                ),
+                onCreated = onPlaylistCreated,
+            )
         },
         extraContent = {
             if (allowSyncing) {

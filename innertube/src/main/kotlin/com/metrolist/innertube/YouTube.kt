@@ -77,7 +77,6 @@ import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import timber.log.Timber
@@ -3009,8 +3008,8 @@ object YouTube {
         innerTube.moveSongPlaylist(WEB_REMIX, playlistId, setVideoId, successorSetVideoId)
     }
 
-    fun createPlaylist(title: String) =
-        runBlocking {
+    suspend fun createPlaylist(title: String) =
+        runCatching {
             innerTube.createPlaylist(WEB_REMIX, title).body<CreatePlaylistResponse>().playlistId
         }
 
