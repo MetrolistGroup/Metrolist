@@ -1577,15 +1577,18 @@ class SyncUtils @Inject constructor(
 
                     Timber.d("syncPlaylist: Updating local playlist (remote: ${remoteIds.size}, local: ${localIds.size})")
 
-                    val remoteIdSet = remoteIds.toSet()
                     val localIdSet = localIds.toSet()
                     val metadataInserts = songs.filter {
                         it.id !in localIdSet || it.id in songIdsWithoutArtists
                     }
-                    // Every local song the remote does not list, not just the downloaded ones. A
-                    // song that exists only here is one this device never managed to upload, and
-                    // rebuilding the playlist from the remote alone is what used to discard it.
-                    val preservedSongIds = localIds.filter { it !in remoteIdSet }
+                    // Every local song the remote does not account for, not just the downloaded
+                    // ones. A song that exists only here is one this device never managed to
+                    // upload, and rebuilding the playlist from the remote alone is what used to
+                    // discard it.
+                    val preservedSongIds = songIdsAbsentFromRemote(
+                        localSongIds = localIds,
+                        remoteSongIds = remoteIds,
+                    )
 
                     database.withTransaction {
                         database.clearPlaylist(playlistId)
