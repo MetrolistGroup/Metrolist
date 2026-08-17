@@ -1532,51 +1532,75 @@ class SyncUtils @Inject constructor(
                     val remoteIds = songs.map { it.id }
                     val localIds = database.playlistSongIds(playlistId)
 
-                    if (remoteIds == localIds) {
-                        Timber.d("syncPlaylist: Local and remote are in sync, no changes needed")
+                    // Compare as sets rather than ordered lists: reorders are pushed to
+                    // YouTube Music from the playlist screen, so when both sides contain the
+                    // same songs the local order is authoritative and must not be overwritten
+                    // by the remote order (which may not have caught up with the reorder yet).
+                    if (remoteIds.toSet() == localIds.toSet()) {
+                        Timber.d("syncPlaylist: Local and remote contain the same songs, no changes needed")
                         return@onSuccess
                     }
 
                     Timber.d("syncPlaylist: Updating local playlist (remote: ${remoteIds.size}, local: ${localIds.size})")
 
-                    val localSongsBeforeSync = database.playlistSongs(playlistId).first()
-                    val downloadedSongIds = localSongsBeforeSync
-                        .filter { it.song.song.isDownloaded || it.song.song.dateDownload != null }
-                        .map { it.song.id }
-                        .toSet()
-
                     database.withTransaction {
-                        database.clearPlaylist(playlistId)
+                        // Merge remote membership changes without discarding the local order:
+                        // songs present on both sides keep their local position, songs removed
+                        // remotely (and not downloaded) are dropped, and new remote songs are
+                        // appended at the end in remote relative order.
+                        val localSongsBeforeSync = database.playlistSongsBlocking(playlistId)
+                        val localIdsBySongId = localSongsBeforeSync.associateBy { it.map.songId }
+                        val remoteSet = remoteIds.toSet()
+                        var changed = false
+
                         songs.forEach { song ->
                             if (database.getSongByIdBlocking(song.id) == null) {
                                 database.insert(song)
                             }
                         }
 
-                        downloadedSongIds.forEach { songId ->
-                            if (songId !in remoteIds) {
-                                val existingSong = database.getSongByIdBlocking(songId)
-                                if (existingSong != null) {
-                                    val maxPosition = database.playlistSongsBlocking(playlistId)
-                                        .maxOfOrNull { it.map.position } ?: -1
-                                    database.insert(
-                                        PlaylistSongMap(
-                                            songId = songId,
-                                            playlistId = playlistId,
-                                            position = maxPosition + 1
-                                        )
-                                    )
-                                    Timber.d("syncPlaylist: Preserved downloaded song $songId in playlist")
-                                }
+                        localSongsBeforeSync.forEach { playlistSong ->
+                            val map = playlistSong.map
+                            if (map.songId !in remoteSet &&
+                                !playlistSong.song.song.isDownloaded &&
+                                playlistSong.song.song.dateDownload == null
+                            ) {
+                                database.delete(map)
+                                changed = true
+                                Timber.d("syncPlaylist: Removed song ${map.songId} no longer in remote playlist")
+                            } else if (map.songId !in remoteSet) {
+                                Timber.d("syncPlaylist: Preserved downloaded song ${map.songId} in playlist")
                             }
                         }
 
-                        val playlistEntity = database.playlistBlocking(playlistId)
-                        if (playlistEntity != null) {
-                            database.addSongsToPlaylist(
-                                playlistEntity,
-                                songs.map { it.id to it.setVideoId }
-                            )
+                        val missingRemoteSongs = remoteIds.filter { it !in localIdsBySongId }
+                        if (missingRemoteSongs.isNotEmpty()) {
+                            var maxPosition = database.playlistSongsBlocking(playlistId)
+                                .maxOfOrNull { it.map.position } ?: -1
+                            missingRemoteSongs.forEach { songId ->
+                                database.insert(
+                                    PlaylistSongMap(
+                                        songId = songId,
+                                        playlistId = playlistId,
+                                        position = ++maxPosition,
+                                        setVideoId = songs.firstOrNull { it.id == songId }?.setVideoId,
+                                    ),
+                                )
+                            }
+                            changed = true
+                        }
+
+                        // Keep positions contiguous so that later inserts (which start from the
+                        // song count) cannot collide with existing positions after the deletions.
+                        database.playlistSongsBlocking(playlistId)
+                            .forEachIndexed { index, playlistSong ->
+                                if (playlistSong.map.position != index) {
+                                    database.update(playlistSong.map.copy(position = index))
+                                }
+                            }
+
+                        if (changed) {
+                            updatePlaylistLastUpdated(playlistId)
                         }
                     }
                     Timber.d("syncPlaylist: Successfully synced playlist")
