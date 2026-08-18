@@ -151,12 +151,26 @@ constructor(
                         MediaMetadata
                             .Builder()
                             .setIsPlayable(false)
-                            .setIsBrowsable(false)
+                            .setIsBrowsable(true)
                             .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
                             .build(),
                     ).build(),
                 params,
             ),
+        )
+
+    override fun onSubscribe(
+        session: MediaLibrarySession,
+        browser: MediaSession.ControllerInfo,
+        parentId: String,
+        params: MediaLibraryService.LibraryParams?,
+    ): ListenableFuture<LibraryResult<Void>> =
+        Futures.immediateFuture(
+            if (isBrowsableMediaId(parentId)) {
+                LibraryResult.ofVoid(params)
+            } else {
+                LibraryResult.ofError(SessionError.ERROR_BAD_VALUE, params)
+            },
         )
 
     override fun onGetChildren(
@@ -169,8 +183,7 @@ constructor(
     ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> =
         scope.future(Dispatchers.IO) {
             try {
-            LibraryResult.ofItemList(
-                when (parentId) {
+                val children = when (parentId) {
                     MusicService.ROOT -> {
                         val sectionsRaw = context.dataStore.get(
                             AndroidAutoSectionsOrderKey,
@@ -452,9 +465,8 @@ constructor(
 
                             else -> emptyList()
                         }
-                },
-                params,
-            )
+                }
+                LibraryResult.ofItemList(children.paginate(page, pageSize), params)
             } catch (e: Exception) {
                 reportException(e)
                 LibraryResult.ofItemList(emptyList(), params)
@@ -509,7 +521,7 @@ constructor(
                     searchResults.add(song.toMediaItem(
                         path = "${MusicService.SEARCH}/$query",
                         isPlayable = true,
-                        isBrowsable = true
+                        isBrowsable = false,
                     ))
                 }
 
@@ -552,7 +564,7 @@ constructor(
                                         })
                                         .setArtworkUri(songItem.thumbnail.toUri())
                                         .setIsPlayable(true)
-                                        .setIsBrowsable(true)
+                                        .setIsBrowsable(false)
                                         .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
                                         .build()
                                 )
@@ -883,4 +895,25 @@ constructor(
                     .build(),
             ).build()
     }
+}
+
+internal fun isBrowsableMediaId(mediaId: String): Boolean =
+    mediaId == MusicService.ROOT ||
+        mediaId == MusicService.SONG ||
+        mediaId == MusicService.ARTIST ||
+        mediaId == MusicService.ALBUM ||
+        mediaId == MusicService.PLAYLIST ||
+        mediaId == MusicService.YOUTUBE_PLAYLIST ||
+        mediaId.startsWith("${MusicService.ARTIST}/") ||
+        mediaId.startsWith("${MusicService.ALBUM}/") ||
+        mediaId.startsWith("${MusicService.PLAYLIST}/") ||
+        mediaId.startsWith("${MusicService.YOUTUBE_PLAYLIST}/")
+
+internal fun <T> List<T>.paginate(
+    page: Int,
+    pageSize: Int,
+): List<T> {
+    val fromIndex = (page.toLong() * pageSize).coerceAtMost(size.toLong()).toInt()
+    val toIndex = (fromIndex.toLong() + pageSize).coerceAtMost(size.toLong()).toInt()
+    return subList(fromIndex, toIndex)
 }
