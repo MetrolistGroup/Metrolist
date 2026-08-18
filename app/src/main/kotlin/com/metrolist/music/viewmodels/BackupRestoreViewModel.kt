@@ -41,6 +41,7 @@ import com.metrolist.music.playback.MusicService.Companion.PERSISTENT_AUTOMIX_FI
 import com.metrolist.music.playback.MusicService.Companion.PERSISTENT_PLAYER_STATE_FILE
 import com.metrolist.music.playback.MusicService.Companion.PERSISTENT_QUEUE_FILE
 import com.metrolist.music.utils.reportException
+import com.metrolist.music.utils.ArtistNameAliases
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -85,6 +86,8 @@ class BackupRestoreViewModel @Inject constructor(
                             outputStream.putNextEntry(ZipEntry(SETTINGS_FILENAME))
                             inputStream.copyTo(outputStream)
                         }
+                    outputStream.putNextEntry(ZipEntry(ArtistNameAliases.BACKUP_FILENAME))
+                    outputStream.write(ArtistNameAliases.serialize().encodeToByteArray())
                     runBlocking(Dispatchers.IO) {
                         database.checkpoint()
                     }
@@ -142,6 +145,7 @@ class BackupRestoreViewModel @Inject constructor(
 
                 var foundDb = false
                 var foundSettings = false
+                var restoredArtistNameAliases: Map<String, String>? = null
 
                 context.applicationContext.contentResolver.openInputStream(uri)?.use { raw ->
                     raw.zipInputStream().use { inputStream ->
@@ -152,6 +156,10 @@ class BackupRestoreViewModel @Inject constructor(
                                 SETTINGS_FILENAME -> {
                                     foundSettings = true
                                     tempSettings.outputStream().use { it.write(inputStream.readBytes()) }
+                                }
+                                ArtistNameAliases.BACKUP_FILENAME -> {
+                                    restoredArtistNameAliases =
+                                        ArtistNameAliases.deserialize(inputStream.readBytes().decodeToString())
                                 }
                                 InternalDatabase.DB_NAME -> {
                                     foundDb = true
@@ -309,6 +317,7 @@ class BackupRestoreViewModel @Inject constructor(
                     context.filesDir.resolve(PERSISTENT_QUEUE_FILE).delete()
                     context.filesDir.resolve(PERSISTENT_AUTOMIX_FILE).delete()
                     context.filesDir.resolve(PERSISTENT_PLAYER_STATE_FILE).delete()
+                    ArtistNameAliases.restore(context, restoredArtistNameAliases.orEmpty())
 
                     // 4. Restart — Room will open the swapped DB and run migrations if needed
                     val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {

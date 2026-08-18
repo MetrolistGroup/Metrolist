@@ -96,6 +96,7 @@ import com.metrolist.music.ui.component.NewActionGrid
 import com.metrolist.music.ui.component.SongListItem
 import com.metrolist.music.ui.component.TextFieldDialog
 import com.metrolist.music.ui.utils.ShowMediaInfo
+import com.metrolist.music.utils.ArtistNameAliases
 import com.metrolist.music.viewmodels.CachePlaylistViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -211,13 +212,17 @@ fun SongMenu(
                 val newArtist = values[1]
 
                 coroutineScope.launch {
+                    val artist = song.artists.firstOrNull()
+                    if (artist != null) {
+                        ArtistNameAliases.set(context, artist.id, artist.channelId, artist.name, newArtist)
+                    }
                     database.query {
                         update(song.song.copy(title = newTitle))
-                        val artist = song.artists.firstOrNull()
                         if (artist != null) {
-                            update(artist.copy(name = newArtist))
+                            renameArtist(artist.id, artist.channelId, artist.name, newArtist)
                         }
                     }
+                    playerConnection.refreshArtistNameAliases()
 
                     showEditDialog = false
                     onDismiss()

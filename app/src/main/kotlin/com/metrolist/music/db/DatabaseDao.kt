@@ -56,6 +56,7 @@ import com.metrolist.music.extensions.toSQLiteQuery
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.ui.utils.resize
+import com.metrolist.music.utils.ArtistNameAliases
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -1648,6 +1649,21 @@ interface DatabaseDao {
     @Query("SELECT * FROM artist WHERE id = :id LIMIT 1")
     fun getArtistById(id: String): ArtistEntity?
 
+    @Query(
+        """
+        UPDATE artist SET name = :name
+        WHERE id = :artistId
+           OR (:channelId IS NOT NULL AND (id = :channelId OR channelId = :channelId))
+           OR name = :originalName
+        """,
+    )
+    fun renameArtist(
+        artistId: String,
+        channelId: String?,
+        originalName: String,
+        name: String,
+    )
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insert(song: SongEntity): Long
 
@@ -1752,7 +1768,7 @@ interface DatabaseDao {
                 ArtistEntity(
                     id = artist.id ?: artistByName(artist.name)?.id
                     ?: ArtistEntity.generateArtistId(),
-                    name = artist.name,
+                    name = ArtistNameAliases.resolve(artist.id, artist.name),
                 )
             }?.onEach(::insert)
             ?.mapIndexed { index, artist ->
@@ -1823,7 +1839,7 @@ interface DatabaseDao {
     ) {
         update(
             artist.copy(
-                name = artistPage.artist.title,
+                name = ArtistNameAliases.resolve(artist.id, artistPage.artist.title),
                 thumbnailUrl = artistPage.artist.thumbnail?.resize(1080, 1080),
                 lastUpdateTime = LocalDateTime.now()
             )
@@ -1875,7 +1891,7 @@ interface DatabaseDao {
                     ArtistEntity(
                         id = artist.id ?: artistByName(artist.name)?.id
                         ?: ArtistEntity.generateArtistId(),
-                        name = artist.name,
+                        name = ArtistNameAliases.resolve(artist.id, artist.name),
                     )
                 }.onEach(::insert)
                 .mapIndexed { index, artist ->

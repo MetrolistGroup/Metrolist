@@ -54,6 +54,7 @@ import com.metrolist.music.utils.cipher.PlayerDatesStore
 import com.metrolist.music.ui.component.Material3SettingsItem
 import com.metrolist.music.ui.component.shimmer.ShimmerHost
 import com.metrolist.music.ui.component.shimmer.TextPlaceholder
+import com.metrolist.music.utils.ArtistNameAliases
 import com.metrolist.music.utils.rememberEnumPreference
 import androidx.compose.ui.platform.LocalLocale
 
@@ -124,7 +125,10 @@ fun ShowMediaInfo(videoId: String) {
                 Column {
                     val baseList = listOf(
                         stringResource(R.string.song_title) to (info?.title ?: song?.title),
-                        stringResource(R.string.song_artists) to (info?.author ?: song?.artists?.joinToString { it.name }),
+                        stringResource(R.string.song_artists) to (
+                            song?.artists?.joinToString { it.name }
+                                ?: info?.author?.let { ArtistNameAliases.resolve(null, it) }
+                        ),
                         stringResource(R.string.media_id) to (song?.id ?: info?.videoId)
                     )
 

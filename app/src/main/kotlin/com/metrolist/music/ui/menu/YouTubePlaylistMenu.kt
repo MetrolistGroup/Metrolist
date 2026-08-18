@@ -62,6 +62,7 @@ import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.utils.completed
 import com.metrolist.music.LocalDatabase
+import com.metrolist.music.LocalArtistNameAliases
 import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
@@ -84,6 +85,7 @@ import com.metrolist.music.ui.component.NewAction
 import com.metrolist.music.ui.component.NewActionGrid
 import com.metrolist.music.ui.component.YouTubeListItem
 import com.metrolist.music.ui.utils.resize
+import com.metrolist.music.utils.ArtistNameAliases
 import com.metrolist.music.utils.exportYouTubePlaylistAsCSV
 import com.metrolist.music.utils.exportYouTubePlaylistAsM3U
 import com.metrolist.music.utils.getExportFileUri
@@ -115,6 +117,7 @@ fun YouTubePlaylistMenu(
     val isGuest = listenTogetherManager?.isInRoom == true && !listenTogetherManager.isHost
     val dbPlaylist by database.playlistByBrowseId(playlist.id).collectAsStateWithLifecycle(initialValue = null)
     val isPinned by database.speedDialDao.isPinned(playlist.id).collectAsStateWithLifecycle(initialValue = false)
+    val artistNameAliases = LocalArtistNameAliases.current
 
     var showChoosePlaylistDialog by rememberSaveable { mutableStateOf(false) }
     var showImportPlaylistDialog by rememberSaveable { mutableStateOf(false) }
@@ -384,7 +387,9 @@ fun YouTubePlaylistMenu(
                         Text(
                             text =
                                 joinByBullet(
-                                    song.artists.joinToString { it.name },
+                                    song.artists.joinToString {
+                                        ArtistNameAliases.resolve(artistNameAliases, it.id, it.name)
+                                    },
                                     makeTimeString(song.duration * 1000L),
                                 ),
                         )

@@ -106,6 +106,7 @@ import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.utils.completed
 import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.music.LocalDatabase
+import com.metrolist.music.LocalArtistNameAliases
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
@@ -160,6 +161,7 @@ import com.metrolist.music.ui.utils.SnapLayoutInfoProvider
 import com.metrolist.music.ui.utils.resize
 import com.metrolist.music.utils.joinByBullet
 import com.metrolist.music.utils.joinToArtistString
+import com.metrolist.music.utils.ArtistNameAliases
 import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
@@ -214,6 +216,7 @@ fun CommunityPlaylistCard(
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val scope = rememberCoroutineScope()
     val isDark = isSystemInDarkTheme()
+    val artistNameAliases = LocalArtistNameAliases.current
 
     val containerColor =
         if (isDark) {
@@ -326,7 +329,10 @@ fun CommunityPlaylistCard(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = item.playlist.author?.name ?: "",
+                        text =
+                            item.playlist.author?.let {
+                                ArtistNameAliases.resolve(artistNameAliases, it.id, it.name)
+                            }.orEmpty(),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         maxLines = 1,
@@ -369,7 +375,9 @@ fun CommunityPlaylistCard(
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                             )
                             Text(
-                                text = song.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name },
+                                text = song.artists.joinToArtistString(" ${stringResource(R.string.and)} ") {
+                                    ArtistNameAliases.resolve(artistNameAliases, it.id, it.name)
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                 maxLines = 1,
@@ -505,6 +513,7 @@ fun DailyDiscoverCard(
     val playCount by database.getLifetimePlayCount(dailyDiscover.recommendation.id).collectAsStateWithLifecycle(initialValue = 0)
     val menuState = LocalMenuState.current
     val haptic = LocalHapticFeedback.current
+    val artistNameAliases = LocalArtistNameAliases.current
 
     val song = dailyDiscover.recommendation as? SongItem
     val playsString = stringResource(R.string.plays)
@@ -584,7 +593,13 @@ fun DailyDiscoverCard(
                         Text(
                             text =
                                 buildString {
-                                    append((dailyDiscover.recommendation as? SongItem)?.artists?.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name } ?: "")
+                                    append(
+                                        (dailyDiscover.recommendation as? SongItem)
+                                            ?.artists
+                                            ?.joinToArtistString(" ${stringResource(R.string.and)} ") {
+                                                ArtistNameAliases.resolve(artistNameAliases, it.id, it.name)
+                                            }.orEmpty(),
+                                    )
                                     if (playCount > 0) {
                                         append(" | $playCount $playsString")
                                     }
@@ -611,7 +626,9 @@ fun DailyDiscoverCard(
                         text =
                             stringResource(
                                 messageRes,
-                                "${dailyDiscover.seed.title} • ${dailyDiscover.seed.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }}",
+                                "${dailyDiscover.seed.title} • ${dailyDiscover.seed.artists.joinToArtistString(" ${stringResource(R.string.and)} ") {
+                                    ArtistNameAliases.resolve(artistNameAliases, it.id, it.name)
+                                }}",
                             ),
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,

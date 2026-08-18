@@ -33,6 +33,7 @@ import com.metrolist.music.db.entities.toArtistPage
 import com.metrolist.music.extensions.filterExplicit
 import com.metrolist.music.extensions.filterExplicitAlbums
 import com.metrolist.music.utils.SyncUtils
+import com.metrolist.music.utils.ArtistNameAliases
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.get
 import com.metrolist.music.utils.reportException
@@ -229,7 +230,7 @@ class ArtistViewModel @Inject constructor(
                             if (existingArtist != null) {
                                 database.update(
                                     existingArtist.copy(
-                                        name = resolvedPage.artist.title,
+                                        name = ArtistNameAliases.resolve(existingArtist.id, resolvedPage.artist.title),
                                         channelId = resolvedPage.artist.channelId ?: existingArtist.channelId,
                                         thumbnailUrl = resolvedPage.artist.thumbnail ?: existingArtist.thumbnailUrl,
                                         cachedPageJson = cachedJson,
@@ -241,7 +242,7 @@ class ArtistViewModel @Inject constructor(
                                 database.insert(
                                     ArtistEntity(
                                         id = artistId,
-                                        name = apiArtist.title,
+                                        name = ArtistNameAliases.resolve(artistId, apiArtist.title),
                                         channelId = apiArtist.channelId,
                                         thumbnailUrl = apiArtist.thumbnail,
                                         cachedPageJson = cachedJson,
@@ -295,7 +296,7 @@ class ArtistViewModel @Inject constructor(
                     database.insert(
                         ArtistEntity(
                             id = artistId,
-                            name = it.title,
+                            name = ArtistNameAliases.resolve(artistId, it.title),
                             channelId = it.channelId,
                             thumbnailUrl = it.thumbnail,
                             bookmarkedAt = java.time.LocalDateTime.now(),

@@ -13,79 +13,63 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.models.toMediaMetadata
-import com.metrolist.music.ui.utils.resize
+import com.metrolist.music.utils.ArtistNameAliases
 
 val MediaItem.metadata: MediaMetadata?
     get() = localConfiguration?.tag as? MediaMetadata
 
-fun Song.toMediaItem() = MediaItem.Builder()
-    .setMediaId(song.id)
-    .setUri(song.id)
-    .setCustomCacheKey(song.id)
-    .setTag(toMediaMetadata())
-    .setMediaMetadata(
-        androidx.media3.common.MediaMetadata.Builder()
-            .setTitle(song.title)
-            .setSubtitle(orderedArtists.joinToString { it.name })
-            .setArtist(orderedArtists.joinToString { it.name })
-            .setArtworkUri(song.thumbnailUrl?.toUri())
-            .setAlbumTitle(song.albumName)
-            .setAlbumArtist(orderedArtists.firstOrNull()?.name)
-            .setDisplayTitle(song.title)
-            .setMediaType(MEDIA_TYPE_MUSIC)
-            .setIsBrowsable(false)
-            .setIsPlayable(true)
-            .setExtras(Bundle().apply {
-                putString("artwork_uri", song.thumbnailUrl)
-            })
-            .build()
-    )
-    .build()
+fun Song.toMediaItem() = toMediaMetadata().toMediaItem()
 
-fun SongItem.toMediaItem() = MediaItem.Builder()
-    .setMediaId(id)
-    .setUri(id)
-    .setCustomCacheKey(id)
-    .setTag(toMediaMetadata())
-    .setMediaMetadata(
-        androidx.media3.common.MediaMetadata.Builder()
-            .setTitle(title)
-            .setSubtitle(artists.joinToString { it.name })
-            .setArtist(artists.joinToString { it.name })
-            .setArtworkUri(thumbnail.resize(1080, 1080).toUri())
-            .setAlbumTitle(album?.name)
-            .setAlbumArtist(artists.firstOrNull()?.name)
-            .setDisplayTitle(title)
-            .setMediaType(MEDIA_TYPE_MUSIC)
-            .setIsBrowsable(false)
-            .setIsPlayable(true)
-            .setExtras(Bundle().apply {
-                putString("artwork_uri", thumbnail.resize(1080, 1080))
-            })
-            .build()
-    )
-    .build()
+fun SongItem.toMediaItem() = toMediaMetadata().toMediaItem()
 
-fun MediaMetadata.toMediaItem() = MediaItem.Builder()
-    .setMediaId(id)
-    .setUri(id)
-    .setCustomCacheKey(id)
-    .setTag(this)
-    .setMediaMetadata(
-        androidx.media3.common.MediaMetadata.Builder()
-            .setTitle(title)
-            .setSubtitle(artists.joinToString { it.name })
-            .setArtist(artists.joinToString { it.name })
-            .setArtworkUri(thumbnailUrl?.toUri())
-            .setAlbumTitle(album?.title)
-            .setAlbumArtist(artists.firstOrNull()?.name)
-            .setDisplayTitle(title)
-            .setMediaType(MEDIA_TYPE_MUSIC)
-            .setIsBrowsable(false)
-            .setIsPlayable(true)
-            .setExtras(Bundle().apply {
-                thumbnailUrl?.let { putString("artwork_uri", it) }
-            })
-            .build()
-    )
-    .build()
+fun MediaMetadata.toMediaItem(): MediaItem {
+    val resolvedMetadata = withResolvedArtistNameAliases()
+    val artistNames = resolvedMetadata.artists.joinToString { it.name }
+    return MediaItem.Builder()
+        .setMediaId(resolvedMetadata.id)
+        .setUri(resolvedMetadata.id)
+        .setCustomCacheKey(resolvedMetadata.id)
+        .setTag(resolvedMetadata)
+        .setMediaMetadata(
+            androidx.media3.common.MediaMetadata.Builder()
+                .setTitle(resolvedMetadata.title)
+                .setSubtitle(artistNames)
+                .setArtist(artistNames)
+                .setArtworkUri(resolvedMetadata.thumbnailUrl?.toUri())
+                .setAlbumTitle(resolvedMetadata.album?.title)
+                .setAlbumArtist(resolvedMetadata.artists.firstOrNull()?.name)
+                .setDisplayTitle(resolvedMetadata.title)
+                .setMediaType(MEDIA_TYPE_MUSIC)
+                .setIsBrowsable(false)
+                .setIsPlayable(true)
+                .setExtras(Bundle().apply {
+                    resolvedMetadata.thumbnailUrl?.let { putString("artwork_uri", it) }
+                })
+                .build(),
+        ).build()
+}
+
+fun MediaMetadata.withResolvedArtistNameAliases(): MediaMetadata {
+    val resolvedArtists =
+        artists.map { artist ->
+            artist.copy(name = ArtistNameAliases.resolve(artist.id, artist.name))
+        }
+    return if (resolvedArtists == artists) this else copy(artists = resolvedArtists)
+}
+
+fun MediaItem.withResolvedArtistNameAliases(): MediaItem {
+    val currentMetadata = metadata ?: return this
+    val resolvedMetadata = currentMetadata.withResolvedArtistNameAliases()
+    if (resolvedMetadata === currentMetadata) return this
+
+    val artistNames = resolvedMetadata.artists.joinToString { it.name }
+    return buildUpon()
+        .setTag(resolvedMetadata)
+        .setMediaMetadata(
+            mediaMetadata.buildUpon()
+                .setSubtitle(artistNames)
+                .setArtist(artistNames)
+                .setAlbumArtist(resolvedMetadata.artists.firstOrNull()?.name)
+                .build(),
+        ).build()
+}
