@@ -9,13 +9,18 @@ package com.metrolist.music.ui.utils
 
 import kotlin.math.roundToInt
 
+private val GOOGLEUSERCONTENT_SIZE_PATTERN =
+    Regex("https://(?:lh3|yt3)\\.googleusercontent\\.com/.*=w(\\d+)-h(\\d+).*")
+private val YTIMG_DEFAULT_IMAGE_PATTERN =
+    Regex("/(?:default|mqdefault|hqdefault|sddefault)\\.jpg")
+
 fun String.resize(
     width: Int? = null,
     height: Int? = null,
 ): String {
     if (width == null && height == null) return this
 
-    "https://(?:lh3|yt3)\\.googleusercontent\\.com/.*=w(\\d+)-h(\\d+).*".toRegex()
+    GOOGLEUSERCONTENT_SIZE_PATTERN
         .matchEntire(this)
         ?.groupValues
         ?.let { group ->
@@ -35,7 +40,7 @@ fun String.resize(
     }
 
     if (startsWith("https://i.ytimg.com/") && maxOf(width ?: 0, height ?: 0) >= 544) {
-        return replace(Regex("/(?:default|mqdefault|hqdefault|sddefault)\\.jpg"), "/maxresdefault.jpg")
+        return replace(YTIMG_DEFAULT_IMAGE_PATTERN, "/maxresdefault.jpg")
     }
 
     return this
