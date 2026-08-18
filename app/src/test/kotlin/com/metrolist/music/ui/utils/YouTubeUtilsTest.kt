@@ -57,4 +57,28 @@ class YouTubeUtilsTest {
             url.resize(544, 544),
         )
     }
+
+    @Test
+    fun `googleusercontent resize preserves query parameters`() {
+        val url = "https://lh3.googleusercontent.com/abc=w120-h120-l90-rj?token=a=b"
+        assertEquals(
+            "https://lh3.googleusercontent.com/abc=w544-h544-p-l90-rj?token=a=b",
+            url.resize(544, 544),
+        )
+    }
+
+    @Test
+    fun `ggpht resize preserves query parameters`() {
+        val url = "https://yt3.ggpht.com/abc=s88?token=a=b"
+        assertEquals(
+            "https://yt3.ggpht.com/abc=w544-h544-p-l90-rj?token=a=b",
+            url.resize(544, 544),
+        )
+    }
+
+    @Test
+    fun `ggpht query without resize suffix remains unchanged`() {
+        val url = "https://yt3.ggpht.com/abc?token=a=b"
+        assertEquals(url, url.resize(544, 544))
+    }
 }

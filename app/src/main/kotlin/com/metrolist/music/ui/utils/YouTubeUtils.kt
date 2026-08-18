@@ -10,7 +10,9 @@ package com.metrolist.music.ui.utils
 import kotlin.math.roundToInt
 
 private val GOOGLEUSERCONTENT_SIZE_PATTERN =
-    Regex("https://(?:lh3|yt3)\\.googleusercontent\\.com/.*=w(\\d+)-h(\\d+).*")
+    Regex("^(https://(?:lh3|yt3)\\.googleusercontent\\.com/[^?]*?)=w(\\d+)-h(\\d+)[^?]*(\\?.*)?$")
+private val GGPHT_SIZE_PATTERN =
+    Regex("^(https://yt3\\.ggpht\\.com/[^?=]+)=(?:s\\d+|w\\d+-h\\d+)[^?]*(\\?.*)?$")
 private val YTIMG_DEFAULT_IMAGE_PATTERN =
     Regex("/(?:default|mqdefault|hqdefault|sddefault)\\.jpg")
 
@@ -24,18 +26,20 @@ fun String.resize(
         .matchEntire(this)
         ?.groupValues
         ?.let { group ->
-            val (originalWidth, originalHeight) = group.drop(1).map(String::toInt)
+            val originalWidth = group[2].toInt()
+            val originalHeight = group[3].toInt()
+            val query = group[4]
             val targetWidth = width ?: ((height!!.toDouble() * originalWidth) / originalHeight).roundToInt()
             val targetHeight = height ?: ((width!!.toDouble() * originalHeight) / originalWidth).roundToInt()
-            return "${substringBefore("=w")}=w${targetWidth.coerceAtLeast(1)}-h${targetHeight.coerceAtLeast(1)}-p-l90-rj"
+            return "${group[1]}=w${targetWidth.coerceAtLeast(1)}-h${targetHeight.coerceAtLeast(1)}-p-l90-rj$query"
         }
 
-    if (startsWith("https://yt3.ggpht.com/") && '=' in this) {
-        val baseUrl = substringBefore('=')
+    GGPHT_SIZE_PATTERN.matchEntire(this)?.groupValues?.let { group ->
+        val query = group[2]
         return if (width != null && height != null) {
-            "$baseUrl=w$width-h$height-p-l90-rj"
+            "${group[1]}=w$width-h$height-p-l90-rj$query"
         } else {
-            "$baseUrl=s${width ?: height}"
+            "${group[1]}=s${width ?: height}$query"
         }
     }
 
