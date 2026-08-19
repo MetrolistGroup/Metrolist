@@ -130,6 +130,10 @@ interface DatabaseDao {
     fun songsByCreateDateAsc(): Flow<List<Song>>
 
     @Transaction
+    @Query("SELECT * FROM song WHERE inLibrary IS NOT NULL ORDER BY inLibrary, rowId LIMIT :limit OFFSET :offset")
+    suspend fun songsByCreateDateAsc(limit: Int, offset: Int): List<Song>
+
+    @Transaction
     @Query("SELECT * FROM song WHERE inLibrary IS NOT NULL ORDER BY title")
     fun songsByNameAsc(): Flow<List<Song>>
 
@@ -179,6 +183,10 @@ interface DatabaseDao {
     @Transaction
     @Query("SELECT * FROM song WHERE liked ORDER BY likedDate")
     fun likedSongsByCreateDateAsc(): Flow<List<Song>>
+
+    @Transaction
+    @Query("SELECT * FROM song WHERE liked ORDER BY likedDate DESC, rowId DESC LIMIT :limit OFFSET :offset")
+    suspend fun likedSongsByCreateDateDesc(limit: Int, offset: Int): List<Song>
 
     @Transaction
     @Query("SELECT * FROM song WHERE liked ORDER BY title")
@@ -231,8 +239,23 @@ interface DatabaseDao {
     fun albumSongs(albumId: String): Flow<List<Song>>
 
     @Transaction
+    @Query(
+        "SELECT song.* FROM song JOIN song_album_map ON song.id = song_album_map.songId " +
+            "WHERE song_album_map.albumId = :albumId " +
+            "ORDER BY song_album_map.`index`, song.rowId LIMIT :limit OFFSET :offset",
+    )
+    suspend fun albumSongs(albumId: String, limit: Int, offset: Int): List<Song>
+
+    @Transaction
     @Query("SELECT * FROM playlist_song_map WHERE playlistId = :playlistId ORDER BY position")
     fun playlistSongs(playlistId: String): Flow<List<PlaylistSong>>
+
+    @Transaction
+    @Query(
+        "SELECT * FROM playlist_song_map WHERE playlistId = :playlistId " +
+            "ORDER BY position, id LIMIT :limit OFFSET :offset",
+    )
+    suspend fun playlistSongs(playlistId: String, limit: Int, offset: Int): List<PlaylistSong>
 
     @Transaction
     @Query(
@@ -251,6 +274,14 @@ interface DatabaseDao {
         "SELECT song.* FROM song_artist_map JOIN song ON song_artist_map.songId = song.id WHERE artistId = :artistId AND inLibrary IS NOT NULL ORDER BY inLibrary",
     )
     fun artistSongsByCreateDateAsc(artistId: String): Flow<List<Song>>
+
+    @Transaction
+    @Query(
+        "SELECT song.* FROM song_artist_map JOIN song ON song_artist_map.songId = song.id " +
+            "WHERE artistId = :artistId AND inLibrary IS NOT NULL " +
+            "ORDER BY inLibrary, song.rowId LIMIT :limit OFFSET :offset",
+    )
+    suspend fun artistSongsByCreateDateAsc(artistId: String, limit: Int, offset: Int): List<Song>
 
     @Transaction
     @Query(
@@ -701,6 +732,9 @@ interface DatabaseDao {
     @Transaction
     @Query("SELECT * FROM song WHERE id IN (:songIds)")
     suspend fun getSongsByIds(songIds: List<String>): List<Song>
+
+    @Query("SELECT id FROM song WHERE id IN (:songIds)")
+    suspend fun existingSongIds(songIds: List<String>): List<String>
 
 
     @Transaction

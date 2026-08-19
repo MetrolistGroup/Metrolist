@@ -30,4 +30,36 @@ class MediaLibrarySessionCallbackTest {
         assertEquals(listOf("five"), children.paginate(page = 2, pageSize = 2))
         assertEquals(emptyList<String>(), children.paginate(page = 3, pageSize = 2))
     }
+
+    @Test
+    fun `database pages are capped before loading relations`() {
+        assertEquals(
+            AndroidAutoPageRequest(offset = 0, limit = MAX_ANDROID_AUTO_PAGE_SIZE),
+            androidAutoPageRequest(page = 0, pageSize = Int.MAX_VALUE),
+        )
+        assertEquals(
+            AndroidAutoPageRequest(offset = MAX_ANDROID_AUTO_PAGE_SIZE, limit = MAX_ANDROID_AUTO_PAGE_SIZE),
+            androidAutoPageRequest(page = 1, pageSize = 1_000),
+        )
+        assertEquals(
+            AndroidAutoPageRequest(offset = 1_000, limit = MAX_ANDROID_AUTO_PAGE_SIZE),
+            androidAutoPageRequest(page = 2, pageSize = 500),
+        )
+    }
+
+    @Test
+    fun `playlist pages account for the leading shuffle action`() {
+        assertEquals(
+            AndroidAutoPageRequest(offset = 0, limit = 99),
+            androidAutoPageRequest(page = 0, pageSize = 100).afterLeadingItems(1),
+        )
+        assertEquals(
+            AndroidAutoPageRequest(offset = 99, limit = 100),
+            androidAutoPageRequest(page = 1, pageSize = 100).afterLeadingItems(1),
+        )
+        assertEquals(
+            AndroidAutoPageRequest(offset = 499, limit = MAX_ANDROID_AUTO_PAGE_SIZE),
+            androidAutoPageRequest(page = 1, pageSize = 1_000).afterLeadingItems(1),
+        )
+    }
 }
