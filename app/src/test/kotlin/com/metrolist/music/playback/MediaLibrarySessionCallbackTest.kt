@@ -62,4 +62,20 @@ class MediaLibrarySessionCallbackTest {
             androidAutoPageRequest(page = 1, pageSize = 1_000).afterLeadingItems(1),
         )
     }
+
+    @Test
+    fun `playlist containers account for both built in playlists`() {
+        assertEquals(
+            AndroidAutoPageRequest(offset = 0, limit = 0),
+            androidAutoPageRequest(page = 0, pageSize = 1).afterLeadingItems(2),
+        )
+        assertEquals(
+            AndroidAutoPageRequest(offset = 0, limit = 0),
+            androidAutoPageRequest(page = 1, pageSize = 1).afterLeadingItems(2),
+        )
+        assertEquals(
+            AndroidAutoPageRequest(offset = 0, limit = 1),
+            androidAutoPageRequest(page = 2, pageSize = 1).afterLeadingItems(2),
+        )
+    }
 }

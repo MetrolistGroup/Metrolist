@@ -126,7 +126,7 @@ fun ShowMediaInfo(videoId: String) {
                     val baseList = listOf(
                         stringResource(R.string.song_title) to (info?.title ?: song?.title),
                         stringResource(R.string.song_artists) to (
-                            song?.artists?.joinToString { it.name }
+                            song?.artists?.joinToString { ArtistNameAliases.resolve(it.id, it.name) }
                                 ?: info?.author?.let { ArtistNameAliases.resolve(null, it) }
                         ),
                         stringResource(R.string.media_id) to (song?.id ?: info?.videoId)

@@ -57,19 +57,45 @@ class AndroidAutoDatabasePaginationTest {
                     duration = 0,
                 ),
             )
-            database.dao.insert(PlaylistEntity(id = "playlist", name = "Playlist"))
+            database.dao.insert(
+                PlaylistEntity(
+                    id = "playlist",
+                    name = "Playlist",
+                    bookmarkedAt = libraryDate,
+                ),
+            )
             repeat(1_001) { index ->
                 val songId = "song-$index"
+                val artistId = "artist-$index"
+                val albumId = "album-$index"
+                database.dao.insert(ArtistEntity(id = artistId, name = "Artist $index"))
+                database.dao.insert(
+                    AlbumEntity(
+                        id = albumId,
+                        title = "Album $index",
+                        songCount = 1,
+                        duration = 0,
+                    ),
+                )
+                database.dao.insert(
+                    PlaylistEntity(
+                        id = "playlist-$index",
+                        name = "Playlist $index",
+                        bookmarkedAt = libraryDate,
+                    ),
+                )
                 database.dao.insert(
                     SongEntity(
                         id = songId,
                         title = "Song $index",
+                        albumId = albumId,
                         liked = true,
                         likedDate = libraryDate,
                         inLibrary = libraryDate,
                     ),
                 )
                 database.dao.insert(SongArtistMap(songId = songId, artistId = "artist", position = 0))
+                database.dao.insert(SongArtistMap(songId = songId, artistId = artistId, position = 1))
                 database.dao.insert(SongAlbumMap(songId = songId, albumId = "album", index = index / 2))
                 database.dao.insert(
                     PlaylistSongMap(
@@ -83,7 +109,11 @@ class AndroidAutoDatabasePaginationTest {
 
         database.dao.songsByCreateDateAsc(limit = 500, offset = 0).let { firstPage ->
             assertEquals(500, firstPage.size)
-            assertTrue(firstPage.all { it.artists.single().id == "artist" && it.album?.id == "album" })
+            assertTrue(
+                firstPage.all { song ->
+                    song.artists.any { it.id == "artist" } && song.album?.id == "album"
+                },
+            )
         }
         assertCompletePagination(
             id = { it.id },
@@ -107,9 +137,24 @@ class AndroidAutoDatabasePaginationTest {
             id = { it.song.id },
             loadPage = { limit, offset -> database.dao.playlistSongs("playlist", limit, offset) },
         )
+        assertCompletePagination(
+            expectedSize = 1_002,
+            id = { it.id },
+            loadPage = { limit, offset -> database.dao.artistsByCreateDateAsc(limit, offset) },
+        )
+        assertCompletePagination(
+            id = { it.id },
+            loadPage = { limit, offset -> database.dao.albumsByCreateDateAsc(limit, offset) },
+        )
+        assertCompletePagination(
+            expectedSize = 1_002,
+            id = { it.id },
+            loadPage = { limit, offset -> database.dao.playlistsByCreateDateAsc(limit, offset) },
+        )
     }
 
     private suspend fun <T> assertCompletePagination(
+        expectedSize: Int = 1_001,
         id: (T) -> String,
         loadPage: suspend (limit: Int, offset: Int) -> List<T>,
     ) {
@@ -118,7 +163,7 @@ class AndroidAutoDatabasePaginationTest {
                 addAll(loadPage(500, offset).map(id))
             }
         }
-        assertEquals(1_001, ids.size)
-        assertEquals(1_001, ids.toSet().size)
+        assertEquals(expectedSize, ids.size)
+        assertEquals(expectedSize, ids.toSet().size)
     }
 }

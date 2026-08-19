@@ -797,6 +797,16 @@ interface DatabaseDao {
 
     @Transaction
     @SuppressWarnings(RoomWarnings.QUERY_MISMATCH)
+    @Query(
+        "SELECT *, (SELECT COUNT(1) FROM song_artist_map JOIN song " +
+            "ON song_artist_map.songId = song.id WHERE artistId = artist.id " +
+            "AND song.inLibrary IS NOT NULL) AS songCount FROM artist " +
+            "WHERE songCount > 0 ORDER BY rowId LIMIT :limit OFFSET :offset",
+    )
+    suspend fun artistsByCreateDateAsc(limit: Int, offset: Int): List<Artist>
+
+    @Transaction
+    @SuppressWarnings(RoomWarnings.QUERY_MISMATCH)
     @Query("SELECT *, (SELECT COUNT(1) FROM song_artist_map JOIN song ON song_artist_map.songId = song.id WHERE artistId = artist.id AND song.inLibrary IS NOT NULL) AS songCount FROM artist WHERE songCount > 0 ORDER BY name")
     fun artistsByNameAsc(): Flow<List<Artist>>
 
@@ -898,6 +908,15 @@ interface DatabaseDao {
     @SuppressWarnings(RoomWarnings.QUERY_MISMATCH)
     @Query("SELECT * FROM album WHERE EXISTS(SELECT * FROM song WHERE song.albumId = album.id AND song.inLibrary IS NOT NULL) ORDER BY rowId")
     fun albumsByCreateDateAsc(): Flow<List<Album>>
+
+    @Transaction
+    @SuppressWarnings(RoomWarnings.QUERY_MISMATCH)
+    @Query(
+        "SELECT * FROM album WHERE EXISTS(SELECT * FROM song " +
+            "WHERE song.albumId = album.id AND song.inLibrary IS NOT NULL) " +
+            "ORDER BY rowId LIMIT :limit OFFSET :offset",
+    )
+    suspend fun albumsByCreateDateAsc(limit: Int, offset: Int): List<Album>
 
     @Transaction
     @SuppressWarnings(RoomWarnings.QUERY_MISMATCH)
@@ -1105,6 +1124,16 @@ interface DatabaseDao {
     @Transaction
     @Query("SELECT *, (SELECT COUNT(*) FROM playlist_song_map WHERE playlistId = playlist.id) AS songCount FROM playlist WHERE bookmarkedAt IS NOT NULL ORDER BY rowId")
     fun playlistsByCreateDateAsc(): Flow<List<Playlist>>
+
+    @Transaction
+    @Query(
+        "SELECT *, (SELECT COUNT(*) FROM playlist_song_map WHERE playlistId = playlist.id) AS songCount " +
+            "FROM playlist WHERE bookmarkedAt IS NOT NULL ORDER BY rowId LIMIT :limit OFFSET :offset",
+    )
+    suspend fun playlistsByCreateDateAsc(limit: Int, offset: Int): List<Playlist>
+
+    @Query("SELECT browseId FROM playlist WHERE bookmarkedAt IS NOT NULL AND browseId IS NOT NULL")
+    suspend fun bookmarkedPlaylistBrowseIds(): List<String>
 
     @Transaction
     @Query(

@@ -219,7 +219,7 @@ fun ClickableArtistText(
                         append(ArtistNameAliases.resolve(artistNameAliases, artistId, artist.name))
                     }
                 } else {
-                    append(artist.name)
+                    append(ArtistNameAliases.resolve(artistNameAliases, null, artist.name))
                 }
                 if (index != artists.lastIndex) {
                     if (index == artists.lastIndex - 1) {
@@ -269,7 +269,7 @@ fun ClickableArtistText(
                         append(ArtistNameAliases.resolve(artistNameAliases, artistId, artist.name))
                     }
                 } else {
-                    append(artist.name)
+                    append(ArtistNameAliases.resolve(artistNameAliases, null, artist.name))
                 }
                 if (index != artists.lastIndex) {
                     if (index == artists.lastIndex - 1) {
