@@ -11,6 +11,7 @@ import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.innertube.utils.sha1
 import io.ktor.client.*
 import io.ktor.client.call.body
+import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.compression.*
@@ -35,8 +36,12 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * For making HTTP requests, not parsing response.
  */
 @OptIn(ExperimentalEncodingApi::class)
-class InnerTube {
-    private var httpClient = createClient()
+class InnerTube internal constructor(
+    private val engineFactory: InnerTube.() -> HttpClientEngine,
+) {
+    constructor() : this({ createEngine() })
+
+    private var httpClient = createClient(engineFactory(this))
 
     private companion object {
         const val PLAYBACK_TELEMETRY_VER = "2"
@@ -63,7 +68,7 @@ class InnerTube {
         set(value) {
             field = value
             httpClient.close()
-            httpClient = createClient()
+            httpClient = createClient(engineFactory(this))
         }
     
     var proxyAuth: String? = null
@@ -71,7 +76,53 @@ class InnerTube {
     var useLoginForBrowse: Boolean = false
 
     @OptIn(ExperimentalSerializationApi::class)
-    private fun createClient() = HttpClient(OkHttp) {
+    private fun createEngine() = OkHttp.create {
+        config {
+            // Connection pool settings for better connection reuse
+            connectionPool(
+                okhttp3.ConnectionPool(
+                    10, // maxIdleConnections
+                    5, // keepAliveDuration
+                    java.util.concurrent.TimeUnit.MINUTES
+                )
+            )
+            
+            // Timeout configurations
+            connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            
+            // Enable HTTP/2 for better performance
+            protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
+            
+            // Retry on connection failure
+            retryOnConnectionFailure(true)
+            
+            // Cache configuration for better performance
+            cache(
+                okhttp3.Cache(
+                    directory = java.io.File(System.getProperty("java.io.tmpdir"), "http_cache"),
+                    maxSize = 50L * 1024L * 1024L // 50 MB
+                )
+            )
+            
+            // Apply proxy configuration
+            this@InnerTube.proxy?.let { proxyConfig ->
+                proxy(proxyConfig)
+            }
+            
+            // Apply proxy authentication
+            this@InnerTube.proxyAuth?.let { auth ->
+                proxyAuthenticator { _, response ->
+                    response.request.newBuilder()
+                        .header("Proxy-Authorization", auth)
+                        .build()
+                }
+            }
+        }
+    }
+
+    private fun createClient(engine: HttpClientEngine) = HttpClient(engine) {
         expectSuccess = true
 
         install(ContentNegotiation) {
@@ -88,51 +139,6 @@ class InnerTube {
         }
 
         // Enhanced network configuration for better performance
-        engine {
-            config {
-                // Connection pool settings for better connection reuse
-                connectionPool(
-                    okhttp3.ConnectionPool(
-                        10, // maxIdleConnections
-                        5, // keepAliveDuration
-                        java.util.concurrent.TimeUnit.MINUTES
-                    )
-                )
-                
-                // Timeout configurations
-                connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-                writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-                
-                // Enable HTTP/2 for better performance
-                protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
-                
-                // Retry on connection failure
-                retryOnConnectionFailure(true)
-                
-                // Cache configuration for better performance
-                cache(
-                    okhttp3.Cache(
-                        directory = java.io.File(System.getProperty("java.io.tmpdir"), "http_cache"),
-                        maxSize = 50L * 1024L * 1024L // 50 MB
-                    )
-                )
-                
-                // Apply proxy configuration
-                this@InnerTube.proxy?.let { proxyConfig ->
-                    proxy(proxyConfig)
-                }
-                
-                // Apply proxy authentication
-                this@InnerTube.proxyAuth?.let { auth ->
-                    proxyAuthenticator { _, response ->
-                        response.request.newBuilder()
-                            .header("Proxy-Authorization", auth)
-                            .build()
-                    }
-                }
-            }
-        }
 
         // Request timeout configuration
         install(HttpTimeout) {
@@ -212,7 +218,7 @@ class InnerTube {
         continuation: String? = null,
     ) = withRetry {
         httpClient.post("search") {
-            ytClient(client, setLogin = false)
+            ytClient(client, setLogin = true)
             setBody(
                 SearchBody(
                     context = client.toContext(

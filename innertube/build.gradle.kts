@@ -34,6 +34,7 @@ dependencies {
     }
     implementation(libs.timber)
     testImplementation(libs.junit)
+    testImplementation(libs.ktor.client.mock)
 
     coreLibraryDesugaring(libs.desugaring)
 }
