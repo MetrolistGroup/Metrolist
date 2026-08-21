@@ -122,7 +122,7 @@ fun AddToPlaylistDialog(
     }
 
     suspend fun addSongsAndSync(targetPlaylist: Playlist, ids: List<String>) {
-        database.addSongsToPlaylist(targetPlaylist, ids.map { it to null }, prepend = true)
+        val rows = database.addSongsToPlaylist(targetPlaylist, ids.map { it to null }, prepend = true)
         // Handed to syncUtils, which uploads on its own application-lifetime scope: a throttled
         // batch outlives this dialog, and dismissing it used to cancel the pending uploads while
         // the local rows were already committed.
@@ -131,7 +131,7 @@ fun AddToPlaylistDialog(
                 browseId,
                 targetPlaylist.id,
                 targetPlaylist.playlist.name,
-                ids,
+                rows,
             )
         }
     }

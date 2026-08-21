@@ -1240,20 +1240,20 @@ interface DatabaseDao {
     @Query("UPDATE playlist_song_map SET position = position + :delta WHERE playlistId = :playlistId")
     fun shiftPlaylistSongPositions(playlistId: String, delta: Int)
 
-    // The subselect matters: adding a song that is already in the playlist leaves two rows for it,
-    // and only the one still awaiting confirmation should take the new setVideoId.
+    // By row id, not by (playlistId, songId): a playlist may hold the same song twice, and the
+    // setVideoId names one of those two items on YouTube rather than the song.
+    @Query("UPDATE playlist_song_map SET setVideoId = :setVideoId WHERE id = :mapId")
+    fun updatePlaylistSongSetVideoId(mapId: Long, setVideoId: String)
+
+    // The copies of this song the playlist has already had confirmed, which is what an upload
+    // whose answer went missing is weighed against.
     @Query(
         """
-        UPDATE playlist_song_map SET setVideoId = :setVideoId
-        WHERE id = (
-            SELECT id FROM playlist_song_map
-            WHERE playlistId = :playlistId AND songId = :songId AND setVideoId IS NULL
-            ORDER BY position
-            LIMIT 1
-        )
+        SELECT setVideoId FROM playlist_song_map
+        WHERE playlistId = :playlistId AND songId = :songId AND setVideoId IS NOT NULL
         """
     )
-    fun updatePlaylistSongSetVideoId(playlistId: String, songId: String, setVideoId: String)
+    fun playlistSongSetVideoIds(playlistId: String, songId: String): List<String>
 
     @Transaction
     fun addSongToPlaylist(playlist: Playlist, songIds: List<String>) {
@@ -1274,54 +1274,44 @@ interface DatabaseDao {
     }
 
     // This prevents songs from being removed during automatic playlist synchronization
+    /**
+     * Returns the row each song was inserted as, paired with its id, so a caller uploading them
+     * can later say which row an answer belongs to. A playlist is allowed to hold the same song
+     * twice, and the two rows are only told apart by their id.
+     */
     @Transaction
     fun addSongsToPlaylist(
         playlist: Playlist,
         songs: List<Pair<String, String?>>, // Pair of (songId, setVideoId)
         prepend: Boolean = false,
-    ) {
+    ): List<Pair<String, Long>> {
         val now = LocalDateTime.now()
         val songsToInsert =
             songs.mapNotNull { (id, setVideoId) ->
                 getSongByIdBlocking(id)?.let { id to setVideoId }
             }
-        if (songsToInsert.isEmpty()) return
+        if (songsToInsert.isEmpty()) return emptyList()
 
         if (prepend) {
             shiftPlaylistSongPositions(playlist.id, songsToInsert.size)
-            var position = 0
-            songsToInsert.forEach { (id, setVideoId) ->
-                val existingSong = getSongByIdBlocking(id)!!
-                if (existingSong.song.inLibrary == null) {
-                    inLibrary(id, now)
-                }
-                insert(
-                    PlaylistSongMap(
-                        songId = id,
-                        playlistId = playlist.id,
-                        position = position++,
-                        setVideoId = setVideoId,
-                    ),
-                )
+        }
+        var position = if (prepend) 0 else playlist.songCount
+        val inserted = songsToInsert.map { (id, setVideoId) ->
+            val existingSong = getSongByIdBlocking(id)!!
+            if (existingSong.song.inLibrary == null) {
+                inLibrary(id, now)
             }
-        } else {
-            var position = playlist.songCount
-            songsToInsert.forEach { (id, setVideoId) ->
-                val existingSong = getSongByIdBlocking(id)!!
-                if (existingSong.song.inLibrary == null) {
-                    inLibrary(id, now)
-                }
-                insert(
-                    PlaylistSongMap(
-                        songId = id,
-                        playlistId = playlist.id,
-                        position = position++,
-                        setVideoId = setVideoId,
-                    ),
-                )
-            }
+            id to insert(
+                PlaylistSongMap(
+                    songId = id,
+                    playlistId = playlist.id,
+                    position = position++,
+                    setVideoId = setVideoId,
+                ),
+            )
         }
         updatePlaylistLastUpdated(playlist.id)
+        return inserted
     }
 
     fun downloadedSongs(
@@ -1804,7 +1794,7 @@ interface DatabaseDao {
     fun insert(map: AlbumArtistMap)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    fun insert(map: PlaylistSongMap)
+    fun insert(map: PlaylistSongMap): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(searchHistory: SearchHistory)

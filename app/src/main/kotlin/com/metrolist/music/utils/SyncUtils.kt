@@ -1754,32 +1754,60 @@ class SyncUtils @Inject constructor(
         }
     }
 
-    // Runs on syncScope, not on the caller's scope: the menu that starts an upload is dismissed
-    // long before a throttled batch finishes, and dismissing it cancels a composition scope.
+    /**
+     * Uploads songs a playlist has already been given locally.
+     *
+     * Runs on [syncScope] rather than the caller's: the menu that starts an upload is dismissed
+     * long before a throttled batch finishes, and dismissing it cancels a composition scope.
+     *
+     * [rows] pairs each song with the playlist row it was written as, since a playlist may hold
+     * the same song twice and only the row id tells the two apart.
+     */
     fun addSongsToPlaylist(
         browseId: String,
         playlistId: String,
         playlistName: String,
-        songIds: List<String>,
+        rows: List<Pair<String, Long>>,
     ) {
-        if (songIds.isEmpty()) return
+        if (rows.isEmpty()) return
         markPlaylistModifying(playlistId)
         syncScope.launch {
             var failedCount = 0
             try {
-                songIds.forEach { songId ->
-                    // withRetry stays outside the queue so a backoff never holds playlistEditMutex.
-                    withRetry {
-                        runQueuedPlaylistEdit {
-                            YouTube.addToPlaylist(browseId, songId).getOrThrow()
-                        }
-                    }.onSuccess { setVideoId ->
+                rows.forEach { (songId, mapId) ->
+                    // The copies this device has already had confirmed, read before the request
+                    // goes out, so an answer that never comes back can be settled against them.
+                    val knownSetVideoIds = database.playlistSongSetVideoIds(playlistId, songId)
+
+                    uploadSong(browseId, songId).onSuccess { setVideoId ->
                         if (setVideoId != null) {
-                            database.updatePlaylistSongSetVideoId(playlistId, songId, setVideoId)
+                            database.updatePlaylistSongSetVideoId(mapId, setVideoId)
                         }
                     }.onFailure { e ->
-                        failedCount++
-                        Timber.e(e, "Failed to add song $songId to playlist $browseId")
+                        Timber.w(e, "Adding $songId to $browseId gave no answer, asking the playlist")
+                        when (val outcome = settleUpload(browseId, songId, knownSetVideoIds)) {
+                            is UploadOutcome.Landed -> {
+                                outcome.setVideoId?.let {
+                                    database.updatePlaylistSongSetVideoId(mapId, it)
+                                }
+                                Timber.d("Song $songId had reached $browseId after all")
+                            }
+                            // Only now is asking again safe: the playlist says the first request
+                            // never arrived, so a second one cannot leave a duplicate behind.
+                            UploadOutcome.DidNotLand -> uploadSong(browseId, songId)
+                                .onSuccess { setVideoId ->
+                                    if (setVideoId != null) {
+                                        database.updatePlaylistSongSetVideoId(mapId, setVideoId)
+                                    }
+                                }.onFailure {
+                                    failedCount++
+                                    Timber.e(it, "Failed to add song $songId to playlist $browseId")
+                                }
+                            UploadOutcome.Unknown -> {
+                                failedCount++
+                                Timber.e(e, "Could not tell whether $songId reached $browseId")
+                            }
+                        }
                     }
                 }
             } finally {
@@ -1798,6 +1826,30 @@ class SyncUtils @Inject constructor(
                 }
             }
         }
+    }
+
+    /** One attempt, never replayed on its own. */
+    private suspend fun uploadSong(browseId: String, songId: String): Result<String?> =
+        runCatching {
+            runQueuedPlaylistEdit {
+                YouTube.addToPlaylist(browseId, songId).getOrThrow()
+            }
+        }
+
+    /** Asks the playlist what became of an upload that failed without saying so. */
+    private suspend fun settleUpload(
+        browseId: String,
+        songId: String,
+        knownSetVideoIds: List<String>,
+    ): UploadOutcome {
+        val remote = withRetry {
+            YouTube.playlist(browseId).completed()
+        }.getOrNull()?.getOrNull() ?: return UploadOutcome.Unknown
+
+        return reconcileUpload(
+            knownSetVideoIds = knownSetVideoIds,
+            remoteSetVideoIds = remote.songs.filter { it.id == songId }.mapNotNull { it.setVideoId },
+        )
     }
 
     fun scheduleRemoveFromPlaylist(

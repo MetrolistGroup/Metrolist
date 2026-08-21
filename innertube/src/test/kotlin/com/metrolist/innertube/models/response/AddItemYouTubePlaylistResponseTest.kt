@@ -37,4 +37,49 @@ class AddItemYouTubePlaylistResponseTest {
 
         assertNull(response.firstSetVideoId)
     }
+
+    @Test
+    fun `an edit result with no added data still parses`() {
+        // A shape YouTube changed must not turn an add that happened into a failure, because a
+        // failure is what makes the caller ask again.
+        val response = json.decodeFromString<AddItemYouTubePlaylistResponse>(
+            """{"playlistEditResults":[{}]}""",
+        )
+
+        assertNull(response.firstSetVideoId)
+    }
+
+    @Test
+    fun `added data with no ids still parses`() {
+        val response = json.decodeFromString<AddItemYouTubePlaylistResponse>(
+            """{"playlistEditResults":[{"playlistEditVideoAddedResultData":{}}]}""",
+        )
+
+        assertNull(response.firstSetVideoId)
+    }
+
+    @Test
+    fun `an empty body still parses`() {
+        val response = json.decodeFromString<AddItemYouTubePlaylistResponse>("{}")
+
+        assertNull(response.status)
+        assertNull(response.firstSetVideoId)
+    }
+
+    @Test
+    fun `a setVideoId later in the results is still found`() {
+        val response = json.decodeFromString<AddItemYouTubePlaylistResponse>(
+            """
+            {
+              "playlistEditResults": [
+                {},
+                {"playlistEditVideoAddedResultData": {"videoId": "VID456"}},
+                {"playlistEditVideoAddedResultData": {"setVideoId": "SVID789", "videoId": "VID456"}}
+              ]
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals("SVID789", response.firstSetVideoId)
+    }
 }
