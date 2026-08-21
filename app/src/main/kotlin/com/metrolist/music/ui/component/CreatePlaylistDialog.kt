@@ -32,6 +32,7 @@ import com.metrolist.music.R
 import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.db.entities.PlaylistEntity
 import com.metrolist.music.extensions.isSyncEnabled
+import com.metrolist.music.utils.isSignedInToYouTube
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -51,7 +52,7 @@ fun CreatePlaylistDialog(
     val context = LocalContext.current
 
     val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
-    val isSignedIn = innerTubeCookie.isNotEmpty()
+    val isSignedIn = isSignedInToYouTube(innerTubeCookie)
 
     val notLoggedInYoutubeStr = stringResource(R.string.not_logged_in_youtube)
     val syncDisabledStr = stringResource(R.string.sync_disabled)

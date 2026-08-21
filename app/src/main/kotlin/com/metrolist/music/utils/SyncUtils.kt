@@ -15,7 +15,6 @@ import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.PodcastItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.utils.completed
-import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.lastfm.LastFM
 import com.metrolist.music.R
 import com.metrolist.music.constants.InnerTubeCookieKey
@@ -294,7 +293,7 @@ class SyncUtils @Inject constructor(
             val cookie = context.dataStore.data
                 .map { it[InnerTubeCookieKey] }
                 .first()
-            cookie?.let { "SAPISID" in parseCookieString(it) } ?: false
+            isSignedInToYouTube(cookie)
         } catch (e: Exception) {
             Timber.e(e, "Error checking login status")
             false
@@ -1775,7 +1774,14 @@ class SyncUtils @Inject constructor(
         syncScope.launch {
             database.insert(playlist)
             withContext(Dispatchers.Main) { onCreated?.invoke(playlist.id) }
-            createPendingPlaylist(playlist, notifyIfStillPending = true)
+            // The account's playlists as they stand before this one is asked for, so a lost
+            // answer can be told from a request that never arrived. There is nothing else to
+            // match on: a creation carries a title and no key, and a title is not an identity.
+            createPendingPlaylist(
+                playlist,
+                idsBefore = remotePlaylistListing()?.map { (id, _) -> id }?.toSet(),
+                notifyIfStillPending = true,
+            )
         }
     }
 
@@ -1784,14 +1790,27 @@ class SyncUtils @Inject constructor(
      * stays quiet: the user is not waiting on it, and the entry point runs on every playlist sync.
      */
     private suspend fun createPendingPlaylists() {
-        database.playlistEntitiesByNameAsc().pendingRemoteCreations().forEach { playlist ->
-            createPendingPlaylist(playlist, notifyIfStillPending = false)
+        val pending = database.playlistEntitiesByNameAsc().pendingRemoteCreations()
+        if (pending.isEmpty()) return
+
+        // Read once for the whole batch rather than once per playlist: it is the same snapshot
+        // for all of them, and none of them has been asked for yet.
+        val idsBefore = remotePlaylistListing()?.map { (id, _) -> id }?.toSet()
+        pending.forEach { playlist ->
+            createPendingPlaylist(playlist, idsBefore, notifyIfStillPending = false)
             delay(DB_OPERATION_DELAY_MS)
         }
     }
 
+    /**
+     * [idsBefore] is the account's playlists as they were before this attempt, which is what tells
+     * a playlist this request created from the ones that were already there. Null when the list
+     * could not be read, and then a lost answer cannot be reconciled and the playlist stays
+     * pending rather than being asked for twice.
+     */
     private suspend fun createPendingPlaylist(
         playlist: PlaylistEntity,
+        idsBefore: Set<String>?,
         notifyIfStillPending: Boolean,
     ) {
         if (!playlist.isPendingRemoteCreation() || !isLoggedIn()) return
@@ -1806,7 +1825,10 @@ class SyncUtils @Inject constructor(
         // walking the pending playlists cannot both create this one.
         if (!playlistsBeingCreated.add(playlist.id)) return
         try {
-            withRetry {
+            // One attempt, never replayed. A creation that reached YouTube and lost its answer
+            // fails exactly like one that never arrived, and asking again would leave the user
+            // with two playlists.
+            runCatching {
                 runQueuedPlaylistEdit {
                     YouTube.createPlaylist(playlist.name).getOrThrow()
                 }
@@ -1814,13 +1836,32 @@ class SyncUtils @Inject constructor(
                 database.update(playlist.copy(browseId = browseId))
                 Timber.d("createPlaylist: created ${playlist.name} on YouTube as $browseId")
             }.onFailure { e ->
-                Timber.e(e, "createPlaylist: failed to create ${playlist.name} on YouTube")
-                if (notifyIfStillPending) notifyPlaylistStillPending(playlist.name)
+                Timber.w(e, "createPlaylist: ${playlist.name} failed, looking for what it left behind")
+                val created = idsBefore?.let { before ->
+                    remotePlaylistListing()?.let { after ->
+                        playlistCreatedByLostRequest(playlist.name, before, after)
+                    }
+                }
+                if (created != null) {
+                    database.update(playlist.copy(browseId = created))
+                    Timber.d("createPlaylist: ${playlist.name} had reached YouTube as $created")
+                } else {
+                    Timber.e(e, "createPlaylist: ${playlist.name} stays pending")
+                    if (notifyIfStillPending) notifyPlaylistStillPending(playlist.name)
+                }
             }
         } finally {
             playlistsBeingCreated.remove(playlist.id)
         }
     }
+
+    /** The account's playlists as browse id and title, or null when the list could not be read. */
+    private suspend fun remotePlaylistListing(): List<Pair<String, String>>? =
+        withRetry {
+            YouTube.library("FEmusic_liked_playlists").completed()
+        }.getOrNull()?.getOrNull()?.items
+            ?.filterIsInstance<PlaylistItem>()
+            ?.map { it.id to it.title }
 
     private suspend fun notifyPlaylistStillPending(playlistName: String) {
         val message = context.getString(R.string.playlist_pending_youtube, playlistName)

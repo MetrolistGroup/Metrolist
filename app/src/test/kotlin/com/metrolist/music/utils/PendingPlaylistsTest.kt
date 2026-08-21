@@ -47,4 +47,91 @@ class PendingPlaylistsTest {
             playlists.pendingRemoteCreations().map { it.name },
         )
     }
+
+    @Test
+    fun `a playlist that appeared while the answer was lost is claimed`() {
+        assertEquals(
+            "PL_new",
+            playlistCreatedByLostRequest(
+                name = "Rock",
+                idsBefore = setOf("PL_old"),
+                remoteAfter = listOf("PL_old" to "Jazz", "PL_new" to "Rock"),
+            ),
+        )
+    }
+
+    @Test
+    fun `a request that never reached YouTube claims nothing`() {
+        assertEquals(
+            null,
+            playlistCreatedByLostRequest(
+                name = "Rock",
+                idsBefore = setOf("PL_old"),
+                remoteAfter = listOf("PL_old" to "Jazz"),
+            ),
+        )
+    }
+
+    @Test
+    fun `a playlist that already carried the name is not claimed`() {
+        // The user is entitled to a second playlist called Rock, so the one that was already
+        // there is not evidence that this request landed.
+        assertEquals(
+            null,
+            playlistCreatedByLostRequest(
+                name = "Rock",
+                idsBefore = setOf("PL_rock"),
+                remoteAfter = listOf("PL_rock" to "Rock"),
+            ),
+        )
+    }
+
+    @Test
+    fun `a new playlist under a different name is not claimed`() {
+        assertEquals(
+            null,
+            playlistCreatedByLostRequest(
+                name = "Rock",
+                idsBefore = emptySet(),
+                remoteAfter = listOf("PL_new" to "Jazz"),
+            ),
+        )
+    }
+
+    @Test
+    fun `two new playlists under the name claim neither`() {
+        // Claiming the wrong one would tie this device's playlist to the other.
+        assertEquals(
+            null,
+            playlistCreatedByLostRequest(
+                name = "Rock",
+                idsBefore = emptySet(),
+                remoteAfter = listOf("PL_a" to "Rock", "PL_b" to "Rock"),
+            ),
+        )
+    }
+
+    @Test
+    fun `the same new playlist listed twice is still claimed`() {
+        assertEquals(
+            "PL_new",
+            playlistCreatedByLostRequest(
+                name = "Rock",
+                idsBefore = emptySet(),
+                remoteAfter = listOf("PL_new" to "Rock", "PL_new" to "Rock"),
+            ),
+        )
+    }
+
+    @Test
+    fun `a name is matched exactly`() {
+        assertEquals(
+            null,
+            playlistCreatedByLostRequest(
+                name = "Rock",
+                idsBefore = emptySet(),
+                remoteAfter = listOf("PL_new" to "rock "),
+            ),
+        )
+    }
 }
