@@ -20,6 +20,18 @@ constructor(
         entity = ArtistEntity::class,
         entityColumn = "id",
         parentColumn = "id",
+        // Every column but cachedPageJson: Room builds one ArtistEntity per pairing here, and the
+        // cached page would be copied into every one of them.
+        projection = [
+            "id",
+            "name",
+            "thumbnailUrl",
+            "channelId",
+            "lastUpdateTime",
+            "bookmarkedAt",
+            "isLocal",
+            "isPodcastChannel",
+        ],
         associateBy =
             Junction(
                 value = SortedSongArtistMap::class,

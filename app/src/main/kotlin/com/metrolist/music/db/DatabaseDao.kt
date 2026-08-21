@@ -1749,6 +1749,11 @@ interface DatabaseDao {
     @Query("SELECT * FROM artist WHERE id = :id LIMIT 1")
     fun getArtistById(id: String): ArtistEntity?
 
+    // Writes the one column rather than the whole row: callers reach this holding an artist that
+    // came from a relation, and those do not carry cachedPageJson.
+    @Query("UPDATE artist SET thumbnailUrl = :thumbnailUrl WHERE id = :artistId")
+    fun updateArtistThumbnail(artistId: String, thumbnailUrl: String)
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insert(song: SongEntity): Long
 

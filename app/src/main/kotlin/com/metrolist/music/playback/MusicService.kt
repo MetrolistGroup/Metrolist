@@ -3726,7 +3726,7 @@ class MusicService :
             if (thumbnail != null) {
                 Timber.tag("DiscordSvc").d("fetchArtistThumbnail: got thumbnail for %s", artist.name)
                 withContext(Dispatchers.IO) {
-                    database.update(artist.copy(thumbnailUrl = thumbnail))
+                    database.updateArtistThumbnail(artist.id, thumbnail)
                 }
                 database.getSongById(song.song.id)
             } else {
