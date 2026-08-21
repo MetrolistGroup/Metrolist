@@ -33,3 +33,27 @@ fun songIdsAbsentFromRemote(
         }
     }
 }
+
+/**
+ * The number of songs a remote playlist says it holds, read out of the localised text YouTube
+ * renders under its title, such as "12 songs". Null when the page says nothing countable.
+ */
+fun remoteSongCountOf(songCountText: String?): Int? =
+    songCountText?.let { Regex("""\d+""").find(it)?.value?.toIntOrNull() }
+
+/**
+ * Whether a remote read describes the playlist well enough to rebuild the local copy from it.
+ *
+ * [readSongCount] is how many songs came through and [claimedSongCount] is how many the page says
+ * are there. A read that falls short of the claim is one this build could not follow to the end,
+ * and it is not the same thing as a playlist that lost songs: every song that failed to arrive
+ * would be taken for local-only and moved to the end of the playlist. An empty read is the case
+ * that matters most, because nothing at all arrived.
+ *
+ * A page that claims a number no larger than what arrived is taken at its word, and that includes
+ * a playlist which genuinely holds nothing. A page that claims nothing countable is only trusted
+ * when at least one song arrived, since there is then no way to tell an empty playlist from an
+ * unreadable one.
+ */
+fun remoteReadAccountsForPlaylist(readSongCount: Int, claimedSongCount: Int?): Boolean =
+    if (claimedSongCount == null) readSongCount > 0 else readSongCount >= claimedSongCount

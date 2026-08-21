@@ -459,8 +459,13 @@ class SyncUtils @Inject constructor(
     suspend fun syncPodcastSubscriptionsSuspend() = syncExecutionMutex.withLock { executeSyncPodcastSubscriptions() }
     suspend fun syncEpisodesForLaterSuspend() = syncExecutionMutex.withLock { executeSyncEpisodesForLater() }
     suspend fun syncSavedPlaylistsSuspend() = syncExecutionMutex.withLock { executeSyncSavedPlaylists() }
+    // Through the playlist edit queue, so a sync the user asked for cannot read the remote while
+    // an upload or a removal for that playlist is still in flight and then rebuild the playlist
+    // from an answer that edit has not reached yet.
     suspend fun syncPlaylistSuspend(browseId: String, playlistId: String) =
-        syncExecutionMutex.withLock { executeSyncPlaylist(browseId, playlistId) }
+        syncExecutionMutex.withLock {
+            runQueuedPlaylistEdit { executeSyncPlaylist(browseId, playlistId) }
+        }
     suspend fun syncAutoSyncPlaylistsSuspend() = syncExecutionMutex.withLock { executeSyncAutoSyncPlaylists() }
     suspend fun cleanupDuplicatePlaylistsSuspend() = syncExecutionMutex.withLock { executeCleanupDuplicatePlaylists() }
     suspend fun clearAllSyncedContentSuspend() = syncExecutionMutex.withLock { executeClearAllSyncedContent() }
@@ -1551,10 +1556,20 @@ class SyncUtils @Inject constructor(
             result.onSuccess { page ->
                 try {
                     val songs = page.songs.map(SongItem::toMediaMetadata)
+                    val claimedSongCount = remoteSongCountOf(page.playlist.songCountText)
                     Timber.d("syncPlaylist: Fetched ${songs.size} songs from remote")
 
-                    if (songs.isEmpty()) {
-                        Timber.w("syncPlaylist: Remote playlist is empty, skipping sync")
+                    // A read that falls short of what the page claims is one this build could not
+                    // follow to the end, which is not the same as a playlist that lost songs.
+                    // Rebuilding from it would take every song that never arrived for local-only
+                    // and move it to the end, so the playlist is left alone until a read adds up.
+                    // A playlist that genuinely holds nothing does reconcile, and the rule below
+                    // keeps every local song it has.
+                    if (!remoteReadAccountsForPlaylist(songs.size, claimedSongCount)) {
+                        Timber.w(
+                            "syncPlaylist: Remote read returned ${songs.size} songs of " +
+                                "${claimedSongCount ?: "an unknown number"}, leaving the local playlist alone"
+                        )
                         return@onSuccess
                     }
 

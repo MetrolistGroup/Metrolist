@@ -1,6 +1,8 @@
 package com.metrolist.music.utils
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlaylistPreservationTest {
@@ -74,5 +76,54 @@ class PlaylistPreservationTest {
             listOf("c"),
             songIdsAbsentFromRemote(listOf("a", "b", "c"), listOf("b", "a")),
         )
+    }
+
+    @Test
+    fun `a read that arrives in full is usable`() {
+        assertTrue(remoteReadAccountsForPlaylist(readSongCount = 12, claimedSongCount = 12))
+    }
+
+    @Test
+    fun `a read that falls short of the claim is not usable`() {
+        assertFalse(remoteReadAccountsForPlaylist(readSongCount = 3, claimedSongCount = 300))
+    }
+
+    @Test
+    fun `a read of nothing from a playlist that claims songs is not usable`() {
+        assertFalse(remoteReadAccountsForPlaylist(readSongCount = 0, claimedSongCount = 12))
+    }
+
+    @Test
+    fun `a playlist that genuinely holds nothing is usable`() {
+        assertTrue(remoteReadAccountsForPlaylist(readSongCount = 0, claimedSongCount = 0))
+    }
+
+    @Test
+    fun `a read of nothing from a page that claims nothing countable is not usable`() {
+        assertFalse(remoteReadAccountsForPlaylist(readSongCount = 0, claimedSongCount = null))
+    }
+
+    @Test
+    fun `songs that arrive without a claim to check them against are usable`() {
+        assertTrue(remoteReadAccountsForPlaylist(readSongCount = 12, claimedSongCount = null))
+    }
+
+    @Test
+    fun `a read longer than the claim is usable`() {
+        // The count under the title can lag behind an edit that already landed.
+        assertTrue(remoteReadAccountsForPlaylist(readSongCount = 13, claimedSongCount = 12))
+    }
+
+    @Test
+    fun `the claimed count is read out of the localised text`() {
+        assertEquals(12, remoteSongCountOf("12 songs"))
+        assertEquals(12, remoteSongCountOf("12 canciones"))
+        assertEquals(0, remoteSongCountOf("0 songs"))
+    }
+
+    @Test
+    fun `a page that says nothing countable claims nothing`() {
+        assertEquals(null, remoteSongCountOf(null))
+        assertEquals(null, remoteSongCountOf("No songs"))
     }
 }
