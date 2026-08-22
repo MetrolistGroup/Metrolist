@@ -1551,11 +1551,6 @@ class SyncUtils @Inject constructor(
                     val songs = page.songs.map(SongItem::toMediaMetadata)
                     Timber.d("syncPlaylist: Fetched ${songs.size} songs from remote")
 
-                    if (songs.isEmpty()) {
-                        Timber.w("syncPlaylist: Remote playlist is empty, skipping sync")
-                        return@onSuccess
-                    }
-
                     val remoteIds = songs.map { it.id }
                     val localIds = database.playlistSongIds(playlistId)
                     val songIdsWithoutArtists = database.playlistSongIdsWithoutArtists(playlistId).toSet()
