@@ -148,8 +148,13 @@ constructor(
                     FormatEntity(
                         id = mediaId,
                         itag = format.itag,
-                        mimeType = format.mimeType.split(";")[0],
-                        codecs = format.mimeType.split("codecs=")[1].removeSurrounding("\""),
+                        mimeType = format.mimeType.substringBefore(";"),
+                        codecs =
+                            format.mimeType
+                                .substringAfter("codecs=", missingDelimiterValue = "")
+                                .substringBefore(";")
+                                .trim()
+                                .removeSurrounding("\""),
                         bitrate = format.bitrate,
                         sampleRate = format.audioSampleRate,
                         contentLength = actualContentLength,

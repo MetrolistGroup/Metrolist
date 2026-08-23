@@ -252,7 +252,7 @@ fun LibraryMixScreen(
                         is Album -> item.album.bookmarkedAt
                         is Artist -> item.artist.bookmarkedAt
                         is Playlist -> item.playlist.createdAt
-                        else -> LocalDateTime.now()
+                        is Song -> LocalDateTime.now()
                     }
                 }
             }
@@ -264,7 +264,7 @@ fun LibraryMixScreen(
                             is Album -> item.album.title
                             is Artist -> item.artist.name
                             is Playlist -> item.playlist.name
-                            else -> ""
+                            is Song -> ""
                         }
                     },
                 )
@@ -276,7 +276,7 @@ fun LibraryMixScreen(
                         is Album -> item.album.lastUpdateTime
                         is Artist -> item.artist.lastUpdateTime
                         is Playlist -> item.playlist.lastUpdateTime
-                        else -> LocalDateTime.now()
+                        is Song -> LocalDateTime.now()
                     }
                 }
             }
@@ -300,7 +300,6 @@ fun LibraryMixScreen(
 
                     is Artist -> matchesNormalizedQuery(normalizedQuery, item.artist.name)
                     is Playlist -> matchesNormalizedQuery(normalizedQuery, item.playlist.name)
-                    else -> true
                 }
             }
 
@@ -315,7 +314,6 @@ fun LibraryMixScreen(
                             is Song -> 1
                             is Artist -> 2
                             is Album -> 3
-                            else -> 4
                         }
                     val secondPriority =
                         when (second) {
@@ -323,7 +321,6 @@ fun LibraryMixScreen(
                             is Song -> 1
                             is Artist -> 2
                             is Album -> 3
-                            else -> 4
                         }
 
                     if (firstPriority != secondPriority) {
@@ -335,7 +332,6 @@ fun LibraryMixScreen(
                                 is Song -> first.song.title
                                 is Artist -> first.artist.name
                                 is Album -> first.album.title
-                                else -> ""
                             }
                         val secondName =
                             when (second) {
@@ -343,7 +339,6 @@ fun LibraryMixScreen(
                                 is Song -> second.song.title
                                 is Artist -> second.artist.name
                                 is Album -> second.album.title
-                                else -> ""
                             }
                         collator.compare(firstName, secondName)
                     }
@@ -758,8 +753,6 @@ fun LibraryMixScreen(
                                             ).animateItem(),
                                 )
                             }
-
-                            else -> {}
                         }
                     }
 
@@ -1036,8 +1029,6 @@ fun LibraryMixScreen(
                                             ).animateItem(),
                                 )
                             }
-
-                            else -> {}
                         }
                     }
 

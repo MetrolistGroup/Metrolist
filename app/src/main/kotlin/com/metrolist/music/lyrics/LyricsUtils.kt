@@ -664,35 +664,49 @@ object LyricsUtils {
      * Get the start time of the next line for calculating the last word's end time
      */
     private fun getNextLineStartTime(currentIndex: Int, allLines: List<String>): Double? {
-        if (currentIndex + 1 >= allLines.size) return null
-
-        val nextLine = allLines[currentIndex + 1].trim()
-        
-        // Try standard rich sync line
-        val matchResult = RICH_SYNC_LINE_REGEX.matchEntire(nextLine)
-        if (matchResult != null) {
-            val minutes = matchResult.groupValues[1].toLongOrNull() ?: return null
-            val seconds = matchResult.groupValues[2].toLongOrNull() ?: return null
-            val fraction = matchResult.groupValues[3].toLongOrNull() ?: 0L
-
-            val fractionPart = if (matchResult.groupValues[3].length == 3) fraction / 1000.0 else fraction / 100.0
-            return minutes * 60.0 + seconds + fractionPart
+        // Background vocals overlap the line they accompany rather than following it,
+        // so a background line does not mark where the previous line ends. Using one
+        // cut the last word short, and when the background started before that word
+        // did, the word was handed an end time earlier than its own start.
+        var nextIndex = currentIndex + 1
+        while (nextIndex < allLines.size && isBackgroundLine(allLines[nextIndex].trim())) {
+            nextIndex++
+            // A background line without inline timestamps carries its word timings on
+            // the following standalone <word:start:end> line. That continuation belongs
+            // to the background, so it has to be stepped over as well.
+            if (nextIndex < allLines.size && isTimingContinuationLine(allLines[nextIndex].trim())) {
+                nextIndex++
+            }
         }
-        
-        // Try background line
-        val bgMatch = PAXSENIX_BG_LINE_REGEX.matchEntire(nextLine)
-        if (bgMatch != null) {
-            val content = bgMatch.groupValues[1]
-            val wordMatch = RICH_SYNC_WORD_REGEX.find(content) ?: return null
-            val minutes = wordMatch.groupValues[1].toLongOrNull() ?: return null
-            val seconds = wordMatch.groupValues[2].toLongOrNull() ?: return null
-            val fraction = wordMatch.groupValues[3].toLongOrNull() ?: 0L
-            val fractionPart = if (wordMatch.groupValues[3].length == 3) fraction / 1000.0 else fraction / 100.0
-            return minutes * 60.0 + seconds + fractionPart
-        }
+        if (nextIndex >= allLines.size) return null
 
-        return null
+        val nextLine = allLines[nextIndex].trim()
+
+        val matchResult = RICH_SYNC_LINE_REGEX.matchEntire(nextLine) ?: return null
+        val minutes = matchResult.groupValues[1].toLongOrNull() ?: return null
+        val seconds = matchResult.groupValues[2].toLongOrNull() ?: return null
+        val fraction = matchResult.groupValues[3].toLongOrNull() ?: 0L
+
+        val fractionPart = if (matchResult.groupValues[3].length == 3) fraction / 1000.0 else fraction / 100.0
+        return minutes * 60.0 + seconds + fractionPart
     }
+
+    /**
+     * Both background spellings the parser accepts: a whole `[bg: ...]` line, and a
+     * timestamped line whose content begins with `{bg}`.
+     */
+    private fun isBackgroundLine(line: String): Boolean {
+        if (PAXSENIX_BG_LINE_REGEX.matches(line)) return true
+        val content = RICH_SYNC_LINE_REGEX.matchEntire(line)?.groupValues?.get(4) ?: return false
+        return BACKGROUND_REGEX.containsMatchIn(content.trim())
+    }
+
+    /**
+     * A standalone `<word:start:end|...>` line holding the previous line's word
+     * timings, matching the continuation form [parseRichSyncLyrics] falls back to.
+     */
+    private fun isTimingContinuationLine(line: String): Boolean =
+        line.startsWith("<") && line.endsWith(">")
 
     /**
      * Parse standard synced lyrics format: [MM:SS.mm] text

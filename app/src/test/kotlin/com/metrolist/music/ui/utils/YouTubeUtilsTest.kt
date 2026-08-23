@@ -9,7 +9,7 @@ class YouTubeUtilsTest {
     fun `lh3 googleusercontent is rewritten to the requested size`() {
         val url = "https://lh3.googleusercontent.com/abc=w120-h120-l90-rj"
         assertEquals(
-            "https://lh3.googleusercontent.com/abc=w544-h544-l90-rj",
+            "https://lh3.googleusercontent.com/abc=w544-h544-p-l90-rj",
             url.resize(544, 544),
         )
     }
@@ -20,7 +20,7 @@ class YouTubeUtilsTest {
         // matching this host, resize() would no-op and the player upscales the 60px image → blur.
         val url = "https://yt3.googleusercontent.com/_zDuDZFnSKmuQwDX=w60-h60-l90-rj"
         assertEquals(
-            "https://yt3.googleusercontent.com/_zDuDZFnSKmuQwDX=w544-h544-l90-rj",
+            "https://yt3.googleusercontent.com/_zDuDZFnSKmuQwDX=w544-h544-p-l90-rj",
             url.resize(544, 544),
         )
     }
@@ -31,6 +31,15 @@ class YouTubeUtilsTest {
         assertEquals(
             "https://i.ytimg.com/vi/abc/maxresdefault.jpg?sqp=-oaymwE",
             url.resize(544, 544),
+        )
+    }
+
+    @Test
+    fun `single dimension preserves googleusercontent aspect ratio`() {
+        val url = "https://lh3.googleusercontent.com/abc=w120-h60-l90-rj"
+        assertEquals(
+            "https://lh3.googleusercontent.com/abc=w300-h150-p-l90-rj",
+            url.resize(width = 300),
         )
     }
 
@@ -47,5 +56,29 @@ class YouTubeUtilsTest {
             "https://yt3.ggpht.com/abc=w544-h544-p-l90-rj",
             url.resize(544, 544),
         )
+    }
+
+    @Test
+    fun `googleusercontent resize preserves query parameters`() {
+        val url = "https://lh3.googleusercontent.com/abc=w120-h120-l90-rj?token=a=b"
+        assertEquals(
+            "https://lh3.googleusercontent.com/abc=w544-h544-p-l90-rj?token=a=b",
+            url.resize(544, 544),
+        )
+    }
+
+    @Test
+    fun `ggpht resize preserves query parameters`() {
+        val url = "https://yt3.ggpht.com/abc=s88?token=a=b"
+        assertEquals(
+            "https://yt3.ggpht.com/abc=w544-h544-p-l90-rj?token=a=b",
+            url.resize(544, 544),
+        )
+    }
+
+    @Test
+    fun `ggpht query without resize suffix remains unchanged`() {
+        val url = "https://yt3.ggpht.com/abc?token=a=b"
+        assertEquals(url, url.resize(544, 544))
     }
 }

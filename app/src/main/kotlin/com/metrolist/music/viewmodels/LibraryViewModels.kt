@@ -8,8 +8,6 @@
 package com.metrolist.music.viewmodels
 
 import android.content.Context
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -32,7 +30,6 @@ import com.metrolist.music.constants.ArtistSortTypeKey
 import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.HideYoutubeShortsKey
-import com.metrolist.music.constants.LibraryFilter
 import com.metrolist.music.constants.PlaylistSortDescendingKey
 import com.metrolist.music.constants.PlaylistSortType
 import com.metrolist.music.constants.PlaylistSortTypeKey
@@ -600,12 +597,4 @@ constructor(
             fetchPodcastChannels()
         }
     }
-}
-
-@HiltViewModel
-class LibraryViewModel
-@Inject
-constructor() : ViewModel() {
-    private val curScreen = mutableStateOf(LibraryFilter.LIBRARY)
-    val filter: MutableState<LibraryFilter> = curScreen
 }

@@ -13,21 +13,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.metrolist.music.R
 
 @Composable
 @Deprecated("Use Material3SettingsGroup instead :)")
@@ -44,13 +38,13 @@ fun PreferenceEntry(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
-        modifier
-            .fillMaxWidth()
-            .clickable(
-                enabled = isEnabled && onClick != null,
-                onClick = onClick ?: {},
-            ).alpha(if (isEnabled) 1f else 0.5f)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            modifier
+                .fillMaxWidth()
+                .clickable(
+                    enabled = isEnabled && onClick != null,
+                    onClick = onClick ?: {},
+                ).alpha(if (isEnabled) 1f else 0.5f)
+                .padding(horizontal = 16.dp, vertical = 16.dp),
     ) {
         if (icon != null) {
             Box(
@@ -87,41 +81,4 @@ fun PreferenceEntry(
             trailingContent()
         }
     }
-}
-
-@Composable
-@Deprecated("Use the Switch component instead")
-fun SwitchPreference(
-    modifier: Modifier = Modifier,
-    title: @Composable () -> Unit,
-    description: String? = null,
-    icon: (@Composable () -> Unit)? = null,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    isEnabled: Boolean = true,
-) {
-    PreferenceEntry(
-        modifier = modifier,
-        title = title,
-        description = description,
-        icon = icon,
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                enabled = isEnabled,
-                thumbContent = {
-                    Icon(
-                        painter = painterResource(
-                            id = if (checked) R.drawable.check else R.drawable.close
-                        ),
-                        contentDescription = null,
-                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                    )
-                }
-            )
-        },
-        onClick = { onCheckedChange(!checked) },
-        isEnabled = isEnabled
-    )
 }

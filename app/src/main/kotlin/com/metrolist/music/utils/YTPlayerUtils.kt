@@ -11,7 +11,7 @@ import androidx.media3.common.PlaybackException
 import com.metrolist.innertube.NewPipeExtractor
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.YouTubeClient
-import com.metrolist.innertube.models.YouTubeClient.Companion.WEB_REMIX
+import com.metrolist.innertubex.models.YouTubeClient.Companion.WEB_REMIX
 import com.metrolist.innertube.models.response.PlayerResponse
 import com.metrolist.innertube.strategy.ContentAwareFallbackStrategy
 import com.metrolist.innertube.strategy.ContentHints

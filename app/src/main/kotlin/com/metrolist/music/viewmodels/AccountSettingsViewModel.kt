@@ -14,6 +14,7 @@ import com.metrolist.music.constants.AccountChannelHandleKey
 import com.metrolist.music.constants.AccountEmailKey
 import com.metrolist.music.constants.AccountNameKey
 import com.metrolist.music.constants.DataSyncIdKey
+import com.metrolist.music.constants.InnerTubeAuthUserKey
 import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.constants.VisitorDataKey
 import com.metrolist.music.utils.SyncUtils
@@ -98,6 +99,7 @@ class AccountSettingsViewModel @Inject constructor(
         cookie: String,
         visitorData: String,
         dataSyncId: String,
+        authUser: String,
         accountName: String,
         accountEmail: String,
         accountChannelHandle: String,
@@ -107,6 +109,7 @@ class AccountSettingsViewModel @Inject constructor(
                 settings[InnerTubeCookieKey] = cookie
                 settings[VisitorDataKey] = visitorData
                 settings[DataSyncIdKey] = dataSyncId
+                settings[InnerTubeAuthUserKey] = authUser.filter(Char::isDigit).ifBlank { "0" }
                 settings[AccountNameKey] = accountName
                 settings[AccountEmailKey] = accountEmail
                 settings[AccountChannelHandleKey] = accountChannelHandle

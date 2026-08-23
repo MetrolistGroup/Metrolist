@@ -16,7 +16,7 @@ class ContentAwareFallbackStrategyTest {
         assertEquals(YouTubeClient.VISIONOS, clients.first())
         assertFalse(clients.contains(YouTubeClient.IOS))
         assertFalse(clients.contains(YouTubeClient.IPADOS))
-        assertFalse(clients.contains(YouTubeClient.MOBILE))
+        assertFalse(clients.contains(YouTubeClient.ANDROID))
         assertFalse(clients.contains(YouTubeClient.ANDROID_CREATOR))
     }
 

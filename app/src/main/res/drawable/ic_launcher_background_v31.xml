@@ -1,8 +1,0 @@
-<!-- Moved to drawable-v31. Keep a fallback gradient using app colors for <31 if referenced by name. -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <gradient
-        android:angle="45.0"
-        android:endColor="@color/teal_200"
-        android:startColor="@color/teal_700"
-        android:type="linear" />
-</shape>

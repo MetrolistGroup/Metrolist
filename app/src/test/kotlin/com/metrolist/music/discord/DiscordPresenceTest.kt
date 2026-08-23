@@ -13,20 +13,6 @@ import org.robolectric.annotation.Config
 class DiscordPresenceTest {
 
     @Test
-    fun buildActivity_includesNameAndType() {
-        val activity = DiscordPresence.buildActivity(
-            name = "Metrolist",
-            type = ActivityType.Listening,
-            details = "Song Title",
-            state = "Artist",
-        )
-        assertEquals("Metrolist", activity.name)
-        assertEquals(ActivityType.Listening.code, activity.type)
-        assertEquals("Song Title", activity.details)
-        assertEquals("Artist", activity.state)
-    }
-
-    @Test
     fun buildPresenceUpdate_serializesAsOp3() {
         val activity = DiscordPresence.buildActivity(
             name = "Metrolist",

@@ -14,7 +14,7 @@ mediarouter = "1.8.1"
 castFramework = "22.3.1"
 room = "2.8.4"
 hilt = "2.60.1"
-ktor = "3.5.1"
+ktor = "3.5.2"
 ksp = "2.3.10"
 jsoup = "1.22.2"
 coil = "3.5.0"
@@ -36,6 +36,7 @@ timber = "5.0.1"
 materialKolor = "5.0.0"
 kuromojiIpadic = "0.9.0"
 extractor = "3cd3341"
+innertubex = "v0.1.2"
 tinypinyin = "2.0.3"
 protobuf = "4.35.1"
 
@@ -117,6 +118,7 @@ timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 
 # newpipeextractor = { module = "com.github.TeamNewPipe:NewPipeExtractor", version.ref = "newpipeextractor" }
 extractor = { module = "com.github.MetrolistGroup:MetrolistExtractor", version.ref = "extractor" }
+innertubex = { module = "com.github.MetrolistGroup.innertubex:innertubex", version.ref = "innertubex" }
 
 kuromoji-ipadic = { module = "com.atilika.kuromoji:kuromoji-ipadic", version.ref = "kuromojiIpadic" }
 tinypinyin = { module = "com.github.promeG:tinypinyin", version.ref = "tinypinyin" }

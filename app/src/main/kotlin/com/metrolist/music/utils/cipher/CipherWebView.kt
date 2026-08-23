@@ -610,9 +610,9 @@ function discoverAndInit() {
                     Timber.tag(TAG).d("Sig: expression-based export: $expr")
                     add("window._cipherSigFunc = function(sig) { try { return $expr; } catch(e) { return null; } };")
                 } else if (sigFuncName != null) {
-                    val sigConstArgs = sigInfo?.constantArgs
-                    val preprocessFunc = sigInfo?.preprocessFunc
-                    val preprocessArgs = sigInfo?.preprocessArgs
+                    val sigConstArgs = sigInfo.constantArgs
+                    val preprocessFunc = sigInfo.preprocessFunc
+                    val preprocessArgs = sigInfo.preprocessArgs
 
                     if (!sigConstArgs.isNullOrEmpty() && preprocessFunc != null && !preprocessArgs.isNullOrEmpty()) {
                         val mainArgsStr = sigConstArgs.joinToString(", ")
@@ -638,7 +638,7 @@ function discoverAndInit() {
                     Timber.tag(TAG).d("N: expression-based export: ${expr.take(80)}")
                     add("window._nTransformFunc = function(n) { try { return $expr; } catch(e) { return n; } };")
                 } else if (nFuncName != null) {
-                    val nConstArgs = nFuncInfo?.constantArgs
+                    val nConstArgs = nFuncInfo.constantArgs
                     if (!nConstArgs.isNullOrEmpty()) {
                         val argsStr = nConstArgs.joinToString(", ")
                         Timber.tag(TAG).d("N-function needs wrapper with constant args: $argsStr")

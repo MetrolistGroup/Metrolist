@@ -22,6 +22,12 @@ if (localPropertiesFile.exists()) {
 val baseApplicationId = "com.gaana" 
 val applicationIdOverride = System.getenv("METROLIST_APPLICATION_ID")?.takeIf { it.isNotBlank() }
 val appNameOverride = System.getenv("METROLIST_APP_NAME")?.takeIf { it.isNotBlank() }
+val buildCommit =
+    System.getenv("METROLIST_BUILD_COMMIT")
+        ?.trim()
+        ?.takeIf { it.matches(Regex("[0-9a-fA-F]{7,40}")) }
+        ?.take(7)
+        ?.lowercase()
 val debugKeystorePathOverride = System.getenv("METROLIST_DEBUG_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
 val debugKeystorePassword = System.getenv("METROLIST_DEBUG_KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() } ?: "android"
 val debugKeyAlias = System.getenv("METROLIST_DEBUG_KEY_ALIAS")?.takeIf { it.isNotBlank() } ?: "androiddebugkey"
@@ -104,6 +110,9 @@ android {
         targetSdk = 36
         versionCode = 152
         versionName = "13.6.3"
+        val baseVersionName = requireNotNull(versionName)
+        buildConfigField("String", "BASE_VERSION_NAME", "\"$baseVersionName\"")
+        buildCommit?.let { versionName = "$baseVersionName+$it" }
         resValue("string", "app_name", appNameOverride ?: "Metrolist")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

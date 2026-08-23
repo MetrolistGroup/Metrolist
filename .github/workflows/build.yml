@@ -66,6 +66,7 @@ jobs:
         env:
           METROLIST_APPLICATION_ID: com.metrolist.music
           METROLIST_APP_NAME: Metrolist Nightly
+          METROLIST_BUILD_COMMIT: ${{ github.sha }}
           PULL_REQUEST: "false"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
@@ -146,6 +147,7 @@ jobs:
         env:
           METROLIST_APPLICATION_ID: com.metrolist.music
           METROLIST_APP_NAME: Metrolist Nightly
+          METROLIST_BUILD_COMMIT: ${{ github.sha }}
           PULL_REQUEST: "false"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
