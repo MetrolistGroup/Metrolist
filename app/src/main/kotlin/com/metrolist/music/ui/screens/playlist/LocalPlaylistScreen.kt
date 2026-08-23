@@ -94,11 +94,9 @@ import androidx.compose.ui.util.fastForEachIndexed
 import androidx.compose.ui.util.fastForEachReversed
 import androidx.compose.ui.util.fastSumBy
 import androidx.core.content.FileProvider
-import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.exoplayer.offline.Download
-import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
@@ -126,6 +124,7 @@ import com.metrolist.music.extensions.move
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.playback.ExoDownloadService
+import com.metrolist.music.playback.enqueuePendingDownloads
 import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.ui.component.ActionPromptDialog
 import com.metrolist.music.ui.component.DefaultDialog
@@ -1427,25 +1426,12 @@ fun LocalPlaylistHeader(
                                     }
 
                                     else -> {
-                                        val currentDownloads = downloadUtil.downloads.value
-                                        songs.filter {
-                                            currentDownloads[it.song.id]?.state != Download.STATE_COMPLETED
-                                        }.forEach { song ->
-                                            val downloadRequest =
-                                                DownloadRequest
-                                                    .Builder(song.song.id, song.song.id.toUri())
-                                                    .setCustomCacheKey(song.song.id)
-                                                    .setData(
-                                                        song.song.song.title
-                                                            .toByteArray(),
-                                                    ).build()
-                                            DownloadService.sendAddDownload(
-                                                context,
-                                                ExoDownloadService::class.java,
-                                                downloadRequest,
-                                                false,
-                                            )
-                                        }
+                                        context.enqueuePendingDownloads(
+                                            downloadUtil.downloads.value,
+                                            songs,
+                                            { it.song.id },
+                                            { it.song.song.title },
+                                        )
                                     }
                                 }
                             },
