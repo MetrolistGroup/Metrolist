@@ -976,4 +976,8 @@
     <string name="stream_source_android_vr_desc">Android VR clients (all versions).</string>
     <string name="stream_source_web_creator">WEB_CREATOR</string>
     <string name="stream_source_web_creator_desc">Creator web client.</string>
+    <plurals name="playlist_upload_failed">
+        <item quantity="one">%1$d song was not added to YouTube in %2$s</item>
+        <item quantity="other">%1$d songs were not added to YouTube in %2$s</item>
+    </plurals>
 </resources>

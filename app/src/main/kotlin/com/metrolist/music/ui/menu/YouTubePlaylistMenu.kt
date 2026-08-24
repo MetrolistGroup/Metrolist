@@ -145,11 +145,6 @@ fun YouTubePlaylistMenu(
             database.withTransaction {
                 allSongs.forEach(::insert)
             }
-            coroutineScope.launch(Dispatchers.IO) {
-                targetPlaylist.playlist.browseId?.let { playlistId ->
-                    YouTube.addPlaylistToPlaylist(playlistId, targetPlaylist.id)
-                }
-            }
             allSongs.map { it.id }
         },
         onGetSongIds = {

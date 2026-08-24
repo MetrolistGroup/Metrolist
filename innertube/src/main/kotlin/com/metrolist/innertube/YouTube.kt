@@ -35,6 +35,7 @@ import com.metrolist.innertube.models.oddElements
 import com.metrolist.innertube.models.splitBySeparator
 import com.metrolist.innertube.utils.parseTime
 import com.metrolist.innertube.models.response.AccountMenuResponse
+import com.metrolist.innertube.models.response.AddItemYouTubePlaylistResponse
 import com.metrolist.innertube.models.response.BrowseResponse
 import com.metrolist.innertube.models.response.CreatePlaylistResponse
 import com.metrolist.innertube.models.response.EditPlaylistResponse
@@ -2982,8 +2983,10 @@ object YouTube {
     suspend fun addToPlaylist(
         playlistId: String,
         videoId: String,
-    ) = runCatching {
+    ): Result<String?> = runCatching {
         innerTube.addToPlaylist(WEB_REMIX, playlistId, videoId)
+            .body<AddItemYouTubePlaylistResponse>()
+            .firstSetVideoId
     }
 
     suspend fun addPlaylistToPlaylist(

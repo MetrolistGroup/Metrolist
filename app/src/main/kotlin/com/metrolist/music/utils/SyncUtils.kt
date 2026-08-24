@@ -7,6 +7,7 @@
 package com.metrolist.music.utils
 
 import android.content.Context
+import android.widget.Toast
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.ArtistItem
@@ -19,6 +20,7 @@ import com.metrolist.lastfm.LastFM
 import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.constants.LastFMUseSendLikes
 import com.metrolist.music.constants.LastFullSyncKey
+import com.metrolist.music.R
 import com.metrolist.music.constants.SYNC_COOLDOWN
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.ArtistEntity
@@ -155,7 +157,7 @@ class SyncUtils @Inject constructor(
             .flatMap(database::songIdsWithoutArtists)
             .toSet()
 
-    private suspend fun runQueuedPlaylistEdit(block: suspend () -> Unit) {
+    private suspend fun <T> runQueuedPlaylistEdit(block: suspend () -> T): T =
         playlistEditMutex.withLock {
             val remainingDelay = PLAYLIST_EDIT_THROTTLE_MS -
                 (System.currentTimeMillis() - lastPlaylistEditAtMs)
@@ -166,7 +168,6 @@ class SyncUtils @Inject constructor(
                 lastPlaylistEditAtMs = System.currentTimeMillis()
             }
         }
-    }
 
     init {
         context.dataStore.data
@@ -1753,23 +1754,102 @@ class SyncUtils @Inject constructor(
         }
     }
 
-    suspend fun addToPlaylist(
+    /**
+     * Uploads songs a playlist has already been given locally.
+     *
+     * Runs on [syncScope] rather than the caller's: the menu that starts an upload is dismissed
+     * long before a throttled batch finishes, and dismissing it cancels a composition scope.
+     *
+     * [rows] pairs each song with the playlist row it was written as, since a playlist may hold
+     * the same song twice and only the row id tells the two apart.
+     */
+    fun addSongsToPlaylist(
         browseId: String,
         playlistId: String,
-        songId: String,
-    ): Boolean {
+        playlistName: String,
+        rows: List<Pair<String, Long>>,
+    ) {
+        if (rows.isEmpty()) return
         markPlaylistModifying(playlistId)
-        return try {
+        syncScope.launch {
+            var failedCount = 0
+            try {
+                rows.forEach { (songId, mapId) ->
+                    // The copies this device has already had confirmed, read before the request
+                    // goes out, so an answer that never comes back can be settled against them.
+                    val knownSetVideoIds = database.playlistSongSetVideoIds(playlistId, songId)
+
+                    uploadSong(browseId, songId).onSuccess { setVideoId ->
+                        if (setVideoId != null) {
+                            database.updatePlaylistSongSetVideoId(mapId, setVideoId)
+                        }
+                    }.onFailure { e ->
+                        Timber.w(e, "Adding $songId to $browseId gave no answer, asking the playlist")
+                        when (val outcome = settleUpload(browseId, songId, knownSetVideoIds)) {
+                            is UploadOutcome.Landed -> {
+                                outcome.setVideoId?.let {
+                                    database.updatePlaylistSongSetVideoId(mapId, it)
+                                }
+                                Timber.d("Song $songId had reached $browseId after all")
+                            }
+                            // Only now is asking again safe: the playlist says the first request
+                            // never arrived, so a second one cannot leave a duplicate behind.
+                            UploadOutcome.DidNotLand -> uploadSong(browseId, songId)
+                                .onSuccess { setVideoId ->
+                                    if (setVideoId != null) {
+                                        database.updatePlaylistSongSetVideoId(mapId, setVideoId)
+                                    }
+                                }.onFailure {
+                                    failedCount++
+                                    Timber.e(it, "Failed to add song $songId to playlist $browseId")
+                                }
+                            UploadOutcome.Unknown -> {
+                                failedCount++
+                                Timber.e(e, "Could not tell whether $songId reached $browseId")
+                            }
+                        }
+                    }
+                }
+            } finally {
+                unmarkPlaylistModifying(playlistId)
+            }
+
+            if (failedCount > 0) {
+                val message = context.resources.getQuantityString(
+                    R.plurals.playlist_upload_failed,
+                    failedCount,
+                    failedCount,
+                    playlistName,
+                )
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    /** One attempt, never replayed on its own. */
+    private suspend fun uploadSong(browseId: String, songId: String): Result<String?> =
+        runCatching {
             runQueuedPlaylistEdit {
                 YouTube.addToPlaylist(browseId, songId).getOrThrow()
             }
-            true
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to add song $songId to playlist $browseId")
-            false
-        } finally {
-            unmarkPlaylistModifying(playlistId)
         }
+
+    /** Asks the playlist what became of an upload that failed without saying so. */
+    private suspend fun settleUpload(
+        browseId: String,
+        songId: String,
+        knownSetVideoIds: List<String>,
+    ): UploadOutcome {
+        val remote = withRetry {
+            YouTube.playlist(browseId).completed()
+        }.getOrNull()?.getOrNull() ?: return UploadOutcome.Unknown
+
+        return reconcileUpload(
+            knownSetVideoIds = knownSetVideoIds,
+            remoteSetVideoIds = remote.songs.filter { it.id == songId }.mapNotNull { it.setVideoId },
+        )
     }
 
     fun scheduleRemoveFromPlaylist(
