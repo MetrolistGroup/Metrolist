@@ -266,7 +266,9 @@ object LyricsUtils {
 
         "ѓ" to "gj", "ѕ" to "dz", "и" to "i", "ј" to "j", "љ" to "lj",
         "њ" to "nj", "ќ" to "kj", "џ" to "dž", "ч" to "č", "ш" to "sh",
-        "ж" to "zh", "ц" to "c", "х" to "h"
+        "ж" to "zh", "ц" to "c", "х" to "h",
+
+        "Ѐ" to "E", "ѐ" to "e", "Ѝ" to "I", "ѝ" to "i"
     )
 
     private val RUSSIAN_CYRILLIC_LETTERS = setOf(
@@ -334,7 +336,9 @@ object LyricsUtils {
 
         "а", "б", "в", "г", "д", "ѓ", "е", "ж", "з", "ѕ", "и", "ј", "к", "л",
         "љ", "м", "н", "њ", "о", "п", "р", "с", "т", "ќ", "у", "ф", "х",
-        "ц", "ч", "џ", "ш"
+        "ц", "ч", "џ", "ш",
+
+        "Ѐ", "ѐ", "Ѝ", "ѝ"
     )
 
     private val UKRAINIAN_SPECIFIC_CYRILLIC_LETTERS = setOf(
