@@ -28,12 +28,15 @@ import com.metrolist.innertube.models.YouTubeLocale
 import com.metrolist.kugou.KuGou
 import com.metrolist.lastfm.LastFM
 import com.metrolist.music.BuildConfig
+import com.metrolist.music.core.BuildConfig as CoreBuildConfig
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.*
 import com.metrolist.music.di.ApplicationScope
 import com.metrolist.music.extensions.toEnum
 import com.metrolist.music.extensions.toInetSocketAddress
 import com.metrolist.music.utils.CrashHandler
 import com.metrolist.music.utils.ArtistNameAliases
+import com.metrolist.music.utils.WearAuthSyncManager
 import com.metrolist.music.utils.YTPlayerUtils
 import com.metrolist.music.utils.cipher.CipherDeobfuscator
 import com.metrolist.music.utils.dataStore
@@ -94,6 +97,9 @@ class App :
 
         // Initialize cipher deobfuscator for WEB_REMIX streaming
         CipherDeobfuscator.initialize(this)
+
+        // Start Wear OS auth synchronization
+        WearAuthSyncManager(this, applicationScope).startSync()
 
         // Pre-read Coil cache size on background to avoid runBlocking in newImageLoader
         applicationScope.launch(Dispatchers.IO) {
@@ -161,8 +167,8 @@ class App :
 
         // Initialize LastFM with API keys from BuildConfig (GitHub Secrets)
         LastFM.initialize(
-            apiKey = BuildConfig.LASTFM_API_KEY.takeIf { it.isNotEmpty() } ?: "",
-            secret = BuildConfig.LASTFM_SECRET.takeIf { it.isNotEmpty() } ?: "",
+            apiKey = CoreBuildConfig.LASTFM_API_KEY.takeIf { it.isNotEmpty() } ?: "",
+            secret = CoreBuildConfig.LASTFM_SECRET.takeIf { it.isNotEmpty() } ?: "",
         )
 
         if (settings[ProxyEnabledKey] == true) {

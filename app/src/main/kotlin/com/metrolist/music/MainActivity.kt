@@ -133,6 +133,18 @@ import coil3.toBitmap
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
+import com.metrolist.music.constants.AuthSyncConstants.AUTH_SYNC_PATH
+import com.metrolist.music.constants.AuthSyncConstants.KEY_ACCOUNT_EMAIL
+import com.metrolist.music.constants.AuthSyncConstants.KEY_ACCOUNT_HANDLE
+import com.metrolist.music.constants.AuthSyncConstants.KEY_ACCOUNT_NAME
+import com.metrolist.music.constants.AuthSyncConstants.KEY_AUTH_USER
+import com.metrolist.music.constants.AuthSyncConstants.KEY_COOKIE
+import com.metrolist.music.constants.AuthSyncConstants.KEY_DATA_SYNC_ID
+import com.metrolist.music.constants.AuthSyncConstants.KEY_TIMESTAMP
+import com.metrolist.music.constants.AuthSyncConstants.KEY_VISITOR_DATA
+import com.google.android.gms.wearable.PutDataMapRequest
+import com.google.android.gms.wearable.Wearable
+import kotlinx.coroutines.tasks.await
 import com.metrolist.music.constants.AppBarHeight
 import com.metrolist.music.constants.AppLanguageKey
 import com.metrolist.music.constants.CheckForUpdatesKey
@@ -164,6 +176,7 @@ import com.metrolist.music.constants.SlimNavBarKey
 import com.metrolist.music.constants.StopMusicOnTaskClearKey
 import com.metrolist.music.constants.UpdateNotificationsEnabledKey
 import com.metrolist.music.constants.UseNewMiniPlayerDesignKey
+import com.metrolist.music.core.R
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.SearchHistory
 import com.metrolist.music.extensions.toEnum
@@ -174,6 +187,7 @@ import com.metrolist.music.playback.MusicService
 import com.metrolist.music.playback.MusicService.MusicBinder
 import com.metrolist.music.playback.PlayerConnection
 import com.metrolist.music.playback.queues.YouTubeQueue
+import com.metrolist.music.*
 import com.metrolist.music.ui.component.AccountSettingsDialog
 import com.metrolist.music.ui.component.AppNavigationBar
 import com.metrolist.music.ui.component.AppNavigationRail
@@ -201,6 +215,8 @@ import com.metrolist.music.utils.SearchRoutes
 import com.metrolist.music.utils.SyncUtils
 import com.metrolist.music.utils.ArtistNameAliases
 import com.metrolist.music.utils.Updater
+import com.metrolist.music.utils.resize
+import com.metrolist.music.core.BuildConfig as CoreBuildConfig
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.safeDataStoreEdit
 import com.metrolist.music.utils.get
@@ -250,7 +266,9 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var navController: NavHostController
     private var pendingIntent: Intent? = null
-    private var latestVersionName by mutableStateOf(BuildConfig.BASE_VERSION_NAME)
+    private var latestVersionName by mutableStateOf(CoreBuildConfig.BASE_VERSION_NAME)
+
+    private var wearSyncNodeId by mutableStateOf<String?>(null)
 
     // Keep PlayerConnection as regular property - NOT mutableStateOf to prevent UI recomposition
     // when it becomes null during onStop. Only update the snapshot for Compose when needed.
@@ -418,7 +436,7 @@ class MainActivity : ComponentActivity() {
         // Defer migration and version tracking to avoid blocking first frame
         lifecycleScope.launch(Dispatchers.IO) {
             val preferences = dataStore.data.first()
-            val currentVersion = BuildConfig.BASE_VERSION_NAME
+            val currentVersion = CoreBuildConfig.BASE_VERSION_NAME
 
             // SimpMusic Removal Migration
             if (preferences[SimpMusicMigrationDoneKey] != true) {
@@ -448,7 +466,7 @@ class MainActivity : ComponentActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             safeDataStoreEdit { settings ->
-                settings[LastSeenVersionKey] = BuildConfig.BASE_VERSION_NAME
+                settings[LastSeenVersionKey] = CoreBuildConfig.BASE_VERSION_NAME
             }
         }
 
@@ -526,7 +544,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 } else {
-                    onLatestVersionNameChange(BuildConfig.BASE_VERSION_NAME)
+                    onLatestVersionNameChange(CoreBuildConfig.BASE_VERSION_NAME)
                     kmpRelease = null
                 }
             }
@@ -608,8 +626,9 @@ class MainActivity : ComponentActivity() {
             playerConnection.service.currentMediaMetadata
                 .distinctUntilChanged { old, new -> old?.id == new?.id }
                 .collectLatest { song ->
-                    if (song?.thumbnailUrl != null) {
-                        val cached = themeColorCache[song.thumbnailUrl]
+                    val thumbnailUrl = song?.thumbnailUrl
+                    if (thumbnailUrl != null) {
+                        val cached = themeColorCache[thumbnailUrl]
                         if (cached != null) {
                             withFrameNanos { }
                             themeColor = cached
@@ -621,7 +640,7 @@ class MainActivity : ComponentActivity() {
                                     imageLoader.execute(
                                         ImageRequest
                                             .Builder(this@MainActivity)
-                                            .data(song.thumbnailUrl)
+                                            .data(thumbnailUrl)
                                             .allowHardware(false)
                                             .memoryCachePolicy(CachePolicy.ENABLED)
                                             .diskCachePolicy(CachePolicy.ENABLED)
@@ -630,7 +649,7 @@ class MainActivity : ComponentActivity() {
                                             .build(),
                                     )
                                 val extractedColor = result.image?.toBitmap()?.extractThemeColor() ?: selectedThemeColor
-                                themeColorCache[song.thumbnailUrl] = extractedColor
+                                themeColorCache[thumbnailUrl] = extractedColor
                                 withFrameNanos { }
                                 themeColor = extractedColor
                             } catch (e: Exception) {
@@ -691,7 +710,7 @@ class MainActivity : ComponentActivity() {
 
                 LaunchedEffect(Unit) {
                     val lastSeenVersion = dataStore.data.first()[LastSeenVersionKey] ?: ""
-                    val currentVersion = BuildConfig.BASE_VERSION_NAME
+                    val currentVersion = CoreBuildConfig.BASE_VERSION_NAME
                     if (lastSeenVersion != currentVersion) {
                         showChangelog.value = true
                     }
@@ -1054,7 +1073,7 @@ class MainActivity : ComponentActivity() {
                                             }
                                             IconButton(onClick = { showAccountDialog = true }) {
                                                 BadgedBox(badge = {
-                                                    if (latestVersionName != BuildConfig.BASE_VERSION_NAME) {
+                                                    if (latestVersionName != CoreBuildConfig.BASE_VERSION_NAME) {
                                                         Badge()
                                                     }
                                                 }) {
@@ -1383,6 +1402,60 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
+                    wearSyncNodeId?.let { nodeId ->
+                        AlertDialog(
+                            onDismissRequest = { wearSyncNodeId = null },
+                            title = { Text("Sincronizar con Reloj") },
+                            text = { Text("¿Deseas enviar tu cuenta de YouTube Music a tu reloj conectado?") },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        val targetNodeId = wearSyncNodeId
+                                        wearSyncNodeId = null
+                                        lifecycleScope.launch(Dispatchers.IO) {
+                                            try {
+                                                val settings = dataStore.data.first()
+                                                val cookie = settings[com.metrolist.music.constants.InnerTubeCookieKey]
+                                                if (cookie == null) {
+                                                    withContext(Dispatchers.Main) {
+                                                        Toast.makeText(this@MainActivity, "Inicia sesión primero", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                    return@launch
+                                                }
+
+                                                val request = PutDataMapRequest.create(AUTH_SYNC_PATH).apply {
+                                                    dataMap.putString(KEY_COOKIE, cookie)
+                                                    settings[com.metrolist.music.constants.VisitorDataKey]?.let { dataMap.putString(KEY_VISITOR_DATA, it) }
+                                                    settings[com.metrolist.music.constants.DataSyncIdKey]?.let { dataMap.putString(KEY_DATA_SYNC_ID, it) }
+                                                    settings[com.metrolist.music.constants.InnerTubeAuthUserKey]?.let { dataMap.putString(KEY_AUTH_USER, it) }
+                                                    settings[com.metrolist.music.constants.AccountNameKey]?.let { dataMap.putString(KEY_ACCOUNT_NAME, it) }
+                                                    settings[com.metrolist.music.constants.AccountEmailKey]?.let { dataMap.putString(KEY_ACCOUNT_EMAIL, it) }
+                                                    settings[com.metrolist.music.constants.AccountChannelHandleKey]?.let { dataMap.putString(KEY_ACCOUNT_HANDLE, it) }
+                                                    dataMap.putLong(KEY_TIMESTAMP, System.currentTimeMillis())
+                                                    setUrgent()
+                                                }.asPutDataRequest()
+
+                                                Wearable.getDataClient(this@MainActivity).putDataItem(request).await()
+                                                withContext(Dispatchers.Main) {
+                                                    Toast.makeText(this@MainActivity, "Cuenta enviada al reloj", Toast.LENGTH_SHORT).show()
+                                                }
+                                            } catch (e: Exception) {
+                                                Timber.e(e, "Manual wear sync failed")
+                                            }
+                                        }
+                                    }
+                                ) {
+                                    Text("Enviar")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { wearSyncNodeId = null }) {
+                                    Text("Cancelar")
+                                }
+                            }
+                        )
+                    }
+
                     sharedSong?.let { song ->
                         playerConnection?.let {
                             Dialog(
@@ -1544,6 +1617,11 @@ class MainActivity : ComponentActivity() {
             return
         }
 
+        if (uri.pathSegments.firstOrNull() == "sync") {
+            wearSyncNodeId = uri.getQueryParameter("node") ?: "all"
+            return
+        }
+
         when (val path = uri.pathSegments.firstOrNull()) {
             "playlist" -> {
                 val playlistId = uri.getQueryParameter("list")
@@ -1651,14 +1729,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-val LocalDatabase = staticCompositionLocalOf<MusicDatabase> { error("No database provided") }
-val LocalNavController = staticCompositionLocalOf<NavController> { error("No NavController provided") }
-val LocalPlayerConnection = staticCompositionLocalOf<PlayerConnection?> { error("No PlayerConnection provided") }
-val LocalPlayerAwareWindowInsets = compositionLocalOf<WindowInsets> { error("No WindowInsets provided") }
-val LocalDownloadUtil = staticCompositionLocalOf<DownloadUtil> { error("No DownloadUtil provided") }
-val LocalSyncUtils = staticCompositionLocalOf<SyncUtils> { error("No SyncUtils provided") }
-val LocalListenTogetherManager = staticCompositionLocalOf<com.metrolist.music.listentogether.ListenTogetherManager?> { null }
-val LocalChangelogState = staticCompositionLocalOf<MutableState<Boolean>> { error("No LocalChangelogState provided") }
-val LocalArtistNameAliases = staticCompositionLocalOf<Map<String, String>> { emptyMap() }
-val LocalIsPlayerExpanded = compositionLocalOf { false }

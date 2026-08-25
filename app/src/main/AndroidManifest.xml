@@ -86,6 +86,7 @@
                 <data android:scheme="https" />
                 <data android:host="metrolist.cc" />
                 <data android:pathPrefix="/listen" />
+                <data android:pathPrefix="/sync" />
             </intent-filter>
 
             <!-- Youtube filter -->
@@ -239,7 +240,7 @@
         <service
             android:name=".playback.MusicService"
             android:exported="true"
-            android:foregroundServiceType="mediaPlayback"
+            android:foregroundServiceType="mediaPlayback|dataSync"
             tools:ignore="ExportedService">
             <intent-filter>
                 <action android:name="androidx.media3.session.MediaSessionService" />
@@ -255,6 +256,15 @@
             <intent-filter>
                 <action android:name="androidx.media3.exoplayer.downloadService.action.RESTART" />
                 <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".wear.WearAuthRequestListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/auth_request" />
             </intent-filter>
         </service>
 
