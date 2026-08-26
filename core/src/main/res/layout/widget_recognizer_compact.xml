@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Music Recognizer Widget – Compact (1×3) -->
+<!-- Left: album art + song title + artist  |  Right: animated mic button (smaller padding) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:background="@drawable/widget_background"
+    android:paddingStart="10dp"
+    android:paddingEnd="10dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp"
+    android:gravity="center_vertical"
+    android:theme="@style/Theme.Widget.Metrolist">
+
+    <!-- Album art (only visible in SUCCESS state) -->
+    <ImageView
+        android:id="@+id/widget_recognizer_album_art"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:scaleType="centerCrop"
+        android:visibility="gone"
+        android:contentDescription="@string/album_art" />
+
+    <!-- Text area (left) -->
+    <LinearLayout
+        android:id="@+id/widget_recognizer_text_area"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center_vertical"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="8dp">
+
+        <TextView
+            android:id="@+id/widget_recognizer_song_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/widget_text_primary"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="@string/widget_recognizer_tap_to_search" />
+
+        <TextView
+            android:id="@+id/widget_recognizer_artist_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="11sp"
+            android:textColor="@color/widget_text_secondary"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:layout_marginTop="2dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+    <!-- Mic button area (right) -->
+    <FrameLayout
+        android:layout_width="52dp"
+        android:layout_height="52dp">
+
+        <!-- Pulse ring -->
+        <ImageView
+            android:id="@+id/widget_recognizer_pulse"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_gravity="center"
+            android:src="@drawable/widget_mic_pulse_idle"
+            android:contentDescription="@null" />
+
+        <!-- Mic circle button -->
+        <FrameLayout
+            android:id="@+id/widget_recognizer_mic_container"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center"
+            android:background="@drawable/widget_mic_button_bg">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_widget_mic"
+                android:contentDescription="@string/widget_recognizer_mic_desc" />
+
+        </FrameLayout>
+
+    </FrameLayout>
+
+</LinearLayout>

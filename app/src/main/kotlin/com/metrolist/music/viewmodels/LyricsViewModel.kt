@@ -95,8 +95,9 @@ class LyricsViewModel @Inject constructor() : ViewModel() {
             }
             if (showIntervalIndicator && i < lines.size - 1) {
                 val nextStart = lines[i + 1].time
-                val currentEnd = if (!entry.words.isNullOrEmpty()) {
-                    (entry.words.last().endTime * 1000).toLong()
+                val words = entry.words
+                val currentEnd = if (!words.isNullOrEmpty()) {
+                    (words.last().endTime * 1000).toLong()
                 } else if (entry.text.isBlank()) {
                     entry.time
                 } else {

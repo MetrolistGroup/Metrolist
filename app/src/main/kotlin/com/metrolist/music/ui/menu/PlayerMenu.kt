@@ -84,7 +84,7 @@ import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.ListItemHeight
 import com.metrolist.music.constants.VarispeedKey
 import com.metrolist.music.listentogether.ConnectionState
@@ -327,9 +327,7 @@ fun PlayerMenu(
                                 icon = {
                                     Icon(
                                         painter = painterResource(R.drawable.radio),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(32.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        contentDescription = null
                                     )
                                 },
                                 text = stringResource(R.string.start_radio),
@@ -347,8 +345,7 @@ fun PlayerMenu(
                                 Icon(
                                     painter = painterResource(R.drawable.playlist_add),
                                     contentDescription = null,
-                                    modifier = Modifier.size(32.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(32.dp)
                                 )
                             },
                             text = stringResource(R.string.add_to_playlist),
@@ -359,8 +356,7 @@ fun PlayerMenu(
                                 Icon(
                                     painter = painterResource(R.drawable.link),
                                     contentDescription = null,
-                                    modifier = Modifier.size(32.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(32.dp)
                                 )
                             },
                             text = stringResource(R.string.copy_link),
@@ -410,7 +406,6 @@ fun PlayerMenu(
                                         Icon(
                                             painter = painterResource(R.drawable.artist),
                                             contentDescription = null,
-                                            modifier = Modifier.size(24.dp),
                                         )
                                     },
                                     onClick = {
@@ -425,13 +420,14 @@ fun PlayerMenu(
                                 ),
                             )
                         }
-                        if (mediaMetadata.album != null) {
+                        val album = mediaMetadata.album
+                        if (album != null) {
                             add(
                                 Material3MenuItemData(
                                     title = { Text(text = stringResource(if (isPodcast) R.string.view_podcast else R.string.view_album)) },
                                     description = {
                                         Text(
-                                            text = mediaMetadata.album.title,
+                                            text = album.title,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
                                         )
@@ -440,14 +436,13 @@ fun PlayerMenu(
                                         Icon(
                                             painter = painterResource(if (isPodcast) R.drawable.mic else R.drawable.album),
                                             contentDescription = null,
-                                            modifier = Modifier.size(24.dp),
                                         )
                                     },
                                     onClick = {
                                         if (isPodcast) {
-                                            navController.navigate("online_podcast/${mediaMetadata.album.id}")
+                                            navController.navigate("online_podcast/${album.id}")
                                         } else {
-                                            navController.navigate("album/${mediaMetadata.album.id}")
+                                            navController.navigate("album/${album.id}")
                                         }
                                         playerBottomSheetState.collapseSoft()
                                         onDismiss()
@@ -482,7 +477,6 @@ fun PlayerMenu(
                                                 },
                                             ),
                                         contentDescription = null,
-                                        modifier = Modifier.size(24.dp),
                                     )
                                 },
                                 onClick = {
@@ -500,9 +494,8 @@ fun PlayerMenu(
                                 },
                                 icon = {
                                     Icon(
-                                        painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.add),
+                                        painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.ic_push_pin),
                                         contentDescription = null,
-                                        modifier = Modifier.size(24.dp),
                                     )
                                 },
                                 onClick = {
@@ -536,12 +529,11 @@ fun PlayerMenu(
                                         )
                                     },
                                     icon = {
-                                        Icon(
-                                            painter = painterResource(R.drawable.offline),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(24.dp),
-                                        )
-                                    },
+                                    Icon(
+                                        painter = painterResource(R.drawable.library_add_check),
+                                        contentDescription = null,
+                                    )
+                                },
                                     onClick = {
                                         DownloadService.sendRemoveDownload(
                                             context,
@@ -577,12 +569,11 @@ fun PlayerMenu(
                                 Material3MenuItemData(
                                     title = { Text(text = stringResource(R.string.action_download)) },
                                     icon = {
-                                        Icon(
-                                            painter = painterResource(R.drawable.download),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(24.dp),
-                                        )
-                                    },
+                                    Icon(
+                                        painter = painterResource(R.drawable.download),
+                                        contentDescription = null,
+                                    )
+                                },
                                     onClick = {
                                         database.transaction {
                                             insert(mediaMetadata)
@@ -622,7 +613,6 @@ fun PlayerMenu(
                                         Icon(
                                             painter = painterResource(R.drawable.group),
                                             contentDescription = null,
-                                            modifier = Modifier.size(24.dp),
                                         )
                                         if (pendingSuggestions.isNotEmpty()) {
                                             Surface(
@@ -654,7 +644,6 @@ fun PlayerMenu(
                                         Icon(
                                             painter = painterResource(R.drawable.replay),
                                             contentDescription = null,
-                                            modifier = Modifier.size(24.dp),
                                         )
                                     },
                                     onClick = {
@@ -682,7 +671,6 @@ fun PlayerMenu(
                                     Icon(
                                         painter = painterResource(R.drawable.info),
                                         contentDescription = null,
-                                        modifier = Modifier.size(24.dp),
                                     )
                                 },
                                 onClick = {
@@ -698,12 +686,11 @@ fun PlayerMenu(
                                     title = { Text(text = stringResource(R.string.equalizer)) },
                                     description = { Text(text = stringResource(R.string.equalizer_desc)) },
                                     icon = {
-                                        Icon(
-                                            painter = painterResource(R.drawable.equalizer),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(24.dp),
-                                        )
-                                    },
+                                    Icon(
+                                        painter = painterResource(R.drawable.equalizer),
+                                        contentDescription = null,
+                                    )
+                                },
                                     onClick = {
                                         navController.navigate("equalizer")
                                         onDismiss()
@@ -715,12 +702,11 @@ fun PlayerMenu(
                                     title = { Text(text = stringResource(R.string.system_equalizer)) },
                                     description = { Text(text = stringResource(R.string.system_equalizer_desc)) },
                                     icon = {
-                                        Icon(
-                                            painter = painterResource(R.drawable.graphic_eq),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(24.dp),
-                                        )
-                                    },
+                                    Icon(
+                                        painter = painterResource(R.drawable.graphic_eq),
+                                        contentDescription = null,
+                                    )
+                                },
                                     onClick = {
                                         val audioSessionId = playerConnection.player.audioSessionId
                                         if (audioSessionId != C.AUDIO_SESSION_ID_UNSET && audioSessionId > 0) {
@@ -742,12 +728,11 @@ fun PlayerMenu(
                                     title = { Text(text = stringResource(R.string.advanced)) },
                                     description = { Text(text = stringResource(R.string.advanced_desc)) },
                                     icon = {
-                                        Icon(
-                                            painter = painterResource(R.drawable.tune),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(24.dp),
-                                        )
-                                    },
+                                    Icon(
+                                        painter = painterResource(R.drawable.tune),
+                                        contentDescription = null,
+                                    )
+                                },
                                     onClick = {
                                         if (!varispeedMode) showPitchTempoDialog = true
                                         else showSpeedDialog = true

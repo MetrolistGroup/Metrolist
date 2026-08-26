@@ -110,7 +110,7 @@ import com.metrolist.music.LocalArtistNameAliases
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.AutoRadioQueueKey
 import com.metrolist.music.constants.GridItemSize
 import com.metrolist.music.constants.GridItemsSizeKey
@@ -158,7 +158,7 @@ import com.metrolist.music.ui.menu.YouTubeArtistMenu
 import com.metrolist.music.ui.menu.YouTubePlaylistMenu
 import com.metrolist.music.ui.menu.YouTubeSongMenu
 import com.metrolist.music.ui.utils.SnapLayoutInfoProvider
-import com.metrolist.music.ui.utils.resize
+import com.metrolist.music.utils.resize
 import com.metrolist.music.utils.joinByBullet
 import com.metrolist.music.utils.joinToArtistString
 import com.metrolist.music.utils.ArtistNameAliases
@@ -2231,17 +2231,21 @@ fun HomeScreen(
                                                 }
                                             },
                                         onClick = {
-                                            when (recommendation.title) {
+                                            val title = recommendation.title
+                                            when (title) {
                                                 is Song -> {
-                                                    navController.navigate("album/${recommendation.title.album!!.id}")
+                                                    val albumId = title.album?.id
+                                                    if (albumId != null) {
+                                                        navController.navigate("album/$albumId")
+                                                    }
                                                 }
 
                                                 is Album -> {
-                                                    navController.navigate("album/${recommendation.title.id}")
+                                                    navController.navigate("album/${title.id}")
                                                 }
 
                                                 is Artist -> {
-                                                    navController.navigate("artist/${recommendation.title.id}")
+                                                    navController.navigate("artist/${title.id}")
                                                 }
 
                                                 is Playlist -> {}

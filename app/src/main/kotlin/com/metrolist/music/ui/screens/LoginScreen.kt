@@ -63,7 +63,7 @@ import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.YouTubeAccount
 import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.music.LocalPlayerAwareWindowInsets
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.AccountChannelHandleKey
 import com.metrolist.music.constants.AccountEmailKey
 import com.metrolist.music.constants.AccountNameKey

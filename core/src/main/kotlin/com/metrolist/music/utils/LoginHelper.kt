@@ -6,6 +6,7 @@
 package com.metrolist.music.utils
 
 import android.content.Context
+import android.content.Intent
 import com.metrolist.innertube.YouTube
 import com.metrolist.music.constants.*
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +38,14 @@ object LoginHelper {
                 settings[AccountChannelHandleKey] = accountInfo.channelHandle.orEmpty()
             }
             if (!saved) throw Exception("Failed to persist account data")
+
+            withContext(Dispatchers.Main) {
+                context.packageManager
+                    .getLaunchIntentForPackage(context.packageName)
+                    ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK) }
+                    ?.let(context::startActivity)
+                Runtime.getRuntime().exit(0)
+            }
         }
     }
 }

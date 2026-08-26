@@ -42,7 +42,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.ui.theme.MetrolistTheme
 import com.metrolist.music.utils.CrashHandler
 import java.io.File

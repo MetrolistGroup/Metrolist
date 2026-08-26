@@ -40,7 +40,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.metrolist.music.LocalNavController
-import com.metrolist.music.R
+import com.metrolist.music.core.R
+import com.metrolist.music.models.wrapped.WrappedScreenType
+import com.metrolist.music.models.wrapped.WrappedState
+import com.metrolist.music.logic.wrapped.WrappedManager
+import com.metrolist.music.logic.wrapped.WrappedAudioService
+import com.metrolist.music.logic.wrapped.WrappedRepository
+import com.metrolist.music.logic.wrapped.MessagePair
 import com.metrolist.music.ui.screens.wrapped.pages.ConclusionPage
 import com.metrolist.music.ui.screens.wrapped.pages.PlaylistPage
 import com.metrolist.music.ui.screens.wrapped.pages.WrappedIntro
@@ -57,36 +63,6 @@ import com.metrolist.music.ui.screens.wrapped.pages.WrappedTotalArtistsScreen
 import com.metrolist.music.ui.screens.wrapped.pages.WrappedTotalSongsScreen
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-
-sealed class WrappedScreenType {
-    object Welcome : WrappedScreenType()
-
-    object MinutesTease : WrappedScreenType()
-
-    object MinutesReveal : WrappedScreenType()
-
-    object TotalSongs : WrappedScreenType()
-
-    object TopSongReveal : WrappedScreenType()
-
-    object Top5Songs : WrappedScreenType()
-
-    object TotalAlbums : WrappedScreenType()
-
-    object TopAlbumReveal : WrappedScreenType()
-
-    object Top5Albums : WrappedScreenType()
-
-    object TotalArtists : WrappedScreenType()
-
-    object TopArtistReveal : WrappedScreenType()
-
-    object Top5Artists : WrappedScreenType()
-
-    object Playlist : WrappedScreenType()
-
-    object Conclusion : WrappedScreenType()
-}
 
 @Composable
 fun WrappedScreen() {

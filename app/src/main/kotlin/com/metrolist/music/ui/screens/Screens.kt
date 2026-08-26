@@ -8,7 +8,7 @@ package com.metrolist.music.ui.screens
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 
 @Immutable
 sealed class Screens(

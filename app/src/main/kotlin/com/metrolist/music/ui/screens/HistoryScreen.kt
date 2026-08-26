@@ -60,7 +60,7 @@ import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.HistorySource
 import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.extensions.metadata
@@ -68,6 +68,7 @@ import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.playback.queues.YouTubeQueue
+import com.metrolist.music.ui.component.ChipInfo
 import com.metrolist.music.ui.component.ChipsRow
 import com.metrolist.music.ui.component.HideOnScrollFAB
 import com.metrolist.music.ui.component.IconButton
@@ -136,6 +137,8 @@ fun HistoryScreen(
     val historyPage by viewModel.historyPage.collectAsStateWithLifecycle()
 
     val events by viewModel.events.collectAsStateWithLifecycle()
+    
+    val mergedHistory by viewModel.mergedHistory.collectAsStateWithLifecycle()
 
     val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
     val isLoggedIn =
@@ -198,6 +201,20 @@ fun HistoryScreen(
             filteredEvents.values.flatten()
         }
 
+    val filteredMergedHistory =
+        remember(mergedHistory, query) {
+            if (query.text.isEmpty()) {
+                mergedHistory
+            } else {
+                mergedHistory
+                    .mapValues { (_, items) ->
+                        items.filter { item ->
+                            item.title.contains(query.text, ignoreCase = true)
+                        }
+                    }.filterValues { it.isNotEmpty() }
+            }
+        }
+
     LaunchedEffect(allEvents) {
         selection.fastForEachReversed { eventId ->
             if (allEvents.find { it.event.id == eventId } == null) {
@@ -227,23 +244,144 @@ fun HistoryScreen(
                     chips =
                         if (isLoggedIn) {
                             listOf(
-                                HistorySource.LOCAL to stringResource(R.string.local_history),
-                                HistorySource.REMOTE to stringResource(R.string.remote_history),
+                                ChipInfo(HistorySource.LOCAL, stringResource(R.string.local_history), R.drawable.offline),
+                                ChipInfo(HistorySource.REMOTE, stringResource(R.string.remote_history), R.drawable.cloud),
+                                ChipInfo(HistorySource.BOTH, stringResource(R.string.history_both), R.drawable.sync),
                             )
                         } else {
-                            listOf(HistorySource.LOCAL to stringResource(R.string.local_history))
+                            listOf(ChipInfo(HistorySource.LOCAL, stringResource(R.string.local_history), R.drawable.offline))
                         },
                     currentValue = historySource,
                     onValueUpdate = {
                         viewModel.historySource.value = it
-                        if (it == HistorySource.REMOTE) {
+                        if (it == HistorySource.REMOTE || it == HistorySource.BOTH) {
                             viewModel.fetchRemoteHistory()
                         }
                     },
                 )
             }
 
-            if (historySource == HistorySource.REMOTE && isLoggedIn) {
+            if (historySource == HistorySource.BOTH && isLoggedIn) {
+                filteredMergedHistory.keys.forEach { dateAgo ->
+                    val items = filteredMergedHistory[dateAgo] ?: emptyList()
+                    stickyHeader {
+                        NavigationTitle(
+                            title = dateAgoToString(dateAgo),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.background),
+                        )
+                    }
+
+                    items(
+                        items = items,
+                        key = { "${dateAgo}_${it.id}_${items.indexOf(it)}" },
+                    ) { item ->
+                        when (item) {
+                            is com.metrolist.music.viewmodels.HistoryItem.Local -> {
+                                SongListItem(
+                                    song = item.event.song,
+                                    isActive = item.event.song.id == mediaMetadata?.id,
+                                    isPlaying = isPlaying,
+                                    showInLibraryIcon = true,
+                                    trailingContent = {
+                                        IconButton(
+                                            onClick = {
+                                                menuState.show {
+                                                    SongMenu(
+                                                        originalSong = item.event.song,
+                                                        event = item.event.event,
+                                                        onDismiss = menuState::dismiss,
+                                                    )
+                                                }
+                                            },
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.more_vert),
+                                                contentDescription = null,
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .combinedClickable(
+                                            onClick = {
+                                                if (item.event.song.id == mediaMetadata?.id) {
+                                                    playerConnection.togglePlayPause()
+                                                } else {
+                                                    playerConnection.playQueue(
+                                                        YouTubeQueue.radio(item.event.song.toMediaMetadata()),
+                                                    )
+                                                }
+                                            },
+                                            onLongClick = {
+                                                menuState.show {
+                                                    SongMenu(
+                                                        originalSong = item.event.song,
+                                                        event = item.event.event,
+                                                        onDismiss = menuState::dismiss,
+                                                    )
+                                                }
+                                            }
+                                        )
+                                )
+                            }
+                            is com.metrolist.music.viewmodels.HistoryItem.Remote -> {
+                                YouTubeListItem(
+                                    item = item.song,
+                                    isActive = item.song.id == mediaMetadata?.id,
+                                    isPlaying = isPlaying,
+                                    trailingContent = {
+                                        IconButton(
+                                            onClick = {
+                                                menuState.show {
+                                                    YouTubeSongMenu(
+                                                        song = item.song,
+                                                        onDismiss = menuState::dismiss,
+                                                        onHistoryRemoved = {
+                                                            viewModel.fetchRemoteHistory()
+                                                        },
+                                                    )
+                                                }
+                                            },
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.more_vert),
+                                                contentDescription = null,
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .combinedClickable(
+                                            onClick = {
+                                                if (item.song.id == mediaMetadata?.id) {
+                                                    playerConnection.togglePlayPause()
+                                                } else {
+                                                    playerConnection.playQueue(
+                                                        YouTubeQueue.radio(item.song.toMediaMetadata()),
+                                                    )
+                                                }
+                                            },
+                                            onLongClick = {
+                                                menuState.show {
+                                                    YouTubeSongMenu(
+                                                        song = item.song,
+                                                        onDismiss = menuState::dismiss,
+                                                        onHistoryRemoved = {
+                                                            viewModel.fetchRemoteHistory()
+                                                        },
+                                                    )
+                                                }
+                                            }
+                                        )
+                                )
+                            }
+                        }
+                    }
+                }
+            } else if (historySource == HistorySource.REMOTE && isLoggedIn) {
                 filteredRemoteContent?.forEach { section ->
                     stickyHeader {
                         NavigationTitle(

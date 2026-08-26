@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude
+        domain="file"
+        path="./exoplayer" />
+    <exclude
+        domain="file"
+        path="./download" />
+    <exclude
+        domain="database"
+        path="exoplayer_internal.db" />
+</full-backup-content>

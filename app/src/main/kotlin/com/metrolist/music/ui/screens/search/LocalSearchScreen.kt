@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.metrolist.music.LocalNavController
 import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.CONTENT_TYPE_LIST
 import com.metrolist.music.constants.ListItemHeight
 import com.metrolist.music.db.entities.Album
@@ -58,6 +58,7 @@ import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.ui.component.AlbumListItem
 import com.metrolist.music.ui.component.ArtistListItem
+import com.metrolist.music.ui.component.ChipInfo
 import com.metrolist.music.ui.component.ChipsRow
 import com.metrolist.music.ui.component.EmptyPlaceholder
 import com.metrolist.music.ui.component.LocalMenuState
@@ -124,11 +125,11 @@ fun LocalSearchScreen(
         ChipsRow(
             chips =
                 listOf(
-                    LocalFilter.ALL to stringResource(R.string.filter_all),
-                    LocalFilter.SONG to stringResource(R.string.filter_songs),
-                    LocalFilter.ALBUM to stringResource(R.string.filter_albums),
-                    LocalFilter.ARTIST to stringResource(R.string.filter_artists),
-                    LocalFilter.PLAYLIST to stringResource(R.string.filter_playlists),
+                    ChipInfo(LocalFilter.ALL, stringResource(R.string.filter_all), R.drawable.search),
+                    ChipInfo(LocalFilter.SONG, stringResource(R.string.filter_songs), R.drawable.music_note),
+                    ChipInfo(LocalFilter.ALBUM, stringResource(R.string.filter_albums), R.drawable.album),
+                    ChipInfo(LocalFilter.ARTIST, stringResource(R.string.filter_artists), R.drawable.artist),
+                    ChipInfo(LocalFilter.PLAYLIST, stringResource(R.string.filter_playlists), R.drawable.playlist_play),
                 ),
             currentValue = searchFilter,
             onValueUpdate = { viewModel.filter.value = it },

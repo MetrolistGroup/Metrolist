@@ -66,7 +66,7 @@ import com.metrolist.music.LocalArtistNameAliases
 import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.ListThumbnailSize
 import com.metrolist.music.constants.ThumbnailCornerRadius
 import com.metrolist.music.db.entities.PlaylistEntity
@@ -84,7 +84,7 @@ import com.metrolist.music.ui.component.Material3MenuItemData
 import com.metrolist.music.ui.component.NewAction
 import com.metrolist.music.ui.component.NewActionGrid
 import com.metrolist.music.ui.component.YouTubeListItem
-import com.metrolist.music.ui.utils.resize
+import com.metrolist.music.utils.resize
 import com.metrolist.music.utils.ArtistNameAliases
 import com.metrolist.music.utils.exportYouTubePlaylistAsCSV
 import com.metrolist.music.utils.exportYouTubePlaylistAsM3U
@@ -423,8 +423,7 @@ fun YouTubePlaylistMenu(
                                             Icon(
                                                 painter = painterResource(R.drawable.play),
                                                 contentDescription = null,
-                                                modifier = Modifier.size(28.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(28.dp)
                                             )
                                         },
                                         text = stringResource(R.string.play),
@@ -442,8 +441,7 @@ fun YouTubePlaylistMenu(
                                             Icon(
                                                 painter = painterResource(R.drawable.shuffle),
                                                 contentDescription = null,
-                                                modifier = Modifier.size(28.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(28.dp)
                                             )
                                         },
                                         text = stringResource(R.string.shuffle),
@@ -461,8 +459,7 @@ fun YouTubePlaylistMenu(
                                             Icon(
                                                 painter = painterResource(R.drawable.radio),
                                                 contentDescription = null,
-                                                modifier = Modifier.size(28.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(28.dp)
                                             )
                                         },
                                         text = stringResource(R.string.start_radio),
@@ -574,7 +571,7 @@ fun YouTubePlaylistMenu(
                             },
                             icon = {
                                 Icon(
-                                    painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.add),
+                                    painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.ic_push_pin),
                                     contentDescription = null,
                                 )
                             },
@@ -599,55 +596,67 @@ fun YouTubePlaylistMenu(
             Material3MenuGroup(
                 items =
                     buildList {
-                        if (songs.isNotEmpty()) {
-                            add(
-                                when (downloadState) {
-                                    Download.STATE_COMPLETED -> {
-                                        Material3MenuItemData(
-                                            title = {
-                                                Text(
-                                                    text = stringResource(R.string.remove_download),
-                                                )
-                                            },
-                                            icon = {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.offline),
-                                                    contentDescription = null,
-                                                )
-                                            },
-                                            onClick = {
-                                                showRemoveDownloadDialog = true
-                                            },
-                                        )
-                                    }
+                        add(
+                            when (downloadState) {
+                                Download.STATE_COMPLETED -> {
+                                    Material3MenuItemData(
+                                        title = { Text(text = stringResource(R.string.remove_download)) },
+                                        icon = {
+                                            Icon(
+                                                painter = painterResource(R.drawable.library_add_check),
+                                                contentDescription = null,
+                                            )
+                                        },
+                                        onClick = {
+                                            showRemoveDownloadDialog = true
+                                        },
+                                    )
+                                }
 
-                                    Download.STATE_QUEUED, Download.STATE_DOWNLOADING -> {
-                                        Material3MenuItemData(
-                                            title = { Text(text = stringResource(R.string.downloading)) },
-                                            icon = {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(24.dp),
-                                                    strokeWidth = 2.dp,
-                                                )
-                                            },
-                                            onClick = {
-                                                showRemoveDownloadDialog = true
-                                            },
-                                        )
-                                    }
+                                Download.STATE_QUEUED, Download.STATE_DOWNLOADING -> {
+                                    Material3MenuItemData(
+                                        title = { Text(text = stringResource(R.string.downloading)) },
+                                        icon = {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(24.dp),
+                                                strokeWidth = 2.dp,
+                                            )
+                                        },
+                                        onClick = {
+                                            showRemoveDownloadDialog = true
+                                        },
+                                    )
+                                }
 
-                                    else -> {
-                                        Material3MenuItemData(
-                                            title = { Text(text = stringResource(R.string.action_download)) },
-                                            description = { Text(text = stringResource(R.string.download_desc)) },
-                                            icon = {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.download),
-                                                    contentDescription = null,
-                                                )
-                                            },
-                                            onClick = {
-                                                songs.forEach { song ->
+                                else -> {
+                                    Material3MenuItemData(
+                                        title = { Text(text = stringResource(R.string.action_download)) },
+                                        description = { Text(text = stringResource(R.string.download_desc)) },
+                                        icon = {
+                                            Icon(
+                                                painter = painterResource(R.drawable.download),
+                                                contentDescription = null,
+                                            )
+                                        },
+                                        onClick = {
+                                            coroutineScope.launch(Dispatchers.IO) {
+                                                val allSongs =
+                                                    if (songs.isEmpty()) {
+                                                        YouTube
+                                                            .playlist(playlist.id)
+                                                            .completed()
+                                                            .getOrNull()
+                                                            ?.songs
+                                                            .orEmpty()
+                                                    } else {
+                                                        songs
+                                                    }
+
+                                                database.withTransaction {
+                                                    allSongs.forEach { insert(it.toMediaMetadata()) }
+                                                }
+
+                                                allSongs.forEach { song ->
                                                     val downloadRequest =
                                                         DownloadRequest
                                                             .Builder(song.id, song.id.toUri())
@@ -661,18 +670,18 @@ fun YouTubePlaylistMenu(
                                                         false,
                                                     )
                                                 }
-                                            },
-                                        )
-                                    }
-                                },
-                            )
-                        }
+                                            }
+                                        },
+                                    )
+                                }
+                            },
+                        )
                         add(
                             Material3MenuItemData(
                                 title = { Text(text = stringResource(R.string.export_playlist)) },
                                 icon = {
                                     Icon(
-                                        painter = painterResource(R.drawable.share),
+                                        painter = painterResource(R.drawable.backup),
                                         contentDescription = null,
                                     )
                                 },

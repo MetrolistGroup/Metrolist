@@ -19,7 +19,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.stringResource
 import com.metrolist.music.LocalPlayerAwareWindowInsets
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 
 /**
  * EQ Wizard - Device Setup Flow

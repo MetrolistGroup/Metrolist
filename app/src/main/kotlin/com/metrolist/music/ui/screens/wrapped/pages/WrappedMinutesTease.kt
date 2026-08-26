@@ -23,7 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.metrolist.music.ui.screens.wrapped.LocalWrappedManager
-import com.metrolist.music.ui.screens.wrapped.MessagePair
+import com.metrolist.music.logic.wrapped.MessagePair
 import com.metrolist.music.ui.theme.bbh_bartle
 import kotlinx.coroutines.delay
 

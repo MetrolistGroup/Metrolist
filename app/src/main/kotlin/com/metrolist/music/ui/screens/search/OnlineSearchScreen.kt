@@ -62,7 +62,7 @@ import com.metrolist.innertube.models.PodcastItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.AutoRadioQueueKey
 import com.metrolist.music.constants.SuggestionItemHeight
 import com.metrolist.music.extensions.toMediaItem

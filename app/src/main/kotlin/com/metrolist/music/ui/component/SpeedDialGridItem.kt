@@ -26,9 +26,9 @@ import androidx.compose.ui.unit.dp
 import com.metrolist.innertube.models.ArtistItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.YTItem
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.ThumbnailCornerRadius
-import com.metrolist.music.ui.utils.resize
+import com.metrolist.music.utils.resize
 
 @Composable
 fun SpeedDialGridItem(

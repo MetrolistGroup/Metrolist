@@ -36,7 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.metrolist.music.ui.screens.wrapped.MessagePair
+import com.metrolist.music.logic.wrapped.MessagePair
 import com.metrolist.music.ui.screens.wrapped.components.AnimatedDecorativeElement
 import com.metrolist.music.ui.theme.bbh_bartle
 import kotlin.random.Random

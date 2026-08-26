@@ -6,6 +6,7 @@
 package com.metrolist.music.wear
 
 import android.widget.Toast
+import com.metrolist.music.core.R
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
@@ -41,7 +42,7 @@ class WearAuthRequestListenerService : WearableListenerService() {
             scope.launch {
                 // Mostrar aviso en el móvil
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(applicationContext, "Enviando cuenta al reloj...", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(applicationContext, R.string.sending_account_to_watch, Toast.LENGTH_SHORT).show()
                 }
 
                 try {
@@ -57,7 +58,7 @@ class WearAuthRequestListenerService : WearableListenerService() {
                     if (cookie == null) {
                         Timber.d("WearAuthRequestListenerService: No cookie found to sync")
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(applicationContext, "Error: Inicia sesión primero en el móvil", Toast.LENGTH_LONG).show()
+                            Toast.makeText(applicationContext, R.string.login_first_on_mobile, Toast.LENGTH_LONG).show()
                         }
                         return@launch
                     }

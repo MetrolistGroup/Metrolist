@@ -112,7 +112,7 @@ import com.metrolist.music.LocalNavController
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.LocalSyncUtils
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.PlaylistEditLockKey
 import com.metrolist.music.constants.PlaylistSongSortDescendingKey
@@ -962,8 +962,9 @@ fun LocalPlaylistHeader(
     LaunchedEffect(result.value) {
         val uri = result.value ?: return@LaunchedEffect
         withContext(Dispatchers.IO) {
+            val browseId = playlist.playlist.browseId
             when {
-                playlist.playlist.browseId == null -> {
+                browseId == null -> {
                     overrideThumbnail.value = uri.toString()
                     isCustomThumbnail = true
 
@@ -977,7 +978,7 @@ fun LocalPlaylistHeader(
                     val bytes = uriToByteArray(context, uri)
                     YouTube
                         .uploadCustomThumbnailLink(
-                            playlist.playlist.browseId,
+                            browseId,
                             bytes!!,
                         ).onSuccess { newThumbnailUrl ->
                             overrideThumbnail.value = newThumbnailUrl
@@ -1117,8 +1118,9 @@ fun LocalPlaylistHeader(
                                                     )
                                                 },
                                                 onRemove = {
+                                                    val browseId = playlist.playlist.browseId
                                                     when {
-                                                        playlist.playlist.browseId == null -> {
+                                                        browseId == null -> {
                                                             overrideThumbnail.value = null
                                                             database.query {
                                                                 update(playlist.playlist.copy(thumbnailUrl = null))
@@ -1127,7 +1129,7 @@ fun LocalPlaylistHeader(
 
                                                         else -> {
                                                             scope.launch(Dispatchers.IO) {
-                                                                YouTube.removeThumbnailPlaylist(playlist.playlist.browseId).onSuccess { newThumbnailUrl ->
+                                                                YouTube.removeThumbnailPlaylist(browseId).onSuccess { newThumbnailUrl ->
                                                                     overrideThumbnail.value = newThumbnailUrl
                                                                     database.query {
                                                                         update(playlist.playlist.copy(thumbnailUrl = newThumbnailUrl))
@@ -1198,8 +1200,9 @@ fun LocalPlaylistHeader(
                                                     )
                                                 },
                                                 onRemove = {
+                                                    val browseId = playlist.playlist.browseId
                                                     when {
-                                                        playlist.playlist.browseId == null -> {
+                                                        browseId == null -> {
                                                             overrideThumbnail.value = null
                                                             database.query {
                                                                 update(playlist.playlist.copy(thumbnailUrl = null))
@@ -1208,7 +1211,7 @@ fun LocalPlaylistHeader(
 
                                                         else -> {
                                                             scope.launch(Dispatchers.IO) {
-                                                                YouTube.removeThumbnailPlaylist(playlist.playlist.browseId).onSuccess { newThumbnailUrl ->
+                                                                YouTube.removeThumbnailPlaylist(browseId).onSuccess { newThumbnailUrl ->
                                                                     overrideThumbnail.value = newThumbnailUrl
                                                                     database.query {
                                                                         update(playlist.playlist.copy(thumbnailUrl = newThumbnailUrl))
@@ -1247,9 +1250,10 @@ fun LocalPlaylistHeader(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Metadata - Song Count • Duration
+        val remoteSongCount = playlist.playlist.remoteSongCount
         val songCount =
-            if (playlist.songCount == 0 && playlist.playlist.remoteSongCount != null) {
-                playlist.playlist.remoteSongCount
+            if (playlist.songCount == 0 && remoteSongCount != null) {
+                remoteSongCount
             } else {
                 playlist.songCount
             }

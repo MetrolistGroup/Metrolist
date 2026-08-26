@@ -53,7 +53,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import com.metrolist.lastfm.LastFM
 import com.metrolist.music.LocalPlayerAwareWindowInsets
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.EnableLastFMScrobblingKey
 import com.metrolist.music.constants.LastFMSessionKey
 import com.metrolist.music.constants.LastFMUseNowPlaying

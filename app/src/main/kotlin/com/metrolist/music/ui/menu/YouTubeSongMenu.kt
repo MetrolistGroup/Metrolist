@@ -65,7 +65,7 @@ import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.LocalSyncUtils
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.ListItemHeight
 import com.metrolist.music.constants.ListThumbnailSize
 import com.metrolist.music.constants.ThumbnailCornerRadius
@@ -83,7 +83,7 @@ import com.metrolist.music.ui.component.Material3MenuItemData
 import com.metrolist.music.ui.component.NewAction
 import com.metrolist.music.ui.component.NewActionGrid
 import com.metrolist.music.ui.utils.ShowMediaInfo
-import com.metrolist.music.ui.utils.resize
+import com.metrolist.music.utils.resize
 import com.metrolist.music.utils.ArtistNameAliases
 import com.metrolist.music.utils.joinByBullet
 import com.metrolist.music.utils.makeTimeString
@@ -306,8 +306,7 @@ fun YouTubeSongMenu(
                                 Icon(
                                     painter = painterResource(R.drawable.playlist_play),
                                     contentDescription = null,
-                                    modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    modifier = Modifier.size(28.dp)
                                 )
                             },
                             text = stringResource(R.string.play_next),
@@ -322,8 +321,7 @@ fun YouTubeSongMenu(
                             Icon(
                                 painter = painterResource(R.drawable.playlist_add),
                                 contentDescription = null,
-                                modifier = Modifier.size(28.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                modifier = Modifier.size(28.dp)
                             )
                         },
                         text = stringResource(R.string.add_to_playlist),
@@ -336,8 +334,7 @@ fun YouTubeSongMenu(
                             Icon(
                                 painter = painterResource(R.drawable.share),
                                 contentDescription = null,
-                                modifier = Modifier.size(28.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                modifier = Modifier.size(28.dp)
                             )
                         },
                         text = stringResource(R.string.share),
@@ -365,7 +362,7 @@ fun YouTubeSongMenu(
                             title = { Text(text = stringResource(R.string.suggest_to_host)) },
                             icon = {
                                 Icon(
-                                    painter = painterResource(R.drawable.queue_music),
+                                    painter = painterResource(R.drawable.trending_up),
                                     contentDescription = null,
                                 )
                             },
@@ -515,7 +512,7 @@ fun YouTubeSongMenu(
                             },
                             icon = {
                                 Icon(
-                                    painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.add),
+                                    painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.ic_push_pin),
                                     contentDescription = null,
                                 )
                             },
@@ -588,7 +585,7 @@ fun YouTubeSongMenu(
                                 },
                                 icon = {
                                     Icon(
-                                        painter = painterResource(R.drawable.offline),
+                                        painter = painterResource(R.drawable.library_add_check),
                                         contentDescription = null
                                     )
                                 },

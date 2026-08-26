@@ -30,7 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.PlaybackException
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 
 @Composable
 fun PlaybackError(

@@ -64,7 +64,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.metrolist.innertube.YouTube
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.CONTENT_TYPE_HEADER
 import com.metrolist.music.constants.CONTENT_TYPE_SONG
 import com.metrolist.music.constants.HideExplicitKey
@@ -78,6 +78,7 @@ import com.metrolist.music.extensions.matchesNormalizedQuery
 import com.metrolist.music.extensions.normalizeForSearch
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.playback.queues.ListQueue
+import com.metrolist.music.ui.component.ChipInfo
 import com.metrolist.music.ui.component.ChipsRow
 import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.HideOnScrollFAB
@@ -379,14 +380,14 @@ fun LibrarySongsScreen(
                     ChipsRow(
                         chips =
                             listOf(
-                                SongFilter.LIKED to stringResource(R.string.filter_liked),
-                                SongFilter.LIBRARY to stringResource(R.string.filter_library),
-                                SongFilter.UPLOADED to stringResource(R.string.filter_uploaded),
-                                SongFilter.DOWNLOADED to stringResource(R.string.filter_downloaded),
+                                ChipInfo(SongFilter.LIKED, stringResource(R.string.filter_liked), R.drawable.favorite),
+                                ChipInfo(SongFilter.LIBRARY, stringResource(R.string.filter_library), R.drawable.library_music),
+                                ChipInfo(SongFilter.UPLOADED, stringResource(R.string.filter_uploaded), R.drawable.upload),
+                                ChipInfo(SongFilter.DOWNLOADED, stringResource(R.string.filter_downloaded), R.drawable.offline),
                             ),
                         currentValue = filter,
-                        onValueUpdate = {
-                            filter = it
+                        onValueUpdate = { selected ->
+                            filter = selected
                         },
                         modifier = Modifier.weight(1f),
                     )

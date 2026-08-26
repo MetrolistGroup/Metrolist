@@ -64,7 +64,7 @@ import com.metrolist.music.LocalArtistNameAliases
 import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.ListItemHeight
 import com.metrolist.music.constants.ListThumbnailSize
 import com.metrolist.music.db.entities.Song
@@ -292,8 +292,7 @@ fun YouTubeAlbumMenu(
                                     Icon(
                                         painter = painterResource(R.drawable.play),
                                         contentDescription = null,
-                                        modifier = Modifier.size(28.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(28.dp)
                                     )
                                 },
                                 text = stringResource(R.string.play),
@@ -311,8 +310,7 @@ fun YouTubeAlbumMenu(
                                     Icon(
                                         painter = painterResource(R.drawable.shuffle),
                                         contentDescription = null,
-                                        modifier = Modifier.size(28.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(28.dp)
                                     )
                                 },
                                 text = stringResource(R.string.shuffle),
@@ -333,8 +331,7 @@ fun YouTubeAlbumMenu(
                                 Icon(
                                     painter = painterResource(R.drawable.share),
                                     contentDescription = null,
-                                    modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(28.dp)
                                 )
                             },
                             text = stringResource(R.string.share),
@@ -421,7 +418,7 @@ fun YouTubeAlbumMenu(
                             },
                             icon = {
                                 Icon(
-                                    painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.add),
+                                    painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.ic_push_pin),
                                     contentDescription = null,
                                 )
                             },
@@ -455,11 +452,11 @@ fun YouTubeAlbumMenu(
                                         )
                                     },
                                     icon = {
-                                        Icon(
-                                            painter = painterResource(R.drawable.offline),
-                                            contentDescription = null,
-                                        )
-                                    },
+                                    Icon(
+                                        painter = painterResource(R.drawable.library_add_check),
+                                        contentDescription = null,
+                                    )
+                                },
                                     onClick = {
                                         album?.songs?.forEach { song ->
                                             DownloadService.sendRemoveDownload(

@@ -9,7 +9,9 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.ForegroundServiceStartNotAllowedException
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
@@ -279,6 +281,14 @@ class MainActivity : ComponentActivity() {
 
     private var isServiceBound = false
 
+    private val quitReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == MusicService.ACTION_QUIT) {
+                finish()
+            }
+        }
+    }
+
     private val serviceConnection =
         object : ServiceConnection {
             override fun onServiceConnected(
@@ -368,10 +378,14 @@ class MainActivity : ComponentActivity() {
         if (isFinishing) {
             listenTogetherManager.disconnect()
         }
+        try {
+            unregisterReceiver(quitReceiver)
+        } catch (_: Exception) {
+        }
         super.onDestroy()
         // Use effective playing state so Cast (local player paused, remote playing) is included.
         val stopServiceOnClear =
-            dataStore.get(StopMusicOnTaskClearKey, false) &&
+            dataStore.get(StopMusicOnTaskClearKey, true) &&
                 playerConnection?.isEffectivelyPlaying?.value == true &&
                 isFinishing
 
@@ -398,12 +412,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "UnspecifiedRegisterReceiverFlag")
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.decorView.layoutDirection = View.LAYOUT_DIRECTION_LTR
         WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(quitReceiver, android.content.IntentFilter(MusicService.ACTION_QUIT), RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(quitReceiver, android.content.IntentFilter(MusicService.ACTION_QUIT))
+        }
 
         // Initialize Listen Together manager
         listenTogetherManager.initialize()
@@ -1405,8 +1425,8 @@ class MainActivity : ComponentActivity() {
                     wearSyncNodeId?.let { nodeId ->
                         AlertDialog(
                             onDismissRequest = { wearSyncNodeId = null },
-                            title = { Text("Sincronizar con Reloj") },
-                            text = { Text("¿Deseas enviar tu cuenta de YouTube Music a tu reloj conectado?") },
+                            title = { Text(stringResource(R.string.sync_with_watch)) },
+                            text = { Text(stringResource(R.string.send_account_to_watch_query)) },
                             confirmButton = {
                                 TextButton(
                                     onClick = {
@@ -1418,7 +1438,7 @@ class MainActivity : ComponentActivity() {
                                                 val cookie = settings[com.metrolist.music.constants.InnerTubeCookieKey]
                                                 if (cookie == null) {
                                                     withContext(Dispatchers.Main) {
-                                                        Toast.makeText(this@MainActivity, "Inicia sesión primero", Toast.LENGTH_SHORT).show()
+                                                        Toast.makeText(this@MainActivity, R.string.login_first, Toast.LENGTH_SHORT).show()
                                                     }
                                                     return@launch
                                                 }
@@ -1437,7 +1457,7 @@ class MainActivity : ComponentActivity() {
 
                                                 Wearable.getDataClient(this@MainActivity).putDataItem(request).await()
                                                 withContext(Dispatchers.Main) {
-                                                    Toast.makeText(this@MainActivity, "Cuenta enviada al reloj", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(this@MainActivity, R.string.account_sent_to_watch, Toast.LENGTH_SHORT).show()
                                                 }
                                             } catch (e: Exception) {
                                                 Timber.e(e, "Manual wear sync failed")
@@ -1445,12 +1465,12 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 ) {
-                                    Text("Enviar")
+                                    Text(stringResource(R.string.send))
                                 }
                             },
                             dismissButton = {
                                 TextButton(onClick = { wearSyncNodeId = null }) {
-                                    Text("Cancelar")
+                                    Text(stringResource(R.string.cancel))
                                 }
                             }
                         )

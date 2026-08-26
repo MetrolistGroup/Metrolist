@@ -44,7 +44,7 @@ import com.metrolist.innertube.models.MediaInfo
 import com.metrolist.music.LocalArtistNameAliases
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.LoudnessLevel
 import com.metrolist.music.constants.LoudnessLevelKey
 import com.metrolist.music.db.entities.FormatEntity

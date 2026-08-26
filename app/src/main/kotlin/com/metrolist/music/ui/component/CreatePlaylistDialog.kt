@@ -29,7 +29,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.metrolist.innertube.YouTube
 import com.metrolist.music.LocalDatabase
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.db.entities.PlaylistEntity
 import com.metrolist.music.extensions.isSyncEnabled

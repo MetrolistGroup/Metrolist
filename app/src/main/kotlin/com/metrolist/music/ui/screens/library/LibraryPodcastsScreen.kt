@@ -65,7 +65,7 @@ import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.LocalSyncUtils
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.CONTENT_TYPE_HEADER
 import com.metrolist.music.constants.CONTENT_TYPE_SONG
 import com.metrolist.music.constants.PodcastFilter
@@ -79,6 +79,7 @@ import com.metrolist.music.db.entities.PodcastEntity
 import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.playback.queues.ListQueue
+import com.metrolist.music.ui.component.ChipInfo
 import com.metrolist.music.ui.component.ChipsRow
 import com.metrolist.music.ui.component.HideOnScrollFAB
 import com.metrolist.music.ui.component.LocalMenuState
@@ -199,12 +200,12 @@ fun LibraryPodcastsScreen(
                 ChipsRow(
                     chips =
                         listOf(
-                            PodcastFilter.EPISODES to stringResource(R.string.filter_episodes),
-                            PodcastFilter.CHANNELS to stringResource(R.string.filter_channels),
-                            PodcastFilter.DOWNLOADED to stringResource(R.string.filter_downloaded),
+                            ChipInfo(PodcastFilter.EPISODES, stringResource(R.string.filter_episodes), R.drawable.list),
+                            ChipInfo(PodcastFilter.CHANNELS, stringResource(R.string.filter_channels), R.drawable.artist),
+                            ChipInfo(PodcastFilter.DOWNLOADED, stringResource(R.string.filter_downloaded), R.drawable.offline),
                         ),
                     currentValue = podcastFilter,
-                    onValueUpdate = { podcastFilter = it },
+                    onValueUpdate = { selected -> podcastFilter = selected },
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -614,9 +615,10 @@ private fun PodcastEpisodePlaylistItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (!podcast.author.isNullOrBlank()) {
+            val author = podcast.author
+            if (!author.isNullOrBlank()) {
                 Text(
-                    text = podcast.author,
+                    text = author,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -709,7 +711,7 @@ private fun PodcastEpisodePlaylistMenu(
                         Icon(
                             painter =
                                 painterResource(
-                                    if (isPinned) R.drawable.remove else R.drawable.add,
+                                    if (isPinned) R.drawable.remove else R.drawable.ic_push_pin,
                                 ),
                             contentDescription = null,
                         )

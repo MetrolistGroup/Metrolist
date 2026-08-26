@@ -102,7 +102,7 @@ import com.metrolist.music.LocalArtistNameAliases
 import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalNavController
 import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.CropAlbumArtKey
 import com.metrolist.music.constants.GridItemSize
 import com.metrolist.music.constants.GridItemsSizeKey
@@ -120,7 +120,7 @@ import com.metrolist.music.db.entities.Song
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.playback.queues.LocalAlbumRadio
-import com.metrolist.music.ui.utils.resize
+import com.metrolist.music.utils.resize
 import com.metrolist.music.utils.joinByBullet
 import com.metrolist.music.utils.joinToArtistString
 import com.metrolist.music.utils.makeTimeString
@@ -956,11 +956,12 @@ fun PlaylistListItem(
     subtitle = if (autoPlaylist) {
         ""
     } else {
-        if (playlist.songCount == 0 && playlist.playlist.remoteSongCount != null) {
+        val remoteSongCount = playlist.playlist.remoteSongCount
+        if (playlist.songCount == 0 && remoteSongCount != null) {
             pluralStringResource(
                 R.plurals.n_song,
-                playlist.playlist.remoteSongCount,
-                playlist.playlist.remoteSongCount
+                remoteSongCount,
+                remoteSongCount
             )
         } else {
             pluralStringResource(
@@ -1044,16 +1045,17 @@ fun PlaylistGridItem(
         )
     },
     subtitle = {
-        val subtitle = if (autoPlaylist) {
-            ""
+         val subtitle = if (autoPlaylist) {
+        ""
+    } else {
+        val remoteSongCount = playlist.playlist.remoteSongCount
+        if (playlist.songCount == 0 && remoteSongCount != null) {
+            pluralStringResource(
+                R.plurals.n_song,
+                remoteSongCount,
+                remoteSongCount
+            )
         } else {
-            if (playlist.songCount == 0 && playlist.playlist.remoteSongCount != null) {
-                pluralStringResource(
-                    R.plurals.n_song,
-                    playlist.playlist.remoteSongCount,
-                    playlist.playlist.remoteSongCount
-                )
-            } else {
                 pluralStringResource(
                     R.plurals.n_song,
                     playlist.songCount,

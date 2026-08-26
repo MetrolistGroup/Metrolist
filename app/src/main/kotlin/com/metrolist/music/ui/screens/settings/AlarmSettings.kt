@@ -52,7 +52,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.metrolist.music.LocalDatabase
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.db.entities.Playlist
 import com.metrolist.music.playback.alarm.MusicAlarmEntry
 import com.metrolist.music.playback.alarm.MusicAlarmScheduler

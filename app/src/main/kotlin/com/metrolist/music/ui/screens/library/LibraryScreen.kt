@@ -14,9 +14,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.metrolist.music.LocalNavController
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.ChipSortTypeKey
 import com.metrolist.music.constants.LibraryFilter
+import com.metrolist.music.ui.component.ChipInfo
 import com.metrolist.music.ui.component.ChipsRow
 import com.metrolist.music.utils.rememberEnumPreference
 
@@ -29,15 +30,15 @@ fun LibraryScreen() {
         Row {
             ChipsRow(
                 chips = listOf(
-                    LibraryFilter.PLAYLISTS to stringResource(R.string.filter_playlists),
-                    LibraryFilter.SONGS to stringResource(R.string.filter_songs),
-                    LibraryFilter.ALBUMS to stringResource(R.string.filter_albums),
-                    LibraryFilter.ARTISTS to stringResource(R.string.filter_artists),
-                    LibraryFilter.PODCASTS to stringResource(R.string.filter_podcasts),
+                    ChipInfo(LibraryFilter.PLAYLISTS, stringResource(R.string.filter_playlists), R.drawable.playlist_play),
+                    ChipInfo(LibraryFilter.SONGS, stringResource(R.string.filter_songs), R.drawable.music_note),
+                    ChipInfo(LibraryFilter.ALBUMS, stringResource(R.string.filter_albums), R.drawable.album),
+                    ChipInfo(LibraryFilter.ARTISTS, stringResource(R.string.filter_artists), R.drawable.artist),
+                    ChipInfo(LibraryFilter.PODCASTS, stringResource(R.string.filter_podcasts), R.drawable.radio),
                 ),
                 currentValue = filterType,
-                onValueUpdate = {
-                    filterType = if (filterType == it) LibraryFilter.LIBRARY else it
+                onValueUpdate = { selected ->
+                    filterType = if (filterType == selected) LibraryFilter.LIBRARY else selected
                 },
                 modifier = Modifier.weight(1f),
             )

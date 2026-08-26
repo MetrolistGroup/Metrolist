@@ -16,7 +16,7 @@ import androidx.compose.ui.res.painterResource
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.music.LocalNavController
 import com.metrolist.innertube.models.WatchEndpoint
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.db.entities.Album
 import com.metrolist.music.db.entities.Artist
 import com.metrolist.music.db.entities.Playlist

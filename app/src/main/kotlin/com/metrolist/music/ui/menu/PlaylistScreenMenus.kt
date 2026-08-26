@@ -33,7 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.media3.exoplayer.offline.Download
 import com.metrolist.music.LocalListenTogetherManager
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.db.entities.Playlist
 import com.metrolist.music.db.entities.PlaylistSong
 import com.metrolist.music.db.entities.Song
@@ -76,7 +76,7 @@ fun LocalPlaylistMenu(
                     description = { Text(stringResource(R.string.remove_download_playlist_desc)) },
                     icon = {
                         Icon(
-                            painter = painterResource(R.drawable.offline),
+                            painter = painterResource(R.drawable.library_add_check),
                             contentDescription = null,
                         )
                     },
@@ -220,7 +220,7 @@ fun LocalPlaylistMenu(
                     title = { Text(stringResource(R.string.export_playlist)) },
                     icon = {
                         Icon(
-                            painter = painterResource(R.drawable.share),
+                            painter = painterResource(R.drawable.backup),
                             contentDescription = null,
                         )
                     },
@@ -335,7 +335,7 @@ fun AutoPlaylistMenu(
                     description = { Text(stringResource(R.string.remove_download_playlist_desc)) },
                     icon = {
                         Icon(
-                            painter = painterResource(R.drawable.offline),
+                            painter = painterResource(R.drawable.library_add_check),
                             contentDescription = null,
                         )
                     },
@@ -407,7 +407,7 @@ fun AutoPlaylistMenu(
                         title = { Text(stringResource(R.string.export_playlist)) },
                         icon = {
                             Icon(
-                                painter = painterResource(R.drawable.share),
+                                painter = painterResource(R.drawable.backup),
                                 contentDescription = null,
                             )
                         },
@@ -515,7 +515,7 @@ fun TopPlaylistMenu(
                     description = { Text(stringResource(R.string.remove_download_playlist_desc)) },
                     icon = {
                         Icon(
-                            painter = painterResource(R.drawable.offline),
+                            painter = painterResource(R.drawable.library_add_check),
                             contentDescription = null,
                         )
                     },
@@ -679,7 +679,7 @@ fun CachePlaylistMenu(
                     description = { Text(stringResource(R.string.remove_download_playlist_desc)) },
                     icon = {
                         Icon(
-                            painter = painterResource(R.drawable.offline),
+                            painter = painterResource(R.drawable.library_add_check),
                             contentDescription = null,
                         )
                     },

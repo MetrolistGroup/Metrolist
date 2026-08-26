@@ -30,8 +30,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.BuildConfig
+import com.metrolist.music.core.BuildConfig as CoreBuildConfig
 import com.metrolist.music.utils.ReleaseInfo
 import com.metrolist.music.utils.Updater
 
@@ -49,7 +50,7 @@ fun ChangelogScreen(
     LaunchedEffect(Unit) {
         Updater.getAllReleases().onSuccess { allReleases ->
             releases = allReleases.filter { release ->
-                Updater.compareVersions(BuildConfig.BASE_VERSION_NAME, release.tagName) >= 0
+                Updater.compareVersions(CoreBuildConfig.BASE_VERSION_NAME, release.tagName) >= 0
             }
             isLoading = false
         }.onFailure {

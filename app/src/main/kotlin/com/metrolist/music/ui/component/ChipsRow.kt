@@ -23,10 +23,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -52,9 +54,16 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.metrolist.music.R
-import com.metrolist.music.ui.screens.OptionStats
+import com.metrolist.music.core.R
+import com.metrolist.music.models.OptionStats
 
+data class ChipInfo<E>(
+    val value: E,
+    val label: String,
+    val icon: Int? = null,
+)
+
+@JvmName("LegacyChipsRow")
 @Composable
 fun <E> ChipsRow(
     chips: List<Pair<E, String>>,
@@ -62,6 +71,24 @@ fun <E> ChipsRow(
     onValueUpdate: (E) -> Unit,
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+) {
+    ChipsRow(
+        chips = chips.map { ChipInfo(it.first, it.second) },
+        currentValue = currentValue,
+        onValueUpdate = onValueUpdate,
+        modifier = modifier,
+        containerColor = containerColor
+    )
+}
+
+@Composable
+fun <E> ChipsRow(
+    chips: List<ChipInfo<E>>,
+    currentValue: E,
+    onValueUpdate: (E) -> Unit,
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    showOnlyIcons: Boolean = true,
 ) {
     Row(
         modifier =
@@ -72,14 +99,33 @@ fun <E> ChipsRow(
     ) {
         Spacer(Modifier.width(12.dp))
 
-        chips.forEach { (value, label) ->
+        chips.forEach { chip ->
             FilterChip(
-                label = { Text(label) },
-                selected = currentValue == value,
+                selected = currentValue == chip.value,
+                onClick = { onValueUpdate(chip.value) },
+                label = {
+                    if (chip.icon != null && showOnlyIcons) {
+                        Icon(
+                            painter = painterResource(chip.icon),
+                            contentDescription = chip.label,
+                            modifier = Modifier.size(FilterChipDefaults.IconSize)
+                        )
+                    } else {
+                        Text(chip.label)
+                    }
+                },
+                leadingIcon = if (chip.icon != null && !showOnlyIcons) {
+                    {
+                        Icon(
+                            painter = painterResource(chip.icon),
+                            contentDescription = null,
+                            modifier = Modifier.size(FilterChipDefaults.IconSize)
+                        )
+                    }
+                } else null,
                 colors = FilterChipDefaults.filterChipColors(
                     containerColor = containerColor,
                 ),
-                onClick = { onValueUpdate(value) },
                 shape = RoundedCornerShape(16.dp),
                 border = null
             )

@@ -36,10 +36,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.ui.screens.wrapped.LocalWrappedManager
-import com.metrolist.music.ui.screens.wrapped.PlaylistCreationState
-import com.metrolist.music.ui.screens.wrapped.WrappedConstants
+import com.metrolist.music.models.wrapped.PlaylistCreationState
+import com.metrolist.music.models.wrapped.WrappedConstants
 import com.metrolist.music.ui.screens.wrapped.components.AnimatedBackground
 import com.metrolist.music.ui.screens.wrapped.components.AutoResizingText
 import com.metrolist.music.ui.screens.wrapped.components.ShapeType

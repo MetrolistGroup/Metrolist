@@ -85,7 +85,7 @@ import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.AutoRadioQueueKey
 import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.MiniPlayerBottomSpacing
@@ -97,6 +97,7 @@ import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.playback.queues.YouTubeQueue
+import com.metrolist.music.ui.component.ChipInfo
 import com.metrolist.music.ui.component.ChipsRow
 import com.metrolist.music.ui.component.EmptyPlaceholder
 import com.metrolist.music.ui.component.HideOnScrollFAB
@@ -454,31 +455,31 @@ fun OnlineSearchResult(
             ) {
                 val visibleChips =
                     listOf(
-                        null to stringResource(R.string.filter_all),
-                        FILTER_SONG to stringResource(R.string.filter_songs),
+                        ChipInfo<com.metrolist.innertube.YouTube.SearchFilter?>(null, stringResource(R.string.filter_all), R.drawable.search),
+                        ChipInfo<com.metrolist.innertube.YouTube.SearchFilter?>(FILTER_SONG, stringResource(R.string.filter_songs), R.drawable.music_note),
                     ).let { baseChips ->
                         if (!hideVideoSongs) {
-                            baseChips + (FILTER_VIDEO to stringResource(R.string.filter_videos))
+                            baseChips + ChipInfo<com.metrolist.innertube.YouTube.SearchFilter?>(FILTER_VIDEO, stringResource(R.string.filter_videos), R.drawable.play)
                         } else {
                             baseChips
                         }
                     } +
                         listOf(
-                            FILTER_ALBUM to stringResource(R.string.filter_albums),
-                            FILTER_ARTIST to stringResource(R.string.filter_artists),
-                            FILTER_COMMUNITY_PLAYLIST to stringResource(R.string.filter_community_playlists),
-                            FILTER_FEATURED_PLAYLIST to stringResource(R.string.filter_featured_playlists),
-                            FILTER_PODCAST to stringResource(R.string.filter_podcasts),
-                            FILTER_EPISODE to stringResource(R.string.filter_episodes),
-                            FILTER_PROFILE to stringResource(R.string.filter_profiles),
+                            ChipInfo<com.metrolist.innertube.YouTube.SearchFilter?>(FILTER_ALBUM, stringResource(R.string.filter_albums), R.drawable.album),
+                            ChipInfo<com.metrolist.innertube.YouTube.SearchFilter?>(FILTER_ARTIST, stringResource(R.string.filter_artists), R.drawable.artist),
+                            ChipInfo<com.metrolist.innertube.YouTube.SearchFilter?>(FILTER_COMMUNITY_PLAYLIST, stringResource(R.string.filter_community_playlists), R.drawable.playlist_play),
+                            ChipInfo<com.metrolist.innertube.YouTube.SearchFilter?>(FILTER_FEATURED_PLAYLIST, stringResource(R.string.filter_featured_playlists), R.drawable.library_music),
+                            ChipInfo<com.metrolist.innertube.YouTube.SearchFilter?>(FILTER_PODCAST, stringResource(R.string.filter_podcasts), R.drawable.radio),
+                            ChipInfo<com.metrolist.innertube.YouTube.SearchFilter?>(FILTER_EPISODE, stringResource(R.string.filter_episodes), R.drawable.list),
+                            ChipInfo<com.metrolist.innertube.YouTube.SearchFilter?>(FILTER_PROFILE, stringResource(R.string.filter_profiles), R.drawable.person),
                         )
 
                 ChipsRow(
                     chips = visibleChips,
                     currentValue = searchFilter,
-                    onValueUpdate = {
-                        if (viewModel.filter.value != it) {
-                            viewModel.filter.value = it
+                    onValueUpdate = { selectedFilter ->
+                        if (viewModel.filter.value != selectedFilter) {
+                            viewModel.filter.value = selectedFilter
                         }
                         coroutineScope.launch {
                             lazyListState.animateScrollToItem(0)

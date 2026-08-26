@@ -8,6 +8,7 @@ package com.metrolist.music.ui.screens.wrapped
 import android.content.Context
 import androidx.compose.runtime.compositionLocalOf
 import com.metrolist.music.db.DatabaseDao
+import com.metrolist.music.logic.wrapped.WrappedManager
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors

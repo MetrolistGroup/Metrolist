@@ -62,7 +62,7 @@ import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.LocalSyncUtils
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.ListItemHeight
 import com.metrolist.music.constants.ListThumbnailSize
 import com.metrolist.music.extensions.toMediaItem
@@ -501,13 +501,14 @@ fun QueueMenu(
                             )
                         )
                     }
-                    if (mediaMetadata.album != null) {
+                    val album = mediaMetadata.album
+                    if (album != null) {
                         add(
                             Material3MenuItemData(
                                 title = { Text(text = stringResource(R.string.view_album)) },
                                 description = {
                                     Text(
-                                        text = mediaMetadata.album.title,
+                                        text = album.title,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -520,7 +521,7 @@ fun QueueMenu(
                                     )
                                 },
                                 onClick = {
-                                    navController.navigate("album/${mediaMetadata.album.id}")
+                                    navController.navigate("album/${album.id}")
                                     playerBottomSheetState.collapseSoft()
                                     onDismiss()
                                 }

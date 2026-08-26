@@ -73,7 +73,7 @@ import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.LocalSyncUtils
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.ListItemHeight
 import com.metrolist.music.constants.ListThumbnailSize
 import com.metrolist.music.db.entities.ArtistEntity
@@ -521,8 +521,7 @@ fun SongMenu(
                                 Icon(
                                     painter = painterResource(R.drawable.edit),
                                     contentDescription = null,
-                                    modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(28.dp)
                                 )
                             },
                             text = stringResource(R.string.edit),
@@ -540,8 +539,7 @@ fun SongMenu(
                                 Icon(
                                     painter = painterResource(R.drawable.playlist_add),
                                     contentDescription = null,
-                                    modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(28.dp)
                                 )
                             },
                             text = stringResource(R.string.add_to_playlist),
@@ -552,8 +550,7 @@ fun SongMenu(
                                 Icon(
                                     painter = painterResource(R.drawable.share),
                                     contentDescription = null,
-                                    modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(28.dp)
                                 )
                             },
                             text = stringResource(R.string.share),
@@ -582,7 +579,7 @@ fun SongMenu(
                                 title = { Text(text = stringResource(R.string.suggest_to_host)) },
                                 icon = {
                                     Icon(
-                                        painter = painterResource(R.drawable.queue_music),
+                                        painter = painterResource(R.drawable.trending_up),
                                         contentDescription = null,
                                     )
                                 },
@@ -677,7 +674,7 @@ fun SongMenu(
                                 },
                                 icon = {
                                     Icon(
-                                        painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.add),
+                                        painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.ic_push_pin),
                                         contentDescription = null,
                                     )
                                 },

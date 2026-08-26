@@ -44,7 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerAwareWindowInsets
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.AndroidAutoSearchLocalLimitKey
 import com.metrolist.music.constants.AndroidAutoSectionsOrderKey
 import com.metrolist.music.constants.AndroidAutoTargetPlaylistKey
@@ -53,20 +53,15 @@ import com.metrolist.music.constants.MediaSessionConstants
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
+import com.metrolist.music.models.AndroidAutoSection
+import com.metrolist.music.utils.deserializeSections
+import com.metrolist.music.utils.serializeSections
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.flow.map
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.math.roundToInt
-
-enum class AndroidAutoSection(val id: String) {
-    LIKED("liked"),
-    SONGS("songs"),
-    ARTISTS("artists"),
-    ALBUMS("albums"),
-    PLAYLISTS("playlists"),
-}
 
 @Composable
 fun AndroidAutoSection.label(): String = when (this) {
@@ -75,20 +70,6 @@ fun AndroidAutoSection.label(): String = when (this) {
     AndroidAutoSection.ARTISTS -> stringResource(R.string.artists)
     AndroidAutoSection.ALBUMS -> stringResource(R.string.albums)
     AndroidAutoSection.PLAYLISTS -> stringResource(R.string.playlists)
-}
-
-fun serializeSections(sections: List<Pair<AndroidAutoSection, Boolean>>): String =
-    sections.joinToString(",") { (section, enabled) -> "${section.id}:$enabled" }
-
-fun deserializeSections(raw: String): List<Pair<AndroidAutoSection, Boolean>> {
-    if (raw.isBlank()) return AndroidAutoSection.values().map { it to true }
-    return raw.split(",").mapNotNull { token ->
-        val parts = token.split(":")
-        if (parts.size != 2) return@mapNotNull null
-        val section = AndroidAutoSection.values().find { it.id == parts[0] } ?: return@mapNotNull null
-        val enabled = parts[1].toBooleanStrictOrNull() ?: true
-        section to enabled
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

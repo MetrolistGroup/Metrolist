@@ -21,10 +21,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import com.metrolist.innertube.models.SongItem
+import com.metrolist.music.db.entities.EventWithSong
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -83,6 +86,44 @@ constructor(
                     }
             }.stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
 
+    val mergedHistory = combine(events, historyPage) { local, remote ->
+        if (remote == null) return@combine local.mapValues { it.value.map { e -> HistoryItem.Local(e) as HistoryItem } }
+
+        val result = local.mapValues { it.value.map { e -> HistoryItem.Local(e) as HistoryItem } }.toMutableMap()
+
+        remote.sections?.forEach { section ->
+            val dateAgo = when (section.title.lowercase()) {
+                "today" -> DateAgo.Today
+                "yesterday" -> DateAgo.Yesterday
+                "this week" -> DateAgo.ThisWeek
+                "last week" -> DateAgo.LastWeek
+                else -> {
+                    // Try to parse month/year if possible, or just group under "Other"
+                    DateAgo.Today // Fallback
+                }
+            }
+            
+            val currentList = result[dateAgo]?.toMutableList() ?: mutableListOf<HistoryItem>()
+            section.songs.forEach { remoteSong ->
+                if (currentList.none { it.id == remoteSong.id }) {
+                    currentList.add(HistoryItem.Remote(remoteSong))
+                }
+            }
+            result[dateAgo] = currentList
+        }
+        result.toSortedMap(
+            compareBy { dateAgo ->
+                when (dateAgo) {
+                    DateAgo.Today -> 0L
+                    DateAgo.Yesterday -> 1L
+                    DateAgo.ThisWeek -> 2L
+                    DateAgo.LastWeek -> 3L
+                    is DateAgo.Other -> ChronoUnit.DAYS.between(dateAgo.date, today)
+                }
+            }
+        )
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
+
     init {
         fetchRemoteHistory()
     }
@@ -95,6 +136,21 @@ constructor(
                 reportException(it)
             }
         }
+    }
+}
+
+sealed class HistoryItem {
+    abstract val id: String
+    abstract val title: String
+
+    data class Local(val event: EventWithSong) : HistoryItem() {
+        override val id: String get() = event.song.id
+        override val title: String get() = event.song.song.title
+    }
+
+    data class Remote(val song: SongItem) : HistoryItem() {
+        override val id: String get() = song.id
+        override val title: String get() = song.title
     }
 }
 

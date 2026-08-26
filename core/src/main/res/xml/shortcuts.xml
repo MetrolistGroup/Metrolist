@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/shortcut_search"
+        android:shortcutId="search"
+        android:shortcutShortLabel="@string/search">
+        <intent
+            android:action="com.metrolist.music.action.SEARCH"
+            android:targetClass="com.metrolist.music.MainActivity"
+            android:targetPackage="com.metrolist.music" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/shortcut_library"
+        android:shortcutId="library"
+        android:shortcutShortLabel="@string/filter_library">
+        <intent
+            android:action="com.metrolist.music.action.LIBRARY"
+            android:targetClass="com.metrolist.music.MainActivity"
+            android:targetPackage="com.metrolist.music" />
+    </shortcut>
+</shortcuts>

@@ -49,7 +49,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.metrolist.music.LocalPlayerAwareWindowInsets
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.ArtistFilter
 import com.metrolist.music.constants.ArtistFilterKey
 import com.metrolist.music.constants.ArtistSortDescendingKey
@@ -63,6 +63,7 @@ import com.metrolist.music.constants.GridItemsSizeKey
 import com.metrolist.music.constants.GridThumbnailHeight
 import com.metrolist.music.constants.LibraryViewType
 import com.metrolist.music.constants.YtmSyncKey
+import com.metrolist.music.ui.component.ChipInfo
 import com.metrolist.music.ui.component.ChipsRow
 import com.metrolist.music.ui.component.LibraryArtistGridItem
 import com.metrolist.music.ui.component.LibraryArtistListItem
@@ -114,12 +115,12 @@ fun LibraryArtistsScreen(
             ChipsRow(
                 chips =
                 listOf(
-                    ArtistFilter.LIKED to stringResource(R.string.filter_liked),
-                    ArtistFilter.LIBRARY to stringResource(R.string.filter_library)
+                    ChipInfo(ArtistFilter.LIKED, stringResource(R.string.filter_liked), R.drawable.favorite),
+                    ChipInfo(ArtistFilter.LIBRARY, stringResource(R.string.filter_library), R.drawable.library_music)
                 ),
                 currentValue = filter,
-                onValueUpdate = {
-                    filter = it
+                onValueUpdate = { selected ->
+                    filter = selected
                 },
                 modifier = Modifier.weight(1f),
             )

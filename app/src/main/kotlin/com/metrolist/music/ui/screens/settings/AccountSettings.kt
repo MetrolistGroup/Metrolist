@@ -56,7 +56,8 @@ import coil3.compose.AsyncImage
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.music.BuildConfig
-import com.metrolist.music.R
+import com.metrolist.music.core.R
+import com.metrolist.music.core.BuildConfig as CoreBuildConfig
 import com.metrolist.music.constants.AccountChannelHandleKey
 import com.metrolist.music.constants.AccountEmailKey
 import com.metrolist.music.constants.AccountNameKey
@@ -415,7 +416,7 @@ fun AccountSettings(
                 icon = {
                     BadgedBox(
                         badge = {
-                            if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.BASE_VERSION_NAME) {
+                            if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != CoreBuildConfig.BASE_VERSION_NAME) {
                                 Badge()
                             }
                         }
@@ -434,7 +435,7 @@ fun AccountSettings(
 
             Spacer(Modifier.height(4.dp))
 
-            if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.BASE_VERSION_NAME) {
+            if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != CoreBuildConfig.BASE_VERSION_NAME) {
                 val releaseInfo = Updater.getCachedLatestRelease()
                 val downloadUrl = releaseInfo?.let { Updater.getDownloadUrlForCurrentVariant(it) }
                 

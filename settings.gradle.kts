@@ -35,6 +35,8 @@ dependencyResolutionManagement {
 
 rootProject.name = "Metrolist"
 include(":app")
+include(":core")
+include(":wear")
 include(":innertube")
 include(":kugou")
 include(":lrclib")

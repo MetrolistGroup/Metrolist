@@ -117,7 +117,7 @@ import coil3.toBitmap
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.AiProviderKey
 import com.metrolist.music.constants.AiSystemPromptKey
 import com.metrolist.music.constants.DarkModeKey
@@ -169,6 +169,7 @@ import com.metrolist.music.ui.component.shimmer.TextPlaceholder
 import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.screens.settings.LyricsPosition
 import com.metrolist.music.ui.screens.settings.defaultList
+import com.metrolist.music.models.LyricsBackgroundStyle
 import com.metrolist.music.ui.utils.fadingEdge
 import com.metrolist.music.utils.ComposeToImage
 import com.metrolist.music.utils.rememberEnumPreference
@@ -1149,7 +1150,7 @@ fun OriginalLyrics(
                                             withStyle(style = SpanStyle(color = wordColor, fontWeight = wordWeight)) {
                                                 append(word.text)
                                             }
-                                            if (wordIndex < item.words.size - 1) append(" ")
+                                            if (wordIndex < (item.words?.size ?: 0) - 1) append(" ")
                                         }
                                     }
                                 Text(
@@ -1225,7 +1226,7 @@ fun OriginalLyrics(
                                             withStyle(style = SpanStyle(color = wordColor, fontWeight = wordWeight, shadow = wordShadow)) {
                                                 append(word.text)
                                             }
-                                            if (wordIndex < item.words.size - 1) append(" ")
+                                            if (wordIndex < (item.words?.size ?: 0) - 1) append(" ")
                                         }
                                     }
                                 Text(
@@ -1297,7 +1298,7 @@ fun OriginalLyrics(
                                             withStyle(style = SpanStyle(color = wordColor, fontWeight = wordWeight, shadow = wordShadow)) {
                                                 append(word.text)
                                             }
-                                            if (wordIndex < item.words.size - 1) append(" ")
+                                            if (wordIndex < (item.words?.size ?: 0) - 1) append(" ")
                                         }
                                     }
                                 Text(
@@ -1381,7 +1382,7 @@ fun OriginalLyrics(
                                                     append(word.text)
                                                 }
                                             }
-                                            if (wordIndex < item.words.size - 1) append(" ")
+                                            if (wordIndex < (item.words?.size ?: 0) - 1) append(" ")
                                         }
                                     }
                                 Text(
@@ -1471,7 +1472,7 @@ fun OriginalLyrics(
                                                     append(word.text)
                                                 }
                                             }
-                                            if (wordIndex < item.words.size - 1) append(" ")
+                                            if (wordIndex < (item.words?.size ?: 0) - 1) append(" ")
                                         }
                                     }
                                 Text(
@@ -1555,7 +1556,7 @@ fun OriginalLyrics(
                                             withStyle(style = SpanStyle(color = wordColor, fontWeight = wordWeight, shadow = wordShadow)) {
                                                 append(word.text)
                                             }
-                                            if (wordIndex < item.words.size - 1) append(" ")
+                                            if (wordIndex < (item.words?.size ?: 0) - 1) append(" ")
                                         }
                                     }
                                 Text(

@@ -51,7 +51,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.metrolist.music.LocalPlayerAwareWindowInsets
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.IconButton
@@ -174,7 +174,7 @@ fun BackupAndRestore(
             ),
         )
 
-        val appName = stringResource(R.string.app_name)
+        val appName = stringResource(com.metrolist.music.R.string.app_name)
         Material3SettingsGroup(
             items =
                 listOf(

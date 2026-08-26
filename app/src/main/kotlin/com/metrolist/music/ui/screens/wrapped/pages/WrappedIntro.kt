@@ -50,7 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.ui.theme.bbhBartle
 import kotlinx.coroutines.delay
 

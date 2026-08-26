@@ -52,7 +52,8 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.metrolist.music.R
+import com.metrolist.music.core.R
+import com.metrolist.music.models.LyricsBackgroundStyle
 import com.metrolist.music.models.MediaMetadata
 
 import androidx.compose.ui.draw.blur
@@ -413,7 +414,7 @@ fun LyricsImageCard(
                     Spacer(modifier = Modifier.width(8.dp))
 
                     Text(
-                        text = stringResource(R.string.app_name),
+                        text = stringResource(com.metrolist.music.R.string.app_name),
                         color = secondaryColor,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold

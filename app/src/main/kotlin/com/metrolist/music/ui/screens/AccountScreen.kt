@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,8 +32,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,11 +53,12 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.metrolist.music.LocalPlayerAwareWindowInsets
-import com.metrolist.music.R
+import com.metrolist.music.core.R
 import com.metrolist.music.constants.GridItemSize
 import com.metrolist.music.constants.GridItemsSizeKey
 import com.metrolist.music.constants.GridThumbnailHeight
 import com.metrolist.music.db.entities.PodcastEntity
+import com.metrolist.music.ui.component.ChipInfo
 import com.metrolist.music.ui.component.ChipsRow
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.component.LocalMenuState
@@ -86,8 +92,21 @@ fun AccountScreen(
     val rdpnPlaylist by viewModel.rdpnPlaylist.collectAsStateWithLifecycle()
     val podcastPlaylists by viewModel.podcastPlaylists.collectAsStateWithLifecycle()
     val podcastChannels by viewModel.podcastChannels.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val selectedContentType by viewModel.selectedContentType.collectAsStateWithLifecycle()
     val gridItemSize by rememberEnumPreference(GridItemsSizeKey, GridItemSize.BIG)
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val syncCompletedStr = stringResource(R.string.sync_completed)
+    
+    // Track previous refresh state to show feedback only on manual refresh completion
+    var wasRefreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(isRefreshing) {
+        if (wasRefreshing && !isRefreshing) {
+            Toast.makeText(context, syncCompletedStr, Toast.LENGTH_SHORT).show()
+        }
+        wasRefreshing = isRefreshing
+    }
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = GridThumbnailHeight + if (gridItemSize == GridItemSize.BIG) 24.dp else (-24).dp),
@@ -97,10 +116,10 @@ fun AccountScreen(
             ChipsRow(
                 chips =
                     listOf(
-                        AccountContentType.PLAYLISTS to stringResource(R.string.filter_playlists),
-                        AccountContentType.ALBUMS to stringResource(R.string.filter_albums),
-                        AccountContentType.ARTISTS to stringResource(R.string.filter_artists),
-                        AccountContentType.PODCASTS to stringResource(R.string.filter_podcasts),
+                        ChipInfo(AccountContentType.PLAYLISTS, stringResource(R.string.filter_playlists), R.drawable.playlist_play),
+                        ChipInfo(AccountContentType.ALBUMS, stringResource(R.string.filter_albums), R.drawable.album),
+                        ChipInfo(AccountContentType.ARTISTS, stringResource(R.string.filter_artists), R.drawable.artist),
+                        ChipInfo(AccountContentType.PODCASTS, stringResource(R.string.filter_podcasts), R.drawable.radio),
                     ),
                 currentValue = selectedContentType,
                 onValueUpdate = { viewModel.setSelectedContentType(it) },
@@ -327,6 +346,18 @@ fun AccountScreen(
             ) {
                 Icon(
                     painterResource(R.drawable.arrow_back),
+                    contentDescription = null,
+                )
+            }
+        },
+        actions = {
+            IconButton(
+                onClick = viewModel::refresh,
+                onLongClick = {},
+                enabled = !isRefreshing,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.cached),
                     contentDescription = null,
                 )
             }

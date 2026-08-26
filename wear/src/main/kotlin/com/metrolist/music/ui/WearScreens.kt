@@ -8,11 +8,14 @@ package com.metrolist.music.ui
 import android.app.Activity
 import android.app.RemoteInput
 import android.content.Intent
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.net.ServerSocket
@@ -33,6 +36,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -46,6 +50,17 @@ import coil3.compose.AsyncImage
 import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.tasks.await
 import com.google.android.horologist.annotations.ExperimentalHorologistApi
+import com.metrolist.music.constants.AudioNormalizationKey
+import com.metrolist.music.constants.AutoDownloadOnLikeKey
+import com.metrolist.music.constants.CrossfadeDurationKey
+import com.metrolist.music.constants.CrossfadeEnabledKey
+import com.metrolist.music.constants.EnableSongCacheKey
+import com.metrolist.music.constants.HideExplicitKey
+import com.metrolist.music.constants.HideVideoSongsKey
+import com.metrolist.music.constants.HistoryDuration
+import com.metrolist.music.constants.SleepTimerDefaultKey
+import com.metrolist.music.constants.StopMusicOnTaskClearKey
+import com.metrolist.music.constants.AppLanguageKey
 import com.google.android.horologist.compose.layout.ScalingLazyColumn
 import com.google.android.horologist.compose.layout.rememberResponsiveColumnState
 import com.metrolist.innertube.YouTube
@@ -224,7 +239,7 @@ fun WearSearchScreen(
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Connecting...",
+                        text = stringResource(R.string.listen_together_connecting),
                         style = MaterialTheme.typography.caption2,
                         textAlign = TextAlign.Center
                     )
@@ -235,27 +250,36 @@ fun WearSearchScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
+                        .padding(vertical = 4.dp)
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)
                 ) {
                     val filters = listOf(
-                        YouTube.SearchFilter.FILTER_SONG to R.string.songs,
-                        YouTube.SearchFilter.FILTER_ALBUM to R.string.albums,
-                        YouTube.SearchFilter.FILTER_ARTIST to R.string.artists
+                        Triple(null, R.string.filter_all, R.drawable.grid_view),
+                        Triple(YouTube.SearchFilter.FILTER_SONG, R.string.songs, R.drawable.music_note),
+                        Triple(YouTube.SearchFilter.FILTER_ALBUM, R.string.albums, R.drawable.album),
+                        Triple(YouTube.SearchFilter.FILTER_ARTIST, R.string.artists, R.drawable.artist),
+                        Triple(YouTube.SearchFilter.FILTER_COMMUNITY_PLAYLIST, R.string.playlists, R.drawable.library_music)
                     )
-                    filters.forEach { (filter, labelRes) ->
+                    filters.forEach { (filter, labelRes, iconRes) ->
                         CompactChip(
-                            onClick = { 
+                            onClick = {
                                 try {
-                                    actualViewModel.filter.value = filter 
+                                    actualViewModel.filter.value = filter
                                 } catch (e: Exception) {
                                     Timber.tag("WearSearchScreen").e(e, "Failed to set filter")
                                 }
                             },
-                            label = { Text(stringResource(labelRes)) },
-                            colors = if (currentFilter == filter) 
-                                ChipDefaults.primaryChipColors() 
-                            else 
+                            label = {
+                                Icon(
+                                    painter = painterResource(iconRes),
+                                    contentDescription = stringResource(labelRes),
+                                    modifier = Modifier.size(ChipDefaults.SmallIconSize)
+                                )
+                            },
+                            colors = if (currentFilter == filter)
+                                ChipDefaults.primaryChipColors()
+                            else
                                 ChipDefaults.secondaryChipColors()
                         )
                     }
@@ -414,6 +438,16 @@ fun WearLoginScreen() {
         }
     }
 
+    val errorNoWifiIp = stringResource(R.string.error_no_wifi_ip)
+    val loginInstructionStep2 = stringResource(R.string.login_instruction_step2).replace("2. ", "")
+    val loginLabel = stringResource(R.string.login).uppercase()
+    val wearSyncTitle = stringResource(R.string.wear_sync_title)
+    val syncLibraryDesc = stringResource(R.string.sync_library_desc)
+    val loginStartedRestart = stringResource(R.string.login_started_restart)
+    val processingToken = stringResource(R.string.processing_token)
+    val errorUnknown = stringResource(R.string.error_unknown)
+    val loginFailed = stringResource(R.string.login_failed)
+
     // Lógica del servidor
     DisposableEffect(Unit) {
         var ip = getLocalIpAddress()
@@ -432,7 +466,7 @@ fun WearLoginScreen() {
                     serverUrl = "http://$ip:$port"
                     Timber.tag("WearSyncServer").d("Server started at $serverUrl")
                 } else {
-                    statusMessage = "Error: No se detectó IP Wi-Fi"
+                    statusMessage = errorNoWifiIp
                 }
                 
                 while (!Thread.currentThread().isInterrupted) {
@@ -465,15 +499,15 @@ fun WearLoginScreen() {
                                 </style>
                             </head>
                             <body>
-                                <h3>Metrolist Wear Sync</h3>
-                                <p class="info">Pega todo el bloque de código de tu móvil abajo:</p>
+                                <h3>${wearSyncTitle}</h3>
+                                <p class="info">${loginInstructionStep2}</p>
                                 <form method="POST">
                                     <div class="box">
                                         <textarea name="sync_block" placeholder="**INNERTUBE COOKIE** =..."></textarea>
                                     </div>
-                                    <button type="submit">VINCULAR CUENTA</button>
+                                    <button type="submit">${loginLabel}</button>
                                 </form>
-                                <p style="font-size: 10px; color: #555; margin-top: 20px;">Al vincular, se cargarán tus Playlists, Me gusta e Historial.</p>
+                                <p style="font-size: 10px; color: #555; margin-top: 20px;">${syncLibraryDesc}</p>
                             </body>
                             </html>
                         """.trimIndent())
@@ -514,13 +548,13 @@ fun WearLoginScreen() {
                         
                         if (cookie.isNotBlank()) {
                             val out = client.getOutputStream().bufferedWriter()
-                            out.write("HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\nLogin iniciado. El reloj se reiniciará en breve.")
+                            out.write("HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${loginStartedRestart}")
                             out.flush()
                             client.close()
 
                             coroutineScope.launch {
                                 try {
-                                    statusMessage = "Procesando token..."
+                                    statusMessage = processingToken
                                     isLoading = true
                                     
                                     val finalVisitorData = visitorData.ifBlank { 
@@ -535,17 +569,17 @@ fun WearLoginScreen() {
                                         authUser = "0"
                                     )
                                 } catch (e: Exception) {
-                                    statusMessage = "Error en el proceso"
+                                    statusMessage = errorUnknown
                                     isLoading = false
                                     Timber.tag("WearSync").e(e)
                                 }
                             }
                         } else {
                             val out = client.getOutputStream().bufferedWriter()
-                            out.write("HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\nERROR: No se encontró la COOKIE en el texto. Verifica que has copiado todo el bloque.")
+                            out.write("HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${loginFailed}")
                             out.flush()
                             client.close()
-                            statusMessage = "Cookie no detectada"
+                            statusMessage = loginFailed
                         }
                     }
                 }
@@ -564,7 +598,7 @@ fun WearLoginScreen() {
         columnState = columnState,
         modifier = Modifier.fillMaxSize().focusRequester(focusRequester).focusable()
     ) {
-        item { ListHeader { Text("Inicio de Sesión Web") } }
+        item { ListHeader { Text(stringResource(R.string.login)) } }
 
         if (serverUrl != null) {
             item {
@@ -577,7 +611,7 @@ fun WearLoginScreen() {
             }
             item {
                 Text(
-                    text = "RELOJ Y MÓVIL DEBEN ESTAR EN EL MISMO WI-FI",
+                    text = stringResource(R.string.wifi_warning).uppercase(),
                     style = MaterialTheme.typography.caption2,
                     color = MaterialTheme.colors.error,
                     textAlign = TextAlign.Center,
@@ -586,7 +620,7 @@ fun WearLoginScreen() {
             }
             item {
                 Text(
-                    text = "1. Escanea el código\n2. Pega el bloque de texto",
+                    text = stringResource(R.string.login_instruction_step1) + "\n" + stringResource(R.string.login_instruction_step2),
                     style = MaterialTheme.typography.caption2,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 12.dp)
@@ -605,7 +639,7 @@ fun WearLoginScreen() {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     Spacer(Modifier.height(8.dp))
-                    Text(statusMessage ?: "Iniciando servidor...", style = MaterialTheme.typography.caption2)
+                    Text(statusMessage ?: stringResource(R.string.starting_server), style = MaterialTheme.typography.caption2)
                 }
             }
         }
@@ -629,11 +663,33 @@ fun WearLibraryScreen(
     onNavigateToPlaylists: () -> Unit,
     onNavigateToLiked: () -> Unit,
     onNavigateToDownloads: () -> Unit,
-    onNavigateToHistory: () -> Unit
+    onNavigateToHistory: () -> Unit,
+    onNavigateToLogin: () -> Unit
 ) {
+    val context = LocalContext.current
     val columnState = rememberResponsiveColumnState()
     val syncUtils = LocalSyncUtils.current
     
+    val cookie by remember {
+        context.dataStore.data.map { it[InnerTubeCookieKey] }
+    }.collectAsStateWithLifecycle(initialValue = null)
+
+    val syncState by syncUtils.syncState.collectAsStateWithLifecycle()
+    val syncCompletedStr = stringResource(R.string.sync_completed)
+    val syncErrorStr = stringResource(R.string.sync_error)
+
+    LaunchedEffect(syncState.overallStatus) {
+        when (syncState.overallStatus) {
+            com.metrolist.music.utils.SyncStatus.Completed -> {
+                Toast.makeText(context, syncCompletedStr, Toast.LENGTH_SHORT).show()
+            }
+            is com.metrolist.music.utils.SyncStatus.Error -> {
+                Toast.makeText(context, syncErrorStr, Toast.LENGTH_SHORT).show()
+            }
+            else -> {}
+        }
+    }
+
     ScalingLazyColumn(
         columnState = columnState,
         modifier = Modifier.fillMaxSize()
@@ -644,10 +700,18 @@ fun WearLibraryScreen(
             }
         }
         item {
+            val startingSyncStr = stringResource(R.string.starting_sync)
             Chip(
-                onClick = { syncUtils.performFullSync() },
-                label = { Text("Sincronizar Biblioteca") },
-                secondaryLabel = { Text("Traer datos de YouTube") },
+                onClick = { 
+                    if (cookie == null) {
+                        onNavigateToLogin()
+                    } else {
+                        Toast.makeText(context, startingSyncStr, Toast.LENGTH_SHORT).show()
+                        syncUtils.performFullSync()
+                    }
+                },
+                label = { Text(stringResource(R.string.sync_library)) },
+                secondaryLabel = { Text(stringResource(R.string.sync_library_desc)) },
                 icon = { Icon(painterResource(R.drawable.sync), contentDescription = null) },
                 colors = ChipDefaults.primaryChipColors(),
                 modifier = Modifier.fillMaxWidth()
@@ -904,7 +968,7 @@ fun WearVolumeScreen() {
             it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || 
             it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO 
         }
-        bluetoothDevice?.productName?.toString() ?: "Reloj"
+        bluetoothDevice?.productName?.toString() ?: context.getString(R.string.watch)
     }
 
     ScalingLazyColumn(
@@ -913,7 +977,7 @@ fun WearVolumeScreen() {
     ) {
         item {
             ListHeader {
-                Text("Volumen", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                Text(stringResource(R.string.volume), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
             }
         }
         item {
@@ -934,7 +998,7 @@ fun WearVolumeScreen() {
                     colors = ButtonDefaults.secondaryButtonColors(),
                     modifier = Modifier.size(ButtonDefaults.DefaultButtonSize)
                 ) {
-                    Icon(painterResource(R.drawable.volume_down), contentDescription = "Bajar volumen")
+                    Icon(painterResource(R.drawable.volume_down), contentDescription = stringResource(R.string.previous))
                 }
 
                 Text(
@@ -956,7 +1020,7 @@ fun WearVolumeScreen() {
                     colors = ButtonDefaults.secondaryButtonColors(),
                     modifier = Modifier.size(ButtonDefaults.DefaultButtonSize)
                 ) {
-                    Icon(painterResource(R.drawable.volume_up), contentDescription = "Subir volumen")
+                    Icon(painterResource(R.drawable.volume_up), contentDescription = stringResource(R.string.next))
                 }
             }
         }
@@ -979,7 +1043,7 @@ fun WearVolumeScreen() {
                     }
                     currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
                 },
-                label = { Text(if (isMuted) "Activar sonido" else "Silenciar") },
+                label = { Text(if (isMuted) stringResource(R.string.unmute) else stringResource(R.string.mute)) },
                 icon = { 
                     Icon(
                         painterResource(if (isMuted) R.drawable.volume_up else R.drawable.volume_off), 
@@ -1012,7 +1076,7 @@ fun WearVolumeScreen() {
                         }
                     }
                 },
-                label = { Text("Salida de audio") },
+                label = { Text(stringResource(R.string.audio_output)) },
                 secondaryLabel = { Text(outputDeviceName) },
                 icon = { Icon(painterResource(R.drawable.bluetooth), contentDescription = null, tint = MaterialTheme.colors.primary) },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp).padding(top = 4.dp)
@@ -1026,7 +1090,10 @@ fun WearVolumeScreen() {
 @OptIn(ExperimentalHorologistApi::class)
 @Composable
 fun WearSettingsScreen(
-    onNavigateToLogin: () -> Unit = {}
+    onNavigateToLogin: () -> Unit = {},
+    onNavigateToLanguage: () -> Unit = {},
+    onNavigateToContentLanguage: () -> Unit = {},
+    onNavigateToContentCountry: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -1042,6 +1109,11 @@ fun WearSettingsScreen(
     var sleepTimerDuration by rememberPreference(key = SleepTimerDefaultKey, defaultValue = 30f)
     var enableSongCache by rememberPreference(key = EnableSongCacheKey, defaultValue = true)
     var autoDownloadOnLike by rememberPreference(key = AutoDownloadOnLikeKey, defaultValue = false)
+    var historyDuration by rememberPreference(key = HistoryDuration, defaultValue = 30f)
+    var stopMusicOnTaskClear by rememberPreference(key = StopMusicOnTaskClearKey, defaultValue = true)
+    val appLanguage by rememberPreference(key = AppLanguageKey, defaultValue = SYSTEM_DEFAULT)
+    val contentLanguage by rememberPreference(key = ContentLanguageKey, defaultValue = SYSTEM_DEFAULT)
+    val contentCountry by rememberPreference(key = ContentCountryKey, defaultValue = SYSTEM_DEFAULT)
 
     val accountName by remember {
         context.dataStore.data.map { it[AccountNameKey] ?: it[AccountEmailKey] }
@@ -1063,7 +1135,7 @@ fun WearSettingsScreen(
         // Account Section
         item {
             ListHeader {
-                Text("Cuenta", style = MaterialTheme.typography.caption2)
+                Text(stringResource(R.string.account), style = MaterialTheme.typography.caption2)
             }
         }
         item {
@@ -1077,9 +1149,58 @@ fun WearSettingsScreen(
                         onNavigateToLogin()
                     }
                 },
-                label = { Text(accountName ?: "No has iniciado sesión") },
-                secondaryLabel = { Text(if (accountName != null) "Cerrar sesión" else "Toca para entrar") },
+                label = { Text(accountName ?: stringResource(R.string.not_logged_in)) },
+                secondaryLabel = { Text(if (accountName != null) stringResource(R.string.action_logout) else stringResource(R.string.action_login)) },
                 icon = { Icon(painterResource(R.drawable.account), contentDescription = null) },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // Language Section
+        item {
+            ListHeader {
+                Text(stringResource(R.string.app_language), style = MaterialTheme.typography.caption2)
+            }
+        }
+        item {
+            Chip(
+                onClick = onNavigateToLanguage,
+                label = { Text(stringResource(R.string.app_language)) },
+                secondaryLabel = {
+                    Text(
+                        if (appLanguage == SYSTEM_DEFAULT) stringResource(R.string.system_default)
+                        else LanguageCodeToName[appLanguage] ?: appLanguage
+                    )
+                },
+                icon = { Icon(painterResource(R.drawable.language), contentDescription = null) },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        item {
+            Chip(
+                onClick = onNavigateToContentLanguage,
+                label = { Text(stringResource(R.string.content_language)) },
+                secondaryLabel = {
+                    Text(
+                        if (contentLanguage == SYSTEM_DEFAULT) stringResource(R.string.system_default)
+                        else LanguageCodeToName[contentLanguage] ?: contentLanguage
+                    )
+                },
+                icon = { Icon(painterResource(R.drawable.language), contentDescription = null) },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        item {
+            Chip(
+                onClick = onNavigateToContentCountry,
+                label = { Text(stringResource(R.string.content_country)) },
+                secondaryLabel = {
+                    Text(
+                        if (contentCountry == SYSTEM_DEFAULT) stringResource(R.string.system_default)
+                        else CountryCodeToName[contentCountry] ?: contentCountry
+                    )
+                },
+                icon = { Icon(painterResource(R.drawable.language), contentDescription = null) },
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -1087,15 +1208,15 @@ fun WearSettingsScreen(
         // Playback Section
         item {
             ListHeader {
-                Text("Reproducción", style = MaterialTheme.typography.caption2)
+                Text(stringResource(R.string.player), style = MaterialTheme.typography.caption2)
             }
         }
         item {
             ToggleChip(
                 checked = crossfadeEnabled,
                 onCheckedChange = { crossfadeEnabled = it },
-                label = { Text("Crossfade") },
-                secondaryLabel = { Text(if (crossfadeEnabled) "Activo (${crossfadeDuration.toInt()}s)" else "Transición suave") },
+                label = { Text(stringResource(R.string.crossfade)) },
+                secondaryLabel = { Text(if (crossfadeEnabled) stringResource(R.string.active_format, crossfadeDuration.toInt()) else stringResource(R.string.crossfade_desc)) },
                 toggleControl = {
                     Checkbox(checked = crossfadeEnabled)
                 },
@@ -1110,8 +1231,8 @@ fun WearSettingsScreen(
                         val next = crossfadeDuration + 1f
                         crossfadeDuration = if (next > 15f) 1f else next
                     },
-                    label = { Text("Ajustar segundos") },
-                    secondaryLabel = { Text("${crossfadeDuration.toInt()} segundos") },
+                    label = { Text(stringResource(R.string.adjust_duration)) },
+                    secondaryLabel = { Text(pluralStringResource(R.plurals.seconds, crossfadeDuration.toInt(), crossfadeDuration.toInt())) },
                     icon = { Icon(painterResource(R.drawable.more_time), contentDescription = null) },
                     colors = ChipDefaults.secondaryChipColors(),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
@@ -1123,7 +1244,7 @@ fun WearSettingsScreen(
             ToggleChip(
                 checked = audioNormalization,
                 onCheckedChange = { audioNormalization = it },
-                label = { Text("Normalización") },
+                label = { Text(stringResource(R.string.audio_normalization)) },
                 toggleControl = {
                     Checkbox(checked = audioNormalization)
                 },
@@ -1132,9 +1253,20 @@ fun WearSettingsScreen(
         }
         item {
             ToggleChip(
+                checked = stopMusicOnTaskClear,
+                onCheckedChange = { stopMusicOnTaskClear = it },
+                label = { Text(stringResource(R.string.stop_music_on_task_clear)) },
+                toggleControl = {
+                    Checkbox(checked = stopMusicOnTaskClear)
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        item {
+            ToggleChip(
                 checked = skipSilence,
                 onCheckedChange = { skipSilence = it },
-                label = { Text("Saltar silencios") },
+                label = { Text(stringResource(R.string.skip_silence)) },
                 toggleControl = {
                     Checkbox(checked = skipSilence)
                 },
@@ -1144,7 +1276,7 @@ fun WearSettingsScreen(
 
         item {
             ListHeader {
-                Text("Temporizador", style = MaterialTheme.typography.caption2)
+                Text(stringResource(R.string.sleep_timer), style = MaterialTheme.typography.caption2)
             }
         }
         item {
@@ -1153,9 +1285,28 @@ fun WearSettingsScreen(
                     val next = sleepTimerDuration + 5f
                     sleepTimerDuration = if (next > 120f) 5f else next
                 },
-                label = { Text("Duración Sleep") },
-                secondaryLabel = { Text("${sleepTimerDuration.toInt()} minutos") },
+                label = { Text(stringResource(R.string.sleep_timer)) },
+                secondaryLabel = { Text(pluralStringResource(R.plurals.minute, sleepTimerDuration.toInt(), sleepTimerDuration.toInt())) },
                 icon = { Icon(painterResource(R.drawable.timer), contentDescription = null) },
+                colors = ChipDefaults.secondaryChipColors(),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+            )
+        }
+
+        item {
+            ListHeader {
+                Text(stringResource(R.string.history), style = MaterialTheme.typography.caption2)
+            }
+        }
+        item {
+            Chip(
+                onClick = {
+                    val next = historyDuration + 10f
+                    historyDuration = if (next > 120f) 10f else next
+                },
+                label = { Text(stringResource(R.string.history_duration)) },
+                secondaryLabel = { Text(pluralStringResource(R.plurals.seconds, historyDuration.toInt(), historyDuration.toInt())) },
+                icon = { Icon(painterResource(R.drawable.history), contentDescription = null) },
                 colors = ChipDefaults.secondaryChipColors(),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
             )
@@ -1164,7 +1315,7 @@ fun WearSettingsScreen(
         // Content Section
         item {
             ListHeader {
-                Text("Contenido", style = MaterialTheme.typography.caption2)
+                Text(stringResource(R.string.content), style = MaterialTheme.typography.caption2)
             }
         }
         item {
@@ -1193,15 +1344,15 @@ fun WearSettingsScreen(
         // Storage Section
         item {
             ListHeader {
-                Text("Almacenamiento", style = MaterialTheme.typography.caption2)
+                Text(stringResource(R.string.storage), style = MaterialTheme.typography.caption2)
             }
         }
         item {
             ToggleChip(
                 checked = enableSongCache,
                 onCheckedChange = { enableSongCache = it },
-                label = { Text("Guardar en caché") },
-                secondaryLabel = { Text("Ahorra datos al repetir") },
+                label = { Text(stringResource(R.string.enable_song_cache)) },
+                secondaryLabel = { Text(stringResource(R.string.enable_song_cache_desc)) },
                 toggleControl = {
                     Checkbox(checked = enableSongCache)
                 },
@@ -1212,8 +1363,8 @@ fun WearSettingsScreen(
             ToggleChip(
                 checked = autoDownloadOnLike,
                 onCheckedChange = { autoDownloadOnLike = it },
-                label = { Text("Auto-descargar") },
-                secondaryLabel = { Text("Al dar Me gusta") },
+                label = { Text(stringResource(R.string.auto_download_on_like)) },
+                secondaryLabel = { Text(stringResource(R.string.auto_download_on_like_desc)) },
                 toggleControl = {
                     Checkbox(checked = autoDownloadOnLike)
                 },
@@ -1222,6 +1373,77 @@ fun WearSettingsScreen(
         }
         
         item { Spacer(Modifier.height(40.dp)) }
+    }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+}
+
+@OptIn(ExperimentalHorologistApi::class)
+@Composable
+fun WearLanguageScreen(
+    title: String,
+    preferenceKey: androidx.datastore.preferences.core.Preferences.Key<String>,
+    options: Map<String, String>,
+    onSelected: () -> Unit = {}
+) {
+    val columnState = rememberResponsiveColumnState()
+    val focusRequester = remember { FocusRequester() }
+
+    var selectedValue by rememberPreference(key = preferenceKey, defaultValue = SYSTEM_DEFAULT)
+
+    ScalingLazyColumn(
+        columnState = columnState,
+        modifier = Modifier
+            .fillMaxSize()
+            .focusRequester(focusRequester)
+            .focusable()
+    ) {
+        item {
+            ListHeader {
+                Text(title)
+            }
+        }
+
+        item {
+            ToggleChip(
+                checked = selectedValue == SYSTEM_DEFAULT,
+                onCheckedChange = { 
+                    if (it) {
+                        selectedValue = SYSTEM_DEFAULT
+                        onSelected()
+                    }
+                },
+                label = { Text(stringResource(R.string.system_default)) },
+                toggleControl = {
+                    RadioButton(selected = selectedValue == SYSTEM_DEFAULT)
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        val sortedOptions = options.entries.sortedBy { it.value }
+        items(sortedOptions) { (code, name) ->
+            ToggleChip(
+                checked = selectedValue == code,
+                onCheckedChange = { 
+                    if (it) {
+                        selectedValue = code
+                        onSelected()
+                    }
+                },
+                label = { Text(name) },
+                toggleControl = {
+                    RadioButton(selected = selectedValue == code)
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(20.dp))
+        }
     }
 
     LaunchedEffect(Unit) {
