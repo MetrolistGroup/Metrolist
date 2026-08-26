@@ -406,6 +406,7 @@ internal suspend fun DatabaseDao.playlistDuplicatesBatched(
         playlistDuplicates(playlistId, songIds)
     } else {
         songIds
+            .distinct()
             .chunked(MAX_PLAYLIST_DUPLICATES_BATCH_SIZE)
             .flatMap { playlistDuplicates(playlistId, it) }
     }
