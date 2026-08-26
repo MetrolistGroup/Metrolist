@@ -44,6 +44,7 @@ import com.metrolist.music.constants.AddToPlaylistSortDescendingKey
 import com.metrolist.music.constants.AddToPlaylistSortTypeKey
 import com.metrolist.music.constants.ListThumbnailSize
 import com.metrolist.music.constants.PlaylistSortType
+import com.metrolist.music.db.DatabaseDao
 import com.metrolist.music.db.entities.Playlist
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.models.ItemsPage
@@ -150,7 +151,7 @@ fun AddToPlaylistDialogOnline(
                 val ids = songs.map { it.id }
                 playlistsContainingSong = playlists
                     .filter { playlist ->
-                        database.playlistDuplicates(playlist.id, ids).isNotEmpty()
+                        database.playlistDuplicatesBatched(playlist.id, ids).isNotEmpty()
                     }
                     .map { it.id }
                     .toSet()
