@@ -861,4 +861,9 @@
     <string name="youtube_channels_failed">Nu s-au putut obține canalele de YouTube pentru acest cont. Te rugăm să încerci din nou.</string>
     <string name="authentication_data_extraction_failed">Nu s-a putut citi sesiunea de YouTube Music. Te rugăm să încerci din nou.</string>
     <string name="login_failed_with_error">Autentificare eșuată: %1$s</string>
+    <string name="add_to_playlist_position">Poziția adăugării în playlist</string>
+    <string name="playlist_position_beginning">Începutul playlistului</string>
+    <string name="playlist_position_beginning_desc">Melodiile noi adăugate vor apărea înainte de melodiile existente</string>
+    <string name="playlist_position_end">Finalul playlistului</string>
+    <string name="playlist_position_end_desc">Melodiile noi adăugate vor apărea după melodiile existente</string>
 </resources>
