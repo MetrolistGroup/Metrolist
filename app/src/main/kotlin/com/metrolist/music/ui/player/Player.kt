@@ -141,6 +141,7 @@ import com.metrolist.music.R
 import com.metrolist.music.constants.CropAlbumArtKey
 import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.HidePlayerThumbnailKey
+import com.metrolist.music.constants.ShowTimedCommentsKey
 import com.metrolist.music.constants.HideStatusBarOnFullscreenKey
 import com.metrolist.music.constants.KeepScreenOn
 import com.metrolist.music.constants.PlayerBackgroundStyle
@@ -173,6 +174,8 @@ import com.metrolist.music.ui.component.ResizableIconButton
 import com.metrolist.music.ui.component.SquigglySlider
 import com.metrolist.music.ui.component.WavySlider
 import com.metrolist.music.ui.component.rememberBottomSheetState
+import com.metrolist.music.features.comments.TimedCommentsRepository
+import com.metrolist.music.features.comments.ui.TimedCommentsStrip
 import com.metrolist.music.ui.menu.PlayerMenu
 import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.theme.PlayerColorExtractor
@@ -222,6 +225,7 @@ fun BottomSheetPlayer(
             defaultValue = true,
         )
     val (hidePlayerThumbnail, onHidePlayerThumbnailChange) = rememberPreference(HidePlayerThumbnailKey, false)
+    val showTimedComments by rememberPreference(ShowTimedCommentsKey, defaultValue = false)
     val (hideStatusBarOnFullscreen) = rememberPreference(HideStatusBarOnFullscreenKey, false)
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
 
@@ -346,6 +350,22 @@ fun BottomSheetPlayer(
     val castPosition by castHandler?.castPosition?.collectAsStateWithLifecycle() ?: remember { mutableLongStateOf(0L) }
     val castDuration by castHandler?.castDuration?.collectAsStateWithLifecycle() ?: remember { mutableLongStateOf(0L) }
     val castIsPlaying by castHandler?.castIsPlaying?.collectAsState() ?: remember { mutableStateOf(false) }
+
+    LaunchedEffect(mediaMetadata?.id) {
+        TimedCommentsRepository.clearAll()
+    }
+
+    LaunchedEffect(playbackState) {
+        if (playbackState == STATE_ENDED) {
+            TimedCommentsRepository.clearAll()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            TimedCommentsRepository.clearAll()
+        }
+    }
 
     val focusRequester = remember { FocusRequester() }
 
@@ -1887,6 +1907,12 @@ fun BottomSheetPlayer(
                             }
                         }
                     }
+                    TimedCommentsStrip(
+                        videoId = mediaMetadata?.id,
+                        positionMs = effectivePosition,
+                        enabled = state.isExpanded && showTimedComments && playbackState != STATE_ENDED,
+                        textColor = TextBackgroundColor,
+                    )
 
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1949,6 +1975,12 @@ fun BottomSheetPlayer(
                             }
                         }
                     }
+                    TimedCommentsStrip(
+                        videoId = mediaMetadata?.id,
+                        positionMs = effectivePosition,
+                        enabled = state.isExpanded && showTimedComments && playbackState != STATE_ENDED,
+                        textColor = TextBackgroundColor,
+                    )
 
                     mediaMetadata?.let {
                         controlsContent(it)
