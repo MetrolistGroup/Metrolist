@@ -22,6 +22,7 @@ import com.metrolist.innertube.models.SectionListRenderer
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.TasteArtist
 import com.metrolist.innertube.models.TasteProfile
+import com.metrolist.innertube.models.TimedComment
 import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_ATV
 import com.metrolist.innertube.models.YTItem
@@ -80,6 +81,11 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import timber.log.Timber
 import java.net.Proxy
 import kotlin.random.Random
@@ -89,6 +95,8 @@ import kotlin.random.Random
  * Modified from [ViMusic](https://github.com/vfsfitvnm/ViMusic)
  */
 object YouTube {
+    private const val MAX_COMMENT_PAGES = 100
+
     private val innerTube = InnerTube()
 
     var locale: YouTubeLocale
@@ -3346,6 +3354,275 @@ object YouTube {
                 .parseToJsonElement(innerTube.accountsList().bodyAsText())
                 .extractYouTubeAccounts()
         }
+
+    data class FeaturedCommentsPage(
+        val comments: List<TimedComment>,
+        val continuation: String?,
+        val client: YouTubeClient,
+    )
+
+    /**
+     * Loads one page of highlighted/top user comments. The first call discovers the regular
+     * comments continuation, and later calls use the returned token directly so the caller can
+     * progressively fetch comments without waiting for the complete feed.
+     */
+    suspend fun featuredCommentsPage(
+        videoId: String,
+        continuation: String? = null,
+        client: YouTubeClient? = null,
+    ): Result<FeaturedCommentsPage> = runCatching {
+        if (continuation != null) {
+            var lastError: Throwable? = null
+            val clients = if (client != null) listOf(client) else listOf(WEB, WEB_REMIX)
+            for (activeClient in clients) {
+                try {
+                    val response =
+                        Json.parseToJsonElement(
+                            innerTube
+                                .next(activeClient, null, null, null, null, null, continuation)
+                                .bodyAsText(),
+                        ).asObject()
+                    return@runCatching FeaturedCommentsPage(
+                        comments = response.parseFeaturedComments(),
+                        continuation = response.findContinuationToken(),
+                        client = activeClient,
+                    )
+                } catch (error: Throwable) {
+                    if (error is kotlin.coroutines.cancellation.CancellationException) throw error
+                    lastError = error
+                }
+            }
+            throw (lastError ?: IllegalStateException("No comments continuation response"))
+        }
+
+        val clients = listOf(WEB, WEB_REMIX)
+        var fallbackPage: FeaturedCommentsPage? = null
+        var lastError: Throwable? = null
+        for (activeClient in clients) {
+            try {
+                val response =
+                    Json.parseToJsonElement(
+                        innerTube
+                            .next(activeClient, videoId, null, null, null, null, null)
+                            .bodyAsText(),
+                    ).asObject()
+                val page = FeaturedCommentsPage(
+                    comments = response.parseFeaturedComments(),
+                    continuation =
+                        response.findFeaturedCommentContinuationToken()
+                            ?: response.findCommentContinuationToken(),
+                    client = activeClient,
+                )
+                if (page.continuation != null || page.comments.isNotEmpty() || activeClient == WEB_REMIX) {
+                    return@runCatching page
+                }
+                fallbackPage = page
+            } catch (error: Throwable) {
+                if (error is kotlin.coroutines.cancellation.CancellationException) throw error
+                lastError = error
+            }
+        }
+        fallbackPage ?: throw (lastError ?: IllegalStateException("No comments response"))
+    }
+
+    private fun JsonElement.asObject(): JsonObject = this as? JsonObject ?: error("Expected a JSON object")
+
+    private fun JsonObject.objectValue(key: String): JsonObject? = this[key] as? JsonObject
+
+    private fun JsonObject.arrayValue(key: String): JsonArray? = this[key] as? JsonArray
+
+    private fun JsonObject.stringValue(key: String): String? =
+        (this[key] as? JsonPrimitive)?.contentOrNull
+
+    private fun JsonElement.findObjectValues(key: String): List<JsonObject> {
+        val matches = mutableListOf<JsonObject>()
+
+        fun visit(element: JsonElement) {
+            when (element) {
+                is JsonObject -> {
+                    (element[key] as? JsonObject)?.let(matches::add)
+                    element.values.forEach(::visit)
+                }
+                is JsonArray -> element.forEach(::visit)
+                else -> Unit
+            }
+        }
+
+        visit(this)
+        return matches
+    }
+
+    private fun JsonElement.findContinuationTokens(): List<String> {
+        val tokens = mutableListOf<String>()
+
+        fun visit(element: JsonElement) {
+            when (element) {
+                is JsonObject -> {
+                    element.continuationToken()?.let(tokens::add)
+                    element.values.forEach(::visit)
+                }
+                is JsonArray -> element.forEach(::visit)
+                else -> Unit
+            }
+        }
+
+        visit(this)
+        return tokens.distinct()
+    }
+
+    private fun JsonObject.runsText(key: String): String =
+        objectValue(key)
+            ?.arrayValue("runs")
+            ?.mapNotNull { (it as? JsonObject)?.stringValue("text") }
+            ?.joinToString("")
+            .orEmpty()
+
+    private fun JsonObject.textValue(key: String): String? {
+        val value = this[key] ?: return null
+        return (value as? JsonPrimitive)?.contentOrNull
+            ?: (value as? JsonObject)?.stringValue("simpleText")
+            ?: (value as? JsonObject)
+                ?.arrayValue("runs")
+                ?.mapNotNull { (it as? JsonObject)?.stringValue("text") }
+                ?.joinToString("")
+                ?.takeIf { it.isNotBlank() }
+    }
+
+    private fun JsonObject.continuationToken(): String? =
+        objectValue("continuationEndpoint")
+            ?.objectValue("continuationCommand")
+            ?.stringValue("token")
+
+    private fun JsonObject.findFeaturedCommentContinuationToken(): String? {
+        val featuredTitles =
+            listOf(
+                "top comments",
+                "featured comments",
+                "popular comments",
+                "bình luận nổi bật",
+                "bình luận hàng đầu",
+                "bình luận phổ biến",
+            )
+        return findObjectValues("sortFilterSubMenuRenderer")
+            .asSequence()
+            .flatMap { it.arrayValue("subMenuItems").orEmpty().asSequence() }
+            .mapNotNull { item ->
+                val itemObject = item as? JsonObject ?: return@mapNotNull null
+                val title = itemObject.textValue("title")?.lowercase() ?: return@mapNotNull null
+                if (featuredTitles.none(title::contains)) return@mapNotNull null
+                itemObject
+                    .objectValue("serviceEndpoint")
+                    ?.objectValue("continuationCommand")
+                    ?.stringValue("token")
+                    ?: itemObject
+                        .objectValue("continuationEndpoint")
+                        ?.objectValue("continuationCommand")
+                        ?.stringValue("token")
+            }
+            .firstOrNull()
+    }
+
+    private fun JsonObject.findCommentContinuationToken(): String? {
+        val standardRoot =
+            objectValue("contents")
+                ?.objectValue("twoColumnWatchNextResults")
+                ?.objectValue("results")
+                ?.objectValue("results")
+
+        // Match ViviMusic's proven WEB comments flow first. The direct continuation is the
+        // comment-item-section token and avoids accidentally selecting a related-video token.
+        val standardContent =
+            listOfNotNull(
+                standardRoot?.arrayValue("contents"),
+                standardRoot?.arrayValue("content"),
+            ).asSequence()
+                .flatMap { it.asSequence() }
+                .mapNotNull { it as? JsonObject }
+
+        standardContent
+            .mapNotNull { it.objectValue("continuationItemRenderer")?.continuationToken() }
+            .firstOrNull()
+            ?.let { return it }
+
+        standardContent
+            .mapNotNull { it.objectValue("itemSectionRenderer") }
+            .flatMap { section -> section.arrayValue("contents").orEmpty().asSequence() }
+            .mapNotNull { it as? JsonObject }
+            .mapNotNull { it.objectValue("continuationItemRenderer")?.continuationToken() }
+            .firstOrNull()
+            ?.let { return it }
+
+        // Some video responses wrap the comments section in a named renderer instead of the
+        // usual itemSectionRenderer. Search only those comment-related branches before falling
+        // back to the broader response scan.
+        standardRoot
+            ?.findObjectValues("commentItemSectionRenderer")
+            ?.asSequence()
+            ?.flatMap { it.findContinuationTokens().asSequence() }
+            ?.firstOrNull()
+            ?.let { return it }
+
+        val engagementRoot =
+            arrayValue("engagementPanels")
+                ?.asSequence()
+                ?.mapNotNull { it as? JsonObject }
+                ?.mapNotNull { it.objectValue("engagementPanelSectionListRenderer") }
+                ?.firstOrNull { it.stringValue("panelIdentifier") == "engagement-panel-comments-section" }
+        engagementRoot?.findContinuationTokens()?.firstOrNull()?.let { return it }
+
+        // YouTube periodically moves the comments section between renderer shapes. Keep a
+        // recursive fallback so a layout change does not make an otherwise valid video empty.
+        return findContinuationTokens().firstOrNull()
+    }
+
+    private fun JsonObject.findContinuationToken(): String? {
+        val endpointToken =
+            arrayValue("onResponseReceivedEndpoints")
+                ?.flatMap { endpoint ->
+                    val endpointObject = endpoint as? JsonObject ?: return@flatMap emptyList()
+                    listOfNotNull(
+                        endpointObject
+                            .objectValue("reloadContinuationItemsCommand")
+                            ?.arrayValue("continuationItems"),
+                        endpointObject
+                            .objectValue("appendContinuationItemsAction")
+                            ?.arrayValue("continuationItems"),
+                    ).flatten()
+                }
+                ?.firstNotNullOfOrNull { item ->
+                    (item as? JsonObject)
+                        ?.objectValue("continuationItemRenderer")
+                        ?.continuationToken()
+                }
+        return endpointToken ?: findContinuationTokens().firstOrNull()
+    }
+
+    private fun JsonObject.parseFeaturedComments(): List<TimedComment> {
+        val legacy = findObjectValues("commentRenderer").mapNotNull { renderer ->
+            val commentId = renderer.stringValue("commentId") ?: return@mapNotNull null
+            val text = renderer.runsText("contentText").trim()
+            if (text.isBlank()) return@mapNotNull null
+            val avatarUrl =
+                renderer
+                    .objectValue("authorThumbnail")
+                    ?.arrayValue("thumbnails")
+                    ?.lastOrNull()
+                    ?.let { (it as? JsonObject)?.stringValue("url") }
+            TimedComment(commentId, text = text, avatarUrl = avatarUrl)
+        }
+
+        val framework = findObjectValues("commentEntityPayload").mapNotNull { payload ->
+            val properties = payload.objectValue("properties") ?: return@mapNotNull null
+            val commentId = properties.stringValue("commentId") ?: return@mapNotNull null
+            val text = properties.objectValue("content")?.stringValue("content").orEmpty().trim()
+            if (text.isBlank()) return@mapNotNull null
+            val avatarUrl = payload.objectValue("author")?.stringValue("avatarThumbnailUrl")
+            TimedComment(commentId, text = text, avatarUrl = avatarUrl)
+        }
+
+        return (legacy + framework).distinctBy { it.id }
+    }
+
 
     suspend fun feedback(tokens: List<String>): Result<Boolean> =
         runCatching {
