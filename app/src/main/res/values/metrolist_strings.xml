@@ -141,6 +141,13 @@
     <string name="enable_lyricsplus_desc">Synchronized lyrics from multiple sources</string>
     <string name="lyrics_provider_selection">Provider selection</string>
     <string name="lyrics_provider_selection_desc">Choose which lyrics providers are enabled</string>
+    <string name="canvas_artwork">Canvas artwork</string>
+    <string name="enable_canvas_artwork">Enable Canvas artwork</string>
+    <string name="enable_canvas_artwork_desc">Show animated artwork on the current song in the Player when available</string>
+    <string name="canvas_source">Canvas source</string>
+    <string name="canvas_source_auto">Automatic (Apple Music, BetterLyrics)</string>
+    <string name="canvas_source_apple_music">Apple Music</string>
+    <string name="canvas_source_better_lyrics">BetterLyrics</string>
     <string name="auto_scroll">Re-sync</string>
     <string name="slim">Slim</string>
     <string name="slim_navbar">Slim bottom navigation bar</string>
