@@ -143,12 +143,9 @@ constructor(
                 .first()
             val enabledProviders = allProviders.filter { it.isEnabled(context) }
 
-            val otherProviders = enabledProviders.filter { it.name != "LyricsPlus" }
-            val lyricsPlusProvider = enabledProviders.find { it.name == "LyricsPlus" }
-
             val callbackMutex = Any()
 
-            val otherJobs = otherProviders.map { provider ->
+            val providerJobs = enabledProviders.map { provider ->
                 launch {
                     try {
                         provider.getAllLyrics(context, mediaId, cleanedTitle, songArtists, duration, album) { lyrics ->
@@ -166,27 +163,7 @@ constructor(
                     }
                 }
             }
-            otherJobs.forEach { it.join() }
-
-            val otherLyricsCount = allResult.count { it.providerName != "LyricsPlus" }
-            if (lyricsPlusProvider != null && otherLyricsCount <= 2) {
-                launch {
-                    try {
-                        lyricsPlusProvider.getAllLyrics(context, mediaId, cleanedTitle, songArtists, duration, album) { lyrics ->
-                            val filteredLyrics = LyricsUtils.filterLyricsCreditLines(lyrics)
-                            val result = LyricsResult(lyricsPlusProvider.name, filteredLyrics)
-                            synchronized(callbackMutex) {
-                                allResult += result
-                                callback(result)
-                            }
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        reportException(e)
-                    }
-                }.join()
-            }
+            providerJobs.forEach { it.join() }
 
             cache.put(cacheKey, allResult)
         }
