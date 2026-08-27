@@ -59,6 +59,9 @@ import com.metrolist.music.constants.AddToPlaylistPosition
 import com.metrolist.music.constants.AddToPlaylistPositionKey
 import com.metrolist.music.constants.AppLanguageKey
 import com.metrolist.music.constants.ContentCountryKey
+import com.metrolist.music.constants.CanvasSource
+import com.metrolist.music.constants.CanvasSourceKey
+import com.metrolist.music.constants.CanvasThumbnailAnimationKey
 import com.metrolist.music.constants.ContentLanguageKey
 import com.metrolist.music.constants.CountryCodeToName
 import com.metrolist.music.constants.EnableBetterLyricsKey
@@ -126,6 +129,8 @@ fun ContentSettings(
     val (enableBetterLyrics, onEnableBetterLyricsChange) = rememberPreference(key = EnableBetterLyricsKey, defaultValue = true)
     val (enablePaxsenix, onEnablePaxsenixChange) = rememberPreference(key = EnablePaxsenixKey, defaultValue = true)
     val (enableLyricsPlus, onEnableLyricsPlusChange) = rememberPreference(key = EnableLyricsPlus, defaultValue = true)
+    val (enableCanvas, onEnableCanvasChange) = rememberPreference(key = CanvasThumbnailAnimationKey, defaultValue = true)
+    val (canvasSource, onCanvasSourceChange) = rememberEnumPreference(key = CanvasSourceKey, defaultValue = CanvasSource.AUTO)
     val (lyricsProviderOrder, onLyricsProviderOrderChange) = rememberPreference(
         key = LyricsProviderOrderKey,
         defaultValue = LyricsProviderRegistry.serializeProviderOrder(LyricsProviderRegistry.getDefaultProviderOrder())
@@ -336,6 +341,28 @@ fun ContentSettings(
             valueText = {
                 CountryCodeToName.getOrElse(it) { stringResource(R.string.system_default) }
             }
+        )
+    }
+
+    var showCanvasSourceDialog by rememberSaveable { mutableStateOf(false) }
+
+    if (showCanvasSourceDialog) {
+        EnumDialog(
+            onDismiss = { showCanvasSourceDialog = false },
+            onSelect = {
+                onCanvasSourceChange(it)
+                showCanvasSourceDialog = false
+            },
+            title = stringResource(R.string.canvas_source),
+            current = canvasSource,
+            values = CanvasSource.entries,
+            valueText = {
+                when (it) {
+                    CanvasSource.AUTO -> stringResource(R.string.canvas_source_auto)
+                    CanvasSource.APPLE_MUSIC -> stringResource(R.string.canvas_source_apple_music)
+                    CanvasSource.BETTER_LYRICS -> stringResource(R.string.canvas_source_better_lyrics)
+                }
+            },
         )
     }
 
@@ -979,6 +1006,45 @@ fun ContentSettings(
                     onClick = { navController.navigate("settings/content/romanization") }
                 )
             )
+        )
+
+        Spacer(modifier = Modifier.height(27.dp))
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.canvas_artwork),
+            items = listOf(
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.slow_motion_video),
+                    title = { Text(stringResource(R.string.enable_canvas_artwork)) },
+                    description = { Text(stringResource(R.string.enable_canvas_artwork_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = enableCanvas,
+                            onCheckedChange = onEnableCanvasChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(id = if (enableCanvas) R.drawable.check else R.drawable.close),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize),
+                                )
+                            },
+                        )
+                    },
+                    onClick = { onEnableCanvasChange(!enableCanvas) },
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.settings),
+                    title = { Text(stringResource(R.string.canvas_source)) },
+                    description = {
+                        Text(when (canvasSource) {
+                            CanvasSource.AUTO -> stringResource(R.string.canvas_source_auto)
+                            CanvasSource.APPLE_MUSIC -> stringResource(R.string.canvas_source_apple_music)
+                            CanvasSource.BETTER_LYRICS -> stringResource(R.string.canvas_source_better_lyrics)
+                        })
+                    },
+                    onClick = { showCanvasSourceDialog = true },
+                ),
+            ),
         )
 
         Spacer(modifier = Modifier.height(27.dp))
