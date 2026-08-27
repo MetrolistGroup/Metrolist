@@ -65,6 +65,8 @@ import com.metrolist.music.constants.EnableBetterLyricsKey
 import com.metrolist.music.constants.EnableKugouKey
 import com.metrolist.music.constants.EnableLrcLibKey
 import com.metrolist.music.constants.EnablePaxsenixKey
+import com.metrolist.music.constants.EnableMusixmatchKey
+import com.metrolist.music.constants.EnableSimpMusicKey
 import com.metrolist.music.constants.EnableLyricsPlus
 import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
@@ -125,6 +127,8 @@ fun ContentSettings(
     val (enableLrclib, onEnableLrclibChange) = rememberPreference(key = EnableLrcLibKey, defaultValue = true)
     val (enableBetterLyrics, onEnableBetterLyricsChange) = rememberPreference(key = EnableBetterLyricsKey, defaultValue = true)
     val (enablePaxsenix, onEnablePaxsenixChange) = rememberPreference(key = EnablePaxsenixKey, defaultValue = true)
+    val (enableMusixmatch, onEnableMusixmatchChange) = rememberPreference(key = EnableMusixmatchKey, defaultValue = true)
+    val (enableSimpMusic, onEnableSimpMusicChange) = rememberPreference(key = EnableSimpMusicKey, defaultValue = true)
     val (enableLyricsPlus, onEnableLyricsPlusChange) = rememberPreference(key = EnableLyricsPlus, defaultValue = true)
     val (lyricsProviderOrder, onLyricsProviderOrderChange) = rememberPreference(
         key = LyricsProviderOrderKey,
@@ -169,6 +173,8 @@ fun ContentSettings(
         mapOf(
             "BetterLyrics" to "Better Lyrics",
             "Paxsenix" to "Paxsenix",
+            "Musixmatch" to "Musixmatch",
+            "SimpMusic" to "SimpMusic",
             "LrcLib" to "LrcLib",
             "KuGou" to "KuGou",
             "LyricsPlus" to "LyricsPlus",
@@ -490,6 +496,18 @@ fun ContentSettings(
                             }
                         )
                     }
+                    ProviderToggleRow(
+                        title = stringResource(R.string.enable_musixmatch),
+                        description = stringResource(R.string.enable_musixmatch_desc),
+                        checked = enableMusixmatch,
+                        onCheckedChange = onEnableMusixmatchChange,
+                    )
+                    ProviderToggleRow(
+                        title = stringResource(R.string.enable_simpmusic),
+                        description = stringResource(R.string.enable_simpmusic_desc),
+                        checked = enableSimpMusic,
+                        onCheckedChange = onEnableSimpMusicChange,
+                    )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -643,12 +661,14 @@ fun ContentSettings(
             "KuGou".takeIf { enableKugou },
             "BetterLyrics".takeIf { enableBetterLyrics },
             "Paxsenix".takeIf { enablePaxsenix },
+            "Musixmatch".takeIf { enableMusixmatch },
+            "SimpMusic".takeIf { enableSimpMusic },
             "LyricsPlus".takeIf { enableLyricsPlus },
         ).filterNotNull().toSet()
         val lyricsIcon = painterResource(R.drawable.lyrics)
         val draggableItems = remember { mutableStateListOf<DraggableLyricsProviderItem>() }
 
-        LaunchedEffect(normalizedOrder, enableLrclib, enableKugou, enableBetterLyrics, enablePaxsenix, enableLyricsPlus) {
+        LaunchedEffect(normalizedOrder, enableLrclib, enableKugou, enableBetterLyrics, enablePaxsenix, enableMusixmatch, enableSimpMusic, enableLyricsPlus) {
             val orderedEnabledProviders = normalizedOrder.filter { it in enabledProviders }
             draggableItems.clear()
             draggableItems.addAll(
@@ -1094,4 +1114,39 @@ fun ContentSettings(
             }
         }
     )
+}
+
+
+@Composable
+private fun ProviderToggleRow(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title)
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            thumbContent = {
+                Icon(
+                    painter = painterResource(id = if (checked) R.drawable.check else R.drawable.close),
+                    contentDescription = null,
+                    modifier = Modifier.size(SwitchDefaults.IconSize),
+                )
+            },
+        )
+    }
 }
