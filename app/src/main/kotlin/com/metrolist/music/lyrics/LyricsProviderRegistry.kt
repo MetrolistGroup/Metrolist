@@ -5,8 +5,14 @@
 
 package com.metrolist.music.lyrics
 
+import com.metrolist.music.features.lyrics.LyricsPlusProvider
+import com.metrolist.music.features.lyrics.MusixmatchLyricsProvider
+import com.metrolist.music.features.lyrics.SimpMusicLyricsProvider
+
 object LyricsProviderRegistry {
     private val providerMap = mapOf(
+        "Musixmatch" to MusixmatchLyricsProvider,
+        "SimpMusic" to SimpMusicLyricsProvider,
         "BetterLyrics" to BetterLyricsProvider,
         "Paxsenix" to PaxsenixLyricsProvider,
         "LrcLib" to LrcLibLyricsProvider,
@@ -27,7 +33,8 @@ object LyricsProviderRegistry {
         if (orderString.isBlank()) {
             return getDefaultProviderOrder()
         }
-        return orderString.split(",").map { it.trim() }.filter { it in providerNames }
+        val stored = orderString.split(",").map { it.trim() }.filter { it in providerNames }
+        return stored + getDefaultProviderOrder().filter { it !in stored }
     }
 
     fun serializeProviderOrder(providers: List<String>): String {
@@ -35,6 +42,8 @@ object LyricsProviderRegistry {
     }
 
     fun getDefaultProviderOrder(): List<String> = listOf(
+        "Musixmatch",
+        "SimpMusic",
         "BetterLyrics",
         "LrcLib",
         "KuGou",
