@@ -16,7 +16,8 @@ class VolumeNormalizationAudioProcessor : AudioProcessor {
     private var channelCount = 0
     private var encoding = C.ENCODING_INVALID
     private var bytesPerSample = 0
-    private var isActive = false
+    private var bytesPerFrame = 0
+    private var active = false
 
     @Volatile
     var enabled = false
@@ -38,7 +39,8 @@ class VolumeNormalizationAudioProcessor : AudioProcessor {
 
     companion object {
         private const val TAG = "VolumeNormalizationProcessor"
-        private val EMPTY_BUFFER: ByteBuffer = ByteBuffer.allocateDirect(0).order(ByteOrder.nativeOrder())
+        private val EMPTY_BUFFER: ByteBuffer =
+            ByteBuffer.allocateDirect(0).order(ByteOrder.nativeOrder())
     }
 
     @Synchronized
@@ -63,56 +65,64 @@ class VolumeNormalizationAudioProcessor : AudioProcessor {
             else -> throw AudioProcessor.UnhandledAudioFormatException(inputAudioFormat)
         }
 
-        Timber.tag(TAG).d("Configured: sampleRate=$sampleRate, channels=$channelCount, encoding=$encoding")
+        bytesPerFrame = bytesPerSample * channelCount
+        active = true
 
-        isActive = true
+        Timber.tag(TAG).d(
+            "Configured: sampleRate=$sampleRate, channels=$channelCount, encoding=$encoding"
+        )
+
         return AudioProcessor.AudioFormat(sampleRate, channelCount, encoding)
     }
 
-    override fun isActive(): Boolean = isActive
+    override fun isActive(): Boolean = active
 
     override fun queueInput(inputBuffer: ByteBuffer) {
         val gain = currentGain
         val applyGain = enabled && gain.targetGainMb != 0
 
         val inputSize = inputBuffer.remaining()
-        if (inputSize == 0) return
+        if (inputSize == 0) {
+            outputBuffer = EMPTY_BUFFER
+            return
+        }
 
-        val sampleCount = inputSize / bytesPerSample
-        val out = replaceOutputBuffer(sampleCount * bytesPerSample)
+        val outputSize = inputSize
+        val out = replaceOutputBuffer(outputSize)
 
         inputBuffer.order(ByteOrder.LITTLE_ENDIAN)
         out.order(ByteOrder.LITTLE_ENDIAN)
 
+        val frameCount = inputSize / bytesPerFrame
+
         when (encoding) {
             C.ENCODING_PCM_16BIT -> {
-                repeat(sampleCount) {
-                    val sample = inputBuffer.getShort()
+                repeat(frameCount * channelCount) {
+                    val sample = inputBuffer.getShort().toInt()
                     val processed = if (applyGain) {
                         (sample * gain.linearGain)
                             .coerceIn(-32768.0, 32767.0)
                             .toInt()
-                            .toShort()
                     } else {
                         sample
                     }
-                    out.putShort(processed)
+                    out.putShort(processed.toShort())
                 }
             }
 
             C.ENCODING_PCM_24BIT -> {
-                repeat(sampleCount) {
+                repeat(frameCount * channelCount) {
                     val b0 = inputBuffer.get().toInt() and 0xFF
                     val b1 = inputBuffer.get().toInt() and 0xFF
                     val b2 = inputBuffer.get().toInt()
                     val sample = (b2 shl 16) or (b1 shl 8) or b0
-
+                    val signed = (sample shl 8) shr 8
                     val processed = if (applyGain) {
-                        (sample * gain.linearGain)
+                        (signed * gain.linearGain)
                             .coerceIn(-8388608.0, 8388607.0)
                             .toInt()
                     } else {
-                        sample
+                        signed
                     }
                     out.put((processed and 0xFF).toByte())
                     out.put(((processed shr 8) and 0xFF).toByte())
@@ -121,7 +131,7 @@ class VolumeNormalizationAudioProcessor : AudioProcessor {
             }
 
             C.ENCODING_PCM_32BIT -> {
-                repeat(sampleCount) {
+                repeat(frameCount * channelCount) {
                     val sample = inputBuffer.getInt()
                     val processed = if (applyGain) {
                         (sample * gain.linearGain)
@@ -136,7 +146,7 @@ class VolumeNormalizationAudioProcessor : AudioProcessor {
             }
 
             C.ENCODING_PCM_FLOAT -> {
-                repeat(sampleCount) {
+                repeat(frameCount * channelCount) {
                     val sample = inputBuffer.getFloat()
                     val processed = if (applyGain) {
                         (sample * gain.linearGain.toFloat()).coerceIn(-1.0f, 1.0f)
@@ -146,9 +156,15 @@ class VolumeNormalizationAudioProcessor : AudioProcessor {
                     out.putFloat(processed)
                 }
             }
+
+            else -> throw AudioProcessor.UnhandledAudioFormatException(
+                AudioProcessor.AudioFormat(sampleRate, channelCount, encoding)
+            )
         }
 
+        inputBuffer.position(inputBuffer.limit())
         out.flip()
+        outputBuffer = out
     }
 
     override fun queueEndOfStream() {
@@ -161,9 +177,7 @@ class VolumeNormalizationAudioProcessor : AudioProcessor {
         return buffer
     }
 
-    override fun isEnded(): Boolean {
-        return inputEnded && outputBuffer === EMPTY_BUFFER
-    }
+    override fun isEnded(): Boolean = inputEnded && outputBuffer === EMPTY_BUFFER
 
     @Deprecated("Deprecated in AudioProcessor")
     override fun flush() {
@@ -179,8 +193,8 @@ class VolumeNormalizationAudioProcessor : AudioProcessor {
         channelCount = 0
         encoding = C.ENCODING_INVALID
         bytesPerSample = 0
-        isActive = false
-        // DO NOT reset enabled or currentGain, as they are controlled by the service
+        bytesPerFrame = 0
+        active = false
     }
 
     private fun replaceOutputBuffer(size: Int): ByteBuffer {
@@ -189,14 +203,6 @@ class VolumeNormalizationAudioProcessor : AudioProcessor {
         } else {
             buffer.clear()
         }
-        outputBuffer = buffer
         return buffer
-    }
-
-    private fun read24Bit(buffer: ByteBuffer): Int {
-        val b0 = buffer.get().toInt() and 0xFF
-        val b1 = buffer.get().toInt() and 0xFF
-        val b2 = buffer.get().toInt()
-        return (b2 shl 16) or (b1 shl 8) or b0
     }
 }
