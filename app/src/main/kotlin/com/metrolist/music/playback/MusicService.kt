@@ -274,6 +274,9 @@ class MusicService :
     lateinit var database: MusicDatabase
 
     @Inject
+    lateinit var downloadUtil: DownloadUtil
+
+    @Inject
     lateinit var lyricsHelper: LyricsHelper
 
     @Inject
@@ -2197,17 +2200,11 @@ class MusicService :
                     syncUtils.likeSong(song)
 
                     if (dataStore.get(AutoDownloadOnLikeKey, false) && song.liked) {
-                        val downloadRequest =
-                            androidx.media3.exoplayer.offline.DownloadRequest
-                                .Builder(song.id, song.id.toUri())
-                                .setCustomCacheKey(song.id)
-                                .setData(song.title.toByteArray())
-                                .build()
-                        androidx.media3.exoplayer.offline.DownloadService.sendAddDownload(
-                            this@MusicService,
-                            ExoDownloadService::class.java,
-                            downloadRequest,
-                            false,
+                        this@MusicService.enqueuePendingDownloads(
+                            downloadUtil.downloads.value,
+                            listOf(song),
+                            { it.id },
+                            { it.title },
                         )
                     }
                 }

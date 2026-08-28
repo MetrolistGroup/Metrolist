@@ -32,9 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.media3.exoplayer.offline.Download
-import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.SongItem
@@ -46,6 +44,7 @@ import com.metrolist.music.R
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.playback.ExoDownloadService
+import com.metrolist.music.playback.enqueuePendingDownloads
 import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.Material3MenuGroup
@@ -378,20 +377,12 @@ fun YouTubeSelectionSongMenu(
                                     )
                                 },
                                 onClick = {
-                                    songSelection.forEach { song ->
-                                        val downloadRequest =
-                                            DownloadRequest
-                                                .Builder(song.id, song.id.toUri())
-                                                .setCustomCacheKey(song.id)
-                                                .setData(song.title.toByteArray())
-                                                .build()
-                                        DownloadService.sendAddDownload(
-                                            context,
-                                            ExoDownloadService::class.java,
-                                            downloadRequest,
-                                            false,
-                                        )
-                                    }
+                                    context.enqueuePendingDownloads(
+                                        downloadUtil.downloads.value,
+                                        songSelection,
+                                        { it.id },
+                                        { it.title },
+                                    )
                                     clearAction()
                                     onDismiss()
                                 },

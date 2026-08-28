@@ -52,9 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.net.toUri
 import androidx.media3.exoplayer.offline.Download
-import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
 import com.metrolist.innertube.YouTube
 import com.metrolist.music.LocalNavController
@@ -71,6 +69,7 @@ import com.metrolist.music.db.entities.Song
 import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.playback.ExoDownloadService
+import com.metrolist.music.playback.enqueuePendingDownloads
 import com.metrolist.music.playback.queues.YouTubeAlbumRadio
 import com.metrolist.music.ui.component.ListDialog
 import com.metrolist.music.ui.component.Material3MenuGroup
@@ -506,20 +505,12 @@ fun YouTubeAlbumMenu(
                                         )
                                     },
                                     onClick = {
-                                        album?.songs?.forEach { song ->
-                                            val downloadRequest =
-                                                DownloadRequest
-                                                    .Builder(song.id, song.id.toUri())
-                                                    .setCustomCacheKey(song.id)
-                                                    .setData(song.song.title.toByteArray())
-                                                    .build()
-                                            DownloadService.sendAddDownload(
-                                                context,
-                                                ExoDownloadService::class.java,
-                                                downloadRequest,
-                                                false,
-                                            )
-                                        }
+                                        context.enqueuePendingDownloads(
+                                            downloadUtil.downloads.value,
+                                            album?.songs.orEmpty(),
+                                            { it.id },
+                                            { it.song.title },
+                                        )
                                     },
                                 )
                             }
