@@ -818,4 +818,22 @@
     <string name="enable_dynamic_icon">動態圖示顏色</string>
     <string name="enable_dynamic_icon_desc">讓應用程式圖示套用動態主題色彩。關閉時，圖示將使用純色呈現。</string>
     <string name="restore_database_incompatible">無法恢復備份：資料庫版本不相容。您目前的資料已保留。</string>
+    <string name="add_to_playlist_position">加入播放清單的位置</string>
+    <string name="playlist_position_beginning">播放清單的開頭</string>
+    <string name="playlist_position_beginning_desc">新加入的歌曲將出現在現有歌曲前</string>
+    <string name="playlist_position_end">播放清單的結尾</string>
+    <string name="playlist_position_end_desc">新加入的歌曲將出現在現有歌曲後</string>
+    <string name="auto_radio_queue">自動電台播放佇列</string>
+    <string name="auto_radio_queue_desc">從搜尋或首頁播放歌曲時，自動建立電台播放佇列</string>
+    <string name="android_auto_search_options">搜尋選項</string>
+    <string name="android_auto_search_local_songs_limit">歌曲搜尋限制</string>
+    <string name="android_auto_search_local_songs_limit_desc">限制搜尋結果中顯示的本機歌曲數量。建議不要設為無限制，以避免記憶體崩潰</string>
+    <string name="widget_playlists_description">帶有小型播放器控制選項的播放清單捷徑</string>
+    <string name="choose_youtube_channel">選擇一個 YouTube 頻道</string>
+    <string name="choose_youtube_channel_description">這個 Google 帳號有多個頻道。請選則擇你想使用的。</string>
+    <string name="switch_youtube_channel">切換 Youtube 頻道</string>
+    <string name="youtube_channels_failed">無法取得此帳號的 YouTube 頻道。請重試。</string>
+    <string name="authentication_data_extraction_failed">無法讀取 YouTube Music 工作階段。請重試。</string>
+    <string name="login_failed_with_error">登入失敗：%1$s</string>
+    <string name="stream_client">串流用戶端</string>
 </resources>
