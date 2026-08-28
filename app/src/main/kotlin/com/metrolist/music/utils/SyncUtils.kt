@@ -459,6 +459,13 @@ class SyncUtils @Inject constructor(
     suspend fun syncPodcastSubscriptionsSuspend() = syncExecutionMutex.withLock { executeSyncPodcastSubscriptions() }
     suspend fun syncEpisodesForLaterSuspend() = syncExecutionMutex.withLock { executeSyncEpisodesForLater() }
     suspend fun syncSavedPlaylistsSuspend() = syncExecutionMutex.withLock { executeSyncSavedPlaylists() }
+    // Through the playlist edit queue, so a sync the user asked for cannot read the remote while
+    // an upload or a removal for that playlist is still in flight and then rebuild the playlist
+    // from an answer that edit has not reached yet.
+    suspend fun syncPlaylistSuspend(browseId: String, playlistId: String) =
+        syncExecutionMutex.withLock {
+            runQueuedPlaylistEdit { executeSyncPlaylist(browseId, playlistId) }
+        }
     suspend fun syncAutoSyncPlaylistsSuspend() = syncExecutionMutex.withLock { executeSyncAutoSyncPlaylists() }
     suspend fun cleanupDuplicatePlaylistsSuspend() = syncExecutionMutex.withLock { executeCleanupDuplicatePlaylists() }
     suspend fun clearAllSyncedContentSuspend() = syncExecutionMutex.withLock { executeClearAllSyncedContent() }
@@ -1549,10 +1556,20 @@ class SyncUtils @Inject constructor(
             result.onSuccess { page ->
                 try {
                     val songs = page.songs.map(SongItem::toMediaMetadata)
+                    val claimedSongCount = remoteSongCountOf(page.playlist.songCountText)
                     Timber.d("syncPlaylist: Fetched ${songs.size} songs from remote")
 
-                    if (songs.isEmpty()) {
-                        Timber.w("syncPlaylist: Remote playlist is empty, skipping sync")
+                    // A read that falls short of what the page claims is one this build could not
+                    // follow to the end, which is not the same as a playlist that lost songs.
+                    // Rebuilding from it would take every song that never arrived for local-only
+                    // and move it to the end, so the playlist is left alone until a read adds up.
+                    // A playlist that genuinely holds nothing does reconcile, and the rule below
+                    // keeps every local song it has.
+                    if (!remoteReadAccountsForPlaylist(songs.size, claimedSongCount)) {
+                        Timber.w(
+                            "syncPlaylist: Remote read returned ${songs.size} songs of " +
+                                "${claimedSongCount ?: "an unknown number"}, leaving the local playlist alone"
+                        )
                         return@onSuccess
                     }
 
@@ -1575,40 +1592,49 @@ class SyncUtils @Inject constructor(
 
                     Timber.d("syncPlaylist: Updating local playlist (remote: ${remoteIds.size}, local: ${localIds.size})")
 
-                    val remoteIdSet = remoteIds.toSet()
                     val localIdSet = localIds.toSet()
-                    val downloadedSongIds = database.downloadedPlaylistSongIds(playlistId).toSet()
                     val metadataInserts = songs.filter {
                         it.id !in localIdSet || it.id in songIdsWithoutArtists
                     }
+                    // Every local song the remote does not account for, not just the downloaded
+                    // ones. A song that exists only here is one this device never managed to
+                    // upload, and rebuilding the playlist from the remote alone is what used to
+                    // discard it.
+                    val preservedSongIds = songIdsAbsentFromRemote(
+                        localSongIds = localIds,
+                        remoteSongIds = remoteIds,
+                    )
 
                     database.withTransaction {
                         database.clearPlaylist(playlistId)
                         metadataInserts.forEach(database::insert)
-
-                        downloadedSongIds.forEach { songId ->
-                            if (songId !in remoteIdSet) {
-                                val existingSong = database.getSongByIdBlocking(songId)
-                                if (existingSong != null) {
-                                    val maxPosition = database.playlistSongsBlocking(playlistId)
-                                        .maxOfOrNull { it.map.position } ?: -1
-                                    database.insert(
-                                        PlaylistSongMap(
-                                            songId = songId,
-                                            playlistId = playlistId,
-                                            position = maxPosition + 1
-                                        )
-                                    )
-                                    Timber.d("syncPlaylist: Preserved downloaded song $songId in playlist")
-                                }
-                            }
-                        }
 
                         val playlistEntity = database.playlistBlocking(playlistId)
                         if (playlistEntity != null) {
                             database.addSongsToPlaylist(
                                 playlistEntity,
                                 songs.map { it.id to it.setVideoId }
+                            )
+                        }
+
+                        // Appended after the remote ordering, so a sync never reshuffles the
+                        // playlist the user already knows.
+                        preservedSongIds.forEach { songId ->
+                            if (database.getSongByIdBlocking(songId) != null) {
+                                val maxPosition = database.playlistSongsBlocking(playlistId)
+                                    .maxOfOrNull { it.map.position } ?: -1
+                                database.insert(
+                                    PlaylistSongMap(
+                                        songId = songId,
+                                        playlistId = playlistId,
+                                        position = maxPosition + 1
+                                    )
+                                )
+                            }
+                        }
+                        if (preservedSongIds.isNotEmpty()) {
+                            Timber.d(
+                                "syncPlaylist: Preserved ${preservedSongIds.size} songs absent from the remote playlist"
                             )
                         }
                     }
