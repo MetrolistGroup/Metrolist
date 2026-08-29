@@ -849,4 +849,9 @@
     <string name="youtube_channels_failed">Không thể lấy danh sách kênh YouTube cho tài khoản này. Vui lòng thử lại.</string>
     <string name="authentication_data_extraction_failed">Không thể truy cập phiên đăng nhập YouTube Music. Vui lòng thử lại.</string>
     <string name="login_failed_with_error">Lỗi đăng nhập: %1$s</string>
+    <string name="add_to_playlist_position">Vị trí thêm vào danh sách phát</string>
+    <string name="playlist_position_beginning">Đầu danh sách phát</string>
+    <string name="playlist_position_beginning_desc">Bài hát mới thêm sẽ xuất hiện trước các bài hát cũ</string>
+    <string name="playlist_position_end">Cuối danh sách phát</string>
+    <string name="playlist_position_end_desc">Bài hát mới thêm sẽ xuất hiện sau các bài hát cũ</string>
 </resources>
