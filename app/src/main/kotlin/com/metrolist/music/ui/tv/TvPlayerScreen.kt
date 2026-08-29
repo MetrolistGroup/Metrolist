@@ -5,14 +5,9 @@
 
 package com.metrolist.music.ui.tv
 
-import android.graphics.Bitmap
 import android.view.KeyEvent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
@@ -23,6 +18,7 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -33,6 +29,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -44,10 +43,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,13 +61,14 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.navigation.NavController
 import coil3.ImageLoader
@@ -78,9 +78,12 @@ import coil3.request.allowHardware
 import coil3.toBitmap
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
+import com.metrolist.music.db.entities.LyricsEntity.Companion.LYRICS_NOT_FOUND
+import com.metrolist.music.extensions.metadata
 import com.metrolist.music.extensions.togglePlayPause
 import com.metrolist.music.extensions.toggleRepeatMode
-import com.metrolist.music.ui.component.Lyrics
+import com.metrolist.music.lyrics.LyricsEntry
+import com.metrolist.music.lyrics.LyricsUtils
 import com.metrolist.music.ui.component.PlayingIndicator
 import com.metrolist.music.ui.theme.PlayerColorExtractor
 import com.metrolist.music.viewmodels.LyricsViewModel
@@ -95,7 +98,7 @@ import kotlinx.coroutines.withContext
  * Left side: Large Album Art with rounded corners, subtle elevation, currently playing badge
  * Right side: Clean track typography, dynamic backdrop extracted from album cover,
  * Spotify style progress bar, transport controls with Spotify green accents,
- * lyrics overlay support, and D-pad remote support.
+ * synchronized TV lyrics mode, in-player TV Queue Viewer panel, and D-pad remote support.
  */
 @Composable
 fun TvPlayerScreen(
@@ -111,6 +114,8 @@ fun TvPlayerScreen(
     val canSkipPrevious by playerConnection.canSkipPrevious.collectAsState()
     val canSkipNext by playerConnection.canSkipNext.collectAsState()
     val currentSong by playerConnection.currentSong.collectAsState(initial = null)
+    val currentLyricsEntity by playerConnection.currentLyrics.collectAsState(initial = null)
+    val queueWindows by playerConnection.queueWindows.collectAsState()
 
     var positionMs by remember { mutableLongStateOf(0L) }
     var durationMs by remember { mutableLongStateOf(1L) }
@@ -119,7 +124,7 @@ fun TvPlayerScreen(
         while (isActive) {
             positionMs = playerConnection.player.currentPosition
             durationMs = playerConnection.player.duration.coerceAtLeast(1L)
-            delay(500L)
+            delay(250L)
         }
     }
 
@@ -162,8 +167,8 @@ fun TvPlayerScreen(
         }
     }
 
-    // Lyrics visibility toggle
-    var showLyrics by remember { mutableStateOf(false) }
+    // View modes: 0 = Standard player, 1 = Synced TV Lyrics, 2 = In-player Queue
+    var playerViewMode by remember { mutableIntStateOf(0) }
 
     val playButtonFocusRequester = remember { FocusRequester() }
 
@@ -223,14 +228,14 @@ fun TvPlayerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            dynamicColors.firstOrNull()?.copy(alpha = 0.75f) ?: Color(0xFF1E3264),
-                            dynamicColors.getOrNull(1)?.copy(alpha = 0.5f) ?: Color(0xFF121212),
-                            Color.Black
-                        )
+                Brush.verticalGradient(
+                    colors = listOf(
+                        dynamicColors.firstOrNull()?.copy(alpha = 0.75f) ?: Color(0xFF1E3264),
+                        dynamicColors.getOrNull(1)?.copy(alpha = 0.5f) ?: Color(0xFF121212),
+                        Color.Black
                     )
                 )
+            )
         )
 
         // Large subtle blurred backdrop from cover art
@@ -248,13 +253,13 @@ fun TvPlayerScreen(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 64.dp, vertical = 48.dp),
+                .padding(horizontal = 64.dp, vertical = 40.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // ── Left Column: Album Art & Track Status ────────────────────────
             Column(
                 modifier = Modifier
-                    .weight(0.42f)
+                    .weight(0.38f)
                     .fillMaxHeight(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
@@ -262,7 +267,7 @@ fun TvPlayerScreen(
                 Box(
                     contentAlignment = Alignment.BottomStart,
                     modifier = Modifier
-                        .fillMaxHeight(0.78f)
+                        .fillMaxHeight(0.72f)
                         .aspectRatio(1f)
                         .shadow(24.dp, RoundedCornerShape(16.dp))
                         .clip(RoundedCornerShape(16.dp))
@@ -307,78 +312,88 @@ fun TvPlayerScreen(
                 }
             }
 
-            Spacer(Modifier.width(56.dp))
+            Spacer(Modifier.width(48.dp))
 
             // ── Right Column: Track Details, Progress Bar & Actions ───────────
             Column(
                 modifier = Modifier
-                    .weight(0.58f)
+                    .weight(0.62f)
                     .fillMaxHeight(),
                 verticalArrangement = Arrangement.Center,
             ) {
-                // If lyrics mode is on, show synchronized lyrics block
-                if (showLyrics) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color.Black.copy(alpha = 0.5f))
-                            .padding(24.dp)
-                    ) {
-                        Lyrics(
-                            sliderPositionProvider = { positionMs },
-                            showLyrics = true,
-                            lyricsViewModel = lyricsViewModel,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                    Spacer(Modifier.height(16.dp))
-                } else {
-                    // Album badge / tag
-                    mediaMetadata?.album?.title?.let { albumTitle ->
-                        Box(
+                when (playerViewMode) {
+                    1 -> {
+                        // ── 10-Foot Synced TV Lyrics Mode ──────────────────────
+                        TvSyncedLyricsView(
+                            lyricsRaw = currentLyricsEntity?.lyrics,
+                            currentPositionMs = positionMs,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(TvColors.OverlayLight)
-                                .padding(horizontal = 14.dp, vertical = 6.dp)
-                        ) {
-                            Text(
-                                text = albumTitle,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = TvColors.TextSecondary,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        Spacer(Modifier.height(16.dp))
+                                .fillMaxWidth()
+                                .weight(1f)
+                        )
+                        Spacer(Modifier.height(12.dp))
                     }
+                    2 -> {
+                        // ── In-Player TV Queue Viewer Panel ───────────────────
+                        TvInPlayerQueueView(
+                            queueWindows = queueWindows,
+                            currentIndex = playerConnection.player.currentMediaItemIndex,
+                            onItemClick = { index ->
+                                playerConnection.player.seekToDefaultPosition(index)
+                                playerConnection.player.play()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    }
+                    else -> {
+                        // ── Standard Track Info Display ──────────────────────
+                        mediaMetadata?.album?.title?.let { albumTitle ->
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(TvColors.OverlayLight)
+                                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = albumTitle,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = TvColors.TextSecondary,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Spacer(Modifier.height(16.dp))
+                        }
 
-                    // Track Title
-                    Text(
-                        text = mediaMetadata?.title ?: "",
-                        style = MaterialTheme.typography.headlineLarge.copy(fontSize = 38.sp),
-                        fontWeight = FontWeight.Black,
-                        color = TvColors.TextPrimary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.basicMarquee()
-                    )
+                        // Track Title
+                        Text(
+                            text = mediaMetadata?.title ?: "",
+                            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 38.sp),
+                            fontWeight = FontWeight.Black,
+                            color = TvColors.TextPrimary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.basicMarquee()
+                        )
 
-                    Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(8.dp))
 
-                    // Artist Name(s)
-                    Text(
-                        text = mediaMetadata?.artists?.joinToString { it.name } ?: "",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Medium,
-                        color = TvColors.TextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                        // Artist Name(s)
+                        Text(
+                            text = mediaMetadata?.artists?.joinToString { it.name } ?: "",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = TvColors.TextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
 
-                    Spacer(Modifier.height(36.dp))
+                        Spacer(Modifier.height(28.dp))
+                    }
                 }
 
                 // ── Modern Spotify TV Progress Bar ────────────────────────────
@@ -435,13 +450,13 @@ fun TvPlayerScreen(
                     }
                 }
 
-                Spacer(Modifier.height(28.dp))
+                Spacer(Modifier.height(20.dp))
 
                 // ── Controls Row (Spotify-styled Buttons) ─────────────────────
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     // Shuffle
                     SpotifyTvIconButton(
@@ -495,35 +510,36 @@ fun TvPlayerScreen(
                         onClick = { playerConnection.toggleLike() }
                     )
 
-                    // Lyrics Toggle
+                    // Lyrics Toggle (In-Player TV Mode)
                     SpotifyTvIconButton(
                         iconRes = R.drawable.lyrics,
                         contentDescription = "Lyrics",
-                        isActive = showLyrics,
-                        onClick = { showLyrics = !showLyrics }
+                        isActive = playerViewMode == 1,
+                        onClick = { playerViewMode = if (playerViewMode == 1) 0 else 1 }
                     )
 
-                    // Queue Screen
+                    // Queue Toggle (In-Player TV Queue)
                     SpotifyTvIconButton(
                         iconRes = R.drawable.queue_music,
                         contentDescription = "Queue",
-                        onClick = { navController.navigate("tv_queue") { launchSingleTop = true } }
+                        isActive = playerViewMode == 2,
+                        onClick = { playerViewMode = if (playerViewMode == 2) 0 else 2 }
                     )
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(18.dp))
 
                 // Remote D-pad Navigation Hints Pill
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color.Black.copy(alpha = 0.4f))
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
                 ) {
                     Text(
-                        text = "◄► Navigate & Select",
+                        text = "◄► Controls",
                         style = MaterialTheme.typography.labelSmall,
                         color = TvColors.TextMuted,
                         fontWeight = FontWeight.SemiBold
@@ -542,6 +558,230 @@ fun TvPlayerScreen(
                         color = TvColors.TextMuted,
                         fontWeight = FontWeight.SemiBold
                     )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 10-Foot Synced TV Lyrics Screen with Smooth Auto-Scroll & High Contrast Typography
+ */
+@Composable
+private fun TvSyncedLyricsView(
+    lyricsRaw: String?,
+    currentPositionMs: Long,
+    modifier: Modifier = Modifier
+) {
+    val lines = remember(lyricsRaw) {
+        if (lyricsRaw.isNullOrBlank() || lyricsRaw == LYRICS_NOT_FOUND) {
+            emptyList()
+        } else {
+            val parsed = LyricsUtils.parseLyrics(lyricsRaw)
+            if (parsed.isNotEmpty()) parsed
+            else {
+                lyricsRaw.lines().filter { it.isNotBlank() }.mapIndexed { i, line ->
+                    LyricsEntry(time = i * 4000L, text = line)
+                }
+            }
+        }
+    }
+
+    val activeIndex = remember(lines, currentPositionMs) {
+        if (lines.isEmpty()) -1
+        else {
+            val idx = lines.indexOfLast { it.time <= currentPositionMs }
+            if (idx >= 0) idx else 0
+        }
+    }
+
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(activeIndex) {
+        if (activeIndex >= 0 && lines.isNotEmpty()) {
+            listState.animateScrollToItem(maxOf(0, activeIndex - 2))
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.Black.copy(alpha = 0.65f))
+            .padding(horizontal = 24.dp, vertical = 16.dp)
+    ) {
+        if (lines.isEmpty()) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Text(
+                    text = "No lyrics available for this song",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TvColors.TextMuted,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        } else {
+            LazyColumn(
+                state = listState,
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                itemsIndexed(lines) { index, line ->
+                    val isActive = index == activeIndex
+                    val isPast = index < activeIndex
+
+                    val textColor = when {
+                        isActive -> TvColors.SpotifyGreenBright
+                        isPast -> TvColors.TextMuted.copy(alpha = 0.5f)
+                        else -> TvColors.TextSecondary
+                    }
+
+                    Text(
+                        text = line.text,
+                        style = if (isActive) MaterialTheme.typography.headlineSmall.copy(fontSize = 28.sp)
+                               else MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp),
+                        fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Medium,
+                        color = textColor,
+                        lineHeight = if (isActive) 36.sp else 28.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * In-Player TV Queue Viewer Panel for picking upcoming tracks without leaving the player
+ */
+@Composable
+private fun TvInPlayerQueueView(
+    queueWindows: List<androidx.media3.common.Timeline.Window>,
+    currentIndex: Int,
+    onItemClick: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(currentIndex) {
+        listState.animateScrollToItem(maxOf(0, currentIndex - 2))
+    }
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.Black.copy(alpha = 0.65f))
+            .padding(horizontal = 20.dp, vertical = 14.dp)
+    ) {
+        if (queueWindows.isEmpty()) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Text(
+                    text = "Queue is empty",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TvColors.TextMuted
+                )
+            }
+        } else {
+            LazyColumn(
+                state = listState,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                itemsIndexed(queueWindows) { index, window ->
+                    val isPlayingItem = index == currentIndex
+                    val mediaItem = window.mediaItem
+                    val interactionSource = remember { MutableInteractionSource() }
+                    val isFocused by interactionSource.collectIsFocusedAsState()
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                when {
+                                    isFocused -> TvColors.CardBackgroundElevated
+                                    isPlayingItem -> TvColors.OverlayLight
+                                    else -> Color.Transparent
+                                }
+                            )
+                            .border(
+                                width = if (isFocused) 2.dp else 0.dp,
+                                color = if (isFocused) Color.White else Color.Transparent,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 12.dp)
+                            .focusable(interactionSource = interactionSource)
+                            .onKeyEvent {
+                                if (it.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                                    (it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)) {
+                                    onItemClick(index)
+                                    true
+                                } else false
+                            }
+                            .clickable { onItemClick(index) }
+                    ) {
+                        // Track index / Playing wave indicator
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            if (isPlayingItem) {
+                                PlayingIndicator(
+                                    color = TvColors.SpotifyGreenBright,
+                                    modifier = Modifier.height(14.dp),
+                                    bars = 3,
+                                    barWidth = 3.dp,
+                                    cornerRadius = 2.dp
+                                )
+                            } else {
+                                Text(
+                                    text = "${index + 1}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = TvColors.TextMuted,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.width(12.dp))
+
+                        // Artwork
+                        AsyncImage(
+                            model = mediaItem.mediaMetadata.artworkUri,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(TvColors.CardBackground)
+                        )
+
+                        Spacer(Modifier.width(14.dp))
+
+                        // Title & Artist
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = mediaItem.mediaMetadata.title?.toString() ?: "Unknown Track",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isPlayingItem) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isPlayingItem || isFocused) TvColors.SpotifyGreenBright else TvColors.TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = mediaItem.mediaMetadata.artist?.toString() ?: "Unknown Artist",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TvColors.TextSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 }
             }
         }

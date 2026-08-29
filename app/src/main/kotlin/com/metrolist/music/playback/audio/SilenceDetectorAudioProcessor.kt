@@ -56,7 +56,7 @@ class SilenceDetectorAudioProcessor(
         return inputAudioFormat
     }
 
-    override fun isActive(): Boolean = true
+    override fun isActive(): Boolean = instantModeEnabled
 
     override fun queueInput(inputBuffer: ByteBuffer) {
         if (!inputBuffer.hasRemaining()) {
@@ -64,8 +64,15 @@ class SilenceDetectorAudioProcessor(
             return
         }
 
+        if (!instantModeEnabled) {
+            val out = replaceOutputBuffer(inputBuffer.remaining())
+            out.put(inputBuffer)
+            out.flip()
+            return
+        }
+
         // Analyze the incoming PCM for silence without mutating the buffer position.
-        if (instantModeEnabled && sampleRate > 0 && channelCount > 0) {
+        if (sampleRate > 0 && channelCount > 0) {
             detectSilence(inputBuffer)
         } else {
             clearSilenceState()
