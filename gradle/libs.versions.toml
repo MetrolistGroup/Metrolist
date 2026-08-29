@@ -1,25 +1,25 @@
 [versions]
-androidGradlePlugin = "9.3.0"
+androidGradlePlugin = "9.3.1"
 browser = "1.10.0"
 robolectric = "4.16.1"
 androidxTestCore = "1.7.0"
 json = "20260522"
 kotlin = "2.4.10"
-compose = "1.11.4"
+compose = "1.12.0"
 lifecycle = "2.11.0"
-material3 = "1.5.0-alpha24"
-appcompat = "1.7.1"
+material3 = "1.5.0-alpha27"
+appcompat = "1.8.0"
 media3 = "1.10.1"
 mediarouter = "1.8.1"
 castFramework = "22.3.1"
 room = "2.8.4"
 hilt = "2.60.1"
 ktor = "3.5.2"
-ksp = "2.3.10"
+ksp = "2.3.11"
 jsoup = "1.22.2"
-coil = "3.5.0"
+coil = "3.6.0"
 ucrop = "2.2.11"
-guava = "33.6.0-jre"
+guava = "33.7.1-jre"
 coroutinesGuava = "1.11.0"
 concurrentFutures = "1.3.0"
 activity = "1.13.0"
@@ -35,10 +35,9 @@ junit = "4.13.2"
 timber = "5.0.1"
 materialKolor = "5.0.0"
 kuromojiIpadic = "0.9.0"
-extractor = "3cd3341"
-innertubex = "v0.1.2"
+innertubex = "v0.2.6"
 tinypinyin = "2.0.3"
-protobuf = "4.35.1"
+protobuf = "4.36.0"
 
 [libraries]
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
@@ -116,8 +115,6 @@ junit = { module = "junit:junit", version.ref = "junit" }
 
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 
-# newpipeextractor = { module = "com.github.TeamNewPipe:NewPipeExtractor", version.ref = "newpipeextractor" }
-extractor = { module = "com.github.MetrolistGroup:MetrolistExtractor", version.ref = "extractor" }
 innertubex = { module = "com.github.MetrolistGroup.innertubex:innertubex", version.ref = "innertubex" }
 
 kuromoji-ipadic = { module = "com.atilika.kuromoji:kuromoji-ipadic", version.ref = "kuromojiIpadic" }

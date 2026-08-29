@@ -93,12 +93,14 @@ import androidx.media3.session.SessionToken
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.MoreExecutors
 import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.strategy.ContentHints
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
+import com.metrolist.innertubex.extraction.ContentHints
 import com.metrolist.lastfm.LastFM
 import com.metrolist.music.MainActivity
 import com.metrolist.music.R
+import com.metrolist.music.constants.AddToPlaylistPosition
+import com.metrolist.music.constants.AddToPlaylistPositionKey
 import com.metrolist.music.constants.AndroidAutoTargetPlaylistKey
 import com.metrolist.music.constants.AudioNormalizationKey
 import com.metrolist.music.constants.AudioOffload
@@ -213,8 +215,7 @@ import com.metrolist.music.utils.ScrobbleManager
 import com.metrolist.music.utils.SyncUtils
 import com.metrolist.music.utils.getArtistSeparator
 import com.metrolist.music.utils.joinToArtistString
-import com.metrolist.music.utils.YTPlayerUtils
-import com.metrolist.music.utils.cipher.CipherDeobfuscator
+import com.metrolist.music.utils.InnerTubeXPlayer
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.get
 import com.metrolist.music.utils.reportException
@@ -1170,7 +1171,7 @@ class MusicService :
         scope.launch {
             dataStore.data.map { it[AutoLoadMoreKey] ?: true }.distinctUntilChanged().collect { cachedAutoLoadMore = it }
         }
-        // Keep YTPlayerUtils in sync with the stream source toggles (Settings → Stream sources).
+        // Keep InnerTubeX extraction in sync with the stream source toggles.
         // Map to the derived set + distinctUntilChanged so an unrelated preference write doesn't
         // rebuild the set and rewrite the @Volatile field on every DataStore emission.
         scope.launch {
@@ -1185,7 +1186,7 @@ class MusicService :
                     }
                 }
                 .distinctUntilChanged()
-                .collect { YTPlayerUtils.disabledStreamClients = it }
+                .collect { InnerTubeXPlayer.disabledStreamClients = it }
         }
 
         if (startupPrefs!![PersistentQueueKey] ?: true) {
@@ -1653,7 +1654,7 @@ class MusicService :
      */
     private suspend fun recoverSong(
         mediaId: String,
-        playbackData: YTPlayerUtils.PlaybackData? = null,
+        playbackData: InnerTubeXPlayer.PlaybackData? = null,
     ) {
         val song = database.song(mediaId).first()
         val mediaMetadata =
@@ -1669,10 +1670,7 @@ class MusicService :
             song?.song?.duration?.takeIf { it != -1 }
                 ?: mediaMetadata?.duration?.takeIf { it != -1 }
                 ?: (
-                    playbackData?.videoDetails ?: YTPlayerUtils
-                        .playerResponseForMetadata(mediaId)
-                        .getOrNull()
-                        ?.videoDetails
+                    playbackData?.videoDetails
                 )?.lengthSeconds?.toInt()
                 ?: -1
 
@@ -1727,7 +1725,7 @@ class MusicService :
      */
     private fun recoverSongDeduped(
         mediaId: String,
-        playbackData: YTPlayerUtils.PlaybackData? = null,
+        playbackData: InnerTubeXPlayer.PlaybackData? = null,
     ) {
         if (!recoveringSongs.add(mediaId)) return
         scope.launch(Dispatchers.IO) {
@@ -2237,7 +2235,15 @@ class MusicService :
 
             val targetPlaylist = database.playlist(targetPlaylistId).first()
             if (targetPlaylist != null) {
-                database.addSongsToPlaylist(targetPlaylist, listOf(currentSong.id to null), prepend = true)
+                val addToPlaylistPosition =
+                    dataStore
+                        .get(AddToPlaylistPositionKey, AddToPlaylistPosition.BEGINNING.name)
+                        .toEnum(AddToPlaylistPosition.BEGINNING)
+                database.addSongsToPlaylist(
+                    targetPlaylist,
+                    listOf(currentSong.id to null),
+                    prepend = addToPlaylistPosition.prepend,
+                )
             }
         }
     }
@@ -3072,22 +3078,15 @@ class MusicService :
      * Clears both player cache and download cache, plus URL cache.
      */
     private fun performAggressiveCacheClear(mediaId: String) {
-        Timber.tag(TAG).d("Performing aggressive cache clear for $mediaId")
+        Timber.tag(TAG).d("Performing aggressive cache clear")
 
         songUrlCache.invalidate(mediaId)
 
         try {
             playerCache.removeResource(mediaId)
-            Timber.tag(TAG).d("Cleared player cache for $mediaId")
+            Timber.tag(TAG).d("Cleared player cache")
         } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "Failed to clear player cache for $mediaId")
-        }
-
-        try {
-            YTPlayerUtils.forceRefreshForVideo(mediaId)
-            Timber.tag(TAG).d("Cleared decryption caches for $mediaId")
-        } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "Failed to clear decryption caches for $mediaId")
+            Timber.tag(TAG).e("Failed to clear player cache type=${e::class.simpleName ?: "unknown"}")
         }
     }
 
@@ -3274,7 +3273,7 @@ class MusicService :
         retryReason: String,
     ) {
         if (hasExceededRetryLimit(mediaId)) {
-            Timber.tag(TAG).w("Song $mediaId reached the retry limit during $retryReason")
+            Timber.tag(TAG).w("Song reached the retry limit during $retryReason")
             markSongAsFailed(mediaId)
             handleFinalFailure()
             return
@@ -3284,23 +3283,17 @@ class MusicService :
 
         songUrlCache.invalidate(mediaId)
         if (failedStreamClient == "WEB_REMIX") {
-            YTPlayerUtils.markWebRemixFailed(mediaId)
+            InnerTubeXPlayer.markWebRemixFailed(mediaId)
         }
-        Timber.tag(TAG).d("Cleared cached URL for $mediaId after $retryReason (client=$failedStreamClient)")
-
-        try {
-            YTPlayerUtils.forceRefreshForVideo(mediaId)
-        } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "Failed to clear decryption caches")
-        }
+        Timber.tag(TAG).d("Cleared cached URL after $retryReason (client=$failedStreamClient)")
 
         if (refreshCipherConfig) {
             // A rejection can mean the cipher produced a wrong-but-non-throwing signature. If a
             // rate-limited refresh corrects the table, allow WEB_REMIX again on the next resolution.
             scope.launch {
-                if (CipherDeobfuscator.onStreamRejected()) {
+                if (InnerTubeXPlayer.refreshAfterStreamRejection()) {
                     Timber.tag(TAG).d("Player config changed after stream rejection — restoring WEB_REMIX")
-                    YTPlayerUtils.clearWebRemixFailures()
+                    InnerTubeXPlayer.clearWebRemixFailures()
                 }
             }
         }
@@ -3726,7 +3719,7 @@ class MusicService :
             if (thumbnail != null) {
                 Timber.tag("DiscordSvc").d("fetchArtistThumbnail: got thumbnail for %s", artist.name)
                 withContext(Dispatchers.IO) {
-                    database.update(artist.copy(thumbnailUrl = thumbnail))
+                    database.updateArtistThumbnail(artist.id, thumbnail)
                 }
                 database.getSongById(song.song.id)
             } else {
@@ -3772,9 +3765,7 @@ class MusicService :
                 songUrlCache[mediaId]?.let { cachedStream ->
                     recoverSongDeduped(mediaId)
                     currentStreamClient.value = cachedStream.clientName
-                    return@Factory dataSpec
-                        .withUri(cachedStream.url.toUri())
-                        .withRequestHeaders(dataSpec.httpRequestHeaders + cachedStream.requestHeaders)
+                    return@Factory dataSpec.withResolvedStream(cachedStream)
                 }
             } else {
                 Timber.tag(TAG).i("BYPASSING CACHE for $mediaId due to quality change")
@@ -3785,7 +3776,7 @@ class MusicService :
             val playbackData =
                 runBlocking(Dispatchers.IO) {
                     val song = database.songEntity(mediaId)
-                    YTPlayerUtils.playerResponseForPlayback(
+                    InnerTubeXPlayer.playerResponseForPlayback(
                         mediaId,
                         audioQuality = audioQuality,
                         connectivityManager = connectivityManager,
@@ -3880,6 +3871,9 @@ class MusicService :
                     requestHeaders = nonNullPlayback.streamHeaders,
                     clientName = nonNullPlayback.streamClient,
                     expiresInSeconds = nonNullPlayback.streamExpiresInSeconds,
+                    requireBoundedRange = nonNullPlayback.requireBoundedRange,
+                    rangeChunkSizeBytes = nonNullPlayback.rangeChunkSizeBytes,
+                    useRangeChunks = nonNullPlayback.useRangeChunks,
                     expectedGeneration = cacheGeneration,
                 )
 
@@ -3887,10 +3881,16 @@ class MusicService :
                     playbackUrlCache[cacheKey(mediaId)] = it
                 }
 
-                return@Factory dataSpec
-                    .withUri(streamUrl.toUri())
-                    .subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
-                    .withRequestHeaders(dataSpec.httpRequestHeaders + nonNullPlayback.streamHeaders)
+                return@Factory dataSpec.withResolvedStream(
+                    CachedStreamUrl(
+                        url = streamUrl,
+                        requestHeaders = nonNullPlayback.streamHeaders,
+                        clientName = nonNullPlayback.streamClient,
+                        requireBoundedRange = nonNullPlayback.requireBoundedRange,
+                        rangeChunkSizeBytes = nonNullPlayback.rangeChunkSizeBytes,
+                        useRangeChunks = nonNullPlayback.useRangeChunks,
+                    ),
+                )
             }
         }
     }
@@ -4003,14 +4003,8 @@ class MusicService :
             scope.launch(Dispatchers.IO) {
                 val playbackUrl =
                     playbackUrlCache[cacheKey(mediaItem.mediaId)]
-                        ?: YTPlayerUtils
-                            .playerResponseForMetadata(mediaItem.mediaId, null)
-                            .getOrNull()
-                            ?.playbackTracking
-                            ?.videostatsPlaybackUrl
-                            ?.baseUrl
                 if (playbackUrl == null) {
-                    Timber.tag(TAG).w("No playback tracking URL available for $mediaItem.mediaId, skipping YouTube history registration")
+                    Timber.tag(TAG).w("No playback tracking URL available; skipping YouTube history registration")
                     return@launch
                 }
                 YouTube
@@ -4309,8 +4303,12 @@ class MusicService :
         // On Android O+, every startForegroundService() call requires
         // Service.startForeground() to be called within a short timeout.
         // Some OEMs (e.g. MIUI) strictly enforce this even when the
-        // service is already in the foreground, so always promote here.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        // service is already in the foreground, so promote here unless Media3 is handling a
+        // notification dismissal. Re-promoting that intent immediately restores the dismissed
+        // media control.
+        val isNotificationDismissal =
+            intent?.getBooleanExtra(MediaNotification.NOTIFICATION_DISMISSED_EVENT_KEY, false) == true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !isNotificationDismissal) {
             if (!ensureForegroundWithLatestNotificationOrStop()) {
                 return START_NOT_STICKY
             }
@@ -4671,7 +4669,7 @@ class MusicService :
             try {
                 val song = database.songEntity(mediaId)
                 val playbackData =
-                    YTPlayerUtils
+                    InnerTubeXPlayer
                         .playerResponseForPlayback(
                             videoId = mediaId,
                             audioQuality = audioQuality,

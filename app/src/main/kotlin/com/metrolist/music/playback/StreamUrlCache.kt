@@ -5,11 +5,34 @@
 
 package com.metrolist.music.playback
 
+import androidx.core.net.toUri
+import androidx.media3.common.C
+import androidx.media3.datasource.DataSpec
+
 internal data class CachedStreamUrl(
     val url: String,
     val requestHeaders: Map<String, String>,
     val clientName: String,
+    val requireBoundedRange: Boolean = false,
+    val rangeChunkSizeBytes: Long = 0L,
+    val useRangeChunks: Boolean = false,
 )
+
+internal fun DataSpec.withResolvedStream(stream: CachedStreamUrl): DataSpec {
+    val resolved =
+        withUri(stream.url.toUri())
+            .withRequestHeaders(httpRequestHeaders + stream.requestHeaders)
+    if ((!stream.requireBoundedRange && !stream.useRangeChunks) || stream.rangeChunkSizeBytes <= 0L) {
+        return resolved
+    }
+    val boundedLength =
+        if (length == C.LENGTH_UNSET.toLong()) {
+            stream.rangeChunkSizeBytes
+        } else {
+            minOf(length, stream.rangeChunkSizeBytes)
+        }
+    return resolved.subrange(0, boundedLength)
+}
 
 internal class StreamUrlCache(
     private val maxEntries: Int = 500,
@@ -55,6 +78,9 @@ internal class StreamUrlCache(
         requestHeaders: Map<String, String>,
         clientName: String,
         expiresInSeconds: Int,
+        requireBoundedRange: Boolean = false,
+        rangeChunkSizeBytes: Long = 0L,
+        useRangeChunks: Boolean = false,
         expectedGeneration: Long = generation(mediaId),
     ): Boolean {
         val now = currentTimeMillis()
@@ -67,7 +93,15 @@ internal class StreamUrlCache(
             if ((generations[mediaId] ?: 0L) != expectedGeneration) return false
             entries[mediaId] =
                 Entry(
-                    stream = CachedStreamUrl(url, requestHeaders.toMap(), clientName),
+                    stream =
+                        CachedStreamUrl(
+                            url = url,
+                            requestHeaders = requestHeaders.toMap(),
+                            clientName = clientName,
+                            requireBoundedRange = requireBoundedRange,
+                            rangeChunkSizeBytes = rangeChunkSizeBytes,
+                            useRangeChunks = useRangeChunks,
+                        ),
                     expiresAtMillis = expiresAtMillis,
                 )
             return true

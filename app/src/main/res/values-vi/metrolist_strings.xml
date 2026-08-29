@@ -8,7 +8,7 @@
     <string name="continuous">Liên tục</string>
     <string name="liked">Đã thích</string>
     <string name="offline">Đã tải xuống</string>
-    <string name="my_top">Top nghe nhiều</string>
+    <string name="my_top">Nghe nhiều nhất</string>
     <string name="sync_playlist">Đồng bộ danh sách phát</string>
     <string name="allows_for_sync_witch_youtube">LƯU Ý: Tùy chọn này cho phép đồng bộ hóa với YouTube Music và KHÔNG THỂ thay đổi sau này</string>
     <string name="select">Chọn tất cả</string>
@@ -67,9 +67,9 @@
     <string name="show_cached_playlist">Hiện danh sách phát có trong bộ nhớ đệm</string>
     <string name="import_csv">Nhập danh sách phát từ tệp CSV</string>
     <string name="import_online">Nhập danh sách phát từ tệp M3U</string>
-    <string name="charts">Biểu đồ</string>
+    <string name="charts">Bảng xếp hạng</string>
     <string name="album_cover_desc">Ảnh bìa Album</string>
-    <string name="top_music_videos">Top MV</string>
+    <string name="top_music_videos">Video ca nhạc hàng đầu</string>
     <string name="sync_disabled">Đã tắt đồng bộ</string>
     <string name="cancel">Huỷ bỏ</string>
     <string name="share_as_text">Chia sẻ dưới dạng văn bản</string>
@@ -96,8 +96,6 @@
     <string name="trending">Thịnh hành</string>
     <string name="share_lyrics">Chia sẻ lời bài hát</string>
     <string name="cached_playlist">Đã lưu vào bộ đệm</string>
-    <string name="lyrics_romanize_japanese">La-tinh hóa lời bài hát tiếng Nhật</string>
-    <string name="lyrics_romanize_korean">La-tinh hóa lời bài hát tiếng Hàn</string>
     <string name="yt_sync">Tự động đồng bộ tài khoản</string>
     <string name="more_content">Nội dung khác</string>
     <string name="playlist_add_local_to_synced_note">LƯU Ý: Không hỗ trợ thêm bài hát cục bộ vào danh sách phát đã đồng bộ hoặc danh sách phát từ xa. Mọi sự kết hợp khác đều hợp lệ</string>
@@ -134,19 +132,9 @@
     <string name="proxy_username">Tên người dùng proxy</string>
     <string name="proxy_password">Mật khẩu proxy</string>
     <string name="enable_authentication">Bật xác thực</string>
-    <string name="lyrics_romanization_cyrillic">Cyrillic</string>
     <string name="lyrics_romanization">La-tinh hóa lời bài hát</string>
     <string name="lyrics_romanize_title">La-tinh hóa</string>
-    <string name="lyrics_romanize_russian">La-tinh hóa lời bài hát tiếng Nga</string>
-    <string name="lyrics_romanize_ukrainian">La-tinh hóa lời bài hát tiếng Ukraine</string>
-    <string name="lyrics_romanize_belarusian">La-tinh hóa lời bài hát tiếng Belarus</string>
-    <string name="lyrics_romanize_kyrgyz">La-tinh hóa lời bài hát tiếng Kyrgyz</string>
-    <string name="lyrics_romanize_serbian">La-tinh hóa lời bài hát tiếng Serbia</string>
-    <string name="lyrics_romanize_bulgarian">La-tinh hóa lời bài hát tiếng Bulgaria</string>
     <string name="line_by_line_option_title">Tự động nhận diện ngôn ngữ theo từng dòng</string>
-    <string name="line_by_line_option_desc">Chữ viết Kirin sẽ được nhận diện theo từng dòng thay vì trên toàn bộ bài hát</string>
-    <string name="line_by_line_dialog_title">Bạn có chắc không?</string>
-    <string name="line_by_line_dialog_desc">Đây là một tính năng thử nghiệm có thể hoạt động không ổn định.\n\nTheo mặc định, ngôn ngữ được nhận diện dựa trên toàn bộ bài hát. Khi bật tùy chọn này, ngôn ngữ sẽ được nhận diện theo từng dòng. Điều này cho phép các bài hát đa ngôn ngữ hoạt động chính xác hơn, NHƯNG ngôn ngữ được nhận diện có thể không phải lúc nào cũng đúng. Ví dụ: một dòng tiếng Ukraine không có các ký tự đặc trưng của tiếng Ukraine có thể bị phiên âm nhầm thành tiếng Nga.\n\nNếu bạn không gặp vấn đề gì, chúng tôi khuyên bạn nên tắt tùy chọn này</string>
     <string name="romanize_current_track">La-tinh hóa lời bài hát hiện tại</string>
     <string name="choose_from_library">Chọn từ thư viện</string>
     <string name="remove_custom_image">Xoá ảnh bìa tùy chỉnh</string>
@@ -172,7 +160,6 @@
     <string name="shuffle_playlist_first">Phát ngẫu nhiên danh sách phát hoặc album đầu tiên</string>
     <string name="shuffle_playlist_first_desc">Khi kích hoạt phát ngẫu nhiên, nó sẽ phát tất cả các bài hát từ danh sách phát / Album trước, sau đó mới phát nội dung tương tự</string>
     <string name="show_wrapped_card">Hiển thị thẻ Wrapped</string>
-    <string name="lyrics_romanize_chinese">La-tinh hóa lời bài hát tiếng Trung</string>
     <string name="updater">Trình cập nhật</string>
     <string name="check_for_updates">Tự động kiểm tra cập nhật</string>
     <string name="update_notifications">Bật thông báo về cập nhật</string>
@@ -181,7 +168,6 @@
     <string name="update_channel_desc">Thông báo về phiên bản mới của ứng dụng</string>
     <string name="google_cast">Truyền</string>
     <string name="google_cast_description">Truyền âm thanh đến Chromecast và các thiết bị hỗ trợ Cast khác</string>
-    <string name="lyrics_romanize_macedonian">Phiên âm chữ Ma-xê-đô-ni-a (Macedonia) sang chữ Latinh</string>
     <string name="integrations">Tích hợp tiện ích</string>
     <string name="username">Tên người dùng</string>
     <string name="password">Mật khẩu</string>
@@ -332,11 +318,6 @@
     <string name="details_desc">Xem thông tin chi tiết của bài hát</string>
     <string name="edit_desc">Sửa tên bài hát hoặc nghệ sĩ</string>
     <string name="none">Không có</string>
-    <string name="fade">Mờ dần</string>
-    <string name="glow">Phát sáng</string>
-    <string name="slide">Trượt</string>
-    <string name="karaoke">Karaoke</string>
-    <string name="apple_music_style">Phong cách Apple Music</string>
     <string name="lyrics_text_size">Cỡ chữ lời bài hát</string>
     <string name="lyrics_line_spacing">Giãn dòng lời bài hát</string>
     <string name="wavy">Lượn sóng</string>
@@ -352,7 +333,6 @@
     <string name="advanced_desc">Điều chỉnh tốc độ (tempo) và cao độ (pitch) của bài hát</string>
     <string name="equalizer_desc">Mở bộ cân bằng âm thanh</string>
     <string name="enable">Cho phép</string>
-    <string name="credits_instagram">Instagram</string>
     <string name="save_episode_for_later">Lưu để nghe sau</string>
     <string name="metrolist">METROLIST</string>
     <string name="credits_license_name">Giấy phép Công cộng GNU phiên bản 3.0 (GPLv3)</string>
@@ -360,8 +340,6 @@
     <string name="logout_keep">Giữ lại</string>
     <string name="logout_clear">Xoá bỏ</string>
     <string name="credits_telegram">Kênh Telegram</string>
-    <string name="credits_website">Website</string>
-    <string name="credits_github">GitHub</string>
     <string name="filter_podcasts">Podcasts</string>
     <string name="view_podcast">Xem podcast</string>
     <string name="no_account_found">Không tìm thấy tài khoản</string>
@@ -409,10 +387,6 @@
     <string name="crossfade_duration">Thời lượng của chuyển tiếp mượt mà</string>
     <string name="crossfade_gapless">Tắt cho album phát liền mạch</string>
     <string name="crossfade_gapless_desc">Bỏ qua hiệu ứng chuyển bài mượt cho các album được thiết kế để phát liền mạch</string>
-    <string name="crossfade_beta_title">Tính năng thử nghiệm!</string>
-    <string name="crossfade_beta_message">Chuyển bài mượt (Crossfade) là một tính năng mới và có thể còn lỗi. Nếu bạn gặp bất kỳ vấn đề nào, vui lòng báo cáo cho chúng tôi.\n\nLƯU Ý: Do giới hạn kỹ thuật, tính năng này sẽ tắt chức năng giảm tải âm thanh (audio offload)</string>
-    <string name="lyrics_romanize_hindi">La-tinh hóa lời bài hát Hindi</string>
-    <string name="lyrics_romanize_punjabi">La-tinh hóa lời bài hát Punjabi</string>
     <string name="audio_offload_disabled_by_crossfade">Đã bị vô hiệu hóa do tính năng chuyển bài mượt đang hoạt động</string>
     <string name="lyrics_romanize_as_main">Hiện lời bài hát La-tinh hóa là chính</string>
     <string name="enable_scrobbling">Kích hoạt scrobbling</string>
@@ -425,7 +399,6 @@
     <string name="hide_youtube_shorts">Ẩn YouTube Shorts</string>
     <string name="start_radio_desc">Bắt đầu phát radio dựa trên mục này</string>
     <string name="mini_player">Trình phát mini</string>
-    <string name="pure_black_mini_player">Trình phát mini đen thuần</string>
     <string name="cache_size_warning_title">Khoan đã!</string>
     <string name="cache_size_warning_message">Giới hạn bạn đã chọn (%1$s) nhỏ hơn dung lượng ứng dụng hiện đang sử dụng. Tiếp tục có thể khiến một số %2$s trong bộ nhớ đệm bị xóa. Bạn vẫn muốn tiếp tục chứ?</string>
     <string name="cache_size_warning_confirm">Tiếp tục</string>
@@ -442,8 +415,6 @@
     <string name="credits_license_desc">Phần mềm miễn phí, mã nguồn mở. Bạn có thể sử dụng, học hỏi, chia sẻ và cải thiện nó😉</string>
     <string name="credits_discord">Máy chủ Discord</string>
     <string name="credits_view_repo">Xem kho lưu trữ</string>
-    <string name="app_version_info">%1$s • %2$s</string>
-    <string name="like_what_i_do">Thích những gì tôi làm?</string>
     <string name="buy_mo_a_coffee">Ủng hộ tôi một ly cà phê!</string>
     <string name="community_and_info">Cộng đồng &amp; Thông tin</string>
     <string name="stands_with_palestine">Dự án này đứng về Palestine 🇵🇸</string>
@@ -521,9 +492,6 @@
     <string name="wrapped_close">Đóng Wrapped</string>
     <string name="wrapped_create_playlist">Tạo danh sách phát</string>
     <string name="wrapped_playlist_saved">Danh sách phát đã được lưu</string>
-    <plurals name="profiles_count">
-        <item quantity="other">%d Hồ sơ</item>
-    </plurals>
     <string name="equalizer_header">Bộ cân bằng âm thanh</string>
     <string name="no_profiles">Không có hồ sơ chỉnh âm</string>
     <string name="import_profile">Nhập hồ sơ</string>
@@ -557,7 +525,6 @@
     <string name="alarm_select_playlist">Chọn danh sách</string>
     <string name="alarm_no_playlists">Không tìm thấy danh sách phát nào</string>
     <string name="alarm_selected">Đã chọn</string>
-    <string name="alarm_playlist_helper">Chọn danh sách phát mà báo thức sẽ sử dụng</string>
     <string name="alarm_add">Thêm báo thức</string>
     <string name="alarm_empty">Chưa có báo thức. Thêm một báo thức để lên lịch phát</string>
     <string name="alarm_disabled">Đã tắt</string>
@@ -571,7 +538,6 @@
     <string name="alarm_delete">Xoá báo thức</string>
     <string name="alarm_duplicate_time_warning">Đã có một báo thức khác vào thời điểm này. Nếu cả hai cùng kích hoạt một lúc, có thể chỉ một báo thức được phát</string>
     <string name="alarm_random_song">Phát bài hát ngẫu nhiên từ danh sách phát</string>
-    <string name="alarm_next_trigger">Kích hoạt tiếp theo</string>
     <string name="alarm_not_scheduled">Chưa lên lịch</string>
     <string name="alarm_exact_permission_title">Cho phép báo động chính xác</string>
     <string name="alarm_battery_optimization_title">Tối ưu hóa pin</string>
@@ -581,7 +547,6 @@
     <string name="found_in_settings_content">Tìm ở Cài đặt &gt; Nội dung</string>
     <string name="your_daily_discover">Hôm nay nghe gì</string>
     <string name="casting_to">Đang phát tới %s</string>
-    <string name="listening_to_metrolist">Đang nghe Metrolist</string>
     <string name="open">Mở</string>
     <string name="failed_to_create_image">Không thể tạo ảnh: %s</string>
     <string name="copied_title">Đã sao chép tiêu đề</string>
@@ -614,7 +579,6 @@
     <string name="listen_together_auto_approval_suggestions">Tự động chấp nhận gợi ý bài hát</string>
     <string name="listen_together_auto_approval_suggestions_desc">Tự động chấp nhận và xếp hàng gợi ý bài hát từ khách</string>
     <string name="listen_together_in_top_bar">Nghe Cùng Nhau trên thanh trên cùng</string>
-    <string name="copy_all_lyrics">Sao chép lời bài hát</string>
     <string name="change">Thay đổi</string>
     <string name="ai_provider">Nhà cung cấp</string>
     <string name="ai_base_url">URL ban đầu</string>
@@ -630,7 +594,6 @@
     <string name="ai_error_no_lyrics">Không có lời bài hát để dịch</string>
     <string name="ai_error_lyrics_empty">Lời bài hát trống rỗng</string>
     <string name="ai_error_language_required">Yêu cầu ngôn ngữ đích</string>
-    <string name="ai_error_unexpected">Kết quả dịch bất ngờ</string>
     <string name="ai_error_unknown">Đã xảy ra lỗi không xác định</string>
     <string name="ai_error_translation_failed">Dịch thất bại</string>
     <string name="ai_provider_help">Lấy API key</string>
@@ -650,7 +613,6 @@
     <string name="ai_deepl_formality_more">Trang trọng hơn</string>
     <string name="ai_deepl_formality_less">Ít trang trọng hơn</string>
     <string name="ai_system_prompt">Lời nhắc hệ thống</string>
-    <string name="ai_system_prompt_desc">Hướng dẫn tùy chỉnh đã đuợc gửi đến mô hình AI. Để trống nếu muốn sử dụng lời nhắc mặc định</string>
     <string name="ai_system_prompt_default">Mặc định</string>
     <string name="ai_system_prompt_reset">Reset về mặc định</string>
     <string name="cd_back">Mặt sau</string>
@@ -660,7 +622,7 @@
     <string name="enable_high_refresh_rate_desc">Buộc màn hình hoạt động ở tốc độ làm mới cao nhất được hỗ trợ (ví dụ: 120Hz)</string>
     <string name="recognize_music">Nhận dạng âm nhạc</string>
     <string name="tap_to_recognize">Ấn để nhận dạng</string>
-    <string name="parsed_from_link">Được phân tích từ liên kết</string>
+    <string name="parsed_from_link">Đã trích xuất từ liên kết</string>
     <string name="lyrics_from_provider">Lời bài hát được cung cấp bởi %s</string>
     <string name="hide_status_bar_fullscreen">Ẩn thanh trạng thái khi ở chế độ toàn màn hình</string>
     <string name="hide_status_bar_fullscreen_desc">Ẩn thanh trạng thái khi lời bài hát ở chế độ toàn màn hình được bật</string>
@@ -694,7 +656,6 @@
     <string name="turntable_widget_description">Widget âm nhạc hình tròn có nút phát và nút thích</string>
     <string name="listen_together_in_top_bar_desc">Hiển thị \"Nghe cùng nhau\" trên thanh ứng dụng trên cùng thay vì thanh điều hướng</string>
     <string name="ai_setup_guide">Thông tin xác thực API</string>
-    <string name="ai_system_prompt_placeholder">Sử dụng {lineCount} làm ký hiệu giữ chỗ cho số dòng cần dịch</string>
     <string name="palette_dynamic">Thích ứng</string>
     <string name="listening">Đang nghe…</string>
     <string name="processing">Đang nhận dạng…</string>
@@ -780,8 +741,6 @@
     <string name="android_auto_youtube_playlists">Hiển thị danh sách phát được đề xuất trên YouTube</string>
     <string name="android_auto_youtube_playlists_desc">Hiển thị các danh sách phát được đề xuất của YouTube Music trong phần danh sách phát khi duyệt bằng Android Auto</string>
     <string name="android_auto_target_playlist">Thêm điểm đến nhanh</string>
-    <string name="android_auto_target_playlist_desc">Chọn danh sách phát để lưu các bài hát khi sử dụng nút thêm nhanh trong Android Auto</string>
-    <string name="added_to_playlist">Đã thêm vào danh sách phát</string>
     <string name="android_auto_target_playlist_not_set">Chưa chọn danh sách phát nào. Vui lòng chọn một danh sách phát trong cài đặt Android Auto</string>
     <string name="time_transfer_warning">CẢNH BÁO: Thao tác này không thể hoàn tác sau khi hoàn tất. Hãy tạo bản sao lưu trước khi tiếp tục. Chỉ những bài hát có ít nhất một lần phát đã được ghi nhận mới đủ điều kiện</string>
     <string name="time_transfer_listen_time_label">Thời lượng:</string>
@@ -804,7 +763,6 @@
     <string name="eq_download_db">Tải dữ liệu của AutoEQ (17 MB)</string>
     <string name="eq_downloading">Đang tải xuống…</string>
     <string name="import_from_file">Nhập từ file</string>
-    <string name="add_profile">Thêm hồ sơ</string>
     <string name="wizard_select_model">Chọn Model</string>
     <string name="wizard_select_profiles">Chọn hồ sơ</string>
     <string name="wizard_search_model_hint">Tìm kiếm model cho tai nghe của bạn</string>
@@ -834,8 +792,6 @@
     <string name="audio_track_playback_params_description">Sử dụng AudioTrack của Android để thay đổi tốc độ/cao độ thay vì xử lý bằng phần mềm. Hoạt động ổn định hơn khi điều chỉnh cao độ ở mức cực hạn</string>
     <string name="auto_radio_queue">Tự động thêm vào hàng chờ</string>
     <string name="and">và</string>
-    <string name="discord_status_connecting">Đang kết nối tới Discord…</string>
-    <string name="discord_status_reconnecting">Đang kết nối lại với Discord…</string>
     <string name="discord_status_connected">Đã kết nối</string>
     <string name="discord_status_authorizing">Đang ủy quyền…</string>
     <string name="discord_status_authorized">Đã ủy quyền</string>
@@ -854,10 +810,6 @@
     <string name="discord_enable_button_2">Hiển thị nút 2</string>
     <string name="discord_button_label">Nhãn</string>
     <string name="discord_button_url">URL</string>
-    <string name="discord_placeholders">Các biến giữ chỗ khả dụng</string>
-    <string name="discord_placeholder_song">Tên bài hát</string>
-    <string name="discord_placeholder_artist">Tên nghệ sĩ</string>
-    <string name="discord_placeholder_album">Tên Album</string>
     <string name="restore_database_incompatible">Không thể khôi phục bản sao lưu: phiên bản cơ sở dữ liệu không tương thích. Dữ liệu hiện tại của bạn đã được giữ nguyên.</string>
     <string name="stream_client">Ứng dụng phát trực tuyến</string>
     <string name="format_player_hash">Mã người dùng</string>
@@ -876,16 +828,25 @@
     <string name="stream_source_visionos_desc">Apple Vision. Không bóp hiệu năng; rất ổn định.</string>
     <string name="stream_source_android_vr">Android VR</string>
     <string name="stream_source_android_vr_desc">Ứng dụng Android VR (mọi phiên bản).</string>
-    <string name="stream_source_ios">iOS / iPadOS</string>
-    <string name="stream_source_ios_desc">Ứng dụng Apple iOS và iPadOS. Mặc định tắt; bóp hiệu năng khi vượt quá ~1 MiB.</string>
     <string name="stream_source_web_creator">WEB_CREATOR</string>
     <string name="stream_source_web_creator_desc">Ứng dụng web cho nhà sáng tạo</string>
-    <string name="stream_source_android_creator">ANDROID_CREATOR</string>
-    <string name="stream_source_android_creator_desc">Ứng dụng Android cho Nhà sáng tạo. Mặc định tắt; cần có DroidGuard.</string>
     <string name="error_job_cancelled">Video không thể phát lúc này. Vui lòng thử lại hoặc chuyển sang bài tiếp theo.</string>
     <string name="enable_landscape_scaling">Tỷ lệ màn hình ngang</string>
     <string name="enable_landscape_scaling_desc">Phóng to giao diện khi xoay ngang trên màn hình lớn</string>
-    <string name="dynamic_theme">Chủ đề động</string>
     <string name="enable_dynamic_icon">Biểu tượng theo chủ đề</string>
     <string name="enable_dynamic_icon_desc">Sử dụng biểu tượng theo chủ đề. Khi tắt, biểu tượng sẽ sử dụng màu đơn sắc.</string>
+    <string name="playlist_unavailable">Không tìm thấy danh sách phát</string>
+    <string name="kmp_upgrade_title">Đã có phiên bản Metrolist KMP %s</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP đang trong giai đoạn thử nghiệm sớm. Các tính năng có thể bị lỗi, chưa hoàn thiện hoặc thay đổi mà không cần báo trước.</string>
+    <string name="kmp_upgrade_action">Nâng cấp lên phiên bản KMP</string>
+    <string name="kmp_upgrade_later">Để sau</string>
+    <string name="android_auto_search_options">Tùy chọn tìm kiếm</string>
+    <string name="android_auto_search_local_songs_limit">Giới hạn tìm kiếm bài hát</string>
+    <string name="android_auto_search_local_songs_limit_desc">Giới hạn số lượng bài hát trên máy hiển thị trong kết quả tìm kiếm. Khuyến nghị không chọn \"không giới hạn\" để tránh lỗi tràn bộ nhớ</string>
+    <string name="choose_youtube_channel">Chọn kênh YouTube</string>
+    <string name="choose_youtube_channel_description">Tài khoản Google này có nhiều kênh. Hãy chọn kênh bạn muốn sử dụng.</string>
+    <string name="switch_youtube_channel">Chuyển kênh YouTube</string>
+    <string name="youtube_channels_failed">Không thể lấy danh sách kênh YouTube cho tài khoản này. Vui lòng thử lại.</string>
+    <string name="authentication_data_extraction_failed">Không thể truy cập phiên đăng nhập YouTube Music. Vui lòng thử lại.</string>
+    <string name="login_failed_with_error">Lỗi đăng nhập: %1$s</string>
 </resources>

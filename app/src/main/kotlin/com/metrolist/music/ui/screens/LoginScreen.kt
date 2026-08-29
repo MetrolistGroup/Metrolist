@@ -10,6 +10,7 @@ import android.content.Intent
 import android.net.Uri
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
@@ -302,6 +303,26 @@ fun LoginScreen(
                 WebView(webViewContext).apply {
                     webViewClient =
                         object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(
+                                view: WebView,
+                                request: WebResourceRequest,
+                            ): Boolean {
+                                val scheme = request.url.scheme
+                                if (scheme == "http" || scheme == "https") return false
+
+                                if (scheme == "intent") {
+                                    runCatching {
+                                        Intent.parseUri(request.url.toString(), Intent.URI_INTENT_SCHEME)
+                                            .apply {
+                                                addCategory(Intent.CATEGORY_BROWSABLE)
+                                                component = null
+                                                selector = null
+                                            }.let(context::startActivity)
+                                    }
+                                }
+                                return true
+                            }
+
                             override fun onPageFinished(
                                 view: WebView,
                                 url: String?,

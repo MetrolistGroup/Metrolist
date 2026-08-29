@@ -58,7 +58,7 @@
     <string name="show_top_playlist">Mostrar playlist do Top</string>
     <string name="show_cached_playlist">Mostrar playlist das Em cache</string>
     <string name="remote_history">Remoto</string>
-    <string name="charts">Ranques</string>
+    <string name="charts">Gráficos</string>
     <string name="back_button_desc">Voltar</string>
     <string name="album_cover_desc">Capa do álbum</string>
     <string name="top_music_videos">Vídeoclipes populares</string>
@@ -103,8 +103,6 @@
     <string name="import_online">Importar uma playlist M3U</string>
     <string name="import_csv">Importar uma playlist CSV</string>
     <string name="playlist_add_local_to_synced_note">OBSERVAÇÃO: Adicionar músicas locais as playlist sincronizadas ou remotas não é suportado. Qualquer outra combinação é valida</string>
-    <string name="lyrics_romanize_japanese">Romanizar letras em Japonês</string>
-    <string name="lyrics_romanize_korean">Romanizar letras em Coreano</string>
     <string name="yt_sync">Sincronizar automaticamente com a conta</string>
     <string name="more_content">Mais conteúdo</string>
     <string name="new_player_design">Novo design do tocador</string>
@@ -138,19 +136,9 @@
     <string name="proxy_username">Nome do usuário da proxy</string>
     <string name="proxy_password">Senha da proxy</string>
     <string name="enable_authentication">Ativar autenticação</string>
-    <string name="lyrics_romanization_cyrillic">Alfabeto cirílico</string>
     <string name="lyrics_romanize_title">Romanização</string>
     <string name="lyrics_romanization">Romanização da letra</string>
-    <string name="lyrics_romanize_russian">Romanizar letras em Russo</string>
-    <string name="lyrics_romanize_ukrainian">Romanizar letras em Ucraniano</string>
-    <string name="lyrics_romanize_belarusian">Romanizar letras em Bielorrusso</string>
-    <string name="lyrics_romanize_kyrgyz">Romanizar letras em Quirguiz</string>
-    <string name="lyrics_romanize_serbian">Romanizar letras em Sérvio</string>
-    <string name="lyrics_romanize_bulgarian">Romanizar letras em Búlgaro</string>
     <string name="line_by_line_option_title">Detectar idioma linha por linha</string>
-    <string name="line_by_line_option_desc">Escrita cirílica será detectada linha por linha em vez de ser detectada pela música inteira</string>
-    <string name="line_by_line_dialog_title">Tem certeza?</string>
-    <string name="line_by_line_dialog_desc">Este é um recurso experimental que pode acertar ou errar.\n\nPor padrão, o idioma é detectado pela música inteira. Com esta opção ativada, será detectado linha por linha. Isto permite que funcione em músicas em vários idiomas, MAS o idioma detectado pode nem sempre estar correto. Por exemplo, uma letra em Ucraniano que não contém nenhum caractere específico do Ucraniano pode ser romanizada como Russo.\n\nSe você não está experienciando nenhum problema, é recomendado manter esta opção desativada</string>
     <string name="romanize_current_track">Romanizar faixa atual</string>
     <string name="choose_from_library">Escolher da biblioteca</string>
     <string name="remove_custom_image">Remover imagem customizada</string>
@@ -161,7 +149,6 @@
     <string name="show_uploaded_playlist">Mostrar playlist das Enviadas</string>
     <string name="updater">Atualizador</string>
     <string name="check_for_updates">Conferir se há atualizações automaticamente</string>
-    <string name="lyrics_romanize_macedonian">Romanizar letras em Macedônio</string>
     <string name="update_notifications">Ativar notificações de atualizações</string>
     <string name="update_available_title">Atualização disponível</string>
     <string name="update_channel_name">Atualizações do aplicativo</string>
@@ -180,7 +167,6 @@
     <string name="primary_color_style">Cor primária</string>
     <string name="tertiary_color_style">Cor terciária</string>
     <string name="auto_scroll">Sincronizar</string>
-    <string name="lyrics_romanize_chinese">Romanizar letras em Chinês</string>
     <string name="google_cast">Transmitir via Google Cast</string>
     <string name="google_cast_description">Transmitir áudio para o Chromecast e outros dispositivos compatíveis</string>
     <string name="last_fm_send_likes">Sincronizar Amado e Desamado</string>
@@ -201,7 +187,6 @@
     <string name="advanced_desc">Ajustar o ritmo e tom da música</string>
     <string name="equalizer_desc">Abrir o equalizador de áudio</string>
     <string name="mini_player">Mini-reprodutor</string>
-    <string name="pure_black_mini_player">Mini-tocador preto puro</string>
     <string name="cache_size_warning_title">Espere!</string>
     <string name="cache_size_warning_message">O limite que você escolheu (%1$s) é menor do que o que o aplicativo está usando atualmente. Continuar pode fazer com que algum cache %2$s seja removido. Prosseguir de qualquer maneira?</string>
     <string name="cache_size_warning_confirm">Continuar</string>
@@ -220,11 +205,6 @@
     <string name="show_wrapped_card">Mostrar cartão da retrospectiva</string>
     <string name="lyrics_animation_style">Estilo de Animação das Letras</string>
     <string name="none">Nenhum</string>
-    <string name="fade">Desvanecer</string>
-    <string name="glow">Brilhar</string>
-    <string name="slide">Deslizar</string>
-    <string name="karaoke">Karaoke</string>
-    <string name="apple_music_style">Apple Músicas</string>
     <string name="lyrics_text_size">Tamanho do texto das letras</string>
     <string name="lyrics_line_spacing">Espaçamento de linha das letras</string>
     <string name="album_art_for">Arte de álbum para %s</string>
@@ -263,11 +243,6 @@
     <string name="wavy">Ondulado</string>
     <string name="wrapped_album_listening_time_minutes">%d minutos</string>
     <string name="wrapped_playlist_saved">Playlist salva</string>
-    <plurals name="profiles_count">
-        <item quantity="one">%d perfil</item>
-        <item quantity="many">%d de perfis</item>
-        <item quantity="other">%d perfis</item>
-    </plurals>
     <string name="equalizer_header">Equalizador</string>
     <string name="no_profiles">Sem perfis de equalizador</string>
     <string name="import_profile">Importar perfil</string>
@@ -284,7 +259,6 @@
     <string name="import_error_title">Erro de importação</string>
     <string name="casting_to">Transmitir para %s</string>
     <string name="progress_percent">Progresso %s%%</string>
-    <string name="listening_to_metrolist">Ouvindo Metrolist</string>
     <string name="open">Abrir</string>
     <string name="failed_to_create_image">Falha ao criar a imagem: %s</string>
     <string name="copied_title">Título copiado</string>
@@ -326,8 +300,6 @@
     <string name="crossfade_duration">Duração da transição suave</string>
     <string name="crossfade_gapless">Desativar para álbuns sem intervalos</string>
     <string name="crossfade_gapless_desc">Pular a transição suave para álbuns feitos para tocar músicas sem vãos</string>
-    <string name="crossfade_beta_title">Recurso Beta!</string>
-    <string name="crossfade_beta_message">Transição suave é uma nova função e podem haver erros. Se você experienciar qualquer problema, por favor reporte-os.\n\nOBSERVAÇÃO: Esse recurso desativa a descarga de áudio devido a limitações técnicas</string>
     <string name="audio_offload_disabled_by_crossfade">Desabilitado porque a transição suave está ativa</string>
     <string name="error_title">Erro inesperado</string>
     <string name="error_eq_apply_failed">Falhou a aplicar o perfil do equalizador: %1$s</string>
@@ -452,7 +424,6 @@
     <string name="ai_error_no_lyrics">Não há letras para traduzir</string>
     <string name="ai_error_lyrics_empty">A letra está vazia</string>
     <string name="ai_error_language_required">Um idioma de destino é necessário</string>
-    <string name="ai_error_unexpected">Resultado de tradução inesperado</string>
     <string name="ai_error_unknown">Um erro desconhecido ocorreu</string>
     <string name="ai_error_translation_failed">A tradução falhou</string>
     <string name="crash_title">O aplicativo travou</string>
@@ -530,7 +501,7 @@
     <string name="discord_activity_listening">Ouvindo</string>
     <string name="discord_activity_watching">Assistindo</string>
     <string name="discord_activity_competing">Competindo</string>
-    <string name="discord_information_warning">Metrolist envia a música tocando no momento para a Gateway do Discord para atualizar a sua Rich Presence. Todos os fatos vão diretamente do seu dispositivo para o Discord — nenhum servidor de terceiros está envolvido. Seu token continua no dispositivo e não é compartilhado. De qualquer maneira, usar um token para conexões de Gateway não é suportado oficialmente e pode violar os termos de serviço do Discord. Prossiga por sua responsabilidade!</string>
+    <string name="discord_information_warning">Metrolist usa as APIs públicas OAuth2 e Gateway do Discord para compartilhar o que você está ouvindo. A autorização acontece em uma sessão local do navegador, que é fechada automaticamente após capturar o código — nada é enviado para servidores de terceiros. Seu token é armazenado neste dispositivo de forma criptografada e nunca é compartilhado. O Metrolist se conecta diretamente a wss://gateway.discord.gg para publicar sua atividade e solicita apenas a permissão mínima necessária (sdk.social_layer_presence).</string>
     <string name="discord_rpc_preview">Visualização de Rich Presence</string>
     <string name="discord_presence">Presença</string>
     <string name="discord_connect_description">Entre com o Discord para compartilhar o que você está ouvindo</string>
@@ -539,8 +510,6 @@
     <string name="discord_advanced_mode_description">Mostrar opções adicionais de personalização do Rich Presence</string>
     <string name="player_background_solid">Sólido</string>
     <string name="resume_on_bluetooth_connect">Retomar com conexão do Bluetooth</string>
-    <string name="lyrics_romanize_hindi">Romanizar letras em Hindi</string>
-    <string name="lyrics_romanize_punjabi">Romanizar letras em Punjabi</string>
     <string name="lyrics_romanize_as_main">Mostrar letras romanizadas como principal</string>
     <string name="enable_lrclib_desc">Biblioteca de letras sincronizadas feitas pela comunidade</string>
     <string name="enable_kugou_desc">Pega as letras do KuGou, uma plataforma chinesa popular de música</string>
@@ -602,12 +571,7 @@
     <string name="credits_license_desc">Software grátis e de código aberto. Você pode usar, estudar, compartilhar, e melhorá-lo</string>
     <string name="credits_discord">Servidor do Discord</string>
     <string name="credits_telegram">Canal do Telegram</string>
-    <string name="credits_website">Site</string>
-    <string name="credits_instagram">Instagram</string>
-    <string name="credits_github">GitHub</string>
     <string name="credits_view_repo">Ver repositório</string>
-    <string name="app_version_info">%1$s • %2$s</string>
-    <string name="like_what_i_do">Gosta do meu trabalho?</string>
     <string name="buy_mo_a_coffee">Me compre um café!</string>
     <string name="community_and_info">Comunidade e Informações</string>
     <string name="metrolist">METROLIST</string>
@@ -632,7 +596,7 @@
     </plurals>
     <string name="restore_confirm_title">Restaurar backup?</string>
     <string name="restore_confirm_message">Isto vai restaurar seus dados do app do backup selecionado</string>
-    <string name="restore_account_warning">Você vai precisar fazer o login novamente após a restauração. A seguinte conta vai ser desconectada:</string>
+    <string name="restore_account_warning">As seguintes informações da conta serão restauradas e preservadas:</string>
     <string name="restore">Restaurar</string>
     <string name="checking_previous_account">Verificando se há uma conta anterior…</string>
     <string name="no_account_found">Nenhuma conta encontrada</string>
@@ -728,7 +692,6 @@
         <item quantity="other">%d músicas</item>
     </plurals>
     <string name="alarm_selected">Selecionado</string>
-    <string name="alarm_playlist_helper">Escolha qual playlist o alarme irá tocar</string>
     <string name="alarm_add">Adicionar alarme</string>
     <string name="alarm_empty">Sem alarmes ainda. Adicione um para inicar uma reprodução agendada</string>
     <string name="alarm_disabled">Desativado</string>
@@ -742,17 +705,13 @@
     <string name="alarm_delete">Deletar alarme</string>
     <string name="alarm_duplicate_time_warning">Outro alarme já existe neste horário. Se ambos ativarem simultaneamente, apenas um deve tocar</string>
     <string name="alarm_random_song">Tocar uma música aleatória da playlist</string>
-    <string name="alarm_next_trigger">Próximo à ativar</string>
     <string name="alarm_not_scheduled">Não agendado</string>
     <string name="alarm_exact_permission_title">Permitir alarmes exatos</string>
     <string name="alarm_exact_permission_desc">Garante permissão para a temporização precisa do alarme, melhorando a confiabilidade quando o app estiver em segundo plano</string>
     <string name="alarm_battery_optimization_title">Otimização de bateria</string>
     <string name="alarm_battery_optimization_desc">Desativar a otimização da bateria para um comportamento de alarme mais confiável em segundo plano</string>
-    <string name="copy_all_lyrics">Copiar toda a letra</string>
     <string name="change">Mudar</string>
     <string name="ai_system_prompt">Prompt do sistema</string>
-    <string name="ai_system_prompt_desc">Instruções personalizadas enviadas ao modelo de IA. Deixe em branco para usar o prompt padrão</string>
-    <string name="ai_system_prompt_placeholder">Use {lineCount} como um Espaço Reservado para o número de linhas para traduzir</string>
     <string name="ai_system_prompt_default">Padrão</string>
     <string name="ai_system_prompt_reset">Restaurar para o padrão</string>
     <string name="recognition_notification_channel_name">Reconhecimento de música</string>
@@ -768,9 +727,7 @@
     <string name="android_auto_youtube_playlists">Mostrar playlists sugeridas do YouTube</string>
     <string name="android_auto_youtube_playlists_desc">Exibe playlists recomendadas do Youtube Music na seção de playlists quando navegando com o Android Auto</string>
     <string name="android_auto_target_playlist">Adição rápida de destino</string>
-    <string name="android_auto_target_playlist_desc">Escolha a playlist onde as músicas são salvas quando usando o botão Adicionar Rápido no Android Auto</string>
     <string name="android_auto_target_playlist_auto">Não definido</string>
-    <string name="added_to_playlist">Adicionado a playlist</string>
     <string name="android_auto_target_playlist_not_set">Nenhuma playlist selecionada. Escolha uma nas configurações do Android Auto</string>
     <string name="time_transfer_title">Transferência de tempo</string>
     <string name="time_transfer_warning">AVISO: esta ação não pode ser desfeita quando completa. Crie um backup antes de prosseguir. Apenas músicas com pelo menos uma reprodução registrada são elegíveis</string>
@@ -820,7 +777,6 @@
     <string name="eq_download_db">Baixar banco de dados do AutoEQ (17 MB)</string>
     <string name="eq_downloading">Baixando…</string>
     <string name="import_from_file">Importar de arquivo</string>
-    <string name="add_profile">Adicionar perfil</string>
     <string name="wizard_select_model">Selecionar Modelo</string>
     <string name="wizard_select_profiles">Selecionar Perfis</string>
     <string name="wizard_search_model_hint">Procurar pelo modelo do seu headphone ou fone de ouvido</string>
@@ -849,7 +805,6 @@
     <string name="widget_playlists_description">Atalhos para a playlist com controles do mini reprodutor</string>
     <string name="choose_something_below">Escolha algo abaixo</string>
     <string name="error_job_cancelled">O vídeo não está disponível para reprodução. Tente novamente ou pule para a próxima música.</string>
-    <string name="discord_status_connecting">Conectando ao Discord…</string>
     <string name="discord_status_connected">Conectado</string>
     <string name="discord_status_authorizing">Autorizando…</string>
     <string name="discord_status_authorized">Autorizado</string>
@@ -863,24 +818,19 @@
     <string name="discord_integration">Integração com Discord</string>
     <string name="not_applicable">N/A</string>
     <string name="enable_dynamic_icon_desc">Usa cores dinâmicas do tema no ícone do app. Quando desabilitado, o ícone usa cores sólidas.</string>
-    <string name="dynamic_theme">Tema Dinâmico</string>
     <string name="enable_landscape_scaling">Escala No Modo Paisagem</string>
     <string name="enable_landscape_scaling_desc">Escala a interface no modo paisagem para telas maiores</string>
     <string name="enable_discord_rpc">Habilitar Rich Presence</string>
     <string name="discord_state">Estado</string>
     <string name="format_cipher_support_added">Suporte a criptografia adicionado</string>
-    <string name="discord_status_reconnecting">Reconectando com Discord…</string>
     <string name="discord_details">Detalhes</string>
     <string name="discord_enable_button_1">Mostrar botão 1</string>
     <string name="discord_enable_button_2">Mostrar botão 2</string>
     <string name="discord_button_label">Rótulo</string>
     <string name="discord_button_url">URL</string>
-    <string name="discord_placeholder_song">Nome da música</string>
-    <string name="discord_placeholder_artist">Nome do artista</string>
-    <string name="discord_placeholder_album">Nome do álbum</string>
     <string name="restore_database_incompatible">Não foi possível restaurar o backup: versão do banco de dados incompatível. Seus dados atuais foram preservados.</string>
     <string name="stream_client">Cliente de streaming</string>
-    <string name="format_player_hash">Hash do reprodutor</string>
+    <string name="format_player_hash">Hash do player</string>
     <string name="enable_dynamic_icon">Cores dinâmicas do ícone</string>
     <string name="stream_sources">Fontes de streaming</string>
     <string name="stream_source_order">Ordem de streaming</string>
@@ -894,8 +844,26 @@
     <string name="stream_source_visionos">visionOS</string>
     <string name="stream_source_android_vr">Android VR</string>
     <string name="stream_source_android_vr_desc">Clientes de Android VR (todas as versões).</string>
-    <string name="stream_source_ios">iOS / iPadOS</string>
     <string name="stream_source_web_creator">WEB_CREATOR</string>
-    <string name="stream_source_android_creator">ANDROID_CREATOR</string>
-    <string name="stream_source_android_creator_desc">Cliente de criador Android. Desativado por padrão; requer DroidGuard.</string>
+    <string name="playlist_unavailable">Lista de reprodução indisponível</string>
+    <string name="kmp_upgrade_later">Agora não</string>
+    <string name="android_auto_search_options">Opções de pesquisa</string>
+    <string name="android_auto_search_local_songs_limit">limite de pesquisa de músicas</string>
+    <string name="kmp_upgrade_title">Metrolist KMP %s está disponível</string>
+    <string name="kmp_upgrade_warning">O Metrolist KMP está em acesso antecipado. Funcionalidades podem estar quebradas, incompletas ou sofrer alterações sem aviso prévio.</string>
+    <string name="kmp_upgrade_action">Atualizar para KMP</string>
+    <string name="android_auto_search_local_songs_limit_desc">Limite o número de músicas locais exibidas nos resultados da pesquisa. Recomenda-se não definir como ilimitado para evitar travamentos de memória</string>
+    <string name="stream_source_visionos_desc">Apple Vision. Sem limitação de velocidade; muito confiável.</string>
+    <string name="stream_source_web_creator_desc">Cliente web do Creator.</string>
+    <string name="choose_youtube_channel">Escolha um canal do YouTube</string>
+    <string name="choose_youtube_channel_description">Essa conta do Google tem múltiplos canais. Por favor escolha o canal que você quiser usar.</string>
+    <string name="switch_youtube_channel">Troque o canal do YouTube</string>
+    <string name="youtube_channels_failed">Não foi possível recuperar os canais do YouTube para essa conta. Por favor tente novamente.</string>
+    <string name="authentication_data_extraction_failed">Não foi possível ler a sessão do YouTube Music. Por favor tente novamente.</string>
+    <string name="login_failed_with_error">Falha no Login: %1$s</string>
+    <string name="add_to_playlist_position">Posição ao adicionar à playlist</string>
+    <string name="playlist_position_beginning">Início da playlist</string>
+    <string name="playlist_position_beginning_desc">Músicas recém-adicionadas aparecem antes das existentes</string>
+    <string name="playlist_position_end">Fim da playlist</string>
+    <string name="playlist_position_end_desc">Músicas recém-adicionadas aparecem depois das existentes</string>
 </resources>

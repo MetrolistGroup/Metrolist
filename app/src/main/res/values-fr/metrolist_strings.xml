@@ -103,8 +103,6 @@
     <string name="playlist_add_local_to_synced_note">REMARQUE : L’ajout de titres locaux à des playlists synchronisées ou distantes n’est pas pris en charge. Toute autre combinaison est valide</string>
     <string name="import_online">Importer une playlist M3U</string>
     <string name="import_csv">Importer une playlist CSV</string>
-    <string name="lyrics_romanize_japanese">Romaniser les paroles japonaises</string>
-    <string name="lyrics_romanize_korean">Romaniser les paroles coréennes</string>
     <string name="yt_sync">Synchronisation automatique avec le compte</string>
     <string name="more_content">Plus de contenu</string>
     <string name="new_player_design">Nouveau design du lecteur</string>
@@ -135,19 +133,9 @@
     <string name="proxy_username">Nom d\'utilisateur du proxy</string>
     <string name="proxy_password">Mot de passe proxy</string>
     <string name="enable_authentication">Activer l\'authentification</string>
-    <string name="lyrics_romanization_cyrillic">Cyrillique</string>
     <string name="lyrics_romanize_title">Romanisation</string>
     <string name="lyrics_romanization">Romanisation des paroles</string>
-    <string name="lyrics_romanize_russian">Romaniser les paroles russes</string>
-    <string name="lyrics_romanize_ukrainian">Romaniser les paroles ukrainiennes</string>
-    <string name="lyrics_romanize_belarusian">Romaniser les paroles biélorusses</string>
-    <string name="lyrics_romanize_kyrgyz">Romaniser les paroles kirghizes</string>
-    <string name="lyrics_romanize_serbian">Romaniser les paroles serbes</string>
-    <string name="lyrics_romanize_bulgarian">Romaniser les paroles bulgares</string>
     <string name="line_by_line_option_title">Détecter la langue ligne par ligne</string>
-    <string name="line_by_line_option_desc">L\'alphabet cyrillique sera détecté ligne par ligne plutôt que sur l\'ensemble du titre</string>
-    <string name="line_by_line_dialog_title">Êtes-vous sûr ?</string>
-    <string name="line_by_line_dialog_desc">Il s\'agit d\'une fonctionnalité expérimentale dont le résultat est aléatoire.\n\nPar défaut, la langue est détectée à partir de l\'ensemble de la chanson. Lorsque cette option est activée, la détection s\'effectue ligne par ligne. Cela permet de prendre en charge les chansons multilingues, MAIS la langue détectée n\'est pas toujours correcte. Par exemple, une ligne en ukrainien ne contenant aucun caractère spécifique à cette langue pourrait être romanisée en russe.\n\nSi vous ne rencontrez aucun problème, il est recommandé de laisser cette option désactivée</string>
     <string name="romanize_current_track">Romaniser la piste actuelle</string>
     <string name="edit_playlist_cover">Modifier la couverture de la playlist</string>
     <string name="edit_playlist_cover_note">REMARQUE : pour modifier la pochette d\'une playlist, votre compte doit être associé à un numéro de téléphone et avoir été vérifié sur YouTube Music</string>
@@ -161,7 +149,6 @@
     <string name="filter_uploaded">Téléchargés</string>
     <string name="updater">Mise à jour</string>
     <string name="check_for_updates">Vérifier automatiquement les mises à jour</string>
-    <string name="lyrics_romanize_macedonian">Romaniser les paroles en macédonien</string>
     <string name="update_notifications">Activer les notifications de mise à jour</string>
     <string name="update_available_title">Mise à jour disponible</string>
     <string name="update_channel_name">Mises à jour de l\'application</string>
@@ -179,7 +166,6 @@
     <string name="swipe_song_to_remove">Faites glisser pour supprimer le titre de la playlist</string>
     <string name="last_fm_send_likes">Synchroniser les favoris et les éléments non favoris</string>
     <string name="last_fm_send_likes_description">Ajoutez ou retirez des titres de vos favoris sur Last.fm lorsque vous les ajoutez ou les retirez de vos favoris dans Metrolist</string>
-    <string name="lyrics_romanize_chinese">Paroles chinoises romanisées</string>
     <string name="google_cast">Google Cast</string>
     <string name="google_cast_description">Diffusez du contenu audio sur Chromecast et d\'autres appareils compatibles avec Cast</string>
     <string name="hide_video_songs">Masquer les chansons vidéo</string>
@@ -199,7 +185,6 @@
     <string name="advanced_desc">Régler le tempo et la hauteur tonale du morceau</string>
     <string name="equalizer_desc">Ouvrez l\'égaliseur audio</string>
     <string name="mini_player">Mini-lecteur</string>
-    <string name="pure_black_mini_player">Mini-lecteur noir pur</string>
     <string name="cache_size_warning_title">Attendez !</string>
     <string name="cache_size_warning_message">La limite que vous avez choisie (%1$s) est inférieure à celle actuellement utilisée par l\'application. Si vous continuez, certains %2$s mis en cache risquent d\'être supprimés. Voulez-vous quand même continuer ?</string>
     <string name="cache_size_warning_confirm">Continuer</string>
@@ -215,11 +200,6 @@
     <string name="enable_better_lyrics_desc">Des paroles synchronisées syllabe par syllabe pour n\'importe quel titre, idéales pour le karaoké</string>
     <string name="lyrics_animation_style">Style d\'animation des paroles</string>
     <string name="none">Aucun</string>
-    <string name="fade">Disparition</string>
-    <string name="glow">Brillance</string>
-    <string name="slide">Glissement</string>
-    <string name="karaoke">Karaoké</string>
-    <string name="apple_music_style">Apple Music</string>
     <string name="lyrics_text_size">Taille du texte des paroles</string>
     <string name="lyrics_line_spacing">Espacement des lignes des paroles</string>
     <string name="shuffle_playlist_first">Commencez par mettre la playlist ou l\'album en lecture aléatoire</string>
@@ -262,7 +242,6 @@
     <string name="wrapped_playlist_saved">Playlist enregistrée</string>
     <string name="casting_to">Conversion en %s</string>
     <string name="progress_percent">Progression %s%%</string>
-    <string name="listening_to_metrolist">Écouter Metrolist</string>
     <string name="open">Ouvrir</string>
     <string name="failed_to_create_image">Échec de la création de l\'image : %s</string>
     <string name="copied_title">Titre copié</string>
@@ -272,11 +251,6 @@
     <string name="lyrics_glow_effect">Activer l\'effet de paroles lumineuses</string>
     <string name="lyrics_glow_effect_desc">Ajoutez une animation lumineuse et un effet de rebond à la ligne de paroles active</string>
     <string name="wavy">Ondulé</string>
-    <plurals name="profiles_count">
-        <item quantity="one">%d profil</item>
-        <item quantity="many">%d profils</item>
-        <item quantity="other">%d profils</item>
-    </plurals>
     <string name="equalizer_header">Égaliseur</string>
     <string name="no_profiles">Aucun profil d\'égaliseur</string>
     <string name="import_profile">Importer un profil</string>
@@ -462,7 +436,6 @@
     <string name="ai_error_no_lyrics">Aucune parole à traduire</string>
     <string name="ai_error_lyrics_empty">Les paroles sont vides</string>
     <string name="ai_error_language_required">Une langue cible est requise</string>
-    <string name="ai_error_unexpected">Résultat de traduction inattendu</string>
     <string name="ai_error_unknown">Une erreur inconnue s\'est produite</string>
     <string name="ai_error_translation_failed">Échec de la traduction</string>
     <string name="play_all">Tout lire</string>
@@ -496,8 +469,6 @@
     <string name="crossfade_duration">Durée du fondu enchaîné</string>
     <string name="crossfade_gapless">Désactiver pour les albums sans interruption</string>
     <string name="crossfade_gapless_desc">Désactiver le fondu enchaîné pour les albums conçus pour être lus sans interruption</string>
-    <string name="crossfade_beta_title">Fonctionnalité en version bêta !</string>
-    <string name="crossfade_beta_message">Le fondu enchaîné est une nouvelle fonctionnalité et peut contenir des bugs. Si vous rencontrez des problèmes, merci de les signaler.\n\nREMARQUE : Cette fonctionnalité désactive le déchargement audio en raison de limitations techniques</string>
     <string name="audio_offload_disabled_by_crossfade">Désactivé car le fondu enchaîné est actif</string>
     <string name="hide_youtube_shorts">Masquer YouTube Shorts</string>
     <string name="listen_together_in_top_bar">Écouter ensemble dans la barre supérieure</string>
@@ -525,7 +496,7 @@
     <string name="discord_buttons">Boutons</string>
     <string name="discord_button_1">Bouton 1</string>
     <string name="discord_button_2">Bouton 2</string>
-    <string name="discord_information_warning">Metrolist envoie le titre en cours de lecture à la passerelle Discord afin de mettre à jour votre profil enrichi. Toutes les données sont transmises directement de votre appareil à Discord — aucun serveur tiers n\'intervient. Votre jeton reste sur votre appareil et n\'est jamais partagé. Cependant, l\'utilisation d\'un jeton utilisateur pour les connexions via la passerelle n\'est pas officiellement prise en charge et peut constituer une violation des conditions d\'utilisation de Discord. Procédez à vos propres risques !</string>
+    <string name="discord_information_warning">Metrolist utilise les API publiques OAuth2 et Gateway de Discord pour partager ce que vous écoutez. L\'autorisation se produit à travers une session de navigateur locale qui se ferme après avoir capturé le code — rien n\'est envoyé à des serveur tiers. Votre jeton est enregistré sous forme encryptée sur votre appareil et n\'est jamais partagé. Metrolist se connecte directement à wss://gateway.discord.gg pour publier votre activité, et ne demande que l\'accès minimum requis (sdk.social_layer_presence).</string>
     <string name="discord_activity_type">Type d\'activité</string>
     <string name="discord_activity_playing">Lire</string>
     <string name="discord_activity_listening">Écouter</string>
@@ -539,18 +510,12 @@
     <string name="discord_advanced_mode_description">Afficher les options de personnalisation supplémentaires de Rich Presence</string>
     <string name="player_background_solid">Solide</string>
     <string name="resume_on_bluetooth_connect">Reprendre la connexion Bluetooth</string>
-    <string name="lyrics_romanize_hindi">Romaniser les paroles en hindi</string>
-    <string name="lyrics_romanize_punjabi">Romaniser les paroles en pendjabi</string>
     <string name="lyrics_romanize_as_main">Afficher les paroles romanisées comme paroles principales</string>
     <string name="credits_license_name">Licence publique générale GNU v3.0</string>
     <string name="credits_license_desc">Logiciel libre et open source. Vous pouvez l\'utiliser, l\'étudier, le partager et l\'améliorer</string>
     <string name="credits_discord">Serveur Discord</string>
     <string name="credits_telegram">Chaîne Telegram</string>
-    <string name="credits_website">Site internet</string>
-    <string name="credits_instagram">Instagram</string>
-    <string name="credits_github">GitHub</string>
     <string name="credits_view_repo">Consulter le dépôt</string>
-    <string name="app_version_info">%1$s • %2$s</string>
     <string name="metrolist">METROLIST</string>
     <string name="no_account_found">Aucun compte trouvé</string>
     <string name="checking_previous_account">Vérification du compte précédent…</string>
@@ -619,7 +584,6 @@
     <string name="credits_lead_developer">Développeur Principal</string>
     <string name="credits_collaborator">Collaborateur</string>
     <string name="credits_collaborators_section">Collaborateurs</string>
-    <string name="like_what_i_do">Vous aimez ce que je fais ?</string>
     <string name="buy_mo_a_coffee">Offrez-moi un café !</string>
     <string name="community_and_info">Communauté &amp; Informations</string>
     <string name="wanna_play_favorite_song">Envie de jouer leur titre préféré ?</string>
@@ -735,7 +699,6 @@
         <item quantity="other">%d titres</item>
     </plurals>
     <string name="alarm_selected">Sélectionnée</string>
-    <string name="alarm_playlist_helper">Choisissez la playlist que l\'alarme doit diffuser</string>
     <string name="alarm_add">Ajouter une alarme</string>
     <string name="alarm_empty">Aucune alarme pour l\'instant. Ajoutez-en une pour lancer la lecture programmée</string>
     <string name="alarm_disabled">Désactivée</string>
@@ -749,17 +712,13 @@
     <string name="alarm_delete">Supprimer l\'alarme</string>
     <string name="alarm_duplicate_time_warning">Une autre alarme est déjà activée à ce moment-là. Si les deux se déclenchent en même temps, une seule pourra retentir</string>
     <string name="alarm_random_song">Lire un titre aléatoire de la playlist</string>
-    <string name="alarm_next_trigger">Déclencheur suivant</string>
     <string name="alarm_not_scheduled">Non programmé</string>
     <string name="alarm_exact_permission_title">Autoriser les alarmes précises</string>
     <string name="alarm_exact_permission_desc">Permet de régler l\'heure des alarmes avec précision, ce qui améliore la fiabilité lorsque l\'application est en arrière-plan</string>
     <string name="alarm_battery_optimization_title">Optimisation de la batterie</string>
     <string name="alarm_battery_optimization_desc">Désactivez l\'optimisation de la batterie pour garantir un fonctionnement plus fiable des alarmes en arrière-plan</string>
-    <string name="copy_all_lyrics">Copier toutes les paroles</string>
     <string name="change">Changer</string>
     <string name="ai_system_prompt">Invite du système</string>
-    <string name="ai_system_prompt_desc">Instructions personnalisées envoyées au modèle d\'IA. Laissez ce champ vide pour utiliser la consigne par défaut</string>
-    <string name="ai_system_prompt_placeholder">Utilisez {lineCount} comme variable de remplacement pour le nombre de lignes à traduire</string>
     <string name="ai_system_prompt_default">Par défaut</string>
     <string name="ai_system_prompt_reset">Réinitialiser les paramètres par défaut</string>
     <string name="recognition_notification_channel_name">Reconnaissance Musicale</string>
@@ -775,9 +734,7 @@
     <string name="android_auto_youtube_playlists">Afficher les playlists suggérées par YouTube</string>
     <string name="android_auto_youtube_playlists_desc">Afficher les playlists recommandées par YouTube Music dans la section « Playlists » lors de la navigation avec Android Auto</string>
     <string name="android_auto_target_playlist">Ajout rapide d\'une destination</string>
-    <string name="android_auto_target_playlist_desc">Choisissez la playlist dans laquelle les titres sont enregistrés lorsque vous utilisez le bouton d\'ajout rapide dans Android Auto</string>
     <string name="android_auto_target_playlist_auto">Non défini</string>
-    <string name="added_to_playlist">Ajouté à la playlist</string>
     <string name="android_auto_target_playlist_not_set">Aucune playlist n\'est sélectionnée. Choisissez-en une dans les paramètres d\'Android Auto</string>
     <string name="mini_player_background_style">Style d\'arrière-plan du mini-lecteur</string>
     <string name="transparent">Transparent</string>
@@ -820,7 +777,6 @@
     <string name="eq_download_db">Télécharger la base de données AutoEQ (17 Mo)</string>
     <string name="eq_downloading">Téléchargement en cours…</string>
     <string name="import_from_file">Importer depuis un fichier</string>
-    <string name="add_profile">Ajouter un profil</string>
     <string name="wizard_select_model">Sélectionner un modèle</string>
     <string name="wizard_select_profiles">Sélectionner des profils</string>
     <string name="wizard_search_model_hint">Recherchez le modèle de votre casque ou de vos écouteurs</string>
@@ -848,8 +804,6 @@
     <string name="auto_radio_queue">File d\'attente radio automatique</string>
     <string name="audio_track_playback_params">Utiliser le traitement audio matériel</string>
     <string name="audio_track_playback_params_description">Utilisez la fonction AudioTrack d\'Android pour modifier la vitesse ou la hauteur tonale, plutôt que de recourir à un traitement logiciel. Cette méthode est plus fiable pour les valeurs de hauteur tonale extrêmes</string>
-    <string name="discord_status_connecting">Connexion à Discord…</string>
-    <string name="discord_status_reconnecting">Reconnexion à Discord…</string>
     <string name="discord_status_connected">Connecté</string>
     <string name="discord_status_authorizing">Autorisation en cours…</string>
     <string name="discord_status_authorized">Autorisé</string>
@@ -868,10 +822,6 @@
     <string name="discord_enable_button_2">Afficher le bouton 2</string>
     <string name="discord_button_label">Label</string>
     <string name="discord_button_url">URL</string>
-    <string name="discord_placeholders">Espaces réservés disponibles</string>
-    <string name="discord_placeholder_song">Titre du morceau</string>
-    <string name="discord_placeholder_artist">Nom de l\'artiste</string>
-    <string name="discord_placeholder_album">Nom de l\'album</string>
     <string name="restore_database_incompatible">Impossible de restaurer la sauvegarde : version de la base de données incompatible. Vos données actuelles ont été conservées.</string>
     <string name="stream_client">Client de streaming</string>
     <string name="format_player_hash">Hachage du lecteur</string>
@@ -890,16 +840,11 @@
     <string name="stream_source_visionos_desc">Apple Vision. Pas de problème d\'accélérateur ; très fiable.</string>
     <string name="stream_source_android_vr">Android VR</string>
     <string name="stream_source_android_vr_desc">Clients Android VR (toutes versions).</string>
-    <string name="stream_source_ios">iOS / iPadOS</string>
-    <string name="stream_source_ios_desc">Clients Apple iOS et iPadOS. Désactivé par défaut ; limitation de débit au-delà d\'environ 1 MiB.</string>
     <string name="stream_source_web_creator">WEB_CREATOR</string>
     <string name="stream_source_web_creator_desc">Client web Creator.</string>
-    <string name="stream_source_android_creator">ANDROID_CREATOR</string>
-    <string name="stream_source_android_creator_desc">Client créateur Android. Désactivé par défaut ; nécessite DroidGuard.</string>
     <string name="error_job_cancelled">La vidéo ne peut pas être lue. Réessayez ou passez au titre suivant.</string>
     <string name="enable_landscape_scaling">Mise à l\'échelle en paysage</string>
     <string name="enable_landscape_scaling_desc">Adapter l\'interface utilisateur au mode paysage pour les écrans plus grands</string>
-    <string name="dynamic_theme">Thème dynamique</string>
     <string name="enable_dynamic_icon">Couleurs dynamiques des icônes</string>
     <string name="enable_dynamic_icon_desc">Utilisez les couleurs dynamiques du thème pour l\'icône de l\'application. Lorsque cette option est désactivée, l\'icône affiche des couleurs unies.</string>
     <string name="kmp_upgrade_title">Metrolist KMP %s est disponible</string>
@@ -909,4 +854,16 @@
     <string name="android_auto_search_options">Options de recherche</string>
     <string name="android_auto_search_local_songs_limit">Limite de recherche de titres</string>
     <string name="android_auto_search_local_songs_limit_desc">Limitez le nombre de morceaux locaux affichés dans les résultats de recherche. Il est recommandé de ne pas choisir l\'option « illimité » afin d\'éviter les plantages liés à la mémoire.</string>
+    <string name="playlist_unavailable">Playlist indisponible</string>
+    <string name="choose_youtube_channel">Choisissez une chaîne YouTube</string>
+    <string name="choose_youtube_channel_description">Ce compte Google a plusieurs chaînes. Choisissez celle que vous voulez utiliser.</string>
+    <string name="switch_youtube_channel">Changer de chaîne YouTube</string>
+    <string name="youtube_channels_failed">Échec de la récupération des chaînes YouTube pour ce compte. Veuillez réessayer.</string>
+    <string name="authentication_data_extraction_failed">Échec de la lecture de la session YouTube Music. Veuillez réessayer.</string>
+    <string name="login_failed_with_error">Échec de la connection : %1$s</string>
+    <string name="add_to_playlist_position">Ajouter à la playlist à cette position</string>
+    <string name="playlist_position_beginning">Début de la playlist</string>
+    <string name="playlist_position_beginning_desc">Les morceaux récemment ajoutés apparaissent avant les morceaux existants</string>
+    <string name="playlist_position_end">Fin de la playlist</string>
+    <string name="playlist_position_end_desc">Les morceaux récemment ajoutés apparaissent après les morceaux existants</string>
 </resources>

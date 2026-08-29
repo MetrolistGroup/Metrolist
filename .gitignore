@@ -115,3 +115,4 @@ app/src/main/cpp/coverart/
 .cursor*
 .codeium
 .cortexkit
+.mcp.json

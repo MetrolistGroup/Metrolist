@@ -1,5 +1,7 @@
 @file:Suppress("UnstableApiUsage")
 
+val useMavenLocalInnerTubeX = providers.gradleProperty("useMavenLocalInnerTubeX").isPresent
+
 pluginManagement {
     repositories {
         mavenLocal()
@@ -15,10 +17,16 @@ dependencyResolutionManagement {
     repositories {
         exclusiveContent {
             forRepository {
-                maven("https://jitpack.io")
+                if (useMavenLocalInnerTubeX) mavenLocal() else maven("https://jitpack.io")
             }
             filter {
-                includeGroup("com.github.MetrolistGroup.innertubex")
+                if (useMavenLocalInnerTubeX) {
+                    includeModule("com.github.MetrolistGroup", "innertubex")
+                    includeModule("com.github.MetrolistGroup", "innertubex-android")
+                    includeModule("com.github.MetrolistGroup", "innertubex-desktop")
+                } else {
+                    includeGroup("com.github.MetrolistGroup.innertubex")
+                }
             }
         }
         google()
@@ -43,19 +51,3 @@ include(":lastfm")
 include(":betterlyrics")
 include(":shazamkit")
 include(":paxsenix")
-
-// Use a local copy of NewPipe Extractor by uncommenting the lines below.
-// We assume, that Metrolist and NewPipe Extractor have the same parent directory.
-// If this is not the case, please change the path in includeBuild().
-//
-// For this to work you also need to change the implementation in innertube/build.gradle.kts
-// to one which does not specify a version.
-// From:
-//      implementation(libs.newpipe.extractor)
-// To:
-//      implementation("com.github.teamnewpipe:NewPipeExtractor")
-//includeBuild("../NewPipeExtractor") {
-//    dependencySubstitution {
-//        substitute(module("com.github.teamnewpipe:NewPipeExtractor")).using(project(":extractor"))
-//    }
-//}

@@ -41,6 +41,13 @@ class InnerTube {
     private var configuredProxyAuth: String? = null
     private var httpClient = createClient()
     private var innerTubeX = InnerTubeX(httpClient)
+    private var transportGeneration = 0L
+
+    class ExtractionTransport internal constructor(
+        val innerTube: InnerTubeX,
+        val httpClient: HttpClient,
+        val generation: Long,
+    )
 
     var locale: YouTubeLocale
         get() = innerTubeX.locale
@@ -94,6 +101,7 @@ class InnerTube {
             innerTubeX.useLoginForBrowse = value
         }
 
+    @Synchronized
     private fun recreateTransport() {
         val session = innerTubeX.sessionSnapshot()
         innerTubeX.close()
@@ -111,7 +119,16 @@ class InnerTube {
                 )
                 replacement.regionOverrideActive = session.regionOverrideActive
             }
+        transportGeneration++
     }
+
+    @Synchronized
+    fun extractionTransport(): ExtractionTransport =
+        ExtractionTransport(
+            innerTube = innerTubeX,
+            httpClient = httpClient,
+            generation = transportGeneration,
+        )
 
     @OptIn(ExperimentalSerializationApi::class)
     private fun createClient() =

@@ -174,7 +174,7 @@
   </tr>
   <tr>
     <td align="center">
-      <a href="https://nightly.link/MetrolistGroup/Metrolist/workflows/build/main/app-with-Google-Cast.zip">
+      <a href="https://github.com/MetrolistGroup/Metrolist/releases/download/nightly/Metrolist-with-Google-Cast.apk">
         <img src="https://github.com/machiav3lli/oandbackupx/blob/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" alt="Download from GitHub" height="75">
       </a>
     </td>

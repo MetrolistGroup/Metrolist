@@ -105,8 +105,6 @@
     <string name="import_csv">Importovat playlist CSV</string>
     <string name="import_online">Importovat playlist M3U</string>
     <string name="playlist_add_local_to_synced_note">UPOZORNĚNÍ: Přidávání místních skladeb do synchronizovaných nebo vzdálených playlistů není podporováno. Jakákoli jiná kombinace je platná</string>
-    <string name="lyrics_romanize_japanese">Přepsat japonské texty do latinky</string>
-    <string name="lyrics_romanize_korean">Přepsat korejské texty do latinky</string>
     <string name="yt_sync">Automaticky synchronizovat s účtem</string>
     <string name="more_content">Další obsah</string>
     <string name="new_player_design">Nový vzhled přehrávače</string>
@@ -137,19 +135,9 @@
     <string name="proxy_username">Uživatelské jméno sítě proxy</string>
     <string name="proxy_password">Heslo sítě proxy</string>
     <string name="enable_authentication">Povolit přihlašování</string>
-    <string name="lyrics_romanization_cyrillic">Cyrilice</string>
     <string name="lyrics_romanize_title">Přepis do latinky</string>
     <string name="lyrics_romanization">Přepis textů do latinky</string>
-    <string name="lyrics_romanize_russian">Přepsat ruské texty do latinky</string>
-    <string name="lyrics_romanize_ukrainian">Přepsat ukrajinské texty do latinky</string>
-    <string name="lyrics_romanize_belarusian">Přepsat běloruské texty do latinky</string>
-    <string name="lyrics_romanize_kyrgyz">Přepsat kyrgyzské texty do latinky</string>
-    <string name="lyrics_romanize_serbian">Přepsat srbské texty do latinky</string>
-    <string name="lyrics_romanize_bulgarian">Přepsat bulharské texty do latinky</string>
     <string name="line_by_line_option_title">Rozpoznávat jazyk po řádcích</string>
-    <string name="line_by_line_option_desc">Cyrilice bude vždy rozpoznávána řádek po řádku namísto celé skladby</string>
-    <string name="line_by_line_dialog_title">Jste si jisti?</string>
-    <string name="line_by_line_dialog_desc">Toto je experimentální funkce, která nemusí vždy fungovat správně.\n\nVe výchozím nastavení je jazyk rozpoznáván z celé písně. Po zapnutí této možnosti se bude určovat pro každý řádek zvlášť. To umožní fungování vícejazyčných písní, ALE jazyk nemusí být vždy určen správně (například pokud ukrajinský text neobsahuje žádná písmena specifická pro ukrajinštinu, může být chybně přepsán jako ruský).\n\nPokud jste nenarazili na žádné problémy, doporučujeme nechat tuto možnost vypnutou</string>
     <string name="romanize_current_track">Přepsat aktuální skladbu do latinky</string>
     <string name="edit_playlist_cover">Upravit obal playlistu</string>
     <string name="edit_playlist_cover_note">UPOZORNĚNÍ: Pro změnu obalu alba musí být k vašemu účtu připojeno telefonní číslo a účet musí být ověřen na YouTube Music</string>
@@ -163,7 +151,6 @@
     <string name="show_uploaded_playlist">Zobrazit playlist Nahráno</string>
     <string name="updater">Aktualizační služba</string>
     <string name="check_for_updates">Automaticky kontrolovat aktualizace</string>
-    <string name="lyrics_romanize_macedonian">Přepsat makedonské texty do latinky</string>
     <string name="update_notifications">Povolit oznámení o aktualizacích</string>
     <string name="update_available_title">Je dostupná aktualizace</string>
     <string name="update_channel_name">Aktualizace aplikací</string>
@@ -181,7 +168,6 @@
     <string name="swipe_song_to_remove">Posuňte pro odstranění skladby z playlistu</string>
     <string name="last_fm_send_likes">Synchronizovat oblíbené</string>
     <string name="last_fm_send_likes_description">Přidat/odebrat srdíčko u skladby v Last.fm, když ji přidáte/odeberete z oblíbených v Metrolistu</string>
-    <string name="lyrics_romanize_chinese">Přepsat čínské texty do latinky</string>
     <string name="google_cast">Google Cast</string>
     <string name="google_cast_description">Streamovat zvuk do Chromecastu a dalších zařízení kompatibilních s protokolem Cast</string>
     <string name="hide_video_songs">Skrýt videoklipy</string>
@@ -201,7 +187,6 @@
     <string name="add_to_playlist_desc">Přidat do playlistu</string>
     <string name="equalizer_desc">Otevřít ekvalizér</string>
     <string name="cache_size_warning_title">Pozor!</string>
-    <string name="pure_black_mini_player">Čistě černý mini přehrávač</string>
     <string name="mini_player">Mini přehrávač</string>
     <string name="advanced_desc">Upravit tempo a výšku skladby</string>
     <string name="add_to_library_desc">Uložit do vaší knihovny</string>
@@ -217,11 +202,6 @@
     <string name="enable_better_lyrics_desc">Texty synchronizované slovo po slově, perfektní pro karaoke</string>
     <string name="lyrics_animation_style">Styl animace textů</string>
     <string name="none">Žádný</string>
-    <string name="fade">Přechod</string>
-    <string name="glow">Záře</string>
-    <string name="slide">Přesun</string>
-    <string name="karaoke">Karaoke</string>
-    <string name="apple_music_style">Apple Music</string>
     <string name="lyrics_text_size">Velikost textů</string>
     <string name="lyrics_line_spacing">Rozestupy řádků v textech</string>
     <string name="shuffle_playlist_first">Zamíchat nejprve playlist nebo album</string>
@@ -266,19 +246,12 @@
     <string name="wrapped_playlist_saved">Playlist uložen</string>
     <string name="casting_to">Přehrávání přes %s</string>
     <string name="progress_percent">Postup %s%%</string>
-    <string name="listening_to_metrolist">Poslouchá Metrolist</string>
     <string name="open">Otevřít</string>
     <string name="failed_to_create_image">Nepodařilo se vytvořit obrázek: %s</string>
     <string name="copied_title">Název zkopírován</string>
     <string name="copied_artist">Umělec zkopírován</string>
     <string name="error_playing">Chyba přehrávače</string>
     <string name="failed_to_parse_proxy">Nepodařilo se zpracovat adresu proxy</string>
-    <plurals name="profiles_count">
-        <item quantity="one">%d profil</item>
-        <item quantity="few">%d profily</item>
-        <item quantity="many">%d profilů</item>
-        <item quantity="other">%d profilů</item>
-    </plurals>
     <string name="equalizer_header">Ekvalizér</string>
     <string name="no_profiles">Žádné profily ekvalizéru</string>
     <string name="import_profile">Importovat profil</string>
@@ -490,7 +463,6 @@
     <string name="play_on_app">Přehrát v Metrolistu</string>
     <string name="listening">Poslouchám…</string>
     <string name="ai_api_key_required">Vyžadován klíč API</string>
-    <string name="ai_error_unexpected">Neočekávaný výsledek překladu</string>
     <string name="continue_action">Pokračovat</string>
     <string name="ai_base_url">Základní URL</string>
     <string name="play_all">Přehrát vše</string>
@@ -500,8 +472,6 @@
     <string name="crossfade_duration">Trvání prolnutí</string>
     <string name="crossfade_gapless">Zakázat pro alba bez mezer</string>
     <string name="crossfade_gapless_desc">Přeskočit křížové prolnutí u alb navržených pro přehrávání bez mezer</string>
-    <string name="crossfade_beta_title">Beta funkce!</string>
-    <string name="crossfade_beta_message">Prolnutí je nová funkce, ve které se mohou vyskytnout chyby. Pokud na nějaké narazíte, prosíme nahlaste je.\n\nUPOZORNĚNÍ: Tato funkce zakáže offload zvuku z důvodu technických omezení</string>
     <string name="audio_offload_disabled_by_crossfade">Zakázáno z důvodu aktivního prolínání</string>
     <string name="hide_youtube_shorts">Skrýt YouTube Shorts</string>
     <string name="listen_together_in_top_bar">Společný poslech v horní liště</string>
@@ -510,8 +480,6 @@
     <string name="prevent_duplicate_tracks_in_queue">Zabránit duplikovaným skladbám ve frontě</string>
     <string name="prevent_duplicate_tracks_in_queue_desc">Při přidávání skladby, která se již ve frontě nachází, bude přesunuta z její předchozí pozice namísto jejího opětovného přidání</string>
     <string name="resume_on_bluetooth_connect">Pokračovat při připojení Bluetooth zařízení</string>
-    <string name="lyrics_romanize_hindi">Přepsat hindské texty do latinky</string>
-    <string name="lyrics_romanize_punjabi">Přepsat pandžábské texty do latinky</string>
     <string name="lyrics_romanize_as_main">Zobrazit texty v latince jako hlavní</string>
     <string name="ai_translation_literal_desc">Přeloží význam do cílového jazyka</string>
     <string name="ai_translation_transcribed_desc">Převede výslovnost do cílového písma</string>
@@ -595,12 +563,7 @@
     <string name="credits_license_desc">Volně dostupný open-source software. Můžete jej používat, studovat, sdílet a vylepšovat</string>
     <string name="credits_discord">Discord server</string>
     <string name="credits_telegram">Kanál na Telegramu</string>
-    <string name="credits_website">Web</string>
-    <string name="credits_instagram">Instagram</string>
-    <string name="credits_github">GitHub</string>
     <string name="credits_view_repo">Zobrazit repozitář</string>
-    <string name="app_version_info">%1$s • %2$s</string>
-    <string name="like_what_i_do">Líbí se vám, co dělám?</string>
     <string name="buy_mo_a_coffee">Kupte mi kávu!</string>
     <string name="community_and_info">Komunita a informace</string>
     <string name="metrolist">METROLIST</string>
@@ -742,7 +705,6 @@
         <item quantity="other">%d skladeb</item>
     </plurals>
     <string name="alarm_selected">Vybráno</string>
-    <string name="alarm_playlist_helper">Vyberte, který playlist má budík přehrávat</string>
     <string name="alarm_add">Přidat budík</string>
     <string name="alarm_empty">Zatím žádné budíky. Přidejte budík pro spuštění naplánovaného přehrávání</string>
     <string name="alarm_disabled">Zakázáno</string>
@@ -756,7 +718,6 @@
     <string name="alarm_delete">Odstranit budík</string>
     <string name="alarm_duplicate_time_warning">V tuto chvíli již existuje jiný budík. Pokud se oba spustí ve stejnou chvíli, může se přehrát pouze jeden z nich</string>
     <string name="alarm_random_song">Přehrát náhodnou skladbu z playlistu</string>
-    <string name="alarm_next_trigger">Další spuštění</string>
     <string name="alarm_not_scheduled">Nenaplánováno</string>
     <string name="alarm_battery_optimization_title">Optimalizace využití baterie</string>
     <string name="alarm_exact_permission_title">Povolit přesné budíky</string>
@@ -766,11 +727,8 @@
     <string name="transparent">Průhledné</string>
     <string name="mini_player_background_not_available">Nedostupné při zakázaném novém stylu mini přehrávače</string>
     <string name="your_daily_discover">Vaše denní objevování</string>
-    <string name="copy_all_lyrics">Kopírovat všechny texty</string>
     <string name="change">Změnit</string>
     <string name="ai_system_prompt">Systémový dotaz</string>
-    <string name="ai_system_prompt_desc">Vlastní instrukce odesílané AI modelu. Ponechte prázdné pro použití výchozího dotazu</string>
-    <string name="ai_system_prompt_placeholder">Použijte {lineCount} jako zástupný řetězec pro počet řádků k přeložení</string>
     <string name="ai_system_prompt_default">Výchozí</string>
     <string name="ai_system_prompt_reset">Resetovat na výchozí</string>
     <string name="recognition_notification_channel_name">Rozpoznávání hudby</string>
@@ -786,9 +744,7 @@
     <string name="android_auto_youtube_playlists">Zobrazit navrhované playlisty YouTube</string>
     <string name="android_auto_youtube_playlists_desc">Zobrazit playlisty navrhované službou YouTube Music v sekci playlistů během procházení v Android Auto</string>
     <string name="android_auto_target_playlist">Cíl rychlého přidání</string>
-    <string name="android_auto_target_playlist_desc">Vyberte playlist, kam jsou ukládány skladby při použití tlačítka rychlého přidání v Android Auto</string>
     <string name="android_auto_target_playlist_auto">Nenastaveno</string>
-    <string name="added_to_playlist">Přidáno do playlistu</string>
     <string name="android_auto_target_playlist_not_set">Není vybrán žádný playlist. Vyberte jej v nastavení Android Auto</string>
     <string name="lyrics_from_provider">Texty ze služby %s</string>
     <string name="hide_status_bar_fullscreen">Skrýt stavovou lištu na celé obrazovce</string>
@@ -827,7 +783,6 @@
     <string name="eq_download_db">Stáhnout databázi AutoEQ (17 MB)</string>
     <string name="eq_downloading">Stahování…</string>
     <string name="import_from_file">Importovat ze souboru</string>
-    <string name="add_profile">Přidat profil</string>
     <string name="wizard_select_model">Vybrat model</string>
     <string name="wizard_select_profiles">Vybrat profily</string>
     <string name="wizard_search_model_hint">Vyhledejte model vašich sluchátek</string>
@@ -855,8 +810,6 @@
     <string name="auto_radio_queue_desc">Automaticky vytvořit frontu rádia během přehrávání skladby z vyhledávače nebo domovské stránky</string>
     <string name="audio_track_playback_params">Použít hardwarové zpracování zvuku</string>
     <string name="audio_track_playback_params_description">Pro změny rychlosti/výšky použít funkci AutoTrack sytému Android namísto softwarového zpracování. Spolehlivější pro extrémní změny hodnoty výšky</string>
-    <string name="discord_status_connecting">Připojování k Discordu…</string>
-    <string name="discord_status_reconnecting">Opětovné připojování k Discordu…</string>
     <string name="discord_status_connected">Připojeno</string>
     <string name="discord_status_authorizing">Autorizace…</string>
     <string name="discord_status_authorized">Autorizováno</string>
@@ -875,10 +828,6 @@
     <string name="discord_enable_button_2">Zobrazit tlačítko 2</string>
     <string name="discord_button_label">Popisek</string>
     <string name="discord_button_url">Adresa</string>
-    <string name="discord_placeholders">Dostupné proměnné</string>
-    <string name="discord_placeholder_song">Název skladby</string>
-    <string name="discord_placeholder_artist">Jméno umělce</string>
-    <string name="discord_placeholder_album">Název alba</string>
     <string name="restore_database_incompatible">Nepodařilo se obnovit zálohu: verze databáze není kompatibilní. Vaše aktuální data zůstala zachována.</string>
     <string name="stream_client">Streamovací klient</string>
     <string name="format_player_hash">Hash přehrávače</string>
@@ -897,16 +846,11 @@
     <string name="stream_source_visionos_desc">Apple Vision. Bez omezování; velmi spolehlivé.</string>
     <string name="stream_source_android_vr">Android VR</string>
     <string name="stream_source_android_vr_desc">Klienti Android VR (všechny verze).</string>
-    <string name="stream_source_ios">iOS / iPadOS</string>
-    <string name="stream_source_ios_desc">Klienti Apple iOS a iPadOS. Ve výchozím nastavení vypnuté; omezované po přesažení ~1 MiB.</string>
     <string name="stream_source_web_creator">WEB_CREATOR</string>
     <string name="stream_source_web_creator_desc">Webový klient tvůrce.</string>
-    <string name="stream_source_android_creator">ANDROID_CREATOR</string>
-    <string name="stream_source_android_creator_desc">Klient tvůrce pro Android. Ve výchozím nastavení vypnuté; vyžaduje DroidGuard.</string>
     <string name="error_job_cancelled">Video není k dispozici k přehrání. Zkuste to znovu nebo přeskočte na další skladbu.</string>
     <string name="enable_landscape_scaling">Škálování na šířku</string>
     <string name="enable_landscape_scaling_desc">Nastavit rozhraní do režimu na šířku pro větší obrazovky</string>
-    <string name="dynamic_theme">Dynamický motiv</string>
     <string name="enable_dynamic_icon">Dynamické barvy ikon</string>
     <string name="enable_dynamic_icon_desc">Použít barvy dynamického motivu pro ikonu aplikace. Pokud je vypnuto, budou použity jednobarevné odstíny.</string>
     <string name="kmp_upgrade_title">Je dostupný Metrolist KMP %s</string>
@@ -915,4 +859,17 @@
     <string name="kmp_upgrade_later">Nezobrazovat</string>
     <string name="android_auto_search_options">Vyhledat možnosti</string>
     <string name="android_auto_search_local_songs_limit">Limit vyhledání skladeb</string>
+    <string name="playlist_unavailable">Playlist není dostupný</string>
+    <string name="android_auto_search_local_songs_limit_desc">Omezit počet lokálních skladeb zobrazených ve výsledcích vyhledávání. Nedoporučujeme nastavit na neomezený počet pro zabránění pádům z důvodu nedostatku paměti</string>
+    <string name="choose_youtube_channel">Vybrat YouTube kanál</string>
+    <string name="choose_youtube_channel_description">Tento účet Google má několik kanálů. Vyberte, který chcete používat.</string>
+    <string name="switch_youtube_channel">Přepnout YouTube kanál</string>
+    <string name="youtube_channels_failed">Nepodařilo se načíst YouTube kanály tohoto účtu. Zkuste to prosím znovu.</string>
+    <string name="authentication_data_extraction_failed">Nepodařilo se přečíst relaci YouTube Music. Zkuste to prosím znovu.</string>
+    <string name="login_failed_with_error">Přihlášení selhalo: %1$s</string>
+    <string name="add_to_playlist_position">Místo přidání do playlistu</string>
+    <string name="playlist_position_beginning">Začátek playlistu</string>
+    <string name="playlist_position_beginning_desc">Nově přidané skladby se objeví před existujícími skladbami</string>
+    <string name="playlist_position_end">Konec playlistu</string>
+    <string name="playlist_position_end_desc">Nově přidané skladby se objeví po existujících skladbách</string>
 </resources>

@@ -158,6 +158,11 @@
     <string name="shuffle_playlist_first_desc">When shuffling, play all songs from the current playlist or album before moving to similar content</string>
     <string name="prevent_duplicate_tracks_in_queue">Prevent duplicate tracks in queue</string>
     <string name="prevent_duplicate_tracks_in_queue_desc">When adding a track that\'s already in the queue, it will be moved from its previous position rather than added again</string>
+    <string name="add_to_playlist_position">Add to playlist position</string>
+    <string name="playlist_position_beginning">Beginning of playlist</string>
+    <string name="playlist_position_beginning_desc">Newly added songs appear before existing songs</string>
+    <string name="playlist_position_end">End of playlist</string>
+    <string name="playlist_position_end_desc">Newly added songs appear after existing songs</string>
     <string name="show_wrapped_card">Show Wrapped card</string>
     <string name="skip_silence_desc">Fast-forward through silent parts of songs</string>
     <string name="skip_silence_instant">Instantly skip silence</string>

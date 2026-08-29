@@ -203,7 +203,6 @@
         <item quantity="other">%d টি গান</item>
     </plurals>
     <string name="alarm_selected">নির্বাচিত</string>
-    <string name="alarm_playlist_helper">অ্যালার্মটি কোন প্লেলিস্ট বাজাবে তা বেছে নিন</string>
     <string name="alarm_add">অ্যালার্ম যুক্ত করুন</string>
     <string name="alarm_empty">এখনো কোনো অ্যালার্ম নেই। নির্ধারিত সময়ে প্লেব্যাক শুরু করতে একটি অ্যালার্ম যোগ করুন</string>
     <string name="alarm_disabled">বন্ধ করা</string>
@@ -217,7 +216,6 @@
     <string name="alarm_delete">অ্যালার্ম মুছুন</string>
     <string name="alarm_duplicate_time_warning">এই সময়ের জন্য ইতিমধ্যেই আরেকটি অ্যালার্ম চালু আছে। যদি দুটিই একই সাথে বেজে ওঠে, তবে কেবল একটিই বাজতে পারে</string>
     <string name="alarm_random_song">প্লেলিস্ট থেকে এলোমেলোভাবে একটি গান চালান</string>
-    <string name="alarm_next_trigger">পরবর্তী ট্রিগার</string>
     <string name="alarm_not_scheduled">নির্ধারিত নয়</string>
     <string name="alarm_exact_permission_title">সুনির্দিষ্ট অ্যালার্মের অনুমতি দিন</string>
     <string name="alarm_exact_permission_desc">সুনির্দিষ্ট অ্যালার্ম টাইমিংয়ের অনুমতি দেয়, যা অ্যাপটি ব্যাকগ্রাউন্ডে থাকাকালীন নির্ভরযোগ্যতা বাড়ায়</string>
@@ -233,26 +231,9 @@
     <string name="crossfade_duration">ক্রসফেড সময়কাল</string>
     <string name="crossfade_gapless">ফাঁকহীন অ্যালবামের জন্য নিষ্ক্রিয় করুন</string>
     <string name="crossfade_gapless_desc">যেসব অ্যালবাম কোনো ফাঁক ছাড়াই চলার জন্য ডিজাইন করা হয়েছে, সেগুলোর ক্ষেত্রে ক্রসফেড এড়িয়ে যান</string>
-    <string name="crossfade_beta_title">বিটা ফিচার!</string>
-    <string name="crossfade_beta_message">ক্রসফেড একটি নতুন ফিচার এবং এতে বাগ থাকতে পারে। আপনি কোনো সমস্যার সম্মুখীন হলে, অনুগ্রহ করে তা জানান।\n\nদ্রষ্টব্য: প্রযুক্তিগত সীমাবদ্ধতার কারণে এই ফিচারটি অডিও অফলোড নিষ্ক্রিয় করে</string>
-    <string name="lyrics_romanization_cyrillic">সিরিলিক</string>
     <string name="lyrics_romanize_title">Romanization</string>
     <string name="lyrics_romanization">লিরিক্স romanization</string>
-    <string name="lyrics_romanize_japanese">জাপানি লিরিক্স Romanize করুন</string>
-    <string name="lyrics_romanize_korean">কোরিয়ান লিরিক্স Romanize করুন</string>
-    <string name="lyrics_romanize_chinese">চীনা লিরিক্স Romanize করুন</string>
-    <string name="lyrics_romanize_hindi">হিন্দি লিরিক্স Romanize করুন</string>
-    <string name="lyrics_romanize_punjabi">পাঞ্জাবি লিরিক্স Romanize করুন</string>
-    <string name="lyrics_romanize_russian">রাশিয়ান লিরিক্স Romanize করুন</string>
-    <string name="lyrics_romanize_ukrainian">ইউক্রেনীয় লিরিক্স Romanize করুন</string>
-    <string name="lyrics_romanize_belarusian">বেলারুশীয় লিরিক্স Romanize করুন</string>
-    <string name="lyrics_romanize_kyrgyz">কিরগিজ লিরিক্স Romanize করুন</string>
-    <string name="lyrics_romanize_serbian">সার্বিয়ান লিরিক্স Romanize করুন</string>
-    <string name="lyrics_romanize_bulgarian">বুলগেরিয়ান লিরিক্স Romanize করুন</string>
     <string name="line_by_line_option_title">লাইন-বাই-লাইন ভাষা শনাক্ত করুন</string>
-    <string name="line_by_line_option_desc">পুরো গান জুড়ে নয়, বরং লাইন-বাই-লাইন সিরিলিক লিপি শনাক্ত করা হবে</string>
-    <string name="line_by_line_dialog_title">আপনি কি নিশ্চিত?</string>
-    <string name="line_by_line_dialog_desc">এটি একটি পরীক্ষামূলক ফিচার যা মাঝে মাঝে কাজ করে আবার মাঝে মাঝে করে না।\n\nডিফল্টরূপে, পুরো গান থেকে ভাষা শনাক্ত করা হয়। এই অপশনটি চালু থাকলে, এর পরিবর্তে লাইন-বাই-লাইন ভাষা শনাক্ত করা হবে। এর ফলে বহুভাষিক গান কাজ করবে, কিন্তু শনাক্ত করা ভাষা সবসময় সঠিক নাও হতে পারে। উদাহরণস্বরূপ, ইউক্রেনীয় ভাষার কোনো নির্দিষ্ট অক্ষর ছাড়া একটি ইউক্রেনীয় লাইনকে রোমানাইজ করার পর রুশ ভাষা হিসেবে দেখানো হতে পারে।\n\nযদি আপনি কোনো সমস্যার সম্মুখীন না হন, তবে এই অপশনটি বন্ধ রাখার পরামর্শ দেওয়া হচ্ছে</string>
     <string name="romanize_current_track">বর্তমান গানটি Romanize করুন</string>
     <string name="lyrics_offset">লিরিক্স অফসেট</string>
     <string name="settings_section_ui">ইন্টারফেস</string>
@@ -274,7 +255,6 @@
     <string name="varispeed_description">পিচকে প্লেব্যাক গতির সাথে সংযোগ করে, যার ফলে টেপ-স্টাইলের গতি বৃদ্ধি এবং হ্রাসের প্রভাব তৈরি হয়</string>
     <string name="google_cast">গুগল কাস্ট</string>
     <string name="google_cast_description">Chromecast এবং অন্যান্য কাস্ট-সক্ষম ডিভাইসে অডিও কাস্ট করুন</string>
-    <string name="lyrics_romanize_macedonian">ম্যাসিডোনীয় লিরিক্স Romanize করুন</string>
     <string name="lyrics_romanize_as_main">রোমান হরফে লেখা লিরিক্স প্রধান লিরিক্স হিসেবে দেখান</string>
     <string name="integrations">ইন্টিগ্রেশন</string>
     <string name="username">ব্যবহারকারীর নাম</string>
@@ -307,7 +287,6 @@
     <string name="eq_download_db">AutoEQ ডেটাবেস ডাউনলোড করুন (১৭ মেগাবাইট)</string>
     <string name="eq_downloading">ডাউনলোড হচ্ছে…</string>
     <string name="import_from_file">ফাইল থেকে ইম্পোর্ট করুন</string>
-    <string name="add_profile">প্রোফাইল যোগ করুন</string>
     <string name="delete_profile_desc">প্রোফাইল মুছুন</string>
     <string name="delete_profile_confirmation">আপনি কি নিশ্চিতভাবে %1$s মুছে ফেলতে চান? একবার মুছে ফেললে আর ফেরানো যাবে না</string>
     <string name="error_file_read">ফাইলটি পড়া যায়নি</string>
@@ -327,7 +306,6 @@
     <string name="your_daily_discover">আপনার দৈনন্দিন ডিসকভার</string>
     <string name="casting_to">%s-এ কাস্ট করা হচ্ছে</string>
     <string name="progress_percent">অগ্রগতি %s%%</string>
-    <string name="listening_to_metrolist">মেট্রোলিস্ট শুনছেন</string>
     <string name="open">খুলুন</string>
     <string name="failed_to_create_image">ছবি তৈরি ব্যর্থ হয়েছে: %s</string>
     <string name="copied_title">শিরোনাম কপি করা হয়েছে</string>
@@ -427,7 +405,6 @@
     <string name="reject">প্রত্যাখ্যান করুন</string>
     <string name="clear">মুছে ফেলুন</string>
     <string name="copy">কপি করুন</string>
-    <string name="copy_all_lyrics">সম্পূর্ণ লিরিক্স কপি করুন</string>
     <string name="change">পরিবর্তন করুন</string>
     <string name="copied_to_clipboard">ক্লিপবোর্ডে কপি করা হয়েছে</string>
     <string name="not_set">সেট করা হয়নি</string>
@@ -485,9 +462,7 @@
     <string name="android_auto_youtube_playlists">ইউটিউবের প্রস্তাবিত প্লেলিস্টগুলি দেখান</string>
     <string name="android_auto_youtube_playlists_desc">অ্যান্ড্রয়েড অটো দিয়ে ব্রাউজ করার সময় প্লেলিস্ট বিভাগে ইউটিউব মিউজিকের প্রস্তাবিত প্লেলিস্টগুলি দেখান</string>
     <string name="android_auto_target_playlist">দ্রুত যোগ করার গন্তব্য</string>
-    <string name="android_auto_target_playlist_desc">অ্যান্ড্রয়েড অটোতে কুইক-অ্যাড বাটন ব্যবহার করার সময়, গানগুলি যেখানে সেভ করা হবে সেই প্লেলিস্টটি বেছে নিন</string>
     <string name="android_auto_target_playlist_auto">সেট করা হয়নি</string>
-    <string name="added_to_playlist">প্লেলিস্টে যোগ করা হয়েছে</string>
     <string name="android_auto_target_playlist_not_set">কোনো প্লেলিস্ট নির্বাচন করা হয়নি। অ্যান্ড্রয়েড অটো সেটিংস থেকে একটি বেছে নিন</string>
     <string name="time_transfer_title">সময় স্থানান্তর</string>
     <string name="time_transfer_warning">সতর্কীকরণ: একবার সম্পন্ন হলে এই কাজটি আর পূর্বাবস্থায় ফেরানো যাবে না। এগিয়ে যাওয়ার আগে একটি ব্যাকআপ তৈরি করুন। শুধুমাত্র অন্তত একটি নিবন্ধিত প্লে থাকা গানগুলোই যোগ্য বলে বিবেচিত হবে</string>
@@ -505,12 +480,7 @@
     <string name="credits_license_desc">বিনামূল্যের, ওপেন-সোর্স সফটওয়্যার। আপনি এটি ব্যবহার করতে, অধ্যয়ন করতে, শেয়ার করতে এবং উন্নত করতে পারেন</string>
     <string name="credits_discord">ডিসকর্ড সার্ভার</string>
     <string name="credits_telegram">টেলিগ্রাম চ্যানেল</string>
-    <string name="credits_website">ওয়েবসাইট</string>
-    <string name="credits_instagram">ইন্সটাগ্রাম</string>
-    <string name="credits_github">গিটহাব</string>
     <string name="credits_view_repo">রিপোজিটোরি দেখুন</string>
-    <string name="app_version_info">%1$s • %2$s</string>
-    <string name="like_what_i_do">আমার কাজ কি আপনার ভালো লাগে?</string>
     <string name="buy_mo_a_coffee">আমাকে এক কাপ কফি কিনে দাও!</string>
     <string name="community_and_info">কমিউনিটি ও তথ্য</string>
     <string name="metrolist">মেট্রোলিস্ট</string>
@@ -654,7 +624,6 @@
     <string name="scrobble_delay_minutes">Scrobble বিলম্ব (মিনিট)</string>
     <string name="equalizer_desc">অডিও equalizer খুলুন</string>
     <string name="mini_player">মিনি-প্লেয়ার</string>
-    <string name="pure_black_mini_player">বিশুদ্ধ কালো মিনি-প্লেয়ার</string>
     <string name="mini_player_background_style">মিনি-প্লেয়ার ব্যাকগ্রাউন্ড স্টাইল</string>
     <string name="transparent">স্বচ্ছ</string>
     <string name="mini_player_background_not_available">নতুন মিনি-প্লেয়ার ডিজাইন নিষ্ক্রিয় করা থাকলে অনুপলব্ধ</string>
@@ -663,11 +632,6 @@
     <string name="cache_size_warning_confirm">এগিয়ে যান</string>
     <string name="lyrics_animation_style_title">Word-by-word অ্যানিমেশন স্টাইল</string>
     <string name="none">কোনোটিই নয়</string>
-    <string name="fade">ফেড</string>
-    <string name="glow">গ্লো</string>
-    <string name="slide">স্লাইড</string>
-    <string name="karaoke">কারাওকে</string>
-    <string name="apple_music_style">অ্যাপেল মিউজিক</string>
     <string name="album_art_for">%s এর জন্য অ্যালবাম আর্ট</string>
     <string name="wrapped_total_albums_title">আপনি শুনেছেন</string>
     <string name="wrapped_total_albums_subtitle">অনন্য অ্যালবাম!</string>
@@ -701,10 +665,6 @@
     <string name="wrapped_special_thanks">মেট্রোলিস্ট তৈরি করার জন্য MO Agamy কে বিশেষ ধন্যবাদ</string>
     <string name="wrapped_close">মোড়কটি বন্ধ করুন</string>
     <string name="wrapped_playlist_title">আপনার %s মোড়ক</string>
-    <plurals name="profiles_count">
-        <item quantity="one">%d টি প্রোফাইল</item>
-        <item quantity="other">%d টি প্রোফাইল</item>
-    </plurals>
     <string name="equalizer_header">ইকুয়ালাইজার</string>
     <string name="no_profiles">কোনো ইকুয়ালাইজার প্রোফাইল নেই</string>
     <string name="system_equalizer">সিস্টেম ইকুয়ালাইজার</string>
@@ -719,7 +679,6 @@
     <string name="ai_error_no_lyrics">অনুবাদ করার জন্য কোনো লিরিক্স পাওয়া যায়নি</string>
     <string name="ai_error_lyrics_empty">লিরিক্স খালি</string>
     <string name="ai_error_language_required">একটি লক্ষ্য ভাষা প্রয়োজন</string>
-    <string name="ai_error_unexpected">অনাকাঙ্ক্ষিত অনুবাদ ফলাফল</string>
     <string name="ai_error_unknown">একটি অজানা ত্রুটি হয়েছে</string>
     <string name="ai_error_translation_failed">অনুবাদ ব্যর্থ হয়েছে</string>
     <string name="ai_provider_help">API কী পান</string>
@@ -736,8 +695,6 @@
     <string name="ai_deepl_formality_more">আরও আনুষ্ঠানিক</string>
     <string name="ai_deepl_formality_less">কম আনুষ্ঠানিক</string>
     <string name="ai_system_prompt">সিস্টেম প্রম্পট</string>
-    <string name="ai_system_prompt_desc">এআই মডেলে পাঠানো কাস্টম নির্দেশাবলী। ডিফল্ট প্রম্পট ব্যবহার করতে এটি খালি রাখুন</string>
-    <string name="ai_system_prompt_placeholder">অনুবাদ করার লাইনের সংখ্যা বোঝাতে {lineCount} কে স্থানধারক হিসেবে ব্যবহার করুন</string>
     <string name="ai_system_prompt_default">ডিফল্ট</string>
     <string name="ai_system_prompt_reset">ডিফল্টে রিসেট করুন</string>
     <string name="crash_title">অ্যাপটি ক্র্যাশ করেছে</string>
@@ -833,4 +790,23 @@
     <string name="loudness_level_loud">লাউড (-11dB)</string>
     <string name="loudness_level_balanced">ভারসাম্যপূর্ণ (-১৪ dB)</string>
     <string name="loudness_level_quiet">শান্ত (-১৯ dB)</string>
+    <string name="and">এবং</string>
+    <string name="auto_radio_queue">স্বয়ংক্রিয় রেডিও কিউ</string>
+    <string name="auto_radio_queue_desc">Search অথবা হোম পেজ থেকে কোনো গান চালু করলে স্বয়ংক্রিয়ভাবে একটি রেডিও কিউ তৈরি করুন</string>
+    <string name="playlist_unavailable">প্লেলিস্টটি পাওয়া যাচ্ছে না</string>
+    <string name="kmp_upgrade_title">মেট্রোলিস্ট KMP %s পাওয়া যাচ্ছে</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP এখন প্রাথমিক অ্যাক্সেসে রয়েছে।ফিচারগুলো অকার্যকর বা অসম্পূর্ণ হতে পারে, অথবা কোনো নোটিশ ছাড়াই পরিবর্তিত হতে পারে।</string>
+    <string name="kmp_upgrade_action">KMP তে আপগ্রেড করুন</string>
+    <string name="kmp_upgrade_later">এখন না</string>
+    <string name="audio_track_playback_params">হার্ডওয়ারের অডিও প্রোসেসিং ব্যবহার করুন</string>
+    <string name="audio_track_playback_params_description">সফটওয়্যার প্রসেসিংয়ের বদলে স্পিড ও পিচ পরিবর্তনের জন্য অ্যান্ড্রেয়েডের AudioTrack ব্যবহার করুন। এটি চরম পিচ মানের ক্ষেত্রেও বেশি নির্ভরযোগ্য।</string>
+    <string name="error_job_cancelled">ভিডিওটি চালানো যাচ্ছে না। আবার চেষ্টা করুন অথবা পরবর্তী গানে চলে যান।</string>
+    <string name="enable_landscape_scaling">ল্যান্ডস্কেপ স্কেলিং</string>
+    <string name="enable_landscape_scaling_desc">বড় স্ক্রিনের জন্য ল্যান্ডস্কেপ মোডে UI-এর আকার পরিবর্তন করুন</string>
+    <string name="discord_status_connected">কানেক্টেড</string>
+    <string name="discord_status_authorizing">অনুমোদন করা হচ্ছে…</string>
+    <string name="discord_status_authorized">অনুমোদিত</string>
+    <string name="discord_status_not_initialized">শুরু করা হয়নি</string>
+    <string name="discord_error_loopback_timeout">ডিসকর্ড সময়মতো সাড়া দেয়নি। অনুগ্রহ করে আবার চেষ্টা করুন।</string>
+    <string name="discord_error_loopback_unbound">একটি লোকাল কলব্যাক পোর্ট খোলা সম্ভব হয়নি। অনুগ্রহ করে একটি পোর্ট খালি করুন এবং আবার চেষ্টা করুন।</string>
 </resources>

@@ -131,21 +131,9 @@
     </plurals>
     <string name="disable_load_more_when_repeat_all">\"Errepikatu guztiak\" moduan automatikoki kargatzea desgaitu</string>
     <string name="disable_load_more_when_repeat_all_desc">Ez kargatu automatikoki abesti gehiago eta antzeko edukia \"Errepikatu guztiak\" modua aktibatuta dagoenean</string>
-    <string name="lyrics_romanization_cyrillic">Kirilikoa</string>
     <string name="lyrics_romanize_title">Erromanizazio</string>
     <string name="lyrics_romanization">Letren erromanizazioa</string>
-    <string name="lyrics_romanize_japanese">Japoniar letrak erromanizatu</string>
-    <string name="lyrics_romanize_korean">Korear letrak erromanizatu</string>
-    <string name="lyrics_romanize_russian">Errusiar letrak erromanizatu</string>
-    <string name="lyrics_romanize_ukrainian">Ukraniar letrak erromanizatu</string>
-    <string name="lyrics_romanize_kyrgyz">Kyrgizar letrak erromanizatu</string>
-    <string name="lyrics_romanize_serbian">Serbiar letrak erromanizatu</string>
     <string name="line_by_line_option_title">Hizkuntza lerroz-lerro hauteman</string>
-    <string name="lyrics_romanize_belarusian">Bielorrusiar letrak erromanizatu</string>
-    <string name="lyrics_romanize_bulgarian">Bulgariar letrak erromanizatu</string>
-    <string name="line_by_line_option_desc">Alfabeto zirilikoa lerroz-lerro hautemango da, abesti osoaren ordez</string>
-    <string name="line_by_line_dialog_title">Ziur zaude?</string>
-    <string name="line_by_line_dialog_desc">Ezaugarri esperimental hau ez da beti fidagarria.\n\nLehenetsita, hizkuntza abesti osoaren arabera zehazten da. Aukera hau gaituz gero, lerroz-lerro hautemango da. Honek hizkuntza anitzeko abestietan funtzionamendua ahalbidetuko du, BAINA hizkuntza ez da beti zuzena izango (adibidez, ukrainierazko lerro bat ez badu letra berezirik, errusieraz erromanizatua izan daiteke).\n\nArazoik ez baduzu, gomendagarria da aukera hau desgaituta uztea</string>
     <string name="romanize_current_track">Oraingo abestia erromanizatu</string>
     <string name="settings_section_ui">Interfazea</string>
     <string name="settings_section_privacy">Pribatutasuna eta Segurtasuna</string>
@@ -208,7 +196,6 @@
     <string name="android_auto_youtube_playlists">YouTubek gomendatutako zerrendak erakutsi</string>
     <string name="android_auto_target_playlist">Helmuga azkar gehitu</string>
     <string name="android_auto_target_playlist_auto">Ezarri gabe</string>
-    <string name="added_to_playlist">Zerrendara gehituta</string>
     <string name="android_auto_target_playlist_not_set">Ez da zerrendarik aukeratu. Android Autoren ezarpenetan aukeratu bat</string>
     <string name="time_transfer_warning">KONTUZ: Ekintza hau ezin da desegin behin eginda. Babes-kopia bat sortu jarraitu baino lehen. Gutxienez behin jotako abestiei baino ez zaie aplikatuko</string>
     <string name="time_transfer_source_song">Jatorrizko abestia</string>
@@ -319,7 +306,6 @@
         <item quantity="other">%d abesti</item>
     </plurals>
     <string name="alarm_selected">Aukeratua</string>
-    <string name="alarm_playlist_helper">Aukeratu alarmak zein erreprodukzio-zerrenda joko duen</string>
     <string name="alarm_add">Alarma gehitu</string>
     <string name="alarm_empty">Ez dago alarmarik oraindik. Gehitu bat programatutako erreprodukzioa abiarazteko</string>
     <string name="alarm_disabled">Ezgaituta</string>
@@ -333,7 +319,6 @@
     <string name="alarm_delete">Alarma ezabatu</string>
     <string name="alarm_duplicate_time_warning">Beste alarma bat dago ordu honetan. Biak aldi berean piztuz gero, soilik batek joko du</string>
     <string name="alarm_random_song">Jo abesti bat erreprodukzio-zerrendatik ausaz</string>
-    <string name="alarm_next_trigger">Piztuko den hurrengo aldia</string>
     <string name="alarm_not_scheduled">Programatu gabe</string>
     <string name="alarm_exact_permission_title">Alarma zehatzak gaitu</string>
     <string name="alarm_exact_permission_desc">Alarma zehatzak baimentzen ditu, bigarren planoan aplikazioaren fidagarritasuna hobetuz</string>
@@ -347,11 +332,6 @@
     <string name="crossfade_duration">Trantsizio leunaren iraupena</string>
     <string name="crossfade_gapless">Etenik gabeko albumetan ezgaitu</string>
     <string name="crossfade_gapless_desc">Etenik gabe entzuteko diseinatutako albumetan trantsizio leuna saltatu</string>
-    <string name="crossfade_beta_title">Beta ezaugarria!</string>
-    <string name="crossfade_beta_message">Trantsizio leuna ezaugarri berria da eta akatsak izan ditzake. Arazorik izanez gero, mesedez haien berri eman.\n\nOHARRA: Ezaugarri honek audio deskarga ezgaitzen du muga teknikoak direla eta</string>
-    <string name="lyrics_romanize_chinese">Txinatarrez dauden hitzak erromanizatu</string>
-    <string name="lyrics_romanize_hindi">Hindiz dauden hitzak erromanizatu</string>
-    <string name="lyrics_romanize_punjabi">Punjabiz dauden hitzak erromanizatu</string>
     <string name="lyrics_offset">Hitzen konpentsazioa</string>
     <string name="updater">Eguneratzailea</string>
     <string name="check_for_updates">Eguneratzeak automatikoki bilatu</string>
@@ -365,7 +345,6 @@
     <string name="varispeed_description">Tonua erreprodukzio-abiadurarekin lotu, zinta batean bezalako azkartze eta moteltze efektuak lortzeko</string>
     <string name="google_cast">Google Cast</string>
     <string name="google_cast_description">Chromecast edo Cast duten beste gailu batzuetara audioa bidali</string>
-    <string name="lyrics_romanize_macedonian">Mazedoniarrez dauden hitzak erromanizatu</string>
     <string name="lyrics_romanize_as_main">Erakutsi hitzak errmoanizatuta lehenetsiz</string>
     <string name="integrations">Integrazioak</string>
     <string name="username">Erabiltzailea</string>
@@ -396,7 +375,6 @@
     <string name="advanced_desc">Abestiaren tenpoa eta tonua aldatu</string>
     <string name="equalizer_desc">Audio-ekualizadorea ireki</string>
     <string name="mini_player">Minierreproduzitzailea</string>
-    <string name="pure_black_mini_player">Minierreproduzitzaile beltza purua</string>
     <string name="mini_player_background_style">Minierreproduzitzailearen hondoaren estiloa</string>
     <string name="transparent">Gardena</string>
     <string name="mini_player_background_not_available">Ez dago erabilgarri minierreproduzitzailearen diseinu berria ezgaituta dagoenean</string>
@@ -405,10 +383,6 @@
     <string name="cache_size_warning_confirm">Jarraitu</string>
     <string name="lyrics_animation_style_title">Hitzez-hitzezko animazio-estiloa</string>
     <string name="none">Ezer ez</string>
-    <string name="glow">Distira</string>
-    <string name="slide">Irristatu</string>
-    <string name="karaoke">Karaokea</string>
-    <string name="apple_music_style">Apple Music</string>
     <string name="album_art_for">%s-ren album-azala</string>
     <string name="wrapped_total_albums_title">Dagoeneko entzun dituzu</string>
     <string name="wrapped_total_albums_subtitle">album ezberdin!</string>
@@ -442,10 +416,6 @@
     <string name="wrapped_playlist_title">Zure %s Wrapped</string>
     <string name="wrapped_create_playlist">Erreprodukzio-zerrenda sortu</string>
     <string name="wrapped_playlist_saved">Erreprodukzio-zerrenda gordeta</string>
-    <plurals name="profiles_count">
-        <item quantity="one">Profil %d</item>
-        <item quantity="other">%d profil</item>
-    </plurals>
     <string name="equalizer_header">Ekualizadorea</string>
     <string name="no_profiles">Ekualizadore profilik ez</string>
     <string name="import_profile">Profila inportatu</string>
@@ -456,7 +426,6 @@
     <string name="eq_download_db">AutoEQ datu-basea deskargatu (17 MB)</string>
     <string name="eq_downloading">Deskargatzen…</string>
     <string name="import_from_file">Fitxategitik inportatu</string>
-    <string name="add_profile">Profila gehitu</string>
     <plurals name="band_count">
         <item quantity="one">Banda %d</item>
         <item quantity="other">%d banda</item>
@@ -475,7 +444,6 @@
     <string name="wizard_model_placeholder">adib.: Sony WH-1000XM4, Bose QuietComfort 45</string>
     <string name="wizard_no_models">Ez da modelorik aurkitu</string>
     <string name="show_wrapped_card">Wrapped txartela ikusi</string>
-    <string name="fade">Itzaldu</string>
     <string name="wizard_multiple_variants">Aukera ezberdinak eskuragarri</string>
     <string name="wizard_select_eq_profiles">%s-rentzako EQ profilak aukeratu</string>
     <string name="wizard_save_profiles">Profilak gorde</string>
@@ -484,7 +452,6 @@
     <string name="plays">erreprodukzio</string>
     <string name="casting_to">%s-ra igortzen</string>
     <string name="progress_percent">%s%%-ko aurrerapena</string>
-    <string name="listening_to_metrolist">Metrolist entzuten</string>
     <string name="open">Ireki</string>
     <string name="failed_to_create_image">Irudia sortzean akatsa: %s</string>
     <string name="copied_title">Izenburua kopiatuta</string>

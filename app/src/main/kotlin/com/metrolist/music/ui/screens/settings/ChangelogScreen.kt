@@ -57,9 +57,7 @@ fun ChangelogScreen(
         }
     }
 
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = false
-    )
+    val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden)
 
     val showFab by remember {
         derivedStateOf { sheetState.targetValue != SheetValue.Hidden }

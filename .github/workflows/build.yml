@@ -158,3 +158,50 @@ jobs:
         with:
           name: ${{ matrix.variant == 'gms' && 'app-debug-gms' || 'app-debug' }}
           path: app/build/outputs/apk/${{ matrix.variant }}/debug/*.apk
+
+  publish_nightly:
+    name: Publish Nightly Release
+    if: github.event_name == 'push'
+    needs: [build_release, build_debug]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Download Signed APK
+        uses: actions/download-artifact@v7
+        with:
+          name: app-with-Google-Cast
+          path: nightly
+
+      - name: Publish Nightly Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mv nightly/app-universal-with-Google-Cast.apk nightly/Metrolist-with-Google-Cast.apk
+
+          PREVIOUS_NIGHTLY_SHA=$(gh release view nightly --json targetCommitish --jq .targetCommitish 2>/dev/null || true)
+          {
+            echo "Automated prerelease built from main at commit $GITHUB_SHA. It may be unstable."
+            if [ -n "$PREVIOUS_NIGHTLY_SHA" ] && [ "$PREVIOUS_NIGHTLY_SHA" != "$GITHUB_SHA" ]; then
+              echo
+              echo "## Changes since previous nightly"
+              gh api "repos/$GITHUB_REPOSITORY/compare/$PREVIOUS_NIGHTLY_SHA...$GITHUB_SHA" \
+                --jq '.commits[] | "* \(.commit.message | split("\n")[0]) (\(.sha[0:7]))"'
+            fi
+          } > nightly-notes.md
+
+          if gh release view nightly > /dev/null 2>&1; then
+            gh release delete nightly --yes --cleanup-tag
+          elif gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/nightly" > /dev/null 2>&1; then
+            gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/nightly"
+          fi
+
+          gh release create nightly \
+            nightly/Metrolist-with-Google-Cast.apk \
+            --target "$GITHUB_SHA" \
+            --title "Metrolist Nightly" \
+            --notes-file nightly-notes.md \
+            --generate-notes \
+            --prerelease \
+            --latest=false

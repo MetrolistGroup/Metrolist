@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -55,6 +56,8 @@ import androidx.navigation.NavController
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
+import com.metrolist.music.constants.AddToPlaylistPosition
+import com.metrolist.music.constants.AddToPlaylistPositionKey
 import com.metrolist.music.constants.AppLanguageKey
 import com.metrolist.music.constants.ContentCountryKey
 import com.metrolist.music.constants.ContentLanguageKey
@@ -136,6 +139,10 @@ fun ContentSettings(
     val (randomizeHomeOrder, onRandomizeHomeOrderChange) = rememberPreference(
         RandomizeHomeOrderKey,
         defaultValue = true
+    )
+    val (addToPlaylistPosition, onAddToPlaylistPositionChange) = rememberEnumPreference(
+        AddToPlaylistPositionKey,
+        AddToPlaylistPosition.BEGINNING,
     )
 
     LaunchedEffect(showMostStatsPlaylists) {
@@ -555,6 +562,35 @@ fun ContentSettings(
         )
     }
 
+    var showAddToPlaylistPositionDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    if (showAddToPlaylistPositionDialog) {
+        EnumDialog(
+            onDismiss = { showAddToPlaylistPositionDialog = false },
+            onSelect = {
+                onAddToPlaylistPositionChange(it)
+                showAddToPlaylistPositionDialog = false
+            },
+            title = stringResource(R.string.add_to_playlist_position),
+            current = addToPlaylistPosition,
+            values = AddToPlaylistPosition.entries,
+            valueText = {
+                when (it) {
+                    AddToPlaylistPosition.BEGINNING -> stringResource(R.string.playlist_position_beginning)
+                    AddToPlaylistPosition.END -> stringResource(R.string.playlist_position_end)
+                }
+            },
+            valueDescription = {
+                when (it) {
+                    AddToPlaylistPosition.BEGINNING -> stringResource(R.string.playlist_position_beginning_desc)
+                    AddToPlaylistPosition.END -> stringResource(R.string.playlist_position_end_desc)
+                }
+            },
+        )
+    }
+
     var showTopLengthDialog by rememberSaveable {
         mutableStateOf(false)
     }
@@ -758,6 +794,27 @@ fun ContentSettings(
                     onClick = { onHideYoutubeShortsChange(!hideYoutubeShorts) }
                 )
             )
+        )
+
+        Spacer(modifier = Modifier.height(27.dp))
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.playlists),
+            items = listOf(
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.playlist_add),
+                    title = { Text(stringResource(R.string.add_to_playlist_position)) },
+                    description = {
+                        Text(
+                            when (addToPlaylistPosition) {
+                                AddToPlaylistPosition.BEGINNING -> stringResource(R.string.playlist_position_beginning)
+                                AddToPlaylistPosition.END -> stringResource(R.string.playlist_position_end)
+                            }
+                        )
+                    },
+                    onClick = { showAddToPlaylistPositionDialog = true },
+                )
+            ),
         )
 
         Spacer(modifier = Modifier.height(27.dp))

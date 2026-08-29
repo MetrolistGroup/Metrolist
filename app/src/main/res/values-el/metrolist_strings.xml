@@ -99,8 +99,6 @@
     <string name="auto_download_on_like_desc">Αυτόματη λήψη τραγουδιών όταν έχω πατήσει like</string>
     <string name="new_mini_player_design">Νέο σχέδιο mini player</string>
     <string name="lyrics_auto_scroll">Στίχοι αυτόματης κύλισης</string>
-    <string name="lyrics_romanize_japanese">Λατινοποίηση (transliteration) ιαπωνικών στίχων</string>
-    <string name="lyrics_romanize_korean">Λατινοποίηση (transliteration) κορεατικών στίχων</string>
     <string name="import_online">Εισαγωγή λιστών αναπαραγωγής \"m3u\"</string>
     <string name="import_csv">Εισαγωγή λιστών αναπαραγωγής \"csv\"</string>
     <string name="playlist_add_local_to_synced_note">Σημείωση: Η προσθήκη τοπικών τραγουδιών σε συγχρονισμένες/απομακρυσμένες λίστες αναπαραγωγής δεν υποστηρίζεται. Οποιοσδήποτε άλλος συνδυασμός είναι έγκυρος</string>
@@ -137,19 +135,9 @@
     <string name="enable_authentication">Ενεργοποίηση ελέγχου ταυτότητας</string>
     <string name="disable_load_more_when_repeat_all">Απενεργοποίηση φόρτωσης περισσότερων όταν επαναλαμβάνονται όλα</string>
     <string name="disable_load_more_when_repeat_all_desc">Μην φορτώνετε αυτόματα περισσότερα τραγούδια και παρόμοιο περιεχόμενο όταν είναι ενεργοποιημένη η λειτουργία επανάληψης όλων</string>
-    <string name="lyrics_romanization_cyrillic">Κυριλικά</string>
     <string name="lyrics_romanize_title">Greeklish</string>
     <string name="lyrics_romanization">Στίχοι σε Greeklish</string>
-    <string name="lyrics_romanize_russian">Λατινοποίηση Ρωσικών στίχων</string>
-    <string name="lyrics_romanize_ukrainian">Λατινοποίηση Ουκρανικών στίχων</string>
-    <string name="lyrics_romanize_belarusian">Λατινοποίηση Λευκορωσικών στίχων</string>
-    <string name="lyrics_romanize_kyrgyz">Λατινοποίηση Κυργιζιανών στίχων</string>
-    <string name="lyrics_romanize_serbian">Λατινοποίηση Σερβικών στίχων</string>
-    <string name="lyrics_romanize_bulgarian">Λατινοποίηση Βουλγαρικών στίχων</string>
     <string name="line_by_line_option_title">ΠΕΙΡΑΜΑΤΙΚΟ: Ανίχνευση γλώσσας γραμμή προς γραμμή</string>
-    <string name="line_by_line_option_desc">Η κυριλλική γλώσσα θα ανιχνεύεται γραμμή προς γραμμή αντί για ολόκληρο το τραγούδι.</string>
-    <string name="line_by_line_dialog_title">Είστε βέβαιος;</string>
-    <string name="line_by_line_dialog_desc">Αυτή είναι μια πειραματική λειτουργία με αβέβαιο αποτέλεσμα.\n\nΑπό προεπιλογή, η γλώσσα προσδιορίζεται από ολόκληρο το τραγούδι, αλλά με αυτήν την επιλογή ενεργοποιημένη, θα προσδιορίζεται γραμμή προς γραμμή. Αυτό θα επιτρέπει τη λειτουργία τραγουδιών σε πολλές γλώσσες, ΑΛΛΑ η γλώσσα μπορεί να μην είναι πάντα σωστή (για παράδειγμα, αν υπάρχουν ουκρανικοί στίχοι που δεν περιέχουν ουκρανικά γράμματα, μπορεί να μεταγραφούν ως ρωσικά). \n\nΕάν δεν έχετε προβλήματα, συνιστάται να διατηρήσετε αυτή την επιλογή απενεργοποιημένη.</string>
     <string name="settings_section_ui">Διεπαφή</string>
     <string name="settings_section_privacy">Απόρρητο και ασφάλεια</string>
     <string name="settings_section_player_content">Αναπαραγωγέας &amp; Περιεχόμενο</string>
@@ -163,7 +151,6 @@
     <string name="update_channel_desc">Ειδοποιήσεις για νέες εκδόσεις</string>
     <string name="audio_offload">Ενεργοποίηση εκφόρτωσης</string>
     <string name="audio_offload_description">Χρησιμοποιήστε τη διαδρομή εκφόρτωσης ήχου για αναπαραγωγή ήχου. Η απενεργοποίηση αυτής της λειτουργίας μπορεί να αυξήσει την κατανάλωση ενέργειας, αλλά μπορεί να είναι χρήσιμη εάν αντιμετωπίζετε προβλήματα με την αναπαραγωγή ήχου ή την μετα-επεξεργασία</string>
-    <string name="lyrics_romanize_macedonian">Λατινοποίηση Σλαβομακεδονικών στίχων</string>
     <string name="integrations">Ενσωματώσεις</string>
     <string name="username">Όνομα χρήστη</string>
     <string name="password">Κωδικός πρόσβασης</string>
@@ -210,7 +197,6 @@
     <string name="remember_shuffle_and_repeat">Απομνημόνευση τυχαίας αναπαραγωγής και επανάληψης</string>
     <string name="remember_shuffle_and_repeat_desc">Απομνημόνευση τυχαίας αναπαραγωγής και επανάληψης κατά την επανεκκίνηση της εφαρμογής</string>
     <string name="pause_music_when_media_is_muted">Παύση μουσικής όταν τα πολυμέσα είναι σε σίγαση</string>
-    <string name="lyrics_romanize_chinese">Λατινοποίηση Κινέζικων στίχων</string>
     <string name="lyrics_offset">Ρύθμιση Συγχρονισμού Στίχων</string>
     <string name="google_cast">Google Cast</string>
     <string name="google_cast_description">Ενεργοποίηση μετάδοσης ήχου σε Chromecast και άλλες συσκευές με δυνατότητα Casting</string>
@@ -230,8 +216,6 @@
     <string name="cache_size_warning_title">Περιμένετε!</string>
     <string name="cache_size_warning_message">Έχετε επιλέξει ένα όριο μεγέθους προσωρινής μνήμης μικρότερο από αυτό που χρησιμοποιεί επί του παρόντος η εφαρμογή (%1$s). Εάν συνεχίσετε, η εφαρμογή ενδέχεται να καταργήσει ορισμένα %2$s για να ταιριάξει με το νέο όριο. Θέλετε να συνεχίσετε;</string>
     <string name="cache_size_warning_confirm">Συνέχεια</string>
-    <string name="karaoke">Καραόκε</string>
-    <string name="apple_music_style">Apple Music</string>
     <string name="lyrics_text_size">Μέγεθος κειμένου στίχων</string>
     <string name="wrapped_total_albums_title">Έχετε ακούσει</string>
     <string name="wrapped_total_albums_subtitle">μοναδικά άλμπουμ</string>
@@ -256,10 +240,6 @@
     <string name="wrapped_special_thanks">Ιδιαίτερες ευχαριστίες στον MO Agamy για τη δημιουργία του Metrolist</string>
     <string name="wrapped_create_playlist">Δημιουργία λίστας αναπαραγωγής</string>
     <string name="wrapped_playlist_saved">Η λίστα αναπαραγωγής αποθηκεύτηκε</string>
-    <plurals name="profiles_count">
-        <item quantity="one">%d Προφίλ</item>
-        <item quantity="other">%d Προφίλ</item>
-    </plurals>
     <string name="equalizer_header">Ισοσταθμιστής</string>
     <string name="no_profiles">Δεν υπάρχουν προφίλ ισοσταθμιστή</string>
     <string name="import_profile">Εισαγωγή Προφίλ</string>
@@ -293,12 +273,8 @@
     <string name="play_next_desc">Προσθήκη στην κορυφή της σειράς αναπαραγωγής</string>
     <string name="add_to_queue_desc">Προσθήκη στο τέλος της σειράς αναπαραγωγής</string>
     <string name="mini_player">Μίνι πρόγραμμα αναπαραγωγής</string>
-    <string name="pure_black_mini_player">Μίνι πρόγραμμα αναπαραγωγής σε εμφάνιση pure black</string>
     <string name="lyrics_animation_style">Στυλ animation λέξη προς λέξη</string>
     <string name="none">Κανένα</string>
-    <string name="fade">Σβήσιμο</string>
-    <string name="glow">Λάμψη</string>
-    <string name="slide">Ολίσθηση</string>
     <string name="lyrics_line_spacing">Διάστημα μεταξύ των στίχων</string>
     <string name="album_art_for">Εξώφυλλο άλμπουμ για %s</string>
     <string name="wrapped_top_song_album_art_content_description">Εξώφυλλο άλμπουμ</string>
@@ -312,7 +288,6 @@
     <string name="wrapped_thank_you">Σας ευχαριστούμε για την ακρόαση</string>
     <string name="wrapped_close">Κλείσιμο wrapped</string>
     <string name="wrapped_playlist_title">To Wrapped σας %s</string>
-    <string name="listening_to_metrolist">Ακούτε το Metrolist</string>
     <string name="failed_to_create_image">Αποτυχία δημιουργίας εικόνας: %s</string>
     <string name="copied_title">Ο Τίτλος Αντιγράφηκε</string>
     <string name="copied_artist">Ο Καλλιτέχνης Αντιγράφηκε</string>

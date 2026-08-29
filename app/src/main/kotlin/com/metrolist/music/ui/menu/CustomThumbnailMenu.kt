@@ -39,8 +39,8 @@ fun CustomThumbnailMenu(
     ) {
         item {
             ListItem(
-                headlineContent = { 
-                    Text(text = stringResource(R.string.choose_from_library)) 
+                content = {
+                    Text(text = stringResource(R.string.choose_from_library))
                 },
                 leadingContent = {
                     Icon(
@@ -56,8 +56,8 @@ fun CustomThumbnailMenu(
         }
         item {
             ListItem(
-                headlineContent = { 
-                    Text(text = stringResource(R.string.remove_custom_image)) 
+                content = {
+                    Text(text = stringResource(R.string.remove_custom_image))
                 },
                 leadingContent = {
                     Icon(

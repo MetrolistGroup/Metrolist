@@ -100,8 +100,6 @@
     <string name="information">資訊</string>
     <string name="dislikes">不喜歡</string>
     <string name="new_player_design">新播放器設計</string>
-    <string name="lyrics_romanize_japanese">羅馬化日文歌詞</string>
-    <string name="lyrics_romanize_korean">羅馬化韓文歌詞</string>
     <string name="yt_sync">自動與帳號同步</string>
     <string name="more_content">更多內容</string>
     <string name="swipe_sensitivity">迷你播放器滑動靈敏度</string>
@@ -129,19 +127,9 @@
     <string name="enable_authentication">開啟身份驗證</string>
     <string name="disable_load_more_when_repeat_all">開啟「重複全部」時停用「載入更多」</string>
     <string name="disable_load_more_when_repeat_all_desc">啟用「重複播放」模式時，停用「自動載入」更多歌曲和類似內容</string>
-    <string name="lyrics_romanization_cyrillic">西里爾</string>
     <string name="lyrics_romanize_title">羅馬化</string>
     <string name="lyrics_romanization">羅馬化歌詞</string>
-    <string name="lyrics_romanize_russian">羅馬化俄文歌詞</string>
-    <string name="lyrics_romanize_ukrainian">羅馬化烏克蘭文歌詞</string>
-    <string name="lyrics_romanize_belarusian">羅馬化白俄羅斯文歌詞</string>
-    <string name="lyrics_romanize_kyrgyz">羅馬化吉爾吉斯語歌詞</string>
-    <string name="lyrics_romanize_serbian">羅馬化塞爾維亞語歌詞</string>
-    <string name="lyrics_romanize_bulgarian">羅馬化白俄羅斯文歌詞</string>
     <string name="line_by_line_option_title">逐行偵測語言</string>
-    <string name="line_by_line_option_desc">西里爾文將逐行偵測，而不是整首歌曲</string>
-    <string name="line_by_line_dialog_title">確定嗎？</string>
-    <string name="line_by_line_dialog_desc">這是一項不保證穩定性的實驗性功能。\n\n在預設情況下，系統會根據整首歌來判斷語言；但開啟此選項後，將改為逐行判斷。這可以支援多語言歌曲，但判斷結果未必完全準確（例如：如果一段烏克蘭語歌詞中不含該語言特有的字母，系統可能會將其誤判並以俄語羅馬化呈現）。\n\n如果目前使用沒有問題，建議維持關閉狀態</string>
     <string name="romanize_current_track">將當前曲目羅馬化</string>
     <string name="settings_section_ui">介面</string>
     <string name="settings_section_privacy">私隱與安全性</string>
@@ -162,7 +150,6 @@
     <string name="update_channel_desc">新版本更新通知</string>
     <string name="audio_offload">啟動音訊卸載</string>
     <string name="audio_offload_description">使用卸載音訊路徑進行播放。停用此功能可能會增加耗電量，但若遇到音訊播放或後處理問題，建議將其關閉</string>
-    <string name="lyrics_romanize_macedonian">羅馬化馬其頓語歌詞</string>
     <string name="integrations">整合</string>
     <string name="username">使用者名稱</string>
     <string name="password">密碼</string>
@@ -191,7 +178,6 @@
     <string name="shuffle_playlist_first">隨機播放清單/專輯</string>
     <string name="shuffle_playlist_first_desc">隨機播放時，先播放原播放清單/專輯中的所有歌曲，然後再播放內容相似的歌曲</string>
     <string name="show_wrapped_card">展示「年度播放」卡片</string>
-    <string name="lyrics_romanize_chinese">中文歌詞羅馬化</string>
     <string name="google_cast_description">啟用向 Chromecast 和其他支援投影功能的裝置投屏音頻</string>
     <string name="logging_in">正在登錄…</string>
     <string name="hide_video_songs">隱藏帶影片的音樂</string>
@@ -214,14 +200,10 @@
     <string name="error_playing">撥放時發生錯誤</string>
     <string name="failed_to_parse_proxy">無法解析 proxy</string>
     <string name="like">喜歡</string>
-    <string name="karaoke">卡拉 OK</string>
     <string name="google_cast">Google Cast</string>
     <string name="failed_to_create_image">無法創建影像：%s</string>
     <string name="copied_title">已複製標題</string>
     <string name="import_profile">匯入設定檔</string>
-    <plurals name="profiles_count">
-        <item quantity="other">%d 設定檔</item>
-    </plurals>
     <string name="equalizer_header">等化器</string>
     <string name="no_profiles">無等化器設定檔</string>
     <string name="system_equalizer">系統等化器</string>
@@ -237,10 +219,7 @@
     <string name="error_file_open">開啟檔案時發生錯誤：%1$s</string>
     <string name="progress_percent">進度 %s%%</string>
     <string name="open">開啟</string>
-    <string name="fade">淡出</string>
     <string name="error_file_read">無法閱讀檔案</string>
-    <string name="glow">高亮效果</string>
-    <string name="slide">滑動</string>
     <string name="pause_music_when_media_is_muted">靜音時暫停音樂播放</string>
     <string name="turntable_widget_description">快速存取最近播放的曲目</string>
     <string name="tap_to_open">點擊開啟 Metrolist</string>
@@ -329,7 +308,7 @@
     <string name="no_account_found">未找到帳戶</string>
     <string name="checking_previous_account">正在檢查之前的帳戶…</string>
     <string name="restore">恢復</string>
-    <string name="restore_account_warning">恢復後您需要重新登入。以下帳戶將被註銷：</string>
+    <string name="restore_account_warning">將會還原並保留以下帳號資訊：</string>
     <string name="restore_confirm_message">這將從備份中還原您的應用資料</string>
     <string name="restore_confirm_title">恢復備份？</string>
     <string name="no_subscribed_channels">沒有訂閱頻道</string>
@@ -350,12 +329,7 @@
     <string name="metrolist">METROLIST</string>
     <string name="community_and_info">社區與資訊</string>
     <string name="buy_mo_a_coffee">請我喝杯咖啡吧！</string>
-    <string name="like_what_i_do">喜歡我做的事嗎？</string>
-    <string name="app_version_info">%1$s • %2$s</string>
     <string name="credits_view_repo">查看儲存庫</string>
-    <string name="credits_github">GitHub</string>
-    <string name="credits_instagram">Instagram</string>
-    <string name="credits_website">網站</string>
     <string name="credits_telegram">Telegram頻道</string>
     <string name="credits_discord">Discord 伺服器</string>
     <string name="credits_license_desc">免費開源軟體。您可以隨意使用、研究、分享和改進它</string>
@@ -382,11 +356,11 @@
     <string name="discord_presence">在場</string>
     <string name="discord_rpc_preview">播放狀態預覽</string>
     <string name="discord_activity_competing">正在參加賽事</string>
-    <string name="discord_activity_watching">觀看</string>
-    <string name="discord_activity_listening">聆聽</string>
-    <string name="discord_activity_playing">玩耍</string>
+    <string name="discord_activity_watching">正在觀看</string>
+    <string name="discord_activity_listening">正在聽</string>
+    <string name="discord_activity_playing">正在遊玩</string>
     <string name="discord_activity_type">活動類型</string>
-    <string name="discord_information_warning">此功能使用 KizzyRPC 庫連接到 Discord 網關並設定您的 Rich Presence 狀態。雖然目前尚未發現因類似使用而被封鎖的情況，但此方法並非 Discord 官方支持，可能被視為違反服務條款。您的令牌將在本地提取，絕不會發送到第三方伺服器。請自行斟酌是否繼續操作。</string>
+    <string name="discord_information_warning">Metrolist 使用 Discord 的公開 OAuth2 和 Gateway API 來分享您正在聆聽的音樂。授權流程完全在您本機的瀏覽器視窗中進行，並於取得授權碼後自動關閉，不會向第三方伺服器發送任何資訊。您的憑證儲存在此裝置的加密偏好設定中，絕不對外洩漏。 Metrolist 直接連接到 wss://gateway.discord.gg 來同步您的聆聽動態，且僅申請顯示狀態所需的最低權限範圍 (sdk.social_layer_presence)。</string>
     <string name="discord_button_2">按鈕 2</string>
     <string name="discord_button_1">按鈕 1</string>
     <string name="discord_buttons">按鈕</string>
@@ -463,7 +437,6 @@
     <string name="ai_provider_help">取得 API 金鑰</string>
     <string name="ai_error_translation_failed">翻譯失敗</string>
     <string name="ai_error_unknown">發生未知錯誤</string>
-    <string name="ai_error_unexpected">翻譯出現意外錯誤</string>
     <string name="ai_error_language_required">目標語言要求</string>
     <string name="ai_error_lyrics_empty">沒有歌詞</string>
     <string name="ai_error_no_lyrics">沒有歌詞可供翻譯</string>
@@ -500,11 +473,7 @@
     <string name="sleep_timer_fade_out_description">播放停止前逐漸降低音量</string>
     <string name="crossfade_duration">淡入淡出持續時間</string>
     <string name="crossfade_gapless_desc">無縫播放的專輯不會使用淡入淡出效果</string>
-    <string name="crossfade_beta_title">測試版功能</string>
     <string name="crossfade_gapless">禁用無縫專輯功能</string>
-    <string name="crossfade_beta_message">淡入淡出是一項新功能，可能會有一些問題。如果您遇到任何問題，請提交報告。\n\n注意：由於技術限制，此功能會停用音訊卸載</string>
-    <string name="lyrics_romanize_hindi">將印地語歌詞羅馬化</string>
-    <string name="lyrics_romanize_punjabi">將旁遮普語歌詞羅馬化</string>
     <string name="lyrics_offset">歌詞偏移</string>
     <string name="audio_offload_disabled_by_crossfade">因淡入淡出功能已啟用，此功能已停用</string>
     <string name="lyrics_romanize_as_main">將羅馬拼音歌詞顯示為主要內容</string>
@@ -515,12 +484,10 @@
     <string name="share_desc">分享此歌曲鏈接</string>
     <string name="advanced_desc">調整歌曲的節奏和音調</string>
     <string name="mini_player">迷你播放器</string>
-    <string name="pure_black_mini_player">純黑色迷你播放器</string>
     <string name="cache_size_warning_title">請稍等！</string>
     <string name="cache_size_warning_message">您選擇的限制 (%1$s) 小於應用程式目前使用的限制。繼續可能會造成部分快取的 %2$s 被刪除。是否仍然要繼續嗎？</string>
     <string name="lyrics_animation_style">歌詞動畫風格</string>
     <string name="none">沒有</string>
-    <string name="apple_music_style">Apple Music</string>
     <string name="lyrics_text_size">歌詞字體大小</string>
     <string name="lyrics_line_spacing">歌詞行間距</string>
     <string name="album_art_for">%s 的專輯封面</string>
@@ -562,7 +529,6 @@
     <string name="error_eq_apply_failed">應用均衡器設定檔失敗：%1$s</string>
     <string name="found_in_settings_content">位於「設定」&gt;「內容」中</string>
     <string name="casting_to">轉換為 %s</string>
-    <string name="listening_to_metrolist">收聽 Metrolist</string>
     <string name="error_playback_failed">播放失敗</string>
     <string name="error_podcast_subscribe">訂閱播客失敗</string>
     <string name="error_podcast_unsubscribe">取消訂閱播客失敗</string>
@@ -684,7 +650,6 @@
     <string name="alarm_select_playlist">選擇播放清單</string>
     <string name="alarm_no_playlists">未找到播放清單</string>
     <string name="alarm_selected">已選擇</string>
-    <string name="alarm_playlist_helper">選擇鬧鐘要播放的播放清單</string>
     <string name="alarm_add">添加鬧鐘</string>
     <string name="alarm_empty">尚未設定任何鬧鐘。加上鬧鐘即可開始定時播放</string>
     <string name="alarm_random_enabled">隨機</string>
@@ -695,7 +660,6 @@
     <string name="alarm_delete">刪除鬧鐘</string>
     <string name="alarm_duplicate_time_warning">此時已經存在另一個鬧鐘。如果兩個鬧鐘同時觸發，則只有其中一個會生效</string>
     <string name="alarm_random_song">從播放清單中隨機播放歌曲</string>
-    <string name="alarm_next_trigger">下一個觸發</string>
     <string name="alarm_not_scheduled">未設定</string>
     <string name="alarm_exact_permission_title">允許準確的鬧鐘</string>
     <string name="alarm_exact_permission_desc">授予設定精確鬧鐘時間的權限，提升應用程式在背景執行的穩定性</string>
@@ -707,11 +671,8 @@
     <string name="your_daily_discover">你的每天新發現</string>
     <string name="together">一起聆聽</string>
     <string name="listen_together_sync_volume">同步主持人音量</string>
-    <string name="copy_all_lyrics">複製所有歌詞</string>
     <string name="change">更改</string>
     <string name="ai_system_prompt">系統提示</string>
-    <string name="ai_system_prompt_desc">發送給人工智慧模型的自訂指令。留空則使用預設提示</string>
-    <string name="ai_system_prompt_placeholder">使用{lineCount} 作為待翻譯行數的佔位符號</string>
     <string name="ai_system_prompt_default">預設</string>
     <string name="ai_system_prompt_reset">重設為預設值</string>
     <string name="recognition_notification_channel_name">歌曲識別</string>
@@ -726,9 +687,7 @@
     <string name="android_auto_youtube_playlists">顯示 YouTube 建議的播放清單</string>
     <string name="android_auto_youtube_playlists_desc">Android Auto 會顯示來自 YouTube Music 的推薦播放清單</string>
     <string name="android_auto_target_playlist">快速新增</string>
-    <string name="android_auto_target_playlist_desc">在 Android Auto 中使用「快速新增」按鈕時，選擇要將歌曲儲存到的播放清單</string>
     <string name="android_auto_target_playlist_auto">未設定</string>
-    <string name="added_to_playlist">已新增至播放清單</string>
     <string name="android_auto_target_playlist_not_set">未選擇播放清單。請在 Android Auto 設定中選擇一個</string>
     <string name="time_transfer_source_song">來源歌曲</string>
     <string name="time_transfer_target_song">目標歌曲</string>
@@ -769,7 +728,6 @@
     <string name="eq_download_db">下載AutoEQ資料庫 (17 MB)</string>
     <string name="eq_downloading">下載中…</string>
     <string name="import_from_file">從檔案匯入</string>
-    <string name="add_profile">新增設定檔</string>
     <plurals name="band_count">
         <item quantity="other">%d 樂團</item>
     </plurals>
@@ -836,7 +794,28 @@
     <string name="discord_enable_button_2">顯示按鈕2</string>
     <string name="discord_button_label">標簽</string>
     <string name="discord_button_url">URL</string>
-    <string name="discord_placeholder_song">歌曲名稱</string>
-    <string name="discord_placeholder_artist">音樂人名稱</string>
-    <string name="discord_placeholder_album">專輯名稱</string>
+    <string name="playlist_unavailable">播放列表不可用</string>
+    <string name="kmp_upgrade_title">Metrolist KMP %s 現已推出</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP 目前處於搶先體驗階段。功能可能有缺陷、不完整或變更，恕不另行通知。</string>
+    <string name="kmp_upgrade_action">升級到 KMP</string>
+    <string name="kmp_upgrade_later">暫不升級</string>
+    <string name="audio_track_playback_params">使用硬體音訊處理</string>
+    <string name="audio_track_playback_params_description">使用 Android 的 AudioTrack 來處理速度/音調變化，而不是使用軟體處理。對於極端音調值，這種方式更可靠</string>
+    <string name="error_job_cancelled">該影片無法播放。請稍後再試或跳至下一首歌曲。</string>
+    <string name="enable_landscape_scaling">橫屏縮放</string>
+    <string name="enable_landscape_scaling_desc">在橫屏模式下調整使用者介面大小，以適應更大的螢幕</string>
+    <string name="discord_status_connected">已連結</string>
+    <string name="discord_status_authorizing">正在授權…</string>
+    <string name="discord_status_authorized">已授權</string>
+    <string name="discord_status_not_initialized">未初始化</string>
+    <string name="discord_error_loopback_timeout">Discord 回應逾時，請重試。</string>
+    <string name="discord_error_loopback_unbound">無法開啟本機回呼通訊埠，請釋出可用通訊埠後再試一次。</string>
+    <string name="discord_error_no_browser">找不到可用的瀏覽器以進行 Discord 授權。</string>
+    <string name="discord_error_token_refresh_failed">Discord 授權已失效，請重新連結。</string>
+    <string name="discord_error_invalid_scope">Discord 拒絕了連接要求。請重新連接並授予必要權限。</string>
+    <string name="discord_integration">Discord 整合</string>
+    <string name="enable_discord_rpc">啟用豐富狀態</string>
+    <string name="enable_dynamic_icon">動態圖示顏色</string>
+    <string name="enable_dynamic_icon_desc">讓應用程式圖示套用動態主題色彩。關閉時，圖示將使用純色呈現。</string>
+    <string name="restore_database_incompatible">無法恢復備份：資料庫版本不相容。您目前的資料已保留。</string>
 </resources>

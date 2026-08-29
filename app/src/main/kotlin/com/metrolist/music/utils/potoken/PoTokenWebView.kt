@@ -96,7 +96,7 @@ class PoTokenWebView private constructor(
                         // here comes from Google's remotely-served botguard/minter JS — transient,
                         // NOT a BadWebViewException, which would permanently disable poTokens for
                         // the session in PoTokenGenerator (same rationale as onRenderProcessGone).
-                        Timber.tag(TAG).e("Uncaught JS error after init (treating as transient): $fmt")
+                        Timber.tag(TAG).e("Uncaught JavaScript error after initialization")
                         isDead = true
                         val exception = PoTokenException(fmt)
                         close()
@@ -105,7 +105,7 @@ class PoTokenWebView private constructor(
                         }
                     } else {
                         val exception = BadWebViewException(fmt)
-                        Timber.tag(TAG).e("This WebView implementation is broken: $fmt")
+                        Timber.tag(TAG).e("This WebView implementation is unavailable")
 
                         onInitializationErrorCloseAndCancel(exception)
                         popAllPoTokenContinuations().forEach { (_, cont) ->
@@ -194,7 +194,7 @@ class PoTokenWebView private constructor(
     @JavascriptInterface
     fun onJsInitializationError(error: String) {
         if (BuildConfig.DEBUG) {
-            Timber.tag(TAG).e("Initialization error from JavaScript: $error")
+            Timber.tag(TAG).e("PO-token JavaScript initialization failed")
         }
         onInitializationErrorCloseAndCancel(buildExceptionForJsError(error))
     }
@@ -210,10 +210,10 @@ class PoTokenWebView private constructor(
             "https://www.youtube.com/api/jnn/v1/GenerateIT",
             "[ \"$REQUEST_KEY\", \"$botguardResponse\" ]",
         ) { responseBody ->
-            Timber.tag(TAG).d("GenerateIT response: $responseBody")
+            Timber.tag(TAG).d("GenerateIT response received")
             try {
                 val (integrityToken, expirationTimeInSeconds) = parseIntegrityTokenData(responseBody)
-                Timber.tag(TAG).d("Parsed integrityToken (${integrityToken.take(50)}...), expires in $expirationTimeInSeconds sec")
+                Timber.tag(TAG).d("Parsed integrity token; expires in $expirationTimeInSeconds sec")
 
                 // leave 10 minutes of margin just to be sure
                 expirationInstant = Instant.now().plusSeconds(expirationTimeInSeconds).minus(10, ChronoUnit.MINUTES)
@@ -240,7 +240,7 @@ class PoTokenWebView private constructor(
                     null
                 )
             } catch (e: Exception) {
-                Timber.tag(TAG).e(e, "Failed to parse integrity token data: ${e.message}")
+                Timber.tag(TAG).e("Failed to parse integrity token data type=${e::class.simpleName ?: "unknown"}")
                 onInitializationErrorCloseAndCancel(PoTokenException("parseIntegrityTokenData failed: ${e.message}"))
             }
         }
@@ -278,7 +278,7 @@ class PoTokenWebView private constructor(
             // PoTokenGenerator's retry recreates the WebView from scratch.
             isDead = true
             popPoTokenContinuation(requestKey)
-            Timber.tag(TAG).e("generatePoToken($identifier) timed out after ${GENERATE_TIMEOUT_MS}ms")
+            Timber.tag(TAG).e("PO-token generation timed out after ${GENERATE_TIMEOUT_MS}ms")
             throw PoTokenException("poToken generation timed out after ${GENERATE_TIMEOUT_MS}ms")
         }
     }
@@ -286,7 +286,7 @@ class PoTokenWebView private constructor(
     private suspend fun generatePoTokenInternal(identifier: String, requestKey: String): String {
         return withContext(Dispatchers.Main) {
             suspendCancellableCoroutine { cont ->
-                Timber.tag(TAG).d("generatePoToken() called with identifier $identifier")
+                Timber.tag(TAG).d("PO-token generation requested")
                 addPoTokenEmitter(requestKey, cont)
                 // The IIFE keeps requestKey/u8Identifier lexically captured per call: bare globals
                 // here would let a concurrent call reassign them before this call's promise
@@ -318,7 +318,7 @@ class PoTokenWebView private constructor(
     @JavascriptInterface
     fun onObtainPoTokenError(requestKey: String, error: String) {
         if (BuildConfig.DEBUG) {
-            Timber.tag(TAG).e("obtainPoToken error from JavaScript: $error")
+            Timber.tag(TAG).e("PO-token JavaScript callback failed")
         }
         // Always transient here: the minter was already created successfully, so even a
         // "SyntaxError" comes from Google's challenge/program data, not a broken WebView engine —
@@ -333,7 +333,7 @@ class PoTokenWebView private constructor(
      */
     @JavascriptInterface
     fun onObtainPoTokenResult(requestKey: String, poTokenU8: String) {
-        Timber.tag(TAG).d("Generated poToken (before decoding): requestKey=$requestKey poTokenU8=$poTokenU8")
+        Timber.tag(TAG).d("Encoded PO-token result received")
         val poToken = try {
             u8ToBase64(poTokenU8)
         } catch (t: Throwable) {
@@ -341,7 +341,7 @@ class PoTokenWebView private constructor(
             return
         }
 
-        Timber.tag(TAG).d("Generated poToken: requestKey=$requestKey poToken=$poToken")
+        Timber.tag(TAG).d("PO token decoded")
         popPoTokenContinuation(requestKey)?.resume(poToken)
     }
 
@@ -435,7 +435,7 @@ class PoTokenWebView private constructor(
             webView.onPause()
             webView.removeAllViews()
             webView.destroy()
-        }.onFailure { Timber.tag(TAG).w("PoToken WebView teardown threw: $it") }
+        }.onFailure { Timber.tag(TAG).w("PO-token WebView teardown failed type=${it::class.simpleName ?: "unknown"}") }
     }
     //endregion
 

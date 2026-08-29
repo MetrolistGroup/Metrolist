@@ -54,10 +54,8 @@
     <string name="share_lyrics">가사 공유</string>
     <string name="cached_playlist">캐시됨</string>
     <string name="open">열기</string>
-    <string name="apple_music_style">Apple Music</string>
     <string name="lyrics_text_size">가사 글씨 크기</string>
     <string name="lyrics_line_spacing">가사 줄간격</string>
-    <string name="karaoke">노래방</string>
     <string name="token_adv_login_description">고급 로그인 방식입니다. 토큰을 직접 입력해 여러 기기에 빠르게 로그인할 수 있습니다. 올바르지 않은 형식의 토큰은 거부됩니다</string>
     <string name="youtube_music_lyrics_note">참고: 다른 출처가 없으면 YouTube Music 가사가 자동으로 표시되며, 보통 싱크가 지원되지 않습니다</string>
     <string name="swipe_song_to_add">왼쪽으로 스와이프해 재생목록에 추가, 혹은 오른쪽으로 스와이프해 다음에 재생</string>
@@ -295,7 +293,6 @@
     <string name="plays">회 재생</string>
     <string name="casting_to">%s(으)로 전송 중</string>
     <string name="progress_percent">진행률 %s%%</string>
-    <string name="listening_to_metrolist">Metrolist에서 감상 중</string>
     <string name="failed_to_create_image">이미지를 생성하지 못했습니다: %s</string>
     <string name="error_playing">재생 오류</string>
     <string name="failed_to_parse_proxy">프록시 URL을 분석하지 못했습니다</string>
@@ -307,27 +304,10 @@
     <string name="view_channel">채널 보기</string>
     <string name="metrolist">METROLIST</string>
     <string name="start_radio_desc">이 항목을 기반으로 라디오 시작</string>
-    <string name="crossfade_beta_title">베타 기능!</string>
-    <string name="crossfade_beta_message">크로스페이드는 베타 기능으로 버그가 있을 수 있습니다. 문제가 발생하면 제보해 주십시오.\n\n참고: 기술적 한계로 오디오 오프로드가 비활성화됩니다</string>
-    <string name="lyrics_romanization_cyrillic">키릴 문자</string>
     <string name="lyrics_romanize_title">로마자 표기</string>
     <string name="lyrics_romanization">가사 로마자 표기</string>
-    <string name="lyrics_romanize_japanese">일본어 가사 로마자 표기</string>
-    <string name="lyrics_romanize_korean">한국어 가사 로마자 표기</string>
-    <string name="lyrics_romanize_chinese">중국어 가사 로마자 표기</string>
-    <string name="lyrics_romanize_hindi">힌디어 가사 로마자 표기</string>
-    <string name="lyrics_romanize_punjabi">펀자브어 가사 로마자 표기</string>
-    <string name="lyrics_romanize_russian">러시아어 가사 로마자 표기</string>
-    <string name="lyrics_romanize_ukrainian">우크라이나어 가사 로마자 표기</string>
-    <string name="lyrics_romanize_belarusian">벨라루스어 가사 로마자 표기</string>
-    <string name="lyrics_romanize_kyrgyz">키르기스어 가사 로마자 표기</string>
-    <string name="lyrics_romanize_serbian">세르비아어 가사 로마자 표기</string>
-    <string name="lyrics_romanize_bulgarian">불가리아어 가사 로마자 표기</string>
     <string name="line_by_line_option_title">줄단위 언어 감지</string>
-    <string name="line_by_line_dialog_title">활성화하시겠습니까?</string>
-    <string name="line_by_line_option_desc">곡 전체 대신 가사 한 줄 단위로 언어(키릴 문자 등)를 감지하여 더 정확하게 로마자로 표기합니다</string>
     <string name="romanize_current_track">현재 곡 로마자 표기</string>
-    <string name="line_by_line_dialog_desc">이 기능은 결과가 일정하지 않을 수 있는 실험적인 기능입니다.\n\n기본적으로 언어 감지는 가사 전체를 대상으로 수행되지만, 이 옵션을 활성화하면 가사 한 줄 단위로 언어를 감지합니다. 덕분에 여러 언어가 섞인 곡도 처리할 수 있지만, 감지 결과가 항상 정확하지는 않을 수 있습니다. 예를 들어, 우크라이나어 특유의 문자가 포함되지 않은 가사 줄은 러시아어로 잘못 인식되어 로마자 표기될 수 있습니다.\n\n사용에 특별한 문제가 없다면 이 옵션을 꺼두는 것을 권장합니다</string>
     <string name="settings_section_ui">인터페이스</string>
     <string name="settings_section_privacy">개인정보 및 보안</string>
     <string name="settings_section_player_content">플레이어 및 콘텐츠</string>
@@ -345,7 +325,6 @@
     <string name="speed">재생 속도</string>
     <string name="google_cast">구글 캐스트</string>
     <string name="google_cast_description">크롬캐스트 및 기타 Cast 지원 기기로 오디오를 전송합니다</string>
-    <string name="lyrics_romanize_macedonian">마케도니아어 가사 로마자 표기</string>
     <string name="lyrics_romanize_as_main">로마자 표기를 기본 가사 위치에 표시</string>
     <string name="integrations">서비스 연동</string>
     <string name="varispeed">배리스피드 활성화</string>
@@ -401,7 +380,6 @@
     <string name="ai_error_unknown">알 수 없는 오류가 발생했습니다</string>
     <string name="ai_error_translation_failed">번역에 실패했습니다</string>
     <string name="ai_provider_help">API 키 가져오기</string>
-    <string name="ai_error_unexpected">번역 결과가 올바르지 않습니다</string>
     <string name="ai_provider_openrouter_help">https://openrouter.ai 에서 API 키를 발급받으세요</string>
     <string name="ai_provider_openai_help">https://platform.openai.com/api-keys 에서 API 키를 발급받으세요</string>
     <string name="ai_provider_claude_help">https://console.anthropic.com/settings/keys 에서 API 키를 발급받으세요</string>
@@ -415,8 +393,6 @@
     <string name="ai_deepl_formality_more">격식체</string>
     <string name="ai_deepl_formality_less">비격식체</string>
     <string name="ai_system_prompt">시스템 프롬프트</string>
-    <string name="ai_system_prompt_desc">AI 모델에 보낼 사용자 지정 지침입니다. 비워두면 기본 프롬프트를 사용합니다</string>
-    <string name="ai_system_prompt_placeholder">번역할 가사의 줄 수를 나타내려면 {lineCount}를 자리표시자로 사용하세요</string>
     <string name="ai_system_prompt_default">기본값</string>
     <string name="ai_system_prompt_reset">기본값으로 초기화</string>
     <string name="crash_title">앱 오류 발생</string>
@@ -451,7 +427,6 @@
     <string name="cd_light_mode">라이트 모드</string>
     <string name="cd_dark_mode">다크 모드</string>
     <string name="cd_system_mode">시스템 설정 사용</string>
-    <string name="pure_black_mini_player">퓨어 블랙 미니 플레이어</string>
     <string name="cd_palette_item">%1$s 팔레트</string>
     <string name="play_all">전곡 재생</string>
     <string name="enable_high_refresh_rate">고주사율 활성화</string>
@@ -499,12 +474,7 @@
     <string name="credits_discord">Discord 서버</string>
     <string name="credits_view_repo">저장소 보기</string>
     <string name="credits_telegram">Telegram 채널</string>
-    <string name="credits_website">웹사이트</string>
-    <string name="credits_instagram">Instagram</string>
-    <string name="credits_github">GitHub</string>
     <string name="randomize_home_order_desc">우선순위에 따라 홈 화면 섹션을 무작위로 정렬합니다</string>
-    <string name="app_version_info">%1$s • %2$s</string>
-    <string name="like_what_i_do">제 작업이 마음에 드시나요?</string>
     <string name="buy_mo_a_coffee">Buy me a coffee!</string>
     <string name="community_and_info">커뮤니티 및 정보</string>
     <string name="wanna_play_favorite_song">좋아하는 곡을 재생해 보시겠습니까?</string>
@@ -516,9 +486,7 @@
     <string name="android_auto_youtube_playlists">YouTube 추천 재생목록 표시</string>
     <string name="android_auto_youtube_playlists_desc">안드로이드 오토를 사용하는 동안 재생목록 섹션에 YouTube Music 추천 재생목록을 표시합니다</string>
     <string name="android_auto_target_playlist">빠른 추가 대상</string>
-    <string name="android_auto_target_playlist_desc">안드로이드 오토에서 \'빠른 추가\' 버튼을 사용할 때 곡이 저장될 재생목록을 선택하세요</string>
     <string name="android_auto_target_playlist_auto">설정되지 않음</string>
-    <string name="added_to_playlist">재생목록에 추가됨</string>
     <string name="android_auto_target_playlist_not_set">선택된 재생목록이 없습니다. Android Auto 설정에서 하나를 선택해 주세요</string>
     <string name="parsed_from_link">링크에서 가져왔습니다</string>
     <string name="max_selection_limit">최대 선택 개수에 도달했습니다</string>
@@ -564,7 +532,6 @@
         <item quantity="other">%d곡</item>
     </plurals>
     <string name="alarm_selected">선택됨</string>
-    <string name="alarm_playlist_helper">알람으로 재생할 재생목록을 선택해 주십시오</string>
     <string name="alarm_add">알람 추가</string>
     <string name="alarm_empty">설정된 알람이 없습니다. 알람을 추가하여 주십시오</string>
     <string name="alarm_disabled">알람 비활성화</string>
@@ -725,7 +692,6 @@
     <string name="reject">거절</string>
     <string name="clear">지우기</string>
     <string name="copy">복사</string>
-    <string name="copy_all_lyrics">모든 가사 복사</string>
     <string name="change">변경</string>
     <string name="copied_to_clipboard">클립보드에 복사되었습니다</string>
     <string name="not_set">설정되지 않음</string>
@@ -770,20 +736,13 @@
     <string name="set_quick_picks">빠른 선곡 설정</string>
     <string name="top_length">\'나의 Top\' 목록 길이</string>
     <string name="history_duration">시청 기록 기간</string>
-    <string name="alarm_next_trigger">다음 실행</string>
     <string name="crossfade_duration">크로스페이드 길이</string>
     <string name="crossfade_gapless">끊김 없는 앨범(Gapless) 비활성화</string>
     <string name="crossfade_gapless_desc">트랙 간 끊김 없이 재생되도록 디자인된 앨범에서는 크로스페이드를 건너뜁니다</string>
     <string name="none">없음</string>
-    <string name="fade">페이드</string>
-    <string name="glow">글로우</string>
-    <string name="slide">슬라이드</string>
     <string name="wrapped_special_thanks">Metrolist를 제작한 MO Agamy에게 특별한 감사를 전합니다</string>
     <string name="wrapped_create_playlist">재생목록 만들기</string>
     <string name="wrapped_playlist_saved">재생목록이 저장되었습니다</string>
-    <plurals name="profiles_count">
-        <item quantity="other">프로필 %d개</item>
-    </plurals>
     <plurals name="band_count">
         <item quantity="other">%d 밴드</item>
     </plurals>
@@ -799,4 +758,31 @@
     <string name="wrapped_total_songs_title">당신이 즐겨 들은</string>
     <string name="wrapped_total_songs_subtitle">다채로운 곡들!</string>
     <string name="your_shows">내 프로그램</string>
+    <string name="mixes">믹스</string>
+    <string name="and">및</string>
+    <string name="show_most_stats_playlists">주간 및 월간 가장 많이 재생된 플레이리스트 표시</string>
+    <string name="show_most_stats_playlists_desc">통계 기반 \'가장 많이 재생된\' 플레이리스트를 통계 및 라이브러리에 생성 및 표시</string>
+    <string name="auto_radio_queue">자동 라디오 큐</string>
+    <string name="auto_radio_queue_desc">검색 또는 홈에서 노래를 재생할 때 자동으로 라디오 큐 생성</string>
+    <string name="playlist_unavailable">플레이리스트를 사용할 수 없음</string>
+    <string name="kmp_upgrade_title">Metrolist KMP %s을(를) 사용할 수 있습니다</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP는 얼리 액세스 버전입니다. 일부 기능이 작동하지 않거나, 완전하지 않을 수 있으며, 사전 공지 없이 변경될 수 있습니다.</string>
+    <string name="kmp_upgrade_action">KMP로 업그레이드</string>
+    <string name="kmp_upgrade_later">지금은 안 함</string>
+    <string name="audio_track_playback_params">하드웨어 오디오 처리 사용</string>
+    <string name="audio_track_playback_params_description">속도/피치 변경 시 소프트웨어 처리 대신 Android AudioTrack을 사용합니다. 극단적인 피치 값에서 더 안정적입니다</string>
+    <string name="system_equalizer_desc">Android 내장 이퀄라이저 열기</string>
+    <string name="eq_wizard">AutoEQ 마법사</string>
+    <string name="eq_download_db">AutoEQ 데이터베이스 다운로드 (17 MB)</string>
+    <string name="eq_downloading">다운로드 중…</string>
+    <string name="import_from_file">파일에서 가져오기</string>
+    <string name="wizard_select_model">모델 선택</string>
+    <string name="wizard_select_profiles">프로필 선택</string>
+    <string name="wizard_search_model_hint">헤드폰 또는 이어폰 모델 검색</string>
+    <string name="wizard_model_name">모델명</string>
+    <string name="wizard_model_placeholder">예: Sony WH-1000XM4, Bose QuietComfort 45</string>
+    <string name="wizard_no_models">모델을 찾을 수 없음</string>
+    <string name="wizard_multiple_variants">여러 변형 가능</string>
+    <string name="wizard_select_eq_profiles">%s용 EQ 프로필 선택</string>
+    <string name="wizard_save_profiles">프로필 저장</string>
 </resources>

@@ -16,10 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -70,7 +67,6 @@ import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.InfoLabel
 import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
-import com.metrolist.music.ui.component.PreferenceEntry
 import com.metrolist.music.ui.component.TextFieldDialog
 import com.metrolist.music.utils.Updater
 import com.metrolist.music.utils.rememberPreference
@@ -391,70 +387,48 @@ fun AccountSettings(
 
         Spacer(Modifier.height(12.dp))
 
-        Column(
-            modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainer)
-        ) {
-            PreferenceEntry(
-                title = { Text(stringResource(R.string.integrations)) },
-                icon = { Icon(painterResource(R.drawable.integration), null) },
-                onClick = {
-                    onClose()
-                    navController.navigate("settings/integrations")
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceContainer)
-            )
-
-            Spacer(Modifier.height(4.dp))
-
-            PreferenceEntry(
-                title = { Text(stringResource(R.string.settings)) },
-                icon = {
-                    BadgedBox(
-                        badge = {
-                            if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.BASE_VERSION_NAME) {
-                                Badge()
-                            }
-                        }
-                    ) {
-                        Icon(painterResource(R.drawable.settings), contentDescription = null)
-                    }
-                },
-                onClick = {
-                    onClose()
-                    navController.navigate("settings")
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceContainer)
-            )
-
-            Spacer(Modifier.height(4.dp))
-
-            if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.BASE_VERSION_NAME) {
-                val releaseInfo = Updater.getCachedLatestRelease()
-                val downloadUrl = releaseInfo?.let { Updater.getDownloadUrlForCurrentVariant(it) }
-                
-                if (downloadUrl != null) {
-                    PreferenceEntry(
-                        title = {
-                            Text(text = stringResource(R.string.new_version_available))
-                        },
-                        description = latestVersionName,
-                        icon = {
-                            BadgedBox(badge = { Badge() }) {
-                                Icon(painterResource(R.drawable.update), null)
-                            }
-                        },
+        Material3SettingsGroup(
+            items = buildList {
+                add(
+                    Material3SettingsItem(
+                        title = { Text(stringResource(R.string.integrations)) },
+                        icon = painterResource(R.drawable.integration),
                         onClick = {
-                            uriHandler.openUri(downloadUrl)
+                            onClose()
+                            navController.navigate("settings/integrations")
                         }
                     )
+                )
+                add(
+                    Material3SettingsItem(
+                        title = { Text(stringResource(R.string.settings)) },
+                        icon = painterResource(R.drawable.settings),
+                        showBadge = BuildConfig.UPDATER_AVAILABLE &&
+                            latestVersionName != BuildConfig.BASE_VERSION_NAME,
+                        onClick = {
+                            onClose()
+                            navController.navigate("settings")
+                        }
+                    )
+                )
+
+                if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.BASE_VERSION_NAME) {
+                    val releaseInfo = Updater.getCachedLatestRelease()
+                    val downloadUrl = releaseInfo?.let { Updater.getDownloadUrlForCurrentVariant(it) }
+                    if (downloadUrl != null) {
+                        add(
+                            Material3SettingsItem(
+                                title = { Text(stringResource(R.string.new_version_available)) },
+                                description = { Text(latestVersionName) },
+                                icon = painterResource(R.drawable.update),
+                                showBadge = true,
+                                onClick = { uriHandler.openUri(downloadUrl) }
+                            )
+                        )
+                    }
                 }
-            }
-        }
+            },
+            useLowContrast = true
+        )
     }
 }

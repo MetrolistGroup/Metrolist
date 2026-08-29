@@ -151,21 +151,9 @@
     </plurals>
     <string name="disable_load_more_when_repeat_all">Ikkje lad inn fleire når alt tvitekst</string>
     <string name="disable_load_more_when_repeat_all_desc">Ikkje lad sjølvverkande inn fleire songar og liknande innhald når tvitek alt-modus er påslege</string>
-    <string name="lyrics_romanization_cyrillic">Kyrillisk</string>
     <string name="lyrics_romanize_title">Romanisering</string>
     <string name="lyrics_romanization">Romanisering av songtekster</string>
-    <string name="lyrics_romanize_japanese">Romaniser japanske songtekster</string>
-    <string name="lyrics_romanize_korean">Romaniser koreanske songtekster</string>
-    <string name="lyrics_romanize_chinese">Romaniser kinesiske songtekster</string>
-    <string name="lyrics_romanize_russian">Romaniser ryske songtekster</string>
-    <string name="lyrics_romanize_ukrainian">Romaniser ukrainske songtekster</string>
-    <string name="lyrics_romanize_belarusian">Romaniser kviteryske songtekster</string>
-    <string name="lyrics_romanize_kyrgyz">Romaniser kirgisiske songtekster</string>
-    <string name="lyrics_romanize_serbian">Romaniser serbiske songtekster</string>
-    <string name="lyrics_romanize_bulgarian">Romaniser bulgarske songtekster</string>
     <string name="line_by_line_option_title">EKSPERIMENTELT: Kjenn att mål line etter line</string>
-    <string name="line_by_line_option_desc">Målet som nøyter det kyrilliske alfabetet, skal kjennast att line etter line i staden for i songen som ein heilskap.</string>
-    <string name="line_by_line_dialog_title">Er du viss?</string>
     <string name="about_artist">Om</string>
     <string name="show_more">Syn meir</string>
     <string name="show_less">Syn mindre</string>
@@ -180,7 +168,6 @@
     <string name="remember_shuffle_and_repeat">Hugs blanding og tvitaking</string>
     <string name="remember_shuffle_and_repeat_desc">Hugs blandings- og tvitakingsmodus når appen vert omstarta</string>
     <string name="pause_music_when_media_is_muted">Pausa musikk når medium er dempa</string>
-    <string name="line_by_line_dialog_desc">Dette er ein funksjon som ender og då kan mislukkast.\n\nSom standard er mål avgjort frå heile songen, men med denne funksjonen vert målet avgjort line etter line. Dette tillèt at fleirmålssongar funkar, MEN det kan hende at målet ikkje alltid er rett (t.d. om det er ei ukrainsk songtekst som ikkje inneheld bokstavar som einast er i ukrainsk, så kan det hende at ho vert romanisert som russisk).\n\nDersom du ikkje har lyte, råder vi til å halde denne funksjonen slegen av.</string>
     <string name="romanize_current_track">Romaniser noverande song</string>
     <string name="lyrics_offset">Songtekstsforskuving</string>
     <string name="settings_section_ui">Grensesned</string>
@@ -198,7 +185,6 @@
     <string name="audio_offload_description">Nøyte avladingsljodstigen («offload audio path») for audioavspeling. Å slå dette av kan auka straumforbruk, men kan gagna om du opplever lyte med audioavspeling eller etterhandsaming</string>
     <string name="google_cast">Google Cast</string>
     <string name="google_cast_description">Slå på det å kasta audio til Chromecast og andre Cast-kunnige einingar</string>
-    <string name="lyrics_romanize_macedonian">Romaniser makedonske songtekster</string>
     <string name="integrations">Hopflettingar</string>
     <string name="username">Nøytarnamn</string>
     <string name="password">Passord</string>
@@ -227,17 +213,11 @@
     <string name="advanced_desc">Brigd snøggleiken og tonehøgd på songen</string>
     <string name="equalizer_desc">Juster audioutjamnaren</string>
     <string name="mini_player">Minispelar</string>
-    <string name="pure_black_mini_player">Reinsvart minispelar</string>
     <string name="cache_size_warning_title">Vent no då!</string>
     <string name="cache_size_warning_message">Du har valt ei snarlagringsstorleiksgrense mindre en storleiken på snarlagringa nett no (%1$s). Dersom du held fram, kan appen taka bort somme snarlagra %2$s for å høva til den nye grensa. Hald fram likevel?</string>
     <string name="cache_size_warning_confirm">Hald fram</string>
     <string name="lyrics_animation_style">Ord-etter-ord-animeringsstil</string>
     <string name="none">Ingen</string>
-    <string name="fade">Avbleiking</string>
-    <string name="glow">Lysing</string>
-    <string name="slide">Skliding</string>
-    <string name="karaoke">Karaoke</string>
-    <string name="apple_music_style">Apple Music</string>
     <string name="lyrics_text_size">Tekststorleik på songtekster</string>
     <string name="lyrics_line_spacing">Lineavstand på songtekster</string>
     <string name="album_art_for">Albumkunst for %s</string>
@@ -275,10 +255,6 @@
     <string name="wrapped_playlist_title">Din %s Wrapped</string>
     <string name="wrapped_create_playlist">Oppretta speleliste</string>
     <string name="wrapped_playlist_saved">Speleliste lagra</string>
-    <plurals name="profiles_count">
-        <item quantity="one">%d profil</item>
-        <item quantity="other">%d profilar</item>
-    </plurals>
     <string name="equalizer_header">Ljodutjemnar</string>
     <string name="no_profiles">Ingen ljodutjemnarprofilar</string>
     <string name="import_profile">Importer profil</string>
@@ -295,7 +271,6 @@
     <string name="import_error_title">Importeringslyte</string>
     <string name="casting_to">Kastar til %s</string>
     <string name="progress_percent">Framsteg %s %%</string>
-    <string name="listening_to_metrolist">Høyrer på Metrolist</string>
     <string name="open">Opna</string>
     <string name="failed_to_create_image">Mislukkast i å skapa bilete: %s</string>
     <string name="copied_title">Kopierte tittel</string>

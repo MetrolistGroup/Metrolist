@@ -27,6 +27,7 @@ class VolumeNormalizationAudioProcessor : AudioProcessor {
             }
         }
 
+    private var buffer: ByteBuffer = EMPTY_BUFFER
     private var outputBuffer: ByteBuffer = EMPTY_BUFFER
     private var inputEnded = false
 
@@ -173,6 +174,7 @@ class VolumeNormalizationAudioProcessor : AudioProcessor {
     @Deprecated("Deprecated in AudioProcessor")
     override fun reset() {
         flush()
+        buffer = EMPTY_BUFFER
         sampleRate = 0
         channelCount = 0
         encoding = C.ENCODING_INVALID
@@ -182,12 +184,13 @@ class VolumeNormalizationAudioProcessor : AudioProcessor {
     }
 
     private fun replaceOutputBuffer(size: Int): ByteBuffer {
-        if (outputBuffer.capacity() < size) {
-            outputBuffer = ByteBuffer.allocateDirect(size).order(ByteOrder.nativeOrder())
+        if (buffer.capacity() < size) {
+            buffer = ByteBuffer.allocateDirect(size).order(ByteOrder.nativeOrder())
         } else {
-            outputBuffer.clear()
+            buffer.clear()
         }
-        return outputBuffer
+        outputBuffer = buffer
+        return buffer
     }
 
     private fun read24Bit(buffer: ByteBuffer): Int {

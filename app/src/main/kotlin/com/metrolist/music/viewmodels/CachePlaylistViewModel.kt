@@ -62,8 +62,12 @@ class CachePlaylistViewModel
 
                 // Clearing the flag removes these songs from cachePlaylistSongs(), so this
                 // re-emits once and then settles rather than looping.
-                partition.stale.forEach { song ->
-                    database.query { update(song.song.copy(dateDownload = null)) }
+                if (partition.stale.isNotEmpty()) {
+                    database.withTransaction {
+                        partition.stale.forEach { song ->
+                            update(song.song.copy(dateDownload = null))
+                        }
+                    }
                 }
 
                 partition.stillCached

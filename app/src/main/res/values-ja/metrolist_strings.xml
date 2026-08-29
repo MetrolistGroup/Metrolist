@@ -82,8 +82,6 @@
     <string name="new_mini_player_design">新しいミニプレーヤーのデザイン</string>
     <string name="swipe_song_to_add">曲を右にスワイプして次に再生、左にスワイプしてキューに追加</string>
     <string name="lyrics_auto_scroll">歌詞を自動でスクロール</string>
-    <string name="lyrics_romanize_japanese">日本語の歌詞にローマ字を追加</string>
-    <string name="lyrics_romanize_korean">韓国語の歌詞にローマ字を追加</string>
     <string name="token_adv_login_description">これは高度なログイン方法です。ウェブポータルを使用する代わりに、ログイントークンを直接入力または更新できます。複数のデバイスで迅速にサインインする際に便利です。認識されない形式のトークンは拒否されます</string>
     <string name="yt_sync">アカウントと自動で同期</string>
     <string name="more_content">その他のコンテンツ</string>
@@ -135,19 +133,9 @@
     <string name="proxy_username">プロキシのユーザー名</string>
     <string name="proxy_password">プロキシのパスワード</string>
     <string name="enable_authentication">プロキシ認証</string>
-    <string name="lyrics_romanization_cyrillic">キリル文字</string>
     <string name="lyrics_romanize_title">ローマ字</string>
     <string name="lyrics_romanization">歌詞にローマ字を追加</string>
-    <string name="lyrics_romanize_russian">ロシア語の歌詞にローマ字を追加</string>
-    <string name="lyrics_romanize_ukrainian">ウクライナ語の歌詞にローマ字を追加</string>
-    <string name="lyrics_romanize_belarusian">ベラルーシ語の歌詞にローマ字を追加</string>
-    <string name="lyrics_romanize_kyrgyz">キルギス語の歌詞にローマ字を追加</string>
-    <string name="lyrics_romanize_serbian">セルビア語の歌詞にローマ字を追加</string>
-    <string name="lyrics_romanize_bulgarian">ブルガリア語の歌詞にローマ字を追加</string>
     <string name="line_by_line_option_title">行ごとに言語を判別</string>
-    <string name="line_by_line_option_desc">キリル文字の言語は、曲全体ではなく行ごとに判別されます</string>
-    <string name="line_by_line_dialog_title">確認</string>
-    <string name="line_by_line_dialog_desc">この機能は実験的で、動作が不安定になる場合があります。\n通常、言語は曲全体から判別されますが、この設定をオンにすると行ごとに判別されます。複数の言語が混在する曲に対応できますが、判別結果が常に正しいとは限りません。たとえば、ウクライナ語特有の文字が含まれていない行は、ロシア語として判別される場合があります。\n問題がない場合は、この設定はオフにすることをおすすめします</string>
     <string name="romanize_current_track">歌詞にローマ字を追加</string>
     <string name="settings_section_ui">インターフェース</string>
     <string name="settings_section_privacy">プライバシーとセキュリティ</string>
@@ -162,7 +150,6 @@
     <string name="update_channel_desc">新しいアプリのバージョンの通知</string>
     <string name="audio_offload">オフロード再生</string>
     <string name="audio_offload_description">音声の再生にオフロードのオーディオパスを使用します。この設定をオフにすると、バッテリー消費が増える場合がありますが、再生や音声の処理に関する問題が改善する場合があります</string>
-    <string name="lyrics_romanize_macedonian">マケドニア語の歌詞にローマ字を追加</string>
     <string name="integrations">外部のサービスと連携</string>
     <string name="username">ユーザー名</string>
     <string name="password">パスワード</string>
@@ -201,7 +188,6 @@
     <string name="show_wrapped_card">Wrappedカードを表示</string>
     <string name="skip_silence_instant">無音の部分をスキップ</string>
     <string name="skip_silence_instant_desc">無音の部分は早送りせずに自動でスキップします</string>
-    <string name="lyrics_romanize_chinese">中国語の歌詞にローマ字を追加</string>
     <string name="google_cast">Google Cast</string>
     <string name="logging_in">ログインしています…</string>
     <string name="hide_video_songs">動画の曲を非表示</string>
@@ -230,17 +216,11 @@
     <string name="delete_desc">このコンテンツを完全に削除します</string>
     <string name="advanced_desc">曲の再生速度と音程を調整します</string>
     <string name="equalizer_desc">オーディオイコライザーを調整します</string>
-    <string name="pure_black_mini_player">ピュアブラックのミニプレーヤー</string>
     <string name="listen_together">Listen Together</string>
     <string name="play_pause">再生/停止</string>
     <string name="wrapped_intro_title">METROLIST</string>
-    <string name="apple_music_style">Apple Music</string>
-    <string name="karaoke">カラオケ</string>
     <string name="none">なし</string>
     <string name="cache_size_warning_confirm">続行</string>
-    <string name="fade">フェード</string>
-    <string name="glow">発光</string>
-    <string name="slide">スライド</string>
     <string name="wrapped_top_song_album_art_content_description">アルバムアート</string>
     <string name="wrapped_playlist_saved">プレイリストを保存しました</string>
     <string name="system_equalizer">システムイコライザー</string>
@@ -375,9 +355,6 @@
     <string name="wrapped_special_thanks">Metrolistを制作したMO Agamyに特別な感謝を</string>
     <string name="wrapped_close">Wrappedを閉じる</string>
     <string name="wrapped_playlist_title">あなたの%sWrapped</string>
-    <plurals name="profiles_count">
-        <item quantity="other">%dプロファイル</item>
-    </plurals>
     <plurals name="band_count">
         <item quantity="other">%dバンド</item>
     </plurals>
@@ -387,7 +364,6 @@
     <string name="error_eq_apply_failed">イコライザープロファイルを適用できません：%1$s</string>
     <string name="casting_to">%sにキャスト中</string>
     <string name="progress_percent">進行状況：%s%%</string>
-    <string name="listening_to_metrolist">Metrolistで再生中</string>
     <string name="failed_to_create_image">画像の作成に失敗しました：%s</string>
     <string name="error_playing">再生中にエラーが発生しました</string>
     <string name="failed_to_parse_proxy">プロキシURLを解析できません</string>
@@ -440,8 +416,6 @@
     <string name="listen_together_room_created">ルームを作成しました：%s</string>
     <string name="crossfade">クロスフェード</string>
     <string name="crossfade_desc">曲の切り替わりをなめらかにします</string>
-    <string name="crossfade_beta_title">ベータ機能</string>
-    <string name="crossfade_beta_message">曲のクロスフェードは新機能のため、不具合が発生する場合があります。問題があればご報告してください。\n\n技術的な制限により、クロスフェードを使用中はオフロード再生はできません</string>
     <string name="enable">オン</string>
     <string name="crossfade_duration">クロスフェードの長さ</string>
     <string name="crossfade_gapless">曲間のない曲では無効にする</string>
@@ -465,7 +439,6 @@
     <string name="ai_error_no_lyrics">翻訳できる歌詞がありません</string>
     <string name="ai_error_lyrics_empty">歌詞がありません</string>
     <string name="ai_error_language_required">翻訳先の言語を設定してください</string>
-    <string name="ai_error_unexpected">翻訳結果が正しくありません</string>
     <string name="ai_error_unknown">不明なエラーが発生しました</string>
     <string name="ai_error_translation_failed">翻訳に失敗しました</string>
     <string name="recognize_music">楽曲認識</string>
@@ -517,7 +490,7 @@
     <string name="discord_buttons">ボタン</string>
     <string name="discord_button_1">ボタン 1</string>
     <string name="discord_button_2">ボタン 2</string>
-    <string name="discord_information_warning">Metrolistは、再生状況を更新するために、現在再生中の曲をDiscordのゲートウェイに送信します。すべてのデータはお使いのデバイスからDiscordに直接送信され、第三者のサーバーは使用されません。トークンはデバイス内に保持され、共有されることはありません。ただし、ゲートウェイ接続にユーザートークンを使用することはDiscordで正式にサポートされておらず、Discordの利用規約に違反する可能性があります。自己責任で使用してください。</string>
+    <string name="discord_information_warning">Metrolistは、あなたが聴いているものを共有するためにDiscordの公開OAuth2 APIおよびGateway APIを使用します。認可はローカルのブラウザセッションを通じて行われ、コードを取得した後はそのセッションは自動的に閉じられます — サードパーティのサーバーに何かが送信されることはありません。あなたのトークンはこのデバイス上の暗号化された設定に保存され、共有されることは決してありません。Metrolistはあなたのアクティビティを公開するためにwss://gateway.discord.ggに直接接続し、必要な最小限のスコープ（sdk.social_layer_presence）のみをリクエストします。</string>
     <string name="discord_activity_type">アクティビティの種類</string>
     <string name="discord_activity_playing">プレイ中</string>
     <string name="discord_activity_listening">再生中</string>
@@ -528,11 +501,9 @@
     <string name="discord_connect_description">Discordにログインして、再生中の内容を共有しよう</string>
     <string name="discord_activity_name">アクティビティ名</string>
     <string name="discord_advanced_mode">詳細設定</string>
-    <string name="discord_advanced_mode_description">再生状況の追加のカスタマイズ設定を表示します</string>
+    <string name="discord_advanced_mode_description">プレースホルダーを使用してRich Presenceのすべてのフィールドをカスタマイズする</string>
     <string name="player_background_solid">単色</string>
     <string name="resume_on_bluetooth_connect">Bluetooth接続時に再生を再開</string>
-    <string name="lyrics_romanize_hindi">ヒンディー語の歌詞にローマ字を追加</string>
-    <string name="lyrics_romanize_punjabi">パンジャブ語の歌詞にローマ字を追加</string>
     <string name="lyrics_romanize_as_main">ローマ字の歌詞をメインに表示</string>
     <string name="display_density">表示サイズ</string>
     <string name="restart">再起動</string>
@@ -595,12 +566,7 @@
     <string name="credits_license_desc">無料でオープンソースのソフトウェアで、使用、学習、共有、改良が可能です</string>
     <string name="credits_discord">Discordサーバー</string>
     <string name="credits_telegram">Telegramチャンネル</string>
-    <string name="credits_website">ウェブサイト</string>
-    <string name="credits_instagram">Instagram</string>
-    <string name="credits_github">GitHub</string>
     <string name="credits_view_repo">リポジトリを表示</string>
-    <string name="app_version_info">%1$s • %2$s</string>
-    <string name="like_what_i_do">私の活動を気に入ってもらえましたか？</string>
     <string name="buy_mo_a_coffee">コーヒーをおごる</string>
     <string name="community_and_info">コミュニティと情報</string>
     <string name="metrolist">METROLIST</string>
@@ -623,7 +589,7 @@
     </plurals>
     <string name="restore_confirm_title">バックアップを復元しますか？</string>
     <string name="restore_confirm_message">選択したバックアップからアプリのデータを復元します</string>
-    <string name="restore_account_warning">復元後、再度ログインが必要になります。このアカウントはログアウトされます：</string>
+    <string name="restore_account_warning">以下のアカウント情報が復元され、保存されます：</string>
     <string name="restore">復元</string>
     <string name="checking_previous_account">以前のアカウントを確認中…</string>
     <string name="no_account_found">アカウントが見つかりません</string>
@@ -714,7 +680,6 @@
         <item quantity="other">%d曲</item>
     </plurals>
     <string name="alarm_selected">選択中</string>
-    <string name="alarm_playlist_helper">アラームで再生するプレイリストを選択してください</string>
     <string name="alarm_add">アラームを追加</string>
     <string name="alarm_empty">アラームがありません。追加してスケジュール再生を開始してください</string>
     <string name="alarm_disabled">無効</string>
@@ -728,17 +693,13 @@
     <string name="alarm_delete">アラームを削除</string>
     <string name="alarm_duplicate_time_warning">同じ時刻にすでに別のアラームが設定されています。同時に作動した場合、どちらか一方しか再生されない可能性があります</string>
     <string name="alarm_random_song">プレイリストからランダムに曲を再生</string>
-    <string name="alarm_next_trigger">次回の実行</string>
     <string name="alarm_not_scheduled">未設定</string>
     <string name="alarm_exact_permission_title">正確なアラームを許可</string>
     <string name="alarm_exact_permission_desc">正確なアラーム時刻の権限を付与し、アプリがバックグラウンドにある場合の信頼性を向上させます</string>
     <string name="alarm_battery_optimization_title">バッテリーの最適化</string>
     <string name="alarm_battery_optimization_desc">バックグラウンドでのアラームの信頼性を高めるために、バッテリーの最適化をオフにしてください</string>
-    <string name="copy_all_lyrics">歌詞をコピー</string>
     <string name="change">変更</string>
     <string name="ai_system_prompt">システムプロンプト</string>
-    <string name="ai_system_prompt_desc">AIモデルに送信されるカスタム指示です。空欄のままにするとデフォルトのプロンプトが使用されます</string>
-    <string name="ai_system_prompt_placeholder">{lineCount} を翻訳する行数のプレースホルダーとして使用します</string>
     <string name="ai_system_prompt_default">デフォルト</string>
     <string name="ai_system_prompt_reset">デフォルトにリセット</string>
     <string name="recognition_notification_channel_name">楽曲認識</string>
@@ -754,9 +715,7 @@
     <string name="android_auto_youtube_playlists">YouTubeのおすすめのプレイリストを表示</string>
     <string name="android_auto_youtube_playlists_desc">Android AutoでYouTube Musicのおすすめのプレイリストを表示します</string>
     <string name="android_auto_target_playlist">クイック追加先</string>
-    <string name="android_auto_target_playlist_desc">Android Autoのクイック追加ボタン使用時に曲を保存するプレイリストを選択します</string>
     <string name="android_auto_target_playlist_auto">未設定</string>
-    <string name="added_to_playlist">プレイリストに追加しました</string>
     <string name="android_auto_target_playlist_not_set">プレイリストが選択されていません。Android Autoの設定で選択してください</string>
     <string name="time_transfer_title">再生時間の引き継ぎ</string>
     <string name="time_transfer_warning">1回以上再生した曲のみが対象です。この操作は完了すると元に戻せません。続行する前に必ずバックアップを作成してください</string>
@@ -805,7 +764,6 @@
     <string name="eq_download_db">AutoEQデータベースをダウンロード（17MB）</string>
     <string name="eq_downloading">ダウンロード中…</string>
     <string name="import_from_file">ファイルからインポート</string>
-    <string name="add_profile">プロファイルを追加</string>
     <string name="wizard_select_model">モデルを選択</string>
     <string name="wizard_select_profiles">プロファイルを選択</string>
     <string name="wizard_search_model_hint">ヘッドホン/イヤホンのモデルを検索</string>
@@ -839,9 +797,6 @@
     <string name="error_job_cancelled">この動画は再生できません。もう一度試すか次の曲へスキップしてください。</string>
     <string name="enable_landscape_scaling">横画面で拡大</string>
     <string name="enable_landscape_scaling_desc">大画面向けに横画面状態時に UI を拡大します</string>
-    <string name="dynamic_theme">ダイナミックテーマ</string>
-    <string name="discord_status_connecting">Discord に接続しています…</string>
-    <string name="discord_status_reconnecting">Discord に再接続しています…</string>
     <string name="discord_status_connected">接続済み</string>
     <string name="discord_status_authorizing">認証中…</string>
     <string name="discord_status_authorized">認証済み</string>
@@ -858,12 +813,34 @@
     <string name="discord_enable_button_2">ボタン 2 を表示</string>
     <string name="discord_button_label">ラベル</string>
     <string name="discord_button_url">URL</string>
-    <string name="discord_placeholder_song">曲名</string>
-    <string name="discord_placeholder_artist">アーティスト名</string>
-    <string name="discord_placeholder_album">アルバム名</string>
     <string name="restore_database_incompatible">バックアップを復元できません: データベースのバージョンに互換性がありません。現在のデータは保存されています。</string>
     <string name="enable_dynamic_icon_desc">アプリのアイコンにダイナミックテーマカラーを使用します。無効になっている場合、アイコンは単色を使用します。</string>
     <string name="enable_dynamic_icon">ダイナミックアイコンカラー</string>
     <string name="stream_client">ストリームクライアント</string>
     <string name="stream_source_web_clients">ウェブクライアント</string>
+    <string name="auto_radio_queue">自動ラジオキュー</string>
+    <string name="auto_radio_queue_desc">検索またはホームから曲を再生するときにラジオキューを自動作成する</string>
+    <string name="playlist_unavailable">プレイリストは利用できません</string>
+    <string name="discord_status_not_initialized">初期化されていません</string>
+    <string name="discord_error_loopback_unbound">ローカルコールバックポートを開けませんでした。ポートを解放してから、もう一度お試しください。</string>
+    <string name="android_auto_search_options">検索オプション</string>
+    <string name="android_auto_search_local_songs_limit">曲の検索制限</string>
+    <string name="android_auto_search_local_songs_limit_desc">検索結果に表示されるローカル曲の数を制限します。メモリクラッシュを防ぐため、無制限には設定しないことをおすすめします</string>
+    <string name="format_player_hash">プレイヤーハッシュ</string>
+    <string name="format_cipher_support_added">暗号サポートが追加されました</string>
+    <string name="not_applicable">N/A</string>
+    <string name="stream_sources">ストリームソース</string>
+    <string name="stream_source_order">ストリームの順序</string>
+    <string name="stream_source_native_clients">ネイティブクライアント</string>
+    <string name="stream_source_creator_clients">クリエータークライアント</string>
+    <string name="stream_source_web_remix">WEB_REMIX</string>
+    <string name="stream_source_web_remix_desc">プライマリクライアント。認証済み。ほとんどのトラックに対応。</string>
+    <string name="stream_source_tvhtml5">TVHTML5</string>
+    <string name="stream_source_tvhtml5_desc">TVクライアント。信頼性の高いフォールバック。</string>
+    <string name="stream_source_visionos">visionOS</string>
+    <string name="stream_source_visionos_desc">Apple Vision。スロットル制限なし。非常に信頼性が高い。</string>
+    <string name="stream_source_android_vr">Android VR</string>
+    <string name="stream_source_android_vr_desc">Android VRクライアント（全バージョン）。</string>
+    <string name="stream_source_web_creator">WEB_CREATOR</string>
+    <string name="stream_source_web_creator_desc">クリエーター向けウェブクライアント。</string>
 </resources>

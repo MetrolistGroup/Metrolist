@@ -94,8 +94,6 @@
     <string name="description">Omschrijving</string>
     <string name="views">Weergaven</string>
     <string name="lyrics_auto_scroll">Automatisch songtekst scrollen</string>
-    <string name="lyrics_romanize_japanese">Japans romaniseren</string>
-    <string name="lyrics_romanize_korean">Koreaans romaniseren</string>
     <string name="yt_sync">Account automatisch synchroniseren</string>
     <string name="more_content">Meer inhoud</string>
     <string name="new_player_design">Nieuw speler ontwerp</string>
@@ -119,14 +117,7 @@
     <string name="enable_authentication">Authenticatie aanzetten</string>
     <string name="lyrics_romanize_title">Romanisatie</string>
     <string name="lyrics_romanization">Songtekst romanizatie</string>
-    <string name="lyrics_romanize_russian">Russisch romaniseren</string>
-    <string name="lyrics_romanize_ukrainian">Oekraïens romaniseren</string>
-    <string name="lyrics_romanize_belarusian">Wit-Russisch romaniseren</string>
-    <string name="lyrics_romanize_kyrgyz">Kirgizisch romaniseren</string>
-    <string name="lyrics_romanize_serbian">Servisch romaniseren</string>
-    <string name="lyrics_romanize_bulgarian">Bulgaars romaniseren</string>
     <string name="line_by_line_option_title">EXPERIMENTEEL: Taal per regel detecteren</string>
-    <string name="line_by_line_dialog_title">Weet je dit zeker?</string>
     <string name="romanize_current_track">Huidig nummer romaniseren</string>
     <string name="edit_playlist_cover">Afspeellijst omslag aanpassen</string>
     <string name="edit_playlist_cover_note">Opmerking: Je account moet aan een telefoonnummer gekoppeld zijn en geverifieerd zijn op YouTube Music om de afspeellijstcover te kunnen wijzigen.</string>
@@ -134,7 +125,6 @@
     <string name="choose_from_library">Uit bibliotheek kiezen</string>
     <string name="remove_custom_image">Verwijder aangepaste afbeelding</string>
     <string name="show_uploaded_playlist">\"Geupload\" tonen</string>
-    <string name="lyrics_romanize_macedonian">Macedonisch romaniseren</string>
     <string name="updater">Updateprogramma</string>
     <string name="check_for_updates">Automatisch voor updates controleren</string>
     <string name="update_notifications">Update meldingen aanzetten</string>
@@ -145,7 +135,6 @@
     <string name="lastfm_integration">Last.fm Integratie</string>
     <string name="enable_scrobbling">Scrobbling aanzetten</string>
     <string name="scrobbling_configuration">Scrobbling Configuratie</string>
-    <string name="lyrics_romanize_chinese">Chinees romaniseren</string>
     <string name="hide_video_songs">Video nummers verbergen</string>
     <string name="primary_color_style">Primaire kleur</string>
     <string name="auto_scroll">Synchroniseren</string>
@@ -158,7 +147,6 @@
     <string name="advanced_desc">Nummer tempo en toonhoogte aanpassen</string>
     <string name="equalizer_desc">Audio equalizer aanpassen</string>
     <string name="mini_player">Mini-speler</string>
-    <string name="pure_black_mini_player">OLED mini-speler</string>
     <string name="tertiary_color_style">Tertiaire kleur</string>
     <string name="logging_in">Inloggen…</string>
     <string name="remove_download_playlist_desc">Verwijder alle gedownloaden nummers van deze afspeellijst</string>
@@ -191,16 +179,11 @@
     <string name="import_csv">Importeer een \"csv\" afspeellijst</string>
     <string name="enable_better_lyrics">Better Lyrics</string>
     <string name="enable_better_lyrics_desc">Gebruik de Better Lyrics provider voor woord-voor-woord gesynchroniseerde songtekst</string>
-    <string name="lyrics_romanization_cyrillic">Cyrillisch</string>
-    <string name="line_by_line_option_desc">De Cyrillische taal zal lijn voor lijn gedetecteerd worden in plaats van het hele lied.</string>
     <string name="set_quick_picks">Snelle keuzes instellen</string>
     <string name="play_pause">Afspelen/Pauzeer</string>
     <string name="lyrics_animation_style">Woord-voor-woord animatie stijl</string>
     <string name="lyrics_glow_effect_desc">Voegt gloeiende animatie en stuiter effecten toe aan actieve songtekst</string>
     <string name="none">Geen</string>
-    <string name="fade">Vervagen</string>
-    <string name="glow">Gloei</string>
-    <string name="slide">Schuiven</string>
     <string name="crop_album_art">Albumhoes bijsnijden</string>
     <string name="remember_shuffle_and_repeat">Behoud de shuffle- en herhaalmodus</string>
     <string name="remember_shuffle_and_repeat_desc">Behoud de shuffle- en herhaalmodus bij het opnieuw opstarten van de app</string>

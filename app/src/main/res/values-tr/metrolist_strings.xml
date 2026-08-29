@@ -96,8 +96,6 @@
     <string name="background_color">Arka plan rengi</string>
     <string name="new_player_design">Yeni oynatıcı tasarımı</string>
     <string name="lyrics_auto_scroll">Şarkı sözlerini otomatik kaydır</string>
-    <string name="lyrics_romanize_japanese">Japonca sözleri Latinleştir</string>
-    <string name="lyrics_romanize_korean">Korece sözleri Latinleştir</string>
     <string name="yt_sync">Hesapla otomatik eşitle</string>
     <string name="more_content">Daha fazla içerik</string>
     <string name="import_online">Bir M3U listesi içe aktar</string>
@@ -138,19 +136,9 @@
     <string name="proxy_username">Proxy kullanıcı adı</string>
     <string name="proxy_password">Proxy şifresi</string>
     <string name="enable_authentication">Kimlik doğrulamayı etkinleştir</string>
-    <string name="lyrics_romanization_cyrillic">Kiril</string>
     <string name="lyrics_romanize_title">Latinleştirme</string>
     <string name="lyrics_romanization">Şarkı sözü Latinleştirmesi</string>
-    <string name="lyrics_romanize_russian">Rusça sözleri Latinleştir</string>
-    <string name="lyrics_romanize_ukrainian">Ukraynaca sözleri Latinleştir</string>
-    <string name="lyrics_romanize_belarusian">Belarusça sözleri Latinleştir</string>
-    <string name="lyrics_romanize_kyrgyz">Kırgızca sözleri Latinleştir</string>
-    <string name="lyrics_romanize_serbian">Sırpça sözleri Latinleştir</string>
-    <string name="lyrics_romanize_bulgarian">Bulgarca sözleri Latinleştir</string>
     <string name="line_by_line_option_title">Dili satır satır algıla</string>
-    <string name="line_by_line_option_desc">Kiril yazısı, şarkının tamamı üzerinden değil, satır satır algılanacaktır</string>
-    <string name="line_by_line_dialog_title">Emin misiniz?</string>
-    <string name="line_by_line_dialog_desc">Bu, başarılı veya başarısız olabilecek deneysel bir özelliktir.\n\nVarsayılan olarak dil tüm şarkı üzerinden belirlenir. Bu seçenek açık olduğunda dil satır satır algılanır. Bu sayede birden çok dil içeren şarkılar çalışabilir ANCAK algılanan dil her zaman doğru olmayabilir. Örneğin, Ukraynaca bir satır Ukraynacaya özgü karakter içermiyorsa, yanlışlıkla Rusça olarak Latinleştirilebilir.\n\nHerhangi bir sorun yaşamıyorsanız, bu seçeneği kapalı tutmanız önerilir</string>
     <string name="romanize_current_track">Mevcut parçayı Latinleştir</string>
     <string name="audio_offload">Ses offload özelliğini etkinleştir</string>
     <string name="audio_offload_description">Oynatma için donanım ses offload yolunu kullanır. Bunu devre dışı bırakmak pil kullanımını artırabilir ancak oynatma veya ses işleme sorunları yaşıyorsanız yardımcı olabilir</string>
@@ -163,7 +151,6 @@
     <string name="update_available_title">Güncelleme mevcut</string>
     <string name="update_channel_name">Uygulama güncellemeleri</string>
     <string name="update_channel_desc">Yeni uygulama sürümleri hakkında bildirimler</string>
-    <string name="lyrics_romanize_macedonian">Makedonca sözleri Latinleştir</string>
     <string name="integrations">Entegrasyonlar</string>
     <string name="username">Kullanıcı adı</string>
     <string name="password">Şifre</string>
@@ -179,7 +166,6 @@
     <string name="last_fm_send_likes_description">Metrolist\'te bir şarkıyı beğendiğinizde veya beğenmediğinizde bu Last.fm\'de güncellenir</string>
     <string name="primary_color_style">Ana renk</string>
     <string name="auto_scroll">Yeniden eşitle</string>
-    <string name="lyrics_romanize_chinese">Çince sözleri Latinleştir</string>
     <string name="google_cast">Google Cast</string>
     <string name="google_cast_description">Sesi Chromecast ve diğer Cast özellikli cihazlara aktarın</string>
     <string name="hide_video_songs">Video şarkılarını gizle</string>
@@ -197,7 +183,6 @@
     <string name="advanced_desc">Şarkının temposunu ve perdesini ayarla</string>
     <string name="equalizer_desc">Ses ekolayzırını aç</string>
     <string name="mini_player">Mini oynatıcı</string>
-    <string name="pure_black_mini_player">Saf siyah mini oynatıcı</string>
     <string name="cache_size_warning_title">Bekle!</string>
     <string name="cache_size_warning_message">Seçtiğiniz sınır (%1$s), uygulamanın şu an kullandığından daha küçük. Devam etmek, önbelleğe alınmış bazı %2$s içeriklerinin silinmesine neden olabilir. Yine de devam edilsin mi?</string>
     <string name="cache_size_warning_confirm">Devam et</string>
@@ -213,11 +198,6 @@
     <string name="enable_better_lyrics_desc">Herhangi bir şarkı için hece senkronizasyonlu sözler, karaoke için ideal</string>
     <string name="lyrics_animation_style">Şarkı sözü animasyon stili</string>
     <string name="none">Hiçbiri</string>
-    <string name="fade">Solma</string>
-    <string name="glow">Parlama</string>
-    <string name="slide">Kayma</string>
-    <string name="karaoke">Karaoke</string>
-    <string name="apple_music_style">Apple Music</string>
     <string name="lyrics_text_size">Şarkı sözü metin boyutu</string>
     <string name="lyrics_line_spacing">Şarkı sözü satır aralığı</string>
     <string name="shuffle_playlist_first">Önce listeyi veya albümü karıştır</string>
@@ -260,7 +240,6 @@
     <string name="wrapped_playlist_saved">Oynatma listesi kaydedildi</string>
     <string name="casting_to">%s cihazına yansıtılıyor</string>
     <string name="progress_percent">İlerleme %s%%</string>
-    <string name="listening_to_metrolist">Metrolist dinleniyor</string>
     <string name="open">Aç</string>
     <string name="failed_to_create_image">Görsel oluşturulamadı: %s</string>
     <string name="copied_title">Başlık kopyalandı</string>
@@ -270,10 +249,6 @@
     <string name="lyrics_glow_effect">Parlayan şarkı sözü efektini etkinleştir</string>
     <string name="lyrics_glow_effect_desc">Etkin şarkı sözü satırına parlama ve zıplama efekti ekler</string>
     <string name="wavy">Dalgalı</string>
-    <plurals name="profiles_count">
-        <item quantity="one">%d profil</item>
-        <item quantity="other">%d profil</item>
-    </plurals>
     <string name="equalizer_header">Ekolayzer</string>
     <string name="no_profiles">Ekolayzer profili yok</string>
     <string name="import_profile">Profili içe aktar</string>
@@ -458,7 +433,6 @@
     <string name="ai_error_no_lyrics">Çevrilecek söz yok</string>
     <string name="ai_error_lyrics_empty">Şarkı sözleri boş</string>
     <string name="ai_error_language_required">Bir hedef dil gereklidir</string>
-    <string name="ai_error_unexpected">Beklenmedik çeviri sonucu</string>
     <string name="ai_error_unknown">Bilinmeyen bir hata oluştu</string>
     <string name="ai_error_translation_failed">Çeviri başarısız</string>
     <string name="play_all">Tümünü oynat</string>
@@ -492,8 +466,6 @@
     <string name="crossfade_duration">Çapraz geçiş süresi</string>
     <string name="crossfade_gapless">Kesintisiz albümler için kapat</string>
     <string name="crossfade_gapless_desc">Kesintisiz çalma için tasarlanmış albümlerde çapraz geçişi atla</string>
-    <string name="crossfade_beta_title">Beta özelliği!</string>
-    <string name="crossfade_beta_message">Çapraz geçiş yeni bir özelliktir ve hatalar içerebilir. Sorun yaşarsanız lütfen bildirin.\n\nNOT: Bu özellik teknik kısıtlamalar nedeniyle ses offload özelliğini devre dışı bırakır</string>
     <string name="audio_offload_disabled_by_crossfade">Çapraz geçiş etkin olduğu için devre dışı bırakıldı</string>
     <string name="hide_youtube_shorts">YouTube Shorts\'u gizle</string>
     <string name="listen_together_in_top_bar">Birlikte Dinle özelliği üst çubukta</string>
@@ -535,8 +507,6 @@
     <string name="discord_advanced_mode_description">Rich Presence\'ın her alanını yer tutucularla özelleştir</string>
     <string name="player_background_solid">Düz</string>
     <string name="resume_on_bluetooth_connect">Bluetooth bağlandığında oynatmayı sürdür</string>
-    <string name="lyrics_romanize_hindi">Hintçe sözleri Latinleştir</string>
-    <string name="lyrics_romanize_punjabi">Pencapça sözleri Latinleştir</string>
     <string name="lyrics_romanize_as_main">Latinleştirilmiş sözleri ana metin olarak göster</string>
     <string name="display_density">Ekran yoğunluğu</string>
     <string name="restart">Yeniden başlat</string>
@@ -598,12 +568,7 @@
     <string name="credits_license_desc">Ücretsiz, açık kaynaklı yazılım. Kullanabilir, inceleyebilir, paylaşabilir ve geliştirebilirsiniz</string>
     <string name="credits_discord">Discord sunucusu</string>
     <string name="credits_telegram">Telegram kanalı</string>
-    <string name="credits_website">Web sitesi</string>
-    <string name="credits_instagram">Instagram</string>
-    <string name="credits_github">GitHub</string>
     <string name="credits_view_repo">Depoyu görüntüle</string>
-    <string name="app_version_info">%1$s • %2$s</string>
-    <string name="like_what_i_do">Yaptıklarımdan hoşlanıyor musunuz?</string>
     <string name="buy_mo_a_coffee">Bana bir kahve ısmarla!</string>
     <string name="community_and_info">Topluluk ve Bilgi</string>
     <string name="metrolist">METROLIST</string>
@@ -718,9 +683,7 @@
     <string name="time_transfer_convert">Dönüştür</string>
     <string name="song_dropdown_more_results">Sonuçları daraltmak için yazmaya devam edin (%d daha fazla)</string>
     <string name="android_auto_target_playlist_not_set">Hiçbir çalma listesi seçilmedi. Android Auto ayarlarından birini seçin</string>
-    <string name="added_to_playlist">Oynatma listesine eklendi</string>
     <string name="android_auto_target_playlist_auto">Ayarlanmadı</string>
-    <string name="android_auto_target_playlist_desc">Android Auto\'da hızlı ekleme düğmesi kullanılırken şarkıların kaydedileceği çalma listesini seçin</string>
     <string name="android_auto_target_playlist">Hızlı ekleme hedefi</string>
     <string name="android_auto_youtube_playlists_desc">Android Auto ile göz atarken çalma listeleri bölümünde YouTube Music önerilen çalma listelerini göster</string>
     <string name="android_auto_youtube_playlists">YouTube\'un önerdiği oynatma listelerini göster</string>
@@ -736,17 +699,13 @@
     <string name="recognition_notification_channel_name">Müzik tanımlama</string>
     <string name="ai_system_prompt_reset">Varsayılana sıfırla</string>
     <string name="ai_system_prompt_default">Varsayılan</string>
-    <string name="ai_system_prompt_placeholder">Çevrilecek satır sayısı için yer tutucu olarak {lineCount} kullanın</string>
-    <string name="ai_system_prompt_desc">Yapay zeka modeline gönderilen özel talimatlar. Varsayılan istemi kullanmak için boş bırakın</string>
     <string name="ai_system_prompt">Sistem istemi</string>
     <string name="change">Değiştir</string>
-    <string name="copy_all_lyrics">Tüm sözleri kopyala</string>
     <string name="alarm_battery_optimization_desc">Arka planda daha kararlı alarm davranışı için pil optimizasyonunu devre dışı bırakın</string>
     <string name="alarm_battery_optimization_title">Pil optimizasyonu</string>
     <string name="alarm_exact_permission_desc">Hassas alarm zamanlaması izni, uygulama arka plandayken güvenilirliği artırır</string>
     <string name="alarm_exact_permission_title">Kesin alarmlara izin ver</string>
     <string name="alarm_not_scheduled">Zamanlanmadı</string>
-    <string name="alarm_next_trigger">Sonraki tetikleme</string>
     <string name="alarm_random_song">Çalma listesinden rastgele bir şarkı çal</string>
     <string name="alarm_duplicate_time_warning">Bu saatte zaten bir alarm var. Çakışırlarsa yalnızca biri çalabilir</string>
     <string name="alarm_delete">Alarmı sil</string>
@@ -760,7 +719,6 @@
     <string name="alarm_disabled">Devre dışı</string>
     <string name="alarm_empty">Henüz alarm yok. Zamanlanmış oynatma için bir tane ekleyin</string>
     <string name="alarm_add">Alarm ekle</string>
-    <string name="alarm_playlist_helper">Alarmda çalacak oynatma listesini seçin</string>
     <string name="alarm_selected">Seçildi</string>
     <plurals name="alarm_playlist_song_count">
         <item quantity="one">%d şarkı</item>
@@ -813,7 +771,6 @@
     <string name="eq_download_db">OtoEQ veritabanını indir (17 MB)</string>
     <string name="eq_downloading">İndiriliyor…</string>
     <string name="import_from_file">Dosyalardan içe aktar</string>
-    <string name="add_profile">Profil ekle</string>
     <string name="wizard_select_model">Model seç</string>
     <string name="wizard_select_profiles">Profilleri seç</string>
     <string name="wizard_search_model_hint">Kulak içi ve kulak üstü kulaklığınızın modelini arayın</string>
@@ -841,8 +798,6 @@
     <string name="auto_radio_queue_desc">aramadan veya ana ekrandan şarkı başlatıldığında otomatik olarak şarkı sırası oluştur</string>
     <string name="audio_track_playback_params">Donanım ses işlemeyi kullan</string>
     <string name="audio_track_playback_params_description">Yazılımsal işleme yerine hız/perde (speed/pitch) değişiklikleri için Android\'in AudioTrack altyapısını kullanır. Aşırı perde değerlerinde daha güvenilirdir</string>
-    <string name="discord_status_connecting">Discord\'a bağlanılıyor…</string>
-    <string name="discord_status_reconnecting">Discord\'a yeniden bağlanılıyor…</string>
     <string name="discord_status_connected">Bağlanıldı</string>
     <string name="discord_status_authorizing">Yetkilendiriliyor…</string>
     <string name="discord_status_authorized">Yetkilendirildi</string>
@@ -861,10 +816,6 @@
     <string name="discord_enable_button_2">2. butonu göster</string>
     <string name="discord_button_label">Etiket</string>
     <string name="discord_button_url">URL</string>
-    <string name="discord_placeholders">Kullanılabilir yer tutucular</string>
-    <string name="discord_placeholder_song">Şarkı adı</string>
-    <string name="discord_placeholder_artist">Sanatçı adı</string>
-    <string name="discord_placeholder_album">Albüm adı</string>
     <string name="restore_database_incompatible">Yedek geri yüklenemiyor: veritabanı sürümü uyumsuz. Mevcut verileriniz korundu.</string>
     <string name="stream_client">Akış istemcisi</string>
     <string name="format_player_hash">Oynatıcı hash\'i</string>
@@ -883,16 +834,11 @@
     <string name="stream_source_visionos_desc">Apple Vision. Kısıtlama eşiği yok; çok güvenilir.</string>
     <string name="stream_source_android_vr">Android VR</string>
     <string name="stream_source_android_vr_desc">Android VR istemcileri (tüm sürümler).</string>
-    <string name="stream_source_ios">iOS / iPadOS</string>
-    <string name="stream_source_ios_desc">Apple iOS ve iPadOS istemcileri. Varsayılan olarak kapalıdır; yaklaşık 1 MiB\'den sonra kısıtlanır.</string>
     <string name="stream_source_web_creator">WEB_CREATOR</string>
     <string name="stream_source_web_creator_desc">Creator web istemcisi.</string>
-    <string name="stream_source_android_creator">ANDROID_CREATOR</string>
-    <string name="stream_source_android_creator_desc">Android Creator istemcisi. Varsayılan olarak kapalıdır; DroidGuard gerekir.</string>
     <string name="error_job_cancelled">Video oynatılamıyor. Tekrar deneyin veya sonraki şarkıya geçin.</string>
     <string name="enable_landscape_scaling">Yatay Ölçekleme</string>
     <string name="enable_landscape_scaling_desc">Büyük ekranlarda yatay mod için arayüzü ölçeklendir</string>
-    <string name="dynamic_theme">Dinamik Tema</string>
     <string name="enable_dynamic_icon">Dinamik ikon renkleri</string>
     <string name="enable_dynamic_icon_desc">Uygulama ikonu için dinamik tema renklerini kullan. Eğer kapatılırsa, ikon sabit renkleri kullanır.</string>
     <string name="kmp_upgrade_title">Metrolist %s KMP sürümü kullanılabilir</string>
@@ -902,4 +848,11 @@
     <string name="android_auto_search_options">Arama seçenekleri</string>
     <string name="android_auto_search_local_songs_limit">Şarkı arama sınırı</string>
     <string name="android_auto_search_local_songs_limit_desc">Arama sonuçlarında gösterilen yerel şarkıların sayısını sınırlandırın. Bellek çökmelerini önlemek için sınırsız olarak ayarlamamanız önerilir</string>
+    <string name="playlist_unavailable">Oynatma listesi kullanılamıyor</string>
+    <string name="choose_youtube_channel">Bir YouTube kanalı seç</string>
+    <string name="choose_youtube_channel_description">Bu Google hesabı birden çok kanala sahip. Kullanmak istediğini seç.</string>
+    <string name="switch_youtube_channel">YouTube kanalına geç</string>
+    <string name="youtube_channels_failed">Hesaba bağlı olan YouTube kanalları alınamadı. Lütfen tekrar deneyin.</string>
+    <string name="authentication_data_extraction_failed">YouTube Music oturumu okunamadı. Lütfen tekrar deneyin.</string>
+    <string name="login_failed_with_error">Giriş başarısız: %1$s</string>
 </resources>
