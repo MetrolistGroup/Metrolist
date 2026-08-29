@@ -69,8 +69,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import coil3.compose.AsyncImage
 import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.music.LocalPlayerConnection
@@ -119,6 +121,7 @@ fun TvMainScreen(
         }
     }
 
+    val isFullScreenPlayer = currentRoute == "tv_player"
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Column(
@@ -126,19 +129,21 @@ fun TvMainScreen(
             .fillMaxSize()
             .background(if (pureBlack) TvColors.BackgroundPureBlack else TvColors.BackgroundDark)
     ) {
-        // ── Spotify TV Style Top Horizontal Navigation Bar ───────────────────
-        TvTopNavigationBar(
-            navigationItems = navigationItems,
-            currentRoute = currentRoute,
-            onNavItemClick = onNavItemClick,
-            pureBlack = pureBlack,
-            onSettingsClick = {
-                navController.navigate("tv_settings") { launchSingleTop = true }
-            },
-            onPlayerClick = {
-                navController.navigate("tv_player") { launchSingleTop = true }
-            },
-        )
+        // ── Spotify TV Style Top Horizontal Navigation Bar (Hidden in Full Player) ──
+        if (!isFullScreenPlayer) {
+            TvTopNavigationBar(
+                navigationItems = navigationItems,
+                currentRoute = currentRoute,
+                onNavItemClick = onNavItemClick,
+                pureBlack = pureBlack,
+                onSettingsClick = {
+                    navController.navigate("tv_settings") { launchSingleTop = true }
+                },
+                onPlayerClick = {
+                    navController.navigate("tv_player") { launchSingleTop = true }
+                },
+            )
+        }
 
         // ── Main Content Area ────────────────────────────────────────────────
         Box(modifier = Modifier.weight(1f)) {
@@ -155,7 +160,52 @@ fun TvMainScreen(
                 popExitTransition = { fadeOut(tween(200)) },
                 modifier = Modifier.fillMaxSize(),
             ) {
-                // Mobile navigation graph components
+                // TV-Native Playlist & Album Detail Screens
+                composable(
+                    route = "local_playlist/{playlistId}",
+                    arguments = listOf(navArgument("playlistId") { type = NavType.LongType })
+                ) { backStackEntry ->
+                    val playlistId = backStackEntry.arguments?.getLong("playlistId") ?: 0L
+                    TvPlaylistScreen(
+                        playlistId = playlistId,
+                        navController = navController
+                    )
+                }
+
+                composable(
+                    route = "auto_playlist/{playlistType}",
+                    arguments = listOf(navArgument("playlistType") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val playlistType = backStackEntry.arguments?.getString("playlistType") ?: "liked"
+                    TvPlaylistScreen(
+                        autoPlaylistType = playlistType,
+                        navController = navController
+                    )
+                }
+
+                composable(
+                    route = "online_playlist/{playlistId}",
+                    arguments = listOf(navArgument("playlistId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val playlistId = backStackEntry.arguments?.getString("playlistId") ?: ""
+                    TvPlaylistScreen(
+                        onlineBrowseId = playlistId,
+                        navController = navController
+                    )
+                }
+
+                composable(
+                    route = "album/{albumId}",
+                    arguments = listOf(navArgument("albumId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val albumId = backStackEntry.arguments?.getString("albumId") ?: ""
+                    TvPlaylistScreen(
+                        albumId = albumId,
+                        navController = navController
+                    )
+                }
+
+                // Mobile navigation graph components for nested sub-routes
                 navigationBuilder(
                     navController = navController,
                     scrollBehavior = scrollBehavior,
@@ -194,14 +244,16 @@ fun TvMainScreen(
             }
         }
 
-        // ── Spotify TV Floating/Docked Now-Playing Bar ────────────────────────
-        TvNowPlayingBar(
-            onOpenPlayer = {
-                navController.navigate("tv_player") {
-                    launchSingleTop = true
-                }
-            },
-        )
+        // ── Spotify TV Floating/Docked Now-Playing Bar (Hidden in Full Player) ──
+        if (!isFullScreenPlayer) {
+            TvNowPlayingBar(
+                onOpenPlayer = {
+                    navController.navigate("tv_player") {
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
     }
 }
 
@@ -385,47 +437,97 @@ private fun TvNowPlayingBar(
     // Hide bar if nothing is queued/loaded
     if (mediaMetadata == null) return
 
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
+    val trackInteractionSource = remember { MutableInteractionSource() }
+    val isTrackFocused by trackInteractionSource.collectIsFocusedAsState()
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(80.dp)
+            .height(82.dp)
             .background(TvColors.CardBackground)
             .border(
-                width = if (isFocused) 2.dp else 0.dp,
-                color = if (isFocused) Color.White.copy(alpha = 0.5f) else Color.Transparent
+                width = 1.dp,
+                color = Color.White.copy(alpha = 0.08f)
             )
             .padding(horizontal = 24.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Thumbnail with rounded corners and playing indicator overlay
-        Box(
+        // Interactive Track Info Card (Focusable)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .size(58.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .weight(1f)
+                .clip(RoundedCornerShape(10.dp))
+                .background(if (isTrackFocused) TvColors.CardBackgroundElevated else Color.Transparent)
+                .border(
+                    width = if (isTrackFocused) 2.dp else 0.dp,
+                    color = if (isTrackFocused) Color.White else Color.Transparent,
+                    shape = RoundedCornerShape(10.dp)
+                )
+                .focusable(interactionSource = trackInteractionSource)
+                .onKeyEvent {
+                    if (it.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                        (it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)) {
+                        onOpenPlayer()
+                        true
+                    } else false
+                }
                 .clickable(onClick = onOpenPlayer)
+                .padding(6.dp)
         ) {
-            AsyncImage(
-                model = mediaMetadata?.thumbnailUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-            if (isPlaying) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.4f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    PlayingIndicator(
-                        color = TvColors.SpotifyGreenBright,
-                        modifier = Modifier.height(18.dp),
-                        bars = 3,
-                        barWidth = 3.dp,
-                        cornerRadius = 2.dp
+            // Thumbnail with playing overlay
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
+                    .clip(RoundedCornerShape(8.dp))
+            ) {
+                AsyncImage(
+                    model = mediaMetadata?.thumbnailUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                if (isPlaying) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.45f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        PlayingIndicator(
+                            color = TvColors.SpotifyGreenBright,
+                            modifier = Modifier.height(16.dp),
+                            bars = 3,
+                            barWidth = 3.dp,
+                            cornerRadius = 2.dp
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.width(14.dp))
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = mediaMetadata?.title ?: "",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isTrackFocused) TvColors.SpotifyGreenBright else TvColors.TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.basicMarquee(),
+                )
+                Spacer(Modifier.height(2.dp))
+                mediaMetadata?.artists?.joinToString { it.name }?.let { artists ->
+                    Text(
+                        text = artists,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TvColors.TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -433,100 +535,124 @@ private fun TvNowPlayingBar(
 
         Spacer(Modifier.width(16.dp))
 
-        // Title and Artist
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .clickable(onClick = onOpenPlayer),
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text = mediaMetadata?.title ?: "",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = TvColors.TextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.basicMarquee(),
-            )
-            Spacer(Modifier.height(2.dp))
-            mediaMetadata?.artists?.joinToString { it.name }?.let { artists ->
-                Text(
-                    text = artists,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TvColors.TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-
         // Transport Controls
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            IconButton(
-                onClick = { playerConnection.player.seekToPreviousMediaItem() },
+            TvDockIconButton(
+                iconRes = R.drawable.skip_previous,
+                contentDescription = "Previous",
                 enabled = canSkipPrevious,
-                modifier = Modifier.focusable(),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.skip_previous),
-                    contentDescription = "Previous",
-                    tint = if (canSkipPrevious) Color.White else TvColors.TextTertiary,
-                    modifier = Modifier.size(26.dp)
-                )
-            }
+                onClick = { playerConnection.player.seekToPreviousMediaItem() }
+            )
 
             // Play / Pause Circle
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(46.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .clickable { playerConnection.player.togglePlayPause() }
-            ) {
-                Icon(
-                    painter = painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
-                    contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = Color.Black,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+            TvDockPlayPauseButton(
+                isPlaying = isPlaying,
+                onClick = { playerConnection.player.togglePlayPause() }
+            )
 
-            IconButton(
-                onClick = { playerConnection.player.seekToNextMediaItem() },
+            TvDockIconButton(
+                iconRes = R.drawable.skip_next,
+                contentDescription = "Next",
                 enabled = canSkipNext,
-                modifier = Modifier.focusable(),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.skip_next),
-                    contentDescription = "Next",
-                    tint = if (canSkipNext) Color.White else TvColors.TextTertiary,
-                    modifier = Modifier.size(26.dp)
-                )
-            }
+                onClick = { playerConnection.player.seekToNextMediaItem() }
+            )
 
             Spacer(Modifier.width(8.dp))
 
             // Expand to Full Player
-            IconButton(
-                onClick = onOpenPlayer,
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(TvColors.OverlayLight)
-                    .focusable(),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.fullscreen),
-                    contentDescription = "Expand Full Player",
-                    tint = TvColors.SpotifyGreenBright,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
+            TvDockIconButton(
+                iconRes = R.drawable.fullscreen,
+                contentDescription = "Expand Full Player",
+                tint = TvColors.SpotifyGreenBright,
+                onClick = onOpenPlayer
+            )
         }
+    }
+}
+
+@Composable
+private fun TvDockPlayPauseButton(
+    isPlaying: Boolean,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(46.dp)
+            .clip(CircleShape)
+            .background(if (isFocused) TvColors.SpotifyGreenBright else Color.White)
+            .border(
+                width = if (isFocused) 2.dp else 0.dp,
+                color = if (isFocused) Color.White else Color.Transparent,
+                shape = CircleShape
+            )
+            .focusable(interactionSource = interactionSource)
+            .onKeyEvent {
+                if (it.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                    (it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    onClick()
+                    true
+                } else false
+            }
+            .clickable(onClick = onClick)
+    ) {
+        Icon(
+            painter = painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
+            contentDescription = if (isPlaying) "Pause" else "Play",
+            tint = Color.Black,
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+
+@Composable
+private fun TvDockIconButton(
+    iconRes: Int,
+    contentDescription: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    tint: Color = Color.White
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(if (isFocused) Color.White else TvColors.OverlayLight)
+            .border(
+                width = if (isFocused) 2.dp else 0.dp,
+                color = if (isFocused) Color.White else Color.Transparent,
+                shape = CircleShape
+            )
+            .focusable(enabled = enabled, interactionSource = interactionSource)
+            .onKeyEvent {
+                if (enabled && it.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                    (it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    onClick()
+                    true
+                } else false
+            }
+            .clickable(enabled = enabled, onClick = onClick)
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = contentDescription,
+            tint = when {
+                !enabled -> TvColors.TextTertiary
+                isFocused -> Color.Black
+                else -> tint
+            },
+            modifier = Modifier.size(22.dp)
+        )
     }
 }
 

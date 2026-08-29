@@ -36,7 +36,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -45,7 +44,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,10 +56,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -82,19 +78,15 @@ import coil3.request.allowHardware
 import coil3.toBitmap
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
-import com.metrolist.music.constants.ShowLyricsKey
 import com.metrolist.music.extensions.togglePlayPause
 import com.metrolist.music.extensions.toggleRepeatMode
 import com.metrolist.music.ui.component.Lyrics
 import com.metrolist.music.ui.component.PlayingIndicator
 import com.metrolist.music.ui.theme.PlayerColorExtractor
-import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.viewmodels.LyricsViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -103,7 +95,7 @@ import kotlinx.coroutines.withContext
  * Left side: Large Album Art with rounded corners, subtle elevation, currently playing badge
  * Right side: Clean track typography, dynamic backdrop extracted from album cover,
  * Spotify style progress bar, transport controls with Spotify green accents,
- * lyrics overlay support, and direct D-pad remote shortcuts.
+ * lyrics overlay support, and D-pad remote support.
  */
 @Composable
 fun TvPlayerScreen(
@@ -173,21 +165,19 @@ fun TvPlayerScreen(
     // Lyrics visibility toggle
     var showLyrics by remember { mutableStateOf(false) }
 
-    // D-Pad focus & controls
-    val focusRequester = remember { FocusRequester() }
     val playButtonFocusRequester = remember { FocusRequester() }
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+        delay(100)
+        try {
+            playButtonFocusRequester.requestFocus()
+        } catch (_: Exception) {}
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(TvColors.BackgroundPureBlack)
-            .focusRequester(focusRequester)
-            .focusable()
             .onKeyEvent { keyEvent ->
                 val action = keyEvent.nativeKeyEvent.action
                 val code = keyEvent.nativeKeyEvent.keyCode
@@ -195,43 +185,19 @@ fun TvPlayerScreen(
                 val isFirst = keyEvent.nativeKeyEvent.repeatCount == 0
 
                 when {
-                    // ── Play/Pause ────────────────────────────────────────────
-                    isDown && isFirst && (code == KeyEvent.KEYCODE_DPAD_CENTER ||
-                        code == KeyEvent.KEYCODE_ENTER ||
-                        code == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) -> {
+                    // Media hardware buttons
+                    isDown && isFirst && code == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
                         playerConnection.player.togglePlayPause()
                         true
                     }
-
-                    // ── Seek Left/Right ─────────────────────────────────────────
-                    isDown && (code == KeyEvent.KEYCODE_DPAD_LEFT ||
-                        code == KeyEvent.KEYCODE_MEDIA_REWIND) -> {
-                        playerConnection.player.seekTo(
-                            (playerConnection.player.currentPosition - 10_000L).coerceAtLeast(0L)
-                        )
+                    isDown && isFirst && code == KeyEvent.KEYCODE_MEDIA_PLAY -> {
+                        playerConnection.player.play()
                         true
                     }
-                    isDown && (code == KeyEvent.KEYCODE_DPAD_RIGHT ||
-                        code == KeyEvent.KEYCODE_MEDIA_FAST_FORWARD) -> {
-                        playerConnection.player.seekTo(
-                            (playerConnection.player.currentPosition + 10_000L).coerceAtMost(durationMs)
-                        )
+                    isDown && isFirst && code == KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                        playerConnection.player.pause()
                         true
                     }
-
-                    // ── Up: Queue screen ───────────────────────────────────────
-                    isDown && isFirst && code == KeyEvent.KEYCODE_DPAD_UP -> {
-                        navController.navigate("tv_queue") { launchSingleTop = true }
-                        true
-                    }
-
-                    // ── Down: Toggle Lyrics / Shuffle ──────────────────────────
-                    isDown && isFirst && code == KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        showLyrics = !showLyrics
-                        true
-                    }
-
-                    // ── Media keys ─────────────────────────────────────────────
                     isDown && isFirst && code == KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
                         playerConnection.player.seekToPreviousMediaItem()
                         true
@@ -240,7 +206,14 @@ fun TvPlayerScreen(
                         playerConnection.player.seekToNextMediaItem()
                         true
                     }
-
+                    isDown && code == KeyEvent.KEYCODE_MEDIA_REWIND -> {
+                        playerConnection.player.seekTo((playerConnection.player.currentPosition - 10_000L).coerceAtLeast(0L))
+                        true
+                    }
+                    isDown && code == KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
+                        playerConnection.player.seekTo((playerConnection.player.currentPosition + 10_000L).coerceAtMost(durationMs))
+                        true
+                    }
                     else -> false
                 }
             },
@@ -410,17 +383,37 @@ fun TvPlayerScreen(
 
                 // ── Modern Spotify TV Progress Bar ────────────────────────────
                 Column(modifier = Modifier.fillMaxWidth()) {
+                    val progressSliderInteractionSource = remember { MutableInteractionSource() }
+                    val isSliderFocused by progressSliderInteractionSource.collectIsFocusedAsState()
+
                     Slider(
                         value = progress,
                         onValueChange = { targetProgress ->
                             playerConnection.player.seekTo((targetProgress * durationMs).toLong())
                         },
                         colors = SliderDefaults.colors(
-                            thumbColor = Color.White,
+                            thumbColor = if (isSliderFocused) TvColors.SpotifyGreenBright else Color.White,
                             activeTrackColor = TvColors.SpotifyGreenBright,
                             inactiveTrackColor = Color.White.copy(alpha = 0.2f)
                         ),
-                        modifier = Modifier.fillMaxWidth()
+                        interactionSource = progressSliderInteractionSource,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onKeyEvent {
+                                if (it.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                                    when (it.nativeKeyEvent.keyCode) {
+                                        KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                            playerConnection.player.seekTo((playerConnection.player.currentPosition - 10_000L).coerceAtLeast(0L))
+                                            true
+                                        }
+                                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                            playerConnection.player.seekTo((playerConnection.player.currentPosition + 10_000L).coerceAtMost(durationMs))
+                                            true
+                                        }
+                                        else -> false
+                                    }
+                                } else false
+                            }
                     )
 
                     Row(
@@ -469,6 +462,7 @@ fun TvPlayerScreen(
                     // Play / Pause (Large Spotify Green Circle)
                     SpotifyTvPlayPauseButton(
                         isPlaying = isPlaying,
+                        focusRequester = playButtonFocusRequester,
                         onClick = { playerConnection.player.togglePlayPause() }
                     )
 
@@ -529,28 +523,21 @@ fun TvPlayerScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Text(
-                        text = "OK Play/Pause",
+                        text = "◄► Navigate & Select",
                         style = MaterialTheme.typography.labelSmall,
                         color = TvColors.TextMuted,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text("•", color = TvColors.TextMuted)
                     Text(
-                        text = "◄► Seek ±10s",
+                        text = "Center: Action",
                         style = MaterialTheme.typography.labelSmall,
                         color = TvColors.TextMuted,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text("•", color = TvColors.TextMuted)
                     Text(
-                        text = "▲ Queue",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TvColors.TextMuted,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text("•", color = TvColors.TextMuted)
-                    Text(
-                        text = "▼ Lyrics",
+                        text = "Back: Return",
                         style = MaterialTheme.typography.labelSmall,
                         color = TvColors.TextMuted,
                         fontWeight = FontWeight.SemiBold
@@ -567,6 +554,7 @@ fun TvPlayerScreen(
 @Composable
 private fun SpotifyTvPlayPauseButton(
     isPlaying: Boolean,
+    focusRequester: FocusRequester? = null,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -583,7 +571,18 @@ private fun SpotifyTvPlayPauseButton(
             .shadow(if (isFocused) 16.dp else 4.dp, CircleShape)
             .clip(CircleShape)
             .background(bgColor)
+            .then(
+                if (focusRequester != null) Modifier.focusRequester(focusRequester)
+                else Modifier
+            )
             .focusable(interactionSource = interactionSource)
+            .onKeyEvent {
+                if (it.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                    (it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    onClick()
+                    true
+                } else false
+            }
             .clickable(onClick = onClick)
     ) {
         Icon(
@@ -614,15 +613,15 @@ private fun SpotifyTvIconButton(
 
     val effectiveTint = when {
         !enabled -> TvColors.TextTertiary
+        isFocused -> Color.Black
         isActive -> TvColors.SpotifyGreenBright
-        isFocused -> Color.White
         else -> tint
     }
 
     val background = when {
-        isFocused -> TvColors.OverlayFocused
-        isActive -> TvColors.SpotifyGreen.copy(alpha = 0.15f)
-        else -> Color.Transparent
+        isFocused -> Color.White
+        isActive -> TvColors.SpotifyGreen.copy(alpha = 0.2f)
+        else -> TvColors.OverlayLight
     }
 
     Box(
@@ -633,10 +632,17 @@ private fun SpotifyTvIconButton(
             .background(background)
             .border(
                 width = if (isFocused) 2.dp else 0.dp,
-                color = if (isFocused) Color.White.copy(alpha = 0.6f) else Color.Transparent,
+                color = if (isFocused) Color.White else Color.Transparent,
                 shape = CircleShape
             )
             .focusable(enabled = enabled, interactionSource = interactionSource)
+            .onKeyEvent {
+                if (enabled && it.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                    (it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    onClick()
+                    true
+                } else false
+            }
             .clickable(enabled = enabled, onClick = onClick)
     ) {
         Icon(
