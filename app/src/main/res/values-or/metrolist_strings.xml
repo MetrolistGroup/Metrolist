@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="local_history">ସ୍ଥାନୀୟ</string>
+    <string name="remote_history">ଦୂରସ୍ଥ</string>
+    <string name="charts">ଚାର୍ଟ</string>
+    <string name="back_button_desc">ପଛକୁ</string>
+    <string name="album_cover_desc">ଆଲବମ୍ ମଲାଟ</string>
+    <string name="top_music_videos">ଶ୍ରେଷ୍ଠ ସଙ୍ଗୀତ ଭିଡିଓ</string>
+    <string name="trending">ସଦ୍ୟତମ ଚର୍ଚ୍ଚିତ</string>
+    <string name="weeks">ସପ୍ତାହ</string>
+    <string name="months">ମାସ</string>
+    <string name="years">ବର୍ଷ</string>
+    <string name="continuous">ଲଗାତାର</string>
+    <string name="liked">ପସନ୍ଦ କରିଥିବା</string>
+    <string name="offline">ଡାଉନଲୋଡ ହୋଇଛି</string>
+    <string name="my_top">ମୋର ପ୍ରିୟ</string>
+    <string name="uploaded_playlist">ଉପଲୋଡ ହେଇଛି</string>
+    <string name="filter_uploaded">ଅପଲୋଡ଼ ହେଇଛି</string>
+    <string name="generating_image">ଚିତ୍ର ପ୍ରସ୍ତୁତ ହେଉଛି</string>
+    <string name="please_wait">ଅପେକ୍ଷା କରନ୍ତୁ</string>
+    <string name="cancel">ବନ୍ଦ କରନ୍ତୁ</string>
+    <string name="enable">ଚାଲୁ</string>
+</resources>

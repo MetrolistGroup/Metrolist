@@ -74,7 +74,8 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
             ACTION_START_RECOGNITION -> handleStartRecognition(context)
             ACTION_UPDATE_WIDGET -> updateAllWidgets(context, AppWidgetManager.getInstance(context))
             ACTION_RESET_STATE -> {
-                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit()
                     .putInt(PREF_STATE, STATE_IDLE)
                     .putString(PREF_SONG_TITLE, "")
                     .putString(PREF_ARTIST_NAME, "")

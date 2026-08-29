@@ -28,6 +28,7 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.music.R
 import com.metrolist.music.constants.ThumbnailCornerRadius
+import com.metrolist.music.ui.utils.resize
 
 @Composable
 fun SpeedDialGridItem(
@@ -45,7 +46,7 @@ fun SpeedDialGridItem(
     ) {
         // Thumbnail
         ItemThumbnail(
-            thumbnailUrl = item.thumbnail,
+            thumbnailUrl = item.thumbnail?.resize(200, 200),
             isActive = isActive,
             isPlaying = isPlaying,
             shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(ThumbnailCornerRadius),

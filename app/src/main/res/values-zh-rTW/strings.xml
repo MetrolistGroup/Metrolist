@@ -13,7 +13,7 @@
     <string name="mood_and_genres">情境與類型</string>
     <string name="account">帳號</string>
     <string name="quick_picks">歌曲快選</string>
-    <string name="quick_picks_empty">聽一些音樂讓我們知道您的喜好</string>
+    <string name="quick_picks_empty">聽一些音樂讓我們知道你的喜好</string>
     <string name="forgotten_favorites">重溫舊愛</string>
     <string name="keep_listening">再聽一次</string>
     <string name="your_youtube_playlists">你的 YouTube 播放清單</string>
@@ -237,13 +237,13 @@
     <string name="listen_history">觀看記錄</string>
     <string name="pause_listen_history">暫停觀看記錄</string>
     <string name="clear_listen_history">清除觀看記錄</string>
-    <string name="clear_listen_history_confirm">您確定要清除所有觀看記錄嗎？</string>
+    <string name="clear_listen_history_confirm">確定要清除所有觀看記錄嗎？</string>
     <string name="search_history">搜尋記錄</string>
     <string name="pause_search_history">暫停搜尋記錄</string>
     <string name="clear_search_history">清除搜尋記錄</string>
-    <string name="clear_search_history_confirm">您確定要清除所有搜尋記錄嗎？</string>
+    <string name="clear_search_history_confirm">確定要清除所有搜尋記錄嗎？</string>
     <string name="disable_screenshot">禁用截圖</string>
-    <string name="disable_screenshot_desc">當此選項開啟時，您無法截圖，也無法在「最近使用」中看到此應用程式的畫面。</string>
+    <string name="disable_screenshot_desc">開啟此選項時，將停用螢幕截圖功能，且在「最近的畫面」中不會顯示畫面內容。</string>
     <string name="enable_lrclib">使用 LrcLib 提供歌詞</string>
     <string name="enable_kugou">使用酷狗音樂提供歌詞</string>
     <string name="hide_explicit">移除不適當內容</string>
@@ -254,17 +254,18 @@
     <string name="backup_create_success">成功建立備份</string>
     <string name="backup_create_failed">無法建立備份</string>
     <string name="restore_failed">無法還原備份</string>
-    <string name="discord_integration">Discord 整合</string>
-    <string name="discord_information">Metrolist使用KizzyRPC函式庫來設定您的Discord狀態。這會用到Discord Gateway連線，可能會違反Discord服務條款，但是目前沒有使用者為此被停用帳號。使用此功能需自行承擔此風險。\n\nMetrolist只會提取你的token，所有東西都存在本機。</string>
+    <string name="discord_information">Metrolist 使用 KizzyRPC 函式庫來設定您的 Discord 狀態。這會用到 Discord Gateway 連線，可能會違反 Discord 服務條款，但是目前沒有使用者為此被停用帳號。使用此功能需自行承擔此風險。\n\nMetrolist 只會提取你的 token，所有東西都存在本機。</string>
     <string name="dismiss">了解</string>
     <string name="options">選項</string>
     <string name="preview">預覽</string>
     <string name="login_failed">登入失敗</string>
     <string name="action_logout">登出</string>
-    <string name="enable_discord_rpc">啟用 Rich Presence</string>
     <string name="about">關於</string>
     <string name="app_version">應用程式版本</string>
     <string name="new_version_available">發現新版本</string>
     <string name="translation_models">翻譯模型</string>
     <string name="clear_translation_models">清除翻譯模型</string>
+    <string name="action_login">登入</string>
+    <string name="use_login_for_browse">使用登入身分瀏覽內容</string>
+    <string name="use_login_for_browse_desc">這會影響你看到的內容，例如若你使用 Premium 會員帳號登入，系統將會顯示 Premium 會員專屬專輯</string>
 </resources>

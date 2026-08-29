@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class TTMLResponse(
-    val ttml: String
+    val ttml: String? = null,
 )
 
 @Serializable

@@ -47,13 +47,14 @@ constructor(
                         browseId = browseId,
                         params = params,
                     ),
-                ).onSuccess { artistItemsPage ->
+                )                .onSuccess { artistItemsPage ->
+                    val resolvedItems = YouTube.resolveArtistIds(artistItemsPage.items)
                     val hideExplicit = context.dataStore.get(HideExplicitKey, false)
                     val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
                     title.value = artistItemsPage.title
                     itemsPage.value =
                         ItemsPage(
-                            items = artistItemsPage.items
+                            items = resolvedItems
                                 .distinctBy { it.id }
                                 .filterExplicit(hideExplicit)
                                 .filterVideoSongs(hideVideoSongs),
@@ -72,12 +73,13 @@ constructor(
             YouTube
                 .artistItemsContinuation(continuation)
                 .onSuccess { artistItemsContinuationPage ->
+                    val resolvedItems = YouTube.resolveArtistIds(artistItemsContinuationPage.items)
                     val hideExplicit = context.dataStore.get(HideExplicitKey, false)
                     val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
                     itemsPage.update {
                         ItemsPage(
                             items =
-                            (oldItemsPage.items + artistItemsContinuationPage.items)
+                            (oldItemsPage.items + resolvedItems)
                                 .distinctBy { it.id }
                                 .filterExplicit(hideExplicit)
                                 .filterVideoSongs(hideVideoSongs),

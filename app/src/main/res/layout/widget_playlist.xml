@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="top"
+    android:background="@drawable/widget_background"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="12dp"
+    android:theme="@style/Theme.Widget.Metrolist">
+
+    <LinearLayout
+        android:id="@+id/widget_playlist_player_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/widget_playlist_album_art"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:scaleType="centerCrop"
+            android:src="@mipmap/ic_launcher"
+            android:contentDescription="@string/album_art" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/widget_playlist_song_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/not_playing"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="@color/widget_text_primary"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/widget_playlist_artist_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/choose_something_below"
+                android:textSize="12sp"
+                android:textColor="@color/widget_text_secondary"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <FrameLayout
+                    android:id="@+id/widget_playlist_prev_container"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp">
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_widget_skip_previous"
+                        android:contentDescription="@string/previous" />
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/widget_playlist_play_pause_container"
+                    android:layout_width="48dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:background="@drawable/widget_play_pill_bg">
+                    <ImageView
+                        android:id="@+id/widget_playlist_play_pause"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_widget_play"
+                        android:contentDescription="@string/play_pause" />
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/widget_playlist_next_container"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp">
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_widget_skip_next"
+                        android:contentDescription="@string/next" />
+                </FrameLayout>
+
+                <FrameLayout
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="6dp">
+                    <ImageButton
+                        android:id="@+id/widget_playlist_like_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:padding="8dp"
+                        android:scaleType="fitCenter"
+                        android:background="@android:color/transparent"
+                        android:src="@drawable/ic_widget_heart_outline_nav"
+                        android:contentDescription="@string/like" />
+                </FrameLayout>
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="5dp"
+                android:layout_marginTop="8dp">
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:src="@drawable/widget_progress_track"
+                    android:scaleType="fitXY"
+                    android:contentDescription="@null" />
+                <ImageView
+                    android:id="@+id/widget_playlist_progress_fill"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:src="@drawable/widget_progress_clip"
+                    android:scaleType="fitXY"
+                    android:contentDescription="@null" />
+            </FrameLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/widget_playlist_quick_picks_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/widget_playlist_row_1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="start">
+
+            <LinearLayout
+                android:id="@+id/widget_playlist_card_1"
+                style="@style/MetrolistPlaylistWidgetCard">
+                <FrameLayout style="@style/MetrolistPlaylistWidgetArtworkFrame">
+                    <ImageView
+                        android:id="@+id/widget_playlist_card_1_art"
+                        style="@style/MetrolistPlaylistWidgetArtwork"
+                        android:contentDescription="@null" />
+                    <FrameLayout
+                        android:id="@+id/widget_playlist_card_1_play_container"
+                        style="@style/MetrolistPlaylistWidgetCardPlayButton">
+                        <ImageView
+                            android:id="@+id/widget_playlist_card_1_play"
+                            style="@style/MetrolistPlaylistWidgetCardPlayIcon"
+                            android:contentDescription="@null" />
+                    </FrameLayout>
+                </FrameLayout>
+                <TextView android:id="@+id/widget_playlist_card_1_title" style="@style/MetrolistPlaylistWidgetCardTitle" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/widget_playlist_card_2"
+                style="@style/MetrolistPlaylistWidgetCard">
+                <FrameLayout style="@style/MetrolistPlaylistWidgetArtworkFrame">
+                    <ImageView
+                        android:id="@+id/widget_playlist_card_2_art"
+                        style="@style/MetrolistPlaylistWidgetArtwork"
+                        android:contentDescription="@null" />
+                    <FrameLayout
+                        android:id="@+id/widget_playlist_card_2_play_container"
+                        style="@style/MetrolistPlaylistWidgetCardPlayButton">
+                        <ImageView
+                            android:id="@+id/widget_playlist_card_2_play"
+                            style="@style/MetrolistPlaylistWidgetCardPlayIcon"
+                            android:contentDescription="@null" />
+                    </FrameLayout>
+                </FrameLayout>
+                <TextView android:id="@+id/widget_playlist_card_2_title" style="@style/MetrolistPlaylistWidgetCardTitle" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/widget_playlist_card_3"
+                style="@style/MetrolistPlaylistWidgetCard">
+                <FrameLayout style="@style/MetrolistPlaylistWidgetArtworkFrame">
+                    <ImageView
+                        android:id="@+id/widget_playlist_card_3_art"
+                        style="@style/MetrolistPlaylistWidgetArtwork"
+                        android:contentDescription="@null" />
+                    <FrameLayout
+                        android:id="@+id/widget_playlist_card_3_play_container"
+                        style="@style/MetrolistPlaylistWidgetCardPlayButton">
+                        <ImageView
+                            android:id="@+id/widget_playlist_card_3_play"
+                            style="@style/MetrolistPlaylistWidgetCardPlayIcon"
+                            android:contentDescription="@null" />
+                    </FrameLayout>
+                </FrameLayout>
+                <TextView android:id="@+id/widget_playlist_card_3_title" style="@style/MetrolistPlaylistWidgetCardTitle" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/widget_playlist_card_4"
+                style="@style/MetrolistPlaylistWidgetCard">
+                <FrameLayout style="@style/MetrolistPlaylistWidgetArtworkFrame">
+                    <ImageView
+                        android:id="@+id/widget_playlist_card_4_art"
+                        style="@style/MetrolistPlaylistWidgetArtwork"
+                        android:contentDescription="@null" />
+                    <FrameLayout
+                        android:id="@+id/widget_playlist_card_4_play_container"
+                        style="@style/MetrolistPlaylistWidgetCardPlayButton">
+                        <ImageView
+                            android:id="@+id/widget_playlist_card_4_play"
+                            style="@style/MetrolistPlaylistWidgetCardPlayIcon"
+                            android:contentDescription="@null" />
+                    </FrameLayout>
+                </FrameLayout>
+                <TextView android:id="@+id/widget_playlist_card_4_title" style="@style/MetrolistPlaylistWidgetCardTitle" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widget_playlist_row_2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal"
+            android:gravity="start"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/widget_playlist_card_5"
+                style="@style/MetrolistPlaylistWidgetCard">
+                <FrameLayout style="@style/MetrolistPlaylistWidgetArtworkFrame">
+                    <ImageView
+                        android:id="@+id/widget_playlist_card_5_art"
+                        style="@style/MetrolistPlaylistWidgetArtwork"
+                        android:contentDescription="@null" />
+                    <FrameLayout
+                        android:id="@+id/widget_playlist_card_5_play_container"
+                        style="@style/MetrolistPlaylistWidgetCardPlayButton">
+                        <ImageView
+                            android:id="@+id/widget_playlist_card_5_play"
+                            style="@style/MetrolistPlaylistWidgetCardPlayIcon"
+                            android:contentDescription="@null" />
+                    </FrameLayout>
+                </FrameLayout>
+                <TextView android:id="@+id/widget_playlist_card_5_title" style="@style/MetrolistPlaylistWidgetCardTitle" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/widget_playlist_card_6"
+                style="@style/MetrolistPlaylistWidgetCard">
+                <FrameLayout style="@style/MetrolistPlaylistWidgetArtworkFrame">
+                    <ImageView
+                        android:id="@+id/widget_playlist_card_6_art"
+                        style="@style/MetrolistPlaylistWidgetArtwork"
+                        android:contentDescription="@null" />
+                    <FrameLayout
+                        android:id="@+id/widget_playlist_card_6_play_container"
+                        style="@style/MetrolistPlaylistWidgetCardPlayButton">
+                        <ImageView
+                            android:id="@+id/widget_playlist_card_6_play"
+                            style="@style/MetrolistPlaylistWidgetCardPlayIcon"
+                            android:contentDescription="@null" />
+                    </FrameLayout>
+                </FrameLayout>
+                <TextView android:id="@+id/widget_playlist_card_6_title" style="@style/MetrolistPlaylistWidgetCardTitle" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/widget_playlist_card_7"
+                style="@style/MetrolistPlaylistWidgetCard">
+                <FrameLayout style="@style/MetrolistPlaylistWidgetArtworkFrame">
+                    <ImageView
+                        android:id="@+id/widget_playlist_card_7_art"
+                        style="@style/MetrolistPlaylistWidgetArtwork"
+                        android:contentDescription="@null" />
+                    <FrameLayout
+                        android:id="@+id/widget_playlist_card_7_play_container"
+                        style="@style/MetrolistPlaylistWidgetCardPlayButton">
+                        <ImageView
+                            android:id="@+id/widget_playlist_card_7_play"
+                            style="@style/MetrolistPlaylistWidgetCardPlayIcon"
+                            android:contentDescription="@null" />
+                    </FrameLayout>
+                </FrameLayout>
+                <TextView android:id="@+id/widget_playlist_card_7_title" style="@style/MetrolistPlaylistWidgetCardTitle" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/widget_playlist_card_8"
+                style="@style/MetrolistPlaylistWidgetCard">
+                <FrameLayout style="@style/MetrolistPlaylistWidgetArtworkFrame">
+                    <ImageView
+                        android:id="@+id/widget_playlist_card_8_art"
+                        style="@style/MetrolistPlaylistWidgetArtwork"
+                        android:contentDescription="@null" />
+                    <FrameLayout
+                        android:id="@+id/widget_playlist_card_8_play_container"
+                        style="@style/MetrolistPlaylistWidgetCardPlayButton">
+                        <ImageView
+                            android:id="@+id/widget_playlist_card_8_play"
+                            style="@style/MetrolistPlaylistWidgetCardPlayIcon"
+                            android:contentDescription="@null" />
+                    </FrameLayout>
+                </FrameLayout>
+                <TextView android:id="@+id/widget_playlist_card_8_title" style="@style/MetrolistPlaylistWidgetCardTitle" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

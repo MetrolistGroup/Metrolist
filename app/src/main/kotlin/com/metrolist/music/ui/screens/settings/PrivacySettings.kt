@@ -22,7 +22,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,8 +48,7 @@ import com.metrolist.music.utils.rememberPreference
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrivacySettings(
-    navController: NavController,
-    scrollBehavior: TopAppBarScrollBehavior,
+    navController: NavController
 ) {
     val database = LocalDatabase.current
     val (pauseListenHistory, onPauseListenHistoryChange) = rememberPreference(

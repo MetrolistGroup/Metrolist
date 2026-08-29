@@ -230,7 +230,6 @@
     <string name="imported_playlist">قائمة أغاني مستوردة</string>
     <string name="hide_explicit">اخفي المحتوى الصريح</string>
     <string name="backup_create_failed">تعذر إنشاء نسخة احتياطية</string>
-    <string name="discord_integration">التكامل مع Discord</string>
     <string name="add_all_to_library">ضف الكل إلى المكتبة</string>
     <string name="action_download">تنزيل</string>
     <string name="remove_all_from_library">امسح الكل من المكتبة</string>
@@ -303,7 +302,6 @@
     <string name="preview">معاينة</string>
     <string name="discord_information">Metrolist يستخدم مكتبة KizzyRPC لتعيين حالة حساب Discord الخاص بك. هذا يتضمن استخدام اتصال Discord Gateway، والذي قد يعتبر انتهاكًا لشروط خدمة Discord. مع ذلك، لا توجد حالات معروفة لتعطيل حسابات المستخدمين لهذا السبب. استخدم على مسؤوليتك الخاصة. \n \nسيقوم Metrolist فقط باستخراج رمز الوصول الخاص بك، وسيتم تخزين كل شيء آخر محليًا.</string>
     <string name="dismiss">صرف</string>
-    <string name="enable_discord_rpc">فعل Rich Presence</string>
     <string name="new_version_available">نسخة جديدة متوفرة</string>
     <string name="login_failed">فشل تسجيل الدخول</string>
     <string name="about">حول</string>

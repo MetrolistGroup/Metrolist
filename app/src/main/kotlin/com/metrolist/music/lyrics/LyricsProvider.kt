@@ -13,6 +13,7 @@ interface LyricsProvider {
     fun isEnabled(context: Context): Boolean
 
     suspend fun getLyrics(
+        context: Context,
         id: String,
         title: String,
         artist: String,
@@ -21,6 +22,7 @@ interface LyricsProvider {
     ): Result<String>
 
     suspend fun getAllLyrics(
+        context: Context,
         id: String,
         title: String,
         artist: String,
@@ -28,6 +30,6 @@ interface LyricsProvider {
         album: String? = null,
         callback: (String) -> Unit,
     ) {
-        getLyrics(id, title, artist, duration, album).onSuccess(callback)
+        getLyrics(context, id, title, artist, duration, album).onSuccess(callback)
     }
 }

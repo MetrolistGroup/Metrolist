@@ -55,6 +55,9 @@ fun CreatePlaylistDialog(
     val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
     val isSignedIn = innerTubeCookie.isNotEmpty()
 
+    val notLoggedInYoutubeStr = stringResource(R.string.not_logged_in_youtube)
+    val syncDisabledStr = stringResource(R.string.sync_disabled)
+
     TextFieldDialog(
         icon = { Icon(painter = painterResource(R.drawable.add), contentDescription = null) },
         title = { Text(text = stringResource(R.string.create_playlist)) },
@@ -62,20 +65,24 @@ fun CreatePlaylistDialog(
         onDismiss = onDismiss,
         onDone = { playlistName ->
             coroutineScope.launch(Dispatchers.IO) {
-                val browseId = if (syncedPlaylist && isSignedIn) {
-                    YouTube.createPlaylist(playlistName)
-                } else if (syncedPlaylist) {
-                    Logger.getLogger("CreatePlaylistDialog").warning("Not signed in")
-                    return@launch
-                } else null
+                val browseId =
+                    if (syncedPlaylist && isSignedIn) {
+                        YouTube.createPlaylist(playlistName)
+                    } else if (syncedPlaylist) {
+                        Logger.getLogger("CreatePlaylistDialog").warning("Not signed in")
+                        return@launch
+                    } else {
+                        null
+                    }
 
-                val playlistEntity = PlaylistEntity(
-                    name = playlistName,
-                    browseId = browseId,
-                    bookmarkedAt = LocalDateTime.now(),
-                    isEditable = true,
-                )
-                
+                val playlistEntity =
+                    PlaylistEntity(
+                        name = playlistName,
+                        browseId = browseId,
+                        bookmarkedAt = LocalDateTime.now(),
+                        isEditable = true,
+                    )
+
                 database.query {
                     insert(playlistEntity)
                 }
@@ -88,7 +95,7 @@ fun CreatePlaylistDialog(
         extraContent = {
             if (allowSyncing) {
                 Row(
-                    modifier = Modifier.padding(vertical = 16.dp, horizontal = 40.dp)
+                    modifier = Modifier.padding(vertical = 16.dp, horizontal = 40.dp),
                 ) {
                     Column {
                         Text(
@@ -98,37 +105,41 @@ fun CreatePlaylistDialog(
                         Text(
                             text = stringResource(R.string.allows_for_sync_witch_youtube),
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.fillMaxWidth(0.7f)
+                            modifier = Modifier.fillMaxWidth(0.7f),
                         )
                     }
                     Row(
                         modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.End
+                        horizontalArrangement = Arrangement.End,
                     ) {
                         Switch(
                             checked = syncedPlaylist,
                             onCheckedChange = {
-                                val isYtmSyncEnabled = context.isSyncEnabled()
-                                if (!isSignedIn && !syncedPlaylist) {
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.not_logged_in_youtube),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                } else if (!isYtmSyncEnabled) {
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.sync_disabled),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                } else {
-                                    syncedPlaylist = !syncedPlaylist
+                                coroutineScope.launch {
+                                    val isYtmSyncEnabled = withContext(Dispatchers.IO) { context.isSyncEnabled() }
+                                    if (!isSignedIn && !syncedPlaylist) {
+                                        Toast
+                                            .makeText(
+                                                context,
+                                                notLoggedInYoutubeStr,
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                    } else if (!isYtmSyncEnabled) {
+                                        Toast
+                                            .makeText(
+                                                context,
+                                                syncDisabledStr,
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                    } else {
+                                        syncedPlaylist = !syncedPlaylist
+                                    }
                                 }
-                            }
+                            },
                         )
                     }
                 }
             }
-        }
+        },
     )
 }

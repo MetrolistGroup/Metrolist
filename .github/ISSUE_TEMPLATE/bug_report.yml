@@ -1,14 +1,14 @@
 name: Bug report
 description: Create a bug report to help us improve
-labels: [ bug ]
+labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        ## ⚠️ IMPORTANT WARNING
-        
+        ## IMPORTANT WARNING
+
         **Duplicate or incomplete issues will be closed immediately without any response from developers.**
-        
+
         - Check existing issues before opening a new one
         - All required checkboxes below must be checked
         - Duplicate issues will be closed instantly with no response
@@ -16,19 +16,21 @@ body:
   - type: checkboxes
     id: checklist
     attributes:
-      label: "⚠️ Checklist - Required"
+      label: "Checklist - Required"
       description: |
         **READ CAREFULLY:** You must complete these checks before submitting. Failing to do so will result in your issue being closed immediately without any response from developers.
-        
+
         **Duplicate issues = Instant closure with no response**
       options:
-        - label: " I am able to reproduce the bug with the [latest debug version](https://github.com/MetrolistGroup/Metrolist/actions)."
+        - label: " I am able to reproduce the bug with the [latest debug version](https://github.com/MetrolistGroup/Metrolist/actions/workflows/build.yml?query=branch%3Amain)."
           required: true
         - label: " I've checked that there is NO open or closed issue about this bug. (Duplicate issues will be closed immediately without response)"
           required: true
-        - label: " This issue contains only ONE bug."
+        - label: " This issue contains only ONE bug. PLEASE check pinned issues before opening a new one."
           required: true
         - label: " The title of this issue accurately describes the bug."
+          required: true
+        - label: " The entire issue report is written/translated in English."
           required: true
 
   - type: markdown
@@ -80,12 +82,39 @@ body:
 
         You can upload them directly in the text box.
 
+  - type: markdown
+    attributes:
+      value: |
+        ## How to create a logcat recording
+
+        ### Firstly, download and install these apps
+        - [F0x1d/LogFox](https://github.com/F0x1d/LogFox/releases/download/v2.1.9-78/LogFox-2.1.9-release.apk)
+        - [thedjchi/Shizuku](https://github.com/thedjchi/Shizuku/releases/download/v13.6.0.r1318-thedjchi/shizuku-v13.6.0.r1318-thedjchi.apk)
+
+        ### Then follow these instructions
+        1. Open **Shizuku**, and click on the "View command" button
+        2. Copy the command and run it on your computer (see ADB setup below if needed)
+        3. Once Shizuku is running, open **LogFox** and start a recording
+        4. Open the app and reproduce the bug you're experiencing
+        5. When finished, press **Export** in LogFox and attach the file to your comment
+        6. Stop the process by pressing **Exit** in the LogFox notification
+        7. Stop Shizuku (unless you're using it for other apps)
+
+        ### Or the video guide
+        https://github.com/user-attachments/assets/30659a03-39d5-4400-b681-4238c608aebd
+
+        > [!IMPORTANT]
+        > **If you're reporting an immediate crash** issue, you should allow LogFox notification permissions on launch. Then open the app and look for a crash report notification from LogFox. 
+
+        > [!TIP]
+        > If you export the recording as a zip file, upload it to https://litterbox.catbox.moe (set expiration to 3 days).
+
   - type: textarea
     id: logs
     attributes:
       label: Logs
       description: |
-        Please use `adb logcat` or other ways to provide logs. This field is strongly recommended to be filled. Without this information, it's likely that the developer is unable to take any meaningful action or provide further assistance.
+        Please read the instructions above on how to create a logcat recording. Logs are crucial for us to understand and fix the bug. Issues without logs might be closed immediately.
     validations:
       required: true
 
@@ -96,7 +125,7 @@ body:
       description: |
         You can find your Metrolist version in **Settings**.
       placeholder: |
-        Example: "1.5.0"
+        Example: "13.1.1"
     validations:
       required: true
 
@@ -105,7 +134,7 @@ body:
     attributes:
       label: Android version
       description: |
-        You can find this somewhere in your Android settings.
+        You can find this in Android Settings > About Phone.
       placeholder: |
         Example: "Android 12"
     validations:

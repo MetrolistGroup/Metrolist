@@ -9,6 +9,8 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.PlaylistSongSortDescendingKey
 import com.metrolist.music.constants.PlaylistSongSortType
@@ -20,6 +22,8 @@ import com.metrolist.music.extensions.toEnum
 import com.metrolist.music.utils.dataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -28,6 +32,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.Collator
 import java.util.Locale
 import javax.inject.Inject
@@ -45,6 +50,9 @@ constructor(
         database
             .playlist(playlistId)
             .stateIn(viewModelScope, SharingStarted.Lazily, null)
+
+    private val _onlinePlaylist = MutableStateFlow<PlaylistItem?>(null)
+    val onlinePlaylist: StateFlow<PlaylistItem?> = _onlinePlaylist
     val playlistSongs: StateFlow<List<PlaylistSong>> =
         combine(
             database.playlistSongs(playlistId),
@@ -99,6 +107,18 @@ constructor(
                         update(playlistSong.map.copy(position = index))
                     }
                 }
+            }
+        }
+
+        viewModelScope.launch {
+            val localPlaylist = playlist.first { it != null }
+            val browseId = localPlaylist?.playlist?.browseId
+            if (browseId != null) {
+                val page = withContext(Dispatchers.IO) {
+                    YouTube.playlist(browseId).getOrNull()
+                }
+                val online = page?.playlist
+                _onlinePlaylist.value = online
             }
         }
     }

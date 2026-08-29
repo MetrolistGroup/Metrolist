@@ -7,7 +7,6 @@ package com.metrolist.music.ui.menu
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.widget.Toast
 import android.content.res.Configuration
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -34,7 +33,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,11 +55,12 @@ import androidx.core.net.toUri
 import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
-import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.metrolist.innertube.YouTube
+import com.metrolist.music.LocalNavController
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.music.LocalDatabase
+import com.metrolist.music.LocalArtistNameAliases
 import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
@@ -84,6 +84,7 @@ import com.metrolist.music.ui.component.NewAction
 import com.metrolist.music.ui.component.NewActionGrid
 import com.metrolist.music.ui.utils.ShowMediaInfo
 import com.metrolist.music.ui.utils.resize
+import com.metrolist.music.utils.ArtistNameAliases
 import com.metrolist.music.utils.joinByBullet
 import com.metrolist.music.utils.makeTimeString
 import kotlinx.coroutines.Dispatchers
@@ -97,23 +98,27 @@ import java.time.LocalDateTime
 @Composable
 fun YouTubeSongMenu(
     song: SongItem,
-    navController: NavController,
     onDismiss: () -> Unit,
     onHistoryRemoved: () -> Unit = {}
 ) {
+    val navController = LocalNavController.current
     val context = LocalContext.current
     val database = LocalDatabase.current
     val playerConnection = LocalPlayerConnection.current ?: return
-    val librarySong by database.song(song.id).collectAsState(initial = null)
-    val download by LocalDownloadUtil.current.getDownload(song.id).collectAsState(initial = null)
+    val librarySong by database.song(song.id).collectAsStateWithLifecycle(initialValue = null)
+    val download by LocalDownloadUtil.current.getDownload(song.id).collectAsStateWithLifecycle(initialValue = null)
     val coroutineScope = rememberCoroutineScope()
     val syncUtils = LocalSyncUtils.current
     val listenTogetherManager = LocalListenTogetherManager.current
-    val isPinned by database.speedDialDao.isPinned(song.id).collectAsState(initial = false)
-    val artists = remember {
+    val isPinned by database.speedDialDao.isPinned(song.id).collectAsStateWithLifecycle(initialValue = false)
+    val artistNameAliases = LocalArtistNameAliases.current
+    val artists = remember(song.artists, artistNameAliases) {
         song.artists.mapNotNull {
             it.id?.let { artistId ->
-                MediaMetadata.Artist(id = artistId, name = it.name)
+                MediaMetadata.Artist(
+                    id = artistId,
+                    name = ArtistNameAliases.resolve(artistNameAliases, artistId, it.name),
+                )
             }
         }
     }
@@ -122,20 +127,21 @@ fun YouTubeSongMenu(
         mutableStateOf(false)  
     }  
 
-    AddToPlaylistDialog(  
-        isVisible = showChoosePlaylistDialog,  
-        onGetSong = { playlist ->  
-            database.transaction {  
-                insert(song.toMediaMetadata())  
-            }  
-            coroutineScope.launch(Dispatchers.IO) {  
-                playlist.playlist.browseId?.let { browseId ->  
-                    YouTube.addToPlaylist(browseId, song.id)  
-                }  
-            }  
-            listOf(song.id)  
-        },  
-        onDismiss = { showChoosePlaylistDialog = false }  
+    AddToPlaylistDialog(
+        isVisible = showChoosePlaylistDialog,
+        onGetSong = { playlist ->
+            database.withTransaction {
+                insert(song.toMediaMetadata())
+            }
+            coroutineScope.launch(Dispatchers.IO) {
+                playlist.playlist.browseId?.let { browseId ->
+                    YouTube.addToPlaylist(browseId, song.id)
+                }
+            }
+            listOf(song.id)
+        },
+        onGetSongIds = { listOf(song.id) },
+        onDismiss = { showChoosePlaylistDialog = false }
     )  
 
     var showSelectArtistDialog by rememberSaveable {  
@@ -186,7 +192,7 @@ fun YouTubeSongMenu(
     }  
 
     ListItem(  
-        headlineContent = {
+        content = {
             Text(
                 text = song.title,
                 modifier = Modifier.basicMarquee(),
@@ -197,7 +203,9 @@ fun YouTubeSongMenu(
         supportingContent = {  
             Text(  
                 text = joinByBullet(
-                    song.artists.joinToString { it.name },
+                    song.artists.joinToString {
+                        ArtistNameAliases.resolve(artistNameAliases, it.id, it.name)
+                    },
                     song.duration?.let { makeTimeString(it * 1000L) },
                 )
             )  
@@ -210,7 +218,7 @@ fun YouTubeSongMenu(
                     .clip(RoundedCornerShape(ThumbnailCornerRadius))
             ) {
                 AsyncImage(
-                    model = song.thumbnail,
+                    model = song.thumbnail.resize(200, 200),
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -228,36 +236,21 @@ fun YouTubeSongMenu(
                         // Episode: toggle save for later
                         val currentLibrarySong = librarySong
                         val isCurrentlySaved = currentLibrarySong?.song?.inLibrary != null
+                        val shouldBeSaved = !isCurrentlySaved
+
+                        // Update local database first (optimistic update)
                         database.query {
                             if (currentLibrarySong != null) {
-                                update(currentLibrarySong.song.copy(inLibrary = if (isCurrentlySaved) null else LocalDateTime.now()))
+                                update(currentLibrarySong.song.copy(inLibrary = if (shouldBeSaved) LocalDateTime.now() else null))
                             } else {
                                 insert(song.toMediaMetadata().toSongEntity().copy(inLibrary = LocalDateTime.now(), isEpisode = true))
                             }
                         }
+
+                        // Sync with YouTube (handles login check internally)
                         coroutineScope.launch(Dispatchers.IO) {
-                            if (isCurrentlySaved) {
-                                val setVideoId = song.setVideoId ?: database.getSetVideoId(song.id)?.setVideoId
-                                if (setVideoId != null) {
-                                    YouTube.removeEpisodeFromSavedEpisodes(song.id, setVideoId).onSuccess {
-                                        Timber.d("[EPISODE_SAVE] Removed episode from Episodes for Later: ${song.id}")
-                                    }.onFailure { e ->
-                                        Timber.e(e, "[EPISODE_SAVE] Failed to remove episode: ${song.id}")
-                                        withContext(Dispatchers.Main) {
-                                            Toast.makeText(context, R.string.error_episode_remove, Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
-                            } else {
-                                YouTube.addEpisodeToSavedEpisodes(song.id).onSuccess {
-                                    Timber.d("[EPISODE_SAVE] Saved episode to Episodes for Later: ${song.id}")
-                                }.onFailure { e ->
-                                    Timber.e(e, "[EPISODE_SAVE] Failed to save episode: ${song.id}")
-                                    withContext(Dispatchers.Main) {
-                                        Toast.makeText(context, R.string.error_episode_save, Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            }
+                            val setVideoId = if (isCurrentlySaved) song.setVideoId ?: database.getSetVideoId(song.id)?.setVideoId else null
+                            syncUtils.saveEpisode(song.id, shouldBeSaved, setVideoId)
                         }
                     } else {
                         // Regular song: toggle like
@@ -446,23 +439,12 @@ fun YouTubeSongMenu(
                                         )
                                     },
                                     onClick = {
-                                        coroutineScope.launch(Dispatchers.IO) {
-                                            Timber.d("[EPISODE_SAVE] Removing episode ${song.id} from Episodes for Later")
-                                            // Optimistic UI update - remove from library immediately
-                                            database.query {
-                                                librarySong?.song?.let { update(it.copy(inLibrary = null)) }
-                                            }
-                                            YouTube.removeEpisodeFromSavedEpisodes(song.id, song.setVideoId!!)
-                                                .onSuccess {
-                                                    Timber.d("[EPISODE_SAVE] Successfully removed from Episodes for Later")
-                                                }
-                                                .onFailure { e ->
-                                                    Timber.e(e, "[EPISODE_SAVE] Failed to remove from Episodes for Later")
-                                                    kotlinx.coroutines.withContext(Dispatchers.Main) {
-                                                        android.widget.Toast.makeText(context, R.string.error_episode_remove, android.widget.Toast.LENGTH_SHORT).show()
-                                                    }
-                                                }
+                                        // Update local database first (optimistic update)
+                                        database.query {
+                                            librarySong?.song?.let { update(it.copy(inLibrary = null)) }
                                         }
+                                        // Sync with YouTube (handles login check internally)
+                                        syncUtils.saveEpisode(song.id, false, song.setVideoId)
                                         onDismiss()
                                     }
                                 )
@@ -480,27 +462,16 @@ fun YouTubeSongMenu(
                                         )
                                     },
                                     onClick = {
-                                        coroutineScope.launch(Dispatchers.IO) {
-                                            Timber.d("[EPISODE_SAVE] Saving episode ${song.id} to Episodes for Later")
-                                            // Optimistic UI update - add to library immediately
-                                            database.query {
-                                                if (librarySong != null) {
-                                                    update(librarySong!!.song.copy(inLibrary = java.time.LocalDateTime.now()))
-                                                } else {
-                                                    insert(song.toMediaMetadata().toSongEntity().copy(inLibrary = java.time.LocalDateTime.now(), isEpisode = true))
-                                                }
+                                        // Update local database first (optimistic update)
+                                        database.query {
+                                            if (librarySong != null) {
+                                                update(librarySong!!.song.copy(inLibrary = java.time.LocalDateTime.now()))
+                                            } else {
+                                                insert(song.toMediaMetadata().toSongEntity().copy(inLibrary = java.time.LocalDateTime.now(), isEpisode = true))
                                             }
-                                            YouTube.addEpisodeToSavedEpisodes(song.id)
-                                                .onSuccess {
-                                                    Timber.d("[EPISODE_SAVE] Successfully saved to Episodes for Later")
-                                                }
-                                                .onFailure { e ->
-                                                    Timber.e(e, "[EPISODE_SAVE] Failed to save to Episodes for Later")
-                                                    kotlinx.coroutines.withContext(Dispatchers.Main) {
-                                                        android.widget.Toast.makeText(context, R.string.error_episode_save, android.widget.Toast.LENGTH_SHORT).show()
-                                                    }
-                                                }
                                         }
+                                        // Sync with YouTube (handles login check internally)
+                                        syncUtils.saveEpisode(song.id, true, null)
                                         onDismiss()
                                     }
                                 )
@@ -696,7 +667,13 @@ fun YouTubeSongMenu(
                         add(
                             Material3MenuItemData(
                                 title = { Text(text = stringResource(R.string.view_artist)) },
-                                description = { Text(text = song.artists.joinToString { it.name }) },
+                                description = {
+                                    Text(
+                                        text = song.artists.joinToString {
+                                            ArtistNameAliases.resolve(artistNameAliases, it.id, it.name)
+                                        },
+                                    )
+                                },
                                 icon = {
                                     Icon(
                                         painter = painterResource(R.drawable.artist),

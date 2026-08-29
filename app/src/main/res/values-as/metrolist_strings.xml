@@ -1,20 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="explore">অনুসন্ধান কৰক</string>
     <string name="local_history">স্থানীয়</string>
     <string name="remote_history">দূৰৱৰ্তী</string>
     <string name="charts">চাৰ্ট</string>
     <string name="back_button_desc">পিছলৈ</string>
-    <string name="no_title">কোনো টাইটেল নাই</string>
-    <string name="unknown_artist">অচিনাকি শিল্পী</string>
-    <string name="unknown_item_type">অজ্ঞাত বস্তুৰ ধৰণ</string>
-    <string name="loading_charts">লোডিং চাৰ্ট…</string>
-    <string name="retry_button">পুনৰ চেষ্টা কৰক</string>
     <string name="album_cover_desc">এলবামৰ কভাৰ</string>
     <string name="top_music_videos">শীৰ্ষ মিউজিক ভিডিঅ\'</string>
     <string name="trending">ট্ৰেণ্ডিং</string>
-    <string name="top_result">শীৰ্ষ ফলাফল</string>
-    <string name="other_results">অন্যান্য</string>
     <string name="weeks">সপ্তাহ</string>
     <string name="months">মাহ</string>
     <string name="years">বছৰ</string>
@@ -27,7 +19,6 @@
     <string name="filter_uploaded">আপলোড কৰা হৈছে</string>
     <string name="sync_playlist">প্লেলিষ্ট ছিঙ্ক কৰক</string>
     <string name="sync_disabled">ছিঙ্ক নিষ্ক্ৰিয় কৰা হৈছে</string>
-    <string name="elements_selected">%1$d উপাদানসমূহ নিৰ্বাচিত কৰা হৈছে</string>
     <string name="allows_for_sync_witch_youtube">বি:দ্ৰ: ইয়াৰ দ্বাৰা YouTube Music ৰ সৈতে ছিংকিং কৰিব পৰা যায়। এইটো পিছত সলনি হ\'ব নোৱাৰে।</string>
     <string name="generating_image">ছবি সৃষ্টি কৰা</string>
     <string name="please_wait">অনুগ্ৰহ কৰি অপেক্ষা কৰক</string>
@@ -38,14 +29,20 @@
     <string name="max_selection_limit">সৰ্বোচ্চ নিৰ্বাচন সীমা</string>
     <string name="share_selected">শ্বেয়াৰ নিৰ্বাচিত কৰা হৈছে</string>
     <string name="customize_colors">ৰং কাষ্টমাইজ কৰক</string>
-    <string name="more_options">অধিক বিকল্প</string>
     <string name="text_color">লিখনীৰ ৰং</string>
     <string name="secondary_text_color">দ্বিতীয় টেষ্টৰ ৰং</string>
     <string name="background_color">বেকগ্ৰাউণ্ড ৰং</string>
-    <string name="added_to_play_next">"পৰৱৰ্তী  গান যোগ কৰা হৈছে"</string>
-    <string name="added_to_queue">শাৰীত যোগ কৰা হৈছে</string>
     <string name="remove_from_cache">কেচৰ পৰা আঁতৰাওক</string>
     <string name="about_artist">বিষয়</string>
     <string name="show_more">অধিক দেখুৱাওক</string>
     <string name="show_less">কম দেখুৱাওক</string>
+    <string name="weekly_most_playlist_name">সাপ্তাহিক সৰ্বাধিক</string>
+    <string name="monthly_most_playlist_name">মাহেকীয়া সৰ্বাধিক</string>
+    <string name="enable">সক্ষম কৰা</string>
+    <string name="artist_page_settings">শিল্পী পৃষ্ঠা</string>
+    <string name="show_artist_description">শিল্পীৰ বিৱৰণ দেখুৱাওক</string>
+    <string name="show_artist_subscriber_count">গ্ৰাহকৰ সংখ্যা দেখুৱাওক</string>
+    <string name="show_artist_monthly_listeners">মাহেকীয়া শ্ৰোতাক দেখুৱাওক</string>
+    <string name="download_playlist_desc">অফলাইন প্লেবেকৰ বাবে সকলো গীত ডাউনলোড কৰক</string>
+    <string name="remove_download_playlist_desc">Remove all downloaded songs from this playlist</string>
 </resources>

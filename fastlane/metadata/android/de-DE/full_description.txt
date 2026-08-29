@@ -9,7 +9,7 @@ Funktionen:
 - Songs für die Offline-Wiedergabe herunterladen und cachen
 - Suche nach Songs, Alben, Künstlern, Videos und Playlists
 - Live-Songtexte
-- YouTube Music Konto Anmeldung unterstützt
+- unterstützt YouTube Music-Kontoanmeldung
 - Synchronisierung von Songs, Künstlern, Alben und Playlists zwischen Gerät und Konto
 - Stille überspringen
 - Playlists importieren

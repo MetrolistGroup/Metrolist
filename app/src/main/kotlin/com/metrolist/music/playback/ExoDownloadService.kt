@@ -50,18 +50,22 @@ class ExoDownloadService : DownloadService(
     override fun getForegroundNotification(
         downloads: MutableList<Download>,
         notMetRequirements: Int
-    ): Notification =
-        Notification.Builder.recoverBuilder(
-            this, downloadUtil.downloadNotificationHelper.buildProgressNotification(
+    ): Notification {
+        val progressNotification =
+            downloadUtil.downloadNotificationHelper.buildProgressNotification(
                 this,
                 R.drawable.download,
                 null,
-                if (downloads.size == 1) Util.fromUtf8Bytes(downloads[0].request.data)
-                else resources.getQuantityString(R.plurals.n_song, downloads.size, downloads.size),
+                if (downloads.size == 1) {
+                    Util.fromUtf8Bytes(downloads[0].request.data)
+                } else {
+                    resources.getQuantityString(R.plurals.n_song, downloads.size, downloads.size)
+                },
                 downloads,
                 notMetRequirements
             )
-        ).addAction(
+
+        val cancelAction =
             Notification.Action.Builder(
                 Icon.createWithResource(this, R.drawable.close),
                 getString(android.R.string.cancel),
@@ -74,7 +78,11 @@ class ExoDownloadService : DownloadService(
                     PendingIntent.FLAG_IMMUTABLE
                 )
             ).build()
-        ).build()
+
+        return Notification.Builder.recoverBuilder(this, progressNotification)
+            .setActions(cancelAction)
+            .build()
+    }
 
 
     /**

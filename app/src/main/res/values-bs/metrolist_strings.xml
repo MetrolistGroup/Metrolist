@@ -1,14 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="lyrics_auto_scroll">Automatsko pomjeranje stihova</string>
-    <string name="google">Google</string>
-    <string name="discord">Discord</string>
     <string name="show_cached_playlist">Prikaži \"Keširanu\" plejlistu</string>
-    <string name="explore">Istraži</string>
     <string name="remote_history">Udaljen</string>
-    <string name="no_title">Nema naziv</string>
-    <string name="unknown_artist">Nepoznati umjetnik</string>
-    <string name="retry_button">Pokužaj ponovo</string>
     <string name="back_button_desc">Nazad</string>
     <string name="trending">U trendu</string>
     <string name="weeks">Sedmice</string>
@@ -18,14 +12,7 @@
     <string name="sync_playlist">Sinhronizovana plejlista</string>
     <string name="please_wait">Molimo vas sačekajte</string>
     <string name="select">Izaberi sve</string>
-    <plurals name="n_element">
-        <item quantity="one">%d element</item>
-        <item quantity="few">%d elementa</item>
-        <item quantity="other">%d elementi</item>
-    </plurals>
     <string name="similar_content">#Sličan #sadržaj</string>
-    <string name="login_settings">Login podešavanja</string>
-    <string name="general_settings">Opšta podešavanja</string>
     <plurals name="n_time">
         <item quantity="one">%d put</item>
         <item quantity="few">%d puta</item>
@@ -37,7 +24,6 @@
     <string name="player_buttons_style">Boje dugmadi igrača</string>
     <string name="player_background_style">#Igrač #pozadina #stil</string>
     <string name="default_style">Podrazumevani stil</string>
-    <string name="secondary_color_style">Sekundarno</string>
     <string name="enable_swipe_thumbnail">Omogući promjenu pjesme prevlačenjem</string>
     <string name="swipe_song_to_add">Prevucite pjesmu ulijevo da biste je dodali u red čekanja ili udesno da biste je pustili sljedeću</string>
     <string name="lyrics_click_change">Promijenite stihove klikom</string>
@@ -52,18 +38,12 @@
     <string name="advanced_login">Napredni login(token)</string>
     <string name="token_hidden">Pritisni da pokažeš token</string>
     <string name="token_shown">Pritisni opet da kopiraš ili urediš</string>
-    <string name="ytm_sync">Automatska sinhronizacija s vašim YouTube Music nalogom</string>
     <string name="general">Generalno</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Promijenite zadani bibliotečki čip</string>
     <string name="set_quick_picks">Postavite brze odabire</string>
     <string name="last_song_listened">Bazirano na zadnju pjesmu koju ste slušali</string>
     <string name="app_language">Jezik aplikacije</string>
-    <string name="configure_app_language">Konfigurirajte jezike aplikacije</string>
-    <string name="open_supported_links">Otvori podržanu vezu prema zadanim postavkama</string>
-    <string name="configure_supported_links">Konfigurirajte podržane veze</string>
-    <string name="set_first_lyrics_provider">Preferirani provajder stihova</string>
-    <string name="audio_quality_max">Maks(beta)</string>
     <string name="enable_similar_content">Omogućite sličan sadržaj</string>
     <string name="similar_content_desc">Automatski dodaj još sličnih pjesama kada se dođe do kraja reda čekanja</string>
     <string name="release_notes">Bilješke o izdanju</string>
@@ -75,7 +55,6 @@
     <string name="auto_download_on_like_desc">Automatski preuzmite pjesme kada vam se sviđaju</string>
     <string name="clear_song_cache_dialog">Jeste li sigurni da želite obrisati sve keširane pjesme?</string>
     <string name="clear_downloads_dialog">Jeste li sigurni da želite obrisati sva preuzimanja?</string>
-    <string name="pause_remote_listen_history">Pauziraj dijeljenje istorije slušanja sa YouTube Music</string>
     <string name="all_time">Sve vrijeme</string>
     <string name="past_24_hours">Zadnjih 24 sata</string>
     <string name="past_week">Prošle sedmice</string>
@@ -83,20 +62,15 @@
     <string name="top_length">Dužina moje top liste</string>
     <string name="information">Informacije</string>
     <string name="description">Opis</string>
-    <string name="numbers">Brojevi</string>
-    <string name="subscribers">Pratitelja</string>
     <string name="views">Pregleda</string>
     <string name="likes">Lajkova</string>
     <string name="charts">Grafikoni</string>
-    <string name="unknown_item_type">Nepoznata vrsta stavke</string>
-    <string name="loading_charts">Učitavanje grafikona...</string>
     <string name="album_cover_desc">Naslovnica albuma</string>
     <string name="top_music_videos">Najbolji muzički spotovi</string>
     <string name="liked">Lajkovano</string>
     <string name="my_top">Moj top</string>
     <string name="cached_playlist">Keširano</string>
     <string name="sync_disabled">Sinhronizacoja onemogućena</string>
-    <string name="elements_selected">Odabrano je %1$d elemenata</string>
     <string name="allows_for_sync_witch_youtube">Napomena: Ovo omogućava sinhronizaciju s YouTube Music. Ovo se NE može kasnije promijeniti.</string>
     <string name="generating_image">Generisanje slike</string>
     <string name="cancel">Otkaži</string>
@@ -106,12 +80,9 @@
     <string name="max_selection_limit">Maksimalna granica izbora</string>
     <string name="share_selected">Dijeljenje odabrano</string>
     <string name="customize_colors">Prilagodite boje</string>
-    <string name="more_options">Više opcija</string>
     <string name="text_color">Boja teksta</string>
     <string name="secondary_text_color">Sekundarna boja teksta</string>
     <string name="background_color">Boja pozadine</string>
-    <string name="added_to_play_next">Dodano za sljedeću reprodukciju</string>
-    <string name="added_to_queue">Dodano u red čekanja</string>
     <string name="remove_from_cache">Ukloni iz keša</string>
     <string name="copy_link">Kopiraj vezu</string>
     <string name="like_all">Lajkuj sve</string>
@@ -120,16 +91,11 @@
     <string name="link_copied">Link je kopiran u međuspremnik</string>
     <string name="lyrics">Stihovi</string>
     <string name="already_in_playlist">Već je u plejlisti:</string>
-    <string name="min_playback_duration_description">Minimalno vrijeme koje pjesma mora biti reproducirana prije nego što se smatra \"reproduciranom\"</string>
-    <string name="minimum_playback_duration">Minimalno trajanje reprodukcije</string>
     <string name="auto_download_on_like">Automatsko preuzimanje na lajk</string>
-    <string name="intent_app_language_not_found">Nisam pronašao postavke jezika aplikacije, molimo vas da ih konfigurirate ručno</string>
     <string name="past_year">Prošle godine</string>
-    <string name="min_playback_duration_title">Minimalno trajanje reprodukcije</string>
     <string name="playlist_add_local_to_synced_note">Napomena: Dodavanje lokalnih pjesama na sinhronizovane/udaljene plejliste nije podržano. Bilo koja druga kombinacija je važeća</string>
     <string name="percentage_format">%d%%</string>
     <string name="not_logged_in_youtube">Niste prijavljeni na YouTube</string>
-    <string name="intent_supported_links_not_found">Nisam pronašao podržane postavke linkova, molimo vas da ih konfigurirate ručno</string>
     <string name="history_duration">Trajanje istorije</string>
     <plurals name="seconds">
         <item quantity="one">%dsekund</item>

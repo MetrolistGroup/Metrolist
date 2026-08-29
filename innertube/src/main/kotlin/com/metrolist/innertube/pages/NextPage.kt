@@ -28,7 +28,9 @@ object NextPage {
         val libraryTokens = PageHelper.extractLibraryTokensFromMenuItems(renderer.menu?.menuRenderer?.items)
 
         return SongItem(
-            id = renderer.videoId ?: return null,
+            id = renderer.videoId
+                ?: renderer.navigationEndpoint.watchEndpoint?.videoId
+                ?: return null,
             title =
                 renderer.title
                     ?.runs

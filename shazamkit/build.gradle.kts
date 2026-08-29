@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.metrolist.shazamkit"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26
@@ -29,6 +29,7 @@ dependencies {
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.json)
     implementation(libs.ktor.client.encoding)
+    implementation(libs.timber)
     testImplementation(libs.junit)
 
     coreLibraryDesugaring(libs.desugaring)

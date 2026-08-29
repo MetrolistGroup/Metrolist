@@ -1,13 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="explore">ஆராய்</string>
     <string name="charts">பட்டியல்கள்</string>
     <string name="back_button_desc">பின்செல்</string>
-    <string name="no_title">தலைப்பு இல்லை</string>
-    <string name="unknown_artist">தெரியாத கலைஞர்</string>
-    <string name="unknown_item_type">தெரியாத பாடல் வகை</string>
-    <string name="loading_charts">பட்டியல்கள் பெறுகிறது...</string>
-    <string name="retry_button">மீண்டும் முயற்சி செய்</string>
     <string name="album_cover_desc">ஆல்பம் கவர்</string>
     <string name="top_music_videos">சிறந்த இசை வீடியோக்கள்</string>
     <string name="trending">டிரெண்டிங்</string>
@@ -23,4 +17,17 @@
     <string name="remote_history">புறம்</string>
     <string name="sync_playlist">ஒத்திசைவு பாடல்கள்</string>
     <string name="sync_disabled">ஒத்திசைவு முடக்கப்பட்டுள்ளது</string>
+    <string name="uploaded_playlist">பதிவேற்றப்பட்டது</string>
+    <string name="filter_uploaded">பதிவேற்றப்பட்டது</string>
+    <string name="allows_for_sync_witch_youtube">குறிப்பு: இது YouTube Music உடன் ஒத்திசைக்க அனுமதிக்கிறது. இதை பின்னர் மாற்ற முடியாது.</string>
+    <string name="generating_image">படத்தை உருவாக்குகிறது</string>
+    <string name="please_wait">தயவுசெய்து காத்திருக்கவும்</string>
+    <string name="cancel">ரத்துசெய்</string>
+    <string name="enable">இயக்கு</string>
+    <string name="share_lyrics">பாடல் வரிகளைப் பகிரவும்</string>
+    <string name="share_as_text">உரையாகப் பகிரவும்</string>
+    <string name="share_as_image">படமாகப் பகிரவும்</string>
+    <string name="max_selection_limit">அதிகபட்ச தேர்வு வரம்பு</string>
+    <string name="share_selected">தேர்ந்தெடுத்தவற்றைப் பகிர்</string>
+    <string name="customize_colors">வண்ணங்களைத் தனிப்பயனாக்குங்கள்</string>
 </resources>

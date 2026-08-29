@@ -333,12 +333,9 @@
     <string name="backup_create_failed">Couldn\'t create backup</string>
     <string name="restore_failed">Failed to restore backup</string>
 
-    <string name="discord_integration">Discord Integration</string>
-    <string name="discord_information">Metrolist uses the KizzyRPC library to set your Discord account\'s status. This involves using the Discord Gateway connection, which may be considered a violation of Discord\'s TOS. However, there are no known cases of user accounts being suspended for this reason. Use at your own risk.\n\Metrolist will only extract your token, and everything else is stored locally.</string>
     <string name="dismiss">Dismiss</string>
     <string name="options">Options</string>
     <string name="preview">Preview</string>
-    <string name="enable_discord_rpc">Enable Rich Presence</string>
 
     <string name="about">About</string>
     <string name="app_version">App version</string>

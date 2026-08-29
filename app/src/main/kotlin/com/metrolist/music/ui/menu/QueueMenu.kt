@@ -31,7 +31,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,8 +55,8 @@ import androidx.core.net.toUri
 import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
-import androidx.navigation.NavController
 import coil3.compose.AsyncImage
+import com.metrolist.music.LocalNavController
 import com.metrolist.innertube.YouTube
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalDownloadUtil
@@ -84,21 +84,21 @@ import kotlinx.coroutines.launch
 @Composable
 fun QueueMenu(
     mediaMetadata: MediaMetadata?,
-    navController: NavController,
     playerBottomSheetState: BottomSheetState,
     onShowDetailsDialog: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     mediaMetadata ?: return
+    val navController = LocalNavController.current
     val context = LocalContext.current
     val database = LocalDatabase.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val coroutineScope = rememberCoroutineScope()
     val syncUtils = LocalSyncUtils.current
 
-    val librarySong by database.song(mediaMetadata.id).collectAsState(initial = null)
+    val librarySong by database.song(mediaMetadata.id).collectAsStateWithLifecycle(initialValue = null)
     val download by LocalDownloadUtil.current.getDownload(mediaMetadata.id)
-        .collectAsState(initial = null)
+        .collectAsStateWithLifecycle(initialValue = null)
 
     var refetchIconDegree by remember { mutableFloatStateOf(0f) }
     val rotationAnimation by animateFloatAsState(
@@ -118,7 +118,7 @@ fun QueueMenu(
     AddToPlaylistDialog(
         isVisible = showChoosePlaylistDialog,
         onGetSong = { playlist ->
-            database.transaction {
+            database.withTransaction {
                 insert(mediaMetadata)
             }
             coroutineScope.launch(Dispatchers.IO) {
@@ -126,6 +126,7 @@ fun QueueMenu(
             }
             listOf(mediaMetadata.id)
         },
+        onGetSongIds = { listOf(mediaMetadata.id) },
         onDismiss = {
             showChoosePlaylistDialog = false
         }
@@ -283,9 +284,16 @@ fun QueueMenu(
                         text = stringResource(R.string.start_radio),
                         onClick = {
                             onDismiss()
-                            playerConnection.playQueue(
-                                YouTubeQueue.radio(mediaMetadata)
-                            )
+                            val currentMediaId = playerConnection.player.currentMediaItemIndex.let {
+                                playerConnection.player.getMediaItemAt(it).mediaId
+                            }
+                            if (mediaMetadata.id == currentMediaId) {
+                                playerConnection.startRadioSeamlessly()
+                            } else {
+                                playerConnection.playQueue(
+                                    YouTubeQueue.radio(mediaMetadata)
+                                )
+                            }
                         }
                     ),
                     NewAction(

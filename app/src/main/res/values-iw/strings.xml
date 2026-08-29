@@ -277,12 +277,10 @@
     <string name="backup_create_success">גיבוי נוצר בהצלחה</string>
     <string name="backup_create_failed">לא ניתן היה ליצור גיבוי</string>
     <string name="restore_failed">שחזור הגיבוי נכשל</string>
-    <string name="discord_integration">שילוב דיסקורד</string>
     <string name="discord_information">Metrolist משתמשת בספריית KizzyRPC כדי לקבוע את סטטוס חשבון הדיסקורד שלך. זה כרוך בשימוש בחיבור Discord Gateway, דבר שעשוי להיחשב כהפרה של תנאי השימוש של Discord. עם זאת, לא ידוע על מקרים של השעיית חשבונות משתמש מסיבה זו. השימוש על אחריותך בלבד.\n\nMetrolist יחלץ רק את הטוקן שלך, וכל השאר מאוחסן באופן מקומי.</string>
     <string name="dismiss">התעלמות</string>
     <string name="options">אפשרויות</string>
     <string name="preview">תצוגה מקדימה</string>
-    <string name="enable_discord_rpc">הפעלת נוכחות עשירה</string>
     <string name="about">אודות</string>
     <string name="app_version">גירסת אפליקציה</string>
     <string name="new_version_available">גירסה חדשה זמינה</string>

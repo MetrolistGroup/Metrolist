@@ -21,7 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -60,9 +60,9 @@ fun ArtistMenu(
     val playerConnection = LocalPlayerConnection.current ?: return
     val listenTogetherManager = LocalListenTogetherManager.current
     val isGuest = listenTogetherManager?.isInRoom == true && !listenTogetherManager.isHost
-    val artistState = database.artist(originalArtist.id).collectAsState(initial = originalArtist)
+    val artistState = database.artist(originalArtist.id).collectAsStateWithLifecycle(initialValue = originalArtist)
     val artist = artistState.value ?: originalArtist
-    val isPinned by database.speedDialDao.isPinned(artist.id).collectAsState(initial = false)
+    val isPinned by database.speedDialDao.isPinned(artist.id).collectAsStateWithLifecycle(initialValue = false)
 
     ArtistListItem(
         artist = artist,
@@ -165,7 +165,7 @@ fun ArtistMenu(
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             },
-                            text = if (isPinned) "Unpin" else "Pin",
+                            text = if (isPinned) stringResource(R.string.unpin) else stringResource(R.string.pin),
                             onClick = {
                                 coroutineScope.launch(Dispatchers.IO) {
                                     if (isPinned) {

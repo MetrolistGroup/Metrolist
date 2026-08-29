@@ -38,17 +38,27 @@ import com.metrolist.music.ui.component.Material3SettingsItem
 import com.metrolist.music.ui.component.ReleaseNotesCard
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.Updater
+import androidx.compose.runtime.remember
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     navController: NavController,
-    scrollBehavior: TopAppBarScrollBehavior,
     latestVersionName: String,
 ) {
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
     val isAndroid12OrLater = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val hasAndroidAuto = remember {
+        try {
+            context.packageManager.getPackageInfo(
+                "com.google.android.projection.gearhead", 0
+            )
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     Column(
         Modifier
@@ -75,9 +85,9 @@ fun SettingsScreen(
                 )
             )
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         // Player & Content Section (moved up and combined with content)
         Material3SettingsGroup(
             title = stringResource(R.string.settings_section_player_content),
@@ -86,6 +96,11 @@ fun SettingsScreen(
                     icon = painterResource(R.drawable.play),
                     title = { Text(stringResource(R.string.player_and_audio)) },
                     onClick = { navController.navigate("settings/player") }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.radio),
+                    title = { Text(stringResource(R.string.stream_sources)) },
+                    onClick = { navController.navigate("settings/stream_sources") }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.language),
@@ -99,8 +114,24 @@ fun SettingsScreen(
                 )
             )
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
+
+        // Android Auto Section — only shown if Android Auto is installed
+        if (hasAndroidAuto) {
+            Material3SettingsGroup(
+                title = "Android Auto",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.ic_android_auto),
+                        title = { Text(stringResource(R.string.android_auto)) },
+                        onClick = { navController.navigate("settings/android_auto") }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
         
         // Privacy & Security Section
         Material3SettingsGroup(
@@ -113,9 +144,9 @@ fun SettingsScreen(
                 )
             )
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         // Storage & Data Section
         Material3SettingsGroup(
             title = stringResource(R.string.settings_section_storage),
@@ -132,9 +163,9 @@ fun SettingsScreen(
                 )
             )
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         // System & About Section
         Material3SettingsGroup(
             title = stringResource(R.string.settings_section_system),
@@ -183,13 +214,15 @@ fun SettingsScreen(
                         )
                     )
                 }
-                add(
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.update),
-                        title = { Text(stringResource(R.string.updater)) },
-                        onClick = { navController.navigate("settings/updater") }
+                if (BuildConfig.UPDATER_AVAILABLE) {
+                    add(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.update),
+                            title = { Text(stringResource(R.string.updater)) },
+                            onClick = { navController.navigate("settings/updater") }
+                        )
                     )
-                )
+                }
                 val showChangelog = com.metrolist.music.LocalChangelogState.current
                 add(
                     Material3SettingsItem(
@@ -205,10 +238,10 @@ fun SettingsScreen(
                         onClick = { navController.navigate("settings/about") }
                     )
                 )
-                if (latestVersionName != BuildConfig.VERSION_NAME) {
+                if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.BASE_VERSION_NAME) {
                     val releaseInfo = Updater.getCachedLatestRelease()
                     val downloadUrl = releaseInfo?.let { Updater.getDownloadUrlForCurrentVariant(it) }
-                    
+
                     if (downloadUrl != null) {
                         add(
                             Material3SettingsItem(
@@ -233,12 +266,11 @@ fun SettingsScreen(
                 }
             }
         )
-        
-        if (latestVersionName != BuildConfig.VERSION_NAME) {
+    if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.BASE_VERSION_NAME) {
             Spacer(modifier = Modifier.height(16.dp))
             ReleaseNotesCard()
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 

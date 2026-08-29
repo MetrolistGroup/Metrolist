@@ -6,13 +6,39 @@
 package com.metrolist.music.db.entities
 
 import androidx.compose.runtime.Immutable
+import androidx.room.Embedded
+import androidx.room.Junction
+import androidx.room.Relation
 
 @Immutable
 data class SongWithStats(
     val id: String,
     val title: String,
-    val artistName: String?,
+    @Relation(
+        entity = ArtistEntity::class,
+        parentColumn = "id",               // Song's primary key column
+        entityColumn = "id",               // Artist's primary key column
+        // Every column but cachedPageJson: Room builds one ArtistEntity per pairing here, and the
+        // cached page would be copied into every one of them.
+        projection = [
+            "id",
+            "name",
+            "thumbnailUrl",
+            "channelId",
+            "lastUpdateTime",
+            "bookmarkedAt",
+            "isLocal",
+            "isPodcastChannel",
+        ],
+        associateBy = Junction(
+            value = SortedSongArtistMap::class,  // Junction table for the many-to-many relationship
+            parentColumn = "songId",            // Foreign key to the Song table
+            entityColumn = "artistId"           // Foreign key to the Artist table
+        )
+    )
+    val artists: List<ArtistEntity>,
     val thumbnailUrl: String,
+    val artistName: String?,
     val songCountListened: Int,
     val timeListened: Long?,
     val isVideo: Boolean = false,

@@ -1,5 +1,6 @@
 package com.metrolist.music.eq.data
 
+import timber.log.Timber
 import java.io.File
 
 /**
@@ -20,6 +21,8 @@ import java.io.File
  *   - HPQ = High Pass
  */
 object ParametricEQParser {
+
+    private const val TAG = "ParametricEQParser"
 
     /**
      * Parse a ParametricEQ file
@@ -123,8 +126,7 @@ object ParametricEQParser {
                 q = q
             )
         } catch (e: Exception) {
-            println("Warning: Failed to parse filter line: $line")
-            println("Error: ${e.message}")
+            Timber.tag(TAG).w(e, "Failed to parse filter line: %s", line)
             return null
         }
     }

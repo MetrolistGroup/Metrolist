@@ -12,10 +12,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,7 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,30 +60,29 @@ import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.ui.utils.backToMain
+import com.metrolist.music.utils.SearchRoutes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RecognitionHistoryScreen(
-    navController: NavController
-) {
+fun RecognitionHistoryScreen(navController: NavController) {
     val database = LocalDatabase.current
     val menuState = LocalMenuState.current
     val coroutineScope = rememberCoroutineScope()
-    
-    val historyItems by database.recognitionHistory().collectAsState(initial = emptyList())
+
+    val historyItems by database.recognitionHistory().collectAsStateWithLifecycle(initialValue = emptyList())
     var showClearDialog by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<RecognitionHistory?>(null) }
-    
+
     if (showClearDialog) {
         DefaultDialog(
             onDismiss = { showClearDialog = false },
             icon = {
                 Icon(
                     painter = painterResource(R.drawable.delete),
-                    contentDescription = null
+                    contentDescription = null,
                 )
             },
             title = { Text(stringResource(R.string.clear_recognition_history)) },
@@ -99,15 +98,15 @@ fun RecognitionHistoryScreen(
                             }
                         }
                         showClearDialog = false
-                    }
+                    },
                 ) {
                     Text(stringResource(R.string.clear))
                 }
-            }
+            },
         ) {
             Text(
                 text = stringResource(R.string.clear_recognition_history_confirm),
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
     }
@@ -118,7 +117,7 @@ fun RecognitionHistoryScreen(
             icon = {
                 Icon(
                     painter = painterResource(R.drawable.delete),
-                    contentDescription = null
+                    contentDescription = null,
                 )
             },
             title = { Text(stringResource(R.string.delete)) },
@@ -134,19 +133,19 @@ fun RecognitionHistoryScreen(
                             }
                         }
                         itemToDelete = null
-                    }
+                    },
                 ) {
                     Text(stringResource(R.string.delete))
                 }
-            }
+            },
         ) {
             Text(
                 text = stringResource(R.string.delete_playlist_confirm, item.title),
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
     }
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -154,11 +153,11 @@ fun RecognitionHistoryScreen(
                 navigationIcon = {
                     IconButton(
                         onClick = { navController.navigateUp() },
-                        onLongClick = { navController.backToMain() }
+                        onLongClick = { navController.backToMain() },
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.arrow_back),
-                            contentDescription = null
+                            contentDescription = null,
                         )
                     }
                 },
@@ -167,61 +166,64 @@ fun RecognitionHistoryScreen(
                         IconButton(onClick = { showClearDialog = true }) {
                             Icon(
                                 painter = painterResource(R.drawable.clear_all),
-                                contentDescription = stringResource(R.string.clear_recognition_history)
+                                contentDescription = stringResource(R.string.clear_recognition_history),
                             )
                         }
                     }
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         if (historyItems.isEmpty()) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                contentAlignment = Alignment.Center,
             ) {
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.history),
                         contentDescription = null,
                         modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "No recognition history",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = LocalPlayerAwareWindowInsets.current
-                    .only(WindowInsetsSides.Bottom)
-                    .asPaddingValues()
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                contentPadding =
+                    LocalPlayerAwareWindowInsets.current
+                        .only(WindowInsetsSides.Bottom)
+                        .asPaddingValues(),
             ) {
                 items(
                     items = historyItems,
-                    key = { it.id }
+                    key = { "recognition_${it.id}" },
                 ) { item ->
                     RecognitionHistoryItem(
                         item = item,
                         onClick = {
                             // Search for the track on YouTube Music
                             val searchQuery = "${item.title} ${item.artist}"
-                            navController.navigate("search/${java.net.URLEncoder.encode(searchQuery, "UTF-8")}")
+                            navController.navigate(SearchRoutes.resultRoute(searchQuery))
                         },
                         onDelete = {
                             itemToDelete = item
-                        }
+                        },
                     )
                 }
             }
@@ -233,69 +235,73 @@ fun RecognitionHistoryScreen(
 private fun RecognitionHistoryItem(
     item: RecognitionHistory,
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
 ) {
     val dateFormatter = remember { DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm") }
-    
+
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clickable { onClick() },
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .clickable { onClick() },
         shape = RoundedCornerShape(ThumbnailCornerRadius),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Album art
             AsyncImage(
                 model = item.coverArtUrl,
                 contentDescription = null,
-                modifier = Modifier
-                    .size(60.dp)
-                    .clip(RoundedCornerShape(ThumbnailCornerRadius)),
-                contentScale = ContentScale.Crop
+                modifier =
+                    Modifier
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(ThumbnailCornerRadius)),
+                contentScale = ContentScale.Crop,
             )
-            
+
             Spacer(modifier = Modifier.width(12.dp))
-            
+
             // Track info
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) {
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = item.artist,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = item.recognizedAt.format(dateFormatter),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 )
             }
-            
+
             // Delete action
             IconButton(onClick = onDelete) {
                 Icon(
                     painter = painterResource(R.drawable.delete),
                     contentDescription = stringResource(R.string.delete_from_history),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

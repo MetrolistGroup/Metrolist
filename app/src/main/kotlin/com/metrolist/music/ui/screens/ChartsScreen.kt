@@ -46,7 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -90,11 +90,11 @@ fun ChartsScreen(
     val menuState = LocalMenuState.current
     val haptic = LocalHapticFeedback.current
     val playerConnection = LocalPlayerConnection.current ?: return
-    val isPlaying by playerConnection.isEffectivelyPlaying.collectAsState()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val isPlaying by playerConnection.isEffectivelyPlaying.collectAsStateWithLifecycle()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
-    val chartsPage by viewModel.chartsPage.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    val chartsPage by viewModel.chartsPage.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
     val lazyListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -112,7 +112,7 @@ fun ChartsScreen(
                 navigationIcon = {
                     IconButton(
                         onClick = { navController.navigateUp() },
-                        onLongClick = { navController.backToMain() }
+                        onLongClick = { navController.backToMain() },
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.arrow_back),
@@ -121,25 +121,27 @@ fun ChartsScreen(
                     }
                 },
             )
-        }
+        },
     ) { paddingValues ->
         BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
         ) {
             if (isLoading || chartsPage == null) {
                 ShimmerHost(
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier.padding(16.dp),
                     ) {
                         TextPlaceholder(
                             height = 36.dp,
-                            modifier = Modifier
-                                .padding(12.dp)
-                                .fillMaxWidth(0.5f),
+                            modifier =
+                                Modifier
+                                    .padding(12.dp)
+                                    .fillMaxWidth(0.5f),
                         )
                         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                             val horizontalLazyGridItemWidthFactor = if (maxWidth * 0.475f >= 320.dp) 0.475f else 0.9f
@@ -148,22 +150,25 @@ fun ChartsScreen(
                             LazyHorizontalGrid(
                                 rows = GridCells.Fixed(4),
                                 contentPadding = PaddingValues(start = 4.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(ListItemHeight * 4),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(ListItemHeight * 4),
                             ) {
                                 items(4) {
                                     Row(
-                                        modifier = Modifier
-                                            .width(horizontalLazyGridItemWidth)
-                                            .padding(8.dp),
+                                        modifier =
+                                            Modifier
+                                                .width(horizontalLazyGridItemWidth)
+                                                .padding(8.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Box(
-                                            modifier = Modifier
-                                                .size(ListItemHeight - 16.dp)
-                                                .clip(RoundedCornerShape(4.dp))
-                                                .background(MaterialTheme.colorScheme.onSurface),
+                                            modifier =
+                                                Modifier
+                                                    .size(ListItemHeight - 16.dp)
+                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .background(MaterialTheme.colorScheme.onSurface),
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Column(
@@ -171,17 +176,19 @@ fun ChartsScreen(
                                             verticalArrangement = Arrangement.Center,
                                         ) {
                                             Box(
-                                                modifier = Modifier
-                                                    .height(16.dp)
-                                                    .width(120.dp)
-                                                    .background(MaterialTheme.colorScheme.onSurface),
+                                                modifier =
+                                                    Modifier
+                                                        .height(16.dp)
+                                                        .width(120.dp)
+                                                        .background(MaterialTheme.colorScheme.onSurface),
                                             )
                                             Spacer(modifier = Modifier.height(8.dp))
                                             Box(
-                                                modifier = Modifier
-                                                    .height(12.dp)
-                                                    .width(80.dp)
-                                                    .background(MaterialTheme.colorScheme.onSurface),
+                                                modifier =
+                                                    Modifier
+                                                        .height(12.dp)
+                                                        .width(80.dp)
+                                                        .background(MaterialTheme.colorScheme.onSurface),
                                             )
                                         }
                                     }
@@ -190,9 +197,10 @@ fun ChartsScreen(
                         }
                         TextPlaceholder(
                             height = 36.dp,
-                            modifier = Modifier
-                                .padding(vertical = 12.dp, horizontal = 12.dp)
-                                .width(250.dp),
+                            modifier =
+                                Modifier
+                                    .padding(vertical = 12.dp, horizontal = 12.dp)
+                                    .width(250.dp),
                         )
                         Row {
                             repeat(2) {
@@ -204,17 +212,19 @@ fun ChartsScreen(
             } else {
                 LazyColumn(
                     state = lazyListState,
-                    contentPadding = LocalPlayerAwareWindowInsets.current
-                        .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
-                        .asPaddingValues(),
+                    contentPadding =
+                        LocalPlayerAwareWindowInsets.current
+                            .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
+                            .asPaddingValues(),
                 ) {
                     chartsPage?.sections?.filter { it.title != "Top music videos" }?.forEach { section ->
                         item(key = "section_title_${section.title}") {
                             NavigationTitle(
-                                title = when (section.title) {
-                                    "Trending" -> stringResource(R.string.trending)
+                                title =
+                                    when (section.title) {
+                                        "Trending" -> stringResource(R.string.trending)
                                         else -> section.title.ifEmpty { stringResource(R.string.charts) }
-                                },
+                                    },
                                 modifier = Modifier.animateItem(),
                             )
                         }
@@ -224,30 +234,33 @@ fun ChartsScreen(
                                 val horizontalLazyGridItemWidth = maxWidth * horizontalLazyGridItemWidthFactor
 
                                 val lazyGridState = rememberLazyGridState()
-                                val snapLayoutInfoProvider = remember(lazyGridState) {
-                                    SnapLayoutInfoProvider(
-                                        lazyGridState = lazyGridState,
-                                        positionInLayout = { layoutSize, itemSize ->
-                                            (layoutSize * horizontalLazyGridItemWidthFactor / 2f - itemSize / 2f)
-                                        },
-                                    )
-                                }
+                                val snapLayoutInfoProvider =
+                                    remember(lazyGridState) {
+                                        SnapLayoutInfoProvider(
+                                            lazyGridState = lazyGridState,
+                                            positionInLayout = { layoutSize, itemSize ->
+                                                (layoutSize * horizontalLazyGridItemWidthFactor / 2f - itemSize / 2f)
+                                            },
+                                        )
+                                    }
 
                                 LazyHorizontalGrid(
                                     state = lazyGridState,
                                     rows = GridCells.Fixed(4),
                                     flingBehavior = rememberSnapFlingBehavior(snapLayoutInfoProvider),
-                                    contentPadding = WindowInsets.systemBars
-                                        .only(WindowInsetsSides.Horizontal)
-                                        .asPaddingValues(),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(ListItemHeight * 4)
-                                        .animateItem(),
+                                    contentPadding =
+                                        WindowInsets.systemBars
+                                            .only(WindowInsetsSides.Horizontal)
+                                            .asPaddingValues(),
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .height(ListItemHeight * 4)
+                                            .animateItem(),
                                 ) {
                                     items(
                                         items = section.items.filterIsInstance<SongItem>().distinctBy { it.id },
-                                        key = { it.id },
+                                        key = { "charts_song_${it.id}" },
                                     ) { song ->
                                         YouTubeListItem(
                                             item = song,
@@ -260,7 +273,6 @@ fun ChartsScreen(
                                                         menuState.show {
                                                             YouTubeSongMenu(
                                                                 song = song,
-                                                                navController = navController,
                                                                 onDismiss = menuState::dismiss,
                                                             )
                                                         }
@@ -272,32 +284,32 @@ fun ChartsScreen(
                                                     )
                                                 }
                                             },
-                                            modifier = Modifier
-                                                .width(horizontalLazyGridItemWidth)
-                                                .combinedClickable(
-                                                    onClick = {
-                                                        if (song.id == mediaMetadata?.id) {
-                                                            playerConnection.togglePlayPause()
-                                                        } else {
-                                                            playerConnection.playQueue(
-                                                                YouTubeQueue(
-                                                                    endpoint = WatchEndpoint(videoId = song.id),
-                                                                    preloadItem = song.toMediaMetadata(),
-                                                                ),
-                                                            )
-                                                        }
-                                                    },
-                                                    onLongClick = {
-                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        menuState.show {
-                                                            YouTubeSongMenu(
-                                                                song = song,
-                                                                navController = navController,
-                                                                onDismiss = menuState::dismiss,
-                                                            )
-                                                        }
-                                                    },
-                                                ),
+                                            modifier =
+                                                Modifier
+                                                    .width(horizontalLazyGridItemWidth)
+                                                    .combinedClickable(
+                                                        onClick = {
+                                                            if (song.id == mediaMetadata?.id) {
+                                                                playerConnection.togglePlayPause()
+                                                            } else {
+                                                                playerConnection.playQueue(
+                                                                    YouTubeQueue(
+                                                                        endpoint = WatchEndpoint(videoId = song.id),
+                                                                        preloadItem = song.toMediaMetadata(),
+                                                                    ),
+                                                                )
+                                                            }
+                                                        },
+                                                        onLongClick = {
+                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                            menuState.show {
+                                                                YouTubeSongMenu(
+                                                                    song = song,
+                                                                    onDismiss = menuState::dismiss,
+                                                                )
+                                                            }
+                                                        },
+                                                    ),
                                         )
                                     }
                                 }
@@ -314,46 +326,46 @@ fun ChartsScreen(
                         }
                         item(key = "top_videos_content") {
                             LazyRow(
-                                contentPadding = WindowInsets.systemBars
-                                    .only(WindowInsetsSides.Horizontal)
-                                    .asPaddingValues(),
+                                contentPadding =
+                                    WindowInsets.systemBars
+                                        .only(WindowInsetsSides.Horizontal)
+                                        .asPaddingValues(),
                                 modifier = Modifier.animateItem(),
                             ) {
                                 items(
                                     items = topVideosSection.items.filterIsInstance<SongItem>().distinctBy { it.id },
-                                    key = { it.id },
+                                    key = { "charts_video_${it.id}" },
                                 ) { video ->
                                     YouTubeGridItem(
                                         item = video,
                                         isActive = video.id == mediaMetadata?.id,
                                         isPlaying = isPlaying,
                                         coroutineScope = coroutineScope,
-                                        modifier = Modifier
-                                            .combinedClickable(
-                                                onClick = {
-                                                    if (video.id == mediaMetadata?.id) {
-                                                        playerConnection.togglePlayPause()
-                                                    } else {
-                                                        playerConnection.playQueue(
-                                                            YouTubeQueue(
-                                                                endpoint = WatchEndpoint(videoId = video.id),
-                                                                preloadItem = video.toMediaMetadata(),
-                                                            ),
-                                                        )
-                                                    }
-                                                },
-                                                onLongClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    menuState.show {
-                                                        YouTubeSongMenu(
-                                                            song = video,
-                                                            navController = navController,
-                                                            onDismiss = menuState::dismiss,
-                                                        )
-                                                    }
-                                                },
-                                            )
-                                            .animateItem(),
+                                        modifier =
+                                            Modifier
+                                                .combinedClickable(
+                                                    onClick = {
+                                                        if (video.id == mediaMetadata?.id) {
+                                                            playerConnection.togglePlayPause()
+                                                        } else {
+                                                            playerConnection.playQueue(
+                                                                YouTubeQueue(
+                                                                    endpoint = WatchEndpoint(videoId = video.id),
+                                                                    preloadItem = video.toMediaMetadata(),
+                                                                ),
+                                                            )
+                                                        }
+                                                    },
+                                                    onLongClick = {
+                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        menuState.show {
+                                                            YouTubeSongMenu(
+                                                                song = video,
+                                                                onDismiss = menuState::dismiss,
+                                                            )
+                                                        }
+                                                    },
+                                                ).animateItem(),
                                     )
                                 }
                             }

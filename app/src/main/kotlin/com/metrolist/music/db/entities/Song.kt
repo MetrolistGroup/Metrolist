@@ -20,6 +20,18 @@ constructor(
         entity = ArtistEntity::class,
         entityColumn = "id",
         parentColumn = "id",
+        // Every column but cachedPageJson: Room builds one ArtistEntity per pairing here, and the
+        // cached page would be copied into every one of them.
+        projection = [
+            "id",
+            "name",
+            "thumbnailUrl",
+            "channelId",
+            "lastUpdateTime",
+            "bookmarkedAt",
+            "isLocal",
+            "isPodcastChannel",
+        ],
         associateBy =
             Junction(
                 value = SortedSongArtistMap::class,
@@ -28,6 +40,12 @@ constructor(
             ),
     )
     val artists: List<ArtistEntity>,
+
+    @Relation(
+        parentColumn = "id",
+        entityColumn = "songId",
+    )
+    val artistMaps: List<SongArtistMap> = emptyList(),
 
     @Relation(
         entity = AlbumEntity::class,
@@ -56,4 +74,19 @@ constructor(
         get() = song.thumbnailUrl
     val romanizeLyrics: Boolean
         get() = song.romanizeLyrics
+
+    val isDownloaded: Boolean
+        get() = song.isDownloaded
+
+    val orderedArtists: List<ArtistEntity>
+        get() {
+            if (artistMaps.isEmpty()) return artists
+
+            val artistsById = artists.associateBy { it.id }
+            val sorted = artistMaps
+                .sortedBy { it.position }
+                .mapNotNull { map -> artistsById[map.artistId] }
+
+            return sorted.ifEmpty { artists }
+        }
 }

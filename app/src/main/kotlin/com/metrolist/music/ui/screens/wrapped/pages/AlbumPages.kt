@@ -52,7 +52,6 @@ import com.metrolist.music.db.entities.Album
 import com.metrolist.music.ui.screens.wrapped.components.AnimatedBackground
 import com.metrolist.music.ui.screens.wrapped.components.ShapeType
 import com.metrolist.music.ui.theme.bbh_bartle
-import com.metrolist.music.ui.utils.resize
 import kotlinx.coroutines.delay
 
 @Composable
@@ -185,7 +184,7 @@ fun WrappedTopAlbumScreen(topAlbum: Album?, isVisible: Boolean) {
                 enter = fadeIn(animationSpec = tween(1000, delayMillis = 400)) + slideInVertically(animationSpec = tween(1000, delayMillis = 400))
             ) {
                 AsyncImage(
-                    model = topAlbum?.thumbnailUrl?.resize(512, 512),
+                    model = topAlbum?.thumbnailUrl,
                     contentDescription = stringResource(R.string.album_art_for, topAlbum?.title ?: ""),
                     modifier = Modifier
                         .size(200.dp)
@@ -280,7 +279,7 @@ fun WrappedTop5AlbumsScreen(topAlbums: List<Album>, isVisible: Boolean) {
                             )
                             Spacer(modifier = Modifier.width(16.dp))
                             AsyncImage(
-                                model = album.thumbnailUrl?.resize(128, 128),
+                                model = album.thumbnailUrl,
                                 contentDescription = stringResource(R.string.album_art_for, album.title),
                                 modifier = Modifier
                                     .size(64.dp)

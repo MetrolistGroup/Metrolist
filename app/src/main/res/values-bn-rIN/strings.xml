@@ -201,4 +201,20 @@
     <string name="restore_failed">ব্যাকআপ থেকে পুনরুদ্ধার করতে অক্ষম</string>
     <string name="about">সম্পর্কিত</string>
     <string name="app_version">অ্যাপ সংস্করণ</string>
+    <string name="forgotten_favorites">ভুলে যাওয়া প্রিয় গান</string>
+    <string name="keep_listening">শুনতে থাকুন</string>
+    <string name="your_youtube_playlists">আপনার ইউটিউব প্লেলিস্টগুলি</string>
+    <string name="similar_to">এর মতো</string>
+    <string name="filter_library">লাইব্রেরি</string>
+    <string name="filter_liked">লাইক করা</string>
+    <string name="filter_downloaded">ডাউনলোড করা</string>
+    <string name="filter_bookmarked">বুকমার্ক করা</string>
+    <string name="library_song_empty">লাইব্রেরির গান এখানে দেখানো হবে</string>
+    <string name="library_artist_empty">লাইব্রেরির শিল্পীরা এখানে দেখানো হবে</string>
+    <string name="library_album_empty">লাইব্রেরির অ্যালবামগুলো এখানে দেখানো হবে</string>
+    <string name="library_playlist_empty">আপনার প্লেলিস্টগুলি এখানে প্রদর্শিত হবে</string>
+    <string name="other_versions">অন্যান্য সংস্করণসমূহ</string>
+    <string name="remove_download_playlist_confirm">আপনি কি সত্যিই \"%s\" প্লেলিস্টের সব ডাউনলোড করা গান মুছে ফেলতে চান?</string>
+    <string name="delete_playlist_confirm">আপনি কি সত্যিই \"%s\" প্লেলিস্টটি মুছে ফেলতে চান?</string>
+    <string name="reset">রিসেট করুন</string>
 </resources>

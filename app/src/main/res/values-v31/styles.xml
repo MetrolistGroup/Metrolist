@@ -2,4 +2,12 @@
 <resources>
     <!-- Widget Theme for Android 12+ with Dynamic Colors -->
     <style name="Theme.Widget.Metrolist" parent="@android:style/Theme.DeviceDefault.DayNight" />
+
+    <style name="Theme.Metrolist.Transparent" parent="@android:style/Theme.Translucent.NoTitleBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
 </resources>

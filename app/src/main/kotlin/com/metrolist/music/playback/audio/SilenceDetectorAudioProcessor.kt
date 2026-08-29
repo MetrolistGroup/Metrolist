@@ -29,6 +29,7 @@ class SilenceDetectorAudioProcessor(
     private var channelCount = 0
     private var encoding = C.ENCODING_INVALID
 
+    private var buffer: ByteBuffer = EMPTY_BUFFER
     private var outputBuffer: ByteBuffer = EMPTY_BUFFER
     private var inputEnded = false
 
@@ -142,18 +143,20 @@ class SilenceDetectorAudioProcessor(
     @Deprecated("Deprecated in AudioProcessor")
     override fun reset() {
         flush()
+        buffer = EMPTY_BUFFER
         sampleRate = 0
         channelCount = 0
         encoding = C.ENCODING_INVALID
     }
 
     private fun replaceOutputBuffer(size: Int): ByteBuffer {
-        if (outputBuffer.capacity() < size) {
-            outputBuffer = ByteBuffer.allocateDirect(size).order(ByteOrder.nativeOrder())
+        if (buffer.capacity() < size) {
+            buffer = ByteBuffer.allocateDirect(size).order(ByteOrder.nativeOrder())
         } else {
-            outputBuffer.clear()
+            buffer.clear()
         }
-        return outputBuffer
+        outputBuffer = buffer
+        return buffer
     }
 
     companion object {

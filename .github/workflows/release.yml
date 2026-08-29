@@ -7,19 +7,25 @@ on:
       - "app/build.gradle.kts"
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   check-version:
     if: "!contains(github.ref, 'refs/tags')"
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
     outputs:
       version_changed: ${{ steps.check_version.outputs.version_changed }}
       new_version: ${{ steps.check_version.outputs.new_version }}
       version_code: ${{ steps.check_version.outputs.version_code }}
     steps:
+      # Only HEAD and HEAD^ are read below, and no submodule or Gradle work
+      # happens in this job.
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
-          submodules: recursive
+          fetch-depth: 2
 
       - name: Check if version changed
         id: check_version
@@ -30,8 +36,8 @@ jobs:
             exit 0
           fi
 
-          NEW_VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts || echo "")
-          VERSION_CODE=$(grep -oP 'versionCode\s*=\s*\K\d+' app/build.gradle.kts || echo "")
+          NEW_VERSION=$(grep -m1 -oP '^\s*versionName\s*=\s*"\K[^"]+' app/build.gradle.kts || echo "")
+          VERSION_CODE=$(grep -m1 -oP '^\s*versionCode\s*=\s*\K\d+' app/build.gradle.kts || echo "")
 
           if [ -z "$NEW_VERSION" ]; then
             echo "Could not find versionName in app/build.gradle.kts"
@@ -41,8 +47,16 @@ jobs:
 
           echo "Current version: $NEW_VERSION (code: $VERSION_CODE)"
 
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "Manual release requested for version $NEW_VERSION"
+            echo "version_changed=true" >> $GITHUB_OUTPUT
+            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           if git show HEAD^:app/build.gradle.kts > /dev/null 2>&1; then
-            OLD_VERSION=$(git show HEAD^:app/build.gradle.kts | grep -oP 'versionName\s*=\s*"\K[^"]+' || echo "")
+            OLD_VERSION=$(git show HEAD^:app/build.gradle.kts | grep -m1 -oP '^\s*versionName\s*=\s*"\K[^"]+' || echo "")
             echo "Previous version: $OLD_VERSION"
             
             if [ "$OLD_VERSION" != "$NEW_VERSION" ]; then
@@ -72,11 +86,17 @@ jobs:
   build:
     needs: check-version
     if: needs.check-version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
     strategy:
       matrix:
-        abi: ["arm64", "armeabi", "x86", "x86_64", "universal"]
-        variant: ["foss", "gms"]
+        include:
+          - variant: foss
+            variantName: Foss
+          - variant: gms
+            variantName: Gms
+          - variant: izzy
+            variantName: Izzy
 
     steps:
       - uses: actions/checkout@v6
@@ -92,26 +112,21 @@ jobs:
       - name: Set Up Gradle
         uses: gradle/actions/setup-gradle@v5
         with:
-          cache-disabled: true
+          # Read-only: release builds reuse the dependency and build caches
+          # written by main without publishing entries of their own.
+          cache-read-only: true
           cache-cleanup: on-success
-
-      - name: Install protoc
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
-
-      - name: Generate protobuf files
-        run: |
-          cd app
-          bash generate_proto.sh
-
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build and Lint Release APK
-        run: ./gradlew --no-configuration-cache --console=plain clean assemble${{ matrix.abi }}${{ matrix.variant == 'foss' && 'Foss' || 'Gms' }}Release :app:lint${{ matrix.abi }}${{ matrix.variant == 'foss' && 'Foss' || 'Gms' }}Release --warning-mode summary
+      # No `clean`: the runner is ephemeral, so there is nothing to clean and
+      # it only discards restored cache entries.
+      - name: Build Release APK
+        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release --warning-mode summary
         env:
+          METROLIST_APPLICATION_ID: com.metrolist.music
+          METROLIST_APP_NAME: Metrolist
           PULL_REQUEST: "false"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
@@ -120,7 +135,7 @@ jobs:
       - name: Sign APK
         uses: ilharp/sign-android-release@v2.0.0
         with:
-          releaseDir: app/build/outputs/apk/${{ matrix.abi }}${{ matrix.variant == 'foss' && 'Foss' || 'Gms' }}/release/
+          releaseDir: app/build/outputs/apk/${{ matrix.variant }}/release/
           signingKey: ${{ secrets.KEYSTORE }}
           keyAlias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -129,32 +144,23 @@ jobs:
 
       - name: Move and rename signed APKs
         run: |
-          OUTPUT_DIR="app/build/outputs/apk/${{ matrix.abi }}${{ matrix.variant == 'foss' && 'Foss' || 'Gms' }}/release"
+          OUTPUT_DIR="app/build/outputs/apk/${{ matrix.variant }}/release"
           mkdir -p "$OUTPUT_DIR/out"
 
           SIGNED_APK=$(find "$OUTPUT_DIR" -name "*-signed.apk" -o -name "*-unsigned-signed.apk" | head -1)
 
           if [ -z "$SIGNED_APK" ]; then
-            echo "No signed APK found for ${{ matrix.abi }} ${{ matrix.variant }}"
+            echo "No signed APK found for ${{ matrix.variant }}"
             ls -la "$OUTPUT_DIR"
             exit 1
           fi
 
-          # Name based on abi and variant
           if [ "${{ matrix.variant }}" = "gms" ]; then
-            # GMS builds get "with Google Cast" suffix
-            if [ "${{ matrix.abi }}" = "universal" ]; then
-              TARGET_NAME="Metrolist-with-Google-Cast.apk"
-            else
-              TARGET_NAME="app-${{ matrix.abi }}-with-Google-Cast.apk"
-            fi
+            TARGET_NAME="Metrolist-with-Google-Cast.apk"
+          elif [ "${{ matrix.variant }}" = "izzy" ]; then
+            TARGET_NAME="Metrolist-izzy.apk"
           else
-            # FOSS builds keep original names
-            if [ "${{ matrix.abi }}" = "universal" ]; then
-              TARGET_NAME="Metrolist.apk"
-            else
-              TARGET_NAME="app-${{ matrix.abi }}-release.apk"
-            fi
+            TARGET_NAME="Metrolist.apk"
           fi
 
           mv "$SIGNED_APK" "$OUTPUT_DIR/out/$TARGET_NAME"
@@ -165,13 +171,14 @@ jobs:
       - name: Upload Signed APKs
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ matrix.variant == 'gms' && (matrix.abi == 'universal' && 'Metrolist-with-Google-Cast' || format('app-{0}-with-Google-Cast', matrix.abi)) || (matrix.abi == 'universal' && 'Metrolist' || format('app-{0}-release', matrix.abi)) }}
-          path: app/build/outputs/apk/${{ matrix.abi }}${{ matrix.variant == 'foss' && 'Foss' || 'Gms' }}/release/out/*.apk
+          name: ${{ matrix.variant == 'gms' && 'Metrolist-with-Google-Cast' || matrix.variant == 'izzy' && 'Metrolist-izzy' || 'Metrolist' }}
+          path: app/build/outputs/apk/${{ matrix.variant }}/release/out/*.apk
 
   create-release:
     needs: [check-version, build]
     if: needs.check-version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
         with:
@@ -192,18 +199,26 @@ jobs:
           echo "APKs ready for release:"
           ls -la release_files/
 
-      - name: Generate release notes
+      - name: Parse release notes from changelog
         run: |
-          echo "Generating release notes..."
+          VERSION="${{ needs.check-version.outputs.new_version }}"
+          chmod +x .github/scripts/parse_changelog.sh
 
-          cat > release_notes.md << EOF
-          Release of version ${{ needs.check-version.outputs.new_version }}
-
-          $(git log $(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~10")..HEAD --pretty=format:"- %s" --no-merges | head -10 || echo "- Initial release")
-          EOF
-
-          echo "Release notes preview:"
-          cat release_notes.md
+          if bash .github/scripts/parse_changelog.sh "$VERSION" changelog.md > release_notes.md; then
+            echo "Release notes sourced from changelog.md for v$VERSION"
+            echo "--- Preview (first 20 lines) ---"
+            head -20 release_notes.md
+          else
+            echo "::warning::v$VERSION not found in changelog.md — falling back to git log"
+            {
+              echo "Release of version $VERSION"
+              echo ""
+              git log "$(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~10")..HEAD" \
+                --pretty=format:"- %s" --no-merges | head -10 || echo "- Initial release"
+            } > release_notes.md
+            echo "--- Fallback notes ---"
+            cat release_notes.md
+          fi
 
       - name: Create Release
         env:
@@ -211,11 +226,16 @@ jobs:
         run: |
           echo "Creating release v${{ needs.check-version.outputs.new_version }}"
 
+          {
+            echo "Released by @${{ github.triggering_actor }}"
+            echo ""
+            cat release_notes.md
+          } > attributed_release_notes.md
+
           gh release create "v${{ needs.check-version.outputs.new_version }}" \
             --title "${{ needs.check-version.outputs.new_version }}" \
-            --notes-file release_notes.md \
+            --notes-file attributed_release_notes.md \
             --latest \
-            --draft \
             release_files/*.apk
 
           echo "Release created successfully!"
@@ -225,5 +245,6 @@ jobs:
           echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Version**: v${{ needs.check-version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Version Code**: ${{ needs.check-version.outputs.version_code }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Released by**: @${{ github.triggering_actor }}" >> $GITHUB_STEP_SUMMARY
           echo "- **APKs Built**: $(ls release_files/*.apk | wc -l)" >> $GITHUB_STEP_SUMMARY
           echo "- **Release URL**: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.check-version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY

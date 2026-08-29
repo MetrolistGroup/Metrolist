@@ -1,0 +1,23 @@
+Trình phát YouTube Music phong cách Material 3 cho Android
+
+Tính năng:
+
+- Phát mọi bài hát hoặc video từ YouTube Music
+- Phát nhạc dưới nền
+- Lựa chọn nhanh dành cho bạn
+- Quản lý thư viện
+- Tải xuống và lưu tạm để nghe ngoại tuyến
+- Tìm kiếm bài hát, album, nghệ sĩ, video và danh sách phát
+- Lời bài hát trực tiếp
+- Hỗ trợ đăng nhập tài khoản YouTube Music
+- Đồng bộ bài hát, nghệ sĩ, album và danh sách phát với tài khoản
+- Bỏ qua đoạn im lặng
+- Nhập danh sách phát
+- Chuẩn hóa âm thanh
+- Điều chỉnh tốc độ hoặc cao độ
+- Quản lý danh sách phát cục bộ
+- Sắp xếp lại bài hát trong danh sách phát hoặc hàng chờ
+- Giao diện Sáng - Tối - Đen - Màu động
+- Hẹn giờ ngủ
+- Thiết kế Material 3
+- Và nhiều tính năng khác.

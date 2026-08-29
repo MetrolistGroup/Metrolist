@@ -186,7 +186,6 @@
     <string name="listen_history">Kuunteluhistoria</string>
     <string name="skip_duplicates">Ohita kaksoiskappaleet</string>
     <string name="disable_screenshot">Poista kuvakaappaukset käytöstä</string>
-    <string name="discord_integration">Discord-integraatio</string>
     <string name="big">Suuri</string>
     <string name="library_artist_empty">Kirjaston artistit näkyvät täällä</string>
     <string name="keep_listening">Jatka kuuntelemista</string>
@@ -219,7 +218,6 @@
     <string name="preview">Esikatselu</string>
     <string name="login_failed">Kirjautuminen epäonnistui</string>
     <string name="action_logout">Kirjaudu ulos</string>
-    <string name="enable_discord_rpc">Tämä on Discord-integraatio-ominaisuus, se tarkoittaa Metrolist-toiminnan näyttämistä Discord-tililläsi</string>
     <string name="forgotten_favorites">Unohtuneet suosikit</string>
     <string name="sample_rate">Näytteenottonopeus</string>
     <string name="queue_searched_songs">Haetut laulut</string>

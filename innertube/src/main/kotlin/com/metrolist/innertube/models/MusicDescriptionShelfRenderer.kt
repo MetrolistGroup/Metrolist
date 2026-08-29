@@ -6,6 +6,6 @@ import kotlinx.serialization.Serializable
 data class MusicDescriptionShelfRenderer(
     val header: Runs?,
     val subheader: Runs?,
-    val description: Runs,
+    val description: Runs?,
     val footer: Runs?,
 )

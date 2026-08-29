@@ -216,7 +216,6 @@
     <string name="imported_playlist">Llista importada</string>
     <string name="hide_explicit">Amaga el contingut explícit</string>
     <string name="backup_restore">Còpia de seguretat i restauració</string>
-    <string name="discord_integration">Integració amb el Discord</string>
     <string name="options">Opcions</string>
     <string name="backup_create_failed">No s’ha pogut crear la còpia de seguretat</string>
     <string name="restore_failed">No s’ha pogut restaurar la còpia de seguretat</string>
@@ -285,7 +284,6 @@
     <string name="disable_screenshot_desc">Quan aquesta opció és activada, les captures de pantalla i la visualització a \"recents\" són desactivades.</string>
     <string name="discord_information">Metrolist utilitza la biblioteca KizzyRPC per establir l\'estat del vostre compte de Discord. Això implica utilitzar la connexió Discord Gateway, la qual cosa es pot considerar una violació de les condicions del servei de Discord. No obstant això, no hi ha casos coneguts d\'usuaris que hagin estat suspesos pel motiu. L\'ús és sota la vostra responsabilitat.\n\nMetrolist només extreu el vostre \"token\", i la resta es desa localment.</string>
     <string name="dismiss">Ignora</string>
-    <string name="enable_discord_rpc">Activa \"Rich Presence\"</string>
     <string name="error_no_stream">Cap transmissió disponible</string>
     <string name="sided">Amb vores</string>
 </resources>

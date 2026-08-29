@@ -40,6 +40,8 @@ data class PlaylistEntity(
     companion object {
         const val LIKED_PLAYLIST_ID = "LP_LIKED"
         const val DOWNLOADED_PLAYLIST_ID = "LP_DOWNLOADED"
+        const val WEEKLY_MOST_PLAYLIST_ID = "LP_WEEKLY_MOST"
+        const val MONTHLY_MOST_PLAYLIST_ID = "LP_MONTHLY_MOST"
 
         fun generatePlaylistId() = "LP" + RandomStringUtils.insecure().next(8, true, false)
     }

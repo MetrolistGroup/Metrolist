@@ -60,7 +60,11 @@ constructor(
                             database.searchPlaylists(query, PREVIEW_SIZE),
                         ) { songs, albums, artists, playlists ->
                             val filteredSongs = if (hideVideoSongs) songs.filter { !it.song.isVideo } else songs
-                            filteredSongs + albums + artists + playlists
+                            val localSongs = filteredSongs.map { it }
+                            val localAlbums = albums.map { it }
+                            val localArtists = artists.map { it }
+                            val localPlaylists = playlists.map { it }
+                            localSongs + localAlbums + localArtists + localPlaylists
                         }
 
                     LocalFilter.SONG -> database.searchSongs(query).map { songs ->

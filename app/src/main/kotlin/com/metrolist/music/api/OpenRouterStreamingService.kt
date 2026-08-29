@@ -9,24 +9,26 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.serialization.json.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import timber.log.Timber
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
-import kotlinx.serialization.json.*
-import timber.log.Timber
 
 object OpenRouterStreamingService {
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(120, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
-        .build()
+    private val client =
+        OkHttpClient
+            .Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(120, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
     private val JSON = "application/json; charset=utf-8".toMediaType()
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -39,20 +41,27 @@ object OpenRouterStreamingService {
         apiKey: String,
         baseUrl: String,
         model: String,
-        mode: String
-    ): Flow<StreamChunk> = flow {
-        if (text.isBlank()) {
-            emit(StreamChunk.Error("Input text is empty"))
-            return@flow
-        }
+        mode: String,
+        customSystemPrompt: String = "",
+    ): Flow<StreamChunk> =
+        flow {
+            if (text.isBlank()) {
+                emit(StreamChunk.Error("Input text is empty"))
+                return@flow
+            }
 
-        val lines = text.lines()
-        val lineCount = lines.size
-        
-        Timber.d("Starting streaming translation for $lineCount lines")
+            val lines = text.lines()
+            val lineCount = lines.size
 
-        try {
-            val systemPrompt = """You are a precise lyrics translation assistant. Your output must ALWAYS be a valid JSON array of strings.
+            Timber.d("Starting streaming translation for $lineCount lines")
+
+            try {
+                // Use custom system prompt if provided, otherwise use the default
+                val systemPrompt =
+                    if (customSystemPrompt.isNotBlank()) {
+                        customSystemPrompt.replace("{lineCount}", lineCount.toString())
+                    } else {
+                        """You are a precise lyrics translation assistant. Your output must ALWAYS be a valid JSON array of strings.
 
 CRITICAL RULES:
 1. Output ONLY a JSON array: ["line1", "line2", "line3"]
@@ -61,9 +70,12 @@ CRITICAL RULES:
 4. Preserve empty lines as empty strings ""
 5. Return EXACTLY $lineCount items in the array
 6. If uncertain, provide best approximation but maintain line count"""
+                    }
 
-            val userPrompt = when (mode) {
-                "Transcribed" -> """Transcribe/transliterate the following $lineCount lines phonetically into $targetLanguage script.
+                val userPrompt =
+                    when (mode) {
+                        "Transcribed" -> {
+                            """Transcribe/transliterate the following $lineCount lines phonetically into $targetLanguage script.
 
 CRITICAL REQUIREMENTS:
 - Convert the SOUND/PRONUNCIATION of the original text into $targetLanguage script
@@ -76,8 +88,10 @@ Input ($lineCount lines):
 $text
 
 Output MUST be a JSON array with EXACTLY $lineCount strings."""
+                        }
 
-                else -> """Translate the following $lineCount lines to $targetLanguage.
+                        else -> {
+                            """Translate the following $lineCount lines to $targetLanguage.
 
 IMPORTANT:
 - Provide natural, accurate translation
@@ -89,120 +103,140 @@ Input ($lineCount lines):
 $text
 
 Output MUST be a JSON array with EXACTLY $lineCount strings."""
-            }
-
-            val messages = JSONArray().apply {
-                put(JSONObject().apply {
-                    put("role", "system")
-                    put("content", systemPrompt)
-                })
-                put(JSONObject().apply {
-                    put("role", "user")
-                    put("content", userPrompt)
-                })
-            }
-
-            val jsonBody = JSONObject().apply {
-                if (model.isNotBlank()) {
-                    put("model", model)
-                }
-                put("messages", messages)
-                put("stream", true)
-                put("temperature", 0.3)
-                put("max_tokens", lineCount * 100)
-            }
-
-            val request = Request.Builder()
-                .url(baseUrl.ifBlank { "https://openrouter.ai/api/v1/chat/completions" })
-                .apply {
-                    if (apiKey.isNotBlank()) {
-                        addHeader("Authorization", "Bearer ${apiKey.trim()}")
+                        }
                     }
-                }
-                .addHeader("Content-Type", "application/json")
-                .addHeader("HTTP-Referer", "https://github.com/MetrolistGroup/Metrolist")
-                .addHeader("X-Title", "Metrolist")
-                .post(jsonBody.toString().toRequestBody(JSON))
-                .build()
 
-            client.newCall(request).execute().use { response ->
-                Timber.d("Got streaming response: ${response.code}")
-                
-                if (!response.isSuccessful) {
-                    val errorMsg = try {
-                        JSONObject(response.body?.string() ?: "")
-                            .optJSONObject("error")?.optString("message")
-                            ?: "HTTP ${response.code}: ${response.message}"
-                    } catch (e: Exception) {
-                        "HTTP ${response.code}: ${response.message}"
+                val messages =
+                    JSONArray().apply {
+                        put(
+                            JSONObject().apply {
+                                put("role", "system")
+                                put("content", systemPrompt)
+                            },
+                        )
+                        put(
+                            JSONObject().apply {
+                                put("role", "user")
+                                put("content", userPrompt)
+                            },
+                        )
                     }
-                    emit(StreamChunk.Error("Translation failed: $errorMsg"))
-                    return@flow
-                }
 
-                val reader = BufferedReader(InputStreamReader(response.body?.byteStream()))
-                var line: String?
-                val contentBuilder = StringBuilder()
-                var chunkCount = 0
+                val jsonBody =
+                    JSONObject().apply {
+                        if (model.isNotBlank()) {
+                            put("model", model)
+                        }
+                        put("messages", messages)
+                        put("stream", true)
+                        put("temperature", 0.3)
+                        put("max_tokens", lineCount * 100)
+                    }
 
-                while (reader.readLine().also { line = it } != null) {
-                    line?.let { currentLine ->
-                        if (currentLine.startsWith("data: ")) {
-                            val data = currentLine.substring(6)
-                            if (data == "[DONE]") {
-                                Timber.d("Streaming complete, received $chunkCount chunks")
-                                // Processing complete, parse the full content
-                                val fullContent = contentBuilder.toString()
-                                Timber.d("Full content length: ${fullContent.length}")
-                                val result = parseTranslationContent(fullContent, lineCount)
-                                result.onSuccess { translatedLines ->
-                                    Timber.d("Successfully parsed ${translatedLines.size} lines")
-                                    emit(StreamChunk.Complete(translatedLines))
-                                }.onFailure { error ->
-                                    Timber.e(error, "Failed to parse translation")
-                                    emit(StreamChunk.Error(error.message ?: "Parsing failed"))
-                                }
-                                return@flow
+                val request =
+                    Request
+                        .Builder()
+                        .url(baseUrl.ifBlank { "https://openrouter.ai/api/v1/chat/completions" })
+                        .apply {
+                            if (apiKey.isNotBlank()) {
+                                addHeader("Authorization", "Bearer ${apiKey.trim()}")
                             }
+                        }.addHeader("Content-Type", "application/json")
+                        .addHeader("HTTP-Referer", "https://github.com/MetrolistGroup/Metrolist")
+                        .addHeader("X-Title", "Metrolist")
+                        .post(jsonBody.toString().toRequestBody(JSON))
+                        .build()
 
+                client.newCall(request).execute().use { response ->
+                    Timber.d("Got streaming response: ${response.code}")
+
+                    if (!response.isSuccessful) {
+                        val errorMsg =
                             try {
-                                val jsonObject = json.parseToJsonElement(data).jsonObject
-                                val choices = jsonObject["choices"]?.jsonArray
-                                val delta = choices?.get(0)?.jsonObject?.get("delta")?.jsonObject
-                                val content = delta?.get("content")?.jsonPrimitive?.content
-
-                                content?.let { chunk ->
-                                    contentBuilder.append(chunk)
-                                    chunkCount++
-                                    emit(StreamChunk.Content(chunk))
-                                }
+                                JSONObject(response.body?.string() ?: "")
+                                    .optJSONObject("error")
+                                    ?.optString("message")
+                                    ?: "HTTP ${response.code}: ${response.message}"
                             } catch (e: Exception) {
-                                // Ignore malformed JSON chunks
-                                Timber.v("Ignored malformed chunk: ${e.message}")
+                                "HTTP ${response.code}: ${response.message}"
+                            }
+                        emit(StreamChunk.Error("Translation failed: $errorMsg"))
+                        return@flow
+                    }
+
+                    val reader = BufferedReader(InputStreamReader(response.body?.byteStream()))
+                    var line: String?
+                    val contentBuilder = StringBuilder()
+                    var chunkCount = 0
+
+                    while (reader.readLine().also { line = it } != null) {
+                        line?.let { currentLine ->
+                            if (currentLine.startsWith("data: ")) {
+                                val data = currentLine.substring(6)
+                                if (data == "[DONE]") {
+                                    Timber.d("Streaming complete, received $chunkCount chunks")
+                                    // Processing complete, parse the full content
+                                    val fullContent = contentBuilder.toString()
+                                    Timber.d("Full content length: ${fullContent.length}")
+                                    val result = parseTranslationContent(fullContent, lineCount)
+                                    result
+                                        .onSuccess { translatedLines ->
+                                            Timber.d("Successfully parsed ${translatedLines.size} lines")
+                                            emit(StreamChunk.Complete(translatedLines))
+                                        }.onFailure { error ->
+                                            Timber.e(error, "Failed to parse translation")
+                                            emit(StreamChunk.Error(error.message ?: "Parsing failed"))
+                                        }
+                                    return@flow
+                                }
+
+                                try {
+                                    val jsonObject = json.parseToJsonElement(data).jsonObject
+                                    val choices = jsonObject["choices"]?.jsonArray
+                                    val delta =
+                                        choices
+                                            ?.get(0)
+                                            ?.jsonObject
+                                            ?.get("delta")
+                                            ?.jsonObject
+                                    val content = delta?.get("content")?.jsonPrimitive?.content
+
+                                    content?.let { chunk ->
+                                        contentBuilder.append(chunk)
+                                        chunkCount++
+                                        emit(StreamChunk.Content(chunk))
+                                    }
+                                } catch (e: Exception) {
+                                    // Ignore malformed JSON chunks
+                                    Timber.v("Ignored malformed chunk: ${e.message}")
+                                }
                             }
                         }
                     }
-                }
-                
-                // If we got here without seeing [DONE], try to parse what we have
-                if (contentBuilder.isNotEmpty()) {
-                    Timber.w("Stream ended without [DONE] marker, attempting to parse content")
-                    val fullContent = contentBuilder.toString()
-                    val result = parseTranslationContent(fullContent, lineCount)
-                    result.onSuccess { translatedLines ->
-                        emit(StreamChunk.Complete(translatedLines))
-                    }.onFailure { error ->
-                        emit(StreamChunk.Error(error.message ?: "Parsing failed"))
+
+                    // If we got here without seeing [DONE], try to parse what we have
+                    if (contentBuilder.isNotEmpty()) {
+                        Timber.w("Stream ended without [DONE] marker, attempting to parse content")
+                        val fullContent = contentBuilder.toString()
+                        val result = parseTranslationContent(fullContent, lineCount)
+                        result
+                            .onSuccess { translatedLines ->
+                                emit(StreamChunk.Complete(translatedLines))
+                            }.onFailure { error ->
+                                emit(StreamChunk.Error(error.message ?: "Parsing failed"))
+                            }
                     }
                 }
+            } catch (e: Exception) {
+                Timber.e(e, "Streaming error")
+                emit(StreamChunk.Error(e.message ?: "Unknown error"))
             }
-        } catch (e: Exception) {
-            Timber.e(e, "Streaming error")
-            emit(StreamChunk.Error(e.message ?: "Unknown error"))
-        }
-    }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.IO)
 
-    private fun parseTranslationContent(content: String, expectedLineCount: Int): Result<List<String>> {
+    private fun parseTranslationContent(
+        content: String,
+        expectedLineCount: Int,
+    ): Result<List<String>> {
         var translatedLines: List<String>? = null
 
         // Strategy 1: Try direct JSON parsing
@@ -228,9 +262,11 @@ Output MUST be a JSON array with EXACTLY $lineCount strings."""
                         translatedLines = (0 until jsonArray.length()).map { jsonArray.optString(it) }
                     } catch (e3: Exception) {
                         // Strategy 4: Manual line-by-line parsing as last resort
-                        translatedLines = cleanedContent.lines()
-                            .filter { it.trim().isNotEmpty() }
-                            .map { it.trim().removeSurrounding("\"").removeSurrounding("'") }
+                        translatedLines =
+                            cleanedContent
+                                .lines()
+                                .filter { it.trim().isNotEmpty() }
+                                .map { it.trim().removeSurrounding("\"").removeSurrounding("'") }
                     }
                 }
             }
@@ -242,8 +278,14 @@ Output MUST be a JSON array with EXACTLY $lineCount strings."""
 
         // Adjust line count
         return when {
-            translatedLines.size == expectedLineCount -> Result.success(translatedLines)
-            translatedLines.size > expectedLineCount -> Result.success(translatedLines.take(expectedLineCount))
+            translatedLines.size == expectedLineCount -> {
+                Result.success(translatedLines)
+            }
+
+            translatedLines.size > expectedLineCount -> {
+                Result.success(translatedLines.take(expectedLineCount))
+            }
+
             else -> {
                 val paddedLines = translatedLines.toMutableList()
                 while (paddedLines.size < expectedLineCount) {
@@ -255,8 +297,16 @@ Output MUST be a JSON array with EXACTLY $lineCount strings."""
     }
 
     sealed class StreamChunk {
-        data class Content(val text: String) : StreamChunk()
-        data class Complete(val translatedLines: List<String>) : StreamChunk()
-        data class Error(val message: String) : StreamChunk()
+        data class Content(
+            val text: String,
+        ) : StreamChunk()
+
+        data class Complete(
+            val translatedLines: List<String>,
+        ) : StreamChunk()
+
+        data class Error(
+            val message: String,
+        ) : StreamChunk()
     }
 }

@@ -5,9 +5,6 @@
 
 package com.metrolist.music.utils
 
-import java.math.BigInteger
-import java.security.MessageDigest
-
 fun makeTimeString(duration: Long?): String {
     if (duration == null || duration < 0) return ""
     var sec = duration / 1000
@@ -22,11 +19,6 @@ fun makeTimeString(duration: Long?): String {
         hour > 0 -> "%d:%02d:%02d".format(hour, minute, sec)
         else -> "%d:%02d".format(minute, sec)
     }
-}
-
-fun md5(str: String): String {
-    val md = MessageDigest.getInstance("MD5")
-    return BigInteger(1, md.digest(str.toByteArray())).toString(16).padStart(32, '0')
 }
 
 fun joinByBullet(vararg str: String?) =

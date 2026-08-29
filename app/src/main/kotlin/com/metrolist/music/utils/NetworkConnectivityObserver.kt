@@ -10,8 +10,8 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Simple NetworkConnectivityObserver based on OuterTune's implementation
@@ -21,16 +21,20 @@ class NetworkConnectivityObserver(context: Context) {
     private val connectivityManager =
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-    private val _networkStatus = Channel<Boolean>(Channel.CONFLATED)
-    val networkStatus = _networkStatus.receiveAsFlow()
+    private val _networkStatus = MutableStateFlow(isCurrentlyConnected())
+    val networkStatus = _networkStatus.asStateFlow()
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
-            _networkStatus.trySend(true)
+            _networkStatus.value = isCurrentlyConnected()
         }
 
         override fun onLost(network: Network) {
-            _networkStatus.trySend(false)
+            _networkStatus.value = isCurrentlyConnected()
+        }
+
+        override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+            _networkStatus.value = isCurrentlyConnected()
         }
     }
 
@@ -44,12 +48,8 @@ class NetworkConnectivityObserver(context: Context) {
             connectivityManager.registerNetworkCallback(request, networkCallback)
         } catch (e: Exception) {
             // Fallback: assume connected if registration fails
-            _networkStatus.trySend(true)
+            _networkStatus.value = true
         }
-        
-        // Send initial state
-        val isInitiallyConnected = isCurrentlyConnected()
-        _networkStatus.trySend(isInitiallyConnected)
     }
 
     fun unregister() {
@@ -65,13 +65,7 @@ class NetworkConnectivityObserver(context: Context) {
             val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
             
             // Check if we have internet capability
-            val hasInternet = networkCapabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
-            
-            // For API 23+, also check if connection is validated
-            val isValidated =
-                networkCapabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
-
-            hasInternet && isValidated
+            networkCapabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
         } catch (e: Exception) {
             false
         }

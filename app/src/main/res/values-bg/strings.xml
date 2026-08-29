@@ -269,12 +269,10 @@
     <string name="hide_explicit">Скрий нецензурно съдържание</string>
     <string name="backup_create_success">Архивирането е създадено успешно</string>
     <string name="restore_failed">Неуспешно възстановяване на резервно копие</string>
-    <string name="discord_integration">Discord интеграция</string>
     <string name="dismiss">Отхвърли</string>
     <string name="options">Опции</string>
     <string name="preview">Преглед</string>
     <string name="action_logout">Изход</string>
-    <string name="enable_discord_rpc">Активирай Rich Presence</string>
     <string name="new_version_available">Налична е нова версия</string>
     <string name="use_login_for_browse">Използвай вход за разглеждане на съдържание</string>
     <string name="use_login_for_browse_desc">Това може да повлияе какво съдържание виждате и например показва само премиум албуми, ако сте влезли с Премиум профил</string>

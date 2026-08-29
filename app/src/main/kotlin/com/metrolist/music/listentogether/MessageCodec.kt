@@ -135,6 +135,8 @@ class MessageCodec(
                     .setInsertNext(payload.insertNext ?: false)
                     .setVolume(payload.volume ?: 1f)
                     .setServerTime(payload.serverTime ?: 0)
+                    .setRevision(payload.revision)
+                    .setCapturedAtServerTime(payload.capturedAtServerTime ?: 0)
                 
                 payload.trackId?.let { builder.setTrackId(it) }
                 payload.trackInfo?.let { builder.setTrackInfo(trackInfoToProto(it)) }
@@ -145,6 +147,10 @@ class MessageCodec(
                 
                 builder.build()
             }
+            is PingPayload -> Listentogether.PingPayload.newBuilder()
+                .setClientTime(payload.clientTime)
+                .setSequence(payload.sequence)
+                .build()
             is BufferReadyPayload -> Listentogether.BufferReadyPayload.newBuilder()
                 .setTrackId(payload.trackId)
                 .build()
@@ -219,16 +225,25 @@ class MessageCodec(
             }
             MessageTypes.SYNC_PLAYBACK -> {
                 val pb = Listentogether.PlaybackActionPayload.parseFrom(payloadBytes)
+                val positionForAction =
+                    pb.position.takeIf {
+                        it != 0L ||
+                            pb.action == PlaybackActions.PLAY ||
+                            pb.action == PlaybackActions.PAUSE ||
+                            pb.action == PlaybackActions.SEEK
+                    }
                 PlaybackActionPayload(
                     action = pb.action,
                     trackId = pb.trackId.takeIf { it.isNotEmpty() },
-                    position = pb.position.takeIf { it > 0 },
-                    trackInfo = pb.trackInfo?.let { protoToTrackInfo(it) },
+                    position = positionForAction,
+                    trackInfo = pb.takeIf { it.hasTrackInfo() }?.trackInfo?.let { protoToTrackInfo(it) },
                     insertNext = pb.insertNext.takeIf { it },
-                    queue = pb.queueList?.map { protoToTrackInfo(it) },
+                    queue = pb.queueList.map { protoToTrackInfo(it) },
                     queueTitle = pb.queueTitle.takeIf { it.isNotEmpty() },
-                    volume = pb.volume.takeIf { it > 0 },
-                    serverTime = pb.serverTime.takeIf { it > 0 }
+                    volume = pb.volume.takeIf { pb.action == PlaybackActions.SET_VOLUME },
+                    serverTime = pb.serverTime.takeIf { it > 0 },
+                    revision = pb.revision,
+                    capturedAtServerTime = pb.capturedAtServerTime.takeIf { it > 0 },
                 )
             }
             MessageTypes.BUFFER_WAIT -> {
@@ -254,13 +269,18 @@ class MessageCodec(
             MessageTypes.SYNC_STATE -> {
                 val pb = Listentogether.SyncStatePayload.parseFrom(payloadBytes)
                 SyncStatePayload(
-                    currentTrack = pb.currentTrack?.let { protoToTrackInfo(it) },
+                    currentTrack = pb.takeIf { it.hasCurrentTrack() }?.currentTrack?.let { protoToTrackInfo(it) },
                     isPlaying = pb.isPlaying,
                     position = pb.position,
                     lastUpdate = pb.lastUpdate,
-                    queue = pb.queueList?.map { protoToTrackInfo(it) },
-                    volume = pb.volume.takeIf { it > 0 }
+                    queue = pb.queueList.map { protoToTrackInfo(it) },
+                    volume = pb.volume,
+                    revision = pb.revision,
                 )
+            }
+            MessageTypes.PONG -> {
+                val pb = Listentogether.PongPayload.parseFrom(payloadBytes)
+                PongPayload(pb.clientTime, pb.serverReceiveTime, pb.serverSendTime, pb.sequence)
             }
             MessageTypes.RECONNECTED -> {
                 val pb = Listentogether.ReconnectedPayload.parseFrom(payloadBytes)
@@ -343,12 +363,13 @@ class MessageCodec(
             roomCode = proto.roomCode,
             hostId = proto.hostId,
             users = proto.usersList.map { protoToUserInfo(it) },
-            currentTrack = proto.currentTrack?.let { protoToTrackInfo(it) },
+            currentTrack = proto.takeIf { it.hasCurrentTrack() }?.currentTrack?.let { protoToTrackInfo(it) },
             isPlaying = proto.isPlaying,
             position = proto.position,
             lastUpdate = proto.lastUpdate,
             volume = proto.volume,
-            queue = proto.queueList.map { protoToTrackInfo(it) }
+            queue = proto.queueList.map { protoToTrackInfo(it) },
+            revision = proto.revision,
         )
     }
 }

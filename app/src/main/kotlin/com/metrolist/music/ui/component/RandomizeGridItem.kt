@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.metrolist.music.constants.ThumbnailCornerRadius
 
@@ -27,29 +28,30 @@ import com.metrolist.music.constants.ThumbnailCornerRadius
 fun RandomizeGridItem(
     isLoading: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     // When isLoading is true, multiplier goes to 0 (moving dots to center)
     // When isLoading is false, multiplier goes to 1 (moving dots to corners)
     val dotOffsetMultiplier by animateFloatAsState(
         targetValue = if (isLoading) 0f else 1f,
         animationSpec = tween(durationMillis = 600),
-        label = "dotOffset"
+        label = "dotOffset",
     )
 
     val loadingAlpha by animateFloatAsState(
         targetValue = if (isLoading) 1f else 0f,
         animationSpec = tween(durationMillis = 400),
-        label = "loadingAlpha"
+        label = "loadingAlpha",
     )
 
     Box(
-        modifier = modifier
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(ThumbnailCornerRadius))
-            .background(MaterialTheme.colorScheme.secondaryContainer)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(ThumbnailCornerRadius))
+                .background(MaterialTheme.colorScheme.secondaryContainer)
+                .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
         // Die Dots (5-pattern)
         val dotColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -61,49 +63,54 @@ fun RandomizeGridItem(
 
         // Top Left
         Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .offset(x = -padding * dotOffsetMultiplier, y = -padding * dotOffsetMultiplier)
-                .size(dotSize)
-                .clip(CircleShape)
-                .background(dotColor)
+            modifier =
+                Modifier
+                    .align(Alignment.Center)
+                    .offset { IntOffset((-padding * dotOffsetMultiplier).roundToPx(), (-padding * dotOffsetMultiplier).roundToPx()) }
+                    .size(dotSize)
+                    .clip(CircleShape)
+                    .background(dotColor),
         )
         // Top Right
         Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .offset(x = padding * dotOffsetMultiplier, y = -padding * dotOffsetMultiplier)
-                .size(dotSize)
-                .clip(CircleShape)
-                .background(dotColor)
+            modifier =
+                Modifier
+                    .align(Alignment.Center)
+                    .offset { IntOffset((padding * dotOffsetMultiplier).roundToPx(), (-padding * dotOffsetMultiplier).roundToPx()) }
+                    .size(dotSize)
+                    .clip(CircleShape)
+                    .background(dotColor),
         )
         // Center
         Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(dotSize)
-                .clip(CircleShape)
-                .background(dotColor)
+            modifier =
+                Modifier
+                    .align(Alignment.Center)
+                    .size(dotSize)
+                    .clip(CircleShape)
+                    .background(dotColor),
         )
         // Bottom Left
         Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .offset(x = -padding * dotOffsetMultiplier, y = padding * dotOffsetMultiplier)
-                .size(dotSize)
-                .clip(CircleShape)
-                .background(dotColor)
+            modifier =
+                Modifier
+                    .align(Alignment.Center)
+                    .offset { IntOffset((-padding * dotOffsetMultiplier).roundToPx(), (padding * dotOffsetMultiplier).roundToPx()) }
+                    .size(dotSize)
+                    .clip(CircleShape)
+                    .background(dotColor),
         )
         // Bottom Right
         Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .offset(x = padding * dotOffsetMultiplier, y = padding * dotOffsetMultiplier)
-                .size(dotSize)
-                .clip(CircleShape)
-                .background(dotColor)
+            modifier =
+                Modifier
+                    .align(Alignment.Center)
+                    .offset { IntOffset((padding * dotOffsetMultiplier).roundToPx(), (padding * dotOffsetMultiplier).roundToPx()) }
+                    .size(dotSize)
+                    .clip(CircleShape)
+                    .background(dotColor),
         )
-        
+
         // Loading Indicator overlay
         Box(modifier = Modifier.alpha(loadingAlpha)) {
             LoadingIndicator(

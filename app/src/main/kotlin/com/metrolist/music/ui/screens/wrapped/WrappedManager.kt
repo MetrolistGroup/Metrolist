@@ -17,6 +17,7 @@ import com.metrolist.music.db.entities.PlaylistEntity
 import com.metrolist.music.db.entities.SongWithStats
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -55,12 +56,8 @@ class WrappedManager(
         scope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    val fromTimestamp = Calendar.getInstance().apply {
-                        set(WrappedConstants.YEAR, Calendar.JANUARY, 1, 0, 0, 0)
-                    }.timeInMillis
-                    val toTimestamp = Calendar.getInstance().apply {
-                        set(WrappedConstants.YEAR, Calendar.DECEMBER, 31, 23, 59, 59)
-                    }.timeInMillis
+                    val fromTimestamp = LocalDateTime.of(WrappedConstants.YEAR, 1, 1, 0, 0, 0)
+                    val toTimestamp = LocalDateTime.of(WrappedConstants.YEAR, 12, 31, 23, 59, 59)
                     val allSongs = databaseDao.mostPlayedSongsStats(fromTimestamp, toTimeStamp = toTimestamp, limit = -1).first()
 
                     val playlistId = UUID.randomUUID().toString()
@@ -83,8 +80,8 @@ class WrappedManager(
 
                     val createdPlaylist = databaseDao.playlist(playlistId).first()
                     if (createdPlaylist != null) {
-                        val songIds = allSongs.map { it.id }
-                        databaseDao.addSongToPlaylist(createdPlaylist, songIds)
+                        val songIds = allSongs.map { it.id to null }
+                        databaseDao.addSongsToPlaylist(createdPlaylist, songIds)
                     } else {
                         Timber.tag("WrappedManager")
                             .e("Failed to retrieve created playlist with id: $playlistId")
@@ -111,7 +108,7 @@ class WrappedManager(
             val playlistMap = mutableMapOf<WrappedScreenType, String>()
 
             // Intro Part: Random song from top 6-30
-            val introSongPool = topSongs.subList(5, topSongs.size)
+            val introSongPool = topSongs.drop(5)
             val introSong = introSongPool.randomOrNull()?.id ?: topSongs.last().id
             playlistMap[WrappedScreenType.Welcome] = introSong
             playlistMap[WrappedScreenType.MinutesTease] = introSong
@@ -135,12 +132,8 @@ class WrappedManager(
 
             // Artist Part: Top artist's song with specific rule
             val topArtist = topArtists.firstOrNull()
-            val fromTimestamp = Calendar.getInstance().apply {
-                set(WrappedConstants.YEAR, Calendar.JANUARY, 1, 0, 0, 0)
-            }.timeInMillis
-            val toTimestamp = Calendar.getInstance().apply {
-                set(WrappedConstants.YEAR, Calendar.DECEMBER, 31, 23, 59, 59)
-            }.timeInMillis
+            val fromTimestamp = LocalDateTime.of(WrappedConstants.YEAR, 1, 1, 0, 0, 0)
+            val toTimestamp = LocalDateTime.of(WrappedConstants.YEAR, 12, 31, 23, 59, 59)
 
             val artistSong = topArtist?.let { artist ->
                 val artistTopSongs = databaseDao.artistSongs(
@@ -169,8 +162,8 @@ class WrappedManager(
             playlistMap[WrappedScreenType.Top5Artists] = artistSong
 
             // End Part
-            val endSongPool = topSongs.subList(2, 5)
-            val endSong = endSongPool.randomOrNull()?.id ?: topSongs[2].id
+            val endSongPool = topSongs.drop(2).take(3)
+            val endSong = endSongPool.randomOrNull()?.id ?: topSong.id
             playlistMap[WrappedScreenType.Playlist] = endSong
             playlistMap[WrappedScreenType.Conclusion] = "2-p9DM2Xvsc"
 
@@ -183,13 +176,8 @@ class WrappedManager(
         if (_state.value.isDataReady) return
         Timber.tag("WrappedManager").d("Starting Wrapped data preparation")
 
-        val fromTimestamp = Calendar.getInstance().apply {
-            set(WrappedConstants.YEAR, Calendar.JANUARY, 1, 0, 0, 0)
-        }.timeInMillis
-
-        val toTimestamp = Calendar.getInstance().apply {
-            set(WrappedConstants.YEAR, Calendar.DECEMBER, 31, 23, 59, 59)
-        }.timeInMillis
+        val fromTimestamp = LocalDateTime.of(WrappedConstants.YEAR, 1, 1, 0, 0, 0)
+        val toTimestamp = LocalDateTime.of(WrappedConstants.YEAR, 12, 31, 23, 59, 59)
 
         withContext(Dispatchers.IO) {
             val accountInfoDeferred = async { YouTube.accountInfo().getOrNull() }
@@ -236,5 +224,9 @@ class WrappedManager(
         generatePlaylistMap()
         _state.update { it.copy(isDataReady = true) }
         Timber.tag("WrappedManager").d("Wrapped data preparation finished")
+    }
+
+    fun dispose() {
+        scope.cancel()
     }
 }

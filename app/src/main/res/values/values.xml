@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Override default media3 notification icons -->
-    <drawable name="media3_notification_play">@drawable/play</drawable>
-    <drawable name="media3_notification_pause">@drawable/pause</drawable>
-    <drawable name="media3_notification_seek_to_previous">@drawable/skip_previous</drawable>
-    <drawable name="media3_notification_seek_to_next">@drawable/skip_next</drawable>
 </resources>

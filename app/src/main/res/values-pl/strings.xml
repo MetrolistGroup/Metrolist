@@ -256,7 +256,6 @@
     <string name="remove_from_playlist">Usuń z playlisty</string>
     <string name="remove_all_from_library">Usuń wszystko z biblioteki</string>
     <string name="your_youtube_playlists">Twoje playlisty YouTube</string>
-    <string name="enable_discord_rpc">Włącz Rich Presence</string>
     <string name="remove_from_queue">Usuń z kolejki</string>
     <string name="login_failed">Błąd logowania</string>
     <string name="similar_to">Podobne do</string>
@@ -288,7 +287,6 @@
     <string name="search_history">Szukaj w historii</string>
     <string name="disable_screenshot">Wyłącz zrzut ekranu</string>
     <string name="hide_explicit">Ukryj wulgarne treści</string>
-    <string name="discord_integration">Integracja z Discordem</string>
     <string name="discord_information">Metrolist używa biblioteki KizzyRPC do aktualizacji statusu konta Discord. Wiąże się to z korzystaniem z połączenia Discord Gateway, co może być postrzegane jako naruszenie warunków korzystania z usług Discord (TOS). Nie są jednak znane przypadki zawieszenia kont użytkowników z tego powodu. Używaj na własne ryzyko.\n\nMetrolist wyodrębni tylko twój token; wszystko inne jest przechowywane lokalnie.</string>
     <string name="dismiss">Odrzuć</string>
     <string name="options">Opcje</string>

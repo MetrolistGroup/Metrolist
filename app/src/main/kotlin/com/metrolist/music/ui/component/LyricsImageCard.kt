@@ -36,6 +36,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -145,12 +146,6 @@ fun rememberAdjustedFontSize(
     }
 
     return calculatedFontSize
-}
-
-enum class LyricsBackgroundStyle {
-    SOLID,
-    BLUR,
-    GRADIENT
 }
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -402,7 +397,7 @@ fun LyricsImageCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(22.dp)
+                            .size(44.dp)
                             .clip(RoundedCornerShape(50))
                             .background(secondaryColor),
                         contentAlignment = Alignment.Center
@@ -411,15 +406,14 @@ fun LyricsImageCard(
                             painter = painterResource(id = R.drawable.small_icon),
                             contentDescription = null,
                             modifier = Modifier
-                                .size(16.dp),
-                            colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(backgroundSolidColor) // Try to use a contrasting color, fallback to solid bg color
+                                .size(38.dp)
                         )
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
 
                     Text(
-                        text = context.getString(R.string.app_name),
+                        text = stringResource(R.string.app_name),
                         color = secondaryColor,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold

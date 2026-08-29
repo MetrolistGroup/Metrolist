@@ -1,0 +1,23 @@
+Material 3 YouTube Music klient për Android
+
+Karakteristikat:
+
+- Luaj çdo këngë ose video nga YT Music
+- Luajtje në sfond
+- Zgjedhje të shpejta të personalizuara
+- Menaxhim i bibliotekës
+- Shkarko dhe ruaj këngë në memorje për luajtje jashtë linje
+- Kërko këngë, albume, artistë, video dhe lista dëgjimi
+- Tekste live
+- Mbështetje për hyrje në llogarinë e YouTube Music
+- Sinkronizim i këngëve, artistëve, albumeve dhe listave dëgjimi, nga dhe në llogarinë tuaj
+- Kapërce heshtjen
+- Importo lista dëgjimi
+- Normalizim i audios
+- Rregullo tempo/tonalitetin
+- Menaxhim i listës dëgjimi lokale
+- Rirendit këngët në listën dëgjimi ose radhë
+- E bardh - E errët - E zezë - Temë dinamike
+- Kohëmatësi i gjumit
+- Material 3
+- etj.

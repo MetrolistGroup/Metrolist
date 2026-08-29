@@ -25,22 +25,26 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import com.metrolist.music.constants.SongSortType
+import com.metrolist.innertube.models.Artist
+import com.metrolist.innertube.models.Album
 import javax.inject.Inject
 
 @HiltViewModel
 class OnlinePlaylistViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     savedStateHandle: SavedStateHandle,
-    database: MusicDatabase
+    private val database: MusicDatabase
 ) : ViewModel() {
     private val playlistId = savedStateHandle.get<String>("playlistId")!!
 
     // Check if this is a special podcast playlist (with or without VL prefix)
     private val normalizedPlaylistId = playlistId.removePrefix("VL")
-    private val isPodcastPlaylist = normalizedPlaylistId == "RDPN" || normalizedPlaylistId == "SE"
+    val isPodcastPlaylist = normalizedPlaylistId == "RDPN" || normalizedPlaylistId == "SE"
 
     val playlist = MutableStateFlow<PlaylistItem?>(null)
     val playlistSongs = MutableStateFlow<List<SongItem>>(emptyList())
@@ -107,25 +111,30 @@ class OnlinePlaylistViewModel @Inject constructor(
                     }
             }
             "SE" -> {
-                YouTube.episodesForLater()
-                    .onSuccess { episodes ->
-                        playlist.value = PlaylistItem(
-                            id = playlistId,
-                            title = "Episodes for Later",
-                            author = null,
-                            songCountText = "${episodes.size} episodes",
-                            thumbnail = episodes.firstOrNull()?.thumbnail ?: "",
-                            playEndpoint = null,
-                            shuffleEndpoint = null,
-                            radioEndpoint = null,
-                        )
-                        playlistSongs.value = applySongFilters(episodes)
-                        _isLoading.value = false
-                    }.onFailure { throwable ->
-                        _error.value = throwable.message ?: "Failed to load episodes for later"
-                        _isLoading.value = false
-                        reportException(throwable)
-                    }
+                timber.log.Timber.d("[SE_LOCAL] Fetching SE playlist...")
+                val result = YouTube.episodesForLater()
+                val episodes = result.getOrNull() ?: emptyList()
+                timber.log.Timber.d("[SE_LOCAL] YouTube API result: ${if (result.isSuccess) "success" else "failed"}, ${episodes.size} episodes")
+
+                if (result.isSuccess && episodes.isNotEmpty()) {
+                    // Use YouTube episodes
+                    playlist.value = PlaylistItem(
+                        id = playlistId,
+                        title = "Episodes for Later",
+                        author = null,
+                        songCountText = "${episodes.size} episodes",
+                        thumbnail = episodes.firstOrNull()?.thumbnail ?: "",
+                        playEndpoint = null,
+                        shuffleEndpoint = null,
+                        radioEndpoint = null,
+                    )
+                    playlistSongs.value = applySongFilters(episodes)
+                    _isLoading.value = false
+                } else {
+                    // Fall back to local saved episodes when API fails or returns empty
+                    timber.log.Timber.d("[SE_LOCAL] Falling back to local saved episodes")
+                    loadLocalSavedEpisodes()
+                }
             }
             else -> {
                 _error.value = "Unknown podcast playlist"
@@ -149,6 +158,50 @@ class OnlinePlaylistViewModel @Inject constructor(
                 _isLoading.value = false
                 reportException(throwable)
             }
+    }
+
+    private suspend fun loadLocalSavedEpisodes() {
+        timber.log.Timber.d("[SE_LOCAL] loadLocalSavedEpisodes called")
+        val savedEpisodes = database.savedPodcastEpisodes(SongSortType.CREATE_DATE, true).firstOrNull() ?: emptyList()
+        timber.log.Timber.d("[SE_LOCAL] Found ${savedEpisodes.size} saved episodes")
+        savedEpisodes.forEachIndexed { index, ep ->
+            timber.log.Timber.d("[SE_LOCAL] Episode $index: id=${ep.song.id}, title=${ep.song.title}, isEpisode=${ep.song.isEpisode}, inLibrary=${ep.song.inLibrary}")
+        }
+        if (savedEpisodes.isNotEmpty()) {
+            // Convert local Song entities to SongItem format
+            val songItems = savedEpisodes.map { song ->
+                SongItem(
+                    id = song.song.id,
+                    title = song.song.title,
+                    artists = song.artists.map { Artist(it.id, it.name) },
+                    album = song.album?.let { com.metrolist.innertube.models.Album(it.id, it.title) },
+                    duration = song.song.duration,
+                    thumbnail = song.song.thumbnailUrl ?: "",
+                    explicit = song.song.explicit,
+                    endpoint = null,
+                )
+            }
+            timber.log.Timber.d("[SE_LOCAL] Converted to ${songItems.size} SongItems")
+            playlist.value = PlaylistItem(
+                id = playlistId,
+                title = "Episodes for Later",
+                author = null,
+                songCountText = "${songItems.size} episodes",
+                thumbnail = songItems.firstOrNull()?.thumbnail ?: "",
+                playEndpoint = null,
+                shuffleEndpoint = null,
+                radioEndpoint = null,
+            )
+            val filtered = applySongFilters(songItems)
+            timber.log.Timber.d("[SE_LOCAL] After filter: ${filtered.size} episodes, setting playlistSongs")
+            playlistSongs.value = filtered
+            _isLoading.value = false
+            timber.log.Timber.d("[SE_LOCAL] Done, isLoading=false")
+        } else {
+            timber.log.Timber.d("[SE_LOCAL] No saved episodes found")
+            _error.value = "No saved episodes"
+            _isLoading.value = false
+        }
     }
 
     private fun startProactiveBackgroundLoading() {

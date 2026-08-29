@@ -2,6 +2,7 @@ package com.metrolist.shazamkit
 
 import com.metrolist.shazamkit.models.RecognitionResult
 import com.metrolist.shazamkit.models.ShazamRequestJson
+import timber.log.Timber
 import com.metrolist.shazamkit.models.ShazamResponseJson
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -33,6 +34,7 @@ import kotlin.random.Random
  * Shazam music recognition with built-in rate limiting and queue management
  */
 object Shazam {
+    private const val TAG = "ShazamApi"
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -107,9 +109,11 @@ object Shazam {
     suspend fun recognize(signature: String, sampleDurationMs: Long): Result<RecognitionResult> {
         val cacheKey = generateCacheKey(signature)
         getCachedResult(cacheKey)?.let {
+            Timber.tag(TAG).d("Cache hit for key=%s", cacheKey)
             return Result.success(it)
         }
 
+        Timber.tag(TAG).d("No cache hit, enqueueing request (pending=%d, active=%d)", requestQueue.size, activeRequests.get())
         return enqueueRequest(signature, sampleDurationMs)
     }
 
@@ -154,6 +158,7 @@ object Shazam {
         sampleDurationMs: Long
     ): Result<RecognitionResult> = requestMutex.withLock {
         if (requestQueue.size >= MAX_QUEUE_SIZE) {
+            Timber.tag(TAG).w("Request queue full (%d/%d), rejecting request", requestQueue.size, MAX_QUEUE_SIZE)
             return Result.failure(Exception("Request queue is full. Please wait."))
         }
 
@@ -165,9 +170,11 @@ object Shazam {
         )
 
         requestQueue.offer(request)
+        Timber.tag(TAG).d("Request #%d enqueued (queue size=%d)", requestId, requestQueue.size)
 
         if (!isProcessingQueue) {
             isProcessingQueue = true
+            Timber.tag(TAG).d("Starting queue processor")
             processQueue()
         }
 
@@ -188,11 +195,12 @@ object Shazam {
             activeRequests.incrementAndGet()
 
             scope.launch {
-                try {
-                    val result = executeRequest(request.signature, request.sampleDurationMs)
-                    request.completeWith(result)
-                } catch (e: Exception) {
-                    request.completeWith(Result.failure(e))
+            try {
+                val result = executeRequest(request.signature, request.sampleDurationMs)
+                request.completeWith(result)
+            } catch (e: Exception) {
+                Timber.tag(TAG).w(e, "Request #%d failed in queue processor", request.id)
+                request.completeWith(Result.failure(e))
                 } finally {
                     activeRequests.decrementAndGet()
                 }
@@ -221,16 +229,19 @@ object Shazam {
                 
                 val cacheKey = generateCacheKey(signature)
                 cacheResult(cacheKey, result)
-                
+                Timber.tag(TAG).d("Request succeeded on attempt %d", attempt + 1)
+
                 return Result.success(result)
             } catch (e: Exception) {
                 lastException = e
+                Timber.tag(TAG).w(e, "Request failed on attempt %d/%d: %s", attempt + 1, MAX_RETRIES, e.message)
 
                 if (e.message?.contains("429") == true ||
                     e.message?.contains("Too many requests", ignoreCase = true) == true
                 ) {
                     if (attempt < MAX_RETRIES - 1) {
                         val delayTime = calculateBackoffDelay(attempt)
+                        Timber.tag(TAG).d("Rate limited, retrying in %dms (attempt %d/%d)", delayTime, attempt + 2, MAX_RETRIES)
                         delay(delayTime)
                         continue
                     }
@@ -269,6 +280,7 @@ object Shazam {
             timezone = timezones.random()
         )
 
+        Timber.tag(TAG).d("Sending recognition request to Shazam API")
         val response = client.post("https://amp.shazam.com/discovery/v5/en/US/android/-/tag/$uuid1/$uuid2") {
             parameter("sync", "true")
             parameter("webv3", "true")
@@ -285,6 +297,7 @@ object Shazam {
 
         if (!response.status.isSuccess()) {
             val statusCode = response.status.value
+            Timber.tag(TAG).w("Shazam API returned HTTP %d", statusCode)
             when (statusCode) {
                 429 -> throw Exception("Too many requests")
                 404 -> throw Exception("No match found")
@@ -294,6 +307,7 @@ object Shazam {
         }
 
         val shazamResponse = response.body<ShazamResponseJson>()
+        Timber.tag(TAG).d("Shazam API response received, hasTrack=%s", shazamResponse.track != null)
         return shazamResponse.toRecognitionResult()
             ?: throw Exception("No match found")
     }
@@ -350,6 +364,7 @@ object Shazam {
             timestamp = System.currentTimeMillis(),
             result = result
         )
+        Timber.tag(TAG).d("Result cached for key=%s (cache size=%d)", key, resultCache.size)
 
         cleanupCache()
     }
@@ -359,6 +374,7 @@ object Shazam {
      */
     private fun cleanupCache() {
         if (resultCache.size < 100) return
+        Timber.tag(TAG).d("Cache cleanup: %d entries, pruning expired", resultCache.size)
 
         val currentTime = System.currentTimeMillis()
         val iterator = resultCache.entries.iterator()

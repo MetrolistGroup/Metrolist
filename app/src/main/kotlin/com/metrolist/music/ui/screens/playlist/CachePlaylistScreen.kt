@@ -37,10 +37,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -105,7 +104,6 @@ import java.time.LocalDateTime
 @Composable
 fun CachePlaylistScreen(
     navController: NavController,
-    scrollBehavior: TopAppBarScrollBehavior,
     viewModel: CachePlaylistViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -114,9 +112,9 @@ fun CachePlaylistScreen(
     val haptic = LocalHapticFeedback.current
     val focusManager = LocalFocusManager.current
 
-    val isPlaying by playerConnection.isEffectivelyPlaying.collectAsState()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
-    val cachedSongs by viewModel.cachedSongs.collectAsState()
+    val isPlaying by playerConnection.isEffectivelyPlaying.collectAsStateWithLifecycle()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    val cachedSongs by viewModel.cachedSongs.collectAsStateWithLifecycle()
 
     val (sortType, onSortTypeChange) = rememberEnumPreference(
         SongSortTypeKey,
@@ -144,9 +142,11 @@ fun CachePlaylistScreen(
             restore = { it.toMutableStateList() }
         )
     ) { mutableStateListOf() }
+    var selectionAnchorSongId by rememberSaveable { mutableStateOf<String?>(null) }
     val onExitSelectionMode = {
         inSelectMode = false
         selection.clear()
+        selectionAnchorSongId = null
     }
 
     var isSearching by remember { mutableStateOf(false) }
@@ -182,6 +182,10 @@ fun CachePlaylistScreen(
             if (filteredSongs.find { it.id == songId } == null) {
                 selection.remove(songId)
             }
+        }
+
+        if (selectionAnchorSongId != null && filteredSongs.none { it.id == selectionAnchorSongId }) {
+            selectionAnchorSongId = filteredSongs.firstOrNull { it.id in selection }?.id
         }
     }
 
@@ -249,7 +253,7 @@ fun CachePlaylistScreen(
                     }
                 }
 
-                itemsIndexed(filteredSongs, key = { _, song -> song.id }) { index, song ->
+                itemsIndexed(filteredSongs, key = { index, song -> "${song.id}_$index" }) { index, song ->
                     val onCheckedChange: (Boolean) -> Unit = {
                         if (it) {
                             selection.add(song.id)
@@ -274,7 +278,6 @@ fun CachePlaylistScreen(
                                     menuState.show {
                                         SongMenu(
                                             originalSong = song,
-                                            navController = navController,
                                             onDismiss = menuState::dismiss,
                                             isFromCache = true,
                                         )
@@ -311,6 +314,24 @@ fun CachePlaylistScreen(
                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                         inSelectMode = true
                                         onCheckedChange(true)
+                                        selectionAnchorSongId = song.id
+                                    } else {
+                                        val anchorIndex = selectionAnchorSongId?.let { anchorSongId ->
+                                            filteredSongs.indexOfFirst { it.id == anchorSongId }
+                                        } ?: -1
+
+                                        if (anchorIndex == -1) {
+                                            onCheckedChange(true)
+                                            selectionAnchorSongId = song.id
+                                        } else {
+                                            val range = if (anchorIndex <= index) anchorIndex..index else index..anchorIndex
+                                            for (rangeIndex in range) {
+                                                val rangeSongId = filteredSongs[rangeIndex].id
+                                                if (rangeSongId !in selection) {
+                                                    selection.add(rangeSongId)
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             )
@@ -485,7 +506,7 @@ private fun CachePlaylistHeader(
         // Playlist Name
         Text(
             text = stringResource(R.string.cached_playlist),
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             maxLines = 2,

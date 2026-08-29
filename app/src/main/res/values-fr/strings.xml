@@ -12,7 +12,7 @@
     </plurals>
     <string name="history">Historique</string>
     <string name="stats">Statistiques</string>
-    <string name="mood_and_genres">Humeurs et Genres</string>
+    <string name="mood_and_genres">Ambiance et Genres</string>
     <string name="account">Compte</string>
     <string name="quick_picks">Sélection Rapide</string>
     <string name="quick_picks_empty">Écoutez quelques titres pour générer votre sélection rapide</string>
@@ -36,8 +36,8 @@
     <string name="filter_albums">Albums</string>
     <string name="filter_artists">Artistes</string>
     <string name="filter_playlists">Playlists</string>
-    <string name="filter_community_playlists">Playlists de la communauté</string>
-    <string name="filter_featured_playlists">Playlists mises en avant</string>
+    <string name="filter_community_playlists">Playlists Communautaires</string>
+    <string name="filter_featured_playlists">Playlists en Vedette</string>
     <string name="filter_bookmarked">Favoris</string>
     <string name="no_results_found">Aucun résultat trouvé</string>
     <string name="from_your_library">De votre bibliothèque</string>
@@ -240,12 +240,10 @@
     <string name="sided">Sur le côté</string>
     <string name="enable_lrclib">Activer le fournisseur de paroles LrcLib</string>
     <string name="hide_explicit">Masquer le contenu explicite</string>
-    <string name="discord_integration">Intégration Discord</string>
     <string name="dismiss">Abandonner</string>
     <string name="options">Options</string>
     <string name="preview">Prévisualisation</string>
     <string name="action_logout">Se déconnecter</string>
-    <string name="enable_discord_rpc">Activer la présence riche</string>
     <string name="login_failed">Échec de la connexion</string>
     <string name="delete_playlist_confirm">Voulez-vous vraiment supprimer la playlist « %s » ?</string>
     <string name="listen_history">Historique d\'écoute</string>

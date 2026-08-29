@@ -93,7 +93,9 @@ fun parseCookieString(cookie: String): Map<String, String> =
 
 fun String.parseTime(): Int? {
     try {
-        val parts = split(":").map { it.toInt() }
+        // YouTube Music returns duration with locale-dependent separators
+        // (":" en-US, "." some locales, "," EU). Accept all.
+        val parts = split(Regex("[:.,]")).map { it.toInt() }
         if (parts.size == 2) {
             return parts[0] * 60 + parts[1]
         }

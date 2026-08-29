@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,6 +25,8 @@ data class SavedEQProfile(
     val deviceModel: String,              // e.g., "Sony WH-1000XM4"
     val bands: List<ParametricEQBand>,    // EQ bands
     val preamp: Double = 0.0,             // Preamp gain in dB
+    val source: String = "unknown",       // Measurement source (e.g., oratory1990, crinacle)
+    val rig: String = "unknown",          // Measurement rig (e.g., HMS II.3, GRAS 43AG-7)
     val isCustom: Boolean = false,        // Whether this is a custom imported profile
     val isActive: Boolean = false,        // Whether this profile is currently active
     val addedTimestamp: Long = System.currentTimeMillis()
@@ -54,6 +57,7 @@ class EQProfileRepository @Inject constructor(
     val activeProfile: StateFlow<SavedEQProfile?> = _activeProfile.asStateFlow()
 
     companion object {
+        private const val TAG = "EQProfileRepository"
         private const val KEY_PROFILES = "eq_profiles"
         private const val KEY_ACTIVE_PROFILE_ID = "active_profile_id"
     }
@@ -77,7 +81,7 @@ class EQProfileRepository @Inject constructor(
                 _activeProfile.value = loadedProfiles.find { it.id == activeId }
             }
         } catch (e: Exception) {
-            println("Error loading EQ profiles: ${e.message}")
+            Timber.tag(TAG).e(e, "Error loading EQ profiles")
             _profiles.value = emptyList()
             _activeProfile.value = null
         }
@@ -100,7 +104,37 @@ class EQProfileRepository @Inject constructor(
             currentProfiles.add(profile)
         }
 
+        if (profile.id == _activeProfile.value?.id) {
+            _activeProfile.value = profile
+        }
+
         // Save to SharedPreferences
+        val profilesJson = json.encodeToString<List<SavedEQProfile>>(currentProfiles)
+        prefs.edit { putString(KEY_PROFILES, profilesJson) }
+
+        _profiles.value = currentProfiles
+    }
+
+    /**
+     * Save multiple profiles at once (useful for wizard)
+     */
+    suspend fun saveProfiles(profiles: List<SavedEQProfile>) = withContext(Dispatchers.IO) {
+        val currentProfiles = _profiles.value.toMutableList()
+
+        val activeId = _activeProfile.value?.id
+
+        profiles.forEach { newProfile ->
+            val existingIndex = currentProfiles.indexOfFirst { it.id == newProfile.id }
+            if (existingIndex >= 0) {
+                currentProfiles[existingIndex] = newProfile
+            } else {
+                currentProfiles.add(newProfile)
+            }
+            if (newProfile.id == activeId) {
+                _activeProfile.value = newProfile
+            }
+        }
+
         val profilesJson = json.encodeToString<List<SavedEQProfile>>(currentProfiles)
         prefs.edit { putString(KEY_PROFILES, profilesJson) }
 

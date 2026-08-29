@@ -13,6 +13,7 @@ import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.MyTopFilter
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.utils.dataStore
+import java.time.LocalDateTime
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -44,7 +45,13 @@ constructor(
             context.dataStore.data.map { it[HideVideoSongsKey] ?: false }.distinctUntilChanged()
         ) { period, hideVideoSongs -> period to hideVideoSongs }
             .flatMapLatest { (period, hideVideoSongs) ->
-                database.mostPlayedSongs(period.toTimeMillis(), top.toInt()).map { songs ->
+                val now = LocalDateTime.now()
+                database.mostPlayedSongs(
+                    fromTimeStamp = period.toLocalDateTime(),
+                    limit = top.toInt(),
+                    offset = 0,
+                    toTimeStamp = now
+                ).map { songs ->
                     if (hideVideoSongs) songs.filter { !it.song.isVideo } else songs
                 }
             }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())

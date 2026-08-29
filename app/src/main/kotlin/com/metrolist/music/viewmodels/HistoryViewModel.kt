@@ -53,7 +53,13 @@ constructor(
             .distinctUntilChanged()
             .flatMapLatest { hideVideoSongs ->
                 database
-                    .events()
+                    .historyEvents(
+                        tomorrowStart = today.plusDays(1).atStartOfDay(),
+                        todayStart = today.atStartOfDay(),
+                        yesterdayStart = today.minusDays(1).atStartOfDay(),
+                        thisMondayStart = thisMonday.atStartOfDay(),
+                        lastMondayStart = lastMonday.atStartOfDay(),
+                    )
                     .map { events ->
                         events
                             .filter { !hideVideoSongs || !it.song.song.isVideo }

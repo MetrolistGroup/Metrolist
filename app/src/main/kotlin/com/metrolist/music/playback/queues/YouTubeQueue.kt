@@ -21,30 +21,59 @@ class YouTubeQueue(
     private var retryCount = 0
     private val maxRetries = 3
 
+    private class EmptyRadioQueueException : IllegalStateException()
+
     override suspend fun getInitialStatus(): Queue.Status {
         return withContext(IO) {
             var lastException: Throwable? = null
-            
-            // Try with original endpoint first (allows YouTube to personalize recommendations)
+
+            if (endpoint.videoId != null && endpoint.playlistId == null) {
+                endpoint = WatchEndpoint(
+                    videoId = endpoint.videoId,
+                    playlistId = "RDAMVM${endpoint.videoId}"
+                )
+            }
+
+            val isRadioRequest =
+                endpoint.playlistId?.startsWith("RDAMVM") == true ||
+                (endpoint.videoId != null && endpoint.playlistId == null)
+
             for (attempt in 0..maxRetries) {
                 try {
                     val nextResult = YouTube.next(endpoint, continuation).getOrThrow()
+                    
+                    var items = nextResult.items
+                    val relEndpoint = nextResult.relatedEndpoint
+                    
+                    if (isRadioRequest && continuation == null && items.size <= 1) {
+                        if (endpoint.playlistId?.startsWith("RDAMVM") == true) {
+                            throw EmptyRadioQueueException()
+                        } else if (relEndpoint != null) {
+                            val relatedPage = YouTube.related(relEndpoint).getOrNull()
+                            if (relatedPage != null && relatedPage.songs.isNotEmpty()) {
+                                val relatedSongs = relatedPage.songs.filter { it.id != endpoint.videoId }
+                                items = items + relatedSongs
+                            }
+                        }
+                    }
+
                     endpoint = nextResult.endpoint
                     continuation = nextResult.continuation
                     retryCount = 0
                     return@withContext Queue.Status(
                         title = nextResult.title,
-                        items = nextResult.items.map { it.toMediaItem() },
+                        items = items.map { it.toMediaItem() },
                         mediaItemIndex = nextResult.currentIndex ?: 0,
                     )
                 } catch (e: Exception) {
                     lastException = e
-                    // If first attempt fails and we have a videoId, try with fallback radio params
-                    if (attempt == 0 && endpoint.videoId != null && endpoint.playlistId == null) {
-                        endpoint = WatchEndpoint(
-                            videoId = endpoint.videoId,
-                            playlistId = "RDAMVM${endpoint.videoId}"
-                        )
+                    if (
+                        e is EmptyRadioQueueException &&
+                        endpoint.playlistId?.startsWith("RDAMVM") == true &&
+                        endpoint.videoId != null
+                    ) {
+                        endpoint = WatchEndpoint(videoId = endpoint.videoId)
+                        // It will loop again and try with just videoId
                     }
                 }
             }
@@ -57,7 +86,7 @@ class YouTubeQueue(
     override suspend fun nextPage(): List<MediaItem> {
         return withContext(IO) {
             var lastException: Throwable? = null
-            
+
             for (attempt in 0..maxRetries) {
                 try {
                     val nextResult = YouTube.next(endpoint, continuation).getOrThrow()
@@ -80,11 +109,14 @@ class YouTubeQueue(
     companion object {
         /**
          * Creates a radio queue based on a song.
-         * Uses only videoId to let YouTube personalize recommendations based on user's listening history.
+         * Explicitly requests the RDAMVM playlist to trigger automotive/radio mixing.
          */
         fun radio(song: MediaMetadata): YouTubeQueue {
             return YouTubeQueue(
-                WatchEndpoint(videoId = song.id),
+                WatchEndpoint(
+                    videoId = song.id,
+                    playlistId = "RDAMVM${song.id}"
+                ),
                 song
             )
         }

@@ -14,7 +14,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.metrolist.music.R
 import com.metrolist.music.constants.AudioQuality
-import com.metrolist.music.utils.YTPlayerUtils
+import com.metrolist.music.utils.InnerTubeXPlayer
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.get
 import kotlinx.coroutines.CoroutineScope
@@ -103,11 +103,12 @@ class WrappedAudioService(
         }
 
         return try {
-            val audioQuality = context.dataStore.get(com.metrolist.music.constants.AudioQualityKey).let {
-                AudioQuality.valueOf(it ?: AudioQuality.AUTO.name)
+            val audioQuality = context.dataStore.get(com.metrolist.music.constants.AudioQualityKey).let { value ->
+                if (value == "VERY_HIGH") AudioQuality.HIGH
+                else AudioQuality.entries.find { it.name == value } ?: AudioQuality.AUTO
             }
             val playbackData = withContext(Dispatchers.IO) {
-                YTPlayerUtils.playerResponseForPlayback(
+                InnerTubeXPlayer.playerResponseForPlayback(
                     videoId = songId,
                     audioQuality = audioQuality,
                     connectivityManager = connectivityManager,

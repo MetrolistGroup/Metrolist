@@ -34,7 +34,7 @@
     <string name="search_library">Поиск в библиотеке…</string>
     <string name="filter_library">Библиотека</string>
     <string name="filter_liked">Понравившиеся</string>
-    <string name="filter_downloaded">Загруженные</string>
+    <string name="filter_downloaded">Скачанные</string>
     <string name="filter_all">Все</string>
     <string name="filter_songs">Композиции</string>
     <string name="filter_videos">Видео</string>
@@ -52,9 +52,9 @@
     <string name="from_your_library">Из вашей библиотеки</string>
     <string name="other_versions">Другие версии</string>
     <string name="liked_songs">Любимые треки</string>
-    <string name="downloaded_songs">Загруженная музыка</string>
+    <string name="downloaded_songs">Скачанная музыка</string>
     <string name="playlist_is_empty">Плейлист пуст</string>
-    <string name="remove_download_playlist_confirm">Вы уверены, что хотите удалить все песни из плейлиста «%s» из хранилища загруженной музыки?</string>
+    <string name="remove_download_playlist_confirm">Вы уверены, что хотите удалить все песни из плейлиста «%s» из хранилища скачанной музыки?</string>
     <string name="delete_playlist_confirm">Вы уверены, что хотите удалить плейлист «%s»?</string>
     <string name="retry">Повторить</string>
     <string name="radio">Радио</string>
@@ -70,9 +70,9 @@
     <string name="add_all_to_library">Добавить все в библиотеку</string>
     <string name="remove_from_library">Удалить из библиотеки</string>
     <string name="remove_all_from_library">Удалить все из библиотеки</string>
-    <string name="action_download">Загрузить</string>
-    <string name="downloading">Загрузка</string>
-    <string name="remove_download">Удалить из загруженных</string>
+    <string name="action_download">Скачать</string>
+    <string name="downloading">Скачивание</string>
+    <string name="remove_download">Удалить из скачанных</string>
     <string name="import_playlist">Импортировать плейлист</string>
     <string name="add_to_playlist">Добавить в плейлист</string>
     <string name="view_artist">Перейти к исполнителю</string>
@@ -205,7 +205,7 @@
     <string name="dark_theme_on">Вкл.</string>
     <string name="dark_theme_off">Выкл.</string>
     <string name="dark_theme_follow_system">Использовать настройки системы</string>
-    <string name="pure_black">Режим чистого черного цвета</string>
+    <string name="pure_black">Чисто чёрный</string>
     <string name="customize_navigation_tabs">Настройка вкладок навигации</string>
     <string name="player">Плеер</string>
     <string name="player_text_alignment">Выравнивание текста плеера</string>
@@ -254,7 +254,7 @@
     <string name="song_cache">Кэш аудио</string>
     <string name="max_cache_size">Максимальный размер кэша</string>
     <string name="unlimited">Неограниченно</string>
-    <string name="clear_all_downloads">Очистить все загрузки</string>
+    <string name="clear_all_downloads">Очистить все скачанные</string>
     <string name="max_image_cache_size">Макс. размер кэша изображений</string>
     <string name="clear_image_cache">Очистить кэш изображений</string>
     <string name="max_song_cache_size">Макс. размер кэша аудио</string>
@@ -271,8 +271,8 @@
     <string name="clear_search_history_confirm">Вы уверены, что хотите очистить всю историю поиска?</string>
     <string name="disable_screenshot">Отключить снимок экрана</string>
     <string name="disable_screenshot_desc">При включении этой опции скриншоты и отображение приложения в списке последних отключаются.</string>
-    <string name="enable_lrclib">Включить провайдера текстов LrcLib</string>
-    <string name="enable_kugou">Включить провайдера текстов KuGou</string>
+    <string name="enable_lrclib">Включить поставщика текстов LrcLib</string>
+    <string name="enable_kugou">Включить поставщика текстов KuGou</string>
     <string name="hide_explicit">Скрывать контент с нецензурной лексикой</string>
     <string name="backup_restore">Резервное копирование</string>
     <string name="action_backup">Создать резервную копию</string>
@@ -281,14 +281,12 @@
     <string name="backup_create_success">Резервная копия создана успешно</string>
     <string name="backup_create_failed">Не удалось создать резервную копию</string>
     <string name="restore_failed">Не удалось восстановить резервную копию</string>
-    <string name="discord_integration">Интеграция с Discord</string>
     <string name="discord_information">Metrolist использует библиотеку KizzyRPC для установки статуса вашего аккаунта Discord. Это включает использование соединения через Discord Gateway, что может считаться нарушением условий использования Discord. Однако, на данный момент нет известных случаев блокировки учетных записей пользователей по этой причине. Используйте на свой страх и риск.\n\nMetrolist будет извлекать только ваш токен, а все остальное хранится локально.</string>
     <string name="dismiss">Закрыть</string>
     <string name="options">Настройки</string>
     <string name="preview">Предпросмотр</string>
     <string name="login_failed">Ошибка входа</string>
     <string name="action_logout">Выйти</string>
-    <string name="enable_discord_rpc">Включить Rich Presence</string>
     <string name="about">О приложении</string>
     <string name="app_version">Версия приложения</string>
     <string name="new_version_available">Доступна новая версия</string>

@@ -6,10 +6,7 @@
     <string name="link_copied">Lenke kopiert til utklippstavlen</string>
     <string name="token_hidden">Klikk for å vise tokenen</string>
     <string name="enable_swipe_thumbnail">Sveip for å bytte sanger</string>
-    <string name="google">Google</string>
     <string name="token_adv_login_description">Dette er en AVANSERT innloggingsmetode. Som alternativ til nettportalen, kan du direkte legge inn eller oppdatere innloggingstokenen din her. Dette kan f.eks. gjøre innlogging på flere enheter raskere. NB: Ugyldige tokenformater som appen ikke lykkes til i å tolke, vil ikke godtas</string>
-    <string name="elements_selected">%1$d elementer valgt</string>
-    <string name="explore">Utforsk</string>
     <string name="lyrics">Sangtekster</string>
     <string name="allows_for_sync_witch_youtube">NB: Dette tillater synkronisering med YouTube Music. Dette kan ikke endres senere.</string>
     <string name="share_lyrics">Del sangtekster</string>
@@ -19,11 +16,6 @@
     <string name="remote_history">Fjern</string>
     <string name="charts">Hitlister</string>
     <string name="back_button_desc">Tilbake</string>
-    <string name="no_title">Ingen tittel</string>
-    <string name="unknown_artist">Ukjent artist</string>
-    <string name="unknown_item_type">Ukjent oppføringstype</string>
-    <string name="loading_charts">Laster inn hitlister…</string>
-    <string name="retry_button">Prøv igjen</string>
     <string name="album_cover_desc">Albumomslag</string>
     <string name="top_music_videos">Topp musikkvideoer</string>
     <string name="trending">Trendende</string>
@@ -41,12 +33,9 @@
     <string name="max_selection_limit">Øvre grense for utvalg</string>
     <string name="share_selected">Del valgte</string>
     <string name="customize_colors">Tilpass farger</string>
-    <string name="more_options">Flere valg</string>
     <string name="text_color">Tekstfarge</string>
     <string name="secondary_text_color">Sekundær tekstfarge</string>
     <string name="background_color">Bakgrunnsfarge</string>
-    <string name="added_to_play_next">Sangen vil spilles nest</string>
-    <string name="added_to_queue">Lagt til i køen</string>
     <string name="remove_from_cache">Fjern fra hurtiglagring</string>
     <string name="copy_link">Kopier lenke</string>
     <string name="select">Velg alt</string>
@@ -54,23 +43,16 @@
     <string name="dislike_all">Mislik alt</string>
     <string name="sort_by_last_updated">Dato oppdatert</string>
     <string name="already_in_playlist">Allerede i spilleliste:</string>
-    <plurals name="n_element">
-        <item quantity="one">%d sang</item>
-        <item quantity="other">%d sanger</item>
-    </plurals>
     <plurals name="n_time">
         <item quantity="one">%d gang</item>
         <item quantity="other">%d ganger</item>
     </plurals>
-    <string name="login_settings">Innloggingsinnstillinger</string>
-    <string name="general_settings">Alminnelige innstillinger</string>
     <string name="player_background_style">Bakgrunnsstil for avspilleren</string>
     <string name="follow_theme">Følg tema</string>
     <string name="gradient">Gradient</string>
     <string name="player_background_blur">Uskarp</string>
     <string name="player_buttons_style">Farger på avspillerknapper</string>
     <string name="default_style">Standard</string>
-    <string name="secondary_color_style">Sekundære</string>
     <string name="swipe_song_to_add">Sveip sangen til venstre for å legge den til i køen, eller til venstre for å legge til neste</string>
     <string name="lyrics_click_change">Endre sangtekster ved klikk</string>
     <string name="slim">Smal</string>
@@ -80,21 +62,14 @@
     <string name="show_downloaded_playlist">Vis «Nedlastet»-spilleliste</string>
     <string name="show_top_playlist">Vis «Topp»-spilleliste</string>
     <string name="show_cached_playlist">Vis «Hurtiglagret»-spilleliste</string>
-    <string name="discord">Discord</string>
     <string name="advanced_login">Avansert innlogging (med token)</string>
     <string name="token_shown">Klikk igjen for å kopiere eller redigere tokenen</string>
-    <string name="ytm_sync">Synkroniser automatisk med YouTube Music-kontoen din</string>
     <string name="general">Alminnelig</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Endre standardvisning i biblioteket</string>
     <string name="set_quick_picks">Still inn hurtigvalg</string>
     <string name="last_song_listened">Basert på siste sang spilt av</string>
     <string name="app_language">Appspråk</string>
-    <string name="configure_app_language">Handter appspråk</string>
-    <string name="intent_app_language_not_found">Kunne ikke finne appspråkinnstillinger, vennligst endre dem for hånd</string>
-    <string name="open_supported_links">Åpne støttede lenker som standard</string>
-    <string name="top_result">Topp resultat</string>
-    <string name="other_results">Andre</string>
     <string name="uploaded_playlist">Opplastet</string>
     <string name="filter_uploaded">Opplastet</string>
     <string name="about_artist">Om artisten</string>
@@ -113,14 +88,10 @@
     <string name="starting_radio">Starter radio</string>
     <string name="now_playing">Spiller nå</string>
     <string name="close">Lukk</string>
-    <string name="minimum_volume">Minste volum</string>
-    <string name="maximum_volume">Høyeste volum</string>
     <string name="hide_player_thumbnail">Vis miniatyrbilde i spilleren</string>
     <string name="hide_player_thumbnail_desc">Erstatt albumcover med applogo i spilleren</string>
     <string name="crop_album_art">Beskjær albumcover</string>
     <string name="crop_album_art_desc">Tving et kvadratisk visningsforhold ved å beskjære miniatyrbilder av videoer</string>
-    <string name="seek_backward">5 sekunder bakover</string>
-    <string name="seek_forward">5 sekunder forover</string>
     <string name="seek_forward_dynamic">%1$d sekunder forover</string>
     <string name="seek_backward_dynamic">-%1$d sekunder bakover</string>
     <string name="seek_seconds_addup">Progressiv spoling</string>
@@ -129,7 +100,6 @@
     <string name="new_mini_player_design">Ny minispillerdesign</string>
     <string name="primary_color_style">Primær farge</string>
     <string name="tertiary_color_style">Tertiær farge</string>
-    <string name="enable_wavy_slider">Aktiver bølgete glider</string>
     <string name="wavy">Bølgete</string>
     <string name="swipe_song_to_remove">Sveip sangen for å fjerne den fra spillelisten</string>
     <string name="lyrics_auto_scroll">Automatisk rullende tekst</string>
@@ -137,8 +107,6 @@
     <string name="lyrics_glow_effect_desc">Legg til glødende animasjon og sprett-effekt til gjeldende sangtekst</string>
     <string name="enable_better_lyrics">Aktiver Better Lyrics</string>
     <string name="enable_better_lyrics_desc">Bruk Better Lyrics-tjeneren til ord-for-ord sangtekster</string>
-    <string name="enable_simpmusic">Aktiver SimpMusic sangtekster</string>
-    <string name="enable_simpmusic_desc">Bruk SimpMusic Lyrics-tjeneren for synkroniserte sangtekster</string>
     <string name="auto_scroll">Re-synk</string>
     <string name="show_uploaded_playlist">Vis \"Opplastet\" spilleliste</string>
     <string name="shuffle_playlist_first">Shuffle spilleliste/album først</string>
@@ -146,4 +114,6 @@
     <string name="show_wrapped_card">Vis Wrapped-kort</string>
     <string name="skip_silence_desc">Hopp forbi stille deler av sanger</string>
     <string name="skip_silence_instant">Hopp over stillhet øyeblikkelig</string>
+    <string name="monthly_most_playlist_name">Månedlig mest</string>
+    <string name="restart">Restart</string>
 </resources>

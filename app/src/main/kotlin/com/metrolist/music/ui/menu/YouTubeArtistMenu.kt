@@ -22,7 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -43,6 +43,7 @@ import com.metrolist.music.ui.component.Material3MenuItemData
 import com.metrolist.music.ui.component.NewAction
 import com.metrolist.music.ui.component.NewActionGrid
 import com.metrolist.music.ui.component.YouTubeListItem
+import com.metrolist.music.utils.ArtistNameAliases
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
@@ -57,10 +58,10 @@ fun YouTubeArtistMenu(
     val context = LocalContext.current
     val database = LocalDatabase.current
     val playerConnection = LocalPlayerConnection.current ?: return
-    val libraryArtist by database.artist(artist.id).collectAsState(initial = null)
+    val libraryArtist by database.artist(artist.id).collectAsStateWithLifecycle(initialValue = null)
     val listenTogetherManager = LocalListenTogetherManager.current
     val isGuest = listenTogetherManager?.isInRoom == true && !listenTogetherManager.isHost
-    val isPinned by database.speedDialDao.isPinned(artist.id).collectAsState(initial = false)
+    val isPinned by database.speedDialDao.isPinned(artist.id).collectAsStateWithLifecycle(initialValue = false)
     val coroutineScope = rememberCoroutineScope()
 
     YouTubeListItem(
@@ -118,7 +119,7 @@ fun YouTubeArtistMenu(
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             },
-                            text = if (isPinned) "Unpin" else "Pin",
+                            text = if (isPinned) stringResource(R.string.unpin) else stringResource(R.string.pin),
                             onClick = {
                                 coroutineScope.launch(Dispatchers.IO) {
                                     if (isPinned) {
@@ -188,7 +189,7 @@ fun YouTubeArtistMenu(
                                     insert(
                                         ArtistEntity(
                                             id = artist.id,
-                                            name = artist.title,
+                                            name = ArtistNameAliases.resolve(artist.id, artist.title),
                                             channelId = artist.channelId,
                                             thumbnailUrl = artist.thumbnail,
                                         ).toggleLike()

@@ -1,15 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="explore">Eksplore</string>
     <string name="local_history">Lokal</string>
     <string name="remote_history">Dan lot aplikasyon</string>
     <string name="charts">Bann graf</string>
     <string name="back_button_desc">Rétour</string>
-    <string name="no_title">Napa tit</string>
-    <string name="unknown_artist">Artist enkoni</string>
-    <string name="unknown_item_type">Type éléman enkoni</string>
-    <string name="loading_charts">Pé load bann graf…</string>
-    <string name="retry_button">Re-eseyé</string>
     <string name="album_cover_desc">Cover album</string>
     <string name="top_music_videos">Bann meyer vidéo clip</string>
     <string name="trending">Tandans</string>
@@ -25,7 +19,6 @@
     <string name="filter_uploaded">Inn upload</string>
     <string name="sync_playlist">Senkroniz playlist</string>
     <string name="sync_disabled">Senkronizasyon dezaktivé</string>
-    <string name="elements_selected">%1$d eleman selekté</string>
     <string name="allows_for_sync_witch_youtube">Note: Sa paramet la permet senkronizasyon ek YouTube Music. Ou PA pu resi resanze li apre.</string>
     <string name="generating_image">Generate zimage</string>
     <string name="please_wait">Patienté silvouple</string>
@@ -36,12 +29,9 @@
     <string name="max_selection_limit">Limit maximal pu seleksyon</string>
     <string name="share_selected">Partaz seleksyon</string>
     <string name="customize_colors">Personaliz kouler</string>
-    <string name="more_options">Plis opsyon</string>
     <string name="text_color">Kouler text</string>
     <string name="secondary_text_color">Kouler secondaire pu text</string>
     <string name="background_color">Kouler background</string>
-    <string name="added_to_play_next">Inn azoute pu zwé apre</string>
-    <string name="added_to_queue">Inn azout dan queue</string>
     <string name="remove_from_cache">Tir dan cache</string>
     <string name="copy_link">Kopié link</string>
     <string name="select">Selekté tou</string>
@@ -53,28 +43,18 @@
     <string name="now_playing">Lektir en cours</string>
     <string name="lyrics">Bann paroles</string>
     <string name="close">Fermé</string>
-    <string name="minimum_volume">Volume Minimum</string>
-    <string name="maximum_volume">Volume Maximum</string>
     <string name="hide_player_thumbnail">Kasiet thumbnail lekter la</string>
     <string name="hide_player_thumbnail_desc">Ranplas art album ar logo aplikasyon dan lekter</string>
     <string name="already_in_playlist">Deza dan playlist:</string>
-    <plurals name="n_element">
-        <item quantity="one">%d eleman</item>
-        <item quantity="other">%d eleman</item>
-    </plurals>
     <plurals name="n_time">
         <item quantity="one">%d fwa</item>
         <item quantity="other">%d fwa</item>
     </plurals>
-    <string name="seek_backward">5 second en aryer</string>
-    <string name="seek_forward">5 second en avan</string>
     <string name="seek_forward_dynamic">%1$d second en avan</string>
     <string name="seek_backward_dynamic">-%1$d second en aryer</string>
     <string name="seek_seconds_addup">Avansman progresif</string>
     <string name="seek_seconds_addup_description">Si sa opsyon la aktif, sak fwa avansé ou rekilé li pu azout 5 second anplis lor sa mem aksyon ki en presedans</string>
     <string name="similar_content">Konteni similaire</string>
-    <string name="login_settings">Paramet login</string>
-    <string name="general_settings">Paramet zeneral</string>
     <string name="player_background_style">Style lekter dan background</string>
     <string name="follow_theme">Swiv thème</string>
     <string name="gradient">Degradé</string>
@@ -83,7 +63,6 @@
     <string name="player_background_blur">Flou</string>
     <string name="player_buttons_style">Kouler bouton dan lekter</string>
     <string name="default_style">Defaut</string>
-    <string name="secondary_color_style">Secondaire</string>
     <string name="enable_swipe_thumbnail">Aktiv swipe pu sanz lamizik</string>
     <string name="swipe_song_to_add">Swipe dan gos pou azout dan queue ou drwat pu zwé li apre</string>
     <string name="swipe_song_to_remove">Swipe lamizk pu tir li dan playlist</string>
@@ -97,13 +76,10 @@
     <string name="show_top_playlist">Afis playlist \"Top\"</string>
     <string name="show_cached_playlist">Afis playlist \"Inn cache\"</string>
     <string name="show_uploaded_playlist">Afis playlist \"Inn Upload\"</string>
-    <string name="google">Google</string>
-    <string name="discord">Discord</string>
     <string name="advanced_login">Login ar token</string>
     <string name="token_hidden">Click pu afis token</string>
     <string name="token_shown">Click ankor pu kopié ou edit</string>
     <string name="token_adv_login_description">Sa method la enn method login AVANCÉ. Antan ki enn alternaif a portail web, ou pu bizin met ou update ou login token direkteman. Par examp, li kapav fer login pli rapid lor plizir aparey. Noté ki app la pa pu aksepté okenn format token ki invalid ek ki li pa resi analizé</string>
-    <string name="ytm_sync">Senkroniz ar ou compte Youtube Music automatikman</string>
     <string name="yt_sync">Senkroniz ar compte automikman</string>
     <string name="more_content">Plis konteni</string>
     <string name="edit_playlist_cover">Edit cover playlist</string>
@@ -113,8 +89,6 @@
     <string name="remove_custom_image">Tir zimaz personalizé</string>
     <string name="general">Zeneral</string>
     <string name="proxy">Proxy</string>
-    <string name="top_result">Bann meyer rezilta</string>
-    <string name="other_results">Lezot</string>
     <string name="download_playlist_desc">Download tou sante pu zwe offline</string>
     <string name="remove_download_playlist_desc">Tir tou sante inn download depi sa playlist la</string>
     <string name="download_in_progress_desc">Pe Download</string>

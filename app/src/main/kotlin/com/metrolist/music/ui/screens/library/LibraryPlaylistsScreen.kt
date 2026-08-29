@@ -11,10 +11,14 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -23,13 +27,15 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -69,13 +76,16 @@ import com.metrolist.music.constants.YtmSyncKey
 import com.metrolist.music.db.entities.Playlist
 import com.metrolist.music.db.entities.PlaylistEntity
 import com.metrolist.music.ui.component.CreatePlaylistDialog
-import com.metrolist.music.ui.component.HideOnScrollFAB
+import com.metrolist.music.ui.component.LibrarySearchEmptyPlaceholder
+import com.metrolist.music.ui.component.LibrarySearchHeader
 import com.metrolist.music.ui.component.LibraryPlaylistGridItem
 import com.metrolist.music.ui.component.LibraryPlaylistListItem
 import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.ui.component.PlaylistGridItem
 import com.metrolist.music.ui.component.PlaylistListItem
 import com.metrolist.music.ui.component.SortHeader
+import com.metrolist.music.extensions.matchesNormalizedQuery
+import com.metrolist.music.extensions.normalizeForSearch
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.viewmodels.LibraryPlaylistsViewModel
@@ -83,7 +93,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
-@OptIn(ExperimentalFoundationApi::class)
+private data class VisiblePlaylistItem(
+    val key: String,
+    val playlist: Playlist,
+    val autoPlaylist: Boolean,
+    val route: String? = null,
+)
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryPlaylistsScreen(
     navController: NavController,
@@ -94,6 +111,7 @@ fun LibraryPlaylistsScreen(
 ) {
     val menuState = LocalMenuState.current
     val haptic = LocalHapticFeedback.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -108,9 +126,22 @@ fun LibraryPlaylistsScreen(
     )
     val gridItemSize by rememberEnumPreference(GridItemsSizeKey, GridItemSize.BIG)
 
-    val playlists by viewModel.allPlaylists.collectAsState()
+    val playlists by viewModel.allPlaylists.collectAsStateWithLifecycle()
 
-    val topSize by viewModel.topValue.collectAsState(initial = 50)
+    var isSearchActive by rememberSaveable { mutableStateOf(false) }
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val normalizedQuery = remember(searchQuery) { searchQuery.normalizeForSearch() }
+    val filteredPlaylists = remember(playlists, normalizedQuery) {
+        if (normalizedQuery.isBlank()) {
+            playlists
+        } else {
+            playlists.filter { playlist ->
+                matchesNormalizedQuery(normalizedQuery, playlist.playlist.name)
+            }
+        }
+    }
+
+    val topSize by viewModel.topValue.collectAsStateWithLifecycle(initialValue = 50)
 
     val likedPlaylist =
         Playlist(
@@ -142,16 +173,7 @@ fun LibraryPlaylistsScreen(
             songThumbnails = emptyList(),
         )
 
-    val cachePlaylist =
-        Playlist(
-            playlist = PlaylistEntity(
-                id = UUID.randomUUID().toString(),
-                name = stringResource(R.string.cached_playlist)
-            ),
-            songCount = 0,
-            songThumbnails = emptyList(),
-        )
-        
+
     val uploadedPlaylist =
         Playlist(
             playlist = PlaylistEntity(
@@ -162,18 +184,110 @@ fun LibraryPlaylistsScreen(
             songThumbnails = emptyList(),
         )
 
+    val cachedPlaylist =
+        Playlist(
+            playlist = PlaylistEntity(
+                id = UUID.randomUUID().toString(),
+                name = stringResource(R.string.cached_playlist)
+            ),
+            songCount = 0,
+            songThumbnails = emptyList(),
+        )
+
     val (showLiked) = rememberPreference(ShowLikedPlaylistKey, true)
     val (showDownloaded) = rememberPreference(ShowDownloadedPlaylistKey, true)
     val (showTop) = rememberPreference(ShowTopPlaylistKey, true)
-    val (showCached) = rememberPreference(ShowCachedPlaylistKey, true)
     val (showUploaded) = rememberPreference(ShowUploadedPlaylistKey, true)
+    val (showCached) = rememberPreference(ShowCachedPlaylistKey, true)
+    val showLikedPlaylist = showLiked && matchesNormalizedQuery(normalizedQuery, likedPlaylist.playlist.name)
+    val showDownloadedPlaylist =
+        showDownloaded && matchesNormalizedQuery(normalizedQuery, downloadPlaylist.playlist.name)
+    val showCachedPlaylists = showCached && matchesNormalizedQuery(normalizedQuery, cachedPlaylist.playlist.name)
+    val showTopPlaylists = showTop && matchesNormalizedQuery(normalizedQuery, topPlaylist.playlist.name)
+    val showUploadedPlaylists =
+        showUploaded && matchesNormalizedQuery(normalizedQuery, uploadedPlaylist.playlist.name)
+
+    val visibleResults = remember(
+        filteredPlaylists,
+        showLikedPlaylist,
+        showDownloadedPlaylist,
+        showCachedPlaylists,
+        showTopPlaylists,
+        showUploadedPlaylists,
+        topSize,
+    ) {
+        buildList {
+            if (showLikedPlaylist) {
+                add(
+                    VisiblePlaylistItem(
+                        key = "likedPlaylist",
+                        playlist = likedPlaylist,
+                        autoPlaylist = true,
+                        route = "auto_playlist/liked",
+                    ),
+                )
+            }
+            if (showDownloadedPlaylist) {
+                add(
+                    VisiblePlaylistItem(
+                        key = "downloadedPlaylist",
+                        playlist = downloadPlaylist,
+                        autoPlaylist = true,
+                        route = "auto_playlist/downloaded",
+                    ),
+                )
+            }
+            if (showCachedPlaylists) {
+                add(
+                    VisiblePlaylistItem(
+                        key = "cachedPlaylist",
+                        playlist = cachedPlaylist,
+                        autoPlaylist = true,
+                        route = "cache_playlist/cached",
+                    ),
+                )
+            }
+            if (showTopPlaylists) {
+                add(
+                    VisiblePlaylistItem(
+                        key = "TopPlaylist",
+                        playlist = topPlaylist,
+                        autoPlaylist = true,
+                        route = "top_playlist/$topSize",
+                    ),
+                )
+            }
+            if (showUploadedPlaylists) {
+                add(
+                    VisiblePlaylistItem(
+                        key = "uploadedPlaylist",
+                        playlist = uploadedPlaylist,
+                        autoPlaylist = true,
+                        route = "auto_playlist/uploaded",
+                    ),
+                )
+            }
+
+            filteredPlaylists
+                .distinctBy { it.id }
+                .forEach { playlist ->
+                    add(
+                        VisiblePlaylistItem(
+                            key = playlist.id,
+                            playlist = playlist,
+                            autoPlaylist = false,
+                        ),
+                    )
+                }
+        }
+    }
 
     val lazyListState = rememberLazyListState()
     val lazyGridState = rememberLazyGridState()
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val scrollToTop =
-        backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsState()
+        backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsStateWithLifecycle()
 
     val (innerTubeCookie) = rememberPreference(InnerTubeCookieKey, "")
     val isLoggedIn = remember(innerTubeCookie) {
@@ -215,8 +329,15 @@ fun LibraryPlaylistsScreen(
     }
 
     val headerContent = @Composable {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        LibrarySearchHeader(
+            isSearchActive = isSearchActive,
+            searchQuery = searchQuery,
+            onSearchQueryChange = viewModel::updateSearchQuery,
+            onBack = {
+                isSearchActive = false
+                viewModel.updateSearchQuery("")
+            },
+            keyboardController = keyboardController,
             modifier = Modifier.padding(start = 16.dp),
         ) {
             SortHeader(
@@ -239,18 +360,28 @@ fun LibraryPlaylistsScreen(
             Text(
                 text = pluralStringResource(
                     R.plurals.n_playlist,
-                    playlists.size,
-                    playlists.size
+                    visibleResults.count { !it.autoPlaylist },
+                    visibleResults.count { !it.autoPlaylist },
                 ),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.secondary,
             )
 
             IconButton(
+                onClick = { isSearchActive = true },
+                modifier = Modifier.padding(start = 8.dp).size(40.dp),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.search),
+                    contentDescription = stringResource(R.string.search),
+                )
+            }
+
+            IconButton(
                 onClick = {
                     viewType = viewType.toggle()
                 },
-                modifier = Modifier.padding(start = 6.dp, end = 6.dp),
+                modifier = Modifier.padding(end = 8.dp).size(40.dp),
             ) {
                 Icon(
                     painter =
@@ -260,7 +391,12 @@ fun LibraryPlaylistsScreen(
                             LibraryViewType.GRID -> R.drawable.grid_view
                         },
                     ),
-                    contentDescription = null,
+                    contentDescription = stringResource(
+                        when (viewType) {
+                            LibraryViewType.LIST -> R.string.switch_to_grid_view
+                            LibraryViewType.GRID -> R.string.switch_to_list_view
+                        },
+                    ),
                 )
             }
         }
@@ -289,130 +425,47 @@ fun LibraryPlaylistsScreen(
                         headerContent()
                     }
 
-                    if (showLiked) {
-                        item(
-                            key = "likedPlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
-                            PlaylistListItem(
-                                playlist = likedPlaylist,
-                                autoPlaylist = true,
-                                modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        navController.navigate("auto_playlist/liked")
-                                    }
-                                    .animateItem(),
-                            )
+                    if (visibleResults.isEmpty()) {
+                        item(key = "empty_placeholder") {
+                            if (searchQuery.isNotBlank()) {
+                                LibrarySearchEmptyPlaceholder(modifier = Modifier.animateItem())
+                            } else {
+                                LibrarySearchEmptyPlaceholder(
+                                    modifier = Modifier.animateItem(),
+                                    icon = R.drawable.playlist_play,
+                                    text = stringResource(R.string.library_playlist_empty),
+                                )
+                            }
                         }
                     }
 
-                    if (showDownloaded) {
-                        item(
-                            key = "downloadedPlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
+                    items(
+                        items = visibleResults,
+                        key = { it.key },
+                        contentType = { CONTENT_TYPE_PLAYLIST },
+                    ) { item ->
+                        if (item.autoPlaylist) {
                             PlaylistListItem(
-                                playlist = downloadPlaylist,
-                                autoPlaylist = true,
-                                modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        navController.navigate("auto_playlist/downloaded")
-                                    }
-                                    .animateItem(),
-                            )
-                        }
-                    }
-
-                    if (showTop) {
-                        item(
-                            key = "TopPlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
-                            PlaylistListItem(
-                                playlist = topPlaylist,
-                                autoPlaylist = true,
-                                modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        navController.navigate("top_playlist/$topSize")
-                                    }
-                                    .animateItem(),
-                            )
-                        }
-                    }
-
-                    if (showCached) {
-                        item(
-                            key = "cachePlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
-                            PlaylistListItem(
-                                playlist = cachePlaylist,
-                                autoPlaylist = true,
-                                modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        navController.navigate("cache_playlist/cached")
-                                    }
-                                    .animateItem(),
-                            )
-                        }
-                    }
-                    
-                    if (showUploaded) {
-                        item(
-                            key = "uploadedPlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
-                            PlaylistListItem(
-                                playlist = uploadedPlaylist,
+                                playlist = item.playlist,
                                 autoPlaylist = true,
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
                                         .clickable {
-                                            navController.navigate("auto_playlist/uploaded")
+                                            item.route?.let(navController::navigate)
                                         }
                                         .animateItem(),
                             )
-                        }
-                    }
-
-                    playlists.let { playlists ->
-                        if (playlists.isEmpty()) {
-                            item(key = "empty_placeholder") {
-                            }
-                        }
-
-                        items(
-                            items = playlists.distinctBy { it.id },
-                            key = { it.id },
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) { playlist ->
+                        } else {
                             LibraryPlaylistListItem(
-                                navController = navController,
                                 menuState = menuState,
                                 coroutineScope = coroutineScope,
-                                playlist = playlist,
-                                modifier = Modifier.animateItem()
+                                playlist = item.playlist,
+                                modifier = Modifier.animateItem(),
                             )
                         }
                     }
                 }
-
-                HideOnScrollFAB(
-                    lazyListState = lazyListState,
-                    icon = R.drawable.add,
-                    onClick = {
-                        showCreatePlaylistDialog = true
-                    },
-                )
             }
 
             LibraryViewType.GRID -> {
@@ -440,144 +493,68 @@ fun LibraryPlaylistsScreen(
                         headerContent()
                     }
 
-                    if (showLiked) {
-                        item(
-                            key = "likedPlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
-                            PlaylistGridItem(
-                                playlist = likedPlaylist,
-                                fillMaxWidth = true,
-                                autoPlaylist = true,
-                                modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .combinedClickable(
-                                        onClick = {
-                                            navController.navigate("auto_playlist/liked")
-                                        },
-                                    )
-                                    .animateItem(),
-                            )
+                    if (visibleResults.isEmpty()) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            if (searchQuery.isNotBlank()) {
+                                LibrarySearchEmptyPlaceholder(modifier = Modifier.animateItem())
+                            } else {
+                                LibrarySearchEmptyPlaceholder(
+                                    modifier = Modifier.animateItem(),
+                                    icon = R.drawable.playlist_play,
+                                    text = stringResource(R.string.library_playlist_empty),
+                                )
+                            }
                         }
                     }
 
-                    if (showDownloaded) {
-                        item(
-                            key = "downloadedPlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
+                    items(
+                        items = visibleResults,
+                        key = { it.key },
+                        contentType = { CONTENT_TYPE_PLAYLIST },
+                    ) { item ->
+                        if (item.autoPlaylist) {
                             PlaylistGridItem(
-                                playlist = downloadPlaylist,
-                                fillMaxWidth = true,
-                                autoPlaylist = true,
-                                modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .combinedClickable(
-                                        onClick = {
-                                            navController.navigate("auto_playlist/downloaded")
-                                        },
-                                    )
-                                    .animateItem(),
-                            )
-                        }
-                    }
-
-                    if (showTop) {
-                        item(
-                            key = "TopPlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
-                            PlaylistGridItem(
-                                playlist = topPlaylist,
-                                fillMaxWidth = true,
-                                autoPlaylist = true,
-                                modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .combinedClickable(
-                                        onClick = {
-                                            navController.navigate("top_playlist/$topSize")
-                                        },
-                                    )
-                                    .animateItem(),
-                            )
-                        }
-                    }
-
-                    if (showCached) {
-                        item(
-                            key = "cachePlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
-                            PlaylistGridItem(
-                                playlist = cachePlaylist,
-                                fillMaxWidth = true,
-                                autoPlaylist = true,
-                                modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .combinedClickable(
-                                        onClick = {
-                                            navController.navigate("cache_playlist/cached")
-                                        },
-                                    )
-                                    .animateItem(),
-                            )
-                        }
-                    }
-
-                    if (showUploaded) {
-                        item(
-                            key = "uploadedPlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
-                            PlaylistGridItem(
-                                playlist = uploadedPlaylist,
+                                playlist = item.playlist,
                                 fillMaxWidth = true,
                                 autoPlaylist = true,
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .clickable {
-                                            navController.navigate("auto_playlist/uploaded")
-                                        }
+                                        .combinedClickable(
+                                            onClick = {
+                                                item.route?.let(navController::navigate)
+                                            },
+                                        )
                                         .animateItem(),
                             )
-                        }
-                    }
-
-                    playlists.let { playlists ->
-                        if (playlists.isEmpty()) {
-                            item(span = { GridItemSpan(maxLineSpan) }) {
-                            }
-                        }
-
-                        items(
-                            items = playlists.distinctBy { it.id },
-                            key = { it.id },
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) { playlist ->
+                        } else {
                             LibraryPlaylistGridItem(
-                                navController = navController,
                                 menuState = menuState,
                                 coroutineScope = coroutineScope,
-                                playlist = playlist,
-                                modifier = Modifier.animateItem()
+                                playlist = item.playlist,
+                                modifier = Modifier.animateItem(),
                             )
                         }
                     }
                 }
-
-                HideOnScrollFAB(
-                    lazyListState = lazyGridState,
-                    icon = R.drawable.add,
-                    onClick = {
-                        showCreatePlaylistDialog = true
-                    },
-                )
             }
+        }
+
+        // Always visible + button (no scroll hiding)
+        FloatingActionButton(
+            onClick = { showCreatePlaylistDialog = true },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .windowInsetsPadding(
+                    LocalPlayerAwareWindowInsets.current
+                        .only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
+                )
+                .padding(16.dp)
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.add),
+                contentDescription = stringResource(R.string.create_playlist),
+            )
         }
     }
 }

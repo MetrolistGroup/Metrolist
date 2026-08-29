@@ -1,7 +1,7 @@
 /**
  * Metrolist Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
- * 
+ *
  * Performance optimized MiniPlayer - prevents unnecessary recomposition
  */
 
@@ -21,6 +21,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableLongState
 import androidx.compose.runtime.Stable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -66,7 +69,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -96,12 +101,29 @@ import com.metrolist.music.playback.CastConnectionHandler
 import com.metrolist.music.playback.PlayerConnection
 import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.utils.resize
+import com.metrolist.music.utils.joinToArtistString
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 import com.metrolist.music.ui.component.Icon as MIcon
+import androidx.compose.ui.draw.blur
+import com.metrolist.music.constants.MiniPlayerBackgroundStyle
+import com.metrolist.music.constants.MiniPlayerBackgroundStyleKey
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
+import androidx.palette.graphics.Palette
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.allowHardware
+import coil3.toBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.metrolist.music.ui.theme.PlayerColorExtractor
+import com.metrolist.music.ui.component.LocalMenuState
+import com.metrolist.music.ui.menu.AddToPlaylistDialog
 
 /**
  * Stable wrapper for progress state - reads values only during draw phase
@@ -110,7 +132,7 @@ import com.metrolist.music.ui.component.Icon as MIcon
 @Stable
 class ProgressState(
     private val positionState: MutableLongState,
-    private val durationState: MutableLongState
+    private val durationState: MutableLongState,
 ) {
     val progress: Float
         get() {
@@ -123,23 +145,26 @@ class ProgressState(
 fun MiniPlayer(
     positionState: MutableLongState,
     durationState: MutableLongState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
 ) {
     val useNewMiniPlayerDesign by rememberPreference(UseNewMiniPlayerDesignKey, true)
-    
+
     // Create stable progress state - doesn't cause recomposition on position changes
     val progressState = remember { ProgressState(positionState, durationState) }
 
     if (useNewMiniPlayerDesign) {
         NewMiniPlayer(
             progressState = progressState,
-            modifier = modifier
+            modifier = modifier,
+            onClick = onClick,
         )
     } else {
         Box(modifier = modifier.fillMaxWidth()) {
             LegacyMiniPlayer(
                 progressState = progressState,
-                modifier = Modifier.align(Alignment.Center)
+                modifier = Modifier.align(Alignment.Center),
+                onClick = onClick,
             )
         }
     }
@@ -152,146 +177,257 @@ fun MiniPlayer(
 @Composable
 private fun NewMiniPlayer(
     progressState: ProgressState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
-    
+    val menuState = LocalMenuState.current
+
     // Theme settings - these rarely change
-    val pureBlack by rememberPreference(PureBlackMiniPlayerKey, defaultValue = false)
+    val miniPlayerBackground by rememberEnumPreference(
+        MiniPlayerBackgroundStyleKey,
+        defaultValue = MiniPlayerBackgroundStyle.DEFAULT,
+    )
+    val context = LocalContext.current
+    var gradientColors by remember { mutableStateOf<List<Color>>(emptyList()) }
     val isSystemInDarkTheme = isSystemInDarkTheme()
     val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
-    val useDarkTheme = remember(darkTheme, isSystemInDarkTheme) {
-        if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
-    }
-    
+    val useDarkTheme =
+        remember(darkTheme, isSystemInDarkTheme) {
+            if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
+        }
+
     // Player states - only collect what's needed at this level
     val playbackState by playerConnection.playbackState.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
-    val canSkipNext by playerConnection.canSkipNext.collectAsState()
-    val canSkipPrevious by playerConnection.canSkipPrevious.collectAsState()
-    
+    val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
+    val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
+
     // Cast state - safely access castConnectionHandler to prevent crashes during service lifecycle changes
-    val castHandler = remember(playerConnection) {
-        try {
-            playerConnection.service.castConnectionHandler
-        } catch (e: Exception) {
-            null
+    val castHandler =
+        remember(playerConnection) {
+            try {
+                playerConnection.service.castConnectionHandler
+            } catch (e: Exception) {
+                null
+            }
         }
-    }
-    val isCasting by castHandler?.isCasting?.collectAsState() ?: remember { mutableStateOf(false) }
+    val isCasting by castHandler?.isCasting?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
 
     // Swipe settings
     val swipeSensitivity by rememberPreference(SwipeSensitivityKey, 0.73f)
     val swipeThumbnailPref by rememberPreference(SwipeThumbnailKey, true)
-    
+
     // Disable swipe for Listen Together guests
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val swipeThumbnail = swipeThumbnailPref && !isListenTogetherGuest
-    
+
     val layoutDirection = LocalLayoutDirection.current
     val coroutineScope = rememberCoroutineScope()
-    
+
+    val windowInfo = LocalWindowInfo.current
     val configuration = LocalConfiguration.current
-    val isTabletLandscape = remember(configuration.screenWidthDp, configuration.orientation) {
-        configuration.screenWidthDp >= 600 && configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    }
+    val density = LocalDensity.current
+    val isTabletLandscape =
+        remember(windowInfo.containerSize.width, configuration.orientation) {
+            (windowInfo.containerSize.width / density.density) >= 600f && configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        }
 
     // Swipe animation state
     val offsetXAnimatable = remember { Animatable(0f) }
     var dragStartTime by remember { mutableLongStateOf(0L) }
     var totalDragDistance by remember { mutableFloatStateOf(0f) }
 
-    val animationSpec = remember {
-        spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow)
+    val animationSpec =
+        remember {
+            spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow)
+        }
+
+    val autoSwipeThreshold =
+        remember(swipeSensitivity) {
+            (600 / (1f + kotlin.math.exp(-(-11.44748 * swipeSensitivity + 9.04945)))).roundToInt()
+        }
+
+    LaunchedEffect(mediaMetadata?.id, miniPlayerBackground) {
+        gradientColors = emptyList()
+        if (miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT) {
+            val url = mediaMetadata?.thumbnailUrl
+            if (url != null) {
+                withContext(Dispatchers.IO) {
+                    val request = ImageRequest.Builder(context)
+                        .data(url)
+                        .size(100, 100)
+                        .allowHardware(false)
+                        .build()
+                    val result = runCatching { context.imageLoader.execute(request) }.getOrNull()
+                    val bitmap = result?.image?.toBitmap()
+                    if (bitmap != null) {
+                        val palette = withContext(Dispatchers.Default) {
+                            Palette.from(bitmap)
+                                .maximumColorCount(8)
+                                .resizeBitmapArea(100 * 100)
+                                .generate()
+                        }
+                        val extracted = PlayerColorExtractor.extractGradientColors(
+                            palette = palette,
+                            fallbackColor = 0xFF000000.toInt(),
+                        )
+                        withContext(Dispatchers.Main) {
+                            gradientColors = extracted
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            gradientColors = emptyList()
+                        }
+                    }
+                }
+            }
+        } else {
+            gradientColors = emptyList()
+        }
     }
 
-    val autoSwipeThreshold = remember(swipeSensitivity) {
-        (600 / (1f + kotlin.math.exp(-(-11.44748 * swipeSensitivity + 9.04945)))).roundToInt()
-    }
-    
     // Memoize colors
-    val backgroundColor = if (pureBlack && useDarkTheme) Color.Black else MaterialTheme.colorScheme.surfaceContainer
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val outlineColor = MaterialTheme.colorScheme.outline
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-    val errorColor = MaterialTheme.colorScheme.error
+    val backgroundColor = when (miniPlayerBackground) {
+        MiniPlayerBackgroundStyle.DEFAULT    -> MaterialTheme.colorScheme.surfaceContainer
+        MiniPlayerBackgroundStyle.TRANSPARENT -> Color.Black.copy(alpha = 0.25f)
+        MiniPlayerBackgroundStyle.BLUR       -> MaterialTheme.colorScheme.surfaceContainer
+        MiniPlayerBackgroundStyle.GRADIENT   -> MaterialTheme.colorScheme.surfaceContainer
+        MiniPlayerBackgroundStyle.PURE_BLACK -> Color.Black
+    }
+    val forceLightColors = !useDarkTheme && (miniPlayerBackground == MiniPlayerBackgroundStyle.PURE_BLACK ||
+            miniPlayerBackground == MiniPlayerBackgroundStyle.BLUR ||
+            miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT)
+
+    val primaryColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.primary
+    val outlineColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.outline
+    val onSurfaceColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.onSurface
+    val errorColor = if (forceLightColors) Color(0xFFFF6B6B) else MaterialTheme.colorScheme.error
 
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(MiniPlayerHeight)
-            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-            .padding(horizontal = 12.dp)
-            .let { baseModifier ->
-                if (swipeThumbnail) {
-                    baseModifier.pointerInput(Unit) {
-                        detectHorizontalDragGestures(
-                            onDragStart = {
-                                dragStartTime = System.currentTimeMillis()
-                                totalDragDistance = 0f
-                            },
-                            onDragCancel = {
-                                coroutineScope.launch {
-                                    offsetXAnimatable.animateTo(0f, animationSpec)
-                                }
-                            },
-                            onHorizontalDrag = { _, dragAmount ->
-                                val adjustedDragAmount =
-                                    if (layoutDirection == LayoutDirection.Rtl) -dragAmount else dragAmount
-                                val canSkipPrevious = playerConnection.player.previousMediaItemIndex != -1
-                                val canSkipNext = playerConnection.player.nextMediaItemIndex != -1
-                                val tryingToSwipeRight = adjustedDragAmount > 0
-                                val tryingToSwipeLeft = adjustedDragAmount < 0
-                                val allowLeft = tryingToSwipeLeft && canSkipNext
-                                val allowRight = tryingToSwipeRight && canSkipPrevious
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(MiniPlayerHeight)
+                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
+                .padding(horizontal = 12.dp)
+                .let { baseModifier ->
+                    if (swipeThumbnail) {
+                        baseModifier.pointerInput(Unit) {
+                            detectHorizontalDragGestures(
+                                onDragStart = {
+                                    dragStartTime = System.currentTimeMillis()
+                                    totalDragDistance = 0f
+                                },
+                                onDragCancel = {
+                                    coroutineScope.launch {
+                                        offsetXAnimatable.animateTo(0f, animationSpec)
+                                    }
+                                },
+                                onHorizontalDrag = { _, dragAmount ->
+                                    val adjustedDragAmount =
+                                        if (layoutDirection == LayoutDirection.Rtl) -dragAmount else dragAmount
+                                    val canSkipPrevious = playerConnection.player.previousMediaItemIndex != -1
+                                    val canSkipNext = playerConnection.player.nextMediaItemIndex != -1
+                                    val tryingToSwipeRight = adjustedDragAmount > 0
+                                    val tryingToSwipeLeft = adjustedDragAmount < 0
+                                    val allowLeft = tryingToSwipeLeft && canSkipNext
+                                    val allowRight = tryingToSwipeRight && canSkipPrevious
 
-                                val canReturnToCenter =
-                                    (tryingToSwipeRight && !canSkipPrevious && offsetXAnimatable.value < 0) ||
+                                    val canReturnToCenter =
+                                        (tryingToSwipeRight && !canSkipPrevious && offsetXAnimatable.value < 0) ||
                                             (tryingToSwipeLeft && !canSkipNext && offsetXAnimatable.value > 0)
 
-                                if (allowLeft || allowRight || canReturnToCenter) {
-                                    totalDragDistance += kotlin.math.abs(adjustedDragAmount)
+                                    if (allowLeft || allowRight || canReturnToCenter) {
+                                        totalDragDistance += kotlin.math.abs(adjustedDragAmount)
+                                        coroutineScope.launch {
+                                            offsetXAnimatable.snapTo(offsetXAnimatable.value + adjustedDragAmount)
+                                        }
+                                    }
+                                },
+                                onDragEnd = {
+                                    val dragDuration = System.currentTimeMillis() - dragStartTime
+                                    val velocity = if (dragDuration > 0) totalDragDistance / dragDuration else 0f
+                                    val currentOffset = offsetXAnimatable.value
+                                    val minDistanceThreshold = 50f
+                                    val velocityThreshold = (swipeSensitivity * -8.25f) + 8.5f
+
+                                    val shouldChangeSong =
+                                        (kotlin.math.abs(currentOffset) > minDistanceThreshold && velocity > velocityThreshold) ||
+                                            (kotlin.math.abs(currentOffset) > autoSwipeThreshold)
+
+                                    if (shouldChangeSong) {
+                                        if (currentOffset > 0 && canSkipPrevious) {
+                                            playerConnection.player.seekToPreviousMediaItem()
+                                        } else if (currentOffset <= 0 && canSkipNext) {
+                                            playerConnection.player.seekToNext()
+                                        }
+                                    }
                                     coroutineScope.launch {
-                                        offsetXAnimatable.snapTo(offsetXAnimatable.value + adjustedDragAmount)
+                                        offsetXAnimatable.animateTo(0f, animationSpec)
                                     }
-                                }
-                            },
-                            onDragEnd = {
-                                val dragDuration = System.currentTimeMillis() - dragStartTime
-                                val velocity = if (dragDuration > 0) totalDragDistance / dragDuration else 0f
-                                val currentOffset = offsetXAnimatable.value
-                                val minDistanceThreshold = 50f
-                                val velocityThreshold = (swipeSensitivity * -8.25f) + 8.5f
-
-                                val shouldChangeSong = (kotlin.math.abs(currentOffset) > minDistanceThreshold && velocity > velocityThreshold) ||
-                                    (kotlin.math.abs(currentOffset) > autoSwipeThreshold)
-
-                                if (shouldChangeSong) {
-                                    if (currentOffset > 0 && canSkipPrevious) {
-                                        playerConnection.player.seekToPreviousMediaItem()
-                                    } else if (currentOffset <= 0 && canSkipNext) {
-                                        playerConnection.player.seekToNext()
-                                    }
-                                }
-                                coroutineScope.launch {
-                                    offsetXAnimatable.animateTo(0f, animationSpec)
-                                }
-                            }
-                        )
+                                },
+                            )
+                        }
+                    } else {
+                        baseModifier
                     }
-                } else baseModifier
-            }
+                },
     ) {
+        val interactionSource = remember { MutableInteractionSource() }
         Box(
-            modifier = Modifier
-                .then(if (isTabletLandscape) Modifier.width(500.dp).align(Alignment.Center) else Modifier.fillMaxWidth())
-                .height(64.dp)
-                .offset { IntOffset(offsetXAnimatable.value.roundToInt(), 0) }
-                .clip(RoundedCornerShape(32.dp))
-                .background(color = backgroundColor)
-                .border(1.dp, outlineColor.copy(alpha = 0.3f), RoundedCornerShape(32.dp))
+            modifier =
+                Modifier
+                    .then(if (isTabletLandscape) Modifier.width(500.dp).align(Alignment.Center) else Modifier.fillMaxWidth())
+                    .height(64.dp)
+                    .offset { IntOffset(offsetXAnimatable.value.roundToInt(), 0) }
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(color = backgroundColor)
+                    .border(1.dp, outlineColor.copy(alpha = 0.3f), RoundedCornerShape(32.dp))
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = LocalIndication.current,
+                        onClick = onClick
+                    ),
         ) {
+            when (miniPlayerBackground) {
+                MiniPlayerBackgroundStyle.BLUR -> {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        mediaMetadata?.thumbnailUrl?.let { url ->
+                            AsyncImage(
+                                model = url,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .blur(60.dp),
+                            )
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.45f)),
+                            )
+                        }
+                    }
+                }
+                MiniPlayerBackgroundStyle.GRADIENT -> {
+                    val colors = if (gradientColors.isNotEmpty()) gradientColors
+                    else listOf(
+                        MaterialTheme.colorScheme.surfaceContainer,
+                        MaterialTheme.colorScheme.surfaceContainer,
+                    )
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.horizontalGradient(colors)
+                            )
+                            .background(Color.Black.copy(alpha = 0.15f)),
+                    )
+                }
+                else -> {}
+            }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 8.dp),
@@ -306,7 +442,7 @@ private fun NewMiniPlayer(
                     mediaMetadata = mediaMetadata,
                     primaryColor = primaryColor,
                     outlineColor = outlineColor,
-                    listenTogetherManager = listenTogetherManager
+                    listenTogetherManager = listenTogetherManager,
                 )
 
                 Spacer(modifier = Modifier.width(16.dp))
@@ -316,31 +452,62 @@ private fun NewMiniPlayer(
                     mediaMetadata = mediaMetadata,
                     onSurfaceColor = onSurfaceColor,
                     errorColor = errorColor,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
-                
+
                 // Cast indicator
                 if (isCasting) {
                     Icon(
                         painter = painterResource(R.drawable.cast_connected),
                         contentDescription = "Casting",
                         tint = primaryColor,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(20.dp),
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                 }
 
-                // Subscribe button - isolated composable
+// Subscribe button - isolated composable
                 mediaMetadata?.artists?.firstOrNull()?.id?.let { artistId ->
-                    SubscribeButton(artistId = artistId, metadata = mediaMetadata!!)
+                    SubscribeButton(
+                        artistId = artistId,
+                        metadata = mediaMetadata!!,
+                        primaryColor = primaryColor,
+                        outlineColor = outlineColor,
+                        onSurfaceColor = onSurfaceColor,
+                    )
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Favorite button - isolated composable
-                mediaMetadata?.let { FavoriteButton(songId = it.id) }
+// Add to playlist button - isolated composable
+                mediaMetadata?.let { metadata ->
+                    AddToPlaylistButton(
+                        onClick = {
+                            menuState.show {
+                                AddToPlaylistDialog(
+                                    isVisible = true,
+                                    onGetSong = { listOf(metadata.id) },
+                                    onDismiss = menuState::dismiss,
+                                )
+                            }
+                        },
+                        outlineColor = outlineColor,
+                        onSurfaceColor = onSurfaceColor,
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+// Favorite button - isolated composable
+                mediaMetadata?.let { FavoriteButton(
+                    songId = it.id,
+                    errorColor = errorColor,
+                    outlineColor = outlineColor,
+                    onSurfaceColor = onSurfaceColor,
+                )
+                }
             }
         }
     }
@@ -360,104 +527,114 @@ private fun NewMiniPlayerPlayButton(
     mediaMetadata: MediaMetadata?,
     primaryColor: Color,
     outlineColor: Color,
-    listenTogetherManager: ListenTogetherManager?
+    listenTogetherManager: ListenTogetherManager?,
 ) {
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val castIsPlaying by castHandler?.castIsPlaying?.collectAsState() ?: remember { mutableStateOf(false) }
     val effectiveIsPlaying = if (isCasting) castIsPlaying else isPlaying
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
-    val isMuted by playerConnection.isMuted.collectAsState()
+    val isMuted by playerConnection.isMuted.collectAsStateWithLifecycle()
 
-    
     val trackColor = outlineColor.copy(alpha = 0.2f)
     val strokeWidth = 3.dp
 
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(48.dp)
-            .drawWithContent {
-                drawContent()
-                // Draw progress arc - this reads progressState.progress during draw phase only
-                val progress = progressState.progress
-                val stroke = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
-                val startAngle = -90f
-                val sweepAngle = 360f * progress
-                val diameter = size.minDimension
-                val topLeft = Offset((size.width - diameter) / 2, (size.height - diameter) / 2)
-                
-                // Draw track
-                drawArc(
-                    color = trackColor,
-                    startAngle = 0f,
-                    sweepAngle = 360f,
-                    useCenter = false,
-                    topLeft = topLeft,
-                    size = Size(diameter, diameter),
-                    style = stroke
-                )
-                // Draw progress
-                drawArc(
-                    color = primaryColor,
-                    startAngle = startAngle,
-                    sweepAngle = sweepAngle,
-                    useCenter = false,
-                    topLeft = topLeft,
-                    size = Size(diameter, diameter),
-                    style = stroke
-                )
-            }
+        modifier =
+            Modifier
+                .size(48.dp)
+                .drawWithContent {
+                    drawContent()
+                    // Draw progress arc - this reads progressState.progress during draw phase only
+                    val progress = progressState.progress
+                    val stroke = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
+                    val startAngle = -90f
+                    val sweepAngle = 360f * progress
+                    val diameter = size.minDimension
+                    val topLeft = Offset((size.width - diameter) / 2, (size.height - diameter) / 2)
+
+                    // Draw track
+                    drawArc(
+                        color = trackColor,
+                        startAngle = 0f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = Size(diameter, diameter),
+                        style = stroke,
+                    )
+                    // Draw progress
+                    drawArc(
+                        color = primaryColor,
+                        startAngle = startAngle,
+                        sweepAngle = sweepAngle,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = Size(diameter, diameter),
+                        style = stroke,
+                    )
+                },
     ) {
         // Thumbnail with play/pause overlay
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .border(1.dp, outlineColor.copy(alpha = 0.3f), CircleShape)
-                .clickable {
-                    if (isListenTogetherGuest) {
-                        playerConnection.toggleMute()
-                        return@clickable
-                    }
-                    if (isCasting) {
-                        if (castIsPlaying) castHandler?.pause() else castHandler?.play()
-                    } else if (playbackState == Player.STATE_ENDED) {
-                        playerConnection.player.seekTo(0, 0)
-                        playerConnection.player.playWhenReady = true
-                    } else {
-                        playerConnection.togglePlayPause()
-                    }
-                }
+            modifier =
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .border(1.dp, outlineColor.copy(alpha = 0.3f), CircleShape)
+                    .clickable {
+                        if (isListenTogetherGuest) {
+                            playerConnection.toggleMute()
+                            return@clickable
+                        }
+                        if (isCasting) {
+                            if (castIsPlaying) castHandler?.pause() else castHandler?.play()
+                        } else if (playbackState == Player.STATE_ENDED) {
+                            playerConnection.player.seekTo(0, 0)
+                            playerConnection.player.playWhenReady = true
+                        } else {
+                            playerConnection.togglePlayPause()
+                        }
+                    },
         ) {
             mediaMetadata?.let { metadata ->
-                val thumbnailUrl = remember(metadata.thumbnailUrl) {
-                    metadata.thumbnailUrl?.resize(120, 120)
-                }
+                val thumbnailUrl =
+                    remember(metadata.thumbnailUrl) {
+                        metadata.thumbnailUrl?.resize(120, 120)
+                    }
                 AsyncImage(
                     model = thumbnailUrl,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(CircleShape)
+                    modifier = Modifier.fillMaxSize().clip(CircleShape),
                 )
             }
 
             // Overlay for paused state or muted (guest)
-            if (isListenTogetherGuest && isMuted || (!isListenTogetherGuest && (!effectiveIsPlaying || playbackState == Player.STATE_ENDED))) {
+            if (isListenTogetherGuest && isMuted ||
+                (!isListenTogetherGuest && (!effectiveIsPlaying || playbackState == Player.STATE_ENDED))
+            ) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.4f), CircleShape),
                 )
                 Icon(
-                    painter = painterResource(
-                        if (isListenTogetherGuest) {
-                            if (isMuted) R.drawable.volume_off else R.drawable.volume_up
-                        } else if (playbackState == Player.STATE_ENDED) R.drawable.replay else R.drawable.play
-                    ),
+                    painter =
+                        painterResource(
+                            if (isListenTogetherGuest) {
+                                if (isMuted) R.drawable.volume_off else R.drawable.volume_up
+                            } else if (playbackState == Player.STATE_ENDED) {
+                                R.drawable.replay
+                            } else {
+                                R.drawable.play
+                            },
+                        ),
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }
@@ -472,13 +649,13 @@ private fun NewMiniPlayerSongInfo(
     mediaMetadata: MediaMetadata?,
     onSurfaceColor: Color,
     errorColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val error by LocalPlayerConnection.current?.error?.collectAsState() ?: remember { mutableStateOf(null) }
-    
+
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         mediaMetadata?.let { metadata ->
             Text(
@@ -487,7 +664,7 @@ private fun NewMiniPlayerSongInfo(
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.Clip,
                 modifier = Modifier.basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
             )
             Row(
@@ -495,13 +672,13 @@ private fun NewMiniPlayerSongInfo(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (metadata.explicit) MIcon.Explicit()
-                if (metadata.artists.any { it.name.isNotBlank() }) {
-                    Text(
-                        text = metadata.artists.joinToString { it.name },
-                        color = onSurfaceColor.copy(alpha = 0.7f),
+                 if (metadata.artists.any { it.name.isNotBlank() }) {
+                     Text(
+                         text = metadata.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name },
+                         color = onSurfaceColor.copy(alpha = 0.7f),
                         fontSize = 12.sp,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Clip,
                         modifier = Modifier.basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
                     )
                 }
@@ -527,28 +704,30 @@ private fun NewMiniPlayerSongInfo(
 @Composable
 private fun LegacyMiniPlayer(
     progressState: ProgressState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val pureBlack by rememberPreference(PureBlackMiniPlayerKey, defaultValue = false)
-    
+
     val playbackState by playerConnection.playbackState.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
-    val canSkipNext by playerConnection.canSkipNext.collectAsState()
-    val canSkipPrevious by playerConnection.canSkipPrevious.collectAsState()
-    
-    val castHandler = remember(playerConnection) {
-        try {
-            playerConnection.service.castConnectionHandler
-        } catch (e: Exception) {
-            null
+    val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
+    val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
+
+    val castHandler =
+        remember(playerConnection) {
+            try {
+                playerConnection.service.castConnectionHandler
+            } catch (e: Exception) {
+                null
+            }
         }
-    }
-    val isCasting by castHandler?.isCasting?.collectAsState() ?: remember { mutableStateOf(false) }
+    val isCasting by castHandler?.isCasting?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
 
     val swipeSensitivity by rememberPreference(SwipeSensitivityKey, 0.73f)
     val swipeThumbnailPref by rememberPreference(SwipeThumbnailKey, true)
-    
+
     // Disable swipe for Listen Together guests
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
@@ -556,112 +735,131 @@ private fun LegacyMiniPlayer(
 
     val layoutDirection = LocalLayoutDirection.current
     val coroutineScope = rememberCoroutineScope()
-    
+
+    val windowInfo = LocalWindowInfo.current
     val configuration = LocalConfiguration.current
-    val isTabletLandscape = remember(configuration.screenWidthDp, configuration.orientation) {
-        configuration.screenWidthDp >= 600 && configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    }
+    val density = LocalDensity.current
+    val isTabletLandscape =
+        remember(windowInfo.containerSize.width, configuration.orientation) {
+            (windowInfo.containerSize.width / density.density) >= 600f && configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        }
 
     val offsetXAnimatable = remember { Animatable(0f) }
     var dragStartTime by remember { mutableLongStateOf(0L) }
     var totalDragDistance by remember { mutableFloatStateOf(0f) }
 
-    val animationSpec = remember {
-        spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow)
-    }
+    val animationSpec =
+        remember {
+            spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow)
+        }
 
-    val autoSwipeThreshold = remember(swipeSensitivity) {
-        (600 / (1f + kotlin.math.exp(-(-11.44748 * swipeSensitivity + 9.04945)))).roundToInt()
-    }
-    
+    val autoSwipeThreshold =
+        remember(swipeSensitivity) {
+            (600 / (1f + kotlin.math.exp(-(-11.44748 * swipeSensitivity + 9.04945)))).roundToInt()
+        }
+
     val primaryColor = MaterialTheme.colorScheme.primary
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
 
-    Box(
-        modifier = modifier
-            .then(if (isTabletLandscape) Modifier.width(500.dp) else Modifier.fillMaxWidth())
-            .height(MiniPlayerHeight)
-            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .background(
-                if (pureBlack && isSystemInDarkTheme()) Color.Black
-                else MaterialTheme.colorScheme.surfaceContainer
-            )
-            .let { baseModifier ->
-                if (swipeThumbnail) {
-                    baseModifier.pointerInput(Unit) {
-                        detectHorizontalDragGestures(
-                            onDragStart = {
-                                dragStartTime = System.currentTimeMillis()
-                                totalDragDistance = 0f
-                            },
-                            onDragCancel = {
-                                coroutineScope.launch { offsetXAnimatable.animateTo(0f, animationSpec) }
-                            },
-                            onHorizontalDrag = { _, dragAmount ->
-                                val adjustedDragAmount =
-                                    if (layoutDirection == LayoutDirection.Rtl) -dragAmount else dragAmount
-                                val canSkipPrevious = playerConnection.player.previousMediaItemIndex != -1
-                                val canSkipNext = playerConnection.player.nextMediaItemIndex != -1
-                                val tryingToSwipeRight = adjustedDragAmount > 0
-                                val tryingToSwipeLeft = adjustedDragAmount < 0
-                                val allowLeft = tryingToSwipeLeft && canSkipNext
-                                val allowRight = tryingToSwipeRight && canSkipPrevious
+    val interactionSource = remember { MutableInteractionSource() }
 
-                                val canReturnToCenter =
-                                    (tryingToSwipeRight && !canSkipPrevious && offsetXAnimatable.value < 0) ||
+    Box(
+        modifier =
+            modifier
+                .then(if (isTabletLandscape) Modifier.width(500.dp) else Modifier.fillMaxWidth())
+                .height(MiniPlayerHeight)
+                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
+                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                .background(
+                    if (pureBlack && isSystemInDarkTheme()) {
+                        Color.Black
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainer
+                    },
+                ).clickable(
+                    interactionSource = interactionSource,
+                    indication = LocalIndication.current,
+                    onClick = onClick
+                ).let { baseModifier ->
+                    if (swipeThumbnail) {
+                        baseModifier.pointerInput(Unit) {
+                            detectHorizontalDragGestures(
+                                onDragStart = {
+                                    dragStartTime = System.currentTimeMillis()
+                                    totalDragDistance = 0f
+                                },
+                                onDragCancel = {
+                                    coroutineScope.launch { offsetXAnimatable.animateTo(0f, animationSpec) }
+                                },
+                                onHorizontalDrag = { _, dragAmount ->
+                                    val adjustedDragAmount =
+                                        if (layoutDirection == LayoutDirection.Rtl) -dragAmount else dragAmount
+                                    val canSkipPrevious = playerConnection.player.previousMediaItemIndex != -1
+                                    val canSkipNext = playerConnection.player.nextMediaItemIndex != -1
+                                    val tryingToSwipeRight = adjustedDragAmount > 0
+                                    val tryingToSwipeLeft = adjustedDragAmount < 0
+                                    val allowLeft = tryingToSwipeLeft && canSkipNext
+                                    val allowRight = tryingToSwipeRight && canSkipPrevious
+
+                                    val canReturnToCenter =
+                                        (tryingToSwipeRight && !canSkipPrevious && offsetXAnimatable.value < 0) ||
                                             (tryingToSwipeLeft && !canSkipNext && offsetXAnimatable.value > 0)
 
-                                if (allowLeft || allowRight || canReturnToCenter) {
-                                    totalDragDistance += kotlin.math.abs(adjustedDragAmount)
-                                    coroutineScope.launch {
-                                        offsetXAnimatable.snapTo(offsetXAnimatable.value + adjustedDragAmount)
+                                    if (allowLeft || allowRight || canReturnToCenter) {
+                                        totalDragDistance += kotlin.math.abs(adjustedDragAmount)
+                                        coroutineScope.launch {
+                                            offsetXAnimatable.snapTo(offsetXAnimatable.value + adjustedDragAmount)
+                                        }
                                     }
-                                }
-                            },
-                            onDragEnd = {
-                                val dragDuration = System.currentTimeMillis() - dragStartTime
-                                val velocity = if (dragDuration > 0) totalDragDistance / dragDuration else 0f
-                                val currentOffset = offsetXAnimatable.value
-                                val minDistanceThreshold = 50f
-                                val velocityThreshold = (swipeSensitivity * -8.25f) + 8.5f
+                                },
+                                onDragEnd = {
+                                    val dragDuration = System.currentTimeMillis() - dragStartTime
+                                    val velocity = if (dragDuration > 0) totalDragDistance / dragDuration else 0f
+                                    val currentOffset = offsetXAnimatable.value
+                                    val minDistanceThreshold = 50f
+                                    val velocityThreshold = (swipeSensitivity * -8.25f) + 8.5f
 
-                                val shouldChangeSong = (kotlin.math.abs(currentOffset) > minDistanceThreshold && velocity > velocityThreshold) ||
-                                    (kotlin.math.abs(currentOffset) > autoSwipeThreshold)
+                                    val shouldChangeSong =
+                                        (kotlin.math.abs(currentOffset) > minDistanceThreshold && velocity > velocityThreshold) ||
+                                            (kotlin.math.abs(currentOffset) > autoSwipeThreshold)
 
-                                if (shouldChangeSong) {
-                                    if (currentOffset > 0 && canSkipPrevious) {
-                                        playerConnection.player.seekToPreviousMediaItem()
-                                    } else if (currentOffset <= 0 && canSkipNext) {
-                                        playerConnection.player.seekToNext()
+                                    if (shouldChangeSong) {
+                                        if (currentOffset > 0 && canSkipPrevious) {
+                                            playerConnection.player.seekToPreviousMediaItem()
+                                        } else if (currentOffset <= 0 && canSkipNext) {
+                                            playerConnection.player.seekToNext()
+                                        }
                                     }
-                                }
-                                coroutineScope.launch { offsetXAnimatable.animateTo(0f, animationSpec) }
-                            }
-                        )
+                                    coroutineScope.launch { offsetXAnimatable.animateTo(0f, animationSpec) }
+                                },
+                            )
+                        }
+                    } else {
+                        baseModifier
                     }
-                } else baseModifier
-            }
+                },
     ) {
         // Progress bar - uses drawWithContent to avoid recomposition
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(2.dp)
-                .align(Alignment.BottomCenter)
-                .drawWithContent {
-                    val progress = progressState.progress
-                    drawRect(trackColor)
-                    drawRect(primaryColor, size = Size(size.width * progress, size.height))
-                }
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .align(Alignment.BottomCenter)
+                    .drawWithContent {
+                        val progress = progressState.progress
+                        drawRect(trackColor)
+                        drawRect(primaryColor, size = Size(size.width * progress, size.height))
+                    },
         )
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxSize()
-                .offset { IntOffset(offsetXAnimatable.value.roundToInt(), 0) }
-                .padding(end = 12.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .offset { IntOffset(offsetXAnimatable.value.roundToInt(), 0) }
+                    .padding(end = 12.dp),
         ) {
             Box(Modifier.weight(1f)) {
                 mediaMetadata?.let {
@@ -678,12 +876,12 @@ private fun LegacyMiniPlayer(
                 isCasting = isCasting,
                 castHandler = castHandler,
                 playerConnection = playerConnection,
-                listenTogetherManager = listenTogetherManager
+                listenTogetherManager = listenTogetherManager,
             )
 
             IconButton(
-                    enabled = canSkipNext && !isListenTogetherGuest,
-                    onClick = if (isListenTogetherGuest) ({}) else ({ playerConnection.seekToNext() }),
+                enabled = canSkipNext && !isListenTogetherGuest,
+                onClick = if (isListenTogetherGuest) ({}) else ({ playerConnection.seekToNext() }),
             ) {
                 Icon(painter = painterResource(R.drawable.skip_next), contentDescription = null)
             }
@@ -692,19 +890,22 @@ private fun LegacyMiniPlayer(
         // Swipe indicator
         if (offsetXAnimatable.value.absoluteValue > 50f) {
             Box(
-                modifier = Modifier
-                    .align(if (offsetXAnimatable.value > 0) Alignment.CenterStart else Alignment.CenterEnd)
-                    .padding(horizontal = 16.dp)
+                modifier =
+                    Modifier
+                        .align(if (offsetXAnimatable.value > 0) Alignment.CenterStart else Alignment.CenterEnd)
+                        .padding(horizontal = 16.dp),
             ) {
                 Icon(
-                    painter = painterResource(
-                        if (offsetXAnimatable.value > 0) R.drawable.skip_previous else R.drawable.skip_next
-                    ),
+                    painter =
+                        painterResource(
+                            if (offsetXAnimatable.value > 0) R.drawable.skip_previous else R.drawable.skip_next,
+                        ),
                     contentDescription = null,
-                    tint = primaryColor.copy(
-                        alpha = (offsetXAnimatable.value.absoluteValue / autoSwipeThreshold).coerceIn(0f, 1f)
-                    ),
-                    modifier = Modifier.size(24.dp)
+                    tint =
+                        primaryColor.copy(
+                            alpha = (offsetXAnimatable.value.absoluteValue / autoSwipeThreshold).coerceIn(0f, 1f),
+                        ),
+                    modifier = Modifier.size(24.dp),
                 )
             }
         }
@@ -717,14 +918,13 @@ private fun LegacyPlayPauseButton(
     isCasting: Boolean,
     castHandler: CastConnectionHandler?,
     playerConnection: PlayerConnection,
-    listenTogetherManager: ListenTogetherManager?
+    listenTogetherManager: ListenTogetherManager?,
 ) {
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val castIsPlaying by castHandler?.castIsPlaying?.collectAsState() ?: remember { mutableStateOf(false) }
     val effectiveIsPlaying = if (isCasting) castIsPlaying else isPlaying
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
-    val isMuted by playerConnection.isMuted.collectAsState()
-
+    val isMuted by playerConnection.isMuted.collectAsStateWithLifecycle()
 
     IconButton(
         onClick = {
@@ -743,14 +943,15 @@ private fun LegacyPlayPauseButton(
         },
     ) {
         Icon(
-            painter = painterResource(
-                when {
-                    isListenTogetherGuest -> if (isMuted) R.drawable.volume_off else R.drawable.volume_up
-                    playbackState == Player.STATE_ENDED -> R.drawable.replay
-                    effectiveIsPlaying -> R.drawable.pause
-                    else -> R.drawable.play
-                }
-            ),
+            painter =
+                painterResource(
+                    when {
+                        isListenTogetherGuest -> if (isMuted) R.drawable.volume_off else R.drawable.volume_up
+                        playbackState == Player.STATE_ENDED -> R.drawable.replay
+                        effectiveIsPlaying -> R.drawable.pause
+                        else -> R.drawable.play
+                    },
+                ),
             contentDescription = null,
         )
     }
@@ -764,33 +965,37 @@ private fun LegacyMiniMediaInfo(
 ) {
     val error by LocalPlayerConnection.current?.error?.collectAsState() ?: remember { mutableStateOf(null) }
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
-    
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier,
     ) {
         Box(
-            modifier = Modifier
-                .padding(6.dp)
-                .size(48.dp)
-                .clip(RoundedCornerShape(ThumbnailCornerRadius))
+            modifier =
+                Modifier
+                    .padding(6.dp)
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(ThumbnailCornerRadius)),
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
             )
 
-            val thumbnailUrl = remember(mediaMetadata.thumbnailUrl) {
-                mediaMetadata.thumbnailUrl?.resize(144, 144)
-            }
+            val thumbnailUrl =
+                remember(mediaMetadata.thumbnailUrl) {
+                    mediaMetadata.thumbnailUrl?.resize(144, 144)
+                }
             AsyncImage(
                 model = thumbnailUrl,
                 contentDescription = null,
                 contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(ThumbnailCornerRadius)),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(ThumbnailCornerRadius)),
             )
 
             androidx.compose.animation.AnimatedVisibility(visible = error != null, enter = fadeIn(), exit = fadeOut()) {
@@ -813,9 +1018,10 @@ private fun LegacyMiniMediaInfo(
         }
 
         Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 6.dp),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .padding(horizontal = 6.dp),
         ) {
             Text(
                 text = mediaMetadata.title,
@@ -827,10 +1033,10 @@ private fun LegacyMiniMediaInfo(
                 modifier = Modifier.basicMarquee(),
             )
 
-            if (mediaMetadata.artists.any { it.name.isNotBlank() }) {
-                Text(
-                    text = mediaMetadata.artists.joinToString { it.name },
-                    color = MaterialTheme.colorScheme.secondary,
+             if (mediaMetadata.artists.any { it.name.isNotBlank() }) {
+                 Text(
+                     text = mediaMetadata.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name },
+                     color = MaterialTheme.colorScheme.secondary,
                     fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -847,71 +1053,67 @@ private fun LegacyMiniMediaInfo(
 @Composable
 private fun SubscribeButton(
     artistId: String,
-    metadata: MediaMetadata
+    metadata: MediaMetadata,
+    primaryColor: Color,
+    outlineColor: Color,
+    onSurfaceColor: Color,
 ) {
     val database = LocalDatabase.current
-    val libraryArtist by database.artist(artistId).collectAsState(initial = null)
+    val libraryArtist by database.artist(artistId).collectAsStateWithLifecycle(initialValue = null)
     val isSubscribed = libraryArtist?.artist?.bookmarkedAt != null
-    
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val outlineColor = MaterialTheme.colorScheme.outline
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+
 
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .border(
-                width = 1.dp,
-                color = if (isSubscribed) primaryColor.copy(alpha = 0.5f) else outlineColor.copy(alpha = 0.3f),
-                shape = CircleShape
-            )
-            .background(
-                color = if (isSubscribed) primaryColor.copy(alpha = 0.1f) else Color.Transparent,
-                shape = CircleShape
-            )
-            .clickable {
-                database.transaction {
-                    val artist = libraryArtist?.artist
-                    if (artist != null) {
-                        update(artist.toggleLike())
-                    } else {
-                        metadata.artists.firstOrNull()?.let { artistInfo ->
-                            insert(
-                                ArtistEntity(
-                                    id = artistInfo.id ?: "",
-                                    name = artistInfo.name,
-                                    channelId = null,
-                                    thumbnailUrl = null,
-                                ).toggleLike()
-                            )
+        modifier =
+            Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .border(
+                    width = 1.dp,
+                    color = if (isSubscribed) primaryColor.copy(alpha = 0.5f) else outlineColor.copy(alpha = 0.3f),
+                    shape = CircleShape,
+                ).background(
+                    color = if (isSubscribed) primaryColor.copy(alpha = 0.1f) else Color.Transparent,
+                    shape = CircleShape,
+                ).clickable {
+                    database.transaction {
+                        val artist = libraryArtist?.artist
+                        if (artist != null) {
+                            update(artist.toggleLike())
+                        } else {
+                            metadata.artists.firstOrNull()?.let { artistInfo ->
+                                insert(
+                                    ArtistEntity(
+                                        id = artistInfo.id ?: "",
+                                        name = artistInfo.name,
+                                        channelId = null,
+                                        thumbnailUrl = null,
+                                    ).toggleLike(),
+                                )
+                            }
                         }
                     }
-                }
-            }
+                },
     ) {
         Icon(
             painter = painterResource(if (isSubscribed) R.drawable.subscribed else R.drawable.subscribe),
             contentDescription = null,
             tint = if (isSubscribed) primaryColor else onSurfaceColor.copy(alpha = 0.7f),
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(20.dp),
         )
     }
 }
 
 @Composable
-private fun FavoriteButton(songId: String) {
-    val database = LocalDatabase.current
-    val playerConnection = LocalPlayerConnection.current ?: return
-    val librarySong by database.song(songId).collectAsState(initial = null)
-    // For episodes, show saved state (inLibrary); for songs, show liked state
-    val isEpisode = librarySong?.song?.isEpisode == true
-    val isLiked = if (isEpisode) librarySong?.song?.inLibrary != null else librarySong?.song?.liked == true
+private fun AddToPlaylistButton(
+    onClick: () -> Unit,
+    outlineColor: Color,
+    onSurfaceColor: Color,
+)
 
-    val errorColor = MaterialTheme.colorScheme.error
-    val outlineColor = MaterialTheme.colorScheme.outline
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+{
+    val contentDescription = stringResource(R.string.add_to_playlist_desc)
 
     Box(
         contentAlignment = Alignment.Center,
@@ -920,20 +1122,58 @@ private fun FavoriteButton(songId: String) {
             .clip(CircleShape)
             .border(
                 width = 1.dp,
-                color = if (isLiked) errorColor.copy(alpha = 0.5f) else outlineColor.copy(alpha = 0.3f),
-                shape = CircleShape
+                color = outlineColor.copy(alpha = 0.3f),
+                shape = CircleShape,
             )
             .background(
-                color = if (isLiked) errorColor.copy(alpha = 0.1f) else Color.Transparent,
-                shape = CircleShape
+                color = Color.Transparent,
+                shape = CircleShape,
             )
-            .clickable { playerConnection.service.toggleLike() }
+            .clickable { onClick() },
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.add),
+            contentDescription = contentDescription,
+            tint = onSurfaceColor.copy(alpha = 0.7f),
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+@Composable
+private fun FavoriteButton(
+    songId: String,
+    errorColor: Color,
+    outlineColor: Color,
+    onSurfaceColor: Color,
+) {
+    val database = LocalDatabase.current
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val librarySong by database.song(songId).collectAsStateWithLifecycle(initialValue = null)
+    // For episodes, show saved state (inLibrary); for songs, show liked state
+    val isEpisode = librarySong?.song?.isEpisode == true
+    val isLiked = if (isEpisode) librarySong?.song?.inLibrary != null else librarySong?.song?.liked == true
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .border(
+                    width = 1.dp,
+                    color = if (isLiked) errorColor.copy(alpha = 0.5f) else outlineColor.copy(alpha = 0.3f),
+                    shape = CircleShape,
+                ).background(
+                    color = if (isLiked) errorColor.copy(alpha = 0.1f) else Color.Transparent,
+                    shape = CircleShape,
+                ).clickable { playerConnection.service.toggleLike() },
     ) {
         Icon(
             painter = painterResource(if (isLiked) R.drawable.favorite else R.drawable.favorite_border),
             contentDescription = null,
             tint = if (isLiked) errorColor else onSurfaceColor.copy(alpha = 0.7f),
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(20.dp),
         )
     }
 }

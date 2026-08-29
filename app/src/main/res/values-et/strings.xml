@@ -193,7 +193,6 @@
     <string name="enable_lrclib">Kasuta laulusõnade kuvamiseks teenusepakkujat LrcLib</string>
     <string name="dismiss">Loobu</string>
     <string name="preview">Eelvaade</string>
-    <string name="enable_discord_rpc">Näita oma tegevust Metrolist rakenduses Discordi olekuteatena</string>
     <string name="sort_by_create_date">Lisamise kuupäev</string>
     <string name="sort_by_name">Nime alusel</string>
     <string name="sort_by_artist">Esitaja järgi</string>
@@ -271,7 +270,6 @@
     <string name="backup_create_success">Varukoopia tegemine õnnestus</string>
     <string name="backup_create_failed">Varukoopia tegemine ei õnnestunud</string>
     <string name="restore_failed">Varukoopiast taastamine ei õnnestunud</string>
-    <string name="discord_integration">Lõiming Discordiga</string>
     <string name="discord_information">Metrolist kasutab Discordi kasutajakonto oleku kuvamiseks KizzyRPC teeki. See eeldab Discord Gateway ühenduse kasutamist ja seda loetakse Discordi kasutustingimuste rikkumiseks. Aga pole teada ühtegi juhust, kus kasutajakonto oleks sel põhjusel keelatud. Kasuta seda teenust omal vastutsusel.\n\nMetrolist kasutab ainult sinu tunnusluba, kõike muud hoitakse kohalikus seadmes.</string>
     <string name="options">Valikud</string>
     <string name="action_logout">Logi välja</string>

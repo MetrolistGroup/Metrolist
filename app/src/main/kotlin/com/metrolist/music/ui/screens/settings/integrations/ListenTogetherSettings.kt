@@ -52,10 +52,9 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -103,26 +102,26 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun ListenTogetherSettings(
     navController: NavController,
-    scrollBehavior: TopAppBarScrollBehavior,
     viewModel: ListenTogetherViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+    val cannotEditUsernameInRoomStr = stringResource(R.string.listen_together_cannot_edit_username_in_room)
     val coroutineScope = rememberCoroutineScope()
-    
-    val connectionState by viewModel.connectionState.collectAsState()
-    val roomState by viewModel.roomState.collectAsState()
-    val role by viewModel.role.collectAsState()
-    val pendingJoinRequests by viewModel.pendingJoinRequests.collectAsState()
-    val logs by viewModel.logs.collectAsState()
-    val blockedUsernames by viewModel.blockedUsernames.collectAsState()
-    
+
+    val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
+    val roomState by viewModel.roomState.collectAsStateWithLifecycle()
+    val role by viewModel.role.collectAsStateWithLifecycle()
+    val pendingJoinRequests by viewModel.pendingJoinRequests.collectAsStateWithLifecycle()
+    val logs by viewModel.logs.collectAsStateWithLifecycle()
+    val blockedUsernames by viewModel.blockedUsernames.collectAsStateWithLifecycle()
+
     val servers = remember { ListenTogetherServers.servers }
     var serverUrl by rememberPreference(ListenTogetherServerUrlKey, ListenTogetherServers.defaultServerUrl)
     var username by rememberPreference(ListenTogetherUsernameKey, "")
     var autoApprovalJoins by rememberPreference(ListenTogetherAutoApprovalKey, false)
     var autoApproveSuggestions by rememberPreference(ListenTogetherAutoApproveSuggestionsKey, false)
     var syncHostVolume by rememberPreference(ListenTogetherSyncVolumeKey, true)
-    
+
     var showServerUrlDialog by rememberSaveable { mutableStateOf(false) }
     var showUsernameDialog by rememberSaveable { mutableStateOf(false) }
     var showCreateRoomDialog by rememberSaveable { mutableStateOf(false) }
@@ -130,7 +129,7 @@ fun ListenTogetherSettings(
     var showLogsDialog by rememberSaveable { mutableStateOf(false) }
     var showBlockedUsersDialog by rememberSaveable { mutableStateOf(false) }
     var roomCodeInput by rememberSaveable { mutableStateOf("") }
-    
+
     // Handle events
     LaunchedEffect(Unit) {
         viewModel.events.collectLatest { event ->
@@ -138,29 +137,36 @@ fun ListenTogetherSettings(
                 is ListenTogetherEvent.RoomCreated -> {
                     // Room created toast is shown globally by the client
                 }
+
                 is ListenTogetherEvent.JoinApproved -> {
                     Toast.makeText(context, "Joined room: ${event.roomCode}", Toast.LENGTH_SHORT).show()
                 }
+
                 is ListenTogetherEvent.JoinRejected -> {
                     Toast.makeText(context, "Join rejected: ${event.reason}", Toast.LENGTH_SHORT).show()
                 }
+
                 is ListenTogetherEvent.JoinRequestReceived -> {
                     Toast.makeText(context, "${event.username} wants to join", Toast.LENGTH_SHORT).show()
                 }
+
                 is ListenTogetherEvent.Kicked -> {
                     Toast.makeText(context, "Kicked: ${event.reason}", Toast.LENGTH_SHORT).show()
                 }
+
                 is ListenTogetherEvent.ConnectionError -> {
                     Toast.makeText(context, "Connection error: ${event.error}", Toast.LENGTH_SHORT).show()
                 }
+
                 is ListenTogetherEvent.ServerError -> {
                     Toast.makeText(context, "Error: ${event.message}", Toast.LENGTH_SHORT).show()
                 }
+
                 else -> {}
             }
         }
     }
-    
+
     // Dialogs
     if (showServerUrlDialog) {
         ServerChooserDialog(
@@ -174,10 +180,10 @@ fun ListenTogetherSettings(
                 serverUrl = customUrl
                 showServerUrlDialog = false
             },
-            onDismiss = { showServerUrlDialog = false }
+            onDismiss = { showServerUrlDialog = false },
         )
     }
-    
+
     if (showUsernameDialog) {
         var tempUsername by rememberSaveable(showUsernameDialog) { mutableStateOf(username) }
 
@@ -186,14 +192,20 @@ fun ListenTogetherSettings(
             icon = { Icon(painterResource(R.drawable.person), contentDescription = null) },
             title = { Text(stringResource(R.string.listen_together_username)) },
             buttons = {
-                TextButton(onClick = { username = ""; showUsernameDialog = false }) {
+                TextButton(onClick = {
+                    username = ""
+                    showUsernameDialog = false
+                }) {
                     Text(stringResource(R.string.reset))
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = { username = tempUsername.trim(); showUsernameDialog = false }) {
+                Button(onClick = {
+                    username = tempUsername.trim()
+                    showUsernameDialog = false
+                }) {
                     Text(stringResource(android.R.string.ok))
                 }
-            }
+            },
         ) {
             OutlinedTextField(
                 value = tempUsername,
@@ -210,11 +222,11 @@ fun ListenTogetherSettings(
                     }
                 },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
-    
+
     if (showCreateRoomDialog) {
         var createUsername by rememberSaveable(showCreateRoomDialog) { mutableStateOf(username) }
 
@@ -238,19 +250,19 @@ fun ListenTogetherSettings(
                             Toast.makeText(context, R.string.error_username_empty, Toast.LENGTH_SHORT).show()
                         }
                     },
-                    enabled = createUsername.trim().isNotBlank()
+                    enabled = createUsername.trim().isNotBlank(),
                 ) {
                     Text(stringResource(R.string.create))
                 }
-            }
+            },
         ) {
             Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
                     text = stringResource(R.string.listen_together_create_room_desc),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 OutlinedTextField(
                     value = createUsername,
@@ -260,12 +272,12 @@ fun ListenTogetherSettings(
                         Icon(painterResource(R.drawable.person), contentDescription = null)
                     },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
     }
-    
+
     if (showJoinRoomDialog) {
         var joinUsername by rememberSaveable(showJoinRoomDialog) { mutableStateOf(username) }
 
@@ -290,14 +302,14 @@ fun ListenTogetherSettings(
                             Toast.makeText(context, R.string.error_username_empty, Toast.LENGTH_SHORT).show()
                         }
                     },
-                    enabled = joinUsername.trim().isNotBlank() && roomCodeInput.length == 8
+                    enabled = joinUsername.trim().isNotBlank() && roomCodeInput.length == 8,
                 ) {
                     Text(stringResource(R.string.join))
                 }
-            }
+            },
         ) {
             Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 OutlinedTextField(
                     value = joinUsername,
@@ -307,7 +319,7 @@ fun ListenTogetherSettings(
                         Icon(painterResource(R.drawable.person), contentDescription = null)
                     },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = roomCodeInput,
@@ -317,17 +329,17 @@ fun ListenTogetherSettings(
                         Icon(painterResource(R.drawable.key), contentDescription = null)
                     },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
     }
-    
+
     if (showLogsDialog) {
         LogsDialog(
             logs = logs,
             onClear = { viewModel.clearLogs() },
-            onDismiss = { showLogsDialog = false }
+            onDismiss = { showLogsDialog = false },
         )
     }
 
@@ -335,156 +347,172 @@ fun ListenTogetherSettings(
         BlockedUsersDialog(
             blockedUsernames = blockedUsernames,
             onUnblock = { viewModel.unblockUser(it) },
-            onDismiss = { showBlockedUsersDialog = false }
+            onDismiss = { showBlockedUsersDialog = false },
         )
     }
 
     Column(
         Modifier
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()),
     ) {
         Spacer(
             Modifier.windowInsetsPadding(
-                LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Top)
-            )
+                LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Top),
+            ),
         )
-        
+
         // Settings section using IntegrationCard
         val selectedServer = remember(serverUrl) { ListenTogetherServers.findByUrl(serverUrl) }
-        
+
         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
             IntegrationCard(
                 title = stringResource(R.string.settings),
-                items = listOf(
-                    IntegrationCardItem(
-                        icon = painterResource(R.drawable.person),
-                        title = { Text(stringResource(R.string.listen_together_blocked_users)) },
-                        description = {
-                            Text(
-                                if (blockedUsernames.isNotEmpty()) 
-                                    stringResource(R.string.listen_together_blocked_users_count, blockedUsernames.size)
-                                else 
-                                    stringResource(R.string.listen_together_no_blocked_users)
-                            )
-                        },
-                        onClick = if (blockedUsernames.isNotEmpty()) {
-                            { showBlockedUsersDialog = true }
-                        } else null
+                items =
+                    listOf(
+                        IntegrationCardItem(
+                            icon = painterResource(R.drawable.person),
+                            title = { Text(stringResource(R.string.listen_together_blocked_users)) },
+                            description = {
+                                Text(
+                                    if (blockedUsernames.isNotEmpty()) {
+                                        stringResource(R.string.listen_together_blocked_users_count, blockedUsernames.size)
+                                    } else {
+                                        stringResource(R.string.listen_together_no_blocked_users)
+                                    },
+                                )
+                            },
+                            onClick =
+                                if (blockedUsernames.isNotEmpty()) {
+                                    { showBlockedUsersDialog = true }
+                                } else {
+                                    null
+                                },
+                        ),
+                        IntegrationCardItem(
+                            icon = painterResource(R.drawable.cloud),
+                            title = { Text(stringResource(R.string.listen_together_server_url)) },
+                            description = {
+                                Text(
+                                    selectedServer?.let { server ->
+                                        "${server.name} - ${server.location}"
+                                    } ?: serverUrl,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                            onClick = { showServerUrlDialog = true },
+                        ),
+                        IntegrationCardItem(
+                            icon = painterResource(R.drawable.person),
+                            title = { Text(stringResource(R.string.listen_together_username)) },
+                            description = {
+                                Text(username.ifEmpty { stringResource(R.string.not_set) })
+                            },
+                            onClick =
+                                if (roomState == null) {
+                                    { showUsernameDialog = true }
+                                } else {
+                                    {
+                                        Toast
+                                            .makeText(
+                                                context,
+                                                cannotEditUsernameInRoomStr,
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                    }
+                                },
+                        ),
+                        IntegrationCardItem(
+                            icon = painterResource(R.drawable.done),
+                            title = { Text(stringResource(R.string.listen_together_auto_approval_joins)) },
+                            description = {
+                                Text(stringResource(R.string.listen_together_auto_approval_joins_desc))
+                            },
+                            trailingContent = {
+                                Switch(
+                                    checked = autoApprovalJoins,
+                                    onCheckedChange = { autoApprovalJoins = it },
+                                    // Only disable for guests in a room (hosts can always change)
+                                    enabled = roomState == null || role != RoomRole.GUEST,
+                                    thumbContent = {
+                                        Icon(
+                                            painter =
+                                                painterResource(
+                                                    id = if (autoApprovalJoins) R.drawable.check else R.drawable.close,
+                                                ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize),
+                                        )
+                                    },
+                                )
+                            },
+                            // Allow clicking to see disabled state, but only change if enabled
+                            onClick = { if (roomState == null || role != RoomRole.GUEST) autoApprovalJoins = !autoApprovalJoins },
+                        ),
+                        IntegrationCardItem(
+                            icon = painterResource(R.drawable.done),
+                            title = { Text(stringResource(R.string.listen_together_auto_approval_suggestions)) },
+                            description = {
+                                Text(stringResource(R.string.listen_together_auto_approval_suggestions_desc))
+                            },
+                            trailingContent = {
+                                Switch(
+                                    checked = autoApproveSuggestions,
+                                    onCheckedChange = { autoApproveSuggestions = it },
+                                    // Only disable for guests in a room (hosts can always change)
+                                    enabled = roomState == null || role != RoomRole.GUEST,
+                                    thumbContent = {
+                                        Icon(
+                                            painter =
+                                                painterResource(
+                                                    id = if (autoApproveSuggestions) R.drawable.check else R.drawable.close,
+                                                ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize),
+                                        )
+                                    },
+                                )
+                            },
+                            // Allow clicking to see disabled state, but only change if enabled
+                            onClick = { if (roomState == null || role != RoomRole.GUEST) autoApproveSuggestions = !autoApproveSuggestions },
+                        ),
+                        IntegrationCardItem(
+                            icon = painterResource(R.drawable.volume_up),
+                            title = { Text(stringResource(R.string.listen_together_sync_volume)) },
+                            description = {
+                                Text(stringResource(R.string.listen_together_sync_volume_desc))
+                            },
+                            trailingContent = {
+                                Switch(
+                                    checked = syncHostVolume,
+                                    onCheckedChange = { syncHostVolume = it },
+                                    thumbContent = {
+                                        Icon(
+                                            painter =
+                                                painterResource(
+                                                    id = if (syncHostVolume) R.drawable.check else R.drawable.close,
+                                                ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize),
+                                        )
+                                    },
+                                )
+                            },
+                            onClick = { syncHostVolume = !syncHostVolume },
+                        ),
+                        IntegrationCardItem(
+                            icon = painterResource(R.drawable.bug_report),
+                            title = { Text(stringResource(R.string.listen_together_view_logs)) },
+                            description = {
+                                Text(stringResource(R.string.listen_together_view_logs_desc))
+                            },
+                            onClick = { showLogsDialog = true },
+                        ),
                     ),
-                    IntegrationCardItem(
-                        icon = painterResource(R.drawable.cloud),
-                        title = { Text(stringResource(R.string.listen_together_server_url)) },
-                        description = {
-                            Text(
-                                selectedServer?.let { server ->
-                                    "${server.name} - ${server.location}"
-                                } ?: serverUrl,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        },
-                        onClick = { showServerUrlDialog = true }
-                    ),
-                    IntegrationCardItem(
-                        icon = painterResource(R.drawable.person),
-                        title = { Text(stringResource(R.string.listen_together_username)) },
-                        description = {
-                            Text(username.ifEmpty { stringResource(R.string.not_set) })
-                        },
-                        onClick = if (roomState == null) {
-                            { showUsernameDialog = true }
-                        } else {
-                            { Toast.makeText(context, context.getString(R.string.listen_together_cannot_edit_username_in_room), Toast.LENGTH_SHORT).show() }
-                        }
-                    ),
-                    IntegrationCardItem(
-                        icon = painterResource(R.drawable.done),
-                        title = { Text(stringResource(R.string.listen_together_auto_approval_joins)) },
-                        description = {
-                            Text(stringResource(R.string.listen_together_auto_approval_joins_desc))
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = autoApprovalJoins,
-                                onCheckedChange = { autoApprovalJoins = it },
-                                // Only disable for guests in a room (hosts can always change)
-                                enabled = roomState == null || role != RoomRole.GUEST,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (autoApprovalJoins) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                                    )
-                                }
-                            )
-                        },
-                        // Allow clicking to see disabled state, but only change if enabled
-                        onClick = { if (roomState == null || role != RoomRole.GUEST) autoApprovalJoins = !autoApprovalJoins }
-                    ),
-                    IntegrationCardItem(
-                        icon = painterResource(R.drawable.done),
-                        title = { Text(stringResource(R.string.listen_together_auto_approval_suggestions)) },
-                        description = {
-                            Text(stringResource(R.string.listen_together_auto_approval_suggestions_desc))
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = autoApproveSuggestions,
-                                onCheckedChange = { autoApproveSuggestions = it },
-                                // Only disable for guests in a room (hosts can always change)
-                                enabled = roomState == null || role != RoomRole.GUEST,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (autoApproveSuggestions) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                                    )
-                                }
-                            )
-                        },
-                        // Allow clicking to see disabled state, but only change if enabled
-                        onClick = { if (roomState == null || role != RoomRole.GUEST) autoApproveSuggestions = !autoApproveSuggestions }
-                    ),
-                    IntegrationCardItem(
-                        icon = painterResource(R.drawable.volume_up),
-                        title = { Text(stringResource(R.string.listen_together_sync_volume)) },
-                        description = {
-                            Text(stringResource(R.string.listen_together_sync_volume_desc))
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = syncHostVolume,
-                                onCheckedChange = { syncHostVolume = it },
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (syncHostVolume) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { syncHostVolume = !syncHostVolume }
-                    ),
-                    IntegrationCardItem(
-                        icon = painterResource(R.drawable.bug_report),
-                        title = { Text(stringResource(R.string.listen_together_view_logs)) },
-                        description = {
-                            Text(stringResource(R.string.listen_together_view_logs_desc))
-                        },
-                        onClick = { showLogsDialog = true }
-                    )
-                )
             )
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 
@@ -500,7 +528,7 @@ fun ListenTogetherSettings(
                     contentDescription = null,
                 )
             }
-        }
+        },
     )
 }
 
@@ -508,16 +536,16 @@ fun ListenTogetherSettings(
 fun LogsDialog(
     logs: List<LogEntry>,
     onClear: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val listState = rememberLazyListState()
-    
+
     LaunchedEffect(logs.size) {
         if (logs.isNotEmpty()) {
             listState.animateScrollToItem(logs.size - 1)
         }
     }
-    
+
     val context = LocalContext.current
 
     DefaultDialog(
@@ -527,22 +555,23 @@ fun LogsDialog(
         buttons = {
             TextButton(
                 onClick = {
-                    val textToCopy = logs.joinToString("\n") { log ->
-                        buildString {
-                            append(log.timestamp)
-                            append(" [")
-                            append(log.level.name)
-                            append("] ")
-                            append(log.message)
-                            log.details?.let { d -> append(" -- $d") }
+                    val textToCopy =
+                        logs.joinToString("\n") { log ->
+                            buildString {
+                                append(log.timestamp)
+                                append(" [")
+                                append(log.level.name)
+                                append("] ")
+                                append(log.message)
+                                log.details?.let { d -> append(" -- $d") }
+                            }
                         }
-                    }
                     val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                     val clip = android.content.ClipData.newPlainText("ListenTogetherLogs", textToCopy)
                     cm.setPrimaryClip(clip)
                     Toast.makeText(context, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
                 },
-                enabled = logs.isNotEmpty()
+                enabled = logs.isNotEmpty(),
             ) {
                 Text(stringResource(R.string.copy))
             }
@@ -553,27 +582,28 @@ fun LogsDialog(
             Button(onClick = onDismiss) {
                 Text(stringResource(android.R.string.ok))
             }
-        }
+        },
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(350.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(350.dp),
         ) {
             if (logs.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = stringResource(R.string.listen_together_no_logs),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             } else {
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
                 ) {
                     items(logs) { log ->
                         LogEntryItem(log)
@@ -590,7 +620,7 @@ private fun ServerChooserDialog(
     currentUrl: String,
     onSelect: (ListenTogetherServer) -> Unit,
     onUseCustom: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     var customUrl by rememberSaveable(currentUrl) { mutableStateOf(currentUrl) }
     val trimmedCustomUrl = customUrl.trim()
@@ -603,59 +633,64 @@ private fun ServerChooserDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(android.R.string.cancel))
             }
-        }
+        },
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             servers.forEach { server ->
                 val isSelected = server.url == currentUrl
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onSelect(server) },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(server) },
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isSelected) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.surfaceVariant
-                        }
-                    )
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor =
+                                if (isSelected) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                },
+                        ),
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = server.name,
                                 style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
                             )
                             Text(
                                 text = "${server.location} - ${server.operator}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Text(
                                 text = server.url,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                         if (isSelected) {
                             Icon(
                                 painter = painterResource(R.drawable.done),
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }
@@ -667,7 +702,7 @@ private fun ServerChooserDialog(
             Text(
                 text = stringResource(R.string.listen_together_custom_server),
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
             OutlinedTextField(
                 value = customUrl,
@@ -677,13 +712,13 @@ private fun ServerChooserDialog(
                     Icon(painterResource(R.drawable.link), contentDescription = null)
                 },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
             Button(
                 onClick = { onUseCustom(trimmedCustomUrl) },
                 enabled = trimmedCustomUrl.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
             ) {
                 Text(stringResource(R.string.listen_together_use_custom_server))
             }
@@ -696,40 +731,43 @@ fun LogEntryItem(log: LogEntry) {
     val context = LocalContext.current
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 2.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
                 text = log.timestamp,
                 style = MaterialTheme.typography.labelSmall,
                 fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.width(8.dp))
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = when (log.level) {
-                    LogLevel.ERROR -> MaterialTheme.colorScheme.errorContainer
-                    LogLevel.WARNING -> Color(0xFFFFF3CD)
-                    LogLevel.DEBUG -> MaterialTheme.colorScheme.surfaceVariant
-                    LogLevel.INFO -> MaterialTheme.colorScheme.primaryContainer
-                }
+                color =
+                    when (log.level) {
+                        LogLevel.ERROR -> MaterialTheme.colorScheme.errorContainer
+                        LogLevel.WARNING -> Color(0xFFFFF3CD)
+                        LogLevel.DEBUG -> MaterialTheme.colorScheme.surfaceVariant
+                        LogLevel.INFO -> MaterialTheme.colorScheme.primaryContainer
+                    },
             ) {
                 Text(
                     text = log.level.name,
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
-                    color = when (log.level) {
-                        LogLevel.ERROR -> MaterialTheme.colorScheme.onErrorContainer
-                        LogLevel.WARNING -> Color(0xFF856404)
-                        LogLevel.DEBUG -> MaterialTheme.colorScheme.onSurfaceVariant
-                        LogLevel.INFO -> MaterialTheme.colorScheme.onPrimaryContainer
-                    }
+                    color =
+                        when (log.level) {
+                            LogLevel.ERROR -> MaterialTheme.colorScheme.onErrorContainer
+                            LogLevel.WARNING -> Color(0xFF856404)
+                            LogLevel.DEBUG -> MaterialTheme.colorScheme.onSurfaceVariant
+                            LogLevel.INFO -> MaterialTheme.colorScheme.onPrimaryContainer
+                        },
                 )
             }
         }
@@ -737,7 +775,7 @@ fun LogEntryItem(log: LogEntry) {
         Text(
             text = log.message,
             style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace
+            fontFamily = FontFamily.Monospace,
         )
         log.details?.let { details ->
             Text(
@@ -746,7 +784,7 @@ fun LogEntryItem(log: LogEntry) {
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -756,7 +794,7 @@ fun LogEntryItem(log: LogEntry) {
 fun BlockedUsersDialog(
     blockedUsernames: Set<String>,
     onUnblock: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val listState = rememberLazyListState()
 
@@ -768,57 +806,59 @@ fun BlockedUsersDialog(
             Button(onClick = onDismiss) {
                 Text(stringResource(android.R.string.ok))
             }
-        }
+        },
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(280.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(280.dp),
         ) {
             if (blockedUsernames.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = stringResource(R.string.listen_together_no_blocked_users),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             } else {
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(blockedUsernames.toList()) { username ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.person),
                                     contentDescription = null,
                                     modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = username,
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
                                 )
                             }
                             TextButton(
-                                onClick = { onUnblock(username) }
+                                onClick = { onUnblock(username) },
                             ) {
                                 Text(stringResource(R.string.unblock))
                             }
@@ -829,4 +869,3 @@ fun BlockedUsersDialog(
         }
     }
 }
-

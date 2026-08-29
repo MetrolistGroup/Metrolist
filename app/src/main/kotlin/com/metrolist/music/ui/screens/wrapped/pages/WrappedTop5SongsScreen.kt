@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.wrapped.pages
 
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -115,7 +116,7 @@ fun WrappedTop5SongsScreen(topSongs: List<SongWithStats>, isVisible: Boolean) {
                                     fontSize = 16.sp
                                 )
                                 Text(
-                                    text = song.artistName ?: "",
+                                    text = song.artists.joinToString(" ${stringResource(R.string.and)} ") { it.name }.ifBlank { song.artistName.orEmpty() },
                                     color = Color.White.copy(alpha = 0.7f),
                                     fontSize = 14.sp
                                 )

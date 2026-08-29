@@ -38,10 +38,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -105,7 +104,6 @@ import com.metrolist.music.viewmodels.TopPlaylistViewModel
 @Composable
 fun TopPlaylistScreen(
     navController: NavController,
-    scrollBehavior: TopAppBarScrollBehavior,
     viewModel: TopPlaylistViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -113,11 +111,11 @@ fun TopPlaylistScreen(
     val haptic = LocalHapticFeedback.current
     val focusManager = LocalFocusManager.current
     val playerConnection = LocalPlayerConnection.current ?: return
-    val isPlaying by playerConnection.isEffectivelyPlaying.collectAsState()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val isPlaying by playerConnection.isEffectivelyPlaying.collectAsStateWithLifecycle()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     val maxSize = viewModel.top
 
-    val songs by viewModel.topSongs.collectAsState(null)
+    val songs by viewModel.topSongs.collectAsStateWithLifecycle(null)
     val mutableSongs = remember { mutableStateListOf<Song>() }
 
     val likeLength = remember(songs) {
@@ -141,9 +139,11 @@ fun TopPlaylistScreen(
             restore = { it.toMutableStateList() }
         )
     ) { mutableStateListOf() }
+    var selectionAnchorSongId by rememberSaveable { mutableStateOf<String?>(null) }
     val onExitSelectionMode = {
         inSelectMode = false
         selection.clear()
+        selectionAnchorSongId = null
     }
 
     val filteredSongs = remember(songs, query) {
@@ -160,6 +160,10 @@ fun TopPlaylistScreen(
                 selection.remove(songId)
             }
         }
+
+        if (selectionAnchorSongId != null && filteredSongs.none { it.id == selectionAnchorSongId }) {
+            selectionAnchorSongId = filteredSongs.firstOrNull { it.id in selection }?.id
+        }
     }
 
     if (isSearching) {
@@ -171,7 +175,7 @@ fun TopPlaylistScreen(
         BackHandler(onBack = onExitSelectionMode)
     }
 
-    val sortType by viewModel.topPeriod.collectAsState()
+    val sortType by viewModel.topPeriod.collectAsStateWithLifecycle()
     val name = stringResource(R.string.my_top) + " $maxSize"
 
     val downloadUtil = LocalDownloadUtil.current
@@ -301,7 +305,7 @@ fun TopPlaylistScreen(
                 if (filteredSongs.isNotEmpty()) {
                     itemsIndexed(
                         items = filteredSongs,
-                        key = { _, song -> song.id },
+                        key = { index, song -> "${song.id}_$index" },
                     ) { index, song ->
                         val onCheckedChange: (Boolean) -> Unit = {
                             if (it) {
@@ -329,7 +333,6 @@ fun TopPlaylistScreen(
                                             menuState.show {
                                                 SongMenu(
                                                     originalSong = song,
-                                                    navController = navController,
                                                     onDismiss = menuState::dismiss,
                                                 )
                                             }
@@ -365,6 +368,24 @@ fun TopPlaylistScreen(
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             inSelectMode = true
                                             onCheckedChange(true)
+                                            selectionAnchorSongId = song.id
+                                        } else {
+                                            val anchorIndex = selectionAnchorSongId?.let { anchorSongId ->
+                                                filteredSongs.indexOfFirst { it.id == anchorSongId }
+                                            } ?: -1
+
+                                            if (anchorIndex == -1) {
+                                                onCheckedChange(true)
+                                                selectionAnchorSongId = song.id
+                                            } else {
+                                                val range = if (anchorIndex <= index) anchorIndex..index else index..anchorIndex
+                                                for (rangeIndex in range) {
+                                                    val rangeSongId = filteredSongs[rangeIndex].id
+                                                    if (rangeSongId !in selection) {
+                                                        selection.add(rangeSongId)
+                                                    }
+                                                }
+                                            }
                                         }
                                     },
                                 )
@@ -546,7 +567,7 @@ private fun TopPlaylistHeader(
         // Playlist Name
         Text(
             text = name,
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             maxLines = 2,
@@ -561,7 +582,7 @@ private fun TopPlaylistHeader(
             text = buildString {
                 append(pluralStringResource(R.plurals.n_song, songs.size, songs.size))
                 if (likeLength > 0) {
-                    append(" • ")
+                    append(" ")
                     append(makeTimeString(likeLength * 1000L))
                 }
             },

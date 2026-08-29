@@ -19,7 +19,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -42,8 +44,14 @@ private data class NavItemState(
 private fun isRouteSelected(currentRoute: String?, screenRoute: String, navigationItems: List<Screens>): Boolean {
     if (currentRoute == null) return false
     if (currentRoute == screenRoute) return true
-    return navigationItems.any { it.route == screenRoute } && 
-           currentRoute.startsWith("$screenRoute/")
+    if (navigationItems.any { it.route == screenRoute } &&
+        currentRoute.startsWith("$screenRoute/")) return true
+
+    // Fix: match the route template, not the resolved route
+    if (screenRoute == "search_input" &&
+        (currentRoute.startsWith("search/") || currentRoute == "search/{query}")) return true
+
+    return false
 }
 
 @Composable
@@ -58,24 +66,25 @@ fun AppNavigationRail(
     val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
-    
+
     NavigationRail(
         modifier = modifier,
         containerColor = containerColor
     ) {
         Spacer(modifier = Modifier.weight(1f))
-        
+
         navigationItems.forEach { screen ->
             val isSelected = remember(currentRoute, screen.route) {
                 isRouteSelected(currentRoute, screen.route, navigationItems)
             }
+            val currentIsSelected by rememberUpdatedState(isSelected)
             val iconRes = remember(isSelected, screen) {
                 if (isSelected) screen.iconIdActive else screen.iconIdInactive
             }
-            
+
             val isSearchItem = screen == Screens.Search && onSearchLongClick != null
             val interactionSource = remember { MutableInteractionSource() }
-            
+
             // Long press detection using InteractionSource
             if (isSearchItem) {
                 LaunchedEffect(interactionSource) {
@@ -91,7 +100,7 @@ fun AppNavigationRail(
                             }
                             is PressInteraction.Release -> {
                                 if (!isLongClick) {
-                                    onItemClick(screen, isSelected)
+                                    onItemClick(screen, currentIsSelected)
                                 }
                             }
                             is PressInteraction.Cancel -> {
@@ -101,12 +110,12 @@ fun AppNavigationRail(
                     }
                 }
             }
-            
+
             NavigationRailItem(
                 selected = isSelected,
-                onClick = { 
+                onClick = {
                     if (!isSearchItem) {
-                        onItemClick(screen, isSelected)
+                        onItemClick(screen, currentIsSelected)
                     }
                     // For search item, click is handled via InteractionSource
                 },
@@ -119,7 +128,7 @@ fun AppNavigationRail(
                 }
             )
         }
-        
+
         Spacer(modifier = Modifier.weight(1f))
     }
 }
@@ -138,7 +147,7 @@ fun AppNavigationBar(
     val contentColor = if (pureBlack) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
-    
+
     NavigationBar(
         modifier = modifier,
         containerColor = containerColor,
@@ -148,13 +157,14 @@ fun AppNavigationBar(
             val isSelected = remember(currentRoute, screen.route) {
                 isRouteSelected(currentRoute, screen.route, navigationItems)
             }
+            val currentIsSelected by rememberUpdatedState(isSelected)
             val iconRes = remember(isSelected, screen) {
                 if (isSelected) screen.iconIdActive else screen.iconIdInactive
             }
-            
+
             val isSearchItem = screen == Screens.Search && onSearchLongClick != null
             val interactionSource = remember { MutableInteractionSource() }
-            
+
             // Long press detection using InteractionSource
             if (isSearchItem) {
                 LaunchedEffect(interactionSource) {
@@ -170,7 +180,7 @@ fun AppNavigationBar(
                             }
                             is PressInteraction.Release -> {
                                 if (!isLongClick) {
-                                    onItemClick(screen, isSelected)
+                                    onItemClick(screen, currentIsSelected)
                                 }
                             }
                             is PressInteraction.Cancel -> {
@@ -180,12 +190,12 @@ fun AppNavigationBar(
                     }
                 }
             }
-            
+
             NavigationBarItem(
                 selected = isSelected,
-                onClick = { 
+                onClick = {
                     if (!isSearchItem) {
-                        onItemClick(screen, isSelected)
+                        onItemClick(screen, currentIsSelected)
                     }
                     // For search item, click is handled via InteractionSource
                 },

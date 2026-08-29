@@ -281,14 +281,12 @@
     <string name="backup_create_success">Резервну копію створено успішно</string>
     <string name="backup_create_failed">Не вдалося створити резервну копію</string>
     <string name="restore_failed">Не вдалося відновити з резервної копії</string>
-    <string name="discord_integration">Інтеграція з Discord</string>
     <string name="discord_information">Metrolist використовує бібліотеку KizzyRPC для встановлення статусу вашого облікового запису Discord. Це передбачає використання підключення через Discord Gateway, що може вважатися порушенням умов використання Discord. Однак, наразі немає відомих випадків блокування облікових записів користувачів з цієї причини. Використовуйте на свій страх і ризик.\n\nMetrolist буде зчитувати тільки ваш токен, а все інше зберігається локально.</string>
     <string name="dismiss">Закрити</string>
     <string name="options">Налаштування</string>
     <string name="preview">Попередній перегляд</string>
     <string name="login_failed">Помилка входу</string>
     <string name="action_logout">Вийти</string>
-    <string name="enable_discord_rpc">Увімкнути Rich Presenсe</string>
     <string name="about">Про програму</string>
     <string name="app_version">Версія застосунку</string>
     <string name="new_version_available">Доступна нова версія</string>

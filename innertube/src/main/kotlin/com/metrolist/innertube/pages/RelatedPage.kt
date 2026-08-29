@@ -12,6 +12,7 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.models.oddElements
 import com.metrolist.innertube.models.splitBySeparator
+import com.metrolist.innertube.utils.parseTime
 
 data class RelatedPage(
     val songs: List<SongItem>,
@@ -33,7 +34,7 @@ data class RelatedPage(
                 ?.splitBySeparator()
 
             return SongItem(
-                id = renderer.playlistItemData?.videoId ?: return null,
+                id = renderer.videoId ?: return null,
                 title =
                     renderer.flexColumns
                         .firstOrNull()
@@ -56,9 +57,11 @@ data class RelatedPage(
                             id = it.navigationEndpoint?.browseEndpoint?.browseId ?: return null,
                         )
                     },
-                duration = null,
+                duration = renderer.fixedColumns?.firstOrNull()
+                    ?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.firstOrNull()
+                    ?.text?.parseTime(),
                 musicVideoType = renderer.musicVideoType,
-                thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: return null,
                 explicit =
                     renderer.badges?.find {
                         it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
@@ -98,7 +101,7 @@ data class RelatedPage(
                                 ?.lastOrNull()
                                 ?.text
                                 ?.toIntOrNull(),
-                        thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                        thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         explicit =
                             renderer.subtitleBadges?.find {
                                 it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
@@ -118,10 +121,10 @@ data class RelatedPage(
                             name = renderer.subtitle?.runs?.lastOrNull()?.text ?: return null,
                             id = null
                         ),
-                        songCountText = renderer.subtitle?.runs?.findLast {
+                        songCountText = renderer.subtitle.runs.findLast {
                             it.text.any { c -> c.isDigit() } && !it.text.contains("view", ignoreCase = true)
                         }?.text,
-                        thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                        thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         playEndpoint =
                             renderer.thumbnailOverlay
                                 ?.musicItemThumbnailOverlayRenderer
@@ -153,7 +156,7 @@ data class RelatedPage(
                             renderer.title.runs
                                 ?.firstOrNull()
                                 ?.text ?: return null,
-                        thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
+                        thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         shuffleEndpoint =
                             renderer.menu
                                 ?.menuRenderer
@@ -183,7 +186,7 @@ data class RelatedPage(
                             )
                         },
                         episodeCountText = renderer.subtitle?.runs?.lastOrNull()?.text,
-                        thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl(),
+                        thumbnail = renderer.thumbnailRenderer.getThumbnailUrl(),
                         playEndpoint = renderer.thumbnailOverlay
                             ?.musicItemThumbnailOverlayRenderer?.content
                             ?.musicPlayButtonRenderer?.playNavigationEndpoint

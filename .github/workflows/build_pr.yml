@@ -4,10 +4,23 @@ on:
   pull_request:
     branches:
       - "**"
+    # Weblate PRs only touch localized string files, which cannot break a
+    # build that the base branch already compiles. The default (unsuffixed)
+    # `values/` directory is deliberately not listed, so English string
+    # changes still build.
+    paths-ignore:
+      - "app/src/main/res/values-*/strings.xml"
+      - "app/src/main/res/values-*/metrolist_strings.xml"
+      - "fastlane/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number }}
+  cancel-in-progress: true
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v6
@@ -26,32 +39,43 @@ jobs:
           cache-read-only: true
           cache-cleanup: on-success
 
-      - name: Setup and Generate Protobuf
-        uses: ./.github/actions/setup-protobuf
-
-
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Generate debug.keystore if not exists
-        run: |
-          mkdir -p ~/.android
-          if [ ! -f ~/.android/debug.keystore ]; then
-            keytool -genkey -v \
-              -keystore ~/.android/debug.keystore \
-              -storepass android \
-              -alias androiddebugkey \
-              -keypass android \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
-          fi
+      - name: Restore PR debug keystore
+        id: pr_keystore
+        uses: actions/cache/restore@v5
+        with:
+          path: app/pr-debug.keystore
+          key: pr-debug-keystore-${{ github.event.number }}
 
-      - name: Build and Lint Universal FOSS Debug APK
-        run: ./gradlew --console=plain assembleUniversalFossDebug :app:lintUniversalFossDebug --warning-mode summary
+      - name: Generate PR debug keystore if not cached
+        if: steps.pr_keystore.outputs.cache-hit != 'true'
+        run: |
+          keytool -genkeypair -v \
+            -keystore app/pr-debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Metrolist PR ${{ github.event.number }},O=Metrolist,C=US"
+
+      - name: Save PR debug keystore
+        if: steps.pr_keystore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: app/pr-debug.keystore
+          key: ${{ steps.pr_keystore.outputs.cache-primary-key }}
+
+      - name: Build GMS Debug APK
+        run: ./gradlew --console=plain assembleGmsDebug --warning-mode summary
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
+          METROLIST_APPLICATION_ID: com.metrolist.music.pr.p${{ github.event.number }}
+          METROLIST_APP_NAME: Metrolist PR ${{ github.event.number }}
+          METROLIST_DEBUG_KEYSTORE_PATH: pr-debug.keystore
           PULL_REQUEST: "true"
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
@@ -60,4 +84,4 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: app-universal-debug-pr-${{ github.event.number }}
-          path: app/build/outputs/apk/universalFoss/debug/*.apk
+          path: app/build/outputs/apk/gms/debug/*.apk

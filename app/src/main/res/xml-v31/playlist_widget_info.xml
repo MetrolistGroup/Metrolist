@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="122dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="122dp"
+    android:maxResizeWidth="520dp"
+    android:maxResizeHeight="405dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:previewImage="@mipmap/ic_launcher"
+    android:previewLayout="@layout/widget_playlist_preview"
+    android:initialLayout="@layout/widget_playlist"
+    android:description="@string/widget_playlists_description"
+    android:widgetCategory="home_screen"
+    android:resizeMode="horizontal|vertical" />

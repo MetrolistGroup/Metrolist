@@ -9,4 +9,7 @@
     <external-cache-path
         name="external_cache"
         path="." />
+    <external-files-path
+        name="external_files_documents"
+        path="Documents/MetrolistExports/" />
 </paths>

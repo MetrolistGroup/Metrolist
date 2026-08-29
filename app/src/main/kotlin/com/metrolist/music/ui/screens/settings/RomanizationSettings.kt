@@ -6,188 +6,186 @@
 package com.metrolist.music.ui.screens.settings
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
 import com.metrolist.music.constants.LyricsRomanizeAsMainKey
-import com.metrolist.music.constants.LyricsRomanizeBelarusianKey
-import com.metrolist.music.constants.LyricsRomanizeBulgarianKey
-import com.metrolist.music.constants.LyricsRomanizeChineseKey
-import com.metrolist.music.constants.LyricsRomanizeHindiKey
-import com.metrolist.music.constants.LyricsRomanizePunjabiKey
 import com.metrolist.music.constants.LyricsRomanizeCyrillicByLineKey
-import com.metrolist.music.constants.LyricsRomanizeJapaneseKey
-import com.metrolist.music.constants.LyricsRomanizeKoreanKey
-import com.metrolist.music.constants.LyricsRomanizeKyrgyzKey
-import com.metrolist.music.constants.LyricsRomanizeMacedonianKey
-import com.metrolist.music.constants.LyricsRomanizeRussianKey
-import com.metrolist.music.constants.LyricsRomanizeSerbianKey
-import com.metrolist.music.constants.LyricsRomanizeUkrainianKey
-import com.metrolist.music.ui.component.ActionPromptDialog
+import com.metrolist.music.constants.LyricsRomanizeList
 import com.metrolist.music.ui.component.IconButton
-import com.metrolist.music.ui.component.PreferenceGroupTitle
-import com.metrolist.music.ui.component.SwitchPreference
+import com.metrolist.music.ui.component.Material3SettingsGroup
+import com.metrolist.music.ui.component.Material3SettingsItem
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.rememberPreference
+
+val defaultList = mutableListOf(
+    "Japanese" to true,
+    "Korean" to true,
+    "Chinese" to true,
+    "Hindi" to true,
+    "Punjabi" to true,
+    "Russian" to true,
+    "Ukrainian" to true,
+    "Serbian" to true,
+    "Bulgarian" to true,
+    "Belarusian" to true,
+    "Kyrgyz" to true,
+    "Macedonian" to true,
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RomanizationSettings(
-    navController: NavController,
-    scrollBehavior: TopAppBarScrollBehavior,
+    navController: NavController
 ) {
-    val context = LocalContext.current
+    val (pref, prefValue) = rememberPreference(LyricsRomanizeList, "")
 
-    val (lyricsRomanizeAsMain, onLyricsRomanizeAsMainChange) = rememberPreference(LyricsRomanizeAsMainKey, defaultValue = false)
-    val (lyricsRomanizeJapanese, onLyricsRomanizeJapaneseChange) = rememberPreference(LyricsRomanizeJapaneseKey, defaultValue = true)
-    val (lyricsRomanizeKorean, onLyricsRomanizeKoreanChange) = rememberPreference(LyricsRomanizeKoreanKey, defaultValue = true)
-    val (lyricsRomanizeChinese, onLyricsRomanizeChineseChange) = rememberPreference(LyricsRomanizeChineseKey, defaultValue = true)
-    val (lyricsRomanizeHindi, onLyricsRomanizeHindiChange) = rememberPreference(LyricsRomanizeHindiKey, defaultValue = true)
-    val (lyricsRomanizePunjabi, onLyricsRomanizePunjabiChange) = rememberPreference(LyricsRomanizePunjabiKey, defaultValue = true)
-    val (lyricsRomanizeRussian, onLyricsRomanizeRussianChange) = rememberPreference(LyricsRomanizeRussianKey, defaultValue = true)
-    val (lyricsRomanizeUkrainian, onLyricsRomanizeUkrainianChange) = rememberPreference(LyricsRomanizeUkrainianKey, defaultValue = true)
-    val (lyricsRomanizeSerbian, onLyricsRomanizeSerbianChange) = rememberPreference(LyricsRomanizeSerbianKey, defaultValue = true)
-    val (lyricsRomanizeBulgarian, onLyricsRomanizeBulgarianChange) = rememberPreference(LyricsRomanizeBulgarianKey, defaultValue = true)
-    val (lyricsRomanizeBelarusian, onLyricsRomanizeBelarusianChange) = rememberPreference(LyricsRomanizeBelarusianKey, defaultValue = true)
-    val (lyricsRomanizeKyrgyz, onLyricsRomanizeKyrgyzChange) = rememberPreference(LyricsRomanizeKyrgyzKey, defaultValue = true)
-    val (lyricsRomanizeMacedonian, onLyricsRomanizeMacedonianChange) = rememberPreference(LyricsRomanizeMacedonianKey, defaultValue = true)
-    val (lyricsRomanizeCyrillicByLine, onLyricsRomanizeCyrillicByLineChange) = rememberPreference(LyricsRomanizeCyrillicByLineKey, defaultValue = false)
-    val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
+    val initialList = remember(pref) {
+        if (pref.isEmpty()) defaultList
+        else {
+            val savedMap = pref.split(",").associate { entry ->
+                val (lang, checked) = entry.split(":")
+                lang to checked.toBoolean()
+            }
+
+            defaultList.map { (lang, defaultChecked) ->
+                Pair(lang, savedMap[lang] ?: defaultChecked)
+            }
+        }
+    }
+
+    val states = remember(initialList) { mutableStateListOf(*initialList.toTypedArray()) }
+
+    val parentState = when {
+        states.all { it.component2() } -> ToggleableState.On
+        states.none { it.component2() } -> ToggleableState.Off
+        else -> ToggleableState.Indeterminate
+    }
+
+    val (lyricsRomanizeAsMain, onLyricsRomanizeAsMainChange) = rememberPreference(
+        LyricsRomanizeAsMainKey,
+        defaultValue = false
+    )
+
+    val (lyricsRomanizeCyrillicByLine, onLyricsRomanizeCyrillicByLineChange) = rememberPreference(
+        LyricsRomanizeCyrillicByLineKey,
+        defaultValue = false
+    )
+
+    val checkboxesList: MutableList<Material3SettingsItem> = mutableListOf()
 
     Column(
         Modifier
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp)
     ) {
-        PreferenceGroupTitle(title = stringResource(R.string.general))
-
-        SwitchPreference(
-            title = { Text(stringResource(R.string.lyrics_romanize_as_main)) },
-            icon = { Icon(painterResource(R.drawable.lyrics), null) },
-            checked = lyricsRomanizeAsMain,
-            onCheckedChange = onLyricsRomanizeAsMainChange,
+        Material3SettingsGroup(
+            title = stringResource(R.string.options),
+            items = listOf(
+                Material3SettingsItem(
+                    title = { Text(stringResource(R.string.lyrics_romanize_as_main)) },
+                    trailingContent = {
+                        Switch(
+                            checked = lyricsRomanizeAsMain,
+                            onCheckedChange = onLyricsRomanizeAsMainChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (lyricsRomanizeAsMain) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize),
+                                )
+                            }
+                        )
+                    },
+                    icon = painterResource(R.drawable.queue_music)
+                ),
+                Material3SettingsItem(
+                    title = { Text(stringResource(R.string.line_by_line_option_title)) },
+                    trailingContent = {
+                        Switch(
+                            checked = lyricsRomanizeCyrillicByLine,
+                            onCheckedChange = onLyricsRomanizeCyrillicByLineChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (lyricsRomanizeCyrillicByLine) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize),
+                                )
+                            }
+                        )
+                    },
+                    icon = painterResource(R.drawable.info)
+                )
+            )
         )
 
-        SwitchPreference(
-            title = { Text(stringResource(R.string.lyrics_romanize_japanese)) },
-            icon = { Icon(painterResource(R.drawable.language_japanese_latin), null) },
-            checked = lyricsRomanizeJapanese,
-            onCheckedChange = onLyricsRomanizeJapaneseChange,
+        Spacer(modifier = Modifier.height(8.dp))
+
+        checkboxesList += Material3SettingsItem(
+            title = { Text("Play all") },
+            trailingContent = {
+                TriStateCheckbox(
+                    state = parentState,
+                    onClick = {
+                        val newState = parentState != ToggleableState.On
+                        states.forEachIndexed { index, (language, _) ->
+                            states[index] = Pair(language, newState)
+                        }
+                        prefValue(states.joinToString(",") { (lang, c) -> "$lang:$c" })
+                    }
+                )
+            },
+            icon = painterResource(R.drawable.info)
         )
 
-        SwitchPreference(
-            title = { Text(stringResource(R.string.lyrics_romanize_korean)) },
-            icon = { Icon(painterResource(R.drawable.language_korean_latin), null) },
-            checked = lyricsRomanizeKorean,
-            onCheckedChange = onLyricsRomanizeKoreanChange,
-        )
-
-        SwitchPreference(
-            title = { Text(stringResource(R.string.lyrics_romanize_chinese)) },
-            icon = { Icon(painterResource(R.drawable.language), null) },
-            checked = lyricsRomanizeChinese,
-            onCheckedChange = onLyricsRomanizeChineseChange,
-        )
-
-        SwitchPreference(
-            title = { Text(stringResource(R.string.lyrics_romanize_hindi)) },
-            icon = { Icon(painterResource(R.drawable.language), null) },
-            checked = lyricsRomanizeHindi,
-            onCheckedChange = onLyricsRomanizeHindiChange,
-        )
-
-        SwitchPreference(
-            title = { Text(stringResource(R.string.lyrics_romanize_punjabi)) },
-            icon = { Icon(painterResource(R.drawable.language), null) },
-            checked = lyricsRomanizePunjabi,
-            onCheckedChange = onLyricsRomanizePunjabiChange,
-        )
-
-        PreferenceGroupTitle(title = stringResource(R.string.lyrics_romanization_cyrillic))
-        SwitchPreference(
-            title = { Text(stringResource(R.string.lyrics_romanize_russian)) },
-            icon = { Icon(painterResource(R.drawable.alphabet_cyrillic), null) },
-            checked = lyricsRomanizeRussian,
-            onCheckedChange = onLyricsRomanizeRussianChange,
-        )
-        SwitchPreference(
-            title = { Text(stringResource(R.string.lyrics_romanize_ukrainian)) },
-            icon = { Icon(painterResource(R.drawable.alphabet_cyrillic), null) },
-            checked = lyricsRomanizeUkrainian,
-            onCheckedChange = onLyricsRomanizeUkrainianChange,
-        )
-        SwitchPreference(
-            title = { Text(stringResource(R.string.lyrics_romanize_serbian)) },
-            icon = { Icon(painterResource(R.drawable.alphabet_cyrillic), null) },
-            checked = lyricsRomanizeSerbian,
-            onCheckedChange = onLyricsRomanizeSerbianChange,
-        )
-        SwitchPreference(
-            title = { Text(stringResource(R.string.lyrics_romanize_bulgarian)) },
-            icon = { Icon(painterResource(R.drawable.alphabet_cyrillic), null) },
-            checked = lyricsRomanizeBulgarian,
-            onCheckedChange = onLyricsRomanizeBulgarianChange,
-        )
-        SwitchPreference(
-            title = { Text(stringResource(R.string.lyrics_romanize_belarusian)) },
-            icon = { Icon(painterResource(R.drawable.alphabet_cyrillic), null) },
-            checked = lyricsRomanizeBelarusian,
-            onCheckedChange = onLyricsRomanizeBelarusianChange,
-        )
-        SwitchPreference(
-            title = { Text(stringResource(R.string.lyrics_romanize_kyrgyz)) },
-            icon = { Icon(painterResource(R.drawable.alphabet_cyrillic), null) },
-            checked = lyricsRomanizeKyrgyz,
-            onCheckedChange = onLyricsRomanizeKyrgyzChange,
-        )
-        SwitchPreference(
-            title = { Text(stringResource(R.string.lyrics_romanize_macedonian)) },
-            icon = { Icon(painterResource(R.drawable.alphabet_cyrillic), null) },
-            checked = lyricsRomanizeMacedonian,
-            onCheckedChange = onLyricsRomanizeMacedonianChange,
-        )
-        SwitchPreference(
-            title = { Text(stringResource(R.string.line_by_line_option_title)) },
-            icon = { Icon(painterResource(R.drawable.warning), null) },
-            description = stringResource(R.string.line_by_line_option_desc),
-            checked = lyricsRomanizeCyrillicByLine,
-            onCheckedChange = {
-                if (it) {
-                    setShowDialog(true)
-                } else {
-                    onLyricsRomanizeCyrillicByLineChange(false)
-                }
-            }
-        )
-        if (showDialog) {
-            ActionPromptDialog(
-                title = stringResource(R.string.line_by_line_dialog_title),
-                onDismiss = { setShowDialog(false) },
-                onConfirm = {
-                    onLyricsRomanizeCyrillicByLineChange(true)
-                    setShowDialog(false)
+        states.forEachIndexed { index, (language, checked) ->
+            checkboxesList += Material3SettingsItem(
+                title = { Text(language) },
+                trailingContent = {
+                    Checkbox(
+                        checked = checked,
+                        onCheckedChange = { isChecked ->
+                            states[index] = Pair(language, isChecked)
+                            prefValue(states.joinToString(",") { (lang, c) -> "$lang:$c" })
+                        }
+                    )
                 },
-                onCancel = { setShowDialog(false) },
-                content = {
-                    Text(stringResource(R.string.line_by_line_dialog_desc))
-                }
+                icon = painterResource(R.drawable.language)
             )
         }
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.content_language),
+            items = checkboxesList
+        )
     }
 
     TopAppBar(

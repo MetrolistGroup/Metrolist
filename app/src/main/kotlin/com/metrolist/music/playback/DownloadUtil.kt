@@ -8,16 +8,17 @@ package com.metrolist.music.playback
 import android.content.Context
 import android.net.ConnectivityManager
 import androidx.core.content.getSystemService
-import androidx.core.net.toUri
 import androidx.media3.database.DatabaseProvider
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.ResolvingDataSource
+import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSource
-import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadNotificationHelper
 import com.metrolist.innertube.YouTube
+import com.metrolist.innertubex.extraction.ContentHints
 import com.metrolist.music.constants.AudioQuality
 import com.metrolist.music.constants.AudioQualityKey
 import com.metrolist.music.db.MusicDatabase
@@ -25,7 +26,7 @@ import com.metrolist.music.db.entities.FormatEntity
 import com.metrolist.music.db.entities.SongEntity
 import com.metrolist.music.di.DownloadCache
 import com.metrolist.music.di.PlayerCache
-import com.metrolist.music.utils.YTPlayerUtils
+import com.metrolist.music.utils.InnerTubeXPlayer
 import com.metrolist.music.utils.enumPreference
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +42,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
+import timber.log.Timber
+import java.io.IOException
 import java.time.LocalDateTime
 import java.util.concurrent.Executor
 import javax.inject.Inject
@@ -53,12 +56,24 @@ constructor(
     @ApplicationContext context: Context,
     val database: MusicDatabase,
     val databaseProvider: DatabaseProvider,
-    @DownloadCache val downloadCache: SimpleCache,
-    @PlayerCache val playerCache: SimpleCache,
+    @DownloadCache val downloadCache: Cache,
+    @PlayerCache val playerCache: Cache,
 ) {
+    private val TAG = "DownloadUtil"
     private val connectivityManager = context.getSystemService<ConnectivityManager>()!!
     private val audioQuality by enumPreference(context, AudioQualityKey, AudioQuality.AUTO)
-    private val songUrlCache = HashMap<String, Pair<String, Long>>()
+    private val songUrlCache = StreamUrlCache()
+    private val streamHttpClient =
+        OkHttpClient.Builder()
+            .proxy(YouTube.proxy)
+            .proxyAuthenticator { _, response ->
+                YouTube.proxyAuth?.let { auth ->
+                    response.request.newBuilder()
+                        .header("Proxy-Authorization", auth)
+                        .build()
+                } ?: response.request
+            }
+            .build()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -70,18 +85,7 @@ constructor(
                 .Factory()
                 .setCache(playerCache)
                 .setUpstreamDataSourceFactory(
-                    OkHttpDataSource.Factory(
-                        OkHttpClient.Builder()
-                            .proxy(YouTube.proxy)
-                            .proxyAuthenticator { _, response ->
-                                YouTube.proxyAuth?.let { auth ->
-                                    response.request.newBuilder()
-                                        .header("Proxy-Authorization", auth)
-                                        .build()
-                                } ?: response.request
-                            }
-                            .build(),
-                    ),
+                    OkHttpDataSource.Factory(streamHttpClient),
                 ),
         ) { dataSpec ->
             val mediaId = dataSpec.key ?: error("No media id")
@@ -91,64 +95,117 @@ constructor(
                 return@Factory dataSpec
             }
 
-            songUrlCache[mediaId]?.takeIf { it.second < System.currentTimeMillis() }?.let {
-                return@Factory dataSpec.withUri(it.first.toUri())
+            songUrlCache[mediaId]?.let { cachedStream ->
+                return@Factory dataSpec.withResolvedStream(cachedStream)
             }
+            val cacheGeneration = songUrlCache.generation(mediaId)
 
             val playbackData = runBlocking(Dispatchers.IO) {
-                YTPlayerUtils.playerResponseForPlayback(
+                val song = database.songEntity(mediaId)
+                InnerTubeXPlayer.playerResponseForPlayback(
                     mediaId,
                     audioQuality = audioQuality,
                     connectivityManager = connectivityManager,
+                    contentHints = ContentHints(
+                        isExplicit = song?.explicit,
+                        isUploaded = song?.isUploaded,
+                    ),
+                    allowBoundedRange = false,
                 )
             }.getOrThrow()
             val format = playbackData.format
 
-            database.query {
-                upsert(
-                    FormatEntity(
-                        id = mediaId,
-                        itag = format.itag,
-                        mimeType = format.mimeType.split(";")[0],
-                        codecs = format.mimeType.split("codecs=")[1].removeSurrounding("\""),
-                        bitrate = format.bitrate,
-                        sampleRate = format.audioSampleRate,
-                        contentLength = format.contentLength!!,
-                        loudnessDb = playbackData.audioConfig?.loudnessDb,
-                        perceptualLoudnessDb = playbackData.audioConfig?.perceptualLoudnessDb,
-                        playbackUrl = playbackData.playbackTracking?.videostatsPlaybackUrl?.baseUrl
-                    ),
-                )
-
-                val now = LocalDateTime.now()
-                val existing = getSongByIdBlocking(mediaId)?.song
-
-                val updatedSong = if (existing != null) {
-                    if (existing.dateDownload == null) {
-                        existing.copy(dateDownload = now)
-                    } else {
-                        existing
+            val actualContentLength =
+                format.contentLength?.takeIf { it > 0L } ?: run {
+                    val request = okhttp3.Request.Builder()
+                        .get()
+                        .url(playbackData.streamUrl)
+                        .apply {
+                            playbackData.streamHeaders.forEach { (name, value) ->
+                                header(name, value)
+                            }
+                        }
+                        .header("Range", "bytes=0-0")
+                        .build()
+                    try {
+                        streamHttpClient.newCall(request).execute().use { response ->
+                            downloadContentLength(
+                                statusCode = response.code,
+                                contentRange = response.header("Content-Range"),
+                                contentLength = response.header("Content-Length"),
+                            )
+                        }
+                    } catch (_: IOException) {
+                        null
                     }
-                } else {
-                    SongEntity(
-                        id = mediaId,
-                        title = playbackData.videoDetails?.title ?: "Unknown",
-                        duration = playbackData.videoDetails?.lengthSeconds?.toIntOrNull() ?: 0,
-                        thumbnailUrl = playbackData.videoDetails?.thumbnail?.thumbnails?.lastOrNull()?.url,
-                        dateDownload = now,
-                        isDownloaded = false
-                    )
                 }
+
+            database.query {
+                if (actualContentLength != null) {
+                    upsert(
+                        FormatEntity(
+                            id = mediaId,
+                            itag = format.itag,
+                            mimeType = format.mimeType.substringBefore(";"),
+                            codecs =
+                                format.mimeType
+                                    .substringAfter("codecs=", missingDelimiterValue = "")
+                                    .substringBefore(";")
+                                    .trim()
+                                    .removeSurrounding("\""),
+                            bitrate = format.bitrate,
+                            sampleRate = format.audioSampleRate,
+                            contentLength = actualContentLength,
+                            loudnessDb = playbackData.audioConfig?.loudnessDb,
+                            perceptualLoudnessDb = playbackData.audioConfig?.perceptualLoudnessDb,
+                            playbackUrl = playbackData.playbackTracking?.videostatsPlaybackUrl?.baseUrl
+                        ),
+                    )
+                } else {
+                    deleteFormat(mediaId)
+                }
+
+                // Metadata registration only — dateDownload is intentionally NOT set here.
+                // It belongs solely to onDownloadChanged()'s STATE_COMPLETED branch below,
+                // which only fires once the download has actually finished. Setting it here
+                // (at URL-resolve time, i.e. the moment the download merely *starts*) would
+                // mark the song as "cached" before a single byte is written.
+                val existing = getSongByIdBlocking(mediaId)?.song
+                val updatedSong = existing ?: SongEntity(
+                    id = mediaId,
+                    title = playbackData.videoDetails?.title ?: "Unknown",
+                    duration = playbackData.videoDetails?.lengthSeconds?.toIntOrNull() ?: 0,
+                    thumbnailUrl = playbackData.videoDetails?.thumbnail?.thumbnails?.lastOrNull()?.url,
+                    dateDownload = null,
+                    isDownloaded = false
+                )
 
                 upsert(updatedSong)
             }
 
-            val streamUrl = playbackData.streamUrl.let {
-                "${it}&range=0-${format.contentLength ?: 10000000}"
-            }
+            val streamUrl = playbackData.streamUrl
 
-            songUrlCache[mediaId] = streamUrl to playbackData.streamExpiresInSeconds * 1000L
-            dataSpec.withUri(streamUrl.toUri())
+            songUrlCache.put(
+                mediaId = mediaId,
+                url = streamUrl,
+                requestHeaders = playbackData.streamHeaders,
+                clientName = playbackData.streamClient,
+                expiresInSeconds = playbackData.streamExpiresInSeconds,
+                requireBoundedRange = playbackData.requireBoundedRange,
+                rangeChunkSizeBytes = playbackData.rangeChunkSizeBytes,
+                useRangeChunks = playbackData.useRangeChunks,
+                expectedGeneration = cacheGeneration,
+            )
+            dataSpec.withResolvedStream(
+                CachedStreamUrl(
+                    url = streamUrl,
+                    requestHeaders = playbackData.streamHeaders,
+                    clientName = playbackData.streamClient,
+                    requireBoundedRange = playbackData.requireBoundedRange,
+                    rangeChunkSizeBytes = playbackData.rangeChunkSizeBytes,
+                    useRangeChunks = playbackData.useRangeChunks,
+                ),
+            )
         }
 
     val downloadNotificationHelper =
@@ -171,6 +228,10 @@ constructor(
                         download: Download,
                         finalException: Exception?,
                     ) {
+                        if (download.state == Download.STATE_FAILED && finalException.isExpiredStreamError()) {
+                            songUrlCache.invalidate(download.request.id)
+                        }
+
                         downloads.update { map ->
                             map.toMutableMap().apply {
                                 set(download.request.id, download)
@@ -192,6 +253,27 @@ constructor(
                             }
                         }
                     }
+
+                    override fun onDownloadRemoved(
+                        downloadManager: DownloadManager,
+                        download: Download,
+                    ) {
+                        val downloadId = download.request.id
+                        songUrlCache.invalidate(downloadId)
+
+                        runCatching {
+                            database.updateDownloadedInfo(downloadId, false, null)
+                        }.onSuccess {
+                            downloads.update { map ->
+                                map.toMutableMap().apply {
+                                    remove(downloadId)
+                                }
+                            }
+                            Timber.tag(TAG).d("Successfully removed download $downloadId from in-memory map")
+                        }.onFailure { error ->
+                            Timber.tag(TAG).e(error, "Failed to update database for removed download $downloadId, keeping in-memory entry")
+                        }
+                    }
                 }
             )
         }
@@ -210,4 +292,43 @@ constructor(
     fun release() {
         scope.cancel()
     }
+
+    private fun Throwable?.isExpiredStreamError(): Boolean {
+        var current = this
+        while (current != null) {
+            if (current is HttpDataSource.InvalidResponseCodeException &&
+                (current.responseCode == 403 || current.responseCode == 410 || current.responseCode == 416)
+            ) {
+                return true
+            }
+            current = current.cause
+        }
+        return false
+    }
 }
+
+internal fun downloadContentLength(
+    statusCode: Int,
+    contentRange: String?,
+    contentLength: String?,
+): Long? {
+    val rangePattern =
+        when (statusCode) {
+            206 -> PARTIAL_CONTENT_RANGE
+            416 -> UNSATISFIED_CONTENT_RANGE
+            else -> null
+        }
+    if (rangePattern != null) {
+        return contentRange
+            ?.trim()
+            ?.let(rangePattern::matchEntire)
+            ?.groupValues
+            ?.get(1)
+            ?.toLongOrNull()
+            ?.takeIf { it > 0L }
+    }
+    return if (statusCode == 200) contentLength?.toLongOrNull()?.takeIf { it > 0L } else null
+}
+
+private val PARTIAL_CONTENT_RANGE = Regex("""bytes\s+0-0/(\d+)""", RegexOption.IGNORE_CASE)
+private val UNSATISFIED_CONTENT_RANGE = Regex("""bytes\s+\*/(\d+)""", RegexOption.IGNORE_CASE)

@@ -21,9 +21,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +38,7 @@ import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
 import com.metrolist.music.constants.AudioNormalizationKey
 import com.metrolist.music.constants.AudioOffload
+import com.metrolist.music.constants.AudioTrackPlaybackParamsKey
 import com.metrolist.music.constants.AudioQuality
 import com.metrolist.music.constants.AudioQualityKey
 import com.metrolist.music.constants.AutoDownloadOnLikeKey
@@ -47,11 +46,15 @@ import com.metrolist.music.constants.CrossfadeDurationKey
 import com.metrolist.music.constants.CrossfadeEnabledKey
 import com.metrolist.music.constants.CrossfadeGaplessKey
 import com.metrolist.music.constants.AutoLoadMoreKey
+import com.metrolist.music.constants.AutoRadioQueueKey
 import com.metrolist.music.constants.AutoSkipNextOnErrorKey
+import com.metrolist.music.constants.AutoplayKey
 import com.metrolist.music.constants.DisableLoadMoreWhenRepeatAllKey
 import com.metrolist.music.constants.EnableGoogleCastKey
 import com.metrolist.music.constants.HistoryDuration
 import com.metrolist.music.constants.KeepScreenOn
+import com.metrolist.music.constants.LoudnessLevel
+import com.metrolist.music.constants.LoudnessLevelKey
 import com.metrolist.music.constants.PauseOnMute
 import com.metrolist.music.constants.PersistentQueueKey
 import com.metrolist.music.constants.PersistentShuffleAcrossQueuesKey
@@ -64,6 +67,7 @@ import com.metrolist.music.constants.SimilarContent
 import com.metrolist.music.constants.SkipSilenceInstantKey
 import com.metrolist.music.constants.SkipSilenceKey
 import com.metrolist.music.constants.StopMusicOnTaskClearKey
+import com.metrolist.music.constants.VarispeedKey
 import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.EnumDialog
 import com.metrolist.music.ui.component.IconButton
@@ -73,12 +77,23 @@ import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import kotlin.math.roundToInt
+import com.metrolist.music.ui.component.SleepTimerDialog
+import com.metrolist.music.constants.SleepTimerEnabledKey
+import com.metrolist.music.constants.SleepTimerRepeatKey
+import com.metrolist.music.constants.SleepTimerCustomDaysKey
+import com.metrolist.music.constants.SleepTimerEndTimeKey
+import com.metrolist.music.constants.SleepTimerStartTimeKey
+import com.metrolist.music.constants.SleepTimerDayTimesKey
+import com.metrolist.music.ui.component.decodeDayTimes
+import com.metrolist.music.ui.component.encodeDayTimes
+import com.metrolist.music.constants.SleepTimerFadeOutKey
+import com.metrolist.music.constants.SleepTimerStopAfterCurrentSongKey
+import com.metrolist.music.ui.utils.getLoudnessLevelLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerSettings(
-    navController: NavController,
-    scrollBehavior: TopAppBarScrollBehavior,
+    navController: NavController
 ) {
     val (audioQuality, onAudioQualityChange) = rememberEnumPreference(
         AudioQualityKey,
@@ -113,8 +128,23 @@ fun PlayerSettings(
         defaultValue = true
     )
 
+    val (loudnessLevel, onLoudnessLevelChange) = rememberEnumPreference(
+        LoudnessLevelKey,
+        defaultValue = LoudnessLevel.BALANCED,
+    )
+
     val (audioOffload, onAudioOffloadChange) = rememberPreference(
         key = AudioOffload,
+        defaultValue = false
+    )
+
+    val (audioTrackPlaybackParams, onAudioTrackPlaybackParamsChange) = rememberPreference(
+        key = AudioTrackPlaybackParamsKey,
+        defaultValue = true
+    )
+
+    val (varispeed, onVarispeedChange) = rememberPreference(
+        key = VarispeedKey,
         defaultValue = false
     )
 
@@ -132,6 +162,10 @@ fun PlayerSettings(
         AutoLoadMoreKey,
         defaultValue = true
     )
+    val (autoRadioQueue, onAutoRadioQueueChange) = rememberPreference(
+        AutoRadioQueueKey,
+        defaultValue = true
+    )
     val (disableLoadMoreWhenRepeatAll, onDisableLoadMoreWhenRepeatAllChange) = rememberPreference(
         DisableLoadMoreWhenRepeatAllKey,
         defaultValue = false
@@ -147,6 +181,10 @@ fun PlayerSettings(
     val (autoSkipNextOnError, onAutoSkipNextOnErrorChange) = rememberPreference(
         AutoSkipNextOnErrorKey,
         defaultValue = false
+    )
+    val (autoplay, onAutoplayChange) = rememberPreference(
+        AutoplayKey,
+        defaultValue = true
     )
     val (persistentShuffleAcrossQueues, onPersistentShuffleAcrossQueuesChange) = rememberPreference(
         PersistentShuffleAcrossQueuesKey,
@@ -189,6 +227,10 @@ fun PlayerSettings(
         mutableStateOf(false)
     }
 
+    var showLoudnessLevelDialog by remember {
+        mutableStateOf(false)
+    }
+
     if (showAudioQualityDialog) {
         EnumDialog(
             onDismiss = { showAudioQualityDialog = false },
@@ -209,6 +251,20 @@ fun PlayerSettings(
         )
     }
 
+    if (showLoudnessLevelDialog) {
+        EnumDialog(
+            onDismiss = { showLoudnessLevelDialog = false },
+            onSelect = {
+                onLoudnessLevelChange(it)
+                showLoudnessLevelDialog = false
+            },
+            title = stringResource(R.string.loudness_level),
+            current = loudnessLevel,
+            values = LoudnessLevel.values().toList(),
+            valueText = { getLoudnessLevelLabel(it) }
+        )
+    }
+
     Column(
         Modifier
             .windowInsetsPadding(
@@ -219,28 +275,6 @@ fun PlayerSettings(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
     ) {
-        var showCrossfadeBetaDialog by remember { mutableStateOf(false) }
-
-        if (showCrossfadeBetaDialog) {
-            DefaultDialog(
-                onDismiss = { showCrossfadeBetaDialog = false },
-                title = { Text(stringResource(R.string.crossfade_beta_title)) },
-                buttons = {
-                    TextButton(onClick = { showCrossfadeBetaDialog = false }) {
-                        Text(stringResource(R.string.cancel))
-                    }
-                    TextButton(onClick = {
-                        showCrossfadeBetaDialog = false
-                        onCrossfadeEnabledChange(true)
-                    }) {
-                        Text(stringResource(R.string.enable))
-                    }
-                }
-            ) {
-                Text(stringResource(R.string.crossfade_beta_message))
-            }
-        }
-
         Spacer(
             Modifier.windowInsetsPadding(
                 LocalPlayerAwareWindowInsets.current.only(
@@ -270,17 +304,10 @@ fun PlayerSettings(
                     icon = painterResource(R.drawable.linear_scale),
                     title = { Text(stringResource(R.string.crossfade)) },
                     description = { Text(stringResource(R.string.crossfade_desc)) },
-                    showBadge = true,
                     trailingContent = {
                         Switch(
                             checked = crossfadeEnabled,
-                            onCheckedChange = {
-                                if (!crossfadeEnabled) {
-                                    showCrossfadeBetaDialog = true
-                                } else {
-                                    onCrossfadeEnabledChange(false)
-                                }
-                            },
+                            onCheckedChange = onCrossfadeEnabledChange,
                             thumbContent = {
                                 Icon(
                                     painter = painterResource(
@@ -292,13 +319,7 @@ fun PlayerSettings(
                             }
                         )
                     },
-                    onClick = {
-                        if (!crossfadeEnabled) {
-                            showCrossfadeBetaDialog = true
-                        } else {
-                            onCrossfadeEnabledChange(false)
-                        }
-                    }
+                    onClick = { onCrossfadeEnabledChange(!crossfadeEnabled) }
                 ))
                 if (crossfadeEnabled) {
                     add(Material3SettingsItem(
@@ -415,6 +436,16 @@ fun PlayerSettings(
                     },
                     onClick = { onAudioNormalizationChange(!audioNormalization) }
                 ))
+                if (audioNormalization) {
+                    add(Material3SettingsItem(
+                        icon = painterResource(R.drawable.volume_up),
+                        title = { Text(stringResource(R.string.loudness_level)) },
+                        description = {
+                            Text(getLoudnessLevelLabel(loudnessLevel))
+                        },
+                        onClick = { showLoudnessLevelDialog = true }
+                    ))
+                }
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.graphic_eq),
                     title = { Text(stringResource(R.string.audio_offload)) },
@@ -441,6 +472,54 @@ fun PlayerSettings(
                         )
                     },
                     onClick = { if (!crossfadeEnabled) onAudioOffloadChange(!audioOffload) }
+                ))
+                add(Material3SettingsItem(
+                    icon = painterResource(R.drawable.graphic_eq),
+                    title = { Text(stringResource(R.string.varispeed)) },
+                    description = {
+                        Text(
+                            stringResource(R.string.varispeed_description)
+                        )
+                    },
+                    trailingContent = {
+                        Switch(
+                            checked = varispeed,
+                            onCheckedChange = onVarispeedChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (varispeed) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onVarispeedChange(!varispeed) }
+                ))
+                add(Material3SettingsItem(
+                    icon = painterResource(R.drawable.speed),
+                    title = { Text(stringResource(R.string.audio_track_playback_params)) },
+                    description = {
+                        Text(stringResource(R.string.audio_track_playback_params_description))
+                    },
+                    trailingContent = {
+                        Switch(
+                            checked = audioTrackPlaybackParams,
+                            onCheckedChange = onAudioTrackPlaybackParamsChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (audioTrackPlaybackParams) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onAudioTrackPlaybackParamsChange(!audioTrackPlaybackParams) }
                 ))
                 // Only show Cast setting in GMS builds (not in F-Droid/FOSS)
                 if (BuildConfig.CAST_AVAILABLE) {
@@ -492,6 +571,178 @@ fun PlayerSettings(
 
         Spacer(modifier = Modifier.height(27.dp))
 
+        var showSleepTimerDialog by remember { mutableStateOf(false) }
+
+        val (sleepTimerEnabled, onSleepTimerEnabledChange) = rememberPreference(
+            SleepTimerEnabledKey,
+            defaultValue = false
+        )
+        val (sleepTimerRepeat, onSleepTimerRepeatChange) = rememberPreference(
+            SleepTimerRepeatKey,
+            defaultValue = "daily"
+        )
+        val (sleepTimerStartTime, onSleepTimerStartTimeChange) = rememberPreference(
+            SleepTimerStartTimeKey,
+            defaultValue = "22:00"
+        )
+        val (sleepTimerEndTime, onSleepTimerEndTimeChange) = rememberPreference(
+            SleepTimerEndTimeKey,
+            defaultValue = "06:00"
+        )
+        val (sleepTimerCustomDays, onSleepTimerCustomDaysChange) = rememberPreference(
+            SleepTimerCustomDaysKey,
+            defaultValue = "0,1,2,3,4"
+        )
+        // Per-day time ranges used in custom mode
+        val (sleepTimerDayTimes, onSleepTimerDayTimesChange) = rememberPreference(
+            SleepTimerDayTimesKey,
+            defaultValue = ""
+        )
+
+        val (sleepTimerStopAfterCurrentSong, onSleepTimerStopAfterCurrentSongChange) = rememberPreference (
+        SleepTimerStopAfterCurrentSongKey,
+        defaultValue = false)
+        val (sleepTimerFadeOut, onSleepTimerFadeOutChange) = rememberPreference(
+            SleepTimerFadeOutKey,
+            false
+        )
+
+        if (showSleepTimerDialog) {
+            val customDays = sleepTimerCustomDays.split(",").mapNotNull { it.toIntOrNull() }
+            val dayTimesMap = decodeDayTimes(sleepTimerDayTimes)
+
+            SleepTimerDialog(
+                isVisible = true,
+                onDismiss = { showSleepTimerDialog = false },
+                onConfirm = { repeat, startTime, endTime, days, dayTimes ->
+                    onSleepTimerRepeatChange(repeat)
+                    onSleepTimerStartTimeChange(startTime)
+                    onSleepTimerEndTimeChange(endTime)
+                    onSleepTimerCustomDaysChange(days?.joinToString(",") ?: "0,1,2,3,4")
+                    onSleepTimerDayTimesChange(encodeDayTimes(dayTimes))
+                    showSleepTimerDialog = false
+                },
+                initialRepeat = sleepTimerRepeat,
+                initialStartTime = sleepTimerStartTime,
+                initialEndTime = sleepTimerEndTime,
+                initialCustomDays = customDays,
+                initialDayTimes = dayTimesMap
+            )
+        }
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.sleep_timer),
+            items = buildList {
+                add(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.time_auto),
+                        title = { Text(stringResource(R.string.enable_automatic_sleeptimer)) },
+                        description = { Text(stringResource(R.string.sleeptimer_description)) },
+                        trailingContent = {
+                            Switch(
+                                checked = sleepTimerEnabled,
+                                onCheckedChange = onSleepTimerEnabledChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter = painterResource(
+                                            id = if (sleepTimerEnabled) R.drawable.check else R.drawable.close
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            )
+                        },
+                        onClick = { onSleepTimerEnabledChange(!sleepTimerEnabled) }
+                    )
+                )
+
+                    add(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.baseline_event_repeat_24),
+                            title = { Text(stringResource(R.string.sleep_timer_repeat)) },
+                            description = {
+                                Text(
+                                    stringResource(R.string.sleep_timer_repeat_description)
+                                )
+                            },
+                            trailingContent = {
+                                Switch(
+                                    checked = sleepTimerEnabled,
+                                    onCheckedChange = {showSleepTimerDialog = true},
+                                    thumbContent = {
+                                        Icon(
+                                            painter = painterResource(
+                                                id = if (sleepTimerEnabled) R.drawable.check else R.drawable.close
+                                            ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize)
+                                        )
+                                    }
+                                )
+                            },
+                            onClick = { showSleepTimerDialog = true }
+                        )
+                    )
+
+
+                add(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.more_time),
+                        title = { Text(stringResource(R.string.sleep_timer_stop_after_current_song_title)) },
+                        description = { Text(stringResource(R.string.sleep_timer_stop_after_current_song_description)) },
+                        trailingContent = {
+                            Switch(
+                                checked = sleepTimerStopAfterCurrentSong,
+                                onCheckedChange = onSleepTimerStopAfterCurrentSongChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter = painterResource(
+                                            id = if (sleepTimerStopAfterCurrentSong) R.drawable.check else R.drawable.close
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            )
+                        },
+                        onClick = { onSleepTimerStopAfterCurrentSongChange(!sleepTimerStopAfterCurrentSong) }
+                    )
+                )
+
+                add(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.timer_arrow_down),
+                        title = { Text(stringResource(R.string.sleep_timer_fade_out_title)) },
+                        description = { Text(stringResource(R.string.sleep_timer_fade_out_description)) },
+                        trailingContent = {
+                            Switch(
+                                checked = sleepTimerFadeOut,
+                                onCheckedChange = onSleepTimerFadeOutChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter = painterResource(
+                                            id = if (sleepTimerFadeOut) R.drawable.check else R.drawable.close
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            )
+                        },
+                        onClick = { onSleepTimerFadeOutChange(!sleepTimerFadeOut) }
+                    )
+                )
+
+            }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        AlarmSettingsSection()
+
+        Spacer(modifier = Modifier.height(27.dp))
+
         Material3SettingsGroup(
             title = stringResource(R.string.queue),
             items = listOf(
@@ -536,6 +787,48 @@ fun PlayerSettings(
                         )
                     },
                     onClick = { onAutoLoadMoreChange(!autoLoadMore) }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.radio),
+                    title = { Text(stringResource(R.string.auto_radio_queue)) },
+                    description = { Text(stringResource(R.string.auto_radio_queue_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = autoRadioQueue,
+                            onCheckedChange = onAutoRadioQueueChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (autoRadioQueue) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onAutoRadioQueueChange(!autoRadioQueue) }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.skip_next),
+                    title = { Text(stringResource(R.string.autoplay)) },
+                    description = { Text(stringResource(R.string.autoplay_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = autoplay,
+                            onCheckedChange = onAutoplayChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (autoplay) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onAutoplayChange(!autoplay) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.repeat),

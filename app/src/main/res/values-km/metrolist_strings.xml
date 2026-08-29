@@ -1,23 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="explore">រុករក</string>
     <string name="local_history">លើឧបករណ៍</string>
     <string name="charts">តារាង</string>
     <string name="back_button_desc">ត្រឡប់ក្រោយ</string>
-    <string name="no_title">គ្មានចំណងជើង</string>
-    <string name="unknown_artist">សិល្បករមិនស្គាល់</string>
-    <string name="unknown_item_type">ប្រភេទមិនស្គាល់</string>
-    <string name="loading_charts">កំពុងផ្ទុកតារាង…</string>
-    <string name="retry_button">ព្យាយាមម្តងទៀត</string>
     <string name="album_cover_desc">គម្របអាល់ប៊ុម</string>
     <string name="top_music_videos">វីដេអូចម្រៀងពេញនិយម</string>
     <string name="trending">កំពុងពេញនិយម</string>
-    <string name="top_result">លទ្ធផលល្អបំផុត</string>
-    <string name="other_results">ផ្សេងៗ</string>
     <string name="weeks">សប្តាហ៍</string>
     <string name="months">ខែ</string>
     <string name="years">ឆ្នាំ</string>
     <string name="continuous">បន្តជាប់គ្នា</string>
     <string name="liked">ចូលចិត្ត</string>
     <string name="offline">បានទាញយក</string>
+    <string name="time_transfer_target_song">Brano di destinazione</string>
+    <string name="time_transfer_listen_time_label">Tempo d\'ascolto:</string>
+    <string name="time_transfer_convert">Convertire</string>
+    <string name="song_dropdown_more_results">Scrivi ancora per restringere i risultati (%d in più)</string>
 </resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="local_history">Ya mtaa</string>
+    <string name="charts">Macheti</string>
+    <string name="mixes">Uchanganyo</string>
+    <string name="back_button_desc">Rudi</string>
+    <string name="top_music_videos">Video za Ngoma Manufaa Zaidi</string>
+    <string name="weeks">Wiki</string>
+    <string name="months">Miezi</string>
+    <string name="years">Miaka</string>
+    <string name="continuous">Kuendeleza</string>
+    <string name="liked">Uliyopenda</string>
+</resources>

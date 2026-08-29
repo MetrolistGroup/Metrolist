@@ -6,6 +6,9 @@
 package com.metrolist.music.ui.menu
 
 import android.app.SearchManager
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.widget.Toast
@@ -35,11 +38,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -61,6 +65,8 @@ import com.metrolist.music.LocalDatabase
 import com.metrolist.music.R
 import com.metrolist.music.db.entities.LyricsEntity
 import com.metrolist.music.db.entities.SongEntity
+import com.metrolist.music.lyrics.LyricsTranslationHelper
+import com.metrolist.music.lyrics.LyricsUtils
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.ListDialog
@@ -75,10 +81,13 @@ import com.metrolist.music.constants.DeeplApiKey
 import com.metrolist.music.constants.AiProviderKey
 import com.metrolist.music.constants.TranslateLanguageKey
 import com.metrolist.music.constants.TranslateModeKey
+import com.metrolist.music.constants.RespectAgentPositioningKey
+import com.metrolist.music.constants.ShowIntervalIndicatorKey
 import com.metrolist.music.constants.OpenRouterBaseUrlKey
+import com.metrolist.music.constants.OpenRouterDefaultBaseUrl
+import com.metrolist.music.constants.OpenRouterDefaultModel
 import com.metrolist.music.constants.OpenRouterModelKey
 import com.metrolist.music.constants.DeeplFormalityKey
-import com.metrolist.music.lyrics.LyricsTranslationHelper
 import com.metrolist.music.utils.rememberPreference
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,15 +108,17 @@ fun LyricsMenu(
     val aiProvider by rememberPreference(AiProviderKey, "OpenRouter")
     val translateLanguage by rememberPreference(TranslateLanguageKey, "en")
     val translateMode by rememberPreference(TranslateModeKey, "Literal")
-    val openRouterBaseUrl by rememberPreference(OpenRouterBaseUrlKey, "https://openrouter.ai/api/v1/chat/completions")
-    val openRouterModel by rememberPreference(OpenRouterModelKey, "google/gemini-2.5-flash-lite")
+    val openRouterBaseUrl by rememberPreference(OpenRouterBaseUrlKey, OpenRouterDefaultBaseUrl)
+    val openRouterModel by rememberPreference(OpenRouterModelKey, OpenRouterDefaultModel)
     val deeplFormality by rememberPreference(DeeplFormalityKey, "default")
+    var respectAgentPositioning by rememberPreference(RespectAgentPositioningKey, true)
+    var showIntervalIndicator by rememberPreference(ShowIntervalIndicatorKey, true)
 
     val hasApiKey = if (aiProvider == "DeepL") deeplApiKey.isNotBlank() else openRouterApiKey.isNotBlank()
     
     // Observe the authoritative translation-active state from the singleton; this persists
     // correctly across menu open/close cycles and avoids the lyricsProvider() race condition.
-    val hasTranslations by LyricsTranslationHelper.hasActiveTranslations.collectAsState()
+    val hasTranslations by LyricsTranslationHelper.hasActiveTranslations.collectAsStateWithLifecycle()
 
     var showEditDialog by rememberSaveable {
         mutableStateOf(false)
@@ -162,7 +173,7 @@ fun LyricsMenu(
             )
         }
 
-    val isNetworkAvailable by viewModel.isNetworkAvailable.collectAsState()
+    val isNetworkAvailable by viewModel.isNetworkAvailable.collectAsStateWithLifecycle()
 
     if (showSearchDialog) {
         DefaultDialog(
@@ -248,8 +259,8 @@ fun LyricsMenu(
     }
 
     if (showSearchResultDialog) {
-        val results by viewModel.results.collectAsState()
-        val isLoading by viewModel.isLoading.collectAsState()
+        val results by viewModel.results.collectAsStateWithLifecycle()
+        val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
         var expandedItemIndex by rememberSaveable {
             mutableIntStateOf(-1)
@@ -340,7 +351,7 @@ fun LyricsMenu(
             if (!isLoading && results.isEmpty()) {
                 item {
                     Text(
-                        text = context.getString(R.string.lyrics_not_found),
+                        text = stringResource(R.string.lyrics_not_found),
                         textAlign = TextAlign.Center,
                         modifier =
                         Modifier
@@ -382,52 +393,81 @@ fun LyricsMenu(
     ) {
         item {
             NewActionGrid(
-                actions = listOf(
-                    NewAction(
-                        icon = {
-                            Icon(
-                                painter = painterResource(R.drawable.edit),
-                                contentDescription = null,
-                                modifier = Modifier.size(28.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        text = stringResource(R.string.edit),
-                        onClick = {
-                            showEditDialog = true
-                        }
+                actions =
+                    listOf(
+                        NewAction(
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.edit),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(28.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            text = stringResource(R.string.edit),
+                            onClick = {
+                                showEditDialog = true
+                            },
+                        ),
+                        NewAction(
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.cached),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(28.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            text = stringResource(R.string.refetch),
+                            onClick = {
+                                onDismiss()
+                                viewModel.refetchLyrics(mediaMetadataProvider(), lyricsProvider())
+                            },
+                        ),
+                        NewAction(
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.search),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(28.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            text = stringResource(R.string.search),
+                            onClick = {
+                                showSearchDialog = true
+                            },
+                        ),
+                        NewAction(
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.content_copy),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(28.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            text = stringResource(R.string.copy),
+                            onClick = {
+                                lyricsProvider()?.lyrics?.let { lyrics ->
+                                    val plainLyrics =
+                                        if (lyrics.startsWith("[")) {
+                                            LyricsUtils.parseLyrics(lyrics)
+                                                .joinToString("\n") { it.text }
+                                        } else {
+                                            lyrics
+                                        }
+
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("Lyrics", plainLyrics)
+                                    clipboard.setPrimaryClip(clip)
+                                    Toast.makeText(context, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                        ),
                     ),
-                    NewAction(
-                        icon = {
-                            Icon(
-                                painter = painterResource(R.drawable.cached),
-                                contentDescription = null,
-                                modifier = Modifier.size(28.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        text = stringResource(R.string.refetch),
-                        onClick = {
-                            onDismiss()
-                            viewModel.refetchLyrics(mediaMetadataProvider(), lyricsProvider())
-                        }
-                    ),
-                    NewAction(
-                        icon = {
-                            Icon(
-                                painter = painterResource(R.drawable.search),
-                                contentDescription = null,
-                                modifier = Modifier.size(28.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        text = stringResource(R.string.search),
-                        onClick = {
-                            showSearchDialog = true
-                        }
-                    )
-                ),
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 16.dp)
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 16.dp),
+                columns = 4,
             )
         }
 
@@ -478,12 +518,102 @@ fun LyricsMenu(
                                                     LyricsTranslationHelper.triggerClearTranslations()
                                                 }
                                             }
-                                        }
+                                        },
+                                        thumbContent = {
+                                            Icon(
+                                                painter = painterResource(
+                                                    id = if (hasTranslations) R.drawable.check else R.drawable.close
+                                                ),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(SwitchDefaults.IconSize)
+                                            )
+                                        },
+                                        colors = SwitchDefaults.colors(
+                                            uncheckedThumbColor = MaterialTheme.colorScheme.primaryContainer,
+                                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                            checkedTrackColor = MaterialTheme.colorScheme.primary
+                                        )
                                     )
                                 }
                             )
                         )
                     }
+                    
+                    add(
+                        Material3MenuItemData(
+                            title = { Text(stringResource(R.string.respect_agent_positioning)) },
+                            description = { Text(stringResource(R.string.respect_agent_positioning_desc)) },
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.lyrics),
+                                    contentDescription = null,
+                                )
+                            },
+                            onClick = {
+                                respectAgentPositioning = !respectAgentPositioning
+                            },
+                            trailingContent = {
+                                Switch(
+                                    checked = respectAgentPositioning,
+                                    onCheckedChange = { newCheckedState ->
+                                        respectAgentPositioning = newCheckedState
+                                    },
+                                    thumbContent = {
+                                        Icon(
+                                            painter = painterResource(
+                                                id = if (respectAgentPositioning) R.drawable.check else R.drawable.close
+                                            ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize)
+                                        )
+                                    },
+                                    colors = SwitchDefaults.colors(
+                                        uncheckedThumbColor = MaterialTheme.colorScheme.primaryContainer,
+                                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+                        )
+                    )
+                    
+                    add(
+                        Material3MenuItemData(
+                            title = { Text(stringResource(R.string.show_interval_indicator)) },
+                            description = { Text(stringResource(R.string.show_interval_indicator_desc)) },
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.lyrics),
+                                    contentDescription = null,
+                                )
+                            },
+                            onClick = {
+                                showIntervalIndicator = !showIntervalIndicator
+                            },
+                            trailingContent = {
+                                Switch(
+                                    checked = showIntervalIndicator,
+                                    onCheckedChange = { newCheckedState ->
+                                        showIntervalIndicator = newCheckedState
+                                    },
+                                    thumbContent = {
+                                        Icon(
+                                            painter = painterResource(
+                                                id = if (showIntervalIndicator) R.drawable.check else R.drawable.close
+                                            ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize)
+                                        )
+                                    },
+                                    colors = SwitchDefaults.colors(
+                                        uncheckedThumbColor = MaterialTheme.colorScheme.primaryContainer,
+                                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+                        )
+                    )
                     
                     add(
                         Material3MenuItemData(
@@ -535,7 +665,21 @@ fun LyricsMenu(
                                                 upsert(song.copy(romanizeLyrics = newCheckedState))
                                             }
                                         }
-                                    }
+                                    },
+                                    thumbContent = {
+                                        Icon(
+                                            painter = painterResource(
+                                                id = if (isChecked) R.drawable.check else R.drawable.close
+                                            ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize)
+                                        )
+                                    },
+                                    colors = SwitchDefaults.colors(
+                                        uncheckedThumbColor = MaterialTheme.colorScheme.primaryContainer,
+                                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                                    )
                                 )
                             }
                         )
@@ -544,50 +688,4 @@ fun LyricsMenu(
             )
         }
     }
-    
-    /* if (showRomanizationDialog) {
-        var isChecked by remember { mutableStateOf(songProvider()?.romanizeLyrics ?: true) }
-
-        // Sync with song changes
-        LaunchedEffect(songProvider()) {
-            isChecked = songProvider()?.romanizeLyrics ?: true
-        }
-
-        DefaultDialog(
-            onDismiss = { showRomanizationDialog = false },
-            title = { Text(stringResource(R.string.romanization)) }
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        // Toggle isChecked when the row is clicked
-                        isChecked = !isChecked
-                        songProvider()?.let { song ->
-                            database.query {
-                                upsert(song.copy(romanizeLyrics = isChecked))
-                            }
-                        }
-                    }
-                    .padding(vertical = 8.dp, horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.romanize_current_track),
-                    modifier = Modifier.weight(1f)
-                )
-                Switch(
-                    checked = isChecked,
-                    onCheckedChange = { newCheckedState ->
-                        isChecked = newCheckedState
-                        songProvider()?.let { song ->
-                            database.query {
-                                upsert(song.copy(romanizeLyrics = newCheckedState))
-                            }
-                        }
-                    }
-                )
-            }
-        }
-    } */
 }

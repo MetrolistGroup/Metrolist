@@ -17,6 +17,7 @@ object KuGouLyricsProvider : LyricsProvider {
         context.dataStore[EnableKugouKey] ?: true
 
     override suspend fun getLyrics(
+        context: Context,
         id: String,
         title: String,
         artist: String,
@@ -26,6 +27,7 @@ object KuGouLyricsProvider : LyricsProvider {
         KuGou.getLyrics(title, artist, duration, album)
 
     override suspend fun getAllLyrics(
+        context: Context,
         id: String,
         title: String,
         artist: String,

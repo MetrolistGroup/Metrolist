@@ -1,38 +1,35 @@
 package com.metrolist.music.ui.screens.equalizer
 
 import android.annotation.SuppressLint
-import android.content.Intent
-import android.media.audiofx.AudioEffect
-import android.media.session.PlaybackState
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,7 +45,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.metrolist.music.LocalPlayerConnection
+import com.metrolist.music.LocalNavController
+import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
 import com.metrolist.music.eq.data.SavedEQProfile
 import timber.log.Timber
@@ -60,18 +58,13 @@ import timber.log.Timber
 @Composable
 fun EqScreen(
     viewModel: EQViewModel = hiltViewModel(),
-    playbackState: PlaybackState? = null
 ) {
+    val navController = LocalNavController.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val playerConnection = LocalPlayerConnection.current
 
     var showError by remember { mutableStateOf<String?>(null) }
-
-    // Activity result launcher for system equalizer
-    val activityResultLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { }
+    var showAddMenu by remember { mutableStateOf(false) }
 
     // File picker for custom EQ import
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -117,34 +110,24 @@ fun EqScreen(
         }
     }
 
+    val activeProfile = state.profiles.find { it.id == state.activeProfileId }
+
     EqScreenContent(
         profiles = state.profiles,
         activeProfileId = state.activeProfileId,
+        activeProfile = activeProfile,
         onProfileSelected = { viewModel.selectProfile(it) },
-        onImportCustomEQ = {
-            // Launch file picker for .txt files
-            filePickerLauncher.launch("text/plain")
+        onNavigateBack = { navController.navigateUp() },
+        showAddMenu = showAddMenu,
+        onAddClicked = { showAddMenu = true },
+        onAddMenuDismissed = { showAddMenu = false },
+        onWizardClicked = {
+            showAddMenu = false
+            navController.navigate("eq_wizard")
         },
-        onOpenSystemEqualizer = {
-            playerConnection?.let { connection ->
-                val intent = Intent(AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL).apply {
-                    putExtra(
-                        AudioEffect.EXTRA_AUDIO_SESSION,
-                        connection.player.audioSessionId
-                    )
-                    putExtra(
-                        AudioEffect.EXTRA_PACKAGE_NAME,
-                        context.packageName
-                    )
-                    putExtra(
-                        AudioEffect.EXTRA_CONTENT_TYPE,
-                        AudioEffect.CONTENT_TYPE_MUSIC
-                    )
-                }
-                if (intent.resolveActivity(context.packageManager) != null) {
-                    activityResultLauncher.launch(intent)
-                }
-            }
+        onImportClicked = {
+            showAddMenu = false
+            filePickerLauncher.launch("text/plain")
         },
         onDeleteProfile = { viewModel.deleteProfile(it) }
     )
@@ -191,119 +174,131 @@ fun EqScreen(
 private fun EqScreenContent(
     profiles: List<SavedEQProfile>,
     activeProfileId: String?,
+    activeProfile: SavedEQProfile?,
     onProfileSelected: (String?) -> Unit,
-    onImportCustomEQ: () -> Unit,
-    onOpenSystemEqualizer: () -> Unit,
+    onNavigateBack: () -> Unit,
+    showAddMenu: Boolean,
+    onAddClicked: () -> Unit,
+    onAddMenuDismissed: () -> Unit,
+    onWizardClicked: () -> Unit,
+    onImportClicked: () -> Unit,
     onDeleteProfile: (String) -> Unit
 ) {
-    Surface(
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 6.dp,
-        modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .heightIn(max = 600.dp)
-            .padding(vertical = 24.dp) // Optional extra padding if desired, but dialog handles it.
-    ) {
-        Column {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = stringResource(R.string.equalizer_header),
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                    Text(
-                        text = pluralStringResource(
-                            id = R.plurals.profiles_count,
-                            count = profiles.size,
-                            profiles.size
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.equalizer_header)) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            painter = painterResource(R.drawable.arrow_back),
+                            contentDescription = null
+                        )
+                    }
+                },
+                actions = {
+                    Box {
+                        IconButton(onClick = onAddClicked) {
+                            Icon(
+                                painter = painterResource(R.drawable.add),
+                                contentDescription = stringResource(R.string.import_profile)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showAddMenu,
+                            onDismissRequest = onAddMenuDismissed
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.eq_wizard)) },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.discover_tune),
+                                        contentDescription = null
+                                    )
+                                },
+                                onClick = onWizardClicked
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.import_from_file)) },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.upload),
+                                        contentDescription = null
+                                    )
+                                },
+                                onClick = onImportClicked
+                            )
+                        }
+                    }
                 }
-                Row {
-                    IconButton(onClick = onImportCustomEQ) {
-                        Icon(
-                            painter = painterResource(R.drawable.add),
-                            contentDescription = stringResource(R.string.import_profile)
-                        )
-                    }
-                    IconButton(onClick = onOpenSystemEqualizer) {
-                        Icon(
-                            painter = painterResource(R.drawable.equalizer),
-                            contentDescription = stringResource(R.string.system_equalizer)
-                        )
-                    }
+            )
+        }
+    ) { paddingValues ->
+        // Profile list
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(paddingValues),
+            contentPadding = PaddingValues(bottom = LocalPlayerAwareWindowInsets.current
+                .asPaddingValues().calculateBottomPadding())
+        ) {
+            // Frequency response graph
+            item {
+                EqFrequencyResponseGraph(
+                    bands = activeProfile?.bands ?: emptyList(),
+                    preamp = activeProfile?.preamp ?: 0.0
+                )
+            }
+
+            // "No Equalization" option (always first)
+            item {
+                NoEqualizationItem(
+                    isSelected = activeProfileId == null,
+                    onSelected = { onProfileSelected(null) }
+                )
+            }
+
+            // Custom profiles only
+            val customProfiles = profiles.filter { it.isCustom }
+
+            if (customProfiles.isNotEmpty()) {
+                items(customProfiles) { profile ->
+                    EQProfileItem(
+                        profile = profile,
+                        isSelected = activeProfileId == profile.id,
+                        onSelected = { onProfileSelected(profile.id) },
+                        onDelete = { onDeleteProfile(profile.id) }
+                    )
                 }
             }
 
-            // Profile list
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                // "No Equalization" option (always first)
+            // Empty state
+            if (customProfiles.isEmpty()) {
                 item {
-                    NoEqualizationItem(
-                        isSelected = activeProfileId == null,
-                        onSelected = { onProfileSelected(null) }
-                    )
-                }
-
-                // Custom profiles only
-                val customProfiles = profiles.filter { it.isCustom }
-
-                if (customProfiles.isNotEmpty()) {
-                    items(customProfiles) { profile ->
-                        EQProfileItem(
-                            profile = profile,
-                            isSelected = activeProfileId == profile.id,
-                            onSelected = { onProfileSelected(profile.id) },
-                            onDelete = { onDeleteProfile(profile.id) }
-                        )
-                    }
-                }
-
-                // Empty state
-                if (customProfiles.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.equalizer),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = stringResource(R.string.no_profiles),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(onClick = onImportCustomEQ) {
-                                    Text(stringResource(R.string.import_profile))
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                OutlinedButton(onClick = onOpenSystemEqualizer) {
-                                    Text(stringResource(R.string.system_equalizer))
-                                }
+                            Icon(
+                                painter = painterResource(R.drawable.equalizer),
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = stringResource(R.string.no_profiles),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = onAddClicked) {
+                                Text(stringResource(R.string.import_profile))
                             }
                         }
                     }
@@ -321,7 +316,7 @@ private fun NoEqualizationItem(
     onSelected: () -> Unit
 ) {
     ListItem(
-        headlineContent = {
+        content = {
             Text(
                 stringResource(R.string.eq_disabled),
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
@@ -349,7 +344,7 @@ private fun EQProfileItem(
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     ListItem(
-        headlineContent = {
+        content = {
             Text(
                 text = profile.deviceModel,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal

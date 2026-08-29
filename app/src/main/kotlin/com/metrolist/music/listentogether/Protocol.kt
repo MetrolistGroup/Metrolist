@@ -108,7 +108,8 @@ data class RoomState(
     val position: Long, // milliseconds
     @SerialName("last_update") val lastUpdate: Long, // unix timestamp ms
     val volume: Float = 1f,
-    val queue: List<TrackInfo> = emptyList()
+    val queue: List<TrackInfo> = emptyList(),
+    val revision: Long = 0L,
 )
 
 // Request payloads
@@ -145,7 +146,15 @@ data class PlaybackActionPayload(
     val queue: List<TrackInfo>? = null,
     @SerialName("queue_title") val queueTitle: String? = null,
     val volume: Float? = null,
-    @SerialName("server_time") val serverTime: Long? = null
+    @SerialName("server_time") val serverTime: Long? = null,
+    val revision: Long = 0L,
+    @SerialName("captured_at_server_time") val capturedAtServerTime: Long? = null,
+)
+
+@Serializable
+data class PingPayload(
+    @SerialName("client_time") val clientTime: Long,
+    val sequence: Long,
 )
 
 @Serializable
@@ -293,7 +302,16 @@ data class SyncStatePayload(
     val position: Long,
     @SerialName("last_update") val lastUpdate: Long,
     val queue: List<TrackInfo>? = null,
-    val volume: Float? = null
+    val volume: Float? = null,
+    val revision: Long = 0L,
+)
+
+@Serializable
+data class PongPayload(
+    @SerialName("client_time") val clientTime: Long,
+    @SerialName("server_receive_time") val serverReceiveTime: Long,
+    @SerialName("server_send_time") val serverSendTime: Long,
+    val sequence: Long,
 )
 
 // Reconnection payloads
