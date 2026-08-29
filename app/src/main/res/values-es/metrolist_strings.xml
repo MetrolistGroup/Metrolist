@@ -847,7 +847,7 @@
     <string name="enable_landscape_scaling_desc">Escala la interfaz en modo horizontal para pantallas grandes</string>
     <string name="enable_dynamic_icon">Colores dinámicos del icono</string>
     <string name="enable_dynamic_icon_desc">Usa los colores dinámicos del tema para el icono de la app. Cuando está desactivado, el icono utiliza colores sólidos.</string>
-    <string name="kmp_upgrade_title">Metrolist KMP %s está disponible!</string>
+    <string name="kmp_upgrade_title">Metrolist KMP %s está disponible</string>
     <string name="kmp_upgrade_warning">Metrolist KMP está en etapa temprana. Puede que funciones estén dañadas, incompletas, o cambiadas sin previo aviso.</string>
     <string name="kmp_upgrade_action">Mejora a KMP</string>
     <string name="android_auto_search_options">Opciones de búsqueda</string>
@@ -855,10 +855,15 @@
     <string name="android_auto_search_local_songs_limit_desc">Limita el número de canciones locales mostradas en los resultados de búsqueda. Se recomienda limitarlo para prevenir cierres de la aplicación inesperados</string>
     <string name="playlist_unavailable">Lista de reproducción no disponible</string>
     <string name="kmp_upgrade_later">Ahora no</string>
-    <string name="choose_youtube_channel">Elige un canal de YouTube</string>
+    <string name="choose_youtube_channel">Elegir un canal de YouTube</string>
     <string name="choose_youtube_channel_description">Esta cuenta de Google tiene varios canales. Elige la que quieres usar.</string>
-    <string name="switch_youtube_channel">Cambia de canal de YouTube</string>
+    <string name="switch_youtube_channel">Cambiar de canal de YouTube</string>
     <string name="youtube_channels_failed">No pude recuperar los canales de YouTube de esta cuenta. Por favor, inténtalo de nuevo.</string>
     <string name="authentication_data_extraction_failed">No pude leer la sesión de YouTube Music. Por favor, inténtalo de nuevo.</string>
     <string name="login_failed_with_error">Inicio de sesión fallido: %1$s</string>
+    <string name="add_to_playlist_position">Agregar a la posición de la lista de reproducción</string>
+    <string name="playlist_position_beginning">Inicio de la lista de reproducción</string>
+    <string name="playlist_position_beginning_desc">Las canciones nuevas aparecen antes de las canciones existentes</string>
+    <string name="playlist_position_end">Fin de la lista de reproducción</string>
+    <string name="playlist_position_end_desc">Las canciones nuevas aparecen después de las canciones existentes</string>
 </resources>
