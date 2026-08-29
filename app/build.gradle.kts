@@ -22,6 +22,7 @@ if (localPropertiesFile.exists()) {
 val baseApplicationId = "com.metrolist.music"
 val applicationIdOverride = System.getenv("METROLIST_APPLICATION_ID")?.takeIf { it.isNotBlank() }
 val appNameOverride = System.getenv("METROLIST_APP_NAME")?.takeIf { it.isNotBlank() }
+val optimizedDebugBuild = System.getenv("METROLIST_OPTIMIZED_DEBUG") == "true"
 val buildCommit =
     System.getenv("METROLIST_BUILD_COMMIT")
         ?.trim()
@@ -198,7 +199,15 @@ android {
             if (applicationIdOverride == null) {
                 applicationIdSuffix = ".debug"
             }
-            isDebuggable = true
+            isDebuggable = !optimizedDebugBuild
+            isMinifyEnabled = optimizedDebugBuild
+            isShrinkResources = optimizedDebugBuild
+            if (optimizedDebugBuild) {
+                proguardFiles(
+                    getDefaultProguardFile("proguard-android-optimize.txt"),
+                    "proguard-rules.pro",
+                )
+            }
             if (appNameOverride == null) {
                 resValue("string", "app_name", "Metrolist Debug")
             }
