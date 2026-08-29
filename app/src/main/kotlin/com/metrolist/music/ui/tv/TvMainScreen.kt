@@ -6,17 +6,22 @@
 package com.metrolist.music.ui.tv
 
 import android.app.Activity
+import android.view.KeyEvent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,10 +36,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -53,6 +57,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -60,6 +65,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
@@ -69,26 +75,20 @@ import coil3.compose.AsyncImage
 import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
-import com.metrolist.music.constants.AccountChannelHandleKey
-import com.metrolist.music.constants.AccountEmailKey
-import com.metrolist.music.constants.AccountNameKey
-import com.metrolist.music.constants.DataSyncIdKey
 import com.metrolist.music.constants.InnerTubeCookieKey
-import com.metrolist.music.constants.VisitorDataKey
 import com.metrolist.music.constants.YtmSyncKey
 import com.metrolist.music.extensions.togglePlayPause
-import com.metrolist.music.ui.screens.settings.NavigationTab
+import com.metrolist.music.ui.component.PlayingIndicator
 import com.metrolist.music.ui.screens.Screens
 import com.metrolist.music.ui.screens.navigationBuilder
+import com.metrolist.music.ui.screens.settings.NavigationTab
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.viewmodels.AccountSettingsViewModel
 import com.metrolist.music.viewmodels.HomeViewModel
-import androidx.compose.foundation.layout.RowScope
 import kotlinx.coroutines.launch
 
 /**
- * Root TV layout: permanent left NavigationRail + content area with NavHost and bottom now-playing bar.
- * Only rendered when the device is an Android TV (detected via [isAndroidTv]).
+ * Root TV layout: Spotify TV Top Navigation Bar + Main content viewport + Spotify TV Now-Playing Bottom Dock.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,7 +105,6 @@ fun TvMainScreen(
     val currentBackStack by navController.currentBackStack.collectAsState()
     val currentRoute = currentBackStack.lastOrNull()?.destination?.route
 
-    // Shared nav item click handler
     val onNavItemClick: (Screens, Boolean) -> Unit = remember(navController) {
         { screen, isSelected ->
             if (!isSelected) {
@@ -122,9 +121,13 @@ fun TvMainScreen(
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
-    Row(modifier = Modifier.fillMaxSize()) {
-        // ── Left navigation rail ──────────────────────────────────────────────
-        TvNavigationRail(
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(if (pureBlack) TvColors.BackgroundPureBlack else TvColors.BackgroundDark)
+    ) {
+        // ── Spotify TV Style Top Horizontal Navigation Bar ───────────────────
+        TvTopNavigationBar(
             navigationItems = navigationItems,
             currentRoute = currentRoute,
             onNavItemClick = onNavItemClick,
@@ -137,69 +140,236 @@ fun TvMainScreen(
             },
         )
 
-        // ── Main content area ─────────────────────────────────────────────────
-        Column(modifier = Modifier.weight(1f)) {
-            // NavHost fills remaining space above the now-playing bar
-            Box(modifier = Modifier.weight(1f)) {
-                NavHost(
+        // ── Main Content Area ────────────────────────────────────────────────
+        Box(modifier = Modifier.weight(1f)) {
+            NavHost(
+                navController = navController,
+                startDestination = when (tabOpenedFromShortcut ?: defaultOpenTab) {
+                    NavigationTab.HOME -> Screens.Home
+                    NavigationTab.LIBRARY -> Screens.Library
+                    else -> Screens.Home
+                }.route,
+                enterTransition = { fadeIn(tween(200)) },
+                exitTransition = { fadeOut(tween(200)) },
+                popEnterTransition = { fadeIn(tween(200)) },
+                popExitTransition = { fadeOut(tween(200)) },
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                // Mobile navigation graph components
+                navigationBuilder(
                     navController = navController,
-                    startDestination = when (tabOpenedFromShortcut ?: defaultOpenTab) {
-                        NavigationTab.HOME -> Screens.Home
-                        NavigationTab.LIBRARY -> Screens.Library
-                        else -> Screens.Home
-                    }.route,
-                    enterTransition = { fadeIn(tween(200)) },
-                    exitTransition = { fadeOut(tween(200)) },
-                    popEnterTransition = { fadeIn(tween(200)) },
-                    popExitTransition = { fadeOut(tween(200)) },
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    // All existing mobile routes (settings, search, library, etc.)
-                    navigationBuilder(
-                        navController = navController,
-                        scrollBehavior = scrollBehavior,
-                        latestVersionName = latestVersionName,
-                        activity = activity,
-                        snackbarHostState = snackbarHostState,
-                    )
+                    scrollBehavior = scrollBehavior,
+                    latestVersionName = latestVersionName,
+                    activity = activity,
+                    snackbarHostState = snackbarHostState,
+                )
 
-                    // TV-only full-screen player route
-                    composable("tv_player") {
-                        TvPlayerScreen(navController = navController)
-                    }
+                // Spotify TV style primary screens
+                composable(Screens.Home.route) {
+                    TvHomeScreen(navController = navController)
+                }
 
-                    // TV-only queue screen
-                    composable("tv_queue") {
-                        TvQueueScreen(navController = navController)
-                    }
+                composable(Screens.Search.route) {
+                    TvSearchScreen(navController = navController)
+                }
 
-                    // TV account/settings panel — TV-native focus-aware replacement for AccountSettings.
-                    // AccountSettings uses Modifier.clickable in a verticalScroll Column; on TV with
-                    // D-pad the focus stays in the NavigationRail and clicks never reach those items.
-                    // This composable has explicit FocusRequesters per item and auto-focuses on entry,
-                    // then navigates to the EXACT same routes ("login", "settings", "settings/integrations")
-                    // that AccountSettings navigates to.
-                    composable("tv_settings") {
-                        TvAccountMenu(navController = navController, latestVersionName = latestVersionName)
-                    }
+                composable(Screens.Library.route) {
+                    TvLibraryScreen(navController = navController)
+                }
+
+                // Spotify TV style full-screen player
+                composable("tv_player") {
+                    TvPlayerScreen(navController = navController)
+                }
+
+                // TV Queue Screen
+                composable("tv_queue") {
+                    TvQueueScreen(navController = navController)
+                }
+
+                // TV Settings / Account screen
+                composable("tv_settings") {
+                    TvAccountMenu(navController = navController, latestVersionName = latestVersionName)
                 }
             }
-
-            // ── Now-playing bar at bottom of content area ─────────────────────
-            TvNowPlayingBar(
-                onOpenPlayer = {
-                    navController.navigate("tv_player") {
-                        launchSingleTop = true
-                    }
-                },
-            )
         }
+
+        // ── Spotify TV Floating/Docked Now-Playing Bar ────────────────────────
+        TvNowPlayingBar(
+            onOpenPlayer = {
+                navController.navigate("tv_player") {
+                    launchSingleTop = true
+                }
+            },
+        )
     }
 }
 
 /**
- * Slim bottom bar showing the currently playing track with basic transport controls.
- * Navigates to the full-screen [TvPlayerScreen] when the user presses the "open" button.
+ * Spotify TV style horizontal top navigation bar.
+ */
+@Composable
+private fun TvTopNavigationBar(
+    navigationItems: List<Screens>,
+    currentRoute: String?,
+    onNavItemClick: (Screens, Boolean) -> Unit,
+    pureBlack: Boolean,
+    onSettingsClick: () -> Unit,
+    onPlayerClick: () -> Unit,
+) {
+    val playerConnection = LocalPlayerConnection.current
+    val isPlaying by (playerConnection?.isPlaying?.collectAsState() ?: remember { mutableStateOf(false) })
+    val mediaMetadata by (playerConnection?.mediaMetadata?.collectAsState() ?: remember { mutableStateOf(null) })
+
+    val isSettingsSelected = currentRoute == "tv_settings" ||
+        currentRoute?.startsWith("settings") == true ||
+        currentRoute?.startsWith("account") == true
+    val isPlayerSelected = currentRoute == "tv_player"
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(72.dp)
+            .background(if (pureBlack) Color.Black else TvColors.BackgroundDark)
+            .padding(horizontal = 40.dp)
+    ) {
+        // App Logo
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(TvColors.SpotifyGreen.copy(alpha = 0.15f))
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.music_note),
+                contentDescription = null,
+                tint = TvColors.SpotifyGreenBright,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        Spacer(Modifier.width(28.dp))
+
+        // Navigation Tabs (Home, Search, Library)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            navigationItems.forEach { screen ->
+                val isSelected = currentRoute == screen.route || currentRoute?.startsWith("${screen.route}/") == true
+                TvTopNavItem(
+                    title = stringResource(screen.titleId),
+                    iconRes = if (isSelected) screen.iconIdActive else screen.iconIdInactive,
+                    isSelected = isSelected,
+                    onClick = { onNavItemClick(screen, isSelected) }
+                )
+            }
+        }
+
+        Spacer(Modifier.weight(1f))
+
+        // Now Playing shortcut in Top Bar
+        if (mediaMetadata != null) {
+            TvTopNavItem(
+                title = stringResource(R.string.player),
+                iconRes = R.drawable.play,
+                isSelected = isPlayerSelected,
+                isPlayingIndicator = isPlaying,
+                onClick = onPlayerClick
+            )
+            Spacer(Modifier.width(16.dp))
+        }
+
+        // Settings / Account
+        TvTopNavItem(
+            title = stringResource(R.string.settings),
+            iconRes = R.drawable.settings,
+            isSelected = isSettingsSelected,
+            onClick = onSettingsClick
+        )
+    }
+}
+
+/**
+ * Focus-aware Top Nav Item chip
+ */
+@Composable
+private fun TvTopNavItem(
+    title: String,
+    iconRes: Int,
+    isSelected: Boolean,
+    isPlayingIndicator: Boolean = false,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                when {
+                    isFocused -> Color.White
+                    isSelected -> TvColors.CardBackgroundElevated
+                    else -> Color.Transparent
+                }
+            )
+            .border(
+                width = if (isFocused) 2.dp else 0.dp,
+                color = if (isFocused) Color.White else Color.Transparent,
+                shape = RoundedCornerShape(20.dp)
+            )
+            .focusable(interactionSource = interactionSource)
+            .onKeyEvent {
+                if (it.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                    (it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    onClick()
+                    true
+                } else false
+            }
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        if (isPlayingIndicator) {
+            PlayingIndicator(
+                color = if (isFocused) Color.Black else TvColors.SpotifyGreenBright,
+                modifier = Modifier.height(16.dp),
+                bars = 3,
+                barWidth = 3.dp,
+                cornerRadius = 2.dp
+            )
+        } else {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = title,
+                tint = when {
+                    isFocused -> Color.Black
+                    isSelected -> TvColors.SpotifyGreenBright
+                    else -> TvColors.TextSecondary
+                },
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (isSelected || isFocused) FontWeight.Bold else FontWeight.Medium,
+            color = when {
+                isFocused -> Color.Black
+                isSelected -> Color.White
+                else -> TvColors.TextSecondary
+            }
+        )
+    }
+}
+
+/**
+ * Spotify TV style bottom playback dock bar.
  */
 @Composable
 private fun TvNowPlayingBar(
@@ -212,184 +382,156 @@ private fun TvNowPlayingBar(
     val canSkipPrevious by playerConnection.canSkipPrevious.collectAsState()
     val canSkipNext by playerConnection.canSkipNext.collectAsState()
 
-    // Hide the bar when nothing is loaded
+    // Hide bar if nothing is queued/loaded
     if (mediaMetadata == null) return
 
-    val bg = MaterialTheme.colorScheme.surfaceContainer
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(72.dp)
-            .background(bg)
-            .padding(horizontal = 16.dp),
+            .height(80.dp)
+            .background(TvColors.CardBackground)
+            .border(
+                width = if (isFocused) 2.dp else 0.dp,
+                color = if (isFocused) Color.White.copy(alpha = 0.5f) else Color.Transparent
+            )
+            .padding(horizontal = 24.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Album art thumbnail
-        AsyncImage(
-            model = mediaMetadata?.thumbnailUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
+        // Thumbnail with rounded corners and playing indicator overlay
+        Box(
             modifier = Modifier
-                .size(52.dp)
-                .clip(RoundedCornerShape(6.dp)),
-        )
+                .size(58.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onOpenPlayer)
+        ) {
+            AsyncImage(
+                model = mediaMetadata?.thumbnailUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            if (isPlaying) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.4f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    PlayingIndicator(
+                        color = TvColors.SpotifyGreenBright,
+                        modifier = Modifier.height(18.dp),
+                        bars = 3,
+                        barWidth = 3.dp,
+                        cornerRadius = 2.dp
+                    )
+                }
+            }
+        }
 
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(16.dp))
 
-        // Track title + artist
+        // Title and Artist
         Column(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .clickable(onClick = onOpenPlayer),
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
                 text = mediaMetadata?.title ?: "",
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TvColors.TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.basicMarquee(),
             )
+            Spacer(Modifier.height(2.dp))
             mediaMetadata?.artists?.joinToString { it.name }?.let { artists ->
                 Text(
                     text = artists,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = TvColors.TextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
         }
 
-        // Transport controls
-        IconButton(
-            onClick = { playerConnection.player.seekToPreviousMediaItem() },
-            enabled = canSkipPrevious,
-            modifier = Modifier.focusable(),
+        // Transport Controls
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(
-                painter = painterResource(R.drawable.skip_previous),
-                contentDescription = null,
-            )
-        }
-
-        IconButton(
-            onClick = { playerConnection.player.togglePlayPause() },
-            modifier = Modifier.focusable(),
-        ) {
-            Icon(
-                painter = painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
-                contentDescription = null,
-            )
-        }
-
-        IconButton(
-            onClick = { playerConnection.player.seekToNextMediaItem() },
-            enabled = canSkipNext,
-            modifier = Modifier.focusable(),
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.skip_next),
-                contentDescription = null,
-            )
-        }
-
-        // Open full-screen player
-        IconButton(
-            onClick = onOpenPlayer,
-            modifier = Modifier.focusable(),
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.expand_less),
-                contentDescription = null,
-            )
-        }
-    }
-}
-
-/**
- * TV-specific NavigationRail that adds Settings and Now-Playing items
- * below the standard navigation items.
- */
-@Composable
-private fun TvNavigationRail(
-    navigationItems: List<Screens>,
-    currentRoute: String?,
-    onNavItemClick: (Screens, Boolean) -> Unit,
-    pureBlack: Boolean,
-    onSettingsClick: () -> Unit,
-    onPlayerClick: () -> Unit,
-) {
-    val playerConnection = LocalPlayerConnection.current
-    val isPlaying by (playerConnection?.isPlaying?.collectAsState() ?: remember { androidx.compose.runtime.mutableStateOf(false) })
-    val mediaMetadata by (playerConnection?.mediaMetadata?.collectAsState() ?: remember { androidx.compose.runtime.mutableStateOf(null) })
-
-    val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
-    val isSettingsSelected = currentRoute == "tv_settings" ||
-        currentRoute?.startsWith("settings") == true ||
-        currentRoute?.startsWith("account") == true
-    val isPlayerSelected = currentRoute == "tv_player"
-
-    NavigationRail(containerColor = containerColor) {
-        Spacer(Modifier.weight(1f))
-
-        // Standard nav items (Home, Search, Library, …)
-        navigationItems.forEach { screen ->
-            val isSelected = currentRoute == screen.route || currentRoute?.startsWith("${screen.route}/") == true
-            NavigationRailItem(
-                selected = isSelected,
-                onClick = { onNavItemClick(screen, isSelected) },
-                icon = {
-                    Icon(
-                        painter = painterResource(if (isSelected) screen.iconIdActive else screen.iconIdInactive),
-                        contentDescription = stringResource(screen.titleId),
-                    )
-                },
-                label = { Text(stringResource(screen.titleId), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            )
-        }
-
-        Spacer(Modifier.weight(1f))
-
-        // Now-playing item — visible when something is loaded
-        if (mediaMetadata != null) {
-            NavigationRailItem(
-                selected = isPlayerSelected,
-                onClick = onPlayerClick,
-                icon = {
-                    Icon(
-                        painter = painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
-                        contentDescription = stringResource(R.string.queue),
-                    )
-                },
-                label = { Text(stringResource(R.string.queue), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            )
-        }
-
-        // Account/Settings item always visible at the bottom
-        NavigationRailItem(
-            selected = isSettingsSelected,
-            onClick = onSettingsClick,
-            icon = {
+            IconButton(
+                onClick = { playerConnection.player.seekToPreviousMediaItem() },
+                enabled = canSkipPrevious,
+                modifier = Modifier.focusable(),
+            ) {
                 Icon(
-                    painter = painterResource(R.drawable.settings),
-                    contentDescription = stringResource(R.string.settings),
+                    painter = painterResource(R.drawable.skip_previous),
+                    contentDescription = "Previous",
+                    tint = if (canSkipPrevious) Color.White else TvColors.TextTertiary,
+                    modifier = Modifier.size(26.dp)
                 )
-            },
-            label = { Text(stringResource(R.string.settings), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        )
+            }
+
+            // Play / Pause Circle
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .clickable { playerConnection.player.togglePlayPause() }
+            ) {
+                Icon(
+                    painter = painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    tint = Color.Black,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            IconButton(
+                onClick = { playerConnection.player.seekToNextMediaItem() },
+                enabled = canSkipNext,
+                modifier = Modifier.focusable(),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.skip_next),
+                    contentDescription = "Next",
+                    tint = if (canSkipNext) Color.White else TvColors.TextTertiary,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            // Expand to Full Player
+            IconButton(
+                onClick = onOpenPlayer,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(TvColors.OverlayLight)
+                    .focusable(),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.fullscreen),
+                    contentDescription = "Expand Full Player",
+                    tint = TvColors.SpotifyGreenBright,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
     }
 }
 
 /**
- * TV-native account/settings menu shown when the user opens the Settings rail item.
- *
- * Replaces the mobile AccountSettings composable for TV because AccountSettings uses
- * Modifier.clickable inside a verticalScroll Column — on TV with D-pad, focus stays in
- * the NavigationRail and those clickable items never receive a click event.
- *
- * This composable uses explicit FocusRequesters and auto-focuses the first item on entry,
- * so D-pad center always reaches the correct item. Navigation targets are the EXACT SAME
- * routes as AccountSettings uses: "login", "account", "settings", "settings/integrations".
+ * TV-native account/settings menu with TV focus control.
  */
 @Composable
 private fun TvAccountMenu(navController: NavController, latestVersionName: String) {
@@ -407,11 +549,9 @@ private fun TvAccountMenu(navController: NavController, latestVersionName: Strin
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // One FocusRequester per menu item: 0=login/account, 1=sync(if logged in), 2=integrations, 3=settings
     val focusRequesters = remember { List(4) { FocusRequester() } }
     var focusedIndex by remember { mutableIntStateOf(0) }
 
-    // Auto-focus the first item as soon as the screen appears
     LaunchedEffect(Unit) {
         focusRequesters[0].requestFocus()
     }
@@ -419,18 +559,19 @@ private fun TvAccountMenu(navController: NavController, latestVersionName: Strin
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface) // Opaque background
+            .background(TvColors.BackgroundDark)
             .padding(horizontal = 80.dp, vertical = 48.dp),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Text(
                 text = stringResource(R.string.settings),
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
+                color = TvColors.TextPrimary,
                 modifier = Modifier.padding(bottom = 16.dp),
             )
-            HorizontalDivider()
-            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = Color.White.copy(alpha = 0.15f))
+            Spacer(Modifier.height(24.dp))
 
             // ── Login / Account row ────────────────────────────────────────────
             TvMenuRow(
@@ -447,13 +588,14 @@ private fun TvAccountMenu(navController: NavController, latestVersionName: Strin
                         model = accountImageUrl,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(40.dp).clip(CircleShape),
+                        modifier = Modifier.size(44.dp).clip(CircleShape),
                     )
                     Spacer(Modifier.width(16.dp))
                 } else {
                     Icon(
                         painter = painterResource(R.drawable.login),
                         contentDescription = null,
+                        tint = TvColors.SpotifyGreenBright,
                         modifier = Modifier.size(28.dp),
                     )
                     Spacer(Modifier.width(16.dp))
@@ -464,12 +606,13 @@ private fun TvAccountMenu(navController: NavController, latestVersionName: Strin
                                else stringResource(R.string.login),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
+                        color = TvColors.TextPrimary
                     )
                     if (!isLoggedIn) {
                         Text(
                             text = stringResource(R.string.login),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = TvColors.TextSecondary,
                         )
                     }
                 }
@@ -488,7 +631,7 @@ private fun TvAccountMenu(navController: NavController, latestVersionName: Strin
 
             // ── Sync row (only when logged in) ────────────────────────────────
             if (isLoggedIn) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
                 TvMenuRow(
                     focusRequester = focusRequesters[1],
                     isFocused = focusedIndex == 1,
@@ -498,21 +641,28 @@ private fun TvAccountMenu(navController: NavController, latestVersionName: Strin
                     Icon(
                         painter = painterResource(R.drawable.cached),
                         contentDescription = null,
+                        tint = TvColors.SpotifyGreenBright,
                         modifier = Modifier.size(28.dp),
                     )
                     Spacer(Modifier.width(16.dp))
                     Text(
                         text = stringResource(R.string.yt_sync),
                         style = MaterialTheme.typography.titleMedium,
+                        color = TvColors.TextPrimary,
                         modifier = Modifier.weight(1f),
                     )
-                    Switch(checked = ytmSync, onCheckedChange = onYtmSyncChange)
+                    Switch(
+                        checked = ytmSync,
+                        onCheckedChange = onYtmSyncChange,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = TvColors.SpotifyGreenBright
+                        )
+                    )
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
             // ── Integrations row ──────────────────────────────────────────────
             TvMenuRow(
@@ -524,22 +674,24 @@ private fun TvAccountMenu(navController: NavController, latestVersionName: Strin
                 Icon(
                     painter = painterResource(R.drawable.integration),
                     contentDescription = null,
+                    tint = TvColors.SpotifyGreenBright,
                     modifier = Modifier.size(28.dp),
                 )
                 Spacer(Modifier.width(16.dp))
                 Text(
                     text = stringResource(R.string.integrations),
                     style = MaterialTheme.typography.titleMedium,
+                    color = TvColors.TextPrimary,
                     modifier = Modifier.weight(1f),
                 )
                 Icon(
                     painter = painterResource(R.drawable.navigate_next),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = TvColors.TextSecondary,
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
 
             // ── Settings row ──────────────────────────────────────────────────
             TvMenuRow(
@@ -551,25 +703,27 @@ private fun TvAccountMenu(navController: NavController, latestVersionName: Strin
                 Icon(
                     painter = painterResource(R.drawable.settings),
                     contentDescription = null,
+                    tint = TvColors.SpotifyGreenBright,
                     modifier = Modifier.size(28.dp),
                 )
                 Spacer(Modifier.width(16.dp))
                 Text(
                     text = stringResource(R.string.settings),
                     style = MaterialTheme.typography.titleMedium,
+                    color = TvColors.TextPrimary,
                     modifier = Modifier.weight(1f),
                 )
                 Icon(
                     painter = painterResource(R.drawable.navigate_next),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = TvColors.TextSecondary,
                 )
             }
         }
     }
 }
 
-/** Single focusable row in the TV account menu. Handles focus highlight and click. */
+/** Single focusable row in the TV account menu with Spotify TV styling */
 @Composable
 private fun TvMenuRow(
     focusRequester: FocusRequester,
@@ -584,17 +738,18 @@ private fun TvMenuRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(
-                if (isFocused) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-                else MaterialTheme.colorScheme.surfaceContainer,
+                if (isFocused) TvColors.OverlayFocused
+                else TvColors.CardBackground
+            )
+            .border(
+                width = if (isFocused) 2.dp else 0.dp,
+                color = if (isFocused) Color.White.copy(alpha = 0.8f) else Color.Transparent,
+                shape = RoundedCornerShape(12.dp)
             )
             .focusRequester(focusRequester)
             .onFocusChanged { if (it.isFocused) onFocused() }
-            // NOTE: clickable must come AFTER focusRequester/onFocusChanged so the
-            // single focus node it creates is the one attached to the requester.
-            // Do NOT add .focusable() here — clickable already provides focusability,
-            // and a separate .focusable() node would steal focus without click handling.
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = 24.dp, vertical = 18.dp),
         content = content,
     )
 }

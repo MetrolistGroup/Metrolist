@@ -72,40 +72,45 @@ class SilenceDetectorAudioProcessor(
         }
 
         val out = replaceOutputBuffer(inputBuffer.remaining())
+        out.order(inputBuffer.order())
         out.put(inputBuffer)
         out.flip()
     }
 
     private fun detectSilence(inputBuffer: ByteBuffer) {
-        // Ensure predictable endian access for getShort(index).
+        val originalOrder = inputBuffer.order()
         inputBuffer.order(ByteOrder.LITTLE_ENDIAN)
 
         val frameCount = inputBuffer.remaining() / 2 / channelCount
         val basePosition = inputBuffer.position()
 
-        repeat(frameCount) { frameIndex ->
-            var framePeak = 0
-            repeat(channelCount) { channelIndex ->
-                val sampleIndex = basePosition + (frameIndex * channelCount + channelIndex) * 2
-                val sampleValue = abs(inputBuffer.getShort(sampleIndex).toInt())
-                if (sampleValue > framePeak) {
-                    framePeak = sampleValue
-                }
-            }
-
-            if (framePeak < silenceThreshold) {
-                consecutiveSilentFrames++
-                val silentDurationUs = (consecutiveSilentFrames * 1_000_000L) / sampleRate
-                if (silentDurationUs >= minSilenceDurationUs) {
-                    inSilence = true
-                    if (!notifiedThisSilence) {
-                        notifiedThisSilence = true
-                        onLongSilence()
+        try {
+            repeat(frameCount) { frameIndex ->
+                var framePeak = 0
+                repeat(channelCount) { channelIndex ->
+                    val sampleIndex = basePosition + (frameIndex * channelCount + channelIndex) * 2
+                    val sampleValue = abs(inputBuffer.getShort(sampleIndex).toInt())
+                    if (sampleValue > framePeak) {
+                        framePeak = sampleValue
                     }
                 }
-            } else {
-                clearSilenceState()
+
+                if (framePeak < silenceThreshold) {
+                    consecutiveSilentFrames++
+                    val silentDurationUs = (consecutiveSilentFrames * 1_000_000L) / sampleRate
+                    if (silentDurationUs >= minSilenceDurationUs) {
+                        inSilence = true
+                        if (!notifiedThisSilence) {
+                            notifiedThisSilence = true
+                            onLongSilence()
+                        }
+                    }
+                } else {
+                    clearSilenceState()
+                }
             }
+        } finally {
+            inputBuffer.order(originalOrder)
         }
     }
 

@@ -3968,7 +3968,7 @@ class MusicService :
                         eqProcessor,
                         silenceProcessor,
                     ),
-                    SilenceSkippingAudioProcessor(2_000_000, 20_000, 256),
+                    SilenceSkippingAudioProcessor(),
                     SonicAudioProcessor(),
                 ),
             ).build()

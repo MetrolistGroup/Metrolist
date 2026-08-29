@@ -7,20 +7,24 @@ package com.metrolist.music.ui.tv
 
 import android.view.KeyEvent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -39,9 +43,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.ContentScale
@@ -49,43 +53,24 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
+import com.metrolist.music.ui.component.PlayingIndicator
 
 /**
- * Full-screen queue view for Android TV.
- *
- * D-pad up/down moves focus (and scrolls) between tracks.
- * Center (or click) selects a track and starts playback, then navigates back.
- * Back returns to the player.
- */
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.toMutableStateList
-import androidx.compose.ui.zIndex
-
-/**
- * Full-screen queue view for Android TV with reorder and remove support.
+ * Full-screen queue view for Android TV (Spotify TV layout).
  *
  * Each row has 3 focus zones:
- * [Drag Handle] - [Track Info] - [Remove Button]
- *
- * Controls:
- * - Left/Right: Navigate between zones in a row.
- * - Up/Down: Navigate between rows.
- * - Center on Drag Handle: Enters "Drag Mode".
- *   - Up/Down in Drag Mode: Moves the item.
- *   - Center/Back in Drag Mode: Exits Drag Mode.
- * - Center on Track Info: Plays the track.
- * - Center on Remove Button: Removes the track.
+ * [Track Info & Play] - [Drag Reorder Handle] - [Remove Track Button]
  */
 @Composable
 fun TvQueueScreen(navController: NavController) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val isPlaying by playerConnection.isPlaying.collectAsState()
     val currentQueue by playerConnection.queueWindows.collectAsState()
     val currentIndex = playerConnection.player.currentMediaItemIndex
 
@@ -94,7 +79,7 @@ fun TvQueueScreen(navController: NavController) {
     // -1 means no item is currently being dragged
     var draggingIndex by remember { mutableIntStateOf(-1) }
 
-    // Track which ROW currently has focus (to keep it visible)
+    // Track which ROW currently has focus
     var focusedRowIndex by remember { mutableIntStateOf(currentIndex.coerceIn(0, (currentQueue.size - 1).coerceAtLeast(0))) }
     var focusedColIndex by remember { mutableIntStateOf(0) } // 0=song, 1=drag, 2=remove
 
@@ -113,53 +98,110 @@ fun TvQueueScreen(navController: NavController) {
         listState.scrollToItem(target)
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(TvColors.BackgroundPureBlack)
+    ) {
+        // Blurred backdrop from artwork
         AsyncImage(
             model = mediaMetadata?.thumbnailUrl,
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize().blur(40.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(80.dp),
         )
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.75f)))
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.75f),
+                            Color.Black.copy(alpha = 0.9f)
+                        )
+                    )
+                )
+        )
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 60.dp, vertical = 32.dp),
+                .padding(horizontal = 64.dp, vertical = 40.dp),
         ) {
+            // Header
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.queue_music),
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp),
-                )
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    text = "Queue (${currentQueue.size})",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                )
-                if (draggingIndex != -1) {
-                    Spacer(Modifier.width(24.dp))
-                    Text(
-                        text = "Move mode: Press Up/Down to move, Center to drop",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(TvColors.SpotifyGreen.copy(alpha = 0.15f))
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.queue_music),
+                        contentDescription = null,
+                        tint = TvColors.SpotifyGreenBright,
+                        modifier = Modifier.size(24.dp),
                     )
                 }
+
+                Spacer(Modifier.width(16.dp))
+
+                Text(
+                    text = "Now Playing & Queue",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TvColors.TextPrimary,
+                )
+
+                Spacer(Modifier.width(16.dp))
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(TvColors.OverlayLight)
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "${currentQueue.size} songs",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TvColors.TextSecondary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                if (draggingIndex != -1) {
+                    Spacer(Modifier.width(24.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(TvColors.SpotifyGreenBright)
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "Moving song: Press Up/Down to reorder, OK to place",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
-            HorizontalDivider(color = Color.White.copy(alpha = 0.3f))
+
+            HorizontalDivider(color = Color.White.copy(alpha = 0.15f))
 
             LazyColumn(
                 state = listState,
-                // We handle key events manually for drag-and-drop
-                modifier = Modifier.fillMaxSize().padding(top = 8.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 16.dp),
             ) {
                 itemsIndexed(
                     items = currentQueue,
@@ -167,11 +209,12 @@ fun TvQueueScreen(navController: NavController) {
                 ) { idx, window ->
                     val isCurrent = window.firstPeriodIndex == currentIndex
                     val isDragging = (draggingIndex == idx)
-                    
+
                     TvQueueItem(
                         index = idx,
                         window = window,
                         isCurrent = isCurrent,
+                        isPlaying = isPlaying && isCurrent,
                         isDragging = isDragging,
                         totalItems = currentQueue.size,
                         isFocusedRow = (idx == focusedRowIndex),
@@ -189,13 +232,11 @@ fun TvQueueScreen(navController: NavController) {
                         onExitDrag = { draggingIndex = -1 },
                         onMove = { from, to ->
                             playerConnection.player.moveMediaItem(from, to)
-                            // Update dragging index to follow the item
                             draggingIndex = to
                             focusedRowIndex = to
                         },
                         onRemove = {
                             playerConnection.player.removeMediaItem(idx)
-                            // If we removed the item we were on, ensure focus stays valid
                             if (focusedRowIndex >= currentQueue.size - 1) {
                                 focusedRowIndex = (currentQueue.size - 2).coerceAtLeast(0)
                             }
@@ -213,6 +254,7 @@ fun TvQueueItem(
     index: Int,
     window: androidx.media3.common.Timeline.Window,
     isCurrent: Boolean,
+    isPlaying: Boolean,
     isDragging: Boolean,
     totalItems: Int,
     isFocusedRow: Boolean,
@@ -230,7 +272,6 @@ fun TvQueueItem(
     val artist = window.mediaItem.mediaMetadata.artist?.toString() ?: ""
     val thumbnailUri = window.mediaItem.mediaMetadata.artworkUri
 
-    // FocusRequesters for the 3 zones
     val dragFocus = remember { FocusRequester() }
     val contentFocus = remember { FocusRequester() }
     val removeFocus = remember { FocusRequester() }
@@ -249,34 +290,44 @@ fun TvQueueItem(
         }
     }
 
-    // If we are dragging, we force focus to the drag handle
     LaunchedEffect(isDragging) {
         if (isDragging) {
             dragFocus.requestFocus()
         }
     }
 
-    // Row container
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(
-                if (isDragging) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                else if (isCurrent) MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
-                else Color.Transparent
+                when {
+                    isDragging -> TvColors.SpotifyGreen.copy(alpha = 0.25f)
+                    isCurrent -> TvColors.CardBackgroundElevated
+                    else -> TvColors.CardBackground
+                }
             )
-            .padding(4.dp)
+            .border(
+                width = if (isCurrent && !contentFocused) 1.dp else 0.dp,
+                color = if (isCurrent && !contentFocused) TvColors.SpotifyGreen.copy(alpha = 0.5f) else Color.Transparent,
+                shape = RoundedCornerShape(10.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        // 1. Content (Left/Center) - Plays on click - NOW FIRST
+        // 1. Content (Playable Track Area)
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .weight(1f)
-                .clip(RoundedCornerShape(6.dp))
-                .background(if (contentFocused) Color(0xFF90EE90).copy(alpha = 0.4f) else Color.Transparent)
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (contentFocused) TvColors.OverlayFocused else Color.Transparent)
+                .border(
+                    width = if (contentFocused) 2.dp else 0.dp,
+                    color = if (contentFocused) Color.White.copy(alpha = 0.8f) else Color.Transparent,
+                    shape = RoundedCornerShape(8.dp)
+                )
                 .focusRequester(contentFocus)
                 .onFocusChanged { state ->
                     contentFocused = state.isFocused
@@ -299,42 +350,60 @@ fun TvQueueItem(
                 .clickable { onPlay() }
                 .padding(8.dp)
         ) {
-            // Index Number
-            Text(
-                text = "${index + 1}",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.5f),
-                modifier = Modifier.width(32.dp)
-            )
-            
-            // Thumbnail
-            if (thumbnailUri != null) {
-                AsyncImage(
-                    model = thumbnailUri,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp))
-                )
-            } else {
-                Box(Modifier.size(40.dp).background(Color.DarkGray, RoundedCornerShape(4.dp)))
+            // Index Number / Waveform indicator
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.width(36.dp)
+            ) {
+                if (isPlaying) {
+                    PlayingIndicator(
+                        color = TvColors.SpotifyGreenBright,
+                        modifier = Modifier.height(14.dp),
+                        bars = 3,
+                        barWidth = 3.dp,
+                        cornerRadius = 2.dp
+                    )
+                } else {
+                    Text(
+                        text = "${index + 1}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (isCurrent) TvColors.SpotifyGreenBright else TvColors.TextTertiary,
+                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
             }
-            
-            Spacer(Modifier.width(12.dp))
-            
+
+            Spacer(Modifier.width(8.dp))
+
+            // Thumbnail
+            AsyncImage(
+                model = thumbnailUri,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(TvColors.CardBackgroundElevated)
+            )
+
+            Spacer(Modifier.width(16.dp))
+
             // Title & Artist
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.White,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.SemiBold,
+                    color = if (isCurrent) TvColors.SpotifyGreenBright else TvColors.TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 if (artist.isNotEmpty()) {
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         text = artist,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TvColors.TextSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -342,20 +411,25 @@ fun TvQueueItem(
             }
         }
 
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(12.dp))
 
         // 2. Drag Handle (Middle)
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(40.dp)
+                .size(42.dp)
                 .clip(CircleShape)
                 .background(
                     when {
-                        isDragging -> MaterialTheme.colorScheme.primary
-                        dragFocused -> Color(0xFFFFEB3B).copy(alpha = 0.7f)
+                        isDragging -> TvColors.SpotifyGreenBright
+                        dragFocused -> TvColors.OverlayFocused
                         else -> Color.Transparent
                     }
+                )
+                .border(
+                    width = if (dragFocused) 2.dp else 0.dp,
+                    color = if (dragFocused) Color.White.copy(alpha = 0.8f) else Color.Transparent,
+                    shape = CircleShape
                 )
                 .focusRequester(dragFocus)
                 .onFocusChanged { state ->
@@ -403,23 +477,28 @@ fun TvQueueItem(
                 painter = painterResource(R.drawable.drag_handle),
                 contentDescription = "Reorder",
                 tint = when {
-                    isDragging -> MaterialTheme.colorScheme.onPrimary
-                    dragFocused -> Color.Black
-                    else -> Color.White.copy(alpha = 0.7f)
+                    isDragging -> Color.Black
+                    dragFocused -> Color.White
+                    else -> TvColors.TextSecondary
                 },
                 modifier = Modifier.size(20.dp)
             )
         }
-        
+
         Spacer(Modifier.width(8.dp))
 
         // 3. Remove Button (Right)
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(40.dp)
+                .size(42.dp)
                 .clip(CircleShape)
                 .background(if (removeFocused) Color(0xFFEF5350).copy(alpha = 0.8f) else Color.Transparent)
+                .border(
+                    width = if (removeFocused) 2.dp else 0.dp,
+                    color = if (removeFocused) Color.White.copy(alpha = 0.8f) else Color.Transparent,
+                    shape = CircleShape
+                )
                 .focusRequester(removeFocus)
                 .onFocusChanged { state ->
                     removeFocused = state.isFocused
@@ -444,7 +523,7 @@ fun TvQueueItem(
             Icon(
                 painter = painterResource(R.drawable.close),
                 contentDescription = "Remove",
-                tint = if (removeFocused) Color.White else Color.White.copy(alpha = 0.7f),
+                tint = if (removeFocused) Color.White else TvColors.TextSecondary,
                 modifier = Modifier.size(20.dp)
             )
         }
