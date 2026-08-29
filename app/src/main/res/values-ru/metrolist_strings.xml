@@ -441,7 +441,7 @@
     <string name="ai_error_language_required">Не выбран язык перевода</string>
     <string name="ai_error_unknown">Произошла неизвестная ошибка</string>
     <string name="ai_error_translation_failed">Ошибка перевода</string>
-    <string name="play_all">Играть все</string>
+    <string name="play_all">Смотреть все</string>
     <string name="recognize_music">Распознать музыку</string>
     <string name="youtube_url_column">Столбец ссылки на YouTube (необязательно)</string>
     <string name="re_listen">Переслушать</string>
@@ -861,9 +861,9 @@
     <string name="android_auto_search_local_songs_limit">Лимит поиска треков</string>
     <string name="android_auto_search_local_songs_limit_desc">Ограничение количества локальных треков, отображаемых в результатах поиска. Не рекомендуется устанавливать значение \"Неограниченно\" во избежание сбоев из-за нехватки памяти</string>
     <string name="playlist_unavailable">Плейлист недоступен</string>
-    <string name="choose_youtube_channel">Выберите YouTube-канал</string>
+    <string name="choose_youtube_channel">Выберите канал YouTube</string>
     <string name="choose_youtube_channel_description">У этого аккаунта Google несколько каналов. Выберите тот, который хотите использовать.</string>
-    <string name="switch_youtube_channel">Сменить YouTube-канал</string>
+    <string name="switch_youtube_channel">Сменить канал YouTube</string>
     <string name="youtube_channels_failed">Не удалось получить список YouTube-каналов для этого аккаунта. Повторите попытку.</string>
     <string name="authentication_data_extraction_failed">Не удалось считать данные сеанса YouTube Music. Повторите попытку.</string>
     <string name="login_failed_with_error">Ошибка входа: %1$s</string>
