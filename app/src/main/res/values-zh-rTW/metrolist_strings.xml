@@ -234,7 +234,7 @@
     <string name="restart_required">需要重新啟動!</string>
     <string name="density_restart_message">顯示密度變更將在重新啟動應用後生效。您現在要重啟嗎？</string>
     <string name="enable_lrclib_desc">社群驅動的同步歌詞資料庫</string>
-    <string name="enable_kugou_desc">歌詞來自中國最大的線上音樂平台</string>
+    <string name="enable_kugou_desc">歌詞來自酷狗，一個流行的中國音樂平台</string>
     <string name="youtube_music_lyrics_note">注意：當其他歌詞無法使用時，會自動顯示來自 YouTube Music 的歌詞，來源歌詞通常不同步</string>
     <string name="prevent_duplicate_tracks_in_queue_desc">將曲目新增至佇列時，如果該曲目已存在於佇列中，則將其從先前的位置移除</string>
     <string name="lyrics_provider_priority">歌詞提供者優先權</string>
@@ -836,4 +836,10 @@
     <string name="authentication_data_extraction_failed">無法讀取 YouTube Music 工作階段。請重試。</string>
     <string name="login_failed_with_error">登入失敗：%1$s</string>
     <string name="stream_client">串流用戶端</string>
+    <string name="format_cipher_support_added">已新增密文碼支援</string>
+    <string name="not_applicable">N/A</string>
+    <string name="format_player_hash">播放器哈希</string>
+    <string name="stream_source_android_vr">Android VR</string>
+    <string name="stream_source_android_vr_desc">Android VR 用戶端 (所有版本)。</string>
+    <string name="stream_source_creator_clients">創作者用戶端</string>
 </resources>
