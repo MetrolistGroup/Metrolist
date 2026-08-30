@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="liked">Geliket</string>
+    <string name="liked">Favoriten</string>
     <string name="offline">Heruntergeladen</string>
     <string name="my_top">Meine Top</string>
     <string name="select">Alles auswählen</string>
