@@ -62,7 +62,7 @@
     <string name="charts">Charts</string>
     <string name="years">Jahre</string>
     <string name="weeks">Wochen</string>
-    <string name="remote_history">Fern</string>
+    <string name="remote_history">YTM-Verlauf</string>
     <string name="sync_playlist">Playlist synchronisieren</string>
     <string name="back_button_desc">Zurück</string>
     <string name="continuous">Fortlaufend</string>
@@ -855,4 +855,9 @@
     <string name="youtube_channels_failed">Infos für den YouTube-Kanal konnten nicht aufgerufen werden. Bitte probiere es nochmal.</string>
     <string name="authentication_data_extraction_failed">Die YouTube Music-Sitzung konnte nicht gelesen werden. Bitte versuche es nochmal.</string>
     <string name="login_failed_with_error">Fehler bei der Anmeldung: %1$s</string>
+    <string name="add_to_playlist_position">Zur Playlist hinzufügen – Position</string>
+    <string name="playlist_position_beginning">Am Anfang der Playlist</string>
+    <string name="playlist_position_beginning_desc">Neu hinzugefügte Songs werden vor den bereits vorhandenen Songs angezeigt</string>
+    <string name="playlist_position_end">Am Ende der Playlist</string>
+    <string name="playlist_position_end_desc">Neu hinzugefügte Songs erscheinen hinter den bereits vorhandenen Songs</string>
 </resources>
