@@ -223,6 +223,12 @@
             android:enabled="true"
             android:exported="false" />
 
+        <provider
+            android:name="com.metrolist.music.playback.aa.ArtworkProvider"
+            android:authorities="${applicationId}.aa.artwork"
+            android:exported="true"
+            android:grantUriPermissions="false" />
+
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:exported="false"

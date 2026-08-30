@@ -64,12 +64,16 @@ import javax.inject.Inject
 import com.metrolist.music.constants.AndroidAutoSectionsOrderKey
 import com.metrolist.music.constants.AndroidAutoYouTubePlaylistsKey
 import com.metrolist.music.constants.AutoRadioQueueKey
+import com.metrolist.music.playback.aa.ArtworkUriResolver
 import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.playback.queues.YouTubeQueue
 import com.metrolist.music.ui.screens.settings.AndroidAutoSection
 import com.metrolist.music.ui.screens.settings.deserializeSections
 import com.metrolist.music.ui.screens.settings.serializeSections
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.milliseconds
 
 class MediaLibrarySessionCallback
 @Inject
@@ -77,6 +81,7 @@ constructor(
     @ApplicationContext val context: Context,
     val database: MusicDatabase,
     val downloadUtil: DownloadUtil,
+    val artworkUriResolver: ArtworkUriResolver,
 ) : MediaLibrarySession.Callback {
     private val scope = CoroutineScope(Dispatchers.Main) + Job()
     lateinit var service: MusicService
@@ -84,6 +89,9 @@ constructor(
     var toggleStartRadio: () -> Unit = {}
     var toggleLibrary: () -> Unit = {}
     var addToTargetPlaylist: () -> Unit = {}
+
+    private val pendingParentIds = ConcurrentHashMap.newKeySet<String>()
+    private var artworkNotifyJob: Job? = null
 
     fun release() {
         scope.cancel()
@@ -93,6 +101,8 @@ constructor(
         session: MediaSession,
         controller: MediaSession.ControllerInfo,
     ): MediaSession.ConnectionResult {
+        setupArtworkReadyListener()
+
         val connectionResult = super.onConnect(session, controller)
         return MediaSession.ConnectionResult.accept(
             connectionResult.availableSessionCommands
@@ -904,6 +914,40 @@ constructor(
                 .build(),
         ).build()
 
+    private fun safeArtworkUri(
+        url: String?,
+        parentId: String,
+        @DrawableRes placeholder: Int = R.drawable.music_note,
+    ): Uri {
+        val uri = artworkUriResolver.resolve(url, placeholder)
+        if (uri.scheme != ContentResolver.SCHEME_CONTENT &&
+            !url.isNullOrBlank() &&
+            parentId.startsWith("${MusicService.SEARCH}/")) {
+            return url.toUri()
+        }
+        if (uri.scheme == ContentResolver.SCHEME_ANDROID_RESOURCE) {
+            pendingParentIds.add(parentId)
+        }
+        return uri
+    }
+
+    private fun setupArtworkReadyListener() {
+        artworkUriResolver.setOnArtworkReadyListener {
+            artworkNotifyJob?.cancel()
+            artworkNotifyJob = scope.launch {
+                delay(2000.milliseconds)
+                if (!::service.isInitialized) return@launch
+                val toNotify = pendingParentIds.toList()
+                pendingParentIds.clear()
+                if (toNotify.isEmpty()) return@launch
+                val mediaLibrarySession = service.sessions.firstOrNull() as? MediaLibrarySession
+                toNotify.forEach { parentId ->
+                    mediaLibrarySession?.notifyChildrenChanged(parentId, MAX_ANDROID_AUTO_PAGE_SIZE, null)
+                }
+            }
+        }
+    }
+
     private fun Song.toMediaItem(path: String, isPlayable: Boolean = true, isBrowsable: Boolean = false): MediaItem {
         return MediaItem
             .Builder()
@@ -918,7 +962,7 @@ constructor(
                      .setArtist(artists.joinToArtistString(getArtistSeparator(context)) {
                          ArtistNameAliases.resolve(it.id, it.name)
                      })
-                     .setArtworkUri(song.thumbnailUrl?.toUri())
+                     .setArtworkUri(safeArtworkUri(song.thumbnailUrl, path))
                     .setIsPlayable(isPlayable)
                     .setIsBrowsable(isBrowsable)
                     .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
