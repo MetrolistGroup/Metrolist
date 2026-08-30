@@ -842,4 +842,8 @@
     <string name="stream_source_android_vr">Android VR</string>
     <string name="stream_source_android_vr_desc">Android VR 用戶端 (所有版本)。</string>
     <string name="stream_source_creator_clients">創作者用戶端</string>
+    <string name="stream_source_web_remix">WEB_REMIX</string>
+    <string name="stream_source_tvhtml5">TVHTML5</string>
+    <string name="stream_source_visionos">visionOS</string>
+    <string name="stream_source_web_creator">WEB_CREATOR</string>
 </resources>
