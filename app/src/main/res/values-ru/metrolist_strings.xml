@@ -873,4 +873,6 @@
     <string name="playlist_position_end">В конец плейлиста</string>
     <string name="playlist_position_end_desc">Новые треки будут добавляться после существующих</string>
     <string name="error_explicit_login_recommended">Для воспроизведения контента с нецензурной лексикой лучше войти в аккаунт.</string>
+    <string name="error_no_internet_connection">Нет подключения к интернету</string>
+    <string name="error_offline_playback">Вы не в сети. Подключитесь к интернету или включите трек, скачанный для прослушивания офлайн.</string>
 </resources>
