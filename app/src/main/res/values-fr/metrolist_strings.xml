@@ -867,4 +867,6 @@
     <string name="playlist_position_end">Fin de la playlist</string>
     <string name="playlist_position_end_desc">Les morceaux récemment ajoutés apparaissent après les morceaux existants</string>
     <string name="error_explicit_login_recommended">La lecture explicite fonctionne mieux lorsque vous êtes connecté à un compte.</string>
+    <string name="error_no_internet_connection">Pas de connexion Internet</string>
+    <string name="error_offline_playback">Vous n\'êtes pas connecté à Internet. Connectez-vous à Internet ou écoutez un morceau téléchargé pour une écoute hors ligne.</string>
 </resources>
