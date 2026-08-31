@@ -866,4 +866,5 @@
     <string name="playlist_position_beginning_desc">Les morceaux récemment ajoutés apparaissent avant les morceaux existants</string>
     <string name="playlist_position_end">Fin de la playlist</string>
     <string name="playlist_position_end_desc">Les morceaux récemment ajoutés apparaissent après les morceaux existants</string>
+    <string name="error_explicit_login_recommended">La lecture explicite fonctionne mieux lorsque vous êtes connecté à un compte.</string>
 </resources>
