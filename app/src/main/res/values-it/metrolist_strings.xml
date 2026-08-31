@@ -866,4 +866,5 @@
     <string name="youtube_channels_failed">Impossibile ottenere i canali di YouTube di questo account. Per favore riprova.</string>
     <string name="authentication_data_extraction_failed">Impossibile leggere la sessione di YouTube Music. Per favore riprova.</string>
     <string name="login_failed_with_error">Accesso non riuscito: %1$s</string>
+    <string name="error_explicit_login_recommended">La riproduzione esplicita funziona meglio se si è fatto l\'accesso.</string>
 </resources>
