@@ -866,4 +866,5 @@
     <string name="playlist_position_beginning_desc">Las canciones nuevas aparecen antes de las canciones existentes</string>
     <string name="playlist_position_end">Fin de la lista de reproducción</string>
     <string name="playlist_position_end_desc">Las canciones nuevas aparecen después de las canciones existentes</string>
+    <string name="error_explicit_login_recommended">La reproducción explícita funciona mejor si has iniciado sesión.</string>
 </resources>
