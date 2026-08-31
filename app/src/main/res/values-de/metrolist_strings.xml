@@ -860,4 +860,5 @@
     <string name="playlist_position_beginning_desc">Neu hinzugefügte Songs werden vor den bereits vorhandenen Songs angezeigt</string>
     <string name="playlist_position_end">Am Ende der Playlist</string>
     <string name="playlist_position_end_desc">Neu hinzugefügte Songs erscheinen hinter den bereits vorhandenen Songs</string>
+    <string name="error_explicit_login_recommended">Die Wiedergabe expliziter Songs funktioniert besser, wenn Sie bei einem Konto angemeldet sind.</string>
 </resources>
