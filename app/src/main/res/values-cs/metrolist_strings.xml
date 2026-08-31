@@ -872,4 +872,7 @@
     <string name="playlist_position_beginning_desc">Nově přidané skladby se objeví před existujícími skladbami</string>
     <string name="playlist_position_end">Konec playlistu</string>
     <string name="playlist_position_end_desc">Nově přidané skladby se objeví po existujících skladbách</string>
+    <string name="error_no_internet_connection">Nejste připojeni k internetu</string>
+    <string name="error_offline_playback">Jste offline. Připojte se k internetu nebo si přehrajte staženou skladbu.</string>
+    <string name="error_explicit_login_recommended">Explicitní přehrávání funguje lépe s přihlášeným účtem.</string>
 </resources>
