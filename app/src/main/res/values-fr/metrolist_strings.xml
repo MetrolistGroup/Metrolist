@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="liked">Favoris</string>
-    <string name="offline">Hors-Ligne</string>
+    <string name="offline">Téléchargés</string>
     <string name="my_top">Mon Top</string>
     <string name="select">Tout sélectionner</string>
-    <string name="like_all">Tout aimer</string>
+    <string name="like_all">Aimer tout</string>
     <string name="sort_by_last_updated">Date de mise à jour</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Choix de la bibliothèque par défaut</string>
@@ -17,7 +17,7 @@
     <string name="past_year">Année dernière</string>
     <string name="top_length">Longueur de la liste Mon Top</string>
     <string name="remote_history">Dans d\'autres applications</string>
-    <string name="top_music_videos">Meilleurs Clips Musicaux</string>
+    <string name="top_music_videos">Meilleurs clips musicaux</string>
     <string name="allows_for_sync_witch_youtube">REMARQUE : cette option active la synchronisation avec YouTube Music et NE PEUT PAS être modifiée ultérieurement</string>
     <string name="copy_link">Copier le lien</string>
     <string name="dislike_all">Ne pas aimer tout</string>
@@ -45,8 +45,8 @@
     <string name="months">Mois</string>
     <string name="years">Années</string>
     <string name="continuous">Continu</string>
-    <string name="cached_playlist">Mise en Cache</string>
-    <string name="sync_playlist">Synchroniser la Playlist</string>
+    <string name="cached_playlist">Mis en cache</string>
+    <string name="sync_playlist">Synchroniser la playlist</string>
     <string name="sync_disabled">Synchronisation désactivée</string>
     <plurals name="n_time">
         <item quantity="one">%d fois</item>
@@ -65,7 +65,7 @@
     <string name="slim">Subtil</string>
     <string name="auto_playlists">Playlists Automatiques</string>
     <string name="show_liked_playlist">Afficher la playlist « Favoris »</string>
-    <string name="show_downloaded_playlist">Afficher la playlist « Hors-Ligne »</string>
+    <string name="show_downloaded_playlist">Afficher la playlist « Téléchargés »</string>
     <string name="advanced_login">Se connecter avec un jeton</string>
     <string name="token_hidden">Cliquer pour afficher le jeton</string>
     <string name="token_shown">Cliquer encore pour copier ou éditer</string>
@@ -87,12 +87,12 @@
     <string name="dislikes">Je n\'aime pas</string>
     <string name="cancel">Annuler</string>
     <string name="share_lyrics">Partager les paroles</string>
-    <string name="share_as_text">Partager comme texte</string>
+    <string name="share_as_text">Partager le texte</string>
     <string name="max_selection_limit">Limite maximale de sélection atteinte</string>
     <string name="share_selected">Partager la sélection</string>
     <string name="customize_colors">Personnaliser les couleurs</string>
     <string name="text_color">Couleur du texte</string>
-    <string name="secondary_text_color">Couleur secondaire du texte</string>
+    <string name="secondary_text_color">Couleur du texte secondaire</string>
     <string name="background_color">Couleur d\'arrière-plan</string>
     <string name="auto_download_on_like">Téléchargement automatique dès qu\'on clique sur « J\'aime »</string>
     <string name="auto_download_on_like_desc">Téléchargez automatiquement les titres quand vous les aimez</string>
@@ -144,9 +144,9 @@
     <string name="remove_custom_image">Supprimer l\'image personnalisée</string>
     <string name="audio_offload">Activer le déchargement audio</string>
     <string name="audio_offload_description">Utilise le chemin de déchargement audio matériel pour la lecture. La désactivation de cette option peut augmenter la consommation de la batterie, mais peut s\'avérer utile en cas de problèmes de lecture ou de post-traitement audio</string>
-    <string name="show_uploaded_playlist">Afficher la playlist « Téléchargés »</string>
-    <string name="uploaded_playlist">Téléchargés</string>
-    <string name="filter_uploaded">Téléchargés</string>
+    <string name="show_uploaded_playlist">Afficher la playlist « Téléversés »</string>
+    <string name="uploaded_playlist">Téléversés</string>
+    <string name="filter_uploaded">Téléversés</string>
     <string name="updater">Mise à jour</string>
     <string name="check_for_updates">Vérifier automatiquement les mises à jour</string>
     <string name="update_notifications">Activer les notifications de mise à jour</string>
@@ -670,8 +670,8 @@
     <string name="export_option_save">Enregistrer dans Documents</string>
     <string name="qs_tile_music_recognizer">Reconnaître la musique</string>
     <string name="ai_provider_mistral_help">Visitez https://console.mistral.ai/api-keys</string>
-    <string name="weekly_most_playlist_name">Les plus populaires de la semaine</string>
-    <string name="monthly_most_playlist_name">Les plus populaires du mois</string>
+    <string name="weekly_most_playlist_name">Tops de la semaine</string>
+    <string name="monthly_most_playlist_name">Tops du mois</string>
     <string name="enable_song_cache">Activer le cache des titres</string>
     <string name="enable_song_cache_desc">Mettre automatiquement les titres en cache pour une lecture plus rapide ultérieurement</string>
     <string name="sleep_timer_stop_after_current_song_title">Arrêter à la fin du titre en cours</string>
