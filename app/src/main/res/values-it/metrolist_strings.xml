@@ -768,7 +768,7 @@
     <string name="clear_search">Cancella ricerca</string>
     <string name="close_chip">Chiudi</string>
     <string name="switch_to_list_view">Passa alla visualizzazione elenco</string>
-    <string name="switch_to_grid_view">Passa alla visualizzazione griglia</string>
+    <string name="switch_to_grid_view">Passa alla vista griglia</string>
     <string name="more_options">Più opzioni</string>
     <string name="autoplay">Riproduzione automatica</string>
     <string name="autoplay_desc">Riproduci automaticamente il brano successivo al termine di quello corrente</string>
@@ -867,4 +867,6 @@
     <string name="authentication_data_extraction_failed">Impossibile leggere la sessione di YouTube Music. Per favore riprova.</string>
     <string name="login_failed_with_error">Accesso non riuscito: %1$s</string>
     <string name="error_explicit_login_recommended">La riproduzione esplicita funziona meglio se si è fatto l\'accesso.</string>
+    <string name="error_offline_playback">Sei disconnesso. Connettiti a internet o riproduci una traccia scaricata per riprodurla offline.</string>
+    <string name="error_no_internet_connection">Nessuna connessione a internet</string>
 </resources>
