@@ -25,14 +25,13 @@ class YouTubePlaylistQueue(
     private var continuation: String? = initialContinuation
     private var retryCount = 0
     private val maxRetries = 3
-    private fun SongItem.toPlaylistItem(): MediaItem = toMediaItem()
 
     override suspend fun getInitialStatus(): Queue.Status {
         return withContext(IO) {
             if (initialSongs.isNotEmpty()) {
                 Queue.Status(
                     title = playlistTitle,
-                    items = initialSongs.map { it.toPlaylistItem() },
+                    items = initialSongs.map { it.toMediaItem() },
                     mediaItemIndex = startIndex,
                 )
             } else {
@@ -40,7 +39,7 @@ class YouTubePlaylistQueue(
                 continuation = playlistPage.songsContinuation
                 Queue.Status(
                     title = playlistPage.playlist.title,
-                    items = playlistPage.songs.map { it.toPlaylistItem() },
+                    items = playlistPage.songs.map { it.toMediaItem() },
                     mediaItemIndex = startIndex,
                 )
             }
@@ -59,7 +58,7 @@ class YouTubePlaylistQueue(
                     val continuationPage = YouTube.playlistContinuation(currentContinuation).getOrThrow()
                     continuation = continuationPage.continuation
                     retryCount = 0
-                    return@withContext continuationPage.songs.map { it.toPlaylistItem() }
+                    return@withContext continuationPage.songs.map { it.toMediaItem() }
                 } catch (e: Exception) {
                     lastException = e
                     retryCount++

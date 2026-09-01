@@ -666,20 +666,12 @@ fun LocalPlaylistScreen(
                                                 playerConnection.togglePlayPause()
                                             } else {
                                                 playerConnection.playQueue(
-                                                ListQueue(
-                                                    title = playlist!!.playlist.name,
-                                                    items = songs.map {
-                                                        it.song.toMediaMetadata()
-                                                            .copy(setVideoId = it.map.setVideoId)
-                                                            .toMediaItem()
-                                                    },
-                                                    startIndex = songs.indexOfFirst { it.map.id == song.map.id },
-                                                    playlistBrowseId = playlist?.playlist?.browseId,
-                                                    playlistId = playlist?.playlist?.id,
-                                                    playlistIsEditable = playlist?.playlist?.isEditable == true,
-                                                ),
-                                            )
-                                        }
+                                                    playlist!!.toListQueue(
+                                                        songs,
+                                                        startIndex = songs.indexOfFirst { it.map.id == song.map.id },
+                                                    ),
+                                                )
+                                            }
                                         },
                                         onLongClick = {
                                             if (!inSelectMode) {
@@ -1332,22 +1324,11 @@ fun LocalPlaylistHeader(
         ) {
             // Shuffle Button - Smaller secondary button
             Surface(
-              onClick = {
-                  val shuffledSongs = songs.shuffled()
-                  playerConnection.playQueue(
-                      ListQueue(
-                          title = playlist.playlist.name,
-                          items = shuffledSongs.map {
-                              it.song.toMediaMetadata()
-                                  .copy(setVideoId = it.map.setVideoId)
-                                  .toMediaItem()
-                          },
-                          playlistBrowseId = playlist.playlist.browseId,
-                          playlistId = playlist.playlist.id,
-                          playlistIsEditable = playlist.playlist.isEditable,
-                      ),
-                  )
-              },
+                onClick = {
+                    playerConnection.playQueue(
+                        playlist.toListQueue(songs.shuffled()),
+                    )
+                },
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier.size(48.dp),
@@ -1368,19 +1349,9 @@ fun LocalPlaylistHeader(
             Surface(
                 onClick = {
                     playerConnection.playQueue(
-                      ListQueue(
-                          title = playlist.playlist.name,
-                          items = songs.map {
-                              it.song.toMediaMetadata()
-                                  .copy(setVideoId = it.map.setVideoId)
-                                  .toMediaItem()
-                          },
-                          playlistBrowseId = playlist.playlist.browseId,
-                          playlistId = playlist.playlist.id,
-                          playlistIsEditable = playlist.playlist.isEditable,
-                      ),
-                  )
-              },
+                        playlist.toListQueue(songs),
+                    )
+                },
                 color = MaterialTheme.colorScheme.primary,
                 shape = CircleShape,
                 modifier = Modifier.size(72.dp),
@@ -1481,6 +1452,28 @@ fun LocalPlaylistHeader(
         }
     }
 }
+
+/**
+ * Builds a queue that carries the playlist context needed by "remove from playlist": the browse id
+ * to edit remotely, the local playlist id to edit in the database, and each row's setVideoId so a
+ * song added to the playlist more than once stays distinguishable while playing.
+ */
+fun Playlist.toListQueue(
+    songs: List<PlaylistSong>,
+    startIndex: Int = 0,
+): ListQueue =
+    ListQueue(
+        title = playlist.name,
+        items = songs.map {
+            it.song.toMediaMetadata()
+                .copy(setVideoId = it.map.setVideoId)
+                .toMediaItem()
+        },
+        startIndex = startIndex,
+        playlistBrowseId = playlist.browseId,
+        playlistId = playlist.id,
+        playlistIsEditable = playlist.isEditable,
+    )
 
 fun uriToByteArray(
     context: Context,

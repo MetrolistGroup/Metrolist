@@ -91,8 +91,8 @@ import com.metrolist.music.listentogether.ConnectionState
 import com.metrolist.music.listentogether.ListenTogetherEvent
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.playback.ExoDownloadService
-import com.metrolist.music.playback.queues.ListQueue
-import com.metrolist.music.playback.queues.YouTubePlaylistQueue
+import com.metrolist.music.playback.queues.resolvePlaylistRemovalTarget
+import com.metrolist.music.playback.queues.selectLocalPlaylistRowToRemove
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.ui.component.BottomSheetState
@@ -109,13 +109,6 @@ import kotlinx.coroutines.withContext
 import kotlin.math.log2
 import kotlin.math.pow
 import kotlin.math.round
-
-private data class PlaylistRemovalTarget(
-    val playlistId: String,
-    val setVideoId: String,
-    val localPlaylistId: String?,
-    val source: String,
-)
 
 private const val PLAYER_MENU_TAG = "PlayerMenu"
 
@@ -154,22 +147,8 @@ fun PlayerMenu(
     val coroutineScope = rememberCoroutineScope()
     val downloadUtil = LocalDownloadUtil.current
     val currentQueue by playerConnection.service.currentQueue.collectAsStateWithLifecycle()
-    val playlistRemovalTarget = when (val queue = currentQueue) {
-        is YouTubePlaylistQueue -> mediaMetadata.setVideoId
-            ?.takeIf { queue.isEditable && it.isNotBlank() }
-            ?.let {
-                PlaylistRemovalTarget(queue.playlistId, it, null, "queue")
-            }
-        is ListQueue -> mediaMetadata.setVideoId
-            ?.takeIf {
-                queue.playlistIsEditable &&
-                    !queue.playlistBrowseId.isNullOrBlank() &&
-                    it.isNotBlank()
-            }
-            ?.let {
-                PlaylistRemovalTarget(queue.playlistBrowseId!!, it, queue.playlistId, "listQueue")
-            }
-        else -> null
+    val playlistRemovalTarget = remember(currentQueue, mediaMetadata.setVideoId) {
+        resolvePlaylistRemovalTarget(currentQueue, mediaMetadata.setVideoId)
     }
 
     val download by downloadUtil
@@ -551,11 +530,11 @@ fun PlayerMenu(
                                             }
                                             removalTarget.localPlaylistId?.let { localPlaylistId ->
                                                 withContext(Dispatchers.IO) {
-                                                    database.playlistSongMaps(mediaMetadata.id)
-                                                        .firstOrNull { playlistSongMap ->
-                                                            playlistSongMap.playlistId == localPlaylistId &&
-                                                                playlistSongMap.setVideoId == removalTarget.setVideoId
-                                                        }
+                                                    selectLocalPlaylistRowToRemove(
+                                                        database.playlistSongMaps(mediaMetadata.id),
+                                                        localPlaylistId,
+                                                        removalTarget.setVideoId,
+                                                    )
                                                         ?.let { playlistSongMap ->
                                                             database.transaction {
                                                                 move(
