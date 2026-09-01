@@ -861,4 +861,6 @@
     <string name="playlist_position_end">Am Ende der Playlist</string>
     <string name="playlist_position_end_desc">Neu hinzugefügte Songs erscheinen hinter den bereits vorhandenen Songs</string>
     <string name="error_explicit_login_recommended">Die Wiedergabe expliziter Songs funktioniert besser, wenn Sie bei einem Konto angemeldet sind.</string>
+    <string name="error_no_internet_connection">Keine Internet Verbindung</string>
+    <string name="error_offline_playback">Du bist offline. Verbinde dich mit dem Internet oder spiele ein heruntergelades Lied ab.</string>
 </resources>
