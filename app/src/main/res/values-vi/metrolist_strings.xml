@@ -68,8 +68,8 @@
     <string name="import_csv">Nhập danh sách phát từ tệp CSV</string>
     <string name="import_online">Nhập danh sách phát từ tệp M3U</string>
     <string name="charts">Bảng xếp hạng</string>
-    <string name="album_cover_desc">Ảnh bìa Album</string>
-    <string name="top_music_videos">Video ca nhạc hàng đầu</string>
+    <string name="album_cover_desc">Ảnh bìa album</string>
+    <string name="top_music_videos">Video âm nhạc hàng đầu</string>
     <string name="sync_disabled">Đã tắt đồng bộ</string>
     <string name="cancel">Huỷ bỏ</string>
     <string name="share_as_text">Chia sẻ dưới dạng văn bản</string>
@@ -854,4 +854,7 @@
     <string name="playlist_position_beginning_desc">Bài hát mới thêm sẽ xuất hiện trước các bài hát cũ</string>
     <string name="playlist_position_end">Cuối danh sách phát</string>
     <string name="playlist_position_end_desc">Bài hát mới thêm sẽ xuất hiện sau các bài hát cũ</string>
+    <string name="error_no_internet_connection">Không có kết nối Internet</string>
+    <string name="error_offline_playback">Bạn đang ngoại tuyến. Hãy kết nối Internet hoặc phát bản nhạc đã tải xuống để nghe ngoại tuyến.</string>
+    <string name="error_explicit_login_recommended">Phát nội dung nhạy cảm hoạt động tốt hơn khi đăng nhập tài khoản.</string>
 </resources>
