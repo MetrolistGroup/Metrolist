@@ -25,7 +25,7 @@
     <string name="gradient">Độ phủ màu</string>
     <string name="player_background_blur">Làm mờ</string>
     <string name="enable_swipe_thumbnail">Bật lướt bìa để chuyển bài</string>
-    <string name="lyrics_click_change">Thay đổi lời bài hát khi nhấn vào</string>
+    <string name="lyrics_click_change">Thay đổi lời bài hát khi nhấp vào</string>
     <string name="slim">Dạng mỏng</string>
     <string name="slim_navbar">Thanh điều hướng mỏng phía dưới</string>
     <string name="advanced_login">Đăng nhập bằng token</string>
@@ -107,7 +107,7 @@
     <string name="disable">Vô hiệu hóa</string>
     <string name="subscribe">Đăng ký</string>
     <string name="subscribed">Đã đăng ký</string>
-    <string name="now_playing">Đang phát</string>
+    <string name="now_playing">ĐANG PHÁT</string>
     <string name="close">Đóng</string>
     <string name="seek_forward_dynamic">+%1$d giây tiến</string>
     <string name="seek_backward_dynamic">-%1$d giây lùi</string>
