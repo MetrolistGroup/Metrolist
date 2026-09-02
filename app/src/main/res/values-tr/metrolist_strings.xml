@@ -860,4 +860,7 @@
     <string name="playlist_position_beginning_desc">Eklenen yeni şarkılar mevcut olanların üstünde görünür</string>
     <string name="playlist_position_end">Oynatma listesinin sonu</string>
     <string name="playlist_position_end_desc">Eklenen yeni şarkılar mevcut olanların altında görünür</string>
+    <string name="error_no_internet_connection">İnternet bağlantısı yok</string>
+    <string name="error_offline_playback">Çevrimdışı durumdasınız. İnternete bağlanın veya çevrimdışı kullanım için indirdiğiniz bir parçayı oynatın.</string>
+    <string name="error_explicit_login_recommended">Açık içerikli oynatma, oturum açılmış bir hesapla daha iyi çalışır.</string>
 </resources>
