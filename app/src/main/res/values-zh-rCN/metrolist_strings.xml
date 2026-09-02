@@ -854,4 +854,7 @@
     <string name="playlist_position_beginning_desc">新添加的歌曲会显示在现有歌曲之前</string>
     <string name="playlist_position_end">播放列表结尾</string>
     <string name="playlist_position_end_desc">新添加的歌曲会显示在现有歌曲之后</string>
+    <string name="error_no_internet_connection">没有互联网连接</string>
+    <string name="error_offline_playback">您已离线。请连接到互联网，或播放已下载的离线曲目。</string>
+    <string name="error_explicit_login_recommended">登录账号后，播放露骨内容的效果会更好。</string>
 </resources>
