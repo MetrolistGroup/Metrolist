@@ -866,4 +866,9 @@
     <string name="playlist_position_beginning_desc">Melodiile noi adăugate vor apărea înainte de melodiile existente</string>
     <string name="playlist_position_end">Finalul playlistului</string>
     <string name="playlist_position_end_desc">Melodiile noi adăugate vor apărea după melodiile existente</string>
+    <string name="playlist_created_locally">Sincronizarea cu YouTube a eșuat. Playlistul a fost creat local.</string>
+    <string name="error_no_internet_connection">Fără conexiune la internet</string>
+    <string name="error_offline_playback">Ești offline. Conectează-te la internet sau redă o piesă descărcată pentru redare offline.</string>
+    <string name="error_explicit_login_recommended">Redarea explicită funcționează cel mai bine cu un cont autentificat.</string>
+    <string name="ai_provider_inception_help">Vizitează https://platform.inceptionlabs.ai pentru chei API</string>
 </resources>
