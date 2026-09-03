@@ -2629,7 +2629,7 @@ class MusicService :
         playWhenReady: Boolean,
         reason: Int,
     ) {
-        floatingLyricsManager.updatePlaybackState(playWhenReady)
+        floatingLyricsManager.updatePlaybackState(player.isPlaying)
         // Safety net: if local player tries to start while casting, immediately pause it
         if (playWhenReady && castConnectionHandler?.isCasting?.value == true) {
             player.pause()
@@ -4676,6 +4676,7 @@ class MusicService :
         reason: Int,
     ) {
         if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+            floatingLyricsManager.updatePosition(player.currentPosition)
             scheduleCrossfade()
         }
     }
