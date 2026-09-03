@@ -11,6 +11,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
+import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
@@ -88,6 +90,7 @@ import com.metrolist.music.constants.OpenRouterDefaultBaseUrl
 import com.metrolist.music.constants.OpenRouterDefaultModel
 import com.metrolist.music.constants.OpenRouterModelKey
 import com.metrolist.music.constants.DeeplFormalityKey
+import com.metrolist.music.constants.FloatingLyricsEnabledKey
 import com.metrolist.music.utils.rememberPreference
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -113,6 +116,7 @@ fun LyricsMenu(
     val deeplFormality by rememberPreference(DeeplFormalityKey, "default")
     var respectAgentPositioning by rememberPreference(RespectAgentPositioningKey, true)
     var showIntervalIndicator by rememberPreference(ShowIntervalIndicatorKey, true)
+    var floatingLyricsEnabled by rememberPreference(FloatingLyricsEnabledKey, false)
 
     val hasApiKey = if (aiProvider == "DeepL") deeplApiKey.isNotBlank() else openRouterApiKey.isNotBlank()
     
@@ -600,6 +604,72 @@ fun LyricsMenu(
                                         Icon(
                                             painter = painterResource(
                                                 id = if (showIntervalIndicator) R.drawable.check else R.drawable.close
+                                            ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize)
+                                        )
+                                    },
+                                    colors = SwitchDefaults.colors(
+                                        uncheckedThumbColor = MaterialTheme.colorScheme.primaryContainer,
+                                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+                        )
+                    add(
+                        Material3MenuItemData(
+                            title = { Text(stringResource(R.string.floating_lyrics)) },
+                            description = { Text(stringResource(R.string.floating_lyrics_desc)) },
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.floating_lyrics),
+                                    contentDescription = null,
+                                )
+                            },
+                            onClick = {
+                                if (!floatingLyricsEnabled && !Settings.canDrawOverlays(context)) {
+                                    try {
+                                        val intent = Intent(
+                                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                            Uri.parse("package:${context.packageName}")
+                                        ).apply {
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        context.startActivity(intent)
+                                        Toast.makeText(context, R.string.floating_lyrics_permission_required, Toast.LENGTH_LONG).show()
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, R.string.floating_lyrics_permission_required, Toast.LENGTH_LONG).show()
+                                    }
+                                } else {
+                                    floatingLyricsEnabled = !floatingLyricsEnabled
+                                }
+                            },
+                            trailingContent = {
+                                Switch(
+                                    checked = floatingLyricsEnabled,
+                                    onCheckedChange = { newCheckedState ->
+                                        if (newCheckedState && !Settings.canDrawOverlays(context)) {
+                                            try {
+                                                val intent = Intent(
+                                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                                    Uri.parse("package:${context.packageName}")
+                                                ).apply {
+                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                }
+                                                context.startActivity(intent)
+                                                Toast.makeText(context, R.string.floating_lyrics_permission_required, Toast.LENGTH_LONG).show()
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, R.string.floating_lyrics_permission_required, Toast.LENGTH_LONG).show()
+                                            }
+                                        } else {
+                                            floatingLyricsEnabled = newCheckedState
+                                        }
+                                    },
+                                    thumbContent = {
+                                        Icon(
+                                            painter = painterResource(
+                                                id = if (floatingLyricsEnabled) R.drawable.check else R.drawable.close
                                             ),
                                             contentDescription = null,
                                             modifier = Modifier.size(SwitchDefaults.IconSize)

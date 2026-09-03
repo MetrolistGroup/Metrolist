@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/floating_root"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_floating_lyrics"
+    android:elevation="10dp"
+    android:orientation="vertical"
+    android:paddingStart="14dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="14dp"
+    android:paddingBottom="8dp">
+
+    <!-- Header bar: drag handle, song info, lock, close -->
+    <LinearLayout
+        android:id="@+id/header_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingBottom="4dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/btn_drag"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/drag_handle"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:id="@+id/text_song_info"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="marquee"
+            android:marqueeRepeatLimit="marquee_forever"
+            android:singleLine="true"
+            android:textColor="#B3FFFFFF"
+            android:textSize="11sp" />
+
+        <ImageView
+            android:id="@+id/btn_lock"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:padding="3dp"
+            android:background="@drawable/bg_floating_lyrics_button"
+            android:src="@drawable/lock_open"
+            android:contentDescription="@null" />
+
+        <ImageView
+            android:id="@+id/btn_close"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginStart="4dp"
+            android:padding="3dp"
+            android:background="@drawable/bg_floating_lyrics_button"
+            android:src="@drawable/close"
+            android:contentDescription="@null" />
+    </LinearLayout>
+
+    <!-- Lyrics text container -->
+    <LinearLayout
+        android:id="@+id/lyrics_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp">
+
+        <TextView
+            android:id="@+id/text_current_lyric"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:textColor="#FFFFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/text_next_lyric"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:gravity="center"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="#80FFFFFF"
+            android:textSize="12sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Media Controls row -->
+    <LinearLayout
+        android:id="@+id/controls_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingTop="6dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/btn_open_app"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:padding="5dp"
+            android:background="@drawable/bg_floating_lyrics_button"
+            android:src="@drawable/fullscreen"
+            android:contentDescription="@null" />
+
+        <Space
+            android:layout_width="20dp"
+            android:layout_height="0dp" />
+
+        <ImageView
+            android:id="@+id/btn_prev"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:padding="4dp"
+            android:background="@drawable/bg_floating_lyrics_button"
+            android:src="@drawable/skip_previous"
+            android:contentDescription="@null" />
+
+        <Space
+            android:layout_width="14dp"
+            android:layout_height="0dp" />
+
+        <ImageView
+            android:id="@+id/btn_play_pause"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:padding="4dp"
+            android:background="@drawable/bg_floating_lyrics_button"
+            android:src="@drawable/pause"
+            android:contentDescription="@null" />
+
+        <Space
+            android:layout_width="14dp"
+            android:layout_height="0dp" />
+
+        <ImageView
+            android:id="@+id/btn_next"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:padding="4dp"
+            android:background="@drawable/bg_floating_lyrics_button"
+            android:src="@drawable/skip_next"
+            android:contentDescription="@null" />
+    </LinearLayout>
+</LinearLayout>

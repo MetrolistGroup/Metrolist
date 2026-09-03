@@ -32,7 +32,17 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
+import com.metrolist.music.constants.FloatingLyricsBackgroundAlphaKey
+import com.metrolist.music.constants.FloatingLyricsEnabledKey
+import com.metrolist.music.constants.FloatingLyricsLockedKey
+import com.metrolist.music.constants.FloatingLyricsShowNextLineKey
+import com.metrolist.music.constants.FloatingLyricsTextSizeKey
 import com.metrolist.music.BuildConfig
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
@@ -95,6 +105,28 @@ import com.metrolist.music.ui.utils.getLoudnessLevelLabel
 fun PlayerSettings(
     navController: NavController
 ) {
+    val context = LocalContext.current
+    val (floatingLyricsEnabled, onFloatingLyricsEnabledChange) = rememberPreference(
+        FloatingLyricsEnabledKey,
+        defaultValue = false
+    )
+    val (floatingLyricsAlpha, onFloatingLyricsAlphaChange) = rememberPreference(
+        FloatingLyricsBackgroundAlphaKey,
+        defaultValue = 0.85f
+    )
+    val (floatingLyricsTextSize, onFloatingLyricsTextSizeChange) = rememberPreference(
+        FloatingLyricsTextSizeKey,
+        defaultValue = 15f
+    )
+    val (floatingLyricsShowNextLine, onFloatingLyricsShowNextLineChange) = rememberPreference(
+        FloatingLyricsShowNextLineKey,
+        defaultValue = true
+    )
+    val (floatingLyricsLocked, onFloatingLyricsLockedChange) = rememberPreference(
+        FloatingLyricsLockedKey,
+        defaultValue = false
+    )
+
     val (audioQuality, onAudioQualityChange) = rememberEnumPreference(
         AudioQualityKey,
         defaultValue = AudioQuality.AUTO
@@ -1087,6 +1119,149 @@ fun PlayerSettings(
                     onClick = { onKeepScreenOnChange(!keepScreenOn) }
                 )
             )
+        )
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.floating_lyrics),
+            items = buildList {
+                add(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.floating_lyrics),
+                        title = { Text(stringResource(R.string.floating_lyrics)) },
+                        description = { Text(stringResource(R.string.floating_lyrics_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = floatingLyricsEnabled,
+                                onCheckedChange = { newChecked ->
+                                    if (newChecked && !Settings.canDrawOverlays(context)) {
+                                        try {
+                                            val intent = Intent(
+                                                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                                Uri.parse("package:${context.packageName}")
+                                            ).apply {
+                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                            }
+                                            context.startActivity(intent)
+                                            Toast.makeText(context, R.string.floating_lyrics_permission_required, Toast.LENGTH_LONG).show()
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, R.string.floating_lyrics_permission_required, Toast.LENGTH_LONG).show()
+                                        }
+                                    } else {
+                                        onFloatingLyricsEnabledChange(newChecked)
+                                    }
+                                },
+                                thumbContent = {
+                                    Icon(
+                                        painter = painterResource(
+                                            id = if (floatingLyricsEnabled) R.drawable.check else R.drawable.close
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            )
+                        },
+                        onClick = {
+                            if (!floatingLyricsEnabled && !Settings.canDrawOverlays(context)) {
+                                try {
+                                    val intent = Intent(
+                                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                        Uri.parse("package:${context.packageName}")
+                                    ).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    context.startActivity(intent)
+                                    Toast.makeText(context, R.string.floating_lyrics_permission_required, Toast.LENGTH_LONG).show()
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, R.string.floating_lyrics_permission_required, Toast.LENGTH_LONG).show()
+                                }
+                            } else {
+                                onFloatingLyricsEnabledChange(!floatingLyricsEnabled)
+                            }
+                        }
+                    )
+                )
+                if (floatingLyricsEnabled) {
+                    add(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.contrast),
+                            title = { Text(stringResource(R.string.floating_lyrics_opacity)) },
+                            description = {
+                                Column {
+                                    Text("${(floatingLyricsAlpha * 100).roundToInt()}%")
+                                    Slider(
+                                        value = floatingLyricsAlpha,
+                                        onValueChange = onFloatingLyricsAlphaChange,
+                                        valueRange = 0.3f..1.0f,
+                                        steps = 7
+                                    )
+                                }
+                            }
+                        )
+                    )
+                    add(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.lyrics),
+                            title = { Text(stringResource(R.string.floating_lyrics_text_size)) },
+                            description = {
+                                Column {
+                                    Text("${floatingLyricsTextSize.roundToInt()} sp")
+                                    Slider(
+                                        value = floatingLyricsTextSize,
+                                        onValueChange = onFloatingLyricsTextSizeChange,
+                                        valueRange = 12f..22f,
+                                        steps = 10
+                                    )
+                                }
+                            }
+                        )
+                    )
+                    add(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.lyrics),
+                            title = { Text(stringResource(R.string.floating_lyrics_show_next_line)) },
+                            trailingContent = {
+                                Switch(
+                                    checked = floatingLyricsShowNextLine,
+                                    onCheckedChange = onFloatingLyricsShowNextLineChange,
+                                    thumbContent = {
+                                        Icon(
+                                            painter = painterResource(
+                                                id = if (floatingLyricsShowNextLine) R.drawable.check else R.drawable.close
+                                            ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize)
+                                        )
+                                    }
+                                )
+                            },
+                            onClick = { onFloatingLyricsShowNextLineChange(!floatingLyricsShowNextLine) }
+                        )
+                    )
+                    add(
+                        Material3SettingsItem(
+                            icon = painterResource(if (floatingLyricsLocked) R.drawable.lock else R.drawable.lock_open),
+                            title = { Text(stringResource(if (floatingLyricsLocked) R.string.floating_lyrics_unlock else R.string.floating_lyrics_lock)) },
+                            trailingContent = {
+                                Switch(
+                                    checked = floatingLyricsLocked,
+                                    onCheckedChange = onFloatingLyricsLockedChange,
+                                    thumbContent = {
+                                        Icon(
+                                            painter = painterResource(
+                                                id = if (floatingLyricsLocked) R.drawable.check else R.drawable.close
+                                            ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize)
+                                        )
+                                    }
+                                )
+                            },
+                            onClick = { onFloatingLyricsLockedChange(!floatingLyricsLocked) }
+                        )
+                    )
+                }
+            }
         )
         Spacer(modifier = Modifier.height(16.dp))
     }

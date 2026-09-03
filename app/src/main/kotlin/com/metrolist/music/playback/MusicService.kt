@@ -290,6 +290,9 @@ class MusicService :
     lateinit var widgetManager: MetrolistWidgetManager
 
     @Inject
+    lateinit var floatingLyricsManager: FloatingLyricsManager
+
+    @Inject
     lateinit var listenTogetherManager: com.metrolist.music.listentogether.ListenTogetherManager
 
     private lateinit var audioManager: AudioManager
@@ -764,6 +767,27 @@ class MusicService :
                         player.seekTo(player.currentPosition)
                     }
                 }
+            }
+        }
+
+        floatingLyricsManager.attach(this, player)
+
+        scope.launch {
+            currentSong.collectLatest { songData ->
+                val song = songData?.song
+                val title = song?.title
+                val artists = songData?.artists?.joinToArtistString(getArtistSeparator(this@MusicService)) { it.name }
+                val lyricsOffset = song?.lyricsOffset ?: 0
+                floatingLyricsManager.updateSong(title, artists, lyricsOffset)
+            }
+        }
+
+        scope.launch {
+            currentMediaMetadata.flatMapLatest { metadata ->
+                if (metadata == null) kotlinx.coroutines.flow.flowOf(null)
+                else database.lyrics(metadata.id)
+            }.collectLatest { lyricsEntity ->
+                floatingLyricsManager.updateLyrics(lyricsEntity?.lyrics)
             }
         }
 
@@ -2544,6 +2568,7 @@ class MusicService :
         @Player.State playbackState: Int,
     ) {
         updateInitialBufferRecovery(playbackState)
+        floatingLyricsManager.updatePlaybackState(player.isPlaying)
 
         if (playbackState == Player.STATE_ENDED) {
             // Check sleep timer guard - don't autoplay/repeat if sleep timer will pause
@@ -2604,6 +2629,7 @@ class MusicService :
         playWhenReady: Boolean,
         reason: Int,
     ) {
+        floatingLyricsManager.updatePlaybackState(playWhenReady)
         // Safety net: if local player tries to start while casting, immediately pause it
         if (playWhenReady && castConnectionHandler?.isCasting?.value == true) {
             player.pause()
@@ -4141,6 +4167,7 @@ class MusicService :
 
     override fun onDestroy() {
         isRunning = false
+        floatingLyricsManager.detach()
 
         if (!::player.isInitialized) {
             try {

@@ -984,4 +984,16 @@
     <string name="stream_source_android_vr_desc">Android VR clients (all versions).</string>
     <string name="stream_source_web_creator">WEB_CREATOR</string>
     <string name="stream_source_web_creator_desc">Creator web client.</string>
+
+    <!-- Floating Lyrics -->
+    <string name="floating_lyrics">Floating Lyrics</string>
+    <string name="floating_lyrics_desc">Display synchronized lyrics over other applications</string>
+    <string name="floating_lyrics_permission_required">Overlay permission is required to display floating lyrics</string>
+    <string name="floating_lyrics_permission_desc">Grant &quot;Display over other apps&quot; permission to use floating lyrics</string>
+    <string name="floating_lyrics_opacity">Background opacity</string>
+    <string name="floating_lyrics_text_size">Lyrics text size</string>
+    <string name="floating_lyrics_show_next_line">Show next lyric line</string>
+    <string name="floating_lyrics_lock">Lock position</string>
+    <string name="floating_lyrics_unlock">Unlock position</string>
+    <string name="no_synced_lyrics">No synchronized lyrics</string>
 </resources>
