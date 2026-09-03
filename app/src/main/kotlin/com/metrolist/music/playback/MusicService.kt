@@ -2734,6 +2734,7 @@ class MusicService :
 
         if (events.containsAny(Player.EVENT_IS_PLAYING_CHANGED)) {
             updateWidgetUI(player.isPlaying)
+            floatingLyricsManager.updatePlaybackState(player.isPlaying)
             if (player.isPlaying) {
                 discordIntentionalDisconnect = false
                 screenOffHandler.removeCallbacks(screenOffTimeout)
