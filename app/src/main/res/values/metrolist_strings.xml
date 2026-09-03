@@ -984,4 +984,5 @@
     <string name="stream_source_android_vr_desc">Android VR clients (all versions).</string>
     <string name="stream_source_web_creator">WEB_CREATOR</string>
     <string name="stream_source_web_creator_desc">Creator web client.</string>
+    <string name="playlist_pending_youtube">%1$s was created on this device only. It will be added to YouTube on the next sync.</string>
 </resources>

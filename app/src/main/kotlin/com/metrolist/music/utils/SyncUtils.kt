@@ -7,6 +7,7 @@
 package com.metrolist.music.utils
 
 import android.content.Context
+import android.widget.Toast
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.ArtistItem
@@ -14,8 +15,8 @@ import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.PodcastItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.utils.completed
-import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.lastfm.LastFM
+import com.metrolist.music.R
 import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.constants.LastFMUseSendLikes
 import com.metrolist.music.constants.LastFullSyncKey
@@ -98,6 +99,9 @@ class SyncUtils @Inject constructor(
     private val playlistsBeingModified = ConcurrentHashMap<String, AtomicInteger>()
     private val playlistEditMutex = Mutex()
     private var lastPlaylistEditAtMs = 0L
+    // Guards against creating the same playlist on YouTube twice: the dialog asks for its own
+    // upload while a sync may be walking the pending ones at the same moment.
+    private val playlistsBeingCreated = ConcurrentHashMap.newKeySet<String>()
 
     companion object {
         private const val MAX_RETRIES = 3
@@ -125,7 +129,7 @@ class SyncUtils @Inject constructor(
             .flatMap(database::songIdsWithoutArtists)
             .toSet()
 
-    private suspend fun runQueuedPlaylistEdit(block: suspend () -> Unit) {
+    private suspend fun <T> runQueuedPlaylistEdit(block: suspend () -> T): T =
         playlistEditMutex.withLock {
             val remainingDelay = PLAYLIST_EDIT_THROTTLE_MS -
                 (System.currentTimeMillis() - lastPlaylistEditAtMs)
@@ -136,7 +140,6 @@ class SyncUtils @Inject constructor(
                 lastPlaylistEditAtMs = System.currentTimeMillis()
             }
         }
-    }
 
     init {
         context.dataStore.data
@@ -256,7 +259,7 @@ class SyncUtils @Inject constructor(
             val cookie = context.dataStore.data
                 .map { it[InnerTubeCookieKey] }
                 .first()
-            cookie?.let { "SAPISID" in parseCookieString(it) } ?: false
+            isSignedInToYouTube(cookie)
         } catch (e: Exception) {
             Timber.e(e, "Error checking login status")
             false
@@ -1290,6 +1293,10 @@ class SyncUtils @Inject constructor(
         }
 
 
+        // Before reading the remote library, so a playlist created here is already listed below
+        // and gets matched to its local row instead of looking like a stranger.
+        createPendingPlaylists()
+
         withRetry {
             YouTube.library("FEmusic_liked_playlists").completed()
         }.onSuccess { result ->
@@ -1535,6 +1542,116 @@ class SyncUtils @Inject constructor(
             Timber.d("[PODCAST_CLEAR] Podcast data cleared successfully")
         } catch (e: Exception) {
             Timber.e(e, "[PODCAST_CLEAR] Error during cleanup")
+        }
+    }
+
+    /**
+     * Creates a playlist locally and, when the user asked for it to be synced, on YouTube as well.
+     *
+     * Both steps run on [syncScope] rather than on the caller's composition scope, because the
+     * dialog that starts this is dismissed before the work begins and anything tied to it would be
+     * cancelled halfway. The local row is written first and never depends on the network, so a
+     * failed upload costs the playlist nothing: it stays pending and a later sync creates it.
+     *
+     * [onCreated] is delivered on the main thread once the row exists, since its callers navigate.
+     */
+    fun createPlaylist(playlist: PlaylistEntity, onCreated: ((String) -> Unit)? = null) {
+        syncScope.launch {
+            database.insert(playlist)
+            withContext(Dispatchers.Main) { onCreated?.invoke(playlist.id) }
+            // The account's playlists as they stand before this one is asked for, so a lost
+            // answer can be told from a request that never arrived. There is nothing else to
+            // match on: a creation carries a title and no key, and a title is not an identity.
+            createPendingPlaylist(
+                playlist,
+                idsBefore = remotePlaylistListing()?.map { (id, _) -> id }?.toSet(),
+                notifyIfStillPending = true,
+            )
+        }
+    }
+
+    /**
+     * Creates on YouTube every playlist the user asked to sync that never reached it. This one
+     * stays quiet: the user is not waiting on it, and the entry point runs on every playlist sync.
+     */
+    private suspend fun createPendingPlaylists() {
+        val pending = database.playlistEntitiesByNameAsc().pendingRemoteCreations()
+        if (pending.isEmpty()) return
+
+        // Read once for the whole batch rather than once per playlist: it is the same snapshot
+        // for all of them, and none of them has been asked for yet.
+        val idsBefore = remotePlaylistListing()?.map { (id, _) -> id }?.toSet()
+        pending.forEach { playlist ->
+            createPendingPlaylist(playlist, idsBefore, notifyIfStillPending = false)
+            delay(DB_OPERATION_DELAY_MS)
+        }
+    }
+
+    /**
+     * [idsBefore] is the account's playlists as they were before this attempt, which is what tells
+     * a playlist this request created from the ones that were already there. Null when the list
+     * could not be read, and then a lost answer cannot be reconciled and the playlist stays
+     * pending rather than being asked for twice.
+     */
+    private suspend fun createPendingPlaylist(
+        playlist: PlaylistEntity,
+        idsBefore: Set<String>?,
+        notifyIfStillPending: Boolean,
+    ) {
+        if (!playlist.isPendingRemoteCreation() || !isLoggedIn()) return
+
+        if (!context.isInternetConnected()) {
+            Timber.d("createPlaylist: offline, ${playlist.name} stays pending")
+            if (notifyIfStillPending) notifyPlaylistStillPending(playlist.name)
+            return
+        }
+
+        // add() is the test and the claim in one step, so the dialog's own upload and a sync
+        // walking the pending playlists cannot both create this one.
+        if (!playlistsBeingCreated.add(playlist.id)) return
+        try {
+            // One attempt, never replayed. A creation that reached YouTube and lost its answer
+            // fails exactly like one that never arrived, and asking again would leave the user
+            // with two playlists.
+            runCatching {
+                runQueuedPlaylistEdit {
+                    YouTube.createPlaylist(playlist.name).getOrThrow()
+                }
+            }.onSuccess { browseId ->
+                database.update(playlist.copy(browseId = browseId))
+                Timber.d("createPlaylist: created ${playlist.name} on YouTube as $browseId")
+            }.onFailure { e ->
+                Timber.w(e, "createPlaylist: ${playlist.name} failed, looking for what it left behind")
+                val created = idsBefore?.let { before ->
+                    remotePlaylistListing()?.let { after ->
+                        playlistCreatedByLostRequest(playlist.name, before, after)
+                    }
+                }
+                if (created != null) {
+                    database.update(playlist.copy(browseId = created))
+                    Timber.d("createPlaylist: ${playlist.name} had reached YouTube as $created")
+                } else {
+                    Timber.e(e, "createPlaylist: ${playlist.name} stays pending")
+                    if (notifyIfStillPending) notifyPlaylistStillPending(playlist.name)
+                }
+            }
+        } finally {
+            playlistsBeingCreated.remove(playlist.id)
+        }
+    }
+
+    /** The account's playlists as browse id and title, or null when the list could not be read. */
+    private suspend fun remotePlaylistListing(): List<Pair<String, String>>? =
+        withRetry {
+            YouTube.library("FEmusic_liked_playlists").completed()
+        }.getOrNull()?.getOrNull()?.items
+            ?.filterIsInstance<PlaylistItem>()
+            ?.map { it.id to it.title }
+
+    private suspend fun notifyPlaylistStillPending(playlistName: String) {
+        val message = context.getString(R.string.playlist_pending_youtube, playlistName)
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
         }
     }
 
