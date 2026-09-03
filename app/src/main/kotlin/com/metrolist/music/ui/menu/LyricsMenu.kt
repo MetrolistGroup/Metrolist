@@ -617,6 +617,8 @@ fun LyricsMenu(
                                 )
                             }
                         )
+                    )
+
                     add(
                         Material3MenuItemData(
                             title = { Text(stringResource(R.string.floating_lyrics)) },

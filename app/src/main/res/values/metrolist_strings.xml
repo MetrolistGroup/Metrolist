@@ -995,5 +995,10 @@
     <string name="floating_lyrics_show_next_line">Show next lyric line</string>
     <string name="floating_lyrics_lock">Lock position</string>
     <string name="floating_lyrics_unlock">Unlock position</string>
+    <string name="floating_lyrics_drag">Drag floating lyrics</string>
+    <string name="floating_lyrics_open_app">Open Metrolist</string>
+    <string name="floating_lyrics_play_pause">Play or pause</string>
+    <string name="floating_lyrics_previous">Previous track</string>
+    <string name="floating_lyrics_next">Next track</string>
     <string name="no_synced_lyrics">No synchronized lyrics</string>
 </resources>

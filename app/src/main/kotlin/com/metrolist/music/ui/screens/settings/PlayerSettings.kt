@@ -1193,7 +1193,7 @@ fun PlayerSettings(
                                         value = floatingLyricsAlpha,
                                         onValueChange = onFloatingLyricsAlphaChange,
                                         valueRange = 0.3f..1.0f,
-                                        steps = 7
+                                        steps = 6
                                     )
                                 }
                             }
@@ -1210,7 +1210,7 @@ fun PlayerSettings(
                                         value = floatingLyricsTextSize,
                                         onValueChange = onFloatingLyricsTextSizeChange,
                                         valueRange = 12f..22f,
-                                        steps = 10
+                                        steps = 9
                                     )
                                 }
                             }

@@ -78,6 +78,7 @@ class FloatingLyricsManager @Inject constructor(
     private var positionTickerJob: Job? = null
     private var autoCollapseJob: Job? = null
     private var preferenceCollectorJob: Job? = null
+    private var showJob: Job? = null
 
     private var isControlsExpanded = false
     private var isLocked = false
@@ -211,13 +212,14 @@ class FloatingLyricsManager @Inject constructor(
      */
     @SuppressLint("InflateParams")
     fun show() {
-        if (isShowing || overlayContainer != null) return
+        if (isShowing || overlayContainer != null || showJob?.isActive == true) return
         if (!hasPermission(context)) {
             Timber.w("Cannot show floating lyrics: overlay permission not granted")
             return
         }
 
-        scope.launch {
+        showJob?.cancel()
+        showJob = scope.launch {
             val savedX = context.dataStore.data.map { it[FloatingLyricsPositionXKey] }.first()
             val savedY = context.dataStore.data.map { it[FloatingLyricsPositionYKey] }.first()
             val savedLocked = context.dataStore.data.map { it[FloatingLyricsLockedKey] ?: false }.first()
@@ -364,6 +366,8 @@ class FloatingLyricsManager @Inject constructor(
      * Hides the floating overlay window from the screen.
      */
     fun hide() {
+        showJob?.cancel()
+        showJob = null
         if (!isShowing && overlayContainer == null) return
         positionTickerJob?.cancel()
         positionTickerJob = null
@@ -470,11 +474,22 @@ class FloatingLyricsManager @Inject constructor(
      */
     fun updatePlaybackState(isPlaying: Boolean) {
         btnPlayPause?.setImageResource(if (isPlaying) R.drawable.pause else R.drawable.play)
-        if (isPlaying) {
+        if (isPlaying && isShowing) {
             startPositionTicker()
         } else {
             positionTickerJob?.cancel()
             positionTickerJob = null
+        }
+    }
+
+    /**
+     * Updates the player instance (e.g. when ExoPlayer is recreated during crossfade or audio param change).
+     */
+    fun updatePlayer(newPlayer: Player) {
+        this.player = newPlayer
+        if (isShowing) {
+            updatePlaybackState(newPlayer.isPlaying)
+            updatePosition(newPlayer.currentPosition)
         }
     }
 

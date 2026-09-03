@@ -26,7 +26,7 @@
             android:layout_width="18dp"
             android:layout_height="18dp"
             android:src="@drawable/drag_handle"
-            android:contentDescription="@null" />
+            android:contentDescription="@string/floating_lyrics_drag" />
 
         <TextView
             android:id="@+id/text_song_info"
@@ -48,7 +48,7 @@
             android:padding="3dp"
             android:background="@drawable/bg_floating_lyrics_button"
             android:src="@drawable/lock_open"
-            android:contentDescription="@null" />
+            android:contentDescription="@string/floating_lyrics_lock" />
 
         <ImageView
             android:id="@+id/btn_close"
@@ -58,7 +58,7 @@
             android:padding="3dp"
             android:background="@drawable/bg_floating_lyrics_button"
             android:src="@drawable/close"
-            android:contentDescription="@null" />
+            android:contentDescription="@string/close" />
     </LinearLayout>
 
     <!-- Lyrics text container -->
@@ -113,7 +113,7 @@
             android:padding="5dp"
             android:background="@drawable/bg_floating_lyrics_button"
             android:src="@drawable/fullscreen"
-            android:contentDescription="@null" />
+            android:contentDescription="@string/floating_lyrics_open_app" />
 
         <Space
             android:layout_width="20dp"
@@ -126,7 +126,7 @@
             android:padding="4dp"
             android:background="@drawable/bg_floating_lyrics_button"
             android:src="@drawable/skip_previous"
-            android:contentDescription="@null" />
+            android:contentDescription="@string/floating_lyrics_previous" />
 
         <Space
             android:layout_width="14dp"
@@ -139,7 +139,7 @@
             android:padding="4dp"
             android:background="@drawable/bg_floating_lyrics_button"
             android:src="@drawable/pause"
-            android:contentDescription="@null" />
+            android:contentDescription="@string/floating_lyrics_play_pause" />
 
         <Space
             android:layout_width="14dp"
@@ -152,6 +152,6 @@
             android:padding="4dp"
             android:background="@drawable/bg_floating_lyrics_button"
             android:src="@drawable/skip_next"
-            android:contentDescription="@null" />
+            android:contentDescription="@string/floating_lyrics_next" />
     </LinearLayout>
 </LinearLayout>

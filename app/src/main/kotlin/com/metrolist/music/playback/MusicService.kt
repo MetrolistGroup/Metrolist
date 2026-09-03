@@ -792,6 +792,14 @@ class MusicService :
         }
 
         scope.launch {
+            _playerFlow.collect { newPlayer ->
+                if (newPlayer != null) {
+                    floatingLyricsManager.updatePlayer(newPlayer)
+                }
+            }
+        }
+
+        scope.launch {
             connectivityObserver.networkStatus.collect { isConnected ->
                 isNetworkConnected.value = isConnected
                 if (isConnected && waitingForNetworkConnection.value) {
