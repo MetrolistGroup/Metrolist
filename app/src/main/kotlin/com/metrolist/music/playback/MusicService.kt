@@ -772,23 +772,19 @@ class MusicService :
 
         floatingLyricsManager.attach(this)
 
-        scope.launch {
-            currentSong.collectLatest { songData ->
-                val song = songData?.song
-                val title = song?.title
-                val artists = songData?.artists?.joinToArtistString(getArtistSeparator(this@MusicService)) { it.name }
-                val lyricsOffset = song?.lyricsOffset ?: 0
-                floatingLyricsManager.updateSong(title, artists, lyricsOffset)
-            }
+        currentSong.collectLatest(scope) { songData ->
+            val song = songData?.song
+            val title = song?.title
+            val artists = songData?.artists?.joinToArtistString(getArtistSeparator(this@MusicService)) { it.name }
+            val lyricsOffset = song?.lyricsOffset ?: 0
+            floatingLyricsManager.updateSong(title, artists, lyricsOffset)
         }
 
-        scope.launch {
-            currentMediaMetadata.flatMapLatest { metadata ->
-                if (metadata == null) kotlinx.coroutines.flow.flowOf(null)
-                else database.lyrics(metadata.id)
-            }.collectLatest { lyricsEntity ->
-                floatingLyricsManager.updateLyrics(lyricsEntity?.lyrics)
-            }
+        currentMediaMetadata.flatMapLatest { metadata ->
+            if (metadata == null) kotlinx.coroutines.flow.flowOf(null)
+            else database.lyrics(metadata.id)
+        }.collectLatest(scope) { lyricsEntity ->
+            floatingLyricsManager.updateLyrics(lyricsEntity?.lyrics)
         }
 
         scope.launch {
