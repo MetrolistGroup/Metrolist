@@ -875,4 +875,5 @@
     <string name="error_no_internet_connection">Nejste připojeni k internetu</string>
     <string name="error_offline_playback">Jste offline. Připojte se k internetu nebo si přehrajte staženou skladbu.</string>
     <string name="error_explicit_login_recommended">Explicitní přehrávání funguje lépe s přihlášeným účtem.</string>
+    <string name="ai_provider_inception_help">Navštivte https://platform.inceptionlabs.ai pro klíče API</string>
 </resources>
