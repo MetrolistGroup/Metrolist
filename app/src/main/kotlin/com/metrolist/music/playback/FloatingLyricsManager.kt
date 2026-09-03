@@ -94,10 +94,10 @@ class FloatingLyricsManager @Inject constructor(
     private var isSyncedLyrics: Boolean = false
     private var currentActiveIndex: Int = -1
 
-    var player: Player? = null
-        private set
     var musicService: MusicService? = null
         private set
+    val player: Player?
+        get() = musicService?.player
     var isShowing: Boolean = false
         private set
 
@@ -118,11 +118,10 @@ class FloatingLyricsManager @Inject constructor(
     }
 
     /**
-     * Attaches MusicService and Player to this manager, and observes preferences.
+     * Attaches MusicService to this manager, and observes preferences.
      */
-    fun attach(service: MusicService, player: Player) {
+    fun attach(service: MusicService) {
         this.musicService = service
-        this.player = player
 
         preferenceCollectorJob?.cancel()
         preferenceCollectorJob = scope.launch {
@@ -203,7 +202,6 @@ class FloatingLyricsManager @Inject constructor(
         preferenceCollectorJob?.cancel()
         preferenceCollectorJob = null
         hide()
-        this.player = null
         this.musicService = null
     }
 
@@ -479,17 +477,6 @@ class FloatingLyricsManager @Inject constructor(
         } else {
             positionTickerJob?.cancel()
             positionTickerJob = null
-        }
-    }
-
-    /**
-     * Updates the player instance (e.g. when ExoPlayer is recreated during crossfade or audio param change).
-     */
-    fun updatePlayer(newPlayer: Player) {
-        this.player = newPlayer
-        if (isShowing) {
-            updatePlaybackState(newPlayer.isPlaying)
-            updatePosition(newPlayer.currentPosition)
         }
     }
 

@@ -770,7 +770,7 @@ class MusicService :
             }
         }
 
-        floatingLyricsManager.attach(this, player)
+        floatingLyricsManager.attach(this)
 
         scope.launch {
             currentSong.collectLatest { songData ->
@@ -788,14 +788,6 @@ class MusicService :
                 else database.lyrics(metadata.id)
             }.collectLatest { lyricsEntity ->
                 floatingLyricsManager.updateLyrics(lyricsEntity?.lyrics)
-            }
-        }
-
-        scope.launch {
-            _playerFlow.collect { newPlayer ->
-                if (newPlayer != null) {
-                    floatingLyricsManager.updatePlayer(newPlayer)
-                }
             }
         }
 
