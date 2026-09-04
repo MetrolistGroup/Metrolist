@@ -49,6 +49,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -1033,7 +1034,7 @@ fun BottomSheetPlayer(
                     }
 
                     Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (mediaMetadata.explicit) MIcon.Explicit()
@@ -1052,24 +1053,25 @@ fun BottomSheetPlayer(
                                     }
                                 }
 
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
-                                        .padding(end = 12.dp),
-                            ) {
+                             Box(
+                                 modifier =
+                                     Modifier
+                                         .weight(1f)
+                                         .offset(y = (-4).dp)
+                                         .padding(end = 12.dp),
+                             ) {
                                 var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
                                 var clickOffset by remember { mutableStateOf<Offset?>(null) }
                                 Text(
                                     text = annotatedString,
                                     style = MaterialTheme.typography.titleMedium.copy(color = TextBackgroundColor),
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    onTextLayout = { layoutResult = it },
-                                    modifier =
-                                        Modifier
-                                            .pointerInput(Unit) {
+                                    overflow = TextOverflow.Clip,
+                                     onTextLayout = { layoutResult = it },
+                                     modifier =
+                                         Modifier
+                                             .basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
+                                             .pointerInput(Unit) {
                                                 awaitPointerEventScope {
                                                     while (true) {
                                                         val event = awaitPointerEvent()
