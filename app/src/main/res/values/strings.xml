@@ -343,4 +343,10 @@
     <string name="new_version_available">New version available</string>
     <string name="translation_models">Translation Models</string>
     <string name="clear_translation_models">Clear translation models</string>
+    <string name="top_result">Top result</string>
+    <string name="other">Other</string>
+    <string name="videos">Videos</string>
+    <string name="episodes">Episodes</string>
+    <string name="podcasts">Podcasts</string>
+    <string name="profiles">Profiles</string>
 </resources>
