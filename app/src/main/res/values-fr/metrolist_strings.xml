@@ -869,4 +869,6 @@
     <string name="error_explicit_login_recommended">La lecture explicite fonctionne mieux lorsque vous êtes connecté à un compte.</string>
     <string name="error_no_internet_connection">Pas de connexion Internet</string>
     <string name="error_offline_playback">Vous n\'êtes pas connecté à Internet. Connectez-vous à Internet ou écoutez un morceau téléchargé pour une écoute hors ligne.</string>
+    <string name="playlist_created_locally">Échec de la synchronisation avec YouTube. Playlist créée localement.</string>
+    <string name="ai_provider_inception_help">Rendez-vous sur https://platform.inceptionlabs.ai pour obtenir des clés API</string>
 </resources>
