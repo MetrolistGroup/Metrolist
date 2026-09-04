@@ -871,4 +871,6 @@
     <string name="error_offline_playback">Ești offline. Conectează-te la internet sau redă o piesă descărcată pentru redare offline.</string>
     <string name="error_explicit_login_recommended">Redarea explicită funcționează cel mai bine cu un cont autentificat.</string>
     <string name="ai_provider_inception_help">Vizitează https://platform.inceptionlabs.ai pentru chei API</string>
+    <string name="enable_zemer">Activează Zemer</string>
+    <string name="enable_zemer_desc">Versuri pentru muzica evreiască</string>
 </resources>
