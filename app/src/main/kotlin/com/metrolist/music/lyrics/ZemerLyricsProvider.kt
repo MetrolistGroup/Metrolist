@@ -87,7 +87,7 @@ object ZemerLyricsProvider : LyricsProvider {
         album: String?,
     ): Result<String> = runCatching {
         val resolved = resolve(id) ?: throw IllegalStateException("Zemer has no lyrics for $id")
-        for (source in resolved.sources.sortedBy { rank(it) }) {
+        for (source in resolved.sources.sortedWith(compareBy({ it.synced != true }, { rank(it) }))) {
             val body = runCatching { fetchBody(source) }
                 .onFailure { Timber.tag("Zemer").d(it, "source ${source.type} failed") }
                 .getOrNull()

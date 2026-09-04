@@ -28,7 +28,8 @@ object LyricsProviderRegistry {
         if (orderString.isBlank()) {
             return getDefaultProviderOrder()
         }
-        return orderString.split(",").map { it.trim() }.filter { it in providerNames }
+        val saved = orderString.split(",").map { it.trim() }.filter { it in providerNames }
+        return saved + getDefaultProviderOrder().filter { it !in saved }
     }
 
     fun serializeProviderOrder(providers: List<String>): String {
