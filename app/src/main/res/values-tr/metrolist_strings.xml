@@ -863,4 +863,6 @@
     <string name="error_no_internet_connection">İnternet bağlantısı yok</string>
     <string name="error_offline_playback">Çevrimdışı durumdasınız. İnternete bağlanın veya çevrimdışı kullanım için indirdiğiniz bir parçayı oynatın.</string>
     <string name="error_explicit_login_recommended">Açık içerikli oynatma, oturum açılmış bir hesapla daha iyi çalışır.</string>
+    <string name="playlist_created_locally">YouTube eşitlemesi başarısız. Oynatma listeleri yerelde oluşturuldu.</string>
+    <string name="ai_provider_inception_help">API anahtarları için https://platform.inceptionlabs.ai sitesini ziyaret edin</string>
 </resources>
