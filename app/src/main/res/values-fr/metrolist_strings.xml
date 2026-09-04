@@ -871,4 +871,6 @@
     <string name="error_offline_playback">Vous n\'êtes pas connecté à Internet. Connectez-vous à Internet ou écoutez un morceau téléchargé pour une écoute hors ligne.</string>
     <string name="playlist_created_locally">Échec de la synchronisation avec YouTube. Playlist créée localement.</string>
     <string name="ai_provider_inception_help">Rendez-vous sur https://platform.inceptionlabs.ai pour obtenir des clés API</string>
+    <string name="enable_zemer">Activer Zemer</string>
+    <string name="enable_zemer_desc">Paroles de musique juive</string>
 </resources>
