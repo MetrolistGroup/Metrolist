@@ -869,4 +869,8 @@
     <string name="error_explicit_login_recommended">La reproducción explícita funciona mejor si has iniciado sesión.</string>
     <string name="error_no_internet_connection">Sin conexión a Internet</string>
     <string name="error_offline_playback">Estás sin conexión. Conéctate a internet, o reproduce una pista descargada para uso sin conexión.</string>
+    <string name="enable_zemer">Activar Zemer</string>
+    <string name="enable_zemer_desc">Letras para música judía</string>
+    <string name="playlist_created_locally">Sincronización de YouTube se fallido. Se ha creado la lista de reproducción local.</string>
+    <string name="ai_provider_inception_help">Visit https://platform.inceptionlabs.ai para claves API</string>
 </resources>
