@@ -1260,6 +1260,9 @@ interface DatabaseDao {
     @Query("UPDATE song SET isDownloaded = :downloaded, dateDownload = :date WHERE id = :songId")
     fun updateDownloadedInfo(songId: String, downloaded: Boolean, date: LocalDateTime?)
 
+    @Query("UPDATE song SET isDownloaded = 0, dateDownload = NULL WHERE isDownloaded = 1 OR dateDownload IS NOT NULL")
+    fun clearAllDownloadedInfo()
+
     @Query("UPDATE song SET playbackPosition = :position WHERE id = :songId")
     fun updatePlaybackPosition(songId: String, position: Long?)
 
