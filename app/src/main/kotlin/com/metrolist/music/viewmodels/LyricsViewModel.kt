@@ -53,11 +53,10 @@ class LyricsViewModel @Inject constructor() : ViewModel() {
                         listOf(LyricsEntry.HEAD_LYRICS_ENTRY) + parsedLines
                     } else {
                         // Fallback for unsynced or invalid LRC
-                        val baseTime = 1000000L
                         lyrics.lines()
                             .filter { it.isNotBlank() && !timestampRegex.containsMatchIn(it) }
-                            .mapIndexed { index, line ->
-                                LyricsEntry(baseTime + index, line)
+                            .map { line ->
+                                LyricsEntry(0L, line)
                             }
                     }
                 }
