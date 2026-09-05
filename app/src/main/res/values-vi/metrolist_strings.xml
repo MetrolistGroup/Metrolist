@@ -859,4 +859,6 @@
     <string name="error_explicit_login_recommended">Phát nội dung nhạy cảm hoạt động tốt hơn khi đăng nhập tài khoản.</string>
     <string name="playlist_created_locally">Đồng bộ hóa với YouTube thất bại. Đã tạo danh sách phát cục bộ.</string>
     <string name="ai_provider_inception_help">Truy cập https://platform.inceptionlabs.ai để lấy khóa API</string>
+    <string name="enable_zemer">Bật nhà cung cấp lời bài hát Zemer</string>
+    <string name="enable_zemer_desc">Lời bài hát cho âm nhạc Do Thái</string>
 </resources>
