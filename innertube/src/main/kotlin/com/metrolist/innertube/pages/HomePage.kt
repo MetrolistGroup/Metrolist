@@ -218,19 +218,15 @@ data class HomePage(
                         )
                     }
                     renderer.isAlbum -> {
+                        val subtitleRuns = renderer.subtitle?.runs
                         AlbumItem(
                             browseId = renderer.navigationEndpoint.browseEndpoint?.browseId ?: return null,
                             playlistId = renderer.thumbnailOverlay?.musicItemThumbnailOverlayRenderer?.content
                                 ?.musicPlayButtonRenderer?.playNavigationEndpoint
                                 ?.watchPlaylistEndpoint?.playlistId ?: return null,
                             title = renderer.title.runs?.firstOrNull()?.text ?: return null,
-                            artists = renderer.subtitle?.runs?.oddElements()?.drop(1)?.map {
-                                Artist(
-                                    name = it.text,
-                                    id = it.navigationEndpoint?.browseEndpoint?.browseId
-                                )
-                            },
-                            year = null,
+                            artists = subtitleRuns?.let { PageHelper.extractArtists(it) },
+                            year = subtitleRuns?.lastOrNull()?.text?.toIntOrNull(),
                             thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                             explicit = renderer.subtitleBadges?.find {
                                 it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
