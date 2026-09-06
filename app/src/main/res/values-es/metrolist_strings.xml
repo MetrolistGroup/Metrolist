@@ -150,7 +150,7 @@
     <string name="updater">Actualizador</string>
     <string name="check_for_updates">Buscar actualizaciones automáticamente</string>
     <string name="update_notifications">Habilitar notificaciones de actualización</string>
-    <string name="update_available_title">Actualización disponible</string>
+    <string name="update_available_title">Nueva actualización disponible</string>
     <string name="update_channel_name">Actualizaciones de la app</string>
     <string name="update_channel_desc">Notificaciones sobre nuevas versiones de la aplicación</string>
     <string name="integrations">Integraciones</string>
@@ -848,8 +848,8 @@
     <string name="enable_dynamic_icon">Colores dinámicos del icono</string>
     <string name="enable_dynamic_icon_desc">Usa los colores dinámicos del tema para el icono de la app. Cuando está desactivado, el icono utiliza colores sólidos.</string>
     <string name="kmp_upgrade_title">Metrolist KMP %s está disponible</string>
-    <string name="kmp_upgrade_warning">Metrolist KMP está en etapa temprana. Puede que funciones estén dañadas, incompletas, o cambiadas sin previo aviso.</string>
-    <string name="kmp_upgrade_action">Mejora a KMP</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP aún está en desarrollo. Es posible que encuentres fallos o funciones incompletas.</string>
+    <string name="kmp_upgrade_action">Prueba KMP</string>
     <string name="android_auto_search_options">Opciones de búsqueda</string>
     <string name="android_auto_search_local_songs_limit">Límite de búsqueda de canciones</string>
     <string name="android_auto_search_local_songs_limit_desc">Limita el número de canciones locales mostradas en los resultados de búsqueda. Se recomienda limitarlo para prevenir cierres de la aplicación inesperados</string>
@@ -873,4 +873,6 @@
     <string name="enable_zemer_desc">Letras para música judía</string>
     <string name="playlist_created_locally">Sincronización de YouTube se fallido. Se ha creado la lista de reproducción local.</string>
     <string name="ai_provider_inception_help">Visit https://platform.inceptionlabs.ai para claves API</string>
+    <string name="update_available_message">Metrolist %s está listo para descargar.</string>
+    <string name="update_action">Actualizar</string>
 </resources>
