@@ -148,7 +148,7 @@
     <string name="updater">Updater</string>
     <string name="check_for_updates">Automatisch nach Updates prüfen</string>
     <string name="update_notifications">Benachrichtigungen zu Updates erhalten</string>
-    <string name="update_available_title">Update verfügbar</string>
+    <string name="update_available_title">Neues Update verfügbar</string>
     <string name="update_channel_name">App-Updates</string>
     <string name="update_channel_desc">Benachrichtigungen über neue App Versionen</string>
     <string name="integrations">Integrationen</string>
@@ -863,4 +863,9 @@
     <string name="error_explicit_login_recommended">Die Wiedergabe expliziter Songs funktioniert besser, wenn Sie bei einem Konto angemeldet sind.</string>
     <string name="error_no_internet_connection">Keine Internet Verbindung</string>
     <string name="error_offline_playback">Du bist offline. Verbinde dich mit dem Internet oder spiele ein heruntergelades Lied ab.</string>
+    <string name="enable_zemer_desc">Songtexte für jüdische Musik</string>
+    <string name="playlist_created_locally">YouTube-Synchronisierung fehlgeschlagen. Playlist lokal erstellt.</string>
+    <string name="update_available_message">Metrolist %s steht zum Download bereit.</string>
+    <string name="update_action">Update</string>
+    <string name="ai_provider_inception_help">Für API-Schlüssel, besuche: https://platform.inceptionlabs.ai</string>
 </resources>
