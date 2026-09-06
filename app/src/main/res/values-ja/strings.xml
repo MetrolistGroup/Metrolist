@@ -30,8 +30,8 @@
     <string name="search_yt_music">YouTube Musicを検索…</string>
     <string name="search_library">ライブラリを検索…</string>
     <string name="filter_library">ライブラリ</string>
-    <string name="filter_liked">高評価済み</string>
-    <string name="filter_downloaded">ダウンロード済み</string>
+    <string name="filter_liked">高評価した曲</string>
+    <string name="filter_downloaded">ダウンロードした曲</string>
     <string name="filter_all">すべて</string>
     <string name="filter_songs">曲</string>
     <string name="filter_videos">動画</string>
@@ -40,7 +40,7 @@
     <string name="filter_playlists">プレイリスト</string>
     <string name="filter_community_playlists">コミュニティのプレイリスト</string>
     <string name="filter_featured_playlists">おすすめのプレイリスト</string>
-    <string name="filter_bookmarked">ブックマーク済み</string>
+    <string name="filter_bookmarked">ブックマークした曲</string>
     <string name="no_results_found">見つかりませんでした</string>
     <string name="library_song_empty">曲のライブラリはここに表示されます</string>
     <string name="library_artist_empty">アーティストのライブラリはここに表示されます</string>
@@ -51,8 +51,8 @@
     <string name="liked_songs">高評価した曲</string>
     <string name="downloaded_songs">ダウンロードした曲</string>
     <string name="playlist_is_empty">プレイリストが空です</string>
-    <string name="remove_download_playlist_confirm">”%s”のプレイリスト上のすべての曲をダウンロード済みから削除しますか？</string>
-    <string name="delete_playlist_confirm">”%s”のプレイリストを削除しますか？</string>
+    <string name="remove_download_playlist_confirm">「%s」のプレイリスト上のすべての曲をダウンロードした曲から削除しますか？</string>
+    <string name="delete_playlist_confirm">「%s」のプレイリストを削除しますか？</string>
     <string name="retry">再試行</string>
     <string name="radio">ラジオ</string>
     <string name="shuffle">シャッフル再生</string>
@@ -82,7 +82,7 @@
     <string name="remove_from_queue">キューから削除</string>
     <string name="search_online">オンラインで検索</string>
     <string name="action_sync">同期</string>
-    <string name="advanced">高度</string>
+    <string name="advanced">再生速度と音程</string>
     <string name="tempo_and_pitch">再生速度と音程</string>
     <string name="sort_by_create_date">追加日時</string>
     <string name="sort_by_name">曲名</string>
@@ -145,7 +145,7 @@
         <item quantity="other">%d年</item>
     </plurals>
     <string name="playlist_imported">プレイリストをインポートしました</string>
-    <string name="removed_song_from_playlist">プレイリストから”%s”を削除しました</string>
+    <string name="removed_song_from_playlist">プレイリストから「%s」を削除しました</string>
     <string name="playlist_synced">プレイリストを同期しました</string>
     <string name="undo">元に戻す</string>
     <string name="lyrics_not_found">歌詞が見つかりません</string>
@@ -208,11 +208,11 @@
     <string name="player_and_audio">プレーヤーとオーディオ</string>
     <string name="audio_quality">音質</string>
     <string name="audio_quality_auto">自動</string>
-    <string name="audio_quality_high">高</string>
-    <string name="audio_quality_low">低</string>
+    <string name="audio_quality_high">高音質</string>
+    <string name="audio_quality_low">低音質</string>
     <string name="queue">再生キュー</string>
     <string name="persistent_queue">再生キューを保持</string>
-    <string name="persistent_queue_desc">アプリ起動時に前回のキューを復元</string>
+    <string name="persistent_queue_desc">アプリを起動時に前回のキューを復元します</string>
     <string name="auto_load_more">曲を自動で追加</string>
     <string name="auto_load_more_desc">キューの最後まで再生したあと、可能なら自動で曲を追加します</string>
     <string name="skip_silence">無音の部分を早送り</string>
@@ -242,7 +242,7 @@
     <string name="pause_search_history">検索履歴の記録を停止</string>
     <string name="clear_search_history">検索履歴をすべて削除</string>
     <string name="clear_search_history_confirm">検索履歴をすべて削除しますか？</string>
-    <string name="disable_screenshot">スクリーンショットを禁止</string>
+    <string name="disable_screenshot">プライバシーモード</string>
     <string name="disable_screenshot_desc">スクリーンショットと最近使用したアプリ画面での表示を無効にします。</string>
     <string name="enable_lrclib">歌詞の提供元にLrcLibを使用</string>
     <string name="enable_kugou">歌詞の提供元にKuGouを使用</string>
@@ -254,18 +254,20 @@
     <string name="backup_create_success">バックアップの作成に成功しました</string>
     <string name="backup_create_failed">バックアップを作成できませんでした</string>
     <string name="restore_failed">バックアップの復元に失敗しました</string>
+    <string name="discord_integration">Discordと連携</string>
     <string name="discord_information">Metrolistは、Discordアカウントのステータスを設定するためにKizzyRPCライブラリを使用しています。Discordのゲートウェイ接続を利用するため、Discordの利用規約に違反する可能性があります。ただし、これを理由にユーザーのアカウントが停止された事例は確認されていません。自己責任で使用してください。\n\nMetrolistはトークンのみを取得し、それ以外の情報はすべてデバイス内に保存されます。</string>
     <string name="dismiss">非表示</string>
     <string name="options">オプション</string>
     <string name="preview">プレビュー</string>
     <string name="login_failed">ログインに失敗しました</string>
     <string name="action_logout">ログアウト</string>
+    <string name="enable_discord_rpc">再生状況を共有</string>
     <string name="about">アプリについて</string>
     <string name="app_version">アプリのバージョン</string>
     <string name="new_version_available">アップデートがあります</string>
     <string name="translation_models">翻訳モデル</string>
     <string name="clear_translation_models">翻訳モデルを削除</string>
-    <string name="use_login_for_browse_desc">例えば、Premiumのアカウントでログインしたときに、Premium限定のアルバムが表示されるようになります。</string>
+    <string name="use_login_for_browse_desc">例えば、Premiumのアカウントでログインしたときに、Premium限定のアルバムが表示されるようになります</string>
     <string name="use_login_for_browse">表示されるコンテンツをアカウントと連携する</string>
     <string name="action_login">ログイン</string>
 </resources>
