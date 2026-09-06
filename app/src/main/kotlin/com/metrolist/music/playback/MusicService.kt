@@ -615,10 +615,30 @@ class MusicService :
         // 5-second timeout imposed by Context.startForegroundService().
         // On some OEMs (e.g. MIUI), even a DataStore read can be slow
         // enough to miss the window, so we promote before any I/O.
+        //
+        // IMPORTANT: onCreate() also runs when the system only *binds* this
+        // service (e.g. Android Auto, Android Assistant, or any other media
+        // browser probing/exposing the library) without ever calling
+        // startForegroundService(). In that case the system may legitimately
+        // deny startForeground(), and that is NOT an error: a bound-only
+        // service has no obligation to be foreground. Previously, any denial
+        // here caused an early `return`, which skipped creation of the
+        // MediaLibrarySession entirely — making Metrolist invisible (or
+        // causing a hang) inside Android Auto's app launcher, since it never
+        // got the chance to answer browse requests.
+        //
+        // The strict "must promote within timeout" requirement is already
+        // enforced separately in onStartCommand(), which only fires for a
+        // real startForegroundService() call triggered by actual playback.
+        // So here we simply attempt promotion best-effort and continue
+        // regardless of the outcome.
         ensureForegroundChannelExists()
-        if (!ensureStartedAsForegroundOrStop()) {
-            return
-        }
+        startForegroundSafely(
+            notification = createFallbackForegroundNotification(),
+            deniedMessage = "Foreground promotion denied at onCreate (likely a browse-only bind, e.g. Android Auto); continuing without foreground",
+            failureMessage = "Failed to enter foreground at onCreate; continuing without foreground",
+            stopOnFailure = false,
+        )
 
         // Read ALL startup preferences in one shot so that subsequent code
         // never calls dataStore.get() (which does runBlocking internally).
@@ -4086,13 +4106,6 @@ class MusicService :
      * [Context.startForegroundService] requires [startForeground] to succeed quickly. If we cannot
      * enter the foreground state, stop immediately so the system does not ANR the app process.
      */
-    private fun ensureStartedAsForegroundOrStop(): Boolean =
-        startForegroundSafely(
-            notification = createFallbackForegroundNotification(),
-            deniedMessage = "Foreground service start not allowed; stopping service to avoid ANR",
-            failureMessage = "Failed to enter foreground; stopping service to avoid ANR",
-        )
-
     private fun ensureForegroundWithLatestNotificationOrStop(): Boolean =
         startForegroundSafely(
             notification = latestMediaNotification ?: createFallbackForegroundNotification(),
