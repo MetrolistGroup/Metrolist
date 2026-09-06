@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
+import com.metrolist.music.LocalSyncUtils
+import com.metrolist.innertube.YouTube
 import com.metrolist.music.R
 import com.metrolist.music.constants.ArtistSongSortType
 import com.metrolist.music.db.entities.SpeedDialItem
@@ -62,6 +64,7 @@ fun ArtistMenu(
     val isGuest = listenTogetherManager?.isInRoom == true && !listenTogetherManager.isHost
     val artistState = database.artist(originalArtist.id).collectAsStateWithLifecycle(initialValue = originalArtist)
     val artist = artistState.value ?: originalArtist
+    val syncUtils = LocalSyncUtils.current
     val isPinned by database.speedDialDao.isPinned(artist.id).collectAsStateWithLifecycle(initialValue = false)
 
     ArtistListItem(
@@ -234,8 +237,15 @@ fun ArtistMenu(
                             )
                         },
                         onClick = {
+                            val newArtist = artist.artist.toggleLike()
                             database.transaction {
-                                update(artist.artist.toggleLike())
+                                update(newArtist)
+                            }
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val targetChannelId = newArtist.channelId ?: YouTube.getChannelId(newArtist.id)
+                                if (targetChannelId.isNotEmpty()) {
+                                    syncUtils.subscribeChannel(targetChannelId, newArtist.bookmarkedAt != null)
+                                }
                             }
                         }
                     )

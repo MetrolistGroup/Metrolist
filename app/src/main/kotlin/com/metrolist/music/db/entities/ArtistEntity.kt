@@ -9,10 +9,6 @@ import androidx.compose.runtime.Immutable
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.metrolist.innertube.YouTube
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 
 @Immutable
@@ -45,14 +41,7 @@ data class ArtistEntity(
         bookmarkedAt = if (bookmarkedAt != null) null else LocalDateTime.now(),
     )
 
-    fun toggleLike() = localToggleLike().also {
-        CoroutineScope(Dispatchers.IO).launch {
-            val targetChannelId = channelId ?: YouTube.getChannelId(id)
-            if (targetChannelId.isNotEmpty()) {
-                YouTube.subscribeChannel(targetChannelId, bookmarkedAt == null)
-            }
-        }
-    }
+    fun toggleLike(): ArtistEntity = localToggleLike()
 
     companion object {
         fun generateArtistId() = generateLocalId("LA")

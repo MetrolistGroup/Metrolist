@@ -906,11 +906,15 @@ fun SelectionMediaMetadataMenu(
                                     database.query {
                                         if (allLiked) {
                                             songSelection.forEach { song ->
-                                                update(song.toSongEntity().toggleLike())
+                                                val s = song.toSongEntity().toggleLike()
+                                                update(s)
+                                                syncUtils.likeSong(s)
                                             }
                                         } else {
                                             songSelection.filter { !it.liked }.forEach { song ->
-                                                update(song.toSongEntity().toggleLike())
+                                                val s = song.toSongEntity().toggleLike()
+                                                update(s)
+                                                syncUtils.likeSong(s)
                                             }
                                         }
                                     }

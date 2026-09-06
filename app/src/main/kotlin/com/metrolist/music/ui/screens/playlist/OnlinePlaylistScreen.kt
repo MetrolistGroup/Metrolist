@@ -96,11 +96,13 @@ import com.metrolist.music.playback.queues.YouTubePlaylistQueue
 import com.metrolist.music.ui.component.ExpandableText
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.component.LocalMenuState
+import com.metrolist.innertube.YouTube
 import com.metrolist.music.ui.component.YouTubeListItem
 import com.metrolist.music.ui.menu.YouTubePlaylistMenu
 import com.metrolist.music.ui.menu.YouTubeSelectionSongMenu
 import com.metrolist.music.ui.menu.YouTubeSongMenu
 import com.metrolist.music.ui.utils.backToMain
+import timber.log.Timber
 import com.metrolist.music.ui.utils.resize
 import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberPreference
@@ -623,11 +625,19 @@ private fun OnlinePlaylistHeader(
             // Like Button - Smaller secondary button
             Surface(
                 onClick = {
+                    val isBookmarked = dbPlaylist?.playlist?.bookmarkedAt != null
                     if (dbPlaylist != null) {
                         database.transaction {
-                            val currentPlaylist = dbPlaylist.playlist
+                            val currentPlaylist = dbPlaylist.playlist.toggleLike()
                             update(currentPlaylist, playlist)
-                            update(currentPlaylist.toggleLike())
+                            update(currentPlaylist)
+                        }
+                        // Sync like to YouTube
+                        coroutineScope.launch(Dispatchers.IO) {
+                            YouTube.likePlaylist(playlist.id, !isBookmarked)
+                                .onFailure { e ->
+                                    Timber.e(e, "Failed to like playlist on YouTube: ${playlist.id}")
+                                }
                         }
                     } else {
                         coroutineScope.launch(Dispatchers.IO) {
@@ -655,6 +665,11 @@ private fun OnlinePlaylistHeader(
                                         ?: throw IllegalStateException("Failed to create playlist")
                                 database.addSongsToPlaylist(createdPlaylist, songIds)
                             }
+                            // Sync like to YouTube
+                            YouTube.likePlaylist(playlist.id, true)
+                                .onFailure { e ->
+                                    Timber.e(e, "Failed to like playlist on YouTube: ${playlist.id}")
+                                }
                         }
                     }
                 },

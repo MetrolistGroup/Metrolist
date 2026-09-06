@@ -30,10 +30,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.ArtistItem
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
+import com.metrolist.music.LocalSyncUtils
 import com.metrolist.music.R
 import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.db.entities.ArtistEntity
@@ -46,6 +48,7 @@ import com.metrolist.music.ui.component.YouTubeListItem
 import com.metrolist.music.utils.ArtistNameAliases
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import androidx.compose.runtime.rememberCoroutineScope
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,6 +66,7 @@ fun YouTubeArtistMenu(
     val isGuest = listenTogetherManager?.isInRoom == true && !listenTogetherManager.isHost
     val isPinned by database.speedDialDao.isPinned(artist.id).collectAsStateWithLifecycle(initialValue = false)
     val coroutineScope = rememberCoroutineScope()
+    val syncUtils = LocalSyncUtils.current
 
     YouTubeListItem(
         item = artist,
@@ -181,19 +185,28 @@ fun YouTubeArtistMenu(
                             )
                         },
                         onClick = {
+                            val libraryArtist = libraryArtist
+                            val newArtist = if (libraryArtist != null) {
+                                libraryArtist.artist.toggleLike()
+                            } else {
+                                ArtistEntity(
+                                    id = artist.id,
+                                    name = ArtistNameAliases.resolve(artist.id, artist.title),
+                                    channelId = artist.channelId,
+                                    thumbnailUrl = artist.thumbnail,
+                                ).toggleLike()
+                            }
                             database.query {
-                                val libraryArtist = libraryArtist
                                 if (libraryArtist != null) {
-                                    update(libraryArtist.artist.toggleLike())
+                                    update(newArtist)
                                 } else {
-                                    insert(
-                                        ArtistEntity(
-                                            id = artist.id,
-                                            name = ArtistNameAliases.resolve(artist.id, artist.title),
-                                            channelId = artist.channelId,
-                                            thumbnailUrl = artist.thumbnail,
-                                        ).toggleLike()
-                                    )
+                                    insert(newArtist)
+                                }
+                            }
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val targetChannelId = newArtist.channelId ?: YouTube.getChannelId(newArtist.id)
+                                if (targetChannelId.isNotEmpty()) {
+                                    syncUtils.subscribeChannel(targetChannelId, newArtist.bookmarkedAt != null)
                                 }
                             }
                         }

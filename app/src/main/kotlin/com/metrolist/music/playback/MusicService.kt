@@ -2139,9 +2139,16 @@ class MusicService :
                 val isInLibrary = it.song.inLibrary != null
                 val token = if (isInLibrary) it.song.libraryRemoveToken else it.song.libraryAddToken
 
+                // Try feedback token approach first (legacy)
                 token?.let { feedbackToken ->
                     YouTube.feedback(listOf(feedbackToken))
                 }
+
+                // Also use the new reliable toggleSongLibrary API for immediate sync
+                YouTube.toggleSongLibrary(it.song.id, addToLibrary = !isInLibrary)
+                    .onFailure { e ->
+                        Timber.e(e, "Failed to toggle library on YouTube: ${it.song.id}")
+                    }
 
                 database.query {
                     update(it.song.toggleLibrary())
