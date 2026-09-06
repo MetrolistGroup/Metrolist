@@ -96,6 +96,9 @@ import com.metrolist.music.ui.utils.resize
 import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.viewmodels.AlbumViewModel
+import com.metrolist.innertube.YouTube
+import timber.log.Timber
+import kotlinx.coroutines.Dispatchers
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -297,8 +300,17 @@ fun AlbumScreen(
                         // Like Button - Smaller secondary button
                         Surface(
                             onClick = {
+                                val albumEntity = albumWithSongs.album.toggleLike()
                                 database.query {
-                                    update(albumWithSongs.album.toggleLike())
+                                    update(albumEntity)
+                                }
+                                albumEntity.playlistId?.let { playlistId ->
+                                    scope.launch(Dispatchers.IO) {
+                                        YouTube.likePlaylist(playlistId, albumEntity.bookmarkedAt != null)
+                                            .onFailure { e ->
+                                                Timber.e(e, "Failed to like album on YouTube: $playlistId")
+                                            }
+                                    }
                                 }
                             },
                             shape = CircleShape,

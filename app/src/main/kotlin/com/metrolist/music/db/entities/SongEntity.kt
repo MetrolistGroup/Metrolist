@@ -10,10 +10,6 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.metrolist.innertube.YouTube
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 
 @Immutable
@@ -76,33 +72,19 @@ data class SongEntity(
         addedAt: LocalDateTime = LocalDateTime.now(),
     ) = copy(inLibrary = if (isInLibrary) inLibrary ?: addedAt else null)
 
-    fun toggleLike(syncToYouTube: Boolean = true) =
+    fun toggleLike(syncToYouTube: Boolean = false): SongEntity =
         copy(
             liked = !liked,
             likedDate = if (!liked) LocalDateTime.now() else null,
             inLibrary = if (!liked) inLibrary ?: LocalDateTime.now() else inLibrary,
-        ).also {
-            if (syncToYouTube) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    YouTube.likeVideo(id, !liked)
-                }
-            }
-        }
+        )
 
-    fun toggleLibrary(syncToYouTube: Boolean = true) =
+    fun toggleLibrary(syncToYouTube: Boolean = false): SongEntity =
         copy(
             liked = if (inLibrary == null) liked else false,
             inLibrary = if (inLibrary == null) LocalDateTime.now() else null,
             likedDate = if (inLibrary == null) likedDate else null,
-        ).also {
-            if (syncToYouTube) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    // Use the new reliable method that fetches fresh tokens
-                    val addToLibrary = inLibrary == null
-                    YouTube.toggleSongLibrary(id, addToLibrary)
-                }
-            }
-        }
+        )
 
     fun toggleUploaded() =
         copy(

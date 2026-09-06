@@ -56,6 +56,7 @@ import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadService
 import coil3.compose.AsyncImage
 import com.metrolist.innertube.YouTube
+import timber.log.Timber
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.utils.completed
@@ -182,6 +183,13 @@ fun YouTubePlaylistMenu(
                                 update(currentPlaylist, playlist)
                                 update(currentPlaylist.toggleLike())
                             }
+                        }
+                        // Sync like to YouTube
+                        coroutineScope.launch(Dispatchers.IO) {
+                            YouTube.likePlaylist(playlist.id, !isCurrentlySaved)
+                                .onFailure { e ->
+                                    Timber.e(e, "Failed to like playlist on YouTube: ${playlist.id}")
+                                }
                         }
                         coroutineScope.launch(Dispatchers.IO) {
                             if (!isCurrentlySaved) {

@@ -65,6 +65,7 @@ import androidx.media3.exoplayer.offline.DownloadService
 import coil3.compose.AsyncImage
 import com.metrolist.music.LocalNavController
 import com.metrolist.innertube.YouTube
+import timber.log.Timber
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalListenTogetherManager
@@ -264,8 +265,17 @@ fun AlbumMenu(
         trailingContent = {
             IconButton(
                 onClick = {
+                    val albumEntity = album.album.toggleLike()
                     database.query {
-                        update(album.album.toggleLike())
+                        update(albumEntity)
+                    }
+                    albumEntity.playlistId?.let { playlistId ->
+                        coroutineScope.launch(Dispatchers.IO) {
+                            YouTube.likePlaylist(playlistId, albumEntity.bookmarkedAt != null)
+                                .onFailure { e ->
+                                    Timber.e(e, "Failed to like album on YouTube: $playlistId")
+                                }
+                        }
                     }
                 },
             ) {

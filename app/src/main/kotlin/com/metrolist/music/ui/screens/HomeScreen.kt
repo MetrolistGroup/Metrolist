@@ -95,6 +95,7 @@ import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.metrolist.innertube.YouTube
+import timber.log.Timber
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.ArtistItem
 import com.metrolist.innertube.models.EpisodeItem
@@ -439,6 +440,7 @@ fun CommunityPlaylistCard(
 
                 IconButton(
                     onClick = {
+                        val isBookmarked = dbPlaylist?.playlist?.bookmarkedAt != null
                         scope.launch(Dispatchers.IO) {
                             if (dbPlaylist?.playlist == null) {
                                 val playlistEntity =
@@ -476,11 +478,21 @@ fun CommunityPlaylistCard(
                                         }
                                     }
                                 }
+                                // Sync like to YouTube
+                                YouTube.likePlaylist(item.playlist.id, true)
+                                    .onFailure { e ->
+                                        Timber.e(e, "Failed to like playlist on YouTube: ${item.playlist.id}")
+                                    }
                             } else {
                                 database.transaction {
-                                    val currentPlaylist = dbPlaylist!!.playlist
-                                    update(currentPlaylist.toggleLike())
+                                    val currentPlaylist = dbPlaylist!!.playlist.toggleLike()
+                                    update(currentPlaylist)
                                 }
+                                // Sync like to YouTube
+                                YouTube.likePlaylist(item.playlist.id, !isBookmarked)
+                                    .onFailure { e ->
+                                        Timber.e(e, "Failed to like playlist on YouTube: ${item.playlist.id}")
+                                    }
                             }
                         }
                     },

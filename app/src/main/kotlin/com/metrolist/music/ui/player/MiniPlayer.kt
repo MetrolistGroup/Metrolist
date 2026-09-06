@@ -99,12 +99,15 @@ import com.metrolist.music.listentogether.ListenTogetherManager
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.playback.CastConnectionHandler
 import com.metrolist.music.playback.PlayerConnection
+import com.metrolist.music.LocalSyncUtils
 import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.utils.resize
 import com.metrolist.music.utils.joinToArtistString
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
+import com.metrolist.innertube.YouTube
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 import com.metrolist.music.ui.component.Icon as MIcon
@@ -1037,9 +1040,10 @@ private fun SubscribeButton(
     onSurfaceColor: Color,
 ) {
     val database = LocalDatabase.current
+    val syncUtils = LocalSyncUtils.current
     val libraryArtist by database.artist(artistId).collectAsStateWithLifecycle(initialValue = null)
     val isSubscribed = libraryArtist?.artist?.bookmarkedAt != null
-
+    val scope = rememberCoroutineScope()
 
     Box(
         contentAlignment = Alignment.Center,
@@ -1055,21 +1059,32 @@ private fun SubscribeButton(
                     color = if (isSubscribed) primaryColor.copy(alpha = 0.1f) else Color.Transparent,
                     shape = CircleShape,
                 ).clickable {
+                    val artist = libraryArtist?.artist
+                    val newArtist = if (artist != null) {
+                        artist.toggleLike()
+                    } else {
+                        metadata.artists.firstOrNull()?.let { artistInfo ->
+                            ArtistEntity(
+                                id = artistInfo.id ?: "",
+                                name = artistInfo.name,
+                                channelId = null,
+                                thumbnailUrl = null,
+                            ).toggleLike()
+                        }
+                    } ?: return@clickable
+
                     database.transaction {
-                        val artist = libraryArtist?.artist
                         if (artist != null) {
-                            update(artist.toggleLike())
+                            update(newArtist)
                         } else {
-                            metadata.artists.firstOrNull()?.let { artistInfo ->
-                                insert(
-                                    ArtistEntity(
-                                        id = artistInfo.id ?: "",
-                                        name = artistInfo.name,
-                                        channelId = null,
-                                        thumbnailUrl = null,
-                                    ).toggleLike(),
-                                )
-                            }
+                            insert(newArtist)
+                        }
+                    }
+
+                    scope.launch(Dispatchers.IO) {
+                        val targetChannelId = newArtist.channelId ?: YouTube.getChannelId(newArtist.id)
+                        if (targetChannelId.isNotEmpty()) {
+                            syncUtils.subscribeChannel(targetChannelId, newArtist.bookmarkedAt != null)
                         }
                     }
                 },

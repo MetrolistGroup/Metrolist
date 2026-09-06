@@ -792,6 +792,14 @@ fun SongMenu(
                                             }
                                         }
 
+                                        // Also use the new reliable toggleSongLibrary API for immediate sync
+                                        coroutineScope.launch(Dispatchers.IO) {
+                                            YouTube.toggleSongLibrary(currentSong.id, !isInLibrary)
+                                                .onFailure { e ->
+                                                    Timber.e(e, "Failed to toggle library on YouTube: ${currentSong.id}")
+                                                }
+                                        }
+
                                         database.query {
                                             update(song.song.toggleLibrary())
                                         }
