@@ -52,7 +52,7 @@
     <string name="seek_forward_dynamic">+%1$d segons endavant</string>
     <string name="seek_backward_dynamic">-%1$d segons enrere</string>
     <string name="seek_seconds_addup">Cerca progressiva</string>
-    <string name="seek_seconds_addup_description">Si està activat, afegeix 5 segons extra per cada cerca</string>
+    <string name="seek_seconds_addup_description">Quand està activat, afegeix 5 segons extra per cada cerca</string>
     <string name="similar_content">Contingut similar</string>
     <string name="player_background_style">Estil de fons del reproductor</string>
     <string name="follow_theme">Segueix el tema</string>
