@@ -1611,24 +1611,14 @@ class SyncUtils @Inject constructor(
         syncScope.launch {
             try {
                 runQueuedPlaylistEdit {
-                    var setVideoId = getSetVideoId()
-
-                    if (setVideoId == null) {
-                        Timber.w("scheduleRemoveFromPlaylist: setVideoId not in DB, fetching from YouTube")
-                        for (attempt in 0 until 3) {
-                            setVideoId = runCatching {
-                                YouTube.playlist(browseId).completed().getOrThrow()
-                                    .songs.lastOrNull { it.id == songId }?.setVideoId
-                            }.getOrNull()
-                            if (setVideoId != null) break
-                            if (attempt < 2) delay(2_000L)
-                        }
-                    }
-
-                    if (setVideoId == null) {
-                        Timber.w("scheduleRemoveFromPlaylist: setVideoId not found on YouTube, skipping remove for songId=$songId")
-                        return@runQueuedPlaylistEdit
-                    }
+                    val setVideoId = resolveSetVideoIdForRemoval(
+                        songId = songId,
+                        fromDb = getSetVideoId,
+                        fromRemote = {
+                            YouTube.playlist(browseId).completed().getOrThrow()
+                                .songs.lastOrNull { it.id == songId }?.setVideoId
+                        },
+                    ) ?: return@runQueuedPlaylistEdit
 
                     YouTube.removeFromPlaylist(browseId, songId, setVideoId).getOrThrow()
                 }

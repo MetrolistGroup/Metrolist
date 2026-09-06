@@ -8,6 +8,7 @@ package com.metrolist.music.ui.menu
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
+import android.util.Log
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -92,12 +93,17 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.time.LocalDateTime
 
+private const val YOUTUBE_SONG_MENU_TAG = "YouTubeSongMenu"
+
 @SuppressLint("MutableCollectionMutableState")
 @Composable
 fun YouTubeSongMenu(
     song: SongItem,
     onDismiss: () -> Unit,
-    onHistoryRemoved: () -> Unit = {}
+    onHistoryRemoved: () -> Unit = {},
+    playlistId: String? = null,
+    isEditable: Boolean = false,
+    onSongRemovedFromPlaylist: () -> Unit = {}
 ) {
     val navController = LocalNavController.current
     val context = LocalContext.current
@@ -560,9 +566,41 @@ fun YouTubeSongMenu(
                                         )
                                     }
                                 }
+                                onDismiss()
                             }
                         )
                     )
+                    val setVideoId = song.setVideoId
+                    if (isEditable && playlistId != null && setVideoId != null) {
+                        add(
+                            Material3MenuItemData(
+                                title = { Text(text = stringResource(R.string.remove_from_playlist)) },
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.delete),
+                                        contentDescription = null,
+                                    )
+                                },
+                                onClick = {
+                                    coroutineScope.launch {
+                                        Log.d(
+                                            YOUTUBE_SONG_MENU_TAG,
+                                            "removeFromPlaylist: playlistId=$playlistId, videoId=${song.id}, setVideoId=$setVideoId",
+                                        )
+                                        syncUtils.scheduleRemoveFromPlaylist(
+                                            playlistId,
+                                            song.id,
+                                            playlistId,
+                                        ) {
+                                            setVideoId
+                                        }
+                                        onSongRemovedFromPlaylist()
+                                    }
+                                    onDismiss()
+                                }
+                            )
+                        )
+                    }
                 }
             )
         }
