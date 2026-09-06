@@ -152,7 +152,7 @@
     <string name="updater">Aktualizační služba</string>
     <string name="check_for_updates">Automaticky kontrolovat aktualizace</string>
     <string name="update_notifications">Povolit oznámení o aktualizacích</string>
-    <string name="update_available_title">Je dostupná aktualizace</string>
+    <string name="update_available_title">Je dostupná nová aktualizace</string>
     <string name="update_channel_name">Aktualizace aplikací</string>
     <string name="update_channel_desc">Oznámení o nových verzích aplikace</string>
     <string name="integrations">Integrace</string>
@@ -854,8 +854,8 @@
     <string name="enable_dynamic_icon">Dynamické barvy ikon</string>
     <string name="enable_dynamic_icon_desc">Použít barvy dynamického motivu pro ikonu aplikace. Pokud je vypnuto, budou použity jednobarevné odstíny.</string>
     <string name="kmp_upgrade_title">Je dostupný Metrolist KMP %s</string>
-    <string name="kmp_upgrade_warning">Metrolist KMP je v předběžném přístupu. Funkce mohou být rozbité, nedokončené nebo se bez upozornění změnit.</string>
-    <string name="kmp_upgrade_action">Aktualizovat na KMP</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP je stále ve vývoji. Můžete narazit na chyby nebo nedokončené funkce.</string>
+    <string name="kmp_upgrade_action">Vyzkoušet KMP</string>
     <string name="kmp_upgrade_later">Nezobrazovat</string>
     <string name="android_auto_search_options">Vyhledat možnosti</string>
     <string name="android_auto_search_local_songs_limit">Limit vyhledání skladeb</string>
@@ -876,4 +876,9 @@
     <string name="error_offline_playback">Jste offline. Připojte se k internetu nebo si přehrajte staženou skladbu.</string>
     <string name="error_explicit_login_recommended">Explicitní přehrávání funguje lépe s přihlášeným účtem.</string>
     <string name="ai_provider_inception_help">Navštivte https://platform.inceptionlabs.ai pro klíče API</string>
+    <string name="enable_zemer">Povolit Zemer</string>
+    <string name="enable_zemer_desc">Texty pro židovskou hudbu</string>
+    <string name="playlist_created_locally">Synchronizace s YouTube selhala. Playlist byl vytvořen lokálně.</string>
+    <string name="update_available_message">Metrolist %s je připraven ke stažení.</string>
+    <string name="update_action">Aktualizovat</string>
 </resources>
