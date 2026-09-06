@@ -91,7 +91,7 @@
     <string name="show_cached_playlist">Pokaż playlistę \"Zapisane w pamięci\"</string>
     <string name="not_logged_in_youtube">Niezalogowany do YouTube</string>
     <string name="default_links">Otwórz obsługiwane linki</string>
-    <string name="open_app_settings_error">Nie można otworzyć ustawień aplikacji</string>
+    <string name="open_app_settings_error">Nie udało się otworzyć ustawień aplikacji</string>
     <string name="release_notes">Informacje o wersji</string>
     <string name="history_duration">Czas trwania historii</string>
     <string name="dislikes">Dislajki</string>
@@ -102,7 +102,7 @@
         <item quantity="other">%d sekund</item>
     </plurals>
     <string name="lyrics_auto_scroll">Autoprzesuwanie tekstu</string>
-    <string name="import_online">Importuj listę odtwarzania \"m3u\"</string>
+    <string name="import_online">Importuj playlistę \"M3U\"</string>
     <string name="import_csv">Importuj playlistę CSV</string>
     <string name="playlist_add_local_to_synced_note">Notatka: Dodawanie lokalnej muzyki do synchronizowanej/zewnętrznej listy odtworzeń nie jest wspierane. Wszelkie inne kombinacje są poprawne</string>
     <string name="yt_sync">Automatyczna synchronizacja z kontem</string>
@@ -124,7 +124,7 @@
     <string name="seek_seconds_addup">Progresywne wyszukiwanie</string>
     <string name="seek_seconds_addup_description">Jeśli włączone, dodaje 5 dodatkowych sekund przy każdym pominięciu wyszukiwania</string>
     <string name="disable_load_more_when_repeat_all">Wyłącz ładowanie więcej po powtórzeniu wszystkich</string>
-    <string name="disable_load_more_when_repeat_all_desc">Nie ładuj automatycznie większej liczby utworów i podobnych treści, gdy włączony jest tryb powtarzania wszystkich utworów</string>
+    <string name="disable_load_more_when_repeat_all_desc">Nie ładuj automatycznie większej liczby utworów albo podobnych treści, gdy włączony jest tryb powtarzania wszystkich utworów</string>
     <string name="settings_section_ui">Interfejs</string>
     <string name="settings_section_privacy">Prywatność i bezpieczeństwo</string>
     <string name="settings_section_player_content">Odtwarzacz i zawartość</string>
@@ -142,7 +142,7 @@
     <string name="enable_authentication">Włącz uwierzytelnianie</string>
     <string name="lyrics_romanize_title">Romanizacja</string>
     <string name="lyrics_romanization">Romanizacja tekstu</string>
-    <string name="line_by_line_option_title">Wykrywanie języka linijka po linijce</string>
+    <string name="line_by_line_option_title">Wykrywaj język linijka po linijce</string>
     <string name="romanize_current_track">Romanizuj bieżący utwór</string>
     <string name="audio_offload">Włącz odciążenie</string>
     <string name="audio_offload_description">Użyj ścieżki audio do odtwarzania dźwięku. Wyłączenie tej opcji może zwiększyć zużycie energii, ale może być przydatne w przypadku problemów z odtwarzaniem dźwięku lub jego przetwarzaniem</string>
@@ -153,7 +153,7 @@
     <string name="check_for_updates">Automatycznie sprawdzaj dostępność aktualizacji</string>
     <string name="update_notifications">Włącz powiadomienia o aktualizacjach</string>
     <string name="update_available_title">Aktualizacja dostępna</string>
-    <string name="update_channel_desc">Powiadomienia o nowych wersjach</string>
+    <string name="update_channel_desc">Powiadomienia o nowych wersjach aplikacji</string>
     <string name="integrations">Integracje</string>
     <string name="username">Nazwa użytkownika</string>
     <string name="password">Hasło</string>
@@ -203,7 +203,7 @@
     <string name="shuffle_playlist_first">Najpierw odtwórz losowo playlistę lub album</string>
     <string name="shuffle_playlist_first_desc">Podczas odtwarzania losowego najpierw odtwarzaj wszystkie utwory z bieżącej playlisty lub albumu, przed przejściem do podobnych utworów</string>
     <string name="show_wrapped_card">Wyświetl kartę Wrapped</string>
-    <string name="scrobble_min_track_duration">Scrobbluj utwory dłuższe niż</string>
+    <string name="scrobble_min_track_duration">Scrobbluj utwory dłuższe niż (sekundy)</string>
     <string name="scrobble_delay_percent">Procent opóźnienia scrobblowania</string>
     <string name="scrobble_delay_minutes">Opóźnienie scrobblowania w minutach</string>
     <string name="lyrics_animation_style">Styl animacji synchronizowanych tekstów</string>
@@ -353,10 +353,10 @@
     <string name="listen_together_description">Słuchaj muzyki razem ze znajomymi w czasie rzeczywistym. Stwórz pokój aby stać się hostem lub dołącz do istniejącego pokoju za pomocą kodu</string>
     <string name="listen_together_background_disconnect_note">Uwaga: Gdy jesteś połączony, ale nie jesteś w pokoju, Słuchaj Razem rozłączy cię po 30 minutach w tle aby oszczędzać baterię</string>
     <string name="listen_together_not_configured">\"Słuchaj Razem\" nie zostało skonfigurowane. Ustaw URL serwera w: Słuchaj Razem &gt; Ustawienia &gt; URL Serwera</string>
-    <string name="listen_together_suggestion_received">%1$s poprosił %2$s</string>
+    <string name="listen_together_suggestion_received">%1$s zasugerował %2$s</string>
     <string name="listen_together_suggestion_sent">Sugestia została wysłana do hosta!</string>
     <string name="listen_together_join_request_notification">%1$s chce dołączyć do pokoju</string>
-    <string name="listen_together_notification_channel_name">Słuchaj razem</string>
+    <string name="listen_together_notification_channel_name">Słuchaj Razem</string>
     <string name="changelog">Lista zmian</string>
     <string name="changelog_empty">Brak dostępnych dzienników zmian</string>
     <string name="github_releases_url">https://github.com/MetrolistGroup/Metrolist/releases</string>
@@ -377,7 +377,7 @@
     <string name="sleep_timer_daily">Codziennie</string>
     <string name="sleep_timer_weekdays">Od poniedziałku do piątku</string>
     <string name="sleep_timer_weekdays_weekends">Dni tygodnia / Weekendy</string>
-    <string name="sleep_timer_weekends">Weekendy (Sob-Niedz)</string>
+    <string name="sleep_timer_weekends">Od Soboty do Niedzieli</string>
     <string name="sleep_timer_start_time">Godzina rozpoczęcia</string>
     <string name="sleep_timer_end_time">Godzina zakończenia</string>
     <string name="sleep_timer_monday">Poniedziałek</string>
@@ -387,7 +387,7 @@
     <string name="sleep_timer_friday">Piątek</string>
     <string name="sleep_timer_saturday">Sobota</string>
     <string name="sleep_timer_sunday">Niedziela</string>
-    <string name="resume_on_bluetooth_connect">Wznów po podłączeniu Bluetooth</string>
+    <string name="resume_on_bluetooth_connect">Wznów po połączeniu Bluetooth</string>
     <string name="crossfade">Crossfade</string>
     <string name="crossfade_desc">Płynne przejście między utworami</string>
     <string name="crossfade_duration">Czas płynnego przejścia między utworami</string>
@@ -450,7 +450,7 @@
     <string name="listen_together_in_top_bar_desc">Pokaż Słuchaj Razem na górnym pasku aplikacji zamiast na pasku nawigacyjnym</string>
     <string name="listen_together_notification_channel_desc">Powiadomienia o wydarzeniach w Słuchaj Razem</string>
     <string name="listen_together_room_created">Utworzono pokój: %s</string>
-    <string name="listen_together_cannot_edit_username_in_room">Nie można edytować nazwy użytkownika będąc w pokoju</string>
+    <string name="listen_together_cannot_edit_username_in_room">Nazwa użytkownika nie może zostać zmieniona będąc w pokoju</string>
     <string name="waiting_for_approval">Oczekiwanie na potwierdzenie hosta…</string>
     <string name="invalid_room_code">Nieprawidłowy kod pokoju</string>
     <string name="join_request_denied">Prośba o dołączenie odrzucona</string>
@@ -788,4 +788,15 @@
     <string name="widget_playlists">Playlisty</string>
     <string name="loudness_level">Poziom głośności</string>
     <string name="experimental_lyrics_desc">Włącz nowy eksperymentalny komponent tekstów z ulepszonymi animacjami i wydajnością</string>
+    <string name="add_to_playlist_position">Dodaj do pozycji w playliście</string>
+    <string name="playlist_position_beginning">Początek playlisty</string>
+    <string name="playlist_position_end">Koniec playlisty</string>
+    <string name="playlist_unavailable">Playlista jest niedostępna</string>
+    <string name="speed">Prędkość odtwarzania</string>
+    <string name="wizard_model_name">Nazwa modelu</string>
+    <string name="loudness_level_aggressive">Agresywny (-7 dB)</string>
+    <string name="loudness_level_loud">Głośny (-11dB)</string>
+    <string name="loudness_level_quiet">Cichy (-19 dB)</string>
+    <string name="choose_youtube_channel">Wybierz kanał YouTube</string>
+    <string name="kmp_upgrade_later">Nie teraz</string>
 </resources>

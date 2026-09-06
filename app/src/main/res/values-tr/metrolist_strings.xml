@@ -855,4 +855,14 @@
     <string name="youtube_channels_failed">Hesaba bağlı olan YouTube kanalları alınamadı. Lütfen tekrar deneyin.</string>
     <string name="authentication_data_extraction_failed">YouTube Music oturumu okunamadı. Lütfen tekrar deneyin.</string>
     <string name="login_failed_with_error">Giriş başarısız: %1$s</string>
+    <string name="add_to_playlist_position">Oynatma listesine ekle</string>
+    <string name="playlist_position_beginning">Oynat listesinin başı</string>
+    <string name="playlist_position_beginning_desc">Eklenen yeni şarkılar mevcut olanların üstünde görünür</string>
+    <string name="playlist_position_end">Oynatma listesinin sonu</string>
+    <string name="playlist_position_end_desc">Eklenen yeni şarkılar mevcut olanların altında görünür</string>
+    <string name="error_no_internet_connection">İnternet bağlantısı yok</string>
+    <string name="error_offline_playback">Çevrimdışı durumdasınız. İnternete bağlanın veya çevrimdışı kullanım için indirdiğiniz bir parçayı oynatın.</string>
+    <string name="error_explicit_login_recommended">Açık içerikli oynatma, oturum açılmış bir hesapla daha iyi çalışır.</string>
+    <string name="playlist_created_locally">YouTube eşitlemesi başarısız. Oynatma listeleri yerelde oluşturuldu.</string>
+    <string name="ai_provider_inception_help">API anahtarları için https://platform.inceptionlabs.ai sitesini ziyaret edin</string>
 </resources>

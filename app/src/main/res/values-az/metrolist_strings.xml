@@ -855,4 +855,9 @@
     <string name="stream_source_android_vr_desc">Android VR müştəriləri (bütün versiyalar).</string>
     <string name="stream_source_web_creator">WEB_CREATOR</string>
     <string name="stream_source_web_creator_desc">Creator veb-müştərisi.</string>
+    <string name="add_to_playlist_position">Pleylist siyahısındakı mövqeyə əlavə et</string>
+    <string name="playlist_position_beginning">Pleylist siyahısının başlanğıcı</string>
+    <string name="playlist_position_beginning_desc">Yeni əlavə edilmiş mahnılar mövcud mahnılardan əvvəl görünür</string>
+    <string name="playlist_position_end">Pleylist siyahısının sonu</string>
+    <string name="playlist_position_end_desc">Yeni əlavə edilmiş mahnılar mövcud mahnılardan sonra görünür</string>
 </resources>

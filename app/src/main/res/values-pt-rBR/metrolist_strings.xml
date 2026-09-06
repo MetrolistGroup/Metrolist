@@ -866,4 +866,7 @@
     <string name="playlist_position_beginning_desc">Músicas recém-adicionadas aparecem antes das existentes</string>
     <string name="playlist_position_end">Fim da playlist</string>
     <string name="playlist_position_end_desc">Músicas recém-adicionadas aparecem depois das existentes</string>
+    <string name="error_no_internet_connection">Sem conexão com a internet</string>
+    <string name="error_offline_playback">Você está offline. Conecte-se à internet ou reproduza uma faixa baixada para uso offline.</string>
+    <string name="error_explicit_login_recommended">A reprodução de conteúdo explícito funciona melhor com uma conta conectada.</string>
 </resources>

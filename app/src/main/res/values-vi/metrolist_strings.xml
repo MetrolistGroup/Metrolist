@@ -25,7 +25,7 @@
     <string name="gradient">Độ phủ màu</string>
     <string name="player_background_blur">Làm mờ</string>
     <string name="enable_swipe_thumbnail">Bật lướt bìa để chuyển bài</string>
-    <string name="lyrics_click_change">Thay đổi lời bài hát khi nhấn vào</string>
+    <string name="lyrics_click_change">Thay đổi lời bài hát khi nhấp vào</string>
     <string name="slim">Dạng mỏng</string>
     <string name="slim_navbar">Thanh điều hướng mỏng phía dưới</string>
     <string name="advanced_login">Đăng nhập bằng token</string>
@@ -68,8 +68,8 @@
     <string name="import_csv">Nhập danh sách phát từ tệp CSV</string>
     <string name="import_online">Nhập danh sách phát từ tệp M3U</string>
     <string name="charts">Bảng xếp hạng</string>
-    <string name="album_cover_desc">Ảnh bìa Album</string>
-    <string name="top_music_videos">Video ca nhạc hàng đầu</string>
+    <string name="album_cover_desc">Ảnh bìa album</string>
+    <string name="top_music_videos">Video âm nhạc hàng đầu</string>
     <string name="sync_disabled">Đã tắt đồng bộ</string>
     <string name="cancel">Huỷ bỏ</string>
     <string name="share_as_text">Chia sẻ dưới dạng văn bản</string>
@@ -107,7 +107,7 @@
     <string name="disable">Vô hiệu hóa</string>
     <string name="subscribe">Đăng ký</string>
     <string name="subscribed">Đã đăng ký</string>
-    <string name="now_playing">Đang phát</string>
+    <string name="now_playing">ĐANG PHÁT</string>
     <string name="close">Đóng</string>
     <string name="seek_forward_dynamic">+%1$d giây tiến</string>
     <string name="seek_backward_dynamic">-%1$d giây lùi</string>
@@ -163,7 +163,7 @@
     <string name="updater">Trình cập nhật</string>
     <string name="check_for_updates">Tự động kiểm tra cập nhật</string>
     <string name="update_notifications">Bật thông báo về cập nhật</string>
-    <string name="update_available_title">Đã có cập nhật mới</string>
+    <string name="update_available_title">Đã có bản cập nhật mới</string>
     <string name="update_channel_name">Cập nhật ứng dụng</string>
     <string name="update_channel_desc">Thông báo về phiên bản mới của ứng dụng</string>
     <string name="google_cast">Truyền</string>
@@ -837,8 +837,8 @@
     <string name="enable_dynamic_icon_desc">Sử dụng biểu tượng theo chủ đề. Khi tắt, biểu tượng sẽ sử dụng màu đơn sắc.</string>
     <string name="playlist_unavailable">Không tìm thấy danh sách phát</string>
     <string name="kmp_upgrade_title">Đã có phiên bản Metrolist KMP %s</string>
-    <string name="kmp_upgrade_warning">Metrolist KMP đang trong giai đoạn thử nghiệm sớm. Các tính năng có thể bị lỗi, chưa hoàn thiện hoặc thay đổi mà không cần báo trước.</string>
-    <string name="kmp_upgrade_action">Nâng cấp lên phiên bản KMP</string>
+    <string name="kmp_upgrade_warning">Ứng dụng Metrolist KMP vẫn đang trong quá trình phát triển. Bạn có thể gặp phải lỗi hoặc các tính năng chưa hoàn thiện.</string>
+    <string name="kmp_upgrade_action">Thử KMP</string>
     <string name="kmp_upgrade_later">Để sau</string>
     <string name="android_auto_search_options">Tùy chọn tìm kiếm</string>
     <string name="android_auto_search_local_songs_limit">Giới hạn tìm kiếm bài hát</string>
@@ -849,4 +849,18 @@
     <string name="youtube_channels_failed">Không thể lấy danh sách kênh YouTube cho tài khoản này. Vui lòng thử lại.</string>
     <string name="authentication_data_extraction_failed">Không thể truy cập phiên đăng nhập YouTube Music. Vui lòng thử lại.</string>
     <string name="login_failed_with_error">Lỗi đăng nhập: %1$s</string>
+    <string name="add_to_playlist_position">Vị trí thêm vào danh sách phát</string>
+    <string name="playlist_position_beginning">Đầu danh sách phát</string>
+    <string name="playlist_position_beginning_desc">Bài hát mới thêm sẽ xuất hiện trước các bài hát cũ</string>
+    <string name="playlist_position_end">Cuối danh sách phát</string>
+    <string name="playlist_position_end_desc">Bài hát mới thêm sẽ xuất hiện sau các bài hát cũ</string>
+    <string name="error_no_internet_connection">Không có kết nối Internet</string>
+    <string name="error_offline_playback">Bạn đang ngoại tuyến. Hãy kết nối Internet hoặc phát bản nhạc đã tải xuống để nghe ngoại tuyến.</string>
+    <string name="error_explicit_login_recommended">Phát nội dung nhạy cảm hoạt động tốt hơn khi đăng nhập tài khoản.</string>
+    <string name="playlist_created_locally">Đồng bộ hóa với YouTube thất bại. Đã tạo danh sách phát cục bộ.</string>
+    <string name="ai_provider_inception_help">Truy cập https://platform.inceptionlabs.ai để lấy khóa API</string>
+    <string name="enable_zemer">Bật nhà cung cấp lời bài hát Zemer</string>
+    <string name="enable_zemer_desc">Lời bài hát cho âm nhạc Do Thái</string>
+    <string name="update_available_message">Metrolist %s đã sẵn sàng để tải xuống.</string>
+    <string name="update_action">Cập nhật</string>
 </resources>
