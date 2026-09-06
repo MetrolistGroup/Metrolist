@@ -106,17 +106,6 @@ object DiscordTokenStore {
         )
     }
 
-    fun storeAccessToken(accessToken: String) {
-        val encryptedToken = encrypt(accessToken) ?: run {
-            Timber.tag(TAG).w("tokenStore: encryption failed, not persisting access token")
-            return
-        }
-        prefs?.edit {
-            putString(TOKEN_KEY, encryptedToken)
-        }
-        Timber.tag(TAG).d("tokenStore: access token updated (length=%d)", accessToken.length)
-    }
-
     fun retrieve(): String? {
         val encrypted = prefs?.getString(TOKEN_KEY, null)
         val token = decrypt(encrypted)

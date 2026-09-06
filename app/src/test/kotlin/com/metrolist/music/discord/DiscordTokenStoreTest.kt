@@ -58,14 +58,6 @@ class DiscordTokenStoreTest {
     }
 
     @Test
-    fun storeAccessToken_updatesAccessWithoutChangingRefresh() {
-        DiscordTokenStore.storeFull("access1", "refresh1", expiresInSec = 3600L)
-        DiscordTokenStore.storeAccessToken("access2")
-        assertEquals("access2", DiscordTokenStore.retrieve())
-        assertEquals("refresh1", DiscordTokenStore.getRefreshToken())
-    }
-
-    @Test
     fun clear_removesAllTokens() {
         DiscordTokenStore.storeFull("access", "refresh", expiresInSec = 3600L)
         DiscordTokenStore.clear()

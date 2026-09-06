@@ -2,17 +2,21 @@ package com.metrolist.music.discord
 
 import android.app.Activity
 import android.content.Context
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 import timber.log.Timber
 import java.net.HttpURLConnection
@@ -26,8 +30,31 @@ data class DiscordUser(
     val avatar: String?,
 )
 
+internal sealed interface ConnectionIntent {
+    data object EnsureConnected : ConnectionIntent
+    data class Resume(val sessionId: String, val sequence: Int) : ConnectionIntent
+    data object Identify : ConnectionIntent
+    data object ForceRefreshAndIdentify : ConnectionIntent
+}
+
+internal fun intentPriority(intent: ConnectionIntent): Int = when (intent) {
+    ConnectionIntent.EnsureConnected -> 0
+    is ConnectionIntent.Resume -> 1
+    ConnectionIntent.Identify -> 2
+    ConnectionIntent.ForceRefreshAndIdentify -> 3
+}
+
+internal fun mergeIntents(current: ConnectionIntent, incoming: ConnectionIntent): ConnectionIntent =
+    if (intentPriority(incoming) >= intentPriority(current)) incoming else current
+
 object DiscordRpcManager {
     private const val TAG = "DiscordSvc"
+    private const val MAX_RECONNECT_ATTEMPTS = 7
+
+    private data class PendingConnectionRequest(
+        var intent: ConnectionIntent,
+        val completions: MutableList<CompletableDeferred<Boolean>> = mutableListOf(),
+    )
 
     @Volatile
     private var initialized: Boolean = false
@@ -52,10 +79,23 @@ object DiscordRpcManager {
 
     @Volatile private var currentSongId: String? = null
     @Volatile private var currentIsPlaying: Boolean = false
+    @Volatile private var lastForcedRefreshAtMs: Long = 0L
     private val currentActivityId = AtomicLong(0L)
     @Volatile private var imageResolutionJob: Job? = null
     @Volatile private var currentActivityHadImages: Boolean = false
-    private val reconnectMutex = Mutex()
+
+    // Every connection lifecycle mutation is serialized through this state and its single worker.
+    private val coordinatorLock = Any()
+    private var pendingConnectionRequest: PendingConnectionRequest? = null
+    private var activeConnectionIntent: ConnectionIntent? = null
+    private var coordinatorJob: Job? = null
+    private var retryJob: Job? = null
+    private var reconnectAttempts: Int = 0
+    private var retryExhausted: Boolean = false
+    private var connectionEpoch: Long = 0L
+    private var currentGatewayConnectionId: Long? = null
+    private var forceRefreshRequired: Boolean = false
+    private var terminalGatewayFailure: Boolean = false
 
     private val _accessTokenFlow = MutableStateFlow<String?>(null)
     val accessTokenFlow: StateFlow<String?> = _accessTokenFlow
@@ -122,7 +162,6 @@ object DiscordRpcManager {
     private fun createGateway(scope: CoroutineScope): DiscordGateway =
         DiscordGateway(
             appId = appId,
-            tokenProvider = { "Bearer ${accessToken ?: ""}" },
             externalScope = scope,
         )
 
@@ -152,7 +191,7 @@ object DiscordRpcManager {
             val saved = DiscordTokenStore.retrieveSuspend()
             if (!saved.isNullOrEmpty()) {
                 Timber.tag(TAG).i("init: found persisted token, reconnecting")
-                reconnectWithToken(saved)
+                reconnect()
             } else {
                 Timber.tag(TAG).i("init: no persisted token, waiting for explicit authorize")
             }
@@ -180,7 +219,7 @@ object DiscordRpcManager {
         if (_authorized) {
             Timber.tag(TAG).d("authorize: short-circuit — authorized but not ready, reconnecting")
             authorizeInProgress = false
-            reconnectWithToken(accessToken ?: "")
+            reconnect()
             scope.launch(Dispatchers.Main) { onComplete(true) }
             return
         }
@@ -191,28 +230,13 @@ object DiscordRpcManager {
         scope.launch {
             try {
                 val result = auth.authorize(activity)
-                DiscordTokenStore.storeFull(
-                    result.accessToken,
-                    result.refreshToken,
-                    result.expiresInSec,
+                val connected = requestConnectionAndAwait(
+                    intent = ConnectionIntent.Identify,
+                    newAuthorization = result,
                 )
-                accessToken = result.accessToken
-                _accessTokenFlow.value = result.accessToken
-                _authorized = true
-
-                try {
-                    reconnectMutex.withLock {
-                        runCatching { gateway.close(4000, "re-authorizing") }
-                        gateway.connect()
-                        gateway.identify("Bearer ${result.accessToken}")
-                    }
+                if (connected) {
                     completeWith(true)
-                } catch (e: Throwable) {
-                    Timber.tag(TAG).e(e, "authorize: gateway connect/identify failed")
-                    _lastError.value = "discord_error_loopback_timeout"
-                    _connectionStatus.value = Status.Disconnected
-                    _ready = false
-                    _authorized = false
+                } else {
                     completeWith(false)
                 }
             } catch (e: DiscordAuthException.UserCancelled) {
@@ -240,6 +264,8 @@ object DiscordRpcManager {
                 _lastError.value = "discord_error_token_refresh_failed"
                 _connectionStatus.value = Status.Disconnected
                 completeWith(false)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Throwable) {
                 Timber.tag(TAG).e(e, "authorize: unexpected failure")
                 _lastError.value = "discord_error_loopback_timeout"
@@ -456,118 +482,477 @@ object DiscordRpcManager {
         }
     }
 
-    fun reconnectWithToken(token: String) {
+    fun reconnect(forceRefresh: Boolean = false) {
         if (!initialized) {
-            Timber.tag(TAG).w("reconnectWithToken: not initialized, ignoring")
+            Timber.tag(TAG).w("reconnect: not initialized, ignoring")
             return
         }
+        val intent = if (forceRefresh) {
+            ConnectionIntent.ForceRefreshAndIdentify
+        } else {
+            ConnectionIntent.EnsureConnected
+        }
+        requestConnection(intent)
+    }
 
-        scope.launch {
-            reconnectMutex.withLock {
-                accessToken = token
-                _accessTokenFlow.value = token
-                DiscordTokenStore.storeAccessToken(token)
+    private suspend fun requestConnectionAndAwait(
+        intent: ConnectionIntent,
+        newAuthorization: DiscordAuthResult? = null,
+    ): Boolean {
+        val completion = CompletableDeferred<Boolean>()
+        if (!requestConnection(intent, completion, newAuthorization = newAuthorization)) {
+            return false
+        }
+        return completion.await()
+    }
+
+    private fun requestConnection(
+        requestedIntent: ConnectionIntent,
+        completion: CompletableDeferred<Boolean>? = null,
+        newAuthorization: DiscordAuthResult? = null,
+        fromRetry: Boolean = false,
+        requiredEpoch: Long? = null,
+    ): Boolean {
+        var delayedRetryToCancel: Job? = null
+        val accepted = synchronized(coordinatorLock) {
+            if (!initialized || !scope.isActive) {
+                completion?.complete(false)
+                return@synchronized false
+            }
+            if (requiredEpoch != null &&
+                (connectionEpoch != requiredEpoch || _ready)
+            ) {
+                return@synchronized false
+            }
+
+            val hasNewAuthorization = newAuthorization != null
+            if (newAuthorization != null) {
+                connectionEpoch++
+                currentGatewayConnectionId = null
+                gateway.close(4000, "new authorization")
+                pendingConnectionRequest?.intent = requestedIntent
+                reconnectAttempts = 0
+                retryExhausted = false
+                forceRefreshRequired = false
+                terminalGatewayFailure = false
+                lastForcedRefreshAtMs = 0L
+                accessToken = newAuthorization.accessToken
+                _accessTokenFlow.value = newAuthorization.accessToken
+                DiscordTokenStore.storeFull(
+                    newAuthorization.accessToken,
+                    newAuthorization.refreshToken,
+                    newAuthorization.expiresInSec,
+                )
+                _authorized = true
+                _ready = false
                 _connectionStatus.value = Status.Authorizing
-                try {
-                    val refreshToken = DiscordTokenStore.getRefreshToken()
-                    val expiresAt = DiscordTokenStore.getExpiresAt()
-                    val nowSec = System.currentTimeMillis() / 1000L
-                    val needsRefresh = !refreshToken.isNullOrEmpty() &&
-                        expiresAt > 0L &&
-                        (expiresAt - nowSec) < 3600L
+            }
 
-                    Timber.tag(TAG).i(
-                        "reconnectWithToken: hasRefreshToken=%s, expiresAt=%d, now=%d, needsRefresh=%s",
-                        !refreshToken.isNullOrEmpty(),
-                        expiresAt,
-                        nowSec,
-                        needsRefresh,
-                    )
+            var intent = requestedIntent
+            if (intent is ConnectionIntent.ForceRefreshAndIdentify) {
+                forceRefreshRequired = true
+            } else if (intent is ConnectionIntent.EnsureConnected && forceRefreshRequired) {
+                intent = ConnectionIntent.ForceRefreshAndIdentify
+            }
 
-                    if (needsRefresh) {
-                        Timber.tag(TAG).i("reconnectWithToken: proactive token refresh")
-                        val refreshed = try {
-                            auth.refresh(refreshToken)
-                        } catch (e: DiscordAuthException.InvalidGrant) {
-                            Timber.tag(TAG).w(e, "reconnectWithToken: refresh invalid_grant, logging out")
-                            _lastError.value = "discord_error_token_refresh_failed"
-                            logout()
-                            return@withLock
-                        } catch (e: Throwable) {
-                            Timber.tag(TAG).w(e, "reconnectWithToken: refresh failed, continuing with old token")
-                            null
-                        }
-                        if (refreshed != null) {
-                            Timber.tag(TAG).i(
-                                "reconnectWithToken: refresh succeeded (new token length=%d, expiresIn=%d)",
-                                refreshed.accessToken.length,
-                                refreshed.expiresInSec,
-                            )
-                            accessToken = refreshed.accessToken
-                            _accessTokenFlow.value = refreshed.accessToken
-                            DiscordTokenStore.storeFull(
-                                refreshed.accessToken,
-                                refreshed.refreshToken,
-                                refreshed.expiresInSec,
-                            )
-                        }
+            if (terminalGatewayFailure && !hasNewAuthorization) {
+                Timber.tag(TAG).w("requestConnection: ignoring reconnect after terminal close")
+                completion?.complete(false)
+                return@synchronized false
+            }
+            if (intent is ConnectionIntent.EnsureConnected && _ready) {
+                completion?.complete(true)
+                return@synchronized true
+            }
+            if (intent is ConnectionIntent.EnsureConnected &&
+                currentGatewayConnectionId != null &&
+                _connectionStatus.value == Status.Authorizing
+            ) {
+                Timber.tag(TAG).d("requestConnection: coalescing with gateway authentication")
+                completion?.complete(true)
+                return@synchronized true
+            }
+
+            val supersedesDelay = hasNewAuthorization ||
+                intent is ConnectionIntent.ForceRefreshAndIdentify
+            if (retryJob?.isActive == true) {
+                if (!supersedesDelay) {
+                    Timber.tag(TAG).d("requestConnection: coalescing with scheduled retry")
+                    completion?.complete(false)
+                    return@synchronized true
+                }
+                delayedRetryToCancel = retryJob
+                retryJob = null
+            }
+
+            if (intent is ConnectionIntent.EnsureConnected &&
+                retryExhausted &&
+                !fromRetry &&
+                activeConnectionIntent == null &&
+                pendingConnectionRequest == null
+            ) {
+                Timber.tag(TAG).i("requestConnection: re-arming exhausted reconnect ladder")
+                reconnectAttempts = 0
+                retryExhausted = false
+            }
+
+            if (!hasNewAuthorization &&
+                completion == null &&
+                activeConnectionIntent != null &&
+                intentPriority(activeConnectionIntent!!) >= intentPriority(intent)
+            ) {
+                Timber.tag(TAG).d("requestConnection: coalescing with active %s", activeConnectionIntent)
+                return@synchronized true
+            }
+
+            val pending = pendingConnectionRequest
+            if (pending == null) {
+                pendingConnectionRequest = PendingConnectionRequest(
+                    intent = intent,
+                    completions = completion?.let { mutableListOf(it) } ?: mutableListOf(),
+                )
+            } else {
+                pending.intent = mergeIntents(pending.intent, intent)
+                if (completion != null) pending.completions += completion
+            }
+            startCoordinatorLocked()
+            true
+        }
+        delayedRetryToCancel?.cancel()
+        return accepted
+    }
+
+    private fun startCoordinatorLocked() {
+        if (pendingConnectionRequest == null || coordinatorJob?.isActive == true) return
+        val job = scope.launch(start = CoroutineStart.LAZY) {
+            runConnectionCoordinator()
+        }
+        coordinatorJob = job
+        job.start()
+    }
+
+    private suspend fun runConnectionCoordinator() {
+        val workerJob = currentCoroutineContext()[Job] ?: return
+        try {
+            while (currentCoroutineContext().isActive) {
+                val request = synchronized(coordinatorLock) {
+                    if (coordinatorJob !== workerJob) return
+                    val next = pendingConnectionRequest
+                    if (next == null) {
+                        activeConnectionIntent = null
+                        coordinatorJob = null
+                        return
                     }
+                    pendingConnectionRequest = null
+                    activeConnectionIntent = next.intent
+                    next
+                }
 
-                    runCatching { gateway.close(4000, "reconnecting") }
-                    gateway.connect()
-                    gateway.identify("Bearer ${accessToken ?: token}")
+                val success = try {
+                    processConnectionIntent(request.intent)
+                } catch (e: CancellationException) {
+                    request.completions.forEach { it.complete(false) }
+                    throw e
                 } catch (e: Throwable) {
-                    Timber.tag(TAG).e(e, "reconnectWithToken: connect/identify failed")
-                    _lastError.value = "discord_error_loopback_timeout"
-                    _connectionStatus.value = Status.Disconnected
+                    Timber.tag(TAG).e(e, "connection coordinator: unexpected failure")
+                    false
+                }
+                val currentSuccess = synchronized(coordinatorLock) {
+                    success &&
+                        coordinatorJob === workerJob &&
+                        currentGatewayConnectionId != null
+                }
+                request.completions.forEach { it.complete(currentSuccess) }
+                synchronized(coordinatorLock) {
+                    if (coordinatorJob === workerJob) {
+                        activeConnectionIntent = null
+                    }
+                }
+            }
+        } finally {
+            synchronized(coordinatorLock) {
+                if (coordinatorJob === workerJob) {
+                    coordinatorJob = null
+                    activeConnectionIntent = null
+                    startCoordinatorLocked()
                 }
             }
         }
     }
 
-    private suspend fun refreshAndReconnect() {
+    private suspend fun processConnectionIntent(intent: ConnectionIntent): Boolean {
+        val initialEpoch = synchronized(coordinatorLock) {
+            if (terminalGatewayFailure) return false
+            connectionEpoch
+        }
+        val forceRefresh = intent is ConnectionIntent.ForceRefreshAndIdentify
+        val token = resolveConnectionToken(forceRefresh, initialEpoch) ?: return false
+        currentCoroutineContext().ensureActive()
+
+        val establishIntent = when (intent) {
+            is ConnectionIntent.Resume -> intent
+            ConnectionIntent.EnsureConnected,
+            ConnectionIntent.Identify,
+            ConnectionIntent.ForceRefreshAndIdentify -> ConnectionIntent.Identify
+        }
+
+        var attemptEpoch: Long? = null
+        return try {
+            val currentAttemptEpoch = beginEstablish(initialEpoch) ?: throw GatewaySupersededException()
+            attemptEpoch = currentAttemptEpoch
+            if (establishIntent is ConnectionIntent.Identify) {
+                gateway.invalidateSession()
+            }
+            gateway.close(4000, "reconnecting")
+            ensureCurrentEpoch(currentAttemptEpoch)
+
+            val connectionId = gateway.connect { createdConnectionId ->
+                // Register before opening so an immediate close cannot outrun connect()'s return.
+                synchronized(coordinatorLock) {
+                    if (connectionEpoch != currentAttemptEpoch) throw GatewaySupersededException()
+                    currentGatewayConnectionId = createdConnectionId
+                }
+            }
+            ensureCurrentEpoch(currentAttemptEpoch)
+            synchronized(coordinatorLock) {
+                if (connectionEpoch != currentAttemptEpoch ||
+                    currentGatewayConnectionId != connectionId
+                ) {
+                    throw GatewaySupersededException()
+                }
+            }
+
+            when (establishIntent) {
+                is ConnectionIntent.Resume -> gateway.resume(
+                    sessionId = establishIntent.sessionId,
+                    seq = establishIntent.sequence,
+                    token = "Bearer $token",
+                    connectionId = connectionId,
+                )
+                ConnectionIntent.Identify -> gateway.identify(
+                    token = "Bearer $token",
+                    connectionId = connectionId,
+                )
+                else -> error("Unsupported establish intent: $establishIntent")
+            }
+            ensureCurrentEpoch(currentAttemptEpoch)
+            true
+        } catch (e: GatewaySupersededException) {
+            Timber.tag(TAG).i("connection attempt superseded")
+            false
+        } catch (e: GatewayConnectionException) {
+            Timber.tag(TAG).w(e, "gateway connection failed before open")
+            val epoch = attemptEpoch
+            if (epoch != null && publishConnectionFailure(epoch, "discord_error_loopback_timeout")) {
+                scheduleRetry(establishIntent, e.statusCode, e.retryReason, epoch)
+            }
+            false
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            Timber.tag(TAG).e(e, "gateway connect/authenticate failed")
+            val epoch = attemptEpoch
+            if (epoch != null && publishConnectionFailure(epoch, "discord_error_loopback_timeout")) {
+                gateway.close(1011, "authentication send failed")
+                scheduleRetry(establishIntent, 4000, e.message ?: "failure", epoch)
+            }
+            false
+        }
+    }
+
+    private suspend fun resolveConnectionToken(forceRefresh: Boolean, expectedEpoch: Long): String? {
+        val storedToken = accessToken ?: DiscordTokenStore.retrieveSuspend()
+        if (!isCurrentEpoch(expectedEpoch)) return null
+        if (storedToken.isNullOrEmpty()) {
+            Timber.tag(TAG).w("resolveConnectionToken: no token available")
+            return null
+        }
+        synchronized(coordinatorLock) {
+            if (connectionEpoch != expectedEpoch) return null
+            accessToken = storedToken
+            _accessTokenFlow.value = storedToken
+        }
+
         val refreshToken = DiscordTokenStore.getRefreshToken()
+        val expiresAt = DiscordTokenStore.getExpiresAt()
+        val nowSec = System.currentTimeMillis() / 1000L
+        val needsRefresh = forceRefresh ||
+            (!refreshToken.isNullOrEmpty() && expiresAt > 0L && (expiresAt - nowSec) < 3600L)
+
+        Timber.tag(TAG).i(
+            "resolveConnectionToken: hasRefreshToken=%s, expiresAt=%d, now=%d, needsRefresh=%s, forced=%s",
+            !refreshToken.isNullOrEmpty(),
+            expiresAt,
+            nowSec,
+            needsRefresh,
+            forceRefresh,
+        )
+        if (!needsRefresh) return storedToken
+
         if (refreshToken.isNullOrEmpty()) {
-            Timber.tag(TAG).w("refreshAndReconnect: no refresh token available, logging out")
-            _lastError.value = "discord_error_token_refresh_failed"
-            logout()
-            return
+            Timber.tag(TAG).w("resolveConnectionToken: refresh needed but no refresh token")
+            performLogout("discord_error_token_refresh_failed")
+            return null
+        }
+
+        val now = System.currentTimeMillis()
+        synchronized(coordinatorLock) {
+            if (connectionEpoch != expectedEpoch) return null
+            if (forceRefresh && (now - lastForcedRefreshAtMs) < 60_000L) {
+                Timber.tag(TAG).w("resolveConnectionToken: forced refresh throttled")
+                _lastError.value = "discord_error_token_refresh_failed"
+                _connectionStatus.value = Status.Disconnected
+                return null
+            }
+            if (forceRefresh) lastForcedRefreshAtMs = now
         }
 
         val refreshed = try {
             auth.refresh(refreshToken)
         } catch (e: DiscordAuthException.InvalidGrant) {
-            Timber.tag(TAG).w(e, "refreshAndReconnect: refresh token rejected, logging out")
-            _lastError.value = "discord_error_token_refresh_failed"
-            logout()
-            return
+            if (isCurrentEpoch(expectedEpoch)) {
+                Timber.tag(TAG).w(e, "resolveConnectionToken: refresh token rejected")
+                performLogout("discord_error_token_refresh_failed")
+            }
+            return null
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Throwable) {
-            Timber.tag(TAG).e(e, "refreshAndReconnect: token refresh failed")
-            _lastError.value = "discord_error_token_refresh_failed"
-            return
+            Timber.tag(TAG).w(e, "resolveConnectionToken: token refresh failed")
+            null
         }
 
-        Timber.tag(TAG).i(
-            "refreshAndReconnect: refresh succeeded (token length=%d, expiresIn=%d), reconnecting",
-            refreshed.accessToken.length,
-            refreshed.expiresInSec,
-        )
-        DiscordTokenStore.storeFull(
-            refreshed.accessToken,
-            refreshed.refreshToken,
-            refreshed.expiresInSec,
-        )
-        reconnectWithToken(refreshed.accessToken)
+        if (!isCurrentEpoch(expectedEpoch)) return null
+        if (refreshed == null) {
+            if (forceRefresh) {
+                synchronized(coordinatorLock) {
+                    if (connectionEpoch != expectedEpoch) return null
+                    _lastError.value = "discord_error_token_refresh_failed"
+                    _connectionStatus.value = Status.Disconnected
+                }
+                return null
+            }
+            return storedToken
+        }
+
+        synchronized(coordinatorLock) {
+            if (connectionEpoch != expectedEpoch) return null
+            accessToken = refreshed.accessToken
+            _accessTokenFlow.value = refreshed.accessToken
+            DiscordTokenStore.storeFull(
+                refreshed.accessToken,
+                refreshed.refreshToken,
+                refreshed.expiresInSec,
+            )
+            if (forceRefresh) forceRefreshRequired = false
+        }
+        return refreshed.accessToken
+    }
+
+    private fun beginEstablish(expectedEpoch: Long): Long? = synchronized(coordinatorLock) {
+        if (!initialized || connectionEpoch != expectedEpoch) return@synchronized null
+        connectionEpoch++
+        currentGatewayConnectionId = null
+        _ready = false
+        _connectionStatus.value = Status.Authorizing
+        connectionEpoch
+    }
+
+    private suspend fun ensureCurrentEpoch(expectedEpoch: Long) {
+        currentCoroutineContext().ensureActive()
+        if (!isCurrentEpoch(expectedEpoch)) throw GatewaySupersededException()
+    }
+
+    private fun isCurrentEpoch(expectedEpoch: Long): Boolean = synchronized(coordinatorLock) {
+        initialized && connectionEpoch == expectedEpoch
+    }
+
+    private fun publishConnectionFailure(expectedEpoch: Long, error: String): Boolean =
+        synchronized(coordinatorLock) {
+            if (!initialized || connectionEpoch != expectedEpoch) return@synchronized false
+            currentGatewayConnectionId = null
+            _ready = false
+            _authorized = false
+            _lastError.value = error
+            _connectionStatus.value = Status.Disconnected
+            true
+        }
+
+    private fun scheduleRetry(
+        intent: ConnectionIntent,
+        closeCode: Int,
+        reason: String,
+        expectedEpoch: Long,
+    ) {
+        var exhausted = false
+        synchronized(coordinatorLock) {
+            if (!initialized || connectionEpoch != expectedEpoch || _ready || retryJob?.isActive == true) {
+                return
+            }
+            if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                retryExhausted = true
+                exhausted = true
+                return@synchronized
+            }
+
+            reconnectAttempts++
+            val attempt = reconnectAttempts
+            val delayMs = DiscordReconnectStrategy.backoffDelayMs(attempt, closeCode, reason)
+            lateinit var scheduledJob: Job
+            scheduledJob = scope.launch(start = CoroutineStart.LAZY) {
+                try {
+                    delay(delayMs)
+                    val shouldRun = synchronized(coordinatorLock) {
+                        if (retryJob !== scheduledJob ||
+                            connectionEpoch != expectedEpoch ||
+                            _ready ||
+                            !initialized
+                        ) {
+                            false
+                        } else {
+                            retryJob = null
+                            true
+                        }
+                    }
+                    if (shouldRun) {
+                        requestConnection(
+                            requestedIntent = intent,
+                            fromRetry = true,
+                            requiredEpoch = expectedEpoch,
+                        )
+                    }
+                } finally {
+                    synchronized(coordinatorLock) {
+                        if (retryJob === scheduledJob) retryJob = null
+                    }
+                }
+            }
+            retryJob = scheduledJob
+            Timber.tag(TAG).i(
+                "scheduleRetry: retrying in %dms (attempt %d, code=%d, intent=%s)",
+                delayMs,
+                attempt,
+                closeCode,
+                intent,
+            )
+            scheduledJob.start()
+        }
+        if (exhausted) {
+            Timber.tag(TAG).w("scheduleRetry: max reconnect attempts reached")
+            val error = when (closeCode) {
+                4001, 4014 -> "discord_error_invalid_scope"
+                4004 -> "discord_error_token_refresh_failed"
+                else -> "discord_error_loopback_timeout"
+            }
+            publishConnectionFailure(expectedEpoch, error)
+        }
     }
 
     fun disconnect() {
         Timber.tag(TAG).i("disconnect: closing gateway, clearing ready/authorized")
+        cancelConnectionWork(closeReason = "user disconnect")
         currentActivityId.incrementAndGet()
         imageResolutionJob?.cancel()
-        runCatching { gateway.close(1000, "user disconnect") }
-        _connectionStatus.value = Status.Disconnected
-        _ready = false
-        _authorized = false
         currentSongId = null
         currentIsPlaying = false
         currentActivityHadImages = false
@@ -575,15 +960,15 @@ object DiscordRpcManager {
 
     fun destroy() {
         Timber.tag(TAG).i("destroy: cancelling scope and tearing down (initialized=%s)", initialized)
+        cancelConnectionWork(
+            closeReason = "destroy",
+            clearTerminalState = true,
+            deactivate = true,
+        )
         currentActivityId.incrementAndGet()
         imageResolutionJob?.cancel()
-        runCatching { gateway.close(1000, "destroy") }
         runCatching { gateway.closeHttp() }
         scope.cancel()
-        _ready = false
-        _authorized = false
-        initialized = false
-        _connectionStatus.value = Status.Disconnected
         lastActivity = null
         currentSongId = null
         currentIsPlaying = false
@@ -592,72 +977,214 @@ object DiscordRpcManager {
 
     fun logout() {
         Timber.tag(TAG).i("logout: clearing tokens and disconnecting")
-        disconnect()
-        accessToken = null
-        _accessTokenFlow.value = null
+        performLogout(null)
+    }
+
+    private fun performLogout(error: String?) {
+        cancelConnectionWork(
+            closeReason = "logout",
+            clearTerminalState = true,
+            clearCredentials = true,
+            connectionError = error,
+        )
+        currentActivityId.incrementAndGet()
+        imageResolutionJob?.cancel()
         _currentUser.value = null
-        DiscordTokenStore.clear()
-        DiscordSuperProperties.reset()
-        _lastError.value = null
         lastActivity = null
+        currentSongId = null
+        currentIsPlaying = false
         currentActivityHadImages = false
+    }
+
+    private fun cancelConnectionWork(
+        closeReason: String,
+        clearTerminalState: Boolean = false,
+        deactivate: Boolean = false,
+        clearCredentials: Boolean = false,
+        connectionError: String? = null,
+    ) {
+        val pendingCompletions: List<CompletableDeferred<Boolean>>
+        val worker: Job?
+        val delayedRetry: Job?
+        synchronized(coordinatorLock) {
+            connectionEpoch++
+            currentGatewayConnectionId = null
+            pendingCompletions = pendingConnectionRequest?.completions?.toList().orEmpty()
+            pendingConnectionRequest = null
+            activeConnectionIntent = null
+            worker = coordinatorJob
+            delayedRetry = retryJob
+            coordinatorJob = null
+            retryJob = null
+            _ready = false
+            _authorized = false
+            _connectionStatus.value = Status.Disconnected
+            if (deactivate) initialized = false
+            gateway.close(1000, closeReason)
+            if (clearTerminalState) {
+                terminalGatewayFailure = false
+                forceRefreshRequired = false
+                reconnectAttempts = 0
+                retryExhausted = false
+                lastForcedRefreshAtMs = 0L
+            }
+            if (clearCredentials) {
+                accessToken = null
+                _accessTokenFlow.value = null
+                DiscordTokenStore.clear()
+                DiscordSuperProperties.reset()
+                _lastError.value = connectionError
+            }
+        }
+        pendingCompletions.forEach { it.complete(false) }
+        delayedRetry?.cancel()
+        worker?.cancel()
     }
 
     private suspend fun handleGatewayEvent(event: GatewayEvent) {
         when (event) {
             is GatewayEvent.Ready -> {
+                var obsoleteRetry: Job? = null
+                val eventEpoch = synchronized(coordinatorLock) {
+                    if (event.connectionId != currentGatewayConnectionId) return
+                    reconnectAttempts = 0
+                    retryExhausted = false
+                    obsoleteRetry = retryJob
+                    retryJob = null
+                    _ready = true
+                    _authorized = true
+                    _connectionStatus.value = Status.Connected
+                    _lastError.value = null
+                    connectionEpoch
+                }
+                obsoleteRetry?.cancel()
                 Timber.tag(TAG).i("gateway: READY (sessionId prefix=%s)", event.sessionId.take(8))
-                _ready = true
-                _authorized = true
-                _connectionStatus.value = Status.Connected
-                _lastError.value = null
                 val token = accessToken ?: return
                 scope.launch {
                     val user = fetchCurrentUser(token)
-                    _currentUser.value = user
-                    if (user != null) {
+                    val current = synchronized(coordinatorLock) {
+                        connectionEpoch == eventEpoch &&
+                            currentGatewayConnectionId == event.connectionId &&
+                            _ready
+                    }
+                    if (current) {
+                        _currentUser.value = user
+                    }
+                    if (current && user != null) {
                         Timber.tag(TAG).i("gateway READY: fetched user %s", user.username)
                     }
                 }
             }
             is GatewayEvent.Resumed -> {
+                var obsoleteRetry: Job? = null
+                synchronized(coordinatorLock) {
+                    if (event.connectionId != currentGatewayConnectionId) return
+                    reconnectAttempts = 0
+                    retryExhausted = false
+                    obsoleteRetry = retryJob
+                    retryJob = null
+                    _ready = true
+                    _authorized = true
+                    _connectionStatus.value = Status.Connected
+                    _lastError.value = null
+                }
+                obsoleteRetry?.cancel()
                 Timber.tag(TAG).i("gateway: RESUMED")
-                _ready = true
-                _authorized = true
-                _connectionStatus.value = Status.Connected
-                _lastError.value = null
             }
             is GatewayEvent.Disconnected -> {
+                val action = if (event.code == 1000 && event.remote) {
+                    null
+                } else {
+                    DiscordReconnectStrategy.decide(
+                        closeCode = event.code,
+                        hadSession = gateway.sessionId != null,
+                        seq = gateway.currentSeq,
+                        sessionId = gateway.sessionId,
+                    )
+                }
+                val eventEpoch = synchronized(coordinatorLock) {
+                    if (event.connectionId != currentGatewayConnectionId) return
+                    currentGatewayConnectionId = null
+                    _ready = false
+                    _authorized = false
+                    _connectionStatus.value = Status.Disconnected
+                    when (action) {
+                        ReconnectAction.RefreshAndReIdentify -> forceRefreshRequired = true
+                        ReconnectAction.SurfaceFatal -> {
+                            terminalGatewayFailure = true
+                            _lastError.value = "discord_error_invalid_scope"
+                        }
+                        else -> Unit
+                    }
+                    connectionEpoch
+                }
                 Timber.tag(TAG).i("gateway: Disconnected (code=%d, remote=%s, reason=%s)",
                     event.code, event.remote, event.reason)
-                _ready = false
-                _authorized = false
-                _connectionStatus.value = Status.Disconnected
                 currentSongId = null
                 currentIsPlaying = false
                 imageResolutionJob?.cancel()
                 imageResolutionJob = null
-                if (event.code in setOf(4001, 4004) && event.reason.contains("max reconnect", ignoreCase = true)) {
-                    _lastError.value = when (event.code) {
-                        4004 -> "discord_error_token_refresh_failed"
-                        4001 -> "discord_error_invalid_scope"
-                        else -> _lastError.value
+
+                if (event.code == 1000 && event.remote) {
+                    invalidateGatewaySession(eventEpoch)
+                    return
+                }
+
+                val reconnectAction = checkNotNull(action)
+                Timber.tag(TAG).i(
+                    "gateway: reconnect strategy=%s for closeCode=%d",
+                    reconnectAction::class.simpleName,
+                    event.code,
+                )
+                when (reconnectAction) {
+                    is ReconnectAction.Resume -> scheduleRetry(
+                        intent = ConnectionIntent.Resume(reconnectAction.sessionId, reconnectAction.seq),
+                        closeCode = event.code,
+                        reason = event.reason,
+                        expectedEpoch = eventEpoch,
+                    )
+                    ReconnectAction.ReIdentify -> {
+                        invalidateGatewaySession(eventEpoch)
+                        scheduleRetry(
+                            intent = ConnectionIntent.Identify,
+                            closeCode = event.code,
+                            reason = event.reason,
+                            expectedEpoch = eventEpoch,
+                        )
+                    }
+                    ReconnectAction.RefreshAndReIdentify -> {
+                        invalidateGatewaySession(eventEpoch)
+                        requestConnection(
+                            requestedIntent = ConnectionIntent.ForceRefreshAndIdentify,
+                            requiredEpoch = eventEpoch,
+                        )
+                    }
+                    ReconnectAction.SurfaceFatal -> {
+                        invalidateGatewaySession(eventEpoch)
                     }
                 }
             }
             is GatewayEvent.InvalidSession -> {
+                val current = synchronized(coordinatorLock) {
+                    event.connectionId == currentGatewayConnectionId
+                }
+                if (!current) return
                 Timber.tag(TAG).w("gateway: InvalidSession (resumable=%s), closing WS to trigger reconnect", event.resumable)
                 imageResolutionJob?.cancel()
                 imageResolutionJob = null
-            }
-            is GatewayEvent.RefreshToken -> {
-                Timber.tag(TAG).w("gateway: RefreshToken requested, refreshing and reconnecting")
-                scope.launch { refreshAndReconnect() }
             }
             is GatewayEvent.Hello -> Unit
             is GatewayEvent.HeartbeatAck -> Unit
             is GatewayEvent.TextDispatch -> {
                 Timber.tag(TAG).v("gateway: TextDispatch op=%d t=%s", event.op, event.t)
+            }
+        }
+    }
+
+    private fun invalidateGatewaySession(expectedEpoch: Long) {
+        synchronized(coordinatorLock) {
+            if (connectionEpoch == expectedEpoch) {
+                gateway.invalidateSession()
             }
         }
     }

@@ -81,4 +81,64 @@ class DiscordReconnectStrategyTest {
         )
         assertEquals(ReconnectAction.SurfaceFatal, action)
     }
+
+    @Test
+    fun backoffDelay_followsExponentialScheduleAndCapsAt64Seconds() {
+        val expectedBaseDelays = listOf(
+            1_000L,
+            2_000L,
+            4_000L,
+            8_000L,
+            16_000L,
+            32_000L,
+            64_000L,
+            64_000L,
+        )
+
+        expectedBaseDelays.forEachIndexed { index, baseDelay ->
+            val actual = DiscordReconnectStrategy.backoffDelayMs(
+                attempt = index + 1,
+                closeCode = 4000,
+                reason = "transient failure",
+            )
+            val jitter = baseDelay / 4L
+            assertTrue(
+                "attempt ${index + 1}: expected $actual within ${baseDelay - jitter}..${baseDelay + jitter}",
+                actual in (baseDelay - jitter)..(baseDelay + jitter),
+            )
+        }
+    }
+
+    @Test
+    fun backoffDelay_usesRetryAfterForRateLimits() {
+        assertEquals(
+            75_500L,
+            DiscordReconnectStrategy.backoffDelayMs(
+                attempt = 1,
+                closeCode = 429,
+                reason = "rate limited;retry_after=75.5",
+            ),
+        )
+    }
+
+    @Test
+    fun backoffDelay_enforcesMinimumForMissingMalformedOrShortRetryAfter() {
+        val reasons = listOf(
+            "rate limited",
+            "rate limited;retry_after=invalid",
+            "rate limited;retry_after=0.5",
+        )
+
+        reasons.forEach { reason ->
+            assertEquals(
+                reason,
+                60_000L,
+                DiscordReconnectStrategy.backoffDelayMs(
+                    attempt = 1,
+                    closeCode = 429,
+                    reason = reason,
+                ),
+            )
+        }
+    }
 }

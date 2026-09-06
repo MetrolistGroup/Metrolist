@@ -1016,7 +1016,7 @@ class MusicService :
                                 Timber.tag("DiscordSvc").i("RPC toggle: initializing")
                                 DiscordRpcManager.init(this@MusicService)
                             }
-                            DiscordRpcManager.reconnectWithToken(DiscordRpcManager.getAccessToken()!!)
+                            DiscordRpcManager.reconnect()
                         }
                     } else {
                         Timber.tag("DiscordSvc").w("RPC toggle: enabled but no token and not ready")
@@ -1040,18 +1040,16 @@ class MusicService :
                     return@collectLatest
                 }
                 if (!discordRpcEnabled) {
-                    Timber.tag("DiscordSvc").i("Token change: RPC disabled, skipping reconnect")
+                    Timber.tag("DiscordSvc").i("Token change: RPC disabled, skipping")
                     return@collectLatest
                 }
+                // Never reconnect from here: every write to accessTokenFlow happens inside a flow
+                // that already establishes the connection itself (init/reconnect/refresh/authorize).
+                // Reacting with another reconnect created a feedback loop that killed each fresh
+                // connection before READY could arrive.
                 if (!DiscordRpcManager.isInitialized()) {
                     Timber.tag("DiscordSvc").i("Token change: initializing")
                     DiscordRpcManager.init(this@MusicService)
-                }
-                if (!DiscordRpcManager.isAuthorized()) {
-                    Timber.tag("DiscordSvc").i("Token change: reconnecting with token")
-                    DiscordRpcManager.reconnectWithToken(token)
-                } else {
-                    Timber.tag("DiscordSvc").i("Token change: already authorized, skipping reconnect")
                 }
             }
 
@@ -3514,7 +3512,7 @@ class MusicService :
                     if (!DiscordRpcManager.isInitialized()) {
                         DiscordRpcManager.init(this@MusicService)
                     }
-                    DiscordRpcManager.reconnectWithToken(token)
+                    DiscordRpcManager.reconnect()
                 }
             }
             return
