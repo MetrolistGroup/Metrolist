@@ -163,7 +163,7 @@
     <string name="updater">Trình cập nhật</string>
     <string name="check_for_updates">Tự động kiểm tra cập nhật</string>
     <string name="update_notifications">Bật thông báo về cập nhật</string>
-    <string name="update_available_title">Đã có cập nhật mới</string>
+    <string name="update_available_title">Đã có bản cập nhật mới</string>
     <string name="update_channel_name">Cập nhật ứng dụng</string>
     <string name="update_channel_desc">Thông báo về phiên bản mới của ứng dụng</string>
     <string name="google_cast">Truyền</string>
@@ -837,8 +837,8 @@
     <string name="enable_dynamic_icon_desc">Sử dụng biểu tượng theo chủ đề. Khi tắt, biểu tượng sẽ sử dụng màu đơn sắc.</string>
     <string name="playlist_unavailable">Không tìm thấy danh sách phát</string>
     <string name="kmp_upgrade_title">Đã có phiên bản Metrolist KMP %s</string>
-    <string name="kmp_upgrade_warning">Metrolist KMP đang trong giai đoạn thử nghiệm sớm. Các tính năng có thể bị lỗi, chưa hoàn thiện hoặc thay đổi mà không cần báo trước.</string>
-    <string name="kmp_upgrade_action">Nâng cấp lên phiên bản KMP</string>
+    <string name="kmp_upgrade_warning">Ứng dụng Metrolist KMP vẫn đang trong quá trình phát triển. Bạn có thể gặp phải lỗi hoặc các tính năng chưa hoàn thiện.</string>
+    <string name="kmp_upgrade_action">Thử KMP</string>
     <string name="kmp_upgrade_later">Để sau</string>
     <string name="android_auto_search_options">Tùy chọn tìm kiếm</string>
     <string name="android_auto_search_local_songs_limit">Giới hạn tìm kiếm bài hát</string>
@@ -861,4 +861,6 @@
     <string name="ai_provider_inception_help">Truy cập https://platform.inceptionlabs.ai để lấy khóa API</string>
     <string name="enable_zemer">Bật nhà cung cấp lời bài hát Zemer</string>
     <string name="enable_zemer_desc">Lời bài hát cho âm nhạc Do Thái</string>
+    <string name="update_available_message">Metrolist %s đã sẵn sàng để tải xuống.</string>
+    <string name="update_action">Cập nhật</string>
 </resources>
