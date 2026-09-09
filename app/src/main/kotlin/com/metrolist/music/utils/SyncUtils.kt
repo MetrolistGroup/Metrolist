@@ -847,19 +847,6 @@ class SyncUtils @Inject constructor(
             result.onSuccess { page ->
                 try {
                     val remoteAlbums = page.items.filterIsInstance<AlbumItem>().reversed()
-                    val remoteIds = remoteAlbums.map { it.id }.toSet()
-                    val localAlbums = database.likedAlbumEntitiesByNameAsc()
-
-                    if (remoteIds.isNotEmpty()) {
-                        localAlbums.filterNot { it.id in remoteIds }.forEach { album ->
-                            try {
-                                database.update(album.localToggleLike())
-                                delay(DB_OPERATION_DELAY_MS)
-                            } catch (e: Exception) {
-                                Timber.e(e, "Failed to update album: ${album.id}")
-                            }
-                        }
-                    }
 
                     remoteAlbums.forEach { album ->
                         try {
