@@ -262,6 +262,7 @@ class CastConnectionHandler(
 
         extensionJob =
             scope.launch {
+                if (player.mediaItemCount == 0) return@launch
                 val lastMediaId = player.getMediaItemAt(player.mediaItemCount - 1).mediaId
                 val localPlayer = musicService.player
                 var index = localPlayer.indexOfMediaId(lastMediaId)
