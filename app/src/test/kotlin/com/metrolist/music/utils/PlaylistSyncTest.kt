@@ -5,12 +5,6 @@ import org.junit.Test
 
 class PlaylistSyncTest {
     @Test
-    fun `incomplete liked songs preserve unmatched local likes`() {
-        assertEquals(false, hasCompleteLikedSongsResponse(fetchedCount = 296, advertisedCount = 321))
-        assertEquals(true, hasCompleteLikedSongsResponse(fetchedCount = 296, advertisedCount = null))
-    }
-
-    @Test
     fun `local-only songs are preserved`() {
         assertEquals(
             listOf(2),

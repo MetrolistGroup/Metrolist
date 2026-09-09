@@ -74,11 +74,6 @@ sealed class SyncOperation {
     data object ClearPodcastData : SyncOperation()
 }
 
-internal fun hasCompleteLikedSongsResponse(
-    fetchedCount: Int,
-    advertisedCount: Int?,
-) = advertisedCount == null || fetchedCount >= advertisedCount
-
 internal fun localSongIndexesAbsentFromRemote(
     localSongIds: List<String>,
     remoteSongIds: List<String>,
@@ -674,22 +669,10 @@ class SyncUtils @Inject constructor(
                 try {
                     val remoteSongs = page.songs
                     val remoteIds = remoteSongs.map { it.id }.toSet()
-                    val localSongs = database.likedSongEntitiesByNameAsc()
-                    val advertisedCount = page.playlist.songCountText?.filter { it.isDigit() }?.toIntOrNull()
-                    val hasCompleteResponse = hasCompleteLikedSongsResponse(remoteSongs.size, advertisedCount)
-                    if (!hasCompleteResponse) {
-                        Timber.w("Liked-song response was incomplete (${remoteSongs.size}/$advertisedCount); preserving unmatched local likes")
-                    }
                     val songIdsWithoutArtists = findSongIdsWithoutArtists(remoteIds)
                     val now = LocalDateTime.now()
 
                     database.withTransaction {
-                        if (hasCompleteResponse) {
-                            localSongs.filterNot { it.id in remoteIds }.forEach { song ->
-                                update(song.localToggleLike())
-                            }
-                        }
-
                         remoteSongs.forEachIndexed { index, song ->
                             val dbSong = songEntity(song.id)
                             val timestamp = dbSong?.likedDate ?: now.minusSeconds(index.toLong())
