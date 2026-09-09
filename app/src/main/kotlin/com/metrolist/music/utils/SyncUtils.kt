@@ -735,15 +735,10 @@ class SyncUtils @Inject constructor(
                 try {
                     val remoteSongs = page.items.filterIsInstance<SongItem>().reversed()
                     val remoteIds = remoteSongs.map { it.id }.toSet()
-                    val localSongs = database.librarySongEntitiesByNameAsc()
                     val songIdsWithoutArtists = findSongIdsWithoutArtists(remoteIds)
                     val now = LocalDateTime.now()
 
                     database.withTransaction {
-                        localSongs.filterNot { it.id in remoteIds }.forEach { song ->
-                            update(song.withLibraryMembership(isInLibrary = false))
-                        }
-
                         remoteSongs.forEachIndexed { index, song ->
                             val dbSong = songEntity(song.id)
                             val timestamp = now.minusSeconds((remoteSongs.lastIndex - index).toLong())
