@@ -546,6 +546,7 @@
     <string name="tap_to_open">Tap to open Metrolist</string>
     <string name="previous">Previous</string>
     <string name="play_pause">Play/Pause</string>
+    <string name="player_pause">Pause</string>
     <string name="next">Next</string>
     <string name="like">Like</string>
     <string name="not_playing">No song playing</string>
