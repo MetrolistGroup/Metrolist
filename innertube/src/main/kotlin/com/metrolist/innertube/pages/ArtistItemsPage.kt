@@ -115,7 +115,7 @@ data class ArtistItemsPage(
                         )
                     }
                     
-                    if (artists.isEmpty() && renderer.subtitle?.runs != null) {
+                    if (artists.isEmpty()) {
                         Timber.w("ArtistItemsPage.fromMusicTwoRowItemRenderer: Song '$title' (id=$videoId) - SUBTITLE RUNS EXIST but parsing returned EMPTY")
                     }
 

@@ -7,7 +7,6 @@ import com.metrolist.innertube.models.Run
 import com.metrolist.innertube.models.splitArtistsByConjunction
 import com.metrolist.innertube.models.splitBySeparator
 import com.metrolist.innertube.utils.parseTime
-import timber.log.Timber
 
 object PageHelper {
     // Icon types for library management (YouTube changed these in Feb 2026)
@@ -124,52 +123,6 @@ object PageHelper {
         return LibraryFeedbackTokens(addToken, removeToken)
     }
 
-    /**
-     * Extract feedback token for library operations.
-     *
-     * YouTube's new icon system (Feb 2026):
-     * - BOOKMARK_BORDER: Song NOT in library -> defaultToken = ADD, toggledToken = REMOVE
-     * - BOOKMARK: Song IS in library -> defaultToken = REMOVE, toggledToken = ADD
-     *
-     * @param menu The toggle menu renderer containing the feedback tokens
-     * @param type "LIBRARY_ADD" to get the add token, "LIBRARY_REMOVE" to get the remove token
-     * @return The appropriate feedback token, or null if not found
-     */
-    fun extractFeedbackToken(menu: Menu.MenuRenderer.Item.ToggleMenuServiceRenderer?, type: String): String? {
-        if (menu == null) return null
-        val defaultToken = menu.defaultServiceEndpoint.feedbackEndpoint?.feedbackToken
-        val toggledToken = menu.toggledServiceEndpoint?.feedbackEndpoint?.feedbackToken
-        val iconType = menu.defaultIcon.iconType
-
-        // Determine if the current icon indicates song is NOT in library
-        // BOOKMARK_BORDER or LIBRARY_ADD = song is NOT in library (default action is ADD)
-        val songNotInLibrary = iconType in LIBRARY_ADD_ICONS
-
-        return when (type) {
-            "LIBRARY_ADD" -> {
-                // We want the ADD token
-                if (songNotInLibrary) {
-                    // Icon shows "add" state, default action adds to library
-                    defaultToken
-                } else {
-                    // Icon shows "saved" state, toggled action would add back
-                    toggledToken
-                }
-            }
-            "LIBRARY_REMOVE", "LIBRARY_SAVED" -> {
-                // We want the REMOVE token
-                if (songNotInLibrary) {
-                    // Icon shows "add" state, toggled action would remove
-                    toggledToken
-                } else {
-                    // Icon shows "saved" state, default action removes from library
-                    defaultToken
-                }
-            }
-            else -> if (iconType == type) defaultToken else toggledToken
-        }
-    }
-
     fun extractArtists(runs: List<Run>?): List<Artist> {
         val sections = runs.orEmpty().splitBySeparator()
         val linkedArtists = sections.flatMap { section ->
@@ -181,7 +134,8 @@ object PageHelper {
                 when {
                     browseId?.startsWith("UC") == true || browseEndpoint?.isArtistEndpoint == true ->
                         Artist(run.text, browseId)
-                    browseId == null && !run.text.isMetadataText() -> Artist(run.text.trim(), null)
+                    browseId == null && run.text.trim() != "," && !run.text.isMetadataText() ->
+                        Artist(run.text.trim(), null)
                     else -> null
                 }
             }

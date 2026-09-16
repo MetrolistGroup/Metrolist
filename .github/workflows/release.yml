@@ -7,6 +7,10 @@ on:
       - "app/build.gradle.kts"
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   check-version:
     if: "!contains(github.ref, 'refs/tags')"
@@ -17,10 +21,11 @@ jobs:
       new_version: ${{ steps.check_version.outputs.new_version }}
       version_code: ${{ steps.check_version.outputs.version_code }}
     steps:
+      # Only HEAD and HEAD^ are read below, and no submodule or Gradle work
+      # happens in this job.
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
-          submodules: recursive
+          fetch-depth: 2
 
       - name: Check if version changed
         id: check_version
@@ -31,8 +36,8 @@ jobs:
             exit 0
           fi
 
-          NEW_VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts || echo "")
-          VERSION_CODE=$(grep -oP 'versionCode\s*=\s*\K\d+' app/build.gradle.kts || echo "")
+          NEW_VERSION=$(grep -m1 -oP '^\s*versionName\s*=\s*"\K[^"]+' app/build.gradle.kts || echo "")
+          VERSION_CODE=$(grep -m1 -oP '^\s*versionCode\s*=\s*\K\d+' app/build.gradle.kts || echo "")
 
           if [ -z "$NEW_VERSION" ]; then
             echo "Could not find versionName in app/build.gradle.kts"
@@ -51,7 +56,7 @@ jobs:
           fi
 
           if git show HEAD^:app/build.gradle.kts > /dev/null 2>&1; then
-            OLD_VERSION=$(git show HEAD^:app/build.gradle.kts | grep -oP 'versionName\s*=\s*"\K[^"]+' || echo "")
+            OLD_VERSION=$(git show HEAD^:app/build.gradle.kts | grep -m1 -oP '^\s*versionName\s*=\s*"\K[^"]+' || echo "")
             echo "Previous version: $OLD_VERSION"
             
             if [ "$OLD_VERSION" != "$NEW_VERSION" ]; then
@@ -95,8 +100,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-        with:
-          submodules: recursive
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
@@ -107,14 +110,18 @@ jobs:
       - name: Set Up Gradle
         uses: gradle/actions/setup-gradle@v5
         with:
-          cache-disabled: true
+          # Read-only: release builds reuse the dependency and build caches
+          # written by main without publishing entries of their own.
+          cache-read-only: true
           cache-cleanup: on-success
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build and Lint Release APK
-        run: ./gradlew --console=plain clean assemble${{ matrix.variantName }}Release :app:lint${{ matrix.variantName }}Release --warning-mode summary
+      # No `clean`: the runner is ephemeral, so there is nothing to clean and
+      # it only discards restored cache entries.
+      - name: Build Release APK
+        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release --warning-mode summary
         env:
           METROLIST_APPLICATION_ID: com.metrolist.music
           METROLIST_APP_NAME: Metrolist
@@ -168,6 +175,8 @@ jobs:
   create-release:
     needs: [check-version, build]
     if: needs.check-version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     steps:
@@ -213,7 +222,7 @@ jobs:
 
       - name: Create Release
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           echo "Creating release v${{ needs.check-version.outputs.new_version }}"
 

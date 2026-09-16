@@ -27,8 +27,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import com.metrolist.innertube.YouTube
-import com.metrolist.music.LocalDatabase
+import com.metrolist.music.LocalSyncUtils
 import com.metrolist.music.R
 import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.db.entities.PlaylistEntity
@@ -38,7 +37,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
-import java.util.logging.Logger
 
 @Composable
 fun CreatePlaylistDialog(
@@ -47,7 +45,7 @@ fun CreatePlaylistDialog(
     allowSyncing: Boolean = true,
     onPlaylistCreated: ((String) -> Unit)? = null,
 ) {
-    val database = LocalDatabase.current
+    val syncUtils = LocalSyncUtils.current
     val coroutineScope = rememberCoroutineScope()
     var syncedPlaylist by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -57,6 +55,7 @@ fun CreatePlaylistDialog(
 
     val notLoggedInYoutubeStr = stringResource(R.string.not_logged_in_youtube)
     val syncDisabledStr = stringResource(R.string.sync_disabled)
+    val playlistCreatedLocallyStr = stringResource(R.string.playlist_created_locally)
 
     TextFieldDialog(
         icon = { Icon(painter = painterResource(R.drawable.add), contentDescription = null) },
@@ -64,32 +63,18 @@ fun CreatePlaylistDialog(
         initialTextFieldValue = TextFieldValue(initialTextFieldValue ?: ""),
         onDismiss = onDismiss,
         onDone = { playlistName ->
-            coroutineScope.launch(Dispatchers.IO) {
-                val browseId =
-                    if (syncedPlaylist && isSignedIn) {
-                        YouTube.createPlaylist(playlistName)
-                    } else if (syncedPlaylist) {
-                        Logger.getLogger("CreatePlaylistDialog").warning("Not signed in")
-                        return@launch
-                    } else {
-                        null
-                    }
-
-                val playlistEntity =
-                    PlaylistEntity(
-                        name = playlistName,
-                        browseId = browseId,
-                        bookmarkedAt = LocalDateTime.now(),
-                        isEditable = true,
-                    )
-
-                database.query {
-                    insert(playlistEntity)
+            syncUtils.createPlaylist(
+                playlist = PlaylistEntity(
+                    name = playlistName,
+                    bookmarkedAt = LocalDateTime.now(),
+                    isEditable = true,
+                ),
+                syncWithYouTube = syncedPlaylist,
+            ) { playlistId, remoteCreated ->
+                if (syncedPlaylist && !remoteCreated) {
+                    Toast.makeText(context, playlistCreatedLocallyStr, Toast.LENGTH_LONG).show()
                 }
-
-                withContext(Dispatchers.Main) {
-                    onPlaylistCreated?.invoke(playlistEntity.id)
-                }
+                onPlaylistCreated?.invoke(playlistId)
             }
         },
         extraContent = {

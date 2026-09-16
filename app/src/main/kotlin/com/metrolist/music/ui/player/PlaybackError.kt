@@ -5,8 +5,13 @@
 
 package com.metrolist.music.ui.player
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,10 +23,15 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -30,154 +40,217 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.PlaybackException
+import com.metrolist.music.BuildConfig
+import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
+import com.metrolist.music.models.MediaMetadata
+import java.time.Instant
 
 @Composable
 fun PlaybackError(
     error: PlaybackException,
     retry: () -> Unit,
 ) {
-    // Build detailed error info for debugging
-    val rawErrorMessage = error.cause?.cause?.message 
-        ?: error.cause?.message 
-        ?: error.message 
-        ?: stringResource(R.string.error_unknown)
-    
-    // Check if this is an age-restricted content error
-    // Age-restricted content typically returns 403 Forbidden or contains age-related messages
-    val isAgeRestricted = rawErrorMessage.contains("age", ignoreCase = true) ||
-            rawErrorMessage.contains("Sign in to confirm your age", ignoreCase = true) ||
-            rawErrorMessage.contains("LOGIN_REQUIRED", ignoreCase = true) ||
-            rawErrorMessage.contains("confirm your age", ignoreCase = true) ||
-            rawErrorMessage.contains("403", ignoreCase = true) ||
-            rawErrorMessage.contains("Response code: 403", ignoreCase = true) ||
-            error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS
+    val context = LocalContext.current
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val streamClient by playerConnection.currentStreamClient.collectAsState()
+    val isOnline by playerConnection.service.connectivityObserver.networkStatus.collectAsState()
+    val causes = remember(error) { error.causeChain() }
+    val rawErrorMessages =
+        remember(causes) {
+            causes.mapNotNull { it.message?.takeIf(String::isNotBlank) }.distinct()
+        }
+    val isExplicitRestricted =
+        rawErrorMessages.any {
+            it.contains("confirm your age", ignoreCase = true) ||
+                it.contains("age-restricted", ignoreCase = true) ||
+                it.contains("LOGIN_REQUIRED", ignoreCase = true) ||
+                it.contains("403", ignoreCase = true)
+        }
+    val isJobCancelled =
+        rawErrorMessages.any {
+            it.contains("job", ignoreCase = true) &&
+                (it.contains("cancelled", ignoreCase = true) ||
+                    it.contains("canceled", ignoreCase = true) ||
+                    it.contains("cancellat", ignoreCase = true))
+        }
+    val guidance =
+        when {
+            isExplicitRestricted -> stringResource(R.string.error_explicit_login_recommended)
+            isJobCancelled -> stringResource(R.string.error_job_cancelled)
+            else -> null
+        }
+    val errorMessage =
+        playbackErrorMessages(
+            isOnline = isOnline,
+            offlineMessage = stringResource(R.string.error_offline_playback),
+            guidance = guidance,
+            rawErrorMessages = rawErrorMessages,
+        ).joinToString("\n").ifBlank { stringResource(R.string.error_unknown) }
+    val causeSummary =
+        remember(causes) {
+            causes
+                .drop(1)
+                .joinToString(" → ") { cause ->
+                    cause.javaClass.simpleName.ifBlank { cause.javaClass.name }
+                }
+        }
+    val errorCodeName = remember(error) { error.errorCodeName.removePrefix("ERROR_CODE_") }
+    val errorReport =
+        remember(error, mediaMetadata, streamClient) {
+            buildPlaybackErrorReport(error, mediaMetadata, streamClient)
+        }
 
-    // Check if this is a "job cancelled" error from YouTube
-    // YouTube returns this when the playback job cannot be started (often transient)
-    val isJobCancelled = rawErrorMessage.contains("job", ignoreCase = true) &&
-            (rawErrorMessage.contains("cancelled", ignoreCase = true) ||
-                    rawErrorMessage.contains("canceled", ignoreCase = true) ||
-                    rawErrorMessage.contains("cancellat", ignoreCase = true))
-    
-    val errorMessage = if (isAgeRestricted) {
-        "This app does not support playing age-restricted songs. We are working on fixing this issue."
-    } else if (isJobCancelled) {
-        stringResource(R.string.error_job_cancelled)
-    } else {
-        rawErrorMessage
-    }
-    
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(16.dp),
     ) {
-        // Error icon
         Icon(
             painter = painterResource(R.drawable.error),
             contentDescription = null,
             tint = MaterialTheme.colorScheme.error,
-            modifier = Modifier.size(48.dp)
+            modifier = Modifier.size(48.dp),
         )
-        
+
         Spacer(modifier = Modifier.height(12.dp))
-        
-        // Main error message
+
         Text(
-            text = stringResource(R.string.error_playback_failed),
+            text = stringResource(
+                if (isOnline) R.string.error_playback_failed else R.string.error_no_internet_connection,
+            ),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.error,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
-        // Error details
+
         Text(
             text = errorMessage,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             maxLines = 3,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
-        
+
         Spacer(modifier = Modifier.height(4.dp))
-        
-        // Error code
+
         Text(
-            text = "Code: ${getErrorCodeName(error.errorCode)} (${error.errorCode})",
-            style = MaterialTheme.typography.bodySmall.copy(
+            text = "Code: $errorCodeName (${error.errorCode})",
+            style =
+            MaterialTheme.typography.bodySmall.copy(
                 fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp
+                fontSize = 11.sp,
             ),
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
-        
+
+        if (causeSummary.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = causeSummary,
+                style =
+                MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 10.sp,
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
-        
-        // Retry button
-        Button(
-            onClick = retry,
-            shape = RoundedCornerShape(20.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                painter = painterResource(R.drawable.replay),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(text = stringResource(R.string.retry))
+            Button(
+                onClick = retry,
+                shape = RoundedCornerShape(20.dp),
+                colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.replay),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = stringResource(R.string.retry))
+            }
+
+            OutlinedButton(
+                onClick = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Metrolist Playback Error", errorReport))
+                },
+                shape = RoundedCornerShape(20.dp),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.content_copy),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = stringResource(R.string.copy))
+            }
         }
     }
 }
 
-/**
- * Get human-readable error code name from PlaybackException error code
- */
-private fun getErrorCodeName(errorCode: Int): String {
-    return when (errorCode) {
-        PlaybackException.ERROR_CODE_UNSPECIFIED -> "UNSPECIFIED"
-        PlaybackException.ERROR_CODE_REMOTE_ERROR -> "REMOTE_ERROR"
-        PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW -> "BEHIND_LIVE_WINDOW"
-        PlaybackException.ERROR_CODE_TIMEOUT -> "TIMEOUT"
-        PlaybackException.ERROR_CODE_FAILED_RUNTIME_CHECK -> "FAILED_RUNTIME_CHECK"
-        PlaybackException.ERROR_CODE_IO_UNSPECIFIED -> "IO_UNSPECIFIED"
-        PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED -> "IO_NETWORK_CONNECTION_FAILED"
-        PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> "IO_NETWORK_CONNECTION_TIMEOUT"
-        PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE -> "IO_INVALID_HTTP_CONTENT_TYPE"
-        PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> "IO_BAD_HTTP_STATUS"
-        PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND -> "IO_FILE_NOT_FOUND"
-        PlaybackException.ERROR_CODE_IO_NO_PERMISSION -> "IO_NO_PERMISSION"
-        PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED -> "IO_CLEARTEXT_NOT_PERMITTED"
-        PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE -> "IO_READ_POSITION_OUT_OF_RANGE"
-        PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED -> "PARSING_CONTAINER_MALFORMED"
-        PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED -> "PARSING_MANIFEST_MALFORMED"
-        PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED -> "PARSING_CONTAINER_UNSUPPORTED"
-        PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED -> "PARSING_MANIFEST_UNSUPPORTED"
-        PlaybackException.ERROR_CODE_DECODER_INIT_FAILED -> "DECODER_INIT_FAILED"
-        PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED -> "DECODER_QUERY_FAILED"
-        PlaybackException.ERROR_CODE_DECODING_FAILED -> "DECODING_FAILED"
-        PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES -> "DECODING_FORMAT_EXCEEDS_CAPABILITIES"
-        PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED -> "DECODING_FORMAT_UNSUPPORTED"
-        PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED -> "AUDIO_TRACK_INIT_FAILED"
-        PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED -> "AUDIO_TRACK_WRITE_FAILED"
-        PlaybackException.ERROR_CODE_DRM_UNSPECIFIED -> "DRM_UNSPECIFIED"
-        PlaybackException.ERROR_CODE_DRM_SCHEME_UNSUPPORTED -> "DRM_SCHEME_UNSUPPORTED"
-        PlaybackException.ERROR_CODE_DRM_PROVISIONING_FAILED -> "DRM_PROVISIONING_FAILED"
-        PlaybackException.ERROR_CODE_DRM_CONTENT_ERROR -> "DRM_CONTENT_ERROR"
-        PlaybackException.ERROR_CODE_DRM_LICENSE_ACQUISITION_FAILED -> "DRM_LICENSE_ACQUISITION_FAILED"
-        PlaybackException.ERROR_CODE_DRM_DISALLOWED_OPERATION -> "DRM_DISALLOWED_OPERATION"
-        PlaybackException.ERROR_CODE_DRM_SYSTEM_ERROR -> "DRM_SYSTEM_ERROR"
-        PlaybackException.ERROR_CODE_DRM_DEVICE_REVOKED -> "DRM_DEVICE_REVOKED"
-        PlaybackException.ERROR_CODE_DRM_LICENSE_EXPIRED -> "DRM_LICENSE_EXPIRED"
-        else -> "UNKNOWN_ERROR_$errorCode"
+internal fun Throwable.causeChain(): List<Throwable> =
+    generateSequence(this) { it.cause }.take(8).toList()
+
+internal fun playbackErrorMessages(
+    isOnline: Boolean,
+    offlineMessage: String,
+    guidance: String?,
+    rawErrorMessages: List<String>,
+): List<String> =
+    if (isOnline) (listOfNotNull(guidance) + rawErrorMessages).distinct() else listOf(offlineMessage)
+
+private fun buildPlaybackErrorReport(
+    error: PlaybackException,
+    mediaMetadata: MediaMetadata?,
+    streamClient: String?,
+): String =
+    buildString {
+        appendLine("Metrolist Playback Error Report")
+        appendLine("================================")
+        appendLine("Time: ${Instant.ofEpochMilli(error.timestampMs)}")
+        appendLine("App version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+        appendLine("Architecture: ${BuildConfig.ARCHITECTURE}")
+        appendLine("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+        appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}")
+        appendLine()
+        appendLine("Media")
+        appendLine("-----")
+        appendLine("Title: ${mediaMetadata?.title ?: "Unknown"}")
+        appendLine("Artists: ${mediaMetadata?.artists?.joinToString(", ") { it.name } ?: "Unknown"}")
+        appendLine("ID: ${mediaMetadata?.id ?: "Unknown"}")
+        appendLine("Link: ${mediaMetadata?.id?.let { "https://music.youtube.com/watch?v=$it" } ?: "Unknown"}")
+        appendLine("Stream client: ${streamClient ?: "Not resolved"}")
+        appendLine()
+        appendLine("Error")
+        appendLine("-----")
+        appendLine("Code: ${error.errorCodeName.removePrefix("ERROR_CODE_")} (${error.errorCode})")
+        error.causeChain().forEachIndexed { index, cause ->
+            appendLine("[$index] ${cause.javaClass.name}: ${cause.message ?: "(no message)"}")
+        }
+        appendLine()
+        appendLine("Stack trace")
+        appendLine("-----------")
+        append(error.stackTraceToString())
     }
-}

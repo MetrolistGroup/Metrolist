@@ -13,8 +13,14 @@ import com.metrolist.innertube.YouTube
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.apache.commons.lang3.RandomStringUtils
 import java.time.LocalDateTime
+
+private const val LOCAL_ID_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+internal fun generateLocalId(prefix: String) = buildString {
+    append(prefix)
+    repeat(8) { append(LOCAL_ID_CHARACTERS.random()) }
+}
 
 @Immutable
 @Entity(tableName = "playlist")
@@ -43,7 +49,7 @@ data class PlaylistEntity(
         const val WEEKLY_MOST_PLAYLIST_ID = "LP_WEEKLY_MOST"
         const val MONTHLY_MOST_PLAYLIST_ID = "LP_MONTHLY_MOST"
 
-        fun generatePlaylistId() = "LP" + RandomStringUtils.insecure().next(8, true, false)
+        fun generatePlaylistId() = generateLocalId("LP")
     }
 
     val shareLink: String?

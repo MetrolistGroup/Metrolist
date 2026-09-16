@@ -237,4 +237,26 @@
     <string name="remove_from_queue">حذف از صف</string>
     <string name="tempo_and_pitch">تمپو و زیر و بمی صدا</string>
     <string name="duplicates">تکراری ها</string>
+    <string name="skip_duplicates">رد شدن از آهنگ‌های تکراری</string>
+    <string name="add_anyway">به‌هرحال اضافه کن</string>
+    <string name="duplicates_description_single">این آهنگ همین الانش‌هم تو پلی‌لیستته</string>
+    <string name="duplicates_description_multiple">%d آهنگ همین‌ الانش‌هم تو پلی‌لیستته</string>
+    <string name="action_like_all">لایک کردن همه</string>
+    <string name="action_remove_like_all">برداشتن همه‌ی لایک‌ها</string>
+    <string name="theme">پوسته</string>
+    <string name="player">پلیر</string>
+    <string name="player_text_alignment">تراز کردن متن پلیر</string>
+    <string name="sided">قرار گرفت</string>
+    <string name="player_slider_style">ظاهر نوار زمان آهنگ</string>
+    <string name="default_">پیش‌فرض</string>
+    <string name="squiggly">موج‌دار</string>
+    <string name="misc">متفرقه</string>
+    <string name="grid_cell_size">اندازه‌ی سلول های شبکه</string>
+    <string name="small">کوچیک</string>
+    <string name="big">بزرگ</string>
+    <string name="action_logout">خارج شدن</string>
+    <string name="action_login">وارد شدن</string>
+    <string name="not_logged_in">وارد حساب نشدی</string>
+    <string name="login_failed">ورود به اکانت، با خطا مواجه شد</string>
+    <string name="queue">صف</string>
 </resources>

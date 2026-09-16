@@ -1,56 +1,47 @@
 package com.metrolist.music.playback
 
 import android.content.Context
+import com.metrolist.music.models.MediaMetadata
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-/**
- * Stub CastConnectionHandler for F-Droid builds.
- * Cast functionality is not available without Google Play Services.
- */
+@Suppress("UNUSED_PARAMETER")
 class CastConnectionHandler(
     context: Context,
     scope: CoroutineScope,
-    musicService: MusicService
+    musicService: MusicService,
 ) {
-    private val _isCasting = MutableStateFlow(false)
-    val isCasting: StateFlow<Boolean> = _isCasting
-    
-    private val _isConnecting = MutableStateFlow(false)
-    val isConnecting: StateFlow<Boolean> = _isConnecting
-    
-    private val _castDeviceName = MutableStateFlow<String?>(null)
-    val castDeviceName: StateFlow<String?> = _castDeviceName
-    
-    private val _castPosition = MutableStateFlow(0L)
-    val castPosition: StateFlow<Long> = _castPosition
-    
-    private val _castDuration = MutableStateFlow(0L)
-    val castDuration: StateFlow<Long> = _castDuration
-    
-    private val _castIsPlaying = MutableStateFlow(false)
-    val castIsPlaying: StateFlow<Boolean> = _castIsPlaying
-    
-    private val _castIsBuffering = MutableStateFlow(false)
-    val castIsBuffering: StateFlow<Boolean> = _castIsBuffering
-    
-    private val _castVolume = MutableStateFlow(1.0f)
-    val castVolume: StateFlow<Float> = _castVolume
-    
-    var isSyncingFromCast: Boolean = false
-        private set
-    
-    fun initialize(): Boolean = false
-    fun disconnect() {}
-    fun loadCurrentMedia() {}
-    fun loadMedia(metadata: com.metrolist.music.models.MediaMetadata) {}
-    fun play() {}
-    fun pause() {}
-    fun seekTo(position: Long) {}
-    fun setVolume(volume: Float) {}
-    fun skipToNext() {}
-    fun skipToPrevious() {}
-    fun navigateToMediaIfInQueue(mediaId: String): Boolean = false
-    fun release() {}
+    val isCasting: StateFlow<Boolean> = MutableStateFlow(false)
+    val castDeviceName: StateFlow<String?> = MutableStateFlow(null)
+    val castPosition: StateFlow<Long> = MutableStateFlow(0L)
+    val castDuration: StateFlow<Long> = MutableStateFlow(0L)
+    val castIsPlaying: StateFlow<Boolean> = MutableStateFlow(false)
+    val castIsBuffering: StateFlow<Boolean> = MutableStateFlow(false)
+    val castVolume: StateFlow<Float> = MutableStateFlow(1f)
+    val isSyncingFromCast = false
+
+    fun initialize() = false
+
+    fun disconnect() = Unit
+
+    fun loadCurrentMedia() = Unit
+
+    fun loadMedia(metadata: MediaMetadata) = Unit
+
+    fun play() = Unit
+
+    fun pause() = Unit
+
+    fun seekTo(position: Long) = Unit
+
+    fun setVolume(volume: Float) = Unit
+
+    fun skipToNext() = Unit
+
+    fun skipToPrevious() = Unit
+
+    fun navigateToMediaIfInQueue(mediaId: String) = false
+
+    fun release() = Unit
 }

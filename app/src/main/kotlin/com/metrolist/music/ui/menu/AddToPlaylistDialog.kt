@@ -33,11 +33,14 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.R
+import com.metrolist.music.constants.AddToPlaylistPosition
+import com.metrolist.music.constants.AddToPlaylistPositionKey
 import com.metrolist.music.constants.AddToPlaylistSortDescendingKey
 import com.metrolist.music.constants.AddToPlaylistSortTypeKey
 import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.constants.ListThumbnailSize
 import com.metrolist.music.constants.PlaylistSortType
+import com.metrolist.music.db.DatabaseDao
 import com.metrolist.music.db.entities.Playlist
 import com.metrolist.music.ui.component.CreatePlaylistDialog
 import com.metrolist.music.ui.component.DefaultDialog
@@ -80,7 +83,7 @@ fun AddToPlaylistDialog(
     isVisible: Boolean,
     allowSyncing: Boolean = true,
     initialTextFieldValue: String? = null,
-    onGetSong: suspend (Playlist) -> List<String>, // list of song ids. Songs should be inserted to database in this function.
+    onGetSong: suspend () -> List<String>, // list of song ids. Songs should be inserted to database in this function.
     onGetSongIds: (suspend () -> List<String>)? = null,
     onDismiss: () -> Unit,
     viewModel: PlaylistsViewModel = hiltViewModel()
@@ -88,6 +91,10 @@ fun AddToPlaylistDialog(
     val database = LocalDatabase.current
     val syncUtils = LocalSyncUtils.current
     val coroutineScope = rememberCoroutineScope()
+    val (addToPlaylistPosition) = rememberEnumPreference(
+        AddToPlaylistPositionKey,
+        AddToPlaylistPosition.BEGINNING,
+    )
     val (sortType, onSortTypeChange) = rememberEnumPreference(
         AddToPlaylistSortTypeKey,
         PlaylistSortType.NAME
@@ -122,11 +129,13 @@ fun AddToPlaylistDialog(
     }
 
     suspend fun addSongsAndSync(targetPlaylist: Playlist, ids: List<String>) {
-        database.addSongsToPlaylist(targetPlaylist, ids.map { it to null }, prepend = true)
-        targetPlaylist.playlist.browseId?.let { plist ->
-            ids.forEach { songId ->
-                syncUtils.addToPlaylist(plist, targetPlaylist.id, songId)
-            }
+        database.addSongsToPlaylist(
+            targetPlaylist,
+            ids.map { it to null },
+            prepend = addToPlaylistPosition.prepend,
+        )
+        targetPlaylist.playlist.browseId?.let { browseId ->
+            syncUtils.scheduleAddToPlaylist(browseId, targetPlaylist.id, ids)
         }
     }
 
@@ -134,18 +143,19 @@ fun AddToPlaylistDialog(
         if (!isVisible || playlists.isEmpty()) return@LaunchedEffect
         if (songIds != null) return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            songIds = onGetSongIds?.invoke() ?: onGetSong(playlists.first())
+            songIds = onGetSongIds?.invoke() ?: onGetSong()
         }
     }
     LaunchedEffect(isVisible, songIds, playlists) {
         if (!isVisible) {
+            songIds = null
             playlistsContainingSong = emptySet()
             return@LaunchedEffect
         }
         val ids = songIds ?: return@LaunchedEffect
         withContext(Dispatchers.IO) {
             playlistsContainingSong = playlists
-                .filter { database.playlistDuplicates(it.id, ids).isNotEmpty() }
+                .filter { database.playlistDuplicatesBatched(it.id, ids).isNotEmpty() }
                 .map { it.id }
                 .toSet()
         }
@@ -294,17 +304,13 @@ fun AddToPlaylistDialog(
                     .clickable {
                         selectedPlaylist = playlist
                         coroutineScope.launch(Dispatchers.IO) {
-                            if (songIds == null) {
-                                songIds = onGetSong(playlist)
-                            } else {
-                                onGetSong(playlist)
-                            }
-                            duplicates = database.playlistDuplicates(playlist.id, songIds!!)
+                            songIds = onGetSong()
+                            duplicates = database.playlistDuplicatesBatched(playlist.id, songIds!!)
                             if (duplicates.isNotEmpty()) {
                                 showDuplicateDialog = true
                             } else {
-                                onDismiss()
                                 addSongsAndSync(playlist, songIds!!)
+                                withContext(Dispatchers.Main) { onDismiss() }
                             }
                         }
                     }
@@ -329,12 +335,12 @@ fun AddToPlaylistDialog(
                     TextButton(
                         onClick = {
                             showDuplicateDialog = false
-                            onDismiss()
                             coroutineScope.launch(Dispatchers.IO) {
                                 addSongsAndSync(
                                     selectedPlaylist!!,
                                     songIds!!.filter { !duplicates.contains(it) }
                                 )
+                                withContext(Dispatchers.Main) { onDismiss() }
                             }
                         }
                     ) {
@@ -344,9 +350,9 @@ fun AddToPlaylistDialog(
                     TextButton(
                         onClick = {
                             showDuplicateDialog = false
-                            onDismiss()
                             coroutineScope.launch(Dispatchers.IO) {
                                 addSongsAndSync(selectedPlaylist!!, songIds!!)
+                                withContext(Dispatchers.Main) { onDismiss() }
                             }
                         }
                     ) {
@@ -377,3 +383,18 @@ fun AddToPlaylistDialog(
             }
         }
 }
+
+internal const val MAX_PLAYLIST_DUPLICATES_BATCH_SIZE = 500
+
+internal suspend fun DatabaseDao.playlistDuplicatesBatched(
+    playlistId: String,
+    songIds: List<String>,
+): List<String> =
+    if (songIds.size <= MAX_PLAYLIST_DUPLICATES_BATCH_SIZE) {
+        playlistDuplicates(playlistId, songIds)
+    } else {
+        songIds
+            .distinct()
+            .chunked(MAX_PLAYLIST_DUPLICATES_BATCH_SIZE)
+            .flatMap { playlistDuplicates(playlistId, it) }
+    }

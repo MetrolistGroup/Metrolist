@@ -60,7 +60,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
-import com.metrolist.music.constants.AlbumViewTypeKey
 import com.metrolist.music.constants.CONTENT_TYPE_HEADER
 import com.metrolist.music.constants.CONTENT_TYPE_PLAYLIST
 import com.metrolist.music.constants.GridItemSize
@@ -117,6 +116,8 @@ import java.util.UUID
 fun LibraryMixScreen(
     navController: NavController,
     filterContent: @Composable () -> Unit,
+    viewType: LibraryViewType,
+    onViewTypeChange: (LibraryViewType) -> Unit,
     viewModel: LibraryMixViewModel = hiltViewModel(),
 ) {
     val menuState = LocalMenuState.current
@@ -127,7 +128,6 @@ fun LibraryMixScreen(
     val isPlaying by playerConnection.isEffectivelyPlaying.collectAsStateWithLifecycle()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
-    var viewType by rememberEnumPreference(AlbumViewTypeKey, LibraryViewType.GRID)
     val (sortType, onSortTypeChange) =
         rememberEnumPreference(
             MixSortTypeKey,
@@ -252,7 +252,7 @@ fun LibraryMixScreen(
                         is Album -> item.album.bookmarkedAt
                         is Artist -> item.artist.bookmarkedAt
                         is Playlist -> item.playlist.createdAt
-                        else -> LocalDateTime.now()
+                        is Song -> LocalDateTime.now()
                     }
                 }
             }
@@ -264,7 +264,7 @@ fun LibraryMixScreen(
                             is Album -> item.album.title
                             is Artist -> item.artist.name
                             is Playlist -> item.playlist.name
-                            else -> ""
+                            is Song -> ""
                         }
                     },
                 )
@@ -276,7 +276,7 @@ fun LibraryMixScreen(
                         is Album -> item.album.lastUpdateTime
                         is Artist -> item.artist.lastUpdateTime
                         is Playlist -> item.playlist.lastUpdateTime
-                        else -> LocalDateTime.now()
+                        is Song -> LocalDateTime.now()
                     }
                 }
             }
@@ -300,7 +300,6 @@ fun LibraryMixScreen(
 
                     is Artist -> matchesNormalizedQuery(normalizedQuery, item.artist.name)
                     is Playlist -> matchesNormalizedQuery(normalizedQuery, item.playlist.name)
-                    else -> true
                 }
             }
 
@@ -315,7 +314,6 @@ fun LibraryMixScreen(
                             is Song -> 1
                             is Artist -> 2
                             is Album -> 3
-                            else -> 4
                         }
                     val secondPriority =
                         when (second) {
@@ -323,7 +321,6 @@ fun LibraryMixScreen(
                             is Song -> 1
                             is Artist -> 2
                             is Album -> 3
-                            else -> 4
                         }
 
                     if (firstPriority != secondPriority) {
@@ -335,7 +332,6 @@ fun LibraryMixScreen(
                                 is Song -> first.song.title
                                 is Artist -> first.artist.name
                                 is Album -> first.album.title
-                                else -> ""
                             }
                         val secondName =
                             when (second) {
@@ -343,7 +339,6 @@ fun LibraryMixScreen(
                                 is Song -> second.song.title
                                 is Artist -> second.artist.name
                                 is Album -> second.album.title
-                                else -> ""
                             }
                         collator.compare(firstName, secondName)
                     }
@@ -418,7 +413,7 @@ fun LibraryMixScreen(
 
             IconButton(
                 onClick = {
-                    viewType = viewType.toggle()
+                    onViewTypeChange(viewType.toggle())
                 },
                 modifier = Modifier.padding(end = 8.dp).size(40.dp),
             ) {
@@ -758,8 +753,6 @@ fun LibraryMixScreen(
                                             ).animateItem(),
                                 )
                             }
-
-                            else -> {}
                         }
                     }
 
@@ -1036,8 +1029,6 @@ fun LibraryMixScreen(
                                             ).animateItem(),
                                 )
                             }
-
-                            else -> {}
                         }
                     }
 

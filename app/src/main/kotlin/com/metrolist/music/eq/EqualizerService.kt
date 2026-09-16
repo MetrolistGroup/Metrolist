@@ -136,17 +136,6 @@ class EqualizerService @Inject constructor() {
     }
 
     /**
-     * Get information about the current EQ capabilities
-     */
-    fun getEqualizerInfo(): EqualizerInfo {
-        return EqualizerInfo(
-            supportsUnlimitedBands = true,
-            maxBands = Int.MAX_VALUE,
-            description = "Custom ExoPlayer AudioProcessor with biquad filters"
-        )
-    }
-
-    /**
      * Release resources (not needed for AudioProcessor, but kept for API compatibility)
      */
     fun release() {
@@ -155,12 +144,3 @@ class EqualizerService @Inject constructor() {
         Timber.tag(TAG).d("Audio processor references cleared")
     }
 }
-
-/**
- * Information about equalizer capabilities
- */
-data class EqualizerInfo(
-    val supportsUnlimitedBands: Boolean,
-    val maxBands: Int,
-    val description: String
-)

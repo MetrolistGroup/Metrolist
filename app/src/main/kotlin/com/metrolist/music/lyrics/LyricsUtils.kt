@@ -266,7 +266,9 @@ object LyricsUtils {
 
         "ѓ" to "gj", "ѕ" to "dz", "и" to "i", "ј" to "j", "љ" to "lj",
         "њ" to "nj", "ќ" to "kj", "џ" to "dž", "ч" to "č", "ш" to "sh",
-        "ж" to "zh", "ц" to "c", "х" to "h"
+        "ж" to "zh", "ц" to "c", "х" to "h",
+
+        "Ѐ" to "E", "ѐ" to "e", "Ѝ" to "I", "ѝ" to "i"
     )
 
     private val RUSSIAN_CYRILLIC_LETTERS = setOf(
@@ -334,7 +336,9 @@ object LyricsUtils {
 
         "а", "б", "в", "г", "д", "ѓ", "е", "ж", "з", "ѕ", "и", "ј", "к", "л",
         "љ", "м", "н", "њ", "о", "п", "р", "с", "т", "ќ", "у", "ф", "х",
-        "ц", "ч", "џ", "ш"
+        "ц", "ч", "џ", "ш",
+
+        "Ѐ", "ѐ", "Ѝ", "ѝ"
     )
 
     private val UKRAINIAN_SPECIFIC_CYRILLIC_LETTERS = setOf(
@@ -664,35 +668,49 @@ object LyricsUtils {
      * Get the start time of the next line for calculating the last word's end time
      */
     private fun getNextLineStartTime(currentIndex: Int, allLines: List<String>): Double? {
-        if (currentIndex + 1 >= allLines.size) return null
-
-        val nextLine = allLines[currentIndex + 1].trim()
-        
-        // Try standard rich sync line
-        val matchResult = RICH_SYNC_LINE_REGEX.matchEntire(nextLine)
-        if (matchResult != null) {
-            val minutes = matchResult.groupValues[1].toLongOrNull() ?: return null
-            val seconds = matchResult.groupValues[2].toLongOrNull() ?: return null
-            val fraction = matchResult.groupValues[3].toLongOrNull() ?: 0L
-
-            val fractionPart = if (matchResult.groupValues[3].length == 3) fraction / 1000.0 else fraction / 100.0
-            return minutes * 60.0 + seconds + fractionPart
+        // Background vocals overlap the line they accompany rather than following it,
+        // so a background line does not mark where the previous line ends. Using one
+        // cut the last word short, and when the background started before that word
+        // did, the word was handed an end time earlier than its own start.
+        var nextIndex = currentIndex + 1
+        while (nextIndex < allLines.size && isBackgroundLine(allLines[nextIndex].trim())) {
+            nextIndex++
+            // A background line without inline timestamps carries its word timings on
+            // the following standalone <word:start:end> line. That continuation belongs
+            // to the background, so it has to be stepped over as well.
+            if (nextIndex < allLines.size && isTimingContinuationLine(allLines[nextIndex].trim())) {
+                nextIndex++
+            }
         }
-        
-        // Try background line
-        val bgMatch = PAXSENIX_BG_LINE_REGEX.matchEntire(nextLine)
-        if (bgMatch != null) {
-            val content = bgMatch.groupValues[1]
-            val wordMatch = RICH_SYNC_WORD_REGEX.find(content) ?: return null
-            val minutes = wordMatch.groupValues[1].toLongOrNull() ?: return null
-            val seconds = wordMatch.groupValues[2].toLongOrNull() ?: return null
-            val fraction = wordMatch.groupValues[3].toLongOrNull() ?: 0L
-            val fractionPart = if (wordMatch.groupValues[3].length == 3) fraction / 1000.0 else fraction / 100.0
-            return minutes * 60.0 + seconds + fractionPart
-        }
+        if (nextIndex >= allLines.size) return null
 
-        return null
+        val nextLine = allLines[nextIndex].trim()
+
+        val matchResult = RICH_SYNC_LINE_REGEX.matchEntire(nextLine) ?: return null
+        val minutes = matchResult.groupValues[1].toLongOrNull() ?: return null
+        val seconds = matchResult.groupValues[2].toLongOrNull() ?: return null
+        val fraction = matchResult.groupValues[3].toLongOrNull() ?: 0L
+
+        val fractionPart = if (matchResult.groupValues[3].length == 3) fraction / 1000.0 else fraction / 100.0
+        return minutes * 60.0 + seconds + fractionPart
     }
+
+    /**
+     * Both background spellings the parser accepts: a whole `[bg: ...]` line, and a
+     * timestamped line whose content begins with `{bg}`.
+     */
+    private fun isBackgroundLine(line: String): Boolean {
+        if (PAXSENIX_BG_LINE_REGEX.matches(line)) return true
+        val content = RICH_SYNC_LINE_REGEX.matchEntire(line)?.groupValues?.get(4) ?: return false
+        return BACKGROUND_REGEX.containsMatchIn(content.trim())
+    }
+
+    /**
+     * A standalone `<word:start:end|...>` line holding the previous line's word
+     * timings, matching the continuation form [parseRichSyncLyrics] falls back to.
+     */
+    private fun isTimingContinuationLine(line: String): Boolean =
+        line.startsWith("<") && line.endsWith(">")
 
     /**
      * Parse standard synced lyrics format: [MM:SS.mm] text
@@ -1198,91 +1216,6 @@ object LyricsUtils {
         return romajiBuilder.toString()
     }
 
-    // TODO: This function might be used later if we let the user choose the language manually
-    /** private suspend fun romanizeCyrillicWithLanguage(text: String, language: CyrillicLanguage): String = withContext(Dispatchers.Default) {
-        if (text.isEmpty()) return@withContext ""
-
-        val detectedLanguage = language ?: when {
-            isRussian(text) -> CyrillicLanguage.RUSSIAN
-            isUkrainian(text) -> CyrillicLanguage.UKRAINIAN
-            isSerbian(text) -> CyrillicLanguage.SERBIAN
-            isBelarusian(text) -> CyrillicLanguage.BELARUSIAN
-            isKyrgyz(text) -> CyrillicLanguage.KYRGYZ
-            isMacedonian(text) -> CyrillicLanguage.MACEDONIAN
-            else -> return@withContext text
-        }
-
-        val languageMap: Map<String, String> = when (detectedLanguage) {
-            CyrillicLanguage.RUSSIAN -> RUSSIAN_ROMAJI_MAP
-            CyrillicLanguage.UKRAINIAN -> UKRAINIAN_ROMAJI_MAP
-            CyrillicLanguage.SERBIAN -> SERBIAN_ROMAJI_MAP
-            CyrillicLanguage.BELARUSIAN -> BELARUSIAN_ROMAJI_MAP
-            CyrillicLanguage.KYRGYZ -> KYRGYZ_ROMAJI_MAP
-            CyrillicLanguage.MACEDONIAN -> MACEDONIAN_ROMAJI_MAP
-            // else -> emptyMap()
-        }
-        val languageLetters = when (language) {
-            CyrillicLanguage.RUSSIAN -> RUSSIAN_CYRILLIC_LETTERS
-            CyrillicLanguage.UKRAINIAN -> UKRAINIAN_CYRILLIC_LETTERS
-            CyrillicLanguage.SERBIAN -> SERBIAN_CYRILLIC_LETTERS
-            CyrillicLanguage.BELARUSIAN -> BELARUSIAN_CYRILLIC_LETTERS
-            CyrillicLanguage.KYRGYZ -> KYRGYZ_CYRILLIC_LETTERS
-            CyrillicLanguage.MACEDONIAN -> MACEDONIAN_CYRILLIC_LETTERS
-            else -> GENERAL_CYRILLIC_ROMAJI_MAP.keys
-        }
-
-        val romajiBuilder = StringBuilder(text.length)
-        val words = text.split("((?<=\\s|[.,!?;])|(?=\\s|[.,!?;]))".toRegex())
-            .filter { it.isNotEmpty() }
-
-        words.forEachIndexed { _, word ->
-            if (word.matches("[.,!?;]".toRegex()) || word.isBlank()) {
-                // Preserve punctuation or spaces as is
-                romajiBuilder.append(word)
-            } else {
-                // Process word
-                var charIndex = 0
-                while (charIndex < word.length) {
-                    var consumed = false
-                    // Check for 3-character sequences (language-specific, e.g., Russian)
-                    if (detectedLanguage == CyrillicLanguage.RUSSIAN && charIndex + 2 < word.length) {
-                        val threeCharCandidate = word.substring(charIndex, charIndex + 3)
-                        if (languageLetters is Set<*> && languageLetters.containsAll(threeCharCandidate.toList().map { it.toString() })) {
-                            val mappedThreeChar = languageMap[threeCharCandidate]
-                            if (mappedThreeChar != null) {
-                                romajiBuilder.append(mappedThreeChar)
-                                charIndex += 3
-                                consumed = true
-                            }
-                        }
-                    }
-                    if (!consumed) {
-                        val charStr = word[charIndex].toString()
-                        val isSpecificLanguageChar = languageLetters is Set<*> && languageLetters.contains(charStr)
-                        val isGeneralCyrillicChar = GENERAL_CYRILLIC_ROMAJI_MAP.containsKey(charStr)
-
-                        if (isSpecificLanguageChar || isGeneralCyrillicChar) {
-                            if (detectedLanguage == CyrillicLanguage.RUSSIAN && (charStr == "е" || charStr == "Е") && charIndex == 0 && (charIndex == 0 || word[charIndex-1].isWhitespace())) {
-                                romajiBuilder.append(if (charStr == "е") "ye" else "Ye")
-                            } else {
-                                val romanizedChar = languageMap[charStr] ?: GENERAL_CYRILLIC_ROMAJI_MAP[charStr]
-                                if (romanizedChar != null) {
-                                    romajiBuilder.append(romanizedChar)
-                                } else {
-                                    romajiBuilder.append(charStr)
-                                }
-                            }
-                        } else {
-                            romajiBuilder.append(charStr)
-                        }
-                        charIndex += 1
-                    }
-                }
-            }
-        }
-        romajiBuilder.toString()
-    } */
-
     fun isRussian(text: String): Boolean {
         return text.any { char ->
             RUSSIAN_CYRILLIC_LETTERS.contains(char.toString())
@@ -1475,12 +1408,5 @@ object LyricsUtils {
         return lyrics.contains(TIME_REGEX) ||
                 lyrics.contains(PAXSENIX_AGENT_LINE_REGEX) ||
                 lyrics.contains(PAXSENIX_BG_LINE_REGEX)
-    }
-
-    fun getLyricsQuality(lyrics: String): Int {
-        if (lyrics.isBlank() || lyrics == "Lyrics not found") return 0
-        if (isWordSynced(lyrics)) return 3
-        if (isLineSynced(lyrics)) return 2
-        return 1
     }
 }

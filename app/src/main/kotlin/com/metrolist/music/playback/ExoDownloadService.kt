@@ -7,14 +7,10 @@ package com.metrolist.music.playback
 
 import android.app.Notification
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Icon
-import androidx.media3.common.util.NotificationUtil
 import androidx.media3.common.util.Util
 import androidx.media3.exoplayer.offline.Download
-import androidx.media3.exoplayer.offline.DownloadManager
-import androidx.media3.exoplayer.offline.DownloadNotificationHelper
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.exoplayer.scheduler.PlatformScheduler
 import androidx.media3.exoplayer.scheduler.Scheduler
@@ -82,32 +78,6 @@ class ExoDownloadService : DownloadService(
         return Notification.Builder.recoverBuilder(this, progressNotification)
             .setActions(cancelAction)
             .build()
-    }
-
-
-    /**
-     * This helper will outlive the lifespan of a single instance of [ExoDownloadService]
-     */
-    class TerminalStateNotificationHelper(
-        private val context: Context,
-        private val notificationHelper: DownloadNotificationHelper,
-        private var nextNotificationId: Int,
-    ) : DownloadManager.Listener {
-        override fun onDownloadChanged(
-            downloadManager: DownloadManager,
-            download: Download,
-            finalException: Exception?,
-        ) {
-            if (download.state == Download.STATE_FAILED) {
-                val notification = notificationHelper.buildDownloadFailedNotification(
-                    context,
-                    R.drawable.error,
-                    null,
-                    Util.fromUtf8Bytes(download.request.data)
-                )
-                NotificationUtil.setNotification(context, nextNotificationId++, notification)
-            }
-        }
     }
 
     companion object {

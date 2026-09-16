@@ -23,15 +23,16 @@ kotlin {
 }
 
 dependencies {
+    if (providers.gradleProperty("useMavenLocalInnerTubeX").isPresent) {
+        api("com.github.MetrolistGroup:innertubex:${libs.versions.innertubex.get()}")
+    } else {
+        api(libs.innertubex)
+    }
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.json)
     implementation(libs.ktor.client.encoding)
-    implementation(libs.brotli)
-    implementation(libs.extractor) {
-        exclude(group = "com.google.protobuf")
-    }
     implementation(libs.timber)
     testImplementation(libs.junit)
 

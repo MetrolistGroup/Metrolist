@@ -40,11 +40,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.offline.Download
-import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
 import com.metrolist.innertube.YouTube
 import com.metrolist.music.LocalDatabase
@@ -77,6 +75,7 @@ fun SelectionSongMenu(
     clearAction: () -> Unit,
     songPosition: List<PlaylistSongMap>? = emptyList(),
     isUploadedPlaylist: Boolean = false,
+    onRemoveFromCache: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val database = LocalDatabase.current
@@ -138,16 +137,7 @@ fun SelectionSongMenu(
 
     AddToPlaylistDialog(
         isVisible = showChoosePlaylistDialog,
-        onGetSong = { playlist ->
-            coroutineScope.launch(Dispatchers.IO) {
-                songSelection.forEach { song ->
-                    playlist.playlist.browseId?.let { browseId ->
-                        YouTube.addToPlaylist(browseId, song.id)
-                    }
-                }
-            }
-            songSelection.map { it.id }
-        },
+        onGetSong = { songSelection.map { it.id } },
         onGetSongIds = { songSelection.map { it.id } },
         onDismiss = {
             showChoosePlaylistDialog = false
@@ -560,25 +550,30 @@ fun SelectionSongMenu(
                                             )
                                         },
                                         onClick = {
-                                            songSelection.forEach { song ->
-                                                val downloadRequest =
-                                                    DownloadRequest
-                                                        .Builder(song.id, song.id.toUri())
-                                                        .setCustomCacheKey(song.id)
-                                                        .setData(song.song.title.toByteArray())
-                                                        .build()
-                                                DownloadService.sendAddDownload(
-                                                    context,
-                                                    ExoDownloadService::class.java,
-                                                    downloadRequest,
-                                                    false,
-                                                )
-                                            }
+                                            songSelection.forEach { downloadUtil.download(it) }
                                         },
                                     )
                                 }
                             },
                         )
+                        onRemoveFromCache?.let { removeFromCache ->
+                            add(
+                                Material3MenuItemData(
+                                    title = { Text(text = stringResource(R.string.remove_from_cache)) },
+                                    icon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.delete),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        onDismiss()
+                                        removeFromCache()
+                                        clearAction()
+                                    },
+                                ),
+                            )
+                        }
                         add(
                             Material3MenuItemData(
                                 title = {
@@ -974,20 +969,7 @@ fun SelectionMediaMetadataMenu(
                                             )
                                         },
                                         onClick = {
-                                            songSelection.forEach { song ->
-                                                val downloadRequest =
-                                                    DownloadRequest
-                                                        .Builder(song.id, song.id.toUri())
-                                                        .setCustomCacheKey(song.id)
-                                                        .setData(song.title.toByteArray())
-                                                        .build()
-                                                DownloadService.sendAddDownload(
-                                                    context,
-                                                    ExoDownloadService::class.java,
-                                                    downloadRequest,
-                                                    false,
-                                                )
-                                            }
+                                            songSelection.forEach { downloadUtil.download(it) }
                                         },
                                     )
                                 }

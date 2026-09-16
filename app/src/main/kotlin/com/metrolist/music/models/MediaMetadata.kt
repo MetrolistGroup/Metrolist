@@ -12,6 +12,7 @@ import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedC
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.db.entities.SongEntity
 import com.metrolist.music.ui.utils.resize
+import com.metrolist.music.utils.ArtistNameAliases
 import java.io.Serializable
 import java.time.LocalDateTime
 
@@ -90,7 +91,7 @@ fun Song.toMediaMetadata() =
         orderedArtists.map {
             MediaMetadata.Artist(
                 id = it.id,
-                name = it.name,
+                name = ArtistNameAliases.resolve(it.id, it.name),
             )
         },
         duration = song.duration,
@@ -126,7 +127,7 @@ fun SongItem.toMediaMetadata() =
         artists.map {
             MediaMetadata.Artist(
                 id = it.id,
-                name = it.name,
+                name = ArtistNameAliases.resolve(it.id, it.name),
             )
         },
         duration = duration ?: -1,
@@ -159,7 +160,7 @@ fun EpisodeItem.toMediaMetadata() =
         artists = listOfNotNull(author).map {
             MediaMetadata.Artist(
                 id = it.id,
-                name = it.name,
+                name = ArtistNameAliases.resolve(it.id, it.name),
             )
         },
         duration = duration ?: -1,

@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -55,6 +56,8 @@ import androidx.navigation.NavController
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
+import com.metrolist.music.constants.AddToPlaylistPosition
+import com.metrolist.music.constants.AddToPlaylistPositionKey
 import com.metrolist.music.constants.AppLanguageKey
 import com.metrolist.music.constants.ContentCountryKey
 import com.metrolist.music.constants.ContentLanguageKey
@@ -64,6 +67,7 @@ import com.metrolist.music.constants.EnableKugouKey
 import com.metrolist.music.constants.EnableLrcLibKey
 import com.metrolist.music.constants.EnablePaxsenixKey
 import com.metrolist.music.constants.EnableLyricsPlus
+import com.metrolist.music.constants.EnableZemerKey
 import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.HideYoutubeShortsKey
@@ -119,6 +123,7 @@ fun ContentSettings(
     val (proxyUrl, onProxyUrlChange) = rememberPreference(key = ProxyUrlKey, defaultValue = "host:port")
     val (proxyUsername, onProxyUsernameChange) = rememberPreference(key = ProxyUsernameKey, defaultValue = "username")
     val (proxyPassword, onProxyPasswordChange) = rememberPreference(key = ProxyPasswordKey, defaultValue = "password")
+    val (enableZemer, onEnableZemerChange) = rememberPreference(key = EnableZemerKey, defaultValue = true)
     val (enableKugou, onEnableKugouChange) = rememberPreference(key = EnableKugouKey, defaultValue = true)
     val (enableLrclib, onEnableLrclibChange) = rememberPreference(key = EnableLrcLibKey, defaultValue = true)
     val (enableBetterLyrics, onEnableBetterLyricsChange) = rememberPreference(key = EnableBetterLyricsKey, defaultValue = true)
@@ -136,6 +141,10 @@ fun ContentSettings(
     val (randomizeHomeOrder, onRandomizeHomeOrderChange) = rememberPreference(
         RandomizeHomeOrderKey,
         defaultValue = true
+    )
+    val (addToPlaylistPosition, onAddToPlaylistPositionChange) = rememberEnumPreference(
+        AddToPlaylistPositionKey,
+        AddToPlaylistPosition.BEGINNING,
     )
 
     LaunchedEffect(showMostStatsPlaylists) {
@@ -166,6 +175,7 @@ fun ContentSettings(
             "LrcLib" to "LrcLib",
             "KuGou" to "KuGou",
             "LyricsPlus" to "LyricsPlus",
+            "Zemer" to "Zemer",
             "YouTubeSubtitle" to "YouTube Subtitles",
             "YouTube" to "YouTube",
         )
@@ -513,6 +523,35 @@ fun ContentSettings(
                             }
                         )
                     }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.enable_zemer))
+                            Text(
+                                text = stringResource(R.string.enable_zemer_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = enableZemer,
+                            onCheckedChange = onEnableZemerChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (enableZemer) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    }
                     Column(modifier = Modifier.padding(2.dp)) {
                         Text(
                             text = stringResource(R.string.youtube_music_lyrics_note),
@@ -552,6 +591,35 @@ fun ContentSettings(
                     QuickPicks.LAST_LISTEN -> stringResource(R.string.last_song_listened)
                 }
             }
+        )
+    }
+
+    var showAddToPlaylistPositionDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    if (showAddToPlaylistPositionDialog) {
+        EnumDialog(
+            onDismiss = { showAddToPlaylistPositionDialog = false },
+            onSelect = {
+                onAddToPlaylistPositionChange(it)
+                showAddToPlaylistPositionDialog = false
+            },
+            title = stringResource(R.string.add_to_playlist_position),
+            current = addToPlaylistPosition,
+            values = AddToPlaylistPosition.entries,
+            valueText = {
+                when (it) {
+                    AddToPlaylistPosition.BEGINNING -> stringResource(R.string.playlist_position_beginning)
+                    AddToPlaylistPosition.END -> stringResource(R.string.playlist_position_end)
+                }
+            },
+            valueDescription = {
+                when (it) {
+                    AddToPlaylistPosition.BEGINNING -> stringResource(R.string.playlist_position_beginning_desc)
+                    AddToPlaylistPosition.END -> stringResource(R.string.playlist_position_end_desc)
+                }
+            },
         )
     }
 
@@ -609,11 +677,12 @@ fun ContentSettings(
             "BetterLyrics".takeIf { enableBetterLyrics },
             "Paxsenix".takeIf { enablePaxsenix },
             "LyricsPlus".takeIf { enableLyricsPlus },
+            "Zemer".takeIf { enableZemer },
         ).filterNotNull().toSet()
         val lyricsIcon = painterResource(R.drawable.lyrics)
         val draggableItems = remember { mutableStateListOf<DraggableLyricsProviderItem>() }
 
-        LaunchedEffect(normalizedOrder, enableLrclib, enableKugou, enableBetterLyrics, enablePaxsenix, enableLyricsPlus) {
+        LaunchedEffect(normalizedOrder, enableLrclib, enableKugou, enableBetterLyrics, enablePaxsenix, enableLyricsPlus, enableZemer) {
             val orderedEnabledProviders = normalizedOrder.filter { it in enabledProviders }
             draggableItems.clear()
             draggableItems.addAll(
@@ -758,6 +827,27 @@ fun ContentSettings(
                     onClick = { onHideYoutubeShortsChange(!hideYoutubeShorts) }
                 )
             )
+        )
+
+        Spacer(modifier = Modifier.height(27.dp))
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.playlists),
+            items = listOf(
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.playlist_add),
+                    title = { Text(stringResource(R.string.add_to_playlist_position)) },
+                    description = {
+                        Text(
+                            when (addToPlaylistPosition) {
+                                AddToPlaylistPosition.BEGINNING -> stringResource(R.string.playlist_position_beginning)
+                                AddToPlaylistPosition.END -> stringResource(R.string.playlist_position_end)
+                            }
+                        )
+                    },
+                    onClick = { showAddToPlaylistPositionDialog = true },
+                )
+            ),
         )
 
         Spacer(modifier = Modifier.height(27.dp))

@@ -98,11 +98,6 @@ fun SettingsScreen(
                     onClick = { navController.navigate("settings/player") }
                 ),
                 Material3SettingsItem(
-                    icon = painterResource(R.drawable.radio),
-                    title = { Text(stringResource(R.string.stream_sources)) },
-                    onClick = { navController.navigate("settings/stream_sources") }
-                ),
-                Material3SettingsItem(
                     icon = painterResource(R.drawable.language),
                     title = { Text(stringResource(R.string.content)) },
                     onClick = { navController.navigate("settings/content") }
@@ -238,7 +233,7 @@ fun SettingsScreen(
                         onClick = { navController.navigate("settings/about") }
                     )
                 )
-                if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.VERSION_NAME) {
+                if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.BASE_VERSION_NAME) {
                     val releaseInfo = Updater.getCachedLatestRelease()
                     val downloadUrl = releaseInfo?.let { Updater.getDownloadUrlForCurrentVariant(it) }
 
@@ -266,7 +261,7 @@ fun SettingsScreen(
                 }
             }
         )
-    if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.VERSION_NAME) {
+    if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.BASE_VERSION_NAME) {
             Spacer(modifier = Modifier.height(16.dp))
             ReleaseNotesCard()
         }

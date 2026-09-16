@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 import com.metrolist.shazamkit.Shazam
 import com.metrolist.shazamkit.models.RecognitionResult
 import com.metrolist.shazamkit.models.RecognitionStatus
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -145,6 +146,8 @@ object MusicRecognitionService {
             )
             
             _recognitionStatus.value
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Recognition failed with exception")
             _recognitionStatus.value = RecognitionStatus.Error(e.message ?: "Recognition failed")

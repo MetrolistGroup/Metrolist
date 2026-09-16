@@ -13,7 +13,6 @@ import com.metrolist.innertube.YouTube
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.apache.commons.lang3.RandomStringUtils
 import java.time.LocalDateTime
 
 @Immutable
@@ -29,6 +28,10 @@ data class ArtistEntity(
     val isLocal: Boolean = false,
     @ColumnInfo(name = "isPodcastChannel", defaultValue = false.toString())
     val isPodcastChannel: Boolean = false,
+    // The artist page as YouTube returned it, so the screen has something to draw before the
+    // network answers. Read only by ArtistViewModel, for the single artist on screen. Relations
+    // that pull artists in bulk project the other columns explicitly, because Room builds one
+    // ArtistEntity per pairing and would otherwise hold one copy of this page per song.
     @ColumnInfo(name = "cachedPageJson")
     val cachedPageJson: String? = null
 ) {
@@ -52,6 +55,6 @@ data class ArtistEntity(
     }
 
     companion object {
-        fun generateArtistId() = "LA" + RandomStringUtils.insecure().next(8, true, false)
+        fun generateArtistId() = generateLocalId("LA")
     }
 }

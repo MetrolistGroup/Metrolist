@@ -5,9 +5,6 @@
 
 package com.metrolist.music.ui.screens.settings
 
-import android.app.Activity
-import android.content.Context
-import android.content.Intent
 import android.os.Build
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -52,7 +49,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.content.edit
 import androidx.navigation.NavController
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
@@ -126,7 +122,6 @@ import kotlin.math.roundToInt
 @Composable
 fun AppearanceSettings(
     navController: NavController,
-    activity: Activity,
     snackbarHostState: SnackbarHostState,
 ) {
     val (dynamicTheme, onDynamicThemeChange) =
@@ -276,25 +271,8 @@ fun AppearanceSettings(
             defaultValue = false,
         )
 
-    // Density scale preferences
-    val context = activity as Context
-    val sharedPreferences = remember { context.getSharedPreferences("metrolist_settings", Context.MODE_PRIVATE) }
-    val prefDensityScale =
-        remember(sharedPreferences) {
-            sharedPreferences.getFloat("density_scale_factor", 1.0f)
-        }
-    val (densityScale, setDensityScale) = rememberPreference(DensityScaleKey, defaultValue = prefDensityScale)
-    var showRestartDialog by rememberSaveable { mutableStateOf(false) }
+    val (densityScale, onDensityScaleChange) = rememberPreference(DensityScaleKey, defaultValue = 1f)
     var showDensityScaleDialog by rememberSaveable { mutableStateOf(false) }
-
-    val onDensityScaleChange: (Float) -> Unit = { newScale ->
-        setDensityScale(newScale)
-        // Write to SharedPreferences for DensityScaler to read on next startup
-        sharedPreferences.edit {
-            putFloat("density_scale_factor", newScale)
-        }
-        showRestartDialog = true
-    }
 
     val (listenTogetherInTopBar, onListenTogetherInTopBarChange) =
         rememberPreference(
@@ -670,45 +648,6 @@ fun AppearanceSettings(
                 }
             },
         )
-    }
-
-    if (showRestartDialog) {
-        DefaultDialog(
-            onDismiss = { showRestartDialog = false },
-            buttons = {
-                TextButton(
-                    onClick = { showRestartDialog = false },
-                ) {
-                    Text(text = stringResource(android.R.string.cancel))
-                }
-                TextButton(
-                    onClick = {
-                        showRestartDialog = false
-                        val intent =
-                            context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                            }
-                        context.startActivity(intent)
-                        Runtime.getRuntime().exit(0)
-                    },
-                ) {
-                    Text(text = stringResource(R.string.restart))
-                }
-            },
-        ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.restart_required),
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                Text(
-                    text = stringResource(R.string.density_restart_message),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
     }
 
     if (showDensityScaleDialog) {
@@ -1924,9 +1863,4 @@ enum class LyricsPosition {
     LEFT,
     CENTER,
     RIGHT,
-}
-
-enum class PlayerTextAlignment {
-    SIDED,
-    CENTER,
 }

@@ -1,48 +1,43 @@
 [versions]
-androidGradlePlugin = "9.3.0"
+androidGradlePlugin = "9.3.1"
 browser = "1.10.0"
 robolectric = "4.16.1"
 androidxTestCore = "1.7.0"
 json = "20260522"
 kotlin = "2.4.10"
-compose = "1.11.4"
+compose = "1.12.0"
 lifecycle = "2.11.0"
-material3 = "1.5.0-alpha24"
-appcompat = "1.7.1"
+material3 = "1.5.0-alpha27"
+appcompat = "1.8.0"
 media3 = "1.10.1"
 mediarouter = "1.8.1"
 castFramework = "22.3.1"
 room = "2.8.4"
 hilt = "2.60.1"
-ktor = "3.5.1"
-ksp = "2.3.10"
-jsoup = "1.22.2"
-coil = "3.5.0"
+ktor = "3.5.2"
+ksp = "2.3.11"
+coil = "3.6.0"
 ucrop = "2.2.11"
-guava = "33.6.0-jre"
+guava = "33.7.1-jre"
 coroutinesGuava = "1.11.0"
-concurrentFutures = "1.3.0"
 activity = "1.13.0"
 hiltNavigation = "1.4.0"
 datastore = "1.2.1"
 composeReorderable = "3.1.0"
 shimmer = "1.5.0"
 palette = "1.0.0"
-apacheLang3 = "3.20.0"
-brotli = "0.1.2"
 desugaring = "2.1.5"
 junit = "4.13.2"
 timber = "5.0.1"
 materialKolor = "5.0.0"
 kuromojiIpadic = "0.9.0"
-extractor = "3cd3341"
+innertubex = "v0.5.2"
 tinypinyin = "2.0.3"
-protobuf = "4.35.1"
+protobuf = "4.36.0"
 
 [libraries]
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 coroutines-guava = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-guava", version.ref = "coroutinesGuava" }
-concurrent-futures = { module = "androidx.concurrent:concurrent-futures-ktx", version.ref = "concurrentFutures" }
 
 gradle = { module = "com.android.tools.build:gradle", version.ref = "androidGradlePlugin" }
 activity = { module = "androidx.activity:activity-compose", version.ref = "activity" }
@@ -53,11 +48,9 @@ compose-runtime = { module = "androidx.compose.runtime:runtime", version.ref = "
 compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "compose" }
 compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
 compose-ui-util = { module = "androidx.compose.ui:ui-util", version.ref = "compose" }
-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "compose" }
-compose-animation = { module = "androidx.compose.animation:animation-graphics", version.ref = "compose" }
+compose-animation = { module = "androidx.compose.animation:animation", version.ref = "compose" }
 compose-reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "composeReorderable" }
 
-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycle" }
 
@@ -76,7 +69,7 @@ ucrop = { module = "com.github.yalantis:ucrop", version.ref = "ucrop" }
 
 shimmer = { module = "com.valentinilk.shimmer:compose-shimmer", version.ref = "shimmer" }
 
-palette = { module = "androidx.palette:palette-ktx", version.ref = "palette" }
+palette = { module = "androidx.palette:palette", version.ref = "palette" }
 
 media3 = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
 media3-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version.ref = "media3" }
@@ -88,26 +81,18 @@ cast-framework = { module = "com.google.android.gms:play-services-cast-framework
 
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
-
-apache-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "apacheLang3" }
 
 hilt = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt" }
 
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
-ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-client-encoding = { module = "io.ktor:ktor-client-encoding", version.ref = "ktor" }
 ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 ktor-serialization-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 
-jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
-
 json = { module = "org.json:json", version.ref = "json" }
-
-brotli = { module = "org.brotli:dec", version.ref = "brotli" }
 
 desugaring = { module = "com.android.tools:desugar_jdk_libs_nio", version.ref = "desugaring" }
 
@@ -115,8 +100,7 @@ junit = { module = "junit:junit", version.ref = "junit" }
 
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 
-# newpipeextractor = { module = "com.github.TeamNewPipe:NewPipeExtractor", version.ref = "newpipeextractor" }
-extractor = { module = "com.github.MetrolistGroup:MetrolistExtractor", version.ref = "extractor" }
+innertubex = { module = "com.github.MetrolistGroup.innertubex:innertubex", version.ref = "innertubex" }
 
 kuromoji-ipadic = { module = "com.atilika.kuromoji:kuromoji-ipadic", version.ref = "kuromojiIpadic" }
 tinypinyin = { module = "com.github.promeG:tinypinyin", version.ref = "tinypinyin" }
@@ -129,3 +113,4 @@ compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+protobuf = { id = "com.google.protobuf", version = "0.10.0" }

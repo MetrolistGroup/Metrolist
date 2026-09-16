@@ -21,7 +21,10 @@ data class SearchResult(
 )
 
 object SearchPage {
-    fun toYTItem(renderer: MusicResponsiveListItemRenderer): YTItem? {
+    fun toYTItem(
+        renderer: MusicResponsiveListItemRenderer,
+        fallbackArtists: List<Artist> = emptyList(),
+    ): YTItem? {
         val secondaryLine =
             renderer.flexColumns
                 .getOrNull(1)
@@ -117,7 +120,8 @@ object SearchPage {
                 val metadataRuns = renderer.flexColumns
                     .drop(1)
                     .flatMap { it.musicResponsiveListItemFlexColumnRenderer.text?.runs.orEmpty() }
-                val artists = PageHelper.extractArtists(metadataRuns)
+                val artists = PageHelper.extractArtists(metadataRuns).ifEmpty { fallbackArtists }
+                val albumRun = PageHelper.extractRuns(renderer.flexColumns, "MUSIC_PAGE_TYPE_ALBUM").firstOrNull()
 
                 SongItem(
                     id = renderer.playlistItemData?.videoId
@@ -139,13 +143,12 @@ object SearchPage {
                             ?.firstOrNull()
                             ?.text ?: return null,
                     artists = artists.ifEmpty { return null },
-                    album =
-                        secondaryLine.getOrNull(1)?.firstOrNull()?.takeIf { it.navigationEndpoint?.browseEndpoint != null }?.let {
-                            Album(
-                                name = it.text,
-                                id = it.navigationEndpoint?.browseEndpoint?.browseId!!,
-                            )
-                        },
+                    album = albumRun?.let {
+                        Album(
+                            name = it.text,
+                            id = it.navigationEndpoint?.browseEndpoint?.browseId ?: return@let null,
+                        )
+                    },
                     duration = PageHelper.extractDuration(metadataRuns),
                     musicVideoType = renderer.musicVideoType,
                     thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: return null,
@@ -273,12 +276,11 @@ object SearchPage {
                             ?.firstOrNull()
                             ?.text ?: return null,
                     author =
-                        secondaryLine.firstOrNull()?.firstOrNull()?.let {
-                            Artist(
-                                name = it.text,
-                                id = it.navigationEndpoint?.browseEndpoint?.browseId,
-                            )
-                        } ?: return null,
+                        PageHelper.extractArtists(
+                            renderer.flexColumns
+                                .drop(1)
+                                .flatMap { it.musicResponsiveListItemFlexColumnRenderer.text?.runs.orEmpty() },
+                        ).firstOrNull() ?: return null,
                     songCountText =
                         renderer.flexColumns
                             .getOrNull(1)
@@ -327,12 +329,11 @@ object SearchPage {
                             ?.firstOrNull()
                             ?.text ?: return null,
                     author =
-                        secondaryLine.firstOrNull()?.firstOrNull()?.let {
-                            Artist(
-                                name = it.text,
-                                id = it.navigationEndpoint?.browseEndpoint?.browseId,
-                            )
-                        },
+                        PageHelper.extractArtists(
+                            renderer.flexColumns
+                                .drop(1)
+                                .flatMap { it.musicResponsiveListItemFlexColumnRenderer.text?.runs.orEmpty() },
+                        ).firstOrNull(),
                     episodeCountText =
                         renderer.flexColumns
                             .getOrNull(1)

@@ -10,7 +10,6 @@ import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.LyricsEntity
 import com.metrolist.music.db.entities.SongEntity
 import com.metrolist.music.api.DeepLService
-import com.metrolist.music.api.MistralService
 import com.metrolist.music.api.OpenRouterService
 import com.metrolist.music.api.OpenRouterStreamingService
 import kotlinx.coroutines.CoroutineScope
@@ -37,9 +36,6 @@ object LyricsTranslationHelper {
 
     private val _hasActiveTranslations = MutableStateFlow(false)
     val hasActiveTranslations: StateFlow<Boolean> = _hasActiveTranslations.asStateFlow()
-
-    private val _translationSaved = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val translationSaved: SharedFlow<Unit> = _translationSaved.asSharedFlow()
 
     private val _manualTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val manualTrigger: SharedFlow<Unit> = _manualTrigger.asSharedFlow()
@@ -249,7 +245,6 @@ object LyricsTranslationHelper {
                                             ),
                                         )
                                     }
-                                    _translationSaved.tryEmit(Unit)
                                 }
                             } catch (e: Exception) {
                                 Timber.e(e, "Failed to persist cached translations to database")
@@ -288,17 +283,6 @@ object LyricsTranslationHelper {
                                 targetLanguage = targetLanguage,
                                 apiKey = deeplApiKey,
                                 formality = deeplFormality,
-                            )
-                        } else if (provider == "Mistral") {
-                            Timber.d("Using Mistral for translation")
-                            // Use Mistral API directly
-                            MistralService.translate(
-                                text = fullText,
-                                targetLanguage = fullLanguageName,
-                                apiKey = apiKey,
-                                model = model,
-                                mode = mode,
-                                customSystemPrompt = systemPrompt,
                             )
                         } else if (useStreaming && provider != "Custom") {
                             Timber.d("Using streaming for translation with provider: $provider")
@@ -399,8 +383,6 @@ object LyricsTranslationHelper {
                                                 ),
                                             )
                                         }
-                                        // Signal that translations have been saved
-                                        _translationSaved.tryEmit(Unit)
                                     }
                                 } catch (e: Exception) {
                                     Timber.e(e, "Failed to save translated lyrics to database")

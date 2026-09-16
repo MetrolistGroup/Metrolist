@@ -217,12 +217,6 @@
                 android:resource="@xml/provider_paths" />
         </provider>
 
-        <provider
-            android:name="com.dpi.DensityScaler"
-            android:authorities="${applicationId}.com.dpi.DensityScaler"
-            android:enabled="true"
-            android:exported="false" />
-
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:exported="false"
@@ -363,11 +357,6 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/recognizer_widget_info" />
         </receiver>
-
-        <service
-            android:name=".widget.MusicRecognizerWidgetService"
-            android:exported="false"
-            android:foregroundServiceType="microphone" />
 
         <service
             android:name=".recognition.RecognitionForegroundService"

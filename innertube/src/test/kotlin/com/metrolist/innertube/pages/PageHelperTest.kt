@@ -62,6 +62,29 @@ class PageHelperTest {
     }
 
     @Test
+    fun `commas between linked artists are not parsed as artists`() {
+        val artists =
+            PageHelper.extractArtists(
+                listOf(
+                    Run(
+                        "Primary Artist",
+                        NavigationEndpoint(browseEndpoint = BrowseEndpoint(browseId = "UC123")),
+                    ),
+                    Run(", ", null),
+                    Run(
+                        "Featured Artist",
+                        NavigationEndpoint(browseEndpoint = BrowseEndpoint(browseId = "UC456")),
+                    ),
+                ),
+            )
+
+        assertEquals(
+            listOf(Artist("Primary Artist", "UC123"), Artist("Featured Artist", "UC456")),
+            artists,
+        )
+    }
+
+    @Test
     fun `linked and unlinked artists are both retained`() {
         val artists = PageHelper.extractArtists(
             listOf(

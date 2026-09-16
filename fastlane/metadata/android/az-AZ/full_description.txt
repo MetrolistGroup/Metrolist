@@ -19,4 +19,4 @@ Xüsusiyyətlər:
 - Pleylistdə və ya növbədə mahnıları yenidən sıralayın
 - Açıq - Tünd - qara - Dinamik mövzu
 - Yuxu taymeri - Material 3
-- və s.
+- və s

@@ -969,7 +969,8 @@ fun BottomSheetPlayer(
                                         contentDescription = null,
                                         modifier =
                                             Modifier
-                                                .size(32.dp)
+                                                .size(32.dp),
+                                        tint = textButtonColor.copy(alpha = 0.7f),
                                     )
                                 }
                             } else {
@@ -2128,48 +2129,6 @@ fun InlineLyricsView(
                 }
             }
         }
-    }
-}
-
-@Composable
-fun MoreActionsButton(
-    mediaMetadata: MediaMetadata,
-    navController: NavController,
-    state: BottomSheetState,
-    textButtonColor: Color,
-    iconButtonColor: Color,
-) {
-    val menuState = LocalMenuState.current
-    val bottomSheetPageState = LocalBottomSheetPageState.current
-
-    Box(
-        modifier =
-            Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(textButtonColor)
-                .clickable {
-                    menuState.show {
-                        PlayerMenu(
-                            mediaMetadata = mediaMetadata,
-                            playerBottomSheetState = state,
-                            onShowDetailsDialog = {
-                                mediaMetadata.id.let {
-                                    bottomSheetPageState.show {
-                                        ShowMediaInfo(it)
-                                    }
-                                }
-                            },
-                            onDismiss = menuState::dismiss,
-                        )
-                    }
-                },
-    ) {
-        Image(
-            painter = painterResource(R.drawable.more_horiz),
-            contentDescription = null,
-            colorFilter = ColorFilter.tint(iconButtonColor),
-        )
     }
 }
 
