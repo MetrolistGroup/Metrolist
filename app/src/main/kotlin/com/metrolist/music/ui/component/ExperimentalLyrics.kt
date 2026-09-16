@@ -105,7 +105,6 @@ import com.metrolist.music.constants.ShowIntervalIndicatorKey
 import com.metrolist.music.constants.TranslateLanguageKey
 import com.metrolist.music.constants.TranslateModeKey
 import com.metrolist.music.db.entities.LyricsEntity.Companion.LYRICS_NOT_FOUND
-import com.metrolist.music.lyrics.LyricsResyncHelper
 import com.metrolist.music.lyrics.LyricsTranslationHelper
 import com.metrolist.music.lyrics.LyricsUtils.findActiveLineIndices
 import com.metrolist.music.ui.component.shimmer.ShimmerHost
@@ -821,18 +820,9 @@ fun ExperimentalLyrics(
             }
         }
 
-        val latestShowLyrics by rememberUpdatedState(showLyrics)
         val latestResyncLyrics by rememberUpdatedState(
             newValue = { isAutoScrollEnabled = true },
         )
-
-        LaunchedEffect(Unit) {
-            LyricsResyncHelper.resyncTrigger.collect {
-                if (latestShowLyrics) {
-                    latestResyncLyrics()
-                }
-            }
-        }
 
         LyricsTranslationHeader(
             status = translationStatus,
