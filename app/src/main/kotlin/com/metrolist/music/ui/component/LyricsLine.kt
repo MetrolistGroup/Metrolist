@@ -7,6 +7,9 @@ package com.metrolist.music.ui.component
 
 import android.graphics.BlurMaskFilter
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -50,13 +53,10 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
@@ -146,6 +146,11 @@ internal fun LyricsLine(
     val itemModifier = modifier
         .fillMaxWidth()
         .onSizeChanged { onSizeChanged(it.height) }
+        // Background lines appear/disappear as the song plays. Their height change would
+        // otherwise shift every line below in a single frame (jump-scare). This animates
+        // the size change itself over the same duration as the fade, so heights land
+        // frame by frame and the scroll offset glides after them smoothly.
+        .then(if (item.isBackground) Modifier.animateContentSize(animationSpec = tween(250)) else Modifier)
         .clip(RoundedCornerShape(8.dp))
         .combinedClickable(
             onClick = onClick,
@@ -155,8 +160,8 @@ internal fun LyricsLine(
         .padding(
             start = when (lyricsTextPosition) { LyricsPosition.LEFT, LyricsPosition.RIGHT -> 11.dp; LyricsPosition.CENTER -> 24.dp },
             end = when (lyricsTextPosition) { LyricsPosition.LEFT, LyricsPosition.RIGHT -> 11.dp; LyricsPosition.CENTER -> 24.dp },
-            top = if (item.isBackground) 0.dp else 12.dp,
-            bottom = if (item.isBackground) 2.dp else 12.dp // simplified gap logic
+            top = if (item.isBackground) LYRICS_BG_TOP_PADDING else LYRICS_LINE_TOP_PADDING,
+            bottom = if (item.isBackground) LYRICS_BG_BOTTOM_PADDING else LYRICS_LINE_BOTTOM_PADDING // simplified gap logic
         )
 
     val agentAlignment = when {
@@ -203,35 +208,30 @@ internal fun LyricsLine(
                 val targetAlpha = if (!isSynced || item.isBackground || isActiveLine) {
                     activeAlpha
                 } else if (isAutoScrollEnabled && displayedCurrentLineIndex >= 0) {
+                    // Adjacent lines stay closer to focused brightness so a fast
+                    // A -> B handoff crossfades instead of fully dimming and
+                    // re-brightening (jitter). Combined with the slower fade below
+                    // and the active-set hold in ExperimentalLyrics, rapid
+                    // transitions no longer dip the whole screen.
                     when (abs(index - displayedCurrentLineIndex)) {
                         0 -> focusedAlpha
-                        1 -> 0.2f; 2 -> 0.2f; 3 -> 0.15f; 4 -> 0.1f; else -> 0.08f
+                        1 -> 0.35f; 2 -> 0.25f; 3 -> 0.15f; 4 -> 0.1f; else -> 0.08f
                     }
                 } else inactiveAlpha
                 
-                val animatedAlpha by animateFloatAsState(targetAlpha, tween(250), label = "lyricsLineAlpha")
+                val animatedAlpha by animateFloatAsState(targetAlpha, tween(350), label = "lyricsLineAlpha")
                 val lineColor = expressiveAccent.copy(alpha = if (item.isBackground) focusedAlpha else animatedAlpha)
                 
                 val romanizedTextState by item.romanizedTextFlow.collectAsStateWithLifecycle()
-                val isRomanizedAvailable = romanizedTextState != null
-                val mainTextRaw = if (romanizeAsMain && isRomanizedAvailable) romanizedTextState else item.text
-                val subTextRaw = if (romanizeAsMain && isRomanizedAvailable) item.text else romanizedTextState
-                val mainText = if (item.isBackground) mainTextRaw?.removePrefix("(")?.removeSuffix(")") else mainTextRaw
-                val subText = if (item.isBackground) subTextRaw?.removePrefix("(")?.removeSuffix(")") else subTextRaw
+                val mainText = effectiveLyricMainText(item, romanizedTextState, romanizeAsMain)
+                val subText = effectiveLyricSubText(item, romanizedTextState, romanizeAsMain)
 
-                val lyricStyle = TextStyle(
-                    fontSize = if (item.isBackground) (lyricsTextSize * 0.7f).sp else lyricsTextSize.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontStyle = if (item.isBackground) FontStyle.Italic else FontStyle.Normal,
-                    lineHeight = if (item.isBackground) (lyricsTextSize * 0.7f * lyricsLineSpacing).sp else (lyricsTextSize * lyricsLineSpacing).sp,
-                    letterSpacing = (-0.5).sp,
-                    textAlign = agentTextAlign,
+                val lyricStyle = lyricMainTextStyle(
+                    isBackground = item.isBackground,
+                    textSizeSp = lyricsTextSize,
+                    lineSpacing = lyricsLineSpacing,
                     fontFamily = MaterialTheme.typography.bodyLarge.fontFamily,
-                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                    lineHeightStyle = LineHeightStyle(
-                        alignment = LineHeightStyle.Alignment.Center,
-                        trim = LineHeightStyle.Trim.Both
-                    )
+                    textAlign = agentTextAlign
                 )
 
                 val effectiveWords = if (item.words?.isNotEmpty() == true) {
@@ -280,11 +280,11 @@ internal fun LyricsLine(
                     subText?.let { 
                         Text(
                             text = it,
-                            fontSize = 18.sp,
-                            color = expressiveAccent.copy(alpha = 0.6f),
+                            fontSize = LYRICS_SUB_FONT_SIZE_SP.sp,
+                            color = expressiveAccent.copy(alpha = 0.6f * animatedAlpha),
                             textAlign = agentTextAlign,
                             fontWeight = FontWeight.Normal,
-                            modifier = Modifier.padding(top = 2.dp)
+                            modifier = Modifier.padding(top = LYRICS_SUB_TOP_PADDING)
                         )
                     }
                 }
@@ -293,21 +293,26 @@ internal fun LyricsLine(
                 transText?.let { 
                     Text(
                         text = it,
-                        fontSize = 16.sp,
-                        color = expressiveAccent.copy(alpha = 0.5f),
+                        fontSize = LYRICS_TRANS_FONT_SIZE_SP.sp,
+                        color = expressiveAccent.copy(alpha = 0.55f * animatedAlpha),
                         textAlign = agentTextAlign,
                         fontWeight = FontWeight.Normal,
-                        modifier = Modifier.padding(top = 4.dp)
+                        modifier = Modifier.padding(top = LYRICS_TRANS_TOP_PADDING)
                     )
                 }
             }
         }
 
         if (item.isBackground) {
+            // Fade AND size animate together: without the size part the line's height
+            // would snap while its alpha fades, instantly shifting every line below
+            // (the jump-scare). With it, heights land frame by frame and the scroll
+            // offset tracks them smoothly via the same-index follow.
             AnimatedVisibility(
                 visible = bgVisible,
-                enter = fadeIn(tween(durationMillis = 250, delayMillis = 100)),
-                exit = fadeOut(tween(250))
+                enter = fadeIn(tween(durationMillis = 250, delayMillis = 100)) +
+                    expandVertically(tween(durationMillis = 250, delayMillis = 100)),
+                exit = fadeOut(tween(250)) + shrinkVertically(tween(250))
             ) {
                 LyricContent()
             }

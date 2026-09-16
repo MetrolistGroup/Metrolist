@@ -34,6 +34,14 @@ class LyricsViewModel @Inject constructor() : ViewModel() {
     private val _mergedLyricsList = MutableStateFlow<List<LyricsListItem>>(emptyList())
     val mergedLyricsList: StateFlow<List<LyricsListItem>> = _mergedLyricsList.asStateFlow()
 
+    // Eagerly precomputed item heights, keyed by everything that affects layout
+    // (lyrics, viewport width, text options). Survives the lyrics screen closing, so a
+    // reopen positions exactly from real measurements instead of fallback estimates.
+    // Accessed on the main thread only. Live measurements are written straight back
+    // (translations etc.), so the next open seeds the true heights, not the
+    // pre-arrival ones.
+    val heightTables = mutableMapOf<String, MutableMap<Int, Int>>()
+
     fun processLyrics(
         lyrics: String?,
         enabledLanguages: List<String>,
