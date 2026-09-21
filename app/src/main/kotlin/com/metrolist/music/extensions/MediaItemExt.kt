@@ -9,6 +9,8 @@ import android.os.Bundle
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata.MEDIA_TYPE_MUSIC
+import androidx.media3.session.MediaConstants.EXTRAS_KEY_IS_EXPLICIT
+import androidx.media3.session.MediaConstants.EXTRAS_VALUE_ATTRIBUTE_PRESENT
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.models.MediaMetadata
@@ -44,6 +46,7 @@ fun MediaMetadata.toMediaItem(): MediaItem {
                 .setIsPlayable(true)
                 .setExtras(Bundle().apply {
                     resolvedMetadata.thumbnailUrl?.let { putString("artwork_uri", it) }
+                    if (resolvedMetadata.explicit) putLong(EXTRAS_KEY_IS_EXPLICIT, EXTRAS_VALUE_ATTRIBUTE_PRESENT)
                 })
                 .build(),
         ).build()
@@ -73,6 +76,7 @@ fun MediaItem.withUpdatedMetadata(updatedMetadata: MediaMetadata): MediaItem {
                 .setAlbumArtist(resolvedMetadata.artists.firstOrNull()?.name)
                 .setExtras(Bundle().apply {
                     resolvedMetadata.thumbnailUrl?.let { putString("artwork_uri", it) }
+                    if (resolvedMetadata.explicit) putLong(EXTRAS_KEY_IS_EXPLICIT, EXTRAS_VALUE_ATTRIBUTE_PRESENT)
                 })
                 .build(),
         ).build()
