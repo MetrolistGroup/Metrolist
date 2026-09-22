@@ -1412,7 +1412,10 @@ class SyncUtils @Inject constructor(
                     val localIds = localSongs.map { it.songId }
                     val songIdsWithoutArtists = database.playlistSongIdsWithoutArtists(playlistId).toSet()
 
-                    if (remoteIds == localIds) {
+                    val existingDbSongIds = database.existingSongIds(remoteIds).toSet()
+                    val missingFromDb = songs.filter { it.id !in existingDbSongIds }
+
+                    if (remoteIds == localIds && missingFromDb.isEmpty()) {
                         val metadataRepairs = songs.filter {
                             it.id in songIdsWithoutArtists && it.artists.isNotEmpty()
                         }
@@ -1424,6 +1427,12 @@ class SyncUtils @Inject constructor(
                         Timber.d("syncPlaylist: Local and remote are in sync, no changes needed")
                         return@onSuccess
                     }
+
+                    if (missingFromDb.isNotEmpty()) {
+                        database.withTransaction {
+                            missingFromDb.forEach(database::insert)
+                        }
+}
 
                     Timber.d("syncPlaylist: Updating local playlist (remote: ${remoteIds.size}, local: ${localIds.size})")
 

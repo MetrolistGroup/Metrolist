@@ -1,6 +1,7 @@
 package com.metrolist.innertube.pages
 
 import com.metrolist.innertube.models.Album
+import com.metrolist.innertube.models.Artist
 import com.metrolist.innertube.models.MusicResponsiveListItemRenderer
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
@@ -31,7 +32,9 @@ data class PlaylistPage(
                 Timber.w("PlaylistPage.fromMusicResponsiveListItemRenderer: Song '$title' - NO SECONDARY LINE (flexColumns[1] is null)")
             }
 
-            val artists = PageHelper.extractArtists(secondaryLineRuns)
+            val artists = PageHelper.extractArtists(secondaryLineRuns).ifEmpty {
+                listOf(Artist(name = "Uploaded", id = null))
+            }
 
             return SongItem(
                 id = renderer.videoId ?: return null,
