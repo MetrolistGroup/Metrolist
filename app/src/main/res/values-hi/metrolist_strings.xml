@@ -41,4 +41,16 @@
     <string name="show_artist_description">कलाकार का वर्णन दिखाएं</string>
     <string name="charts">आरेख</string>
     <string name="mixes">मिश्रण</string>
+    <string name="parsed_from_link">लिंक से निकाला गया</string>
+    <string name="and">और</string>
+    <string name="show_artist_subscriber_count">सदस्य संख्या दर्शाएं</string>
+    <string name="show_artist_monthly_listeners">हर महीने सुनने वाले दिखाएं</string>
+    <string name="download_playlist_desc">ऑफ़लाइन सुनने के लिए सभी गाने डाउनलोड करें</string>
+    <string name="remove_download_playlist_desc">इस प्लेलिस्ट से सभी डाउनलोड किए गए गाने हटा दें</string>
+    <string name="download_in_progress_desc">डाउनलोड चल रहा है</string>
+    <string name="share_playlist_desc">इस प्लेलिस्ट को दूसरों के साथ शेयर करें</string>
+    <string name="delete_playlist_desc">इस प्लेलिस्ट को हमेशा के लिए हटा दें</string>
+    <string name="sync_playlist_desc">इस प्लेलिस्ट को YouTube Music के साथ सिंक करें</string>
+    <string name="copy_link">लिंक की प्रतिलिपि करें</string>
+    <string name="select">सबका चयन करें</string>
 </resources>
