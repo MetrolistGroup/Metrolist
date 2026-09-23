@@ -12,15 +12,10 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDecay
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.exponentialDecay
-import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.verticalDrag
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -43,7 +38,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -55,7 +49,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -67,22 +60,25 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.input.pointer.util.addPointerInputChange
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
 import android.text.Layout
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalListenTogetherManager
@@ -111,7 +107,6 @@ import com.metrolist.music.constants.TranslateModeKey
 import com.metrolist.music.db.entities.LyricsEntity.Companion.LYRICS_NOT_FOUND
 import com.metrolist.music.lyrics.LyricsTranslationHelper
 import com.metrolist.music.lyrics.LyricsUtils.findActiveLineIndices
-import com.metrolist.music.lyrics.lyricsTextLooksSynced
 import com.metrolist.music.ui.component.shimmer.ShimmerHost
 import com.metrolist.music.ui.component.shimmer.TextPlaceholder
 import com.metrolist.music.ui.screens.settings.LyricsPosition
@@ -121,23 +116,37 @@ import com.metrolist.music.utils.ComposeToImage
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.viewmodels.LyricsViewModel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private const val LYRICS_ANCHOR_RATIO = 0.35f
+// A jump landing within this of the tapped line counts as the tap landing
+// (covers ExoPlayer keyframe quantization); anything else is a scrub.
+private const val TAP_TARGET_TOLERANCE_MS = 3000L
+private const val LINE_CHANGE_ANIMATION_MS = 350
+// After a scrub jump, index convergence within this window settles instantly
+// instead of visibly gliding (tap jumps are exempt and keep gliding).
+private const val SEEK_SETTLE_MS = 500L
+// Brief redirect when the target moves far while a scroll is already in transit:
+// smooth continuation instead of a murder-snap.
+private const val REDIRECT_ANIMATION_MS = 200
 private val LYRICS_ITEM_FALLBACK_HEIGHT_DP = 68.dp
 private val LYRICS_ITEM_GAP_DP = 16.dp
 private val LYRICS_FADE_TOP_DP = 130.dp
 private val LYRICS_FADE_BOTTOM_DP = 160.dp
-private const val LYRICS_STAGGER_DELAY_PER_DISTANCE = 20
-private const val LYRICS_STAGGER_DELAY_MAX_MS = 200
-private const val LYRICS_PREVIEW_TIME = 8000L
+
+private sealed class ScrollCommand {
+    data object Stop : ScrollCommand()
+    data class Snap(val value: Float) : ScrollCommand()
+    data class Animate(val value: Float, val durationMs: Int = 450) : ScrollCommand()
+    data class Fling(val velocity: Float) : ScrollCommand()
+}
 
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -226,9 +235,7 @@ fun ExperimentalLyrics(
         lyricsViewModel.processLyrics(lyrics, enabledLanguages, romanizeCyrillicByLine, showIntervalIndicator)
     }
 
-    val isSynced = remember(lyrics) { lyricsTextLooksSynced(lyrics) }
-    val hasWordTimings = remember(lines) { lines.any { it.words?.isNotEmpty() == true } }
-
+    val isSynced = remember(lyrics) { lyrics != null && com.metrolist.music.lyrics.LyricsUtils.isLineSynced(lyrics) }
     DisposableEffect(Unit) {
         LyricsTranslationHelper.setCompositionActive(true)
         onDispose {
@@ -300,14 +307,20 @@ fun ExperimentalLyrics(
         PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT -> Color.White
     }
 
-    var activeLineIndices by remember { mutableStateOf(emptySet<Int>()) }
-    var scrollTargetIndex by rememberSaveable { mutableIntStateOf(-1) }
-    var previousScrollActiveIndices by remember { mutableStateOf(emptySet<Int>()) }
-    
-    var currentPositionState by remember { mutableLongStateOf(0L) }
-    var deferredCurrentLineIndex by rememberSaveable { mutableIntStateOf(0) }
-    var lastPreviewTime by rememberSaveable { mutableLongStateOf(0L) }
-    var isSeeking by remember { mutableStateOf(false) }
+    val currentPositionRef = remember {
+        object {
+            var position: Long = runCatching { playerConnection.player.currentPosition }.getOrDefault(0L)
+        }
+    }
+    var activeLineIndices by remember(lines, currentSong?.id) {
+        mutableStateOf(emptySet<Int>())
+    }
+    var visibleBackgroundLineIndices by remember(lines, currentSong?.id) {
+        mutableStateOf(emptySet<Int>())
+    }
+    var activeIndicatorListIndex by remember(mergedLyricsList) {
+        mutableStateOf<Int?>(null)
+    }
     var showProgressDialog by remember { mutableStateOf(false) }
     var showShareDialog by remember { mutableStateOf(false) }
     var showColorPickerDialog by remember { mutableStateOf(false) }
@@ -315,8 +328,11 @@ fun ExperimentalLyrics(
     var isSelectionModeActive by rememberSaveable { mutableStateOf(false) }
     val selectedIndices = remember { mutableStateListOf<Int>() }
     var showMaxSelectionToast by remember { mutableStateOf(false) }
-    val isLyricsProviderShown = lyricsEntity != null && lyricsEntity.provider != "Unknown" && lyricsEntity.provider != "Manual" && !isSelectionModeActive
-    var isAutoScrollEnabled by rememberSaveable { mutableStateOf(true) }
+    var isAutoScrollEnabled by rememberSaveable(isSynced) { mutableStateOf(isSynced) }
+    val isLyricsProviderShown = lyricsEntity != null &&
+        lyricsEntity.provider != "Unknown" &&
+        lyricsEntity.provider != "Manual" &&
+        !isSelectionModeActive
 
     BackHandler(enabled = isSelectionModeActive) {
         isSelectionModeActive = false
@@ -331,27 +347,65 @@ fun ExperimentalLyrics(
         }
     }
 
-    var lastMainMaxSeen by remember(lyrics, lines) { mutableIntStateOf(-1) }
-    var smoothPositionForSync by remember { mutableLongStateOf(0L) }
+    val backgroundToMainMap = remember(lines) {
+        val map = mutableMapOf<Int, Int>()
+        for (i in lines.indices) {
+            if (lines[i].isBackground) {
+                val pairedMain = (i - 1 downTo 0).firstOrNull { !lines[it].isBackground } ?: -1
+                if (pairedMain != -1) {
+                    map[i] = pairedMain
+                }
+            }
+        }
+        map
+    }
 
-    LaunchedEffect(lyrics, lines) {
+    // Seek generation counter: bumped by the frame loop whenever the playback position
+    // jumps discontinuously (>2s between frames). NOTE: sliderPositionProvider() returns
+    // the current position (non-null) in the lyrics-screen path, so provider nullness
+    // must NOT be used as a seek signal.
+    var positionEpoch by remember(lyrics) { mutableIntStateOf(0) }
+    // Wall time of the last position discontinuity. Lets index convergence right
+    // after a scrub settle instantly instead of visibly gliding there.
+    var lastJumpTime by remember(lyrics) { mutableLongStateOf(0L) }
+    // Pending tap-to-seek target (lyric timestamp). Set when a lyric line is tapped;
+    // a position jump landing on it glides with a fixed duration, a jump anywhere
+    // else (scrub) snaps instantly. Either/or, decided by position match — never by
+    // timing. Cleared on consume or supersede; reset per lyrics.
+    var pendingTapSeekMs by remember(lyrics) { mutableStateOf<Long?>(null) }
+    // UNLIMITED (not CONFLATED) so a gesture Fling queued after drag Snaps can never be
+    // overwritten in the buffer by a later auto/height Snap. Ordering drag -> fling is preserved.
+    val scrollCommands = remember { Channel<ScrollCommand>(Channel.UNLIMITED) }
+    var hasAutoPositioned by remember(lyrics) { mutableStateOf(false) }
+    // Set by the frame loop after its first computation (even if the active set is
+    // legitimately empty, e.g. mid-gap). Gates the very first snap so it goes
+    // straight to the live spot instead of via the top.
+    var loopWarmedUp by remember(lyrics) { mutableStateOf(false) }
+    LaunchedEffect(lyrics, lines, mergedLyricsList, backgroundToMainMap) {
         if (lyrics.isNullOrEmpty() || lines.isEmpty()) {
             activeLineIndices = emptySet()
+            visibleBackgroundLineIndices = emptySet()
+            activeIndicatorListIndex = null
             return@LaunchedEffect
         }
         
-        var lastPlayerPos = playerConnection.player.currentPosition
+        var lastPlayerPos = runCatching { playerConnection.player.currentPosition }.getOrDefault(0L)
         var lastUpdateTime = System.currentTimeMillis()
+        // Bridges micro-gaps between lines: when one line ends and the next starts
+        // almost immediately, activeLineIndices is empty for a few frames, which would
+        // make every line dim and then brighten again (flicker). Retain the previous
+        // non-empty set briefly so fast transitions crossfade instead of dipping.
+        var lastNonEmptyActive = emptySet<Int>()
+        var lastNonEmptyTime = 0L
+        val activeHoldMs = 700L
+        var lastEffectivePosition = 0L
         
         while (isActive) {
             withFrameNanos { _ -> }
             val now = System.currentTimeMillis()
             val sliderPosition = sliderPositionProvider()
-            isSeeking = sliderPosition != null
             
-            val position = if (isSeeking) {
-                sliderPosition!!
-            } else {
+            val position = sliderPosition ?: run {
                 val playerPos = playerConnection.player.currentPosition
                 if (playerPos != lastPlayerPos) {
                     lastPlayerPos = playerPos
@@ -360,131 +414,124 @@ fun ExperimentalLyrics(
                 val elapsed = now - lastUpdateTime
                 lastPlayerPos + (if (playerConnection.player.isPlaying) elapsed else 0)
             }
-            
-            currentPositionState = position
-            smoothPositionForSync = position
-            
+            currentPositionRef.position = position
             val lyricsOffset = currentSong?.song?.lyricsOffset ?: 0
             val effectivePosition = position + lyricsOffset
             
-            val initialActiveIndices = findActiveLineIndices(lines, effectivePosition)
-            val scrollActiveIndicesRaw = findActiveLineIndices(lines, effectivePosition + (if (hasWordTimings) 0L else 250L))
-            
-            val scrollActiveIndices = scrollActiveIndicesRaw.toMutableSet()
-            for (i in scrollActiveIndicesRaw) {
-                if (lines.getOrNull(i)?.isBackground == true) {
-                    for (j in i - 1 downTo 0) {
-                        if (lines.getOrNull(j)?.isBackground == false) {
-                            scrollActiveIndices.add(j)
-                            break
-                        }
+            val newActiveIndices = if (isSynced) {
+                val active = findActiveLineIndices(lines, effectivePosition).toMutableSet()
+                for (i in active.toList()) {
+                    val pairedMain = backgroundToMainMap[i]
+                    if (pairedMain != null) {
+                        active.add(pairedMain)
                     }
                 }
+                // A seek (or any large position jump) is a discontinuity: never hold the
+                // pre-seek line, otherwise the view would first snap to the old line and
+                // only correct itself ~700ms later. It also bumps positionEpoch so the
+                // auto-scroll effect snaps exactly once to the new spot.
+                val discontinuity = abs(effectivePosition - lastEffectivePosition) > 2000L
+                if (discontinuity) {
+                    lastJumpTime = now
+                }
+                lastEffectivePosition = effectivePosition
+                if (discontinuity) {
+                    positionEpoch++
+                    lastNonEmptyActive = active.toSet()
+                    lastNonEmptyTime = now
+                    active
+                } else if (active.isNotEmpty()) {
+                    lastNonEmptyActive = active.toSet()
+                    lastNonEmptyTime = now
+                    active
+                } else if (now - lastNonEmptyTime <= activeHoldMs && lastNonEmptyActive.isNotEmpty()) {
+                    lastNonEmptyActive
+                } else {
+                    active
+                }
+            } else {
+                lines.indices.toSet()
             }
-            
-            val newActiveIndices = initialActiveIndices.toMutableSet()
-            for (i in initialActiveIndices) {
-                if (lines.getOrNull(i)?.isBackground == true) {
-                    for (j in i - 1 downTo 0) {
-                        if (lines.getOrNull(j)?.isBackground == false) {
-                            newActiveIndices.add(j)
-                            break
-                        }
+            if (activeLineIndices != newActiveIndices) {
+                activeLineIndices = newActiveIndices
+            }
+
+            if (isSynced) {
+                val newBgVisible = mutableSetOf<Int>()
+                for ((bgIndex, pairedMain) in backgroundToMainMap) {
+                    val mainTime = lines[pairedMain].time
+                    val bgTime = lines[bgIndex].time
+                    val inGap = effectivePosition in mainTime..bgTime
+                    if (newActiveIndices.contains(bgIndex) || newActiveIndices.contains(pairedMain) || inGap) {
+                        newBgVisible.add(bgIndex)
                     }
                 }
-            }
-
-            val scrollMax = scrollActiveIndices
-                .filter { lines.getOrNull(it)?.isBackground == false }
-                .maxOrNull() ?: (scrollActiveIndices.maxOrNull() ?: -1)
-
-            val isCurrentTargetStillActive = scrollTargetIndex in scrollActiveIndices
-            val anyStillActive = scrollActiveIndices.isNotEmpty()
-
-            val shouldScroll = when {
-                isSeeking -> true
-                // If current target just ended and there are other active lines, scroll to the new max
-                !isCurrentTargetStillActive && anyStillActive && scrollMax > scrollTargetIndex -> true
-                
-                // If current target just ended and no other active lines
-                !isCurrentTargetStillActive && !anyStillActive && previousScrollActiveIndices.isNotEmpty() -> true
-                
-                // If we don't have a target yet and lines became active
-                scrollTargetIndex == -1 && anyStillActive -> true
-                
-                // New line started while nothing was active before
-                previousScrollActiveIndices.isEmpty() && anyStillActive && scrollMax > scrollTargetIndex -> true
-
-                else -> false
-            }
-
-            if (shouldScroll) {
-                val targetToScroll = when {
-                    isSeeking -> scrollMax
-                    !isCurrentTargetStillActive && anyStillActive -> scrollMax
-                    !isCurrentTargetStillActive && !anyStillActive -> {
-                        (lastMainMaxSeen + 1 until lines.size).firstOrNull {
-                            lines.getOrNull(it)?.isBackground == false
-                        } ?: scrollTargetIndex
-                    }
-                    else -> scrollMax
-                }
-                if (targetToScroll != -1 && (isSeeking || targetToScroll > scrollTargetIndex)) {
-                    scrollTargetIndex = targetToScroll
+                if (visibleBackgroundLineIndices != newBgVisible) {
+                    visibleBackgroundLineIndices = newBgVisible
                 }
             }
-            
-            if (scrollMax > lastMainMaxSeen && scrollMax != -1) {
-                lastMainMaxSeen = scrollMax
+
+            // A set containing only blank entries (e.g. the HEAD entry at song start)
+            // has no visible line, so it counts as "no active line" for gap purposes.
+            // This makes the interval indicator also show before the first lyric.
+            val hasVisibleActive = newActiveIndices.any { lines.getOrNull(it)?.text?.isNotBlank() == true }
+            val newIndicator = if (!hasVisibleActive) {
+                mergedLyricsList.indexOfFirst { item ->
+                    item is LyricsListItem.Indicator &&
+                        effectivePosition >= item.gapStartMs &&
+                        effectivePosition <= item.gapEndMs - 650L
+                }.takeIf { it >= 0 }
+            } else null
+            if (activeIndicatorListIndex != newIndicator) {
+                activeIndicatorListIndex = newIndicator
             }
-            
-            previousScrollActiveIndices = scrollActiveIndices
-            activeLineIndices = newActiveIndices
+            if (!loopWarmedUp) loopWarmedUp = true
         }
     }
 
-    LaunchedEffect(isSeeking, lastPreviewTime) {
-        if (isSeeking) {
-            lastPreviewTime = 0L
-        } else if (lastPreviewTime != 0L) {
-            delay(LYRICS_PREVIEW_TIME)
-            lastPreviewTime = 0L
-        }
-    }
+    val viewConfiguration = LocalViewConfiguration.current
 
-    LaunchedEffect(scrollTargetIndex, isAutoScrollEnabled) {
-        if (scrollTargetIndex != -1 && isAutoScrollEnabled) {
-            deferredCurrentLineIndex = scrollTargetIndex
-        }
-    }
-
-    var userManualOffset by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(lyrics, lines) {
-        isAutoScrollEnabled = true
-        userManualOffset = 0f
-        scrollTargetIndex = -1
-        deferredCurrentLineIndex = 0
-        isSelectionModeActive = false
-        selectedIndices.clear()
-        previousScrollActiveIndices = emptySet()
-    }
-    
-    var flingJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-    val velocityTracker = remember { VelocityTracker() }
-    val decayAnimSpec = remember { exponentialDecay<Float>(frictionMultiplier = 1.8f) }
-    val itemHeights = remember(lyrics, mergedLyricsList) { mutableStateMapOf<Int, Int>() }
-    var isInitialLayout by remember(lyrics, mergedLyricsList) { mutableStateOf(true) }
-
-    val activeListIndex by remember(mergedLyricsList, deferredCurrentLineIndex) {
+    val anchoredLineIndex by remember(lines, activeLineIndices) {
         derivedStateOf {
-            mergedLyricsList.indexOfFirst { 
-                (it is LyricsListItem.Line && it.index == deferredCurrentLineIndex) ||
-                (it is LyricsListItem.Indicator && it.afterLineIndex == deferredCurrentLineIndex)
-            }.coerceAtLeast(0)
+            activeLineIndices
+                .filter { lines.getOrNull(it)?.isBackground == false }
+                .maxOrNull() ?: activeLineIndices.maxOrNull() ?: 0
         }
     }
 
-    val lifecycleOwner = LocalLifecycleOwner.current
+    val scrollTargetListIndex by remember(
+        mergedLyricsList,
+        activeLineIndices,
+        anchoredLineIndex,
+        activeIndicatorListIndex,
+    ) {
+        derivedStateOf {
+            val activeLineListIndex = if (activeLineIndices.isEmpty()) {
+                -1
+            } else {
+                mergedLyricsList.indexOfFirst {
+                    it is LyricsListItem.Line && it.index == anchoredLineIndex
+                }
+            }
+
+            if (activeLineListIndex >= 0) {
+                activeLineListIndex
+            } else {
+                activeIndicatorListIndex
+            }
+        }
+    }
+    var activeListIndex by remember(lyrics) { mutableIntStateOf(0) }
+
+    LaunchedEffect(scrollTargetListIndex, mergedLyricsList.lastIndex) {
+        val targetListIndex = scrollTargetListIndex
+        if (targetListIndex != null) {
+            activeListIndex = targetListIndex
+        } else if (mergedLyricsList.isNotEmpty()) {
+            activeListIndex = activeListIndex.coerceIn(0, mergedLyricsList.lastIndex)
+        }
+    }
+
     DisposableEffect(showLyrics) {
         val activity = context as? Activity
         if (showLyrics) activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -497,144 +544,284 @@ fun ExperimentalLyrics(
     ) {
         val maxHeightPx = constraints.maxHeight.toFloat()
         val anchorY = maxHeightPx * LYRICS_ANCHOR_RATIO
-        val lineHeightPx = with(density) { LYRICS_ITEM_FALLBACK_HEIGHT_DP.toPx() }
+        val contentTop = with(density) { 56.dp.toPx() }
         val indicatorHeightPx = with(density) { 72.dp.toPx() }
-        
-        // Use a more permissive fallback for constraints to prevent "locks" if items are not measured yet
-        val constraintLineHeightPx = with(density) { 120.dp.toPx() }
+        val lineHeightPx = with(density) { LYRICS_ITEM_FALLBACK_HEIGHT_DP.toPx() }
+        val itemGapPx = with(density) { LYRICS_ITEM_GAP_DP.toPx() }
+        val romanizeSong = currentSong?.romanizeLyrics == true
 
-        val positions = remember(itemHeights.toMap(), activeListIndex, mergedLyricsList) {
-            val map = mutableMapOf<Int, Float>()
-            if (activeListIndex == -1 || mergedLyricsList.isEmpty()) return@remember map
-            
-            map[activeListIndex] = 0f
-            var currentY = 0f
-            for (i in activeListIndex - 1 downTo 0) {
-                val item = mergedLyricsList[i]
-                val height = itemHeights[i]?.toFloat() ?: (if (item is LyricsListItem.Indicator) indicatorHeightPx else lineHeightPx)
-                val noGap = (item as? LyricsListItem.Line)?.entry?.isBackground == true || item is LyricsListItem.Indicator
-                currentY -= (height + if (noGap) 0f else with(density) { LYRICS_ITEM_GAP_DP.toPx() })
-                map[i] = currentY
-            }
-            currentY = 0f
-            for (i in activeListIndex until mergedLyricsList.size - 1) {
-                val currentItem = mergedLyricsList[i]
-                val nextItem = mergedLyricsList[i + 1]
-                val height = itemHeights[i]?.toFloat() ?: (if (currentItem is LyricsListItem.Indicator) indicatorHeightPx else lineHeightPx)
-                val nextNoGap = (nextItem as? LyricsListItem.Line)?.entry?.isBackground == true || nextItem is LyricsListItem.Indicator
-                currentY += (height + if (nextNoGap) 0f else with(density) { LYRICS_ITEM_GAP_DP.toPx() })
-                map[i + 1] = currentY
-            }
-            map
+        // Eager exact heights: measured once with the real text engine (same styles and
+        // width as LyricsLine) instead of starting from fallback estimates. Seeded
+        // synchronously from the ViewModel cache on reopen, so positions are exact on the
+        // very first frame. Later arrivals (translations) still patch entries live.
+        val textMeasurer = rememberTextMeasurer()
+        val mainFontFamily = MaterialTheme.typography.bodyLarge.fontFamily
+        val tableKey = remember(
+            lyrics?.hashCode() ?: 0, constraints.maxWidth, lyricsTextPosition, showIntervalIndicator,
+            romanizeAsMain, enabledLanguages, romanizeSong, translateLanguage, translateMode,
+        ) {
+            "${lyrics?.hashCode() ?: 0}|${constraints.maxWidth}|$lyricsTextPosition|" +
+                "$showIntervalIndicator|$romanizeAsMain|${enabledLanguages.hashCode()}|" +
+                "$romanizeSong|$translateLanguage|$translateMode"
         }
-
-        val minOffset = remember(itemHeights.toMap(), mergedLyricsList, activeListIndex, anchorY) {
-            if (mergedLyricsList.isEmpty() || activeListIndex == -1) return@remember 0f
-            val totalBelow = (activeListIndex until mergedLyricsList.size - 1).sumOf { i ->
-                val currentItem = mergedLyricsList[i]
-                val nextItem = mergedLyricsList[i + 1]
-                val height = itemHeights[i]?.toFloat() ?: (if (currentItem is LyricsListItem.Indicator) indicatorHeightPx else constraintLineHeightPx)
-                val nextNoGap = (nextItem as? LyricsListItem.Line)?.entry?.isBackground == true || nextItem is LyricsListItem.Indicator
-                (height + if (nextNoGap) 0f else with(density) { LYRICS_ITEM_GAP_DP.toPx() }).toDouble()
-            }.toFloat()
-            val lastItem = mergedLyricsList.last()
-            val lastHeight = itemHeights[mergedLyricsList.size - 1]?.toFloat() ?: (if (lastItem is LyricsListItem.Indicator) indicatorHeightPx else constraintLineHeightPx)
-            with(density) { 100.dp.toPx() } - anchorY - totalBelow - lastHeight
-        }
-
-        val maxOffset = remember(itemHeights.toMap(), mergedLyricsList, activeListIndex, maxHeightPx, anchorY) {
-            if (mergedLyricsList.isEmpty() || activeListIndex == -1) return@remember 0f
-            val totalAbove = (0 until activeListIndex).sumOf { i ->
-                val item = mergedLyricsList[i]
-                val height = itemHeights[i]?.toFloat() ?: (if (item is LyricsListItem.Indicator) indicatorHeightPx else constraintLineHeightPx)
-                val noGap = (item as? LyricsListItem.Line)?.entry?.isBackground == true || item is LyricsListItem.Indicator
-                (height + if (noGap) 0f else with(density) { LYRICS_ITEM_GAP_DP.toPx() }).toDouble()
-            }.toFloat()
-            maxHeightPx - with(density) { 150.dp.toPx() } - anchorY + totalAbove
-        }
-
-        // Clamp to real content bounds only. minOffset/maxOffset already use conservative height
-        // fallbacks (constraintLineHeightPx) for items not yet measured; a large buffer here caused
-        // effectively unbounded overscroll away from the lyrics.
-        val scrollClampMin = minOf(minOffset, maxOffset)
-        val scrollClampMax = maxOf(minOffset, maxOffset)
-
-        LaunchedEffect(scrollClampMin, scrollClampMax) {
-            if (userManualOffset < scrollClampMin || userManualOffset > scrollClampMax) {
-                userManualOffset = userManualOffset.coerceIn(scrollClampMin, scrollClampMax)
-            }
-        }
-
-        LaunchedEffect(isAutoScrollEnabled, lines) {
-            if (isAutoScrollEnabled) {
-                val start = userManualOffset
-                if (abs(start) < 1f) {
-                    userManualOffset = 0f
-                    return@LaunchedEffect
+        val itemHeights = remember(tableKey) {
+            mutableStateMapOf<Int, Int>().also { map ->
+                lyricsViewModel.heightTables[tableKey]?.let { cached ->
+                    map.putAll(cached)
+                    // Collapse bg/indicator entries on load: hidden is the common case
+                    // and stays exact; visible ones are always near the anchor (hence
+                    // composed) and regrow via live reports within a frame or two.
+                    mergedLyricsList.forEachIndexed { i, item ->
+                        when (item) {
+                            is LyricsListItem.Indicator -> map[i] = 0
+                            is LyricsListItem.Line ->
+                                if (item.entry.isBackground) {
+                                    map[i] = with(density) { (LYRICS_BG_TOP_PADDING + LYRICS_BG_BOTTOM_PADDING).roundToPx() }
+                                }
+                        }
+                    }
                 }
-                val anim = Animatable(start)
-                var lastValue = start
-                anim.animateTo(0f, tween((abs(start) / 4f).toInt().coerceIn(200, 600), easing = FastOutSlowInEasing)) {
-                    userManualOffset += (value - lastValue)
-                    lastValue = value
+            }
+        }
+        LaunchedEffect(tableKey, mergedLyricsList) {
+            if (mergedLyricsList.isNotEmpty() && lyricsViewModel.heightTables[tableKey] == null) {
+                val table = precomputeLyricHeights(
+                    items = mergedLyricsList,
+                    measurer = textMeasurer,
+                    density = density,
+                    contentWidthPx = lyricContentWidthPx(constraints.maxWidth, density, lyricsTextPosition),
+                    mainFontFamily = mainFontFamily,
+                    textSizeSp = LYRICS_TEXT_SIZE_SP,
+                    lineSpacing = LYRICS_LINE_SPACING,
+                    romanizeAsMain = romanizeAsMain,
+                    showRomanizedSub = romanizeSong && enabledLanguages.isNotEmpty(),
+                    indicatorHeightPx = indicatorHeightPx,
+                    itemGapPx = itemGapPx,
+                    visibleBgLineIndices = visibleBackgroundLineIndices,
+                    visibleIndicatorListIndex = activeIndicatorListIndex,
+                )
+                if (lyricsViewModel.heightTables.size > 3) lyricsViewModel.heightTables.clear()
+                lyricsViewModel.heightTables[tableKey] = table.toMutableMap()
+                // Live-measured entries (if any) win; the table only fills gaps.
+                table.forEach { (index, height) -> itemHeights.putIfAbsent(index, height) }
+            }
+        }
+
+        // Each item is positioned from the start of the song. The active line only changes
+        // the viewport's offset, so playback never changes the layout of individual lines.
+        val positions by remember(mergedLyricsList) {
+            derivedStateOf {
+                val n = mergedLyricsList.size
+                val arr = FloatArray(n)
+                var currentY = 0f
+                for (i in 0 until n) {
+                    arr[i] = currentY
+                    val item = mergedLyricsList[i]
+                    val height = itemHeights[i]?.toFloat()
+                        ?: (if (item is LyricsListItem.Indicator) indicatorHeightPx else lineHeightPx)
+                    val noGap = (item as? LyricsListItem.Line)?.entry?.isBackground == true || item is LyricsListItem.Indicator
+                    currentY += height + if (noGap) 0f else itemGapPx
                 }
-                userManualOffset = 0f
+                arr
+            }
+        }
+        // Let the first and last entries reach the playback anchor instead of pinning
+        // either edge of the list to the edge of the viewport.
+        val firstAnchorOffset = contentTop - anchorY
+        val lastAnchorOffset = remember(positions, contentTop, anchorY, mergedLyricsList.lastIndex) {
+            derivedStateOf {
+                val lastY = if (positions.isNotEmpty() && mergedLyricsList.isNotEmpty()) {
+                    positions[mergedLyricsList.lastIndex]
+                } else 0f
+                contentTop + lastY - anchorY
+            }
+        }
+        val scrollClampMin = remember(lastAnchorOffset, firstAnchorOffset) { 
+            derivedStateOf { minOf(firstAnchorOffset, lastAnchorOffset.value) } 
+        }
+        val scrollClampMax = remember(lastAnchorOffset, firstAnchorOffset) { 
+            derivedStateOf { maxOf(firstAnchorOffset, lastAnchorOffset.value) } 
+        }
+
+        val scrollOffset = remember { Animatable(0f) }
+
+        LaunchedEffect(scrollCommands) {
+            scrollCommands.receiveAsFlow().collectLatest { command ->
+                when (command) {
+                    is ScrollCommand.Stop -> scrollOffset.stop()
+                    is ScrollCommand.Snap -> scrollOffset.snapTo(command.value)
+                    is ScrollCommand.Animate -> scrollOffset.animateTo(command.value, tween(command.durationMs, easing = FastOutSlowInEasing))
+                    is ScrollCommand.Fling -> scrollOffset.animateDecay(command.velocity, exponentialDecay())
+                }
             }
         }
 
-        LaunchedEffect(showLyrics, lyrics, mergedLyricsList.size) {
-            if (showLyrics && mergedLyricsList.isNotEmpty()) {
-                isInitialLayout = true
-                snapshotFlow { 
-                    val h = itemHeights.toMap()
-                    val windowStart = (activeListIndex - 8).coerceAtLeast(0)
-                    val windowEnd = (activeListIndex + 12).coerceAtMost(mergedLyricsList.size - 1)
-                    (windowStart..windowEnd).all { h.containsKey(it) } 
-                }.first { it }
-                isInitialLayout = false
+        val latestScrollLimits = rememberUpdatedState(scrollClampMin.value to scrollClampMax.value)
+        val dragTargetOffsetRef = remember { object { var value: Float = 0f } }
+        val latestAutoScrollEnabled = rememberUpdatedState(isAutoScrollEnabled)
+
+        val onItemHeightChanged = rememberUpdatedState { index: Int, newHeight: Int ->
+            val prevHeight = itemHeights[index]
+            if (prevHeight == newHeight) return@rememberUpdatedState
+
+            val fallbackHeight = if (mergedLyricsList.getOrNull(index) is LyricsListItem.Indicator) {
+                indicatorHeightPx.roundToInt()
+            } else {
+                lineHeightPx.roundToInt()
+            }
+            val oldHeight = prevHeight ?: fallbackHeight
+            val delta = (newHeight - oldHeight).toFloat()
+
+            itemHeights[index] = newHeight
+            // Write live values straight back to the cached table so the next open
+            // seeds true heights (e.g. with translations), not pre-arrival ones.
+            lyricsViewModel.heightTables[tableKey]?.let { tbl ->
+                if (tbl[index] != newHeight) tbl[index] = newHeight
+            }
+
+            // In auto mode the autoScrollTarget already recomputes from the new positions,
+            // so an extra Snap here would fight the auto animation (stutter). In manual
+            // mode only compensate a settled offset; never cancel a running fling.
+            if (delta != 0f && positions.isNotEmpty() && hasAutoPositioned &&
+                !latestAutoScrollEnabled.value && !scrollOffset.isRunning
+            ) {
+                val currentAnchorY = scrollOffset.value - contentTop + anchorY
+                val itemY = positions.getOrElse(index) { 0f }
+                if (itemY < currentAnchorY) {
+                    val newOffset = scrollOffset.value + delta
+                    dragTargetOffsetRef.value += delta
+                    scrollCommands.trySend(ScrollCommand.Snap(newOffset))
+                }
             }
         }
 
-        // When jumping significantly, we might want to reset isInitialLayout to prevent jumps
-        LaunchedEffect(activeListIndex) {
-            if (mergedLyricsList.isNotEmpty()) {
-                val h = itemHeights.toMap()
-                val windowStart = (activeListIndex - 3).coerceAtLeast(0)
-                val windowEnd = (activeListIndex + 3).coerceAtMost(mergedLyricsList.size - 1)
-                val needsMeasurement = (windowStart..windowEnd).any { !h.containsKey(it) }
-                if (needsMeasurement) {
-                    isInitialLayout = true
-                    snapshotFlow { 
-                        val hh = itemHeights.toMap()
-                        (windowStart..windowEnd).all { hh.containsKey(it) } 
-                    }.first { it }
-                    isInitialLayout = false
+        LaunchedEffect(scrollClampMin.value, scrollClampMax.value) {
+            scrollOffset.updateBounds(scrollClampMin.value, scrollClampMax.value)
+        }
+
+        val autoScrollTarget = remember(
+            positions,
+            activeListIndex,
+            scrollClampMin,
+            scrollClampMax,
+            contentTop,
+            anchorY
+        ) {
+            derivedStateOf {
+                if (positions.isEmpty() || activeListIndex !in positions.indices) {
+                    null
+                } else {
+                    (positions[activeListIndex] + contentTop - anchorY)
+                        .coerceIn(scrollClampMin.value, scrollClampMax.value)
+                }
+            }
+        }
+
+        val visibleRange by remember(positions, contentTop, maxHeightPx, mergedLyricsList.size) {
+            derivedStateOf {
+                if (positions.isEmpty() || mergedLyricsList.isEmpty()) {
+                    IntRange.EMPTY
+                } else {
+                    val currentOffset = scrollOffset.value
+                    // Generous prefetch in both directions so fast flings don't outrun
+                    // composition (which reads as skipping/jumping).
+                    val minListY = currentOffset - contentTop - (2f * maxHeightPx)
+                    val maxListY = currentOffset - contentTop + (3f * maxHeightPx)
+                    val start = findStartIndex(positions, minListY)
+                    val end = findEndIndex(positions, maxListY)
+                    start..end
+                }
+            }
+        }
+
+        // Scroll policy: the very first positioning snaps instantly (reopen shows the
+        // exact spot with no animation). Tap-initiated jumps glide with the same fixed
+        // duration as normal line changes, near or far. Scrub jumps snap instantly to
+        // follow the finger. Same-index target moves are layout shifts (translation
+        // arrival, clamp/rotation change), followed instantly and exactly.
+        var lastAutoTargetIndex by remember(lyrics) { mutableIntStateOf(-1) }
+        var lastHandledEpoch by remember(lyrics) { mutableIntStateOf(-1) }
+        LaunchedEffect(autoScrollTarget.value, isAutoScrollEnabled, positionEpoch, loopWarmedUp) {
+            val target = autoScrollTarget.value
+            if (isAutoScrollEnabled && target != null) {
+                if (!hasAutoPositioned) {
+                    // Wait for the loop's first computation so the first snap goes
+                    // straight to the live spot (scrollTargetListIndex is converged by
+                    // then); the paint gate below holds the frames before it, so the
+                    // opening frame already shows the right spot, never the top.
+                    if (loopWarmedUp) {
+                        val firstIdx = if (isSynced) scrollTargetListIndex else 0
+                        val firstTarget = if (firstIdx != null && firstIdx in positions.indices) {
+                            (positions[firstIdx] + contentTop - anchorY)
+                                .coerceIn(scrollClampMin.value, scrollClampMax.value)
+                        } else target
+                        scrollCommands.send(ScrollCommand.Snap(firstTarget))
+                        hasAutoPositioned = true
+                        lastAutoTargetIndex = activeListIndex
+                        lastHandledEpoch = positionEpoch
+                    }
+                } else if (positionEpoch != lastHandledEpoch) {
+                    // Tap landing (jumped position matches the tapped line) glides with
+                    // a fixed duration; anything else (scrub) snaps instantly and clears
+                    // a stale tap. The flag survives a match so post-landing convergence
+                    // in the far branch below keeps gliding instead of snapping.
+                    val tapTarget = pendingTapSeekMs
+                    val isTapLanding = tapTarget != null &&
+                        abs(currentPositionRef.position - tapTarget) < TAP_TARGET_TOLERANCE_MS
+                    lastAutoTargetIndex = activeListIndex
+                    lastHandledEpoch = positionEpoch
+                    if (isTapLanding) {
+                        scrollCommands.send(ScrollCommand.Animate(target, LINE_CHANGE_ANIMATION_MS))
+                    } else {
+                        if (tapTarget != null) pendingTapSeekMs = null
+                        scrollCommands.send(ScrollCommand.Snap(target))
+                    }
+                } else {
+                    val indexDelta = if (lastAutoTargetIndex >= 0) {
+                        abs(activeListIndex - lastAutoTargetIndex)
+                    } else {
+                        Int.MAX_VALUE
+                    }
+                    lastAutoTargetIndex = activeListIndex
+                    if (indexDelta == 0) {
+                        // Same line, target moved: the layout shifted under us (indicator
+                        // show/hide, translation arrival, clamp/rotation change). Tiny
+                        // shifts follow instantly (invisible). Bigger ones glide briefly:
+                        // snapping here would murder an in-flight scroll animation (e.g.
+                        // the tap glide) mid-way, so it gets redirected smoothly instead.
+                        val d = abs(target - scrollOffset.value)
+                        if (d > 0.5f) {
+                            if (d < 24f) {
+                                scrollCommands.send(ScrollCommand.Snap(target))
+                            } else {
+                                scrollCommands.send(ScrollCommand.Animate(target, REDIRECT_ANIMATION_MS))
+                            }
+                        }
+                    } else if (indexDelta <= 2) {
+                        scrollCommands.send(ScrollCommand.Animate(target, LINE_CHANGE_ANIMATION_MS))
+                    } else {
+                        // Far index jump: tap convergence keeps the fixed line-change
+                        // duration (flag consumed here); scrub settling snaps instantly
+                        // to follow the finger; anything else gets one smooth glide.
+                        val tapPending = pendingTapSeekMs != null
+                        val justJumped = System.currentTimeMillis() - lastJumpTime < SEEK_SETTLE_MS
+                        if (tapPending) {
+                            pendingTapSeekMs = null
+                            scrollCommands.send(ScrollCommand.Animate(target, LINE_CHANGE_ANIMATION_MS))
+                        } else if (justJumped) {
+                            scrollCommands.send(ScrollCommand.Snap(target))
+                        } else {
+                            val distance = abs(target - scrollOffset.value)
+                            val duration = (300 + distance * 0.12f).toInt().coerceIn(300, 750)
+                            scrollCommands.send(ScrollCommand.Animate(target, duration))
+                        }
+                    }
                 }
             }
         }
 
         val latestResyncLyrics by rememberUpdatedState(
-            newValue = {
-                flingJob?.cancel()
-                var target = scrollTargetIndex
-                if (target == -1) {
-                    target =
-                        findActiveLineIndices(
-                            lines,
-                            currentPositionState + (currentSong?.song?.lyricsOffset ?: 0),
-                        ).maxOrNull() ?: -1
-                }
-                if (target != -1) {
-                    val listIdx =
-                        mergedLyricsList.indexOfFirst {
-                            it is LyricsListItem.Line && it.index == target
-                        }.coerceAtLeast(0)
-                    userManualOffset += positions[listIdx] ?: 0f
-                    deferredCurrentLineIndex = target
-                    scrollTargetIndex = target
-                }
-                isAutoScrollEnabled = true
-            },
+            newValue = { isAutoScrollEnabled = true },
         )
 
         LyricsTranslationHeader(
@@ -660,122 +847,129 @@ fun ExperimentalLyrics(
                     .clipToBounds()
                     .nestedScroll(remember {
                         object : NestedScrollConnection {
-                            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                                if (source == NestedScrollSource.UserInput) isAutoScrollEnabled = false
-                                if (!isSelectionModeActive) lastPreviewTime = System.currentTimeMillis()
-                                return super.onPostScroll(consumed, available, source)
-                            }
-                            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                                isAutoScrollEnabled = false
-                                if (!isSelectionModeActive) lastPreviewTime = System.currentTimeMillis()
-                                return super.onPostFling(consumed, available)
+                            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                                return if (source == NestedScrollSource.UserInput && available.y != 0f) {
+                                    Offset(0f, available.y)
+                                } else {
+                                    Offset.Zero
+                                }
                             }
                         }
                     })
                     .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val down = awaitFirstDown(requireUnconsumed = false)
-                                if (isInitialLayout) continue
-                                flingJob?.cancel()
-                                velocityTracker.resetTracking()
-                                isAutoScrollEnabled = false
-                                lastPreviewTime = System.currentTimeMillis()
-                                velocityTracker.addPosition(down.uptimeMillis, down.position)
-                                verticalDrag(down.id) { change ->
-                                    userManualOffset = (userManualOffset + change.positionChange().y).coerceIn(scrollClampMin, scrollClampMax)
-                                    velocityTracker.addPosition(change.uptimeMillis, change.position)
-                                    change.consume()
-                                }
-                                val velocity = velocityTracker.calculateVelocity().y
-                                flingJob = scope.launch {
-                                    AnimationState(initialValue = userManualOffset, initialVelocity = velocity).animateDecay(decayAnimSpec) {
-                                        val clamped = value.coerceIn(scrollClampMin, scrollClampMax)
-                                        userManualOffset = clamped
-                                        if (value != clamped) cancelAnimation()
+                        coroutineScope {
+                            while (isActive) {
+                                val velocity = awaitPointerEventScope {
+                                    val down = awaitFirstDown(requireUnconsumed = false)
+                                    if (!isAutoScrollEnabled && scrollOffset.isRunning) {
+                                        scrollCommands.trySend(ScrollCommand.Stop)
                                     }
+                                    val tracker = VelocityTracker()
+                                    tracker.addPointerInputChange(down)
+                                    var dragging = false
+                                    var accumulatedDrag = 0f
+                                    var targetOffset = scrollOffset.value
+                                    dragTargetOffsetRef.value = targetOffset
+                                    while (true) {
+                                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                        if (change.changedToUp()) break
+                                        val delta = change.positionChange().y
+                                        accumulatedDrag += delta
+                                        if (!dragging && abs(accumulatedDrag) > viewConfiguration.touchSlop) {
+                                            dragging = true
+                                            isAutoScrollEnabled = false
+                                            targetOffset = scrollOffset.value
+                                            dragTargetOffsetRef.value = targetOffset
+                                            scrollCommands.trySend(ScrollCommand.Stop)
+                                        }
+                                        if (dragging && delta != 0f) {
+                                            val (minClamp, maxClamp) = latestScrollLimits.value
+                                            targetOffset = (dragTargetOffsetRef.value - delta)
+                                                .coerceIn(minClamp, maxClamp)
+                                            dragTargetOffsetRef.value = targetOffset
+                                            scrollCommands.trySend(ScrollCommand.Snap(targetOffset))
+                                            tracker.addPointerInputChange(change)
+                                            change.consume()
+                                        }
+                                    }
+                                    if (dragging) -tracker.calculateVelocity().y else 0f
+                                }
+                                if (velocity != 0f) {
+                                    scrollCommands.send(ScrollCommand.Fling(velocity))
                                 }
                             }
                         }
                     }
             ) {
-                val lyricsOffsetVal = (currentSong?.song?.lyricsOffset ?: 0).toLong()
-                val currentEffectivePosition = currentPositionState + lyricsOffsetVal
-                
+                // Paint gate: hold the list until the first snap lands so the opening
+                // frame already shows the right spot (never the top). Lasts a frame or
+                // two; unsynced lyrics (auto off) paint immediately at the top.
+                if (hasAutoPositioned || !isAutoScrollEnabled) {
                 if (isLyricsProviderShown) {
-                    val targetProviderBase = anchorY + (positions[0] ?: 0f) - with(density) { 32.dp.toPx() }
-                    val animatedProviderBase by animateFloatAsState(
-                        targetValue = targetProviderBase,
-                        animationSpec = if (isInitialLayout || !isAutoScrollEnabled) snap()
-                        else {
-                            tween(750, 0, FastOutSlowInEasing)
-                        },
-                        label = "lyricsProviderOffset"
-                    )
                     Text(
                         text = stringResource(R.string.lyrics_from_provider, lyricsEntity.provider),
                         fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        modifier = Modifier.fillMaxWidth().offset { IntOffset(0, (animatedProviderBase + userManualOffset).roundToInt()) }.padding(horizontal = 24.dp, vertical = 4.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset { 
+                                val y = contentTop - scrollOffset.value - with(density) { 32.dp.toPx() }
+                                IntOffset(0, y.roundToInt()) 
+                            }
+                            .padding(horizontal = 24.dp, vertical = 4.dp)
                     )
                 }
 
-                mergedLyricsList.forEachIndexed { listIndex, listItem ->
+                for (listIndex in visibleRange) {
+                    val listItem = mergedLyricsList[listIndex]
                     key(listItem) {
-                        val distance = abs(listIndex - activeListIndex)
-                        val targetOffset = anchorY + positions.getOrDefault(listIndex, (listIndex - activeListIndex) * lineHeightPx)
-                        val frozenOffset = remember { mutableFloatStateOf(targetOffset) }
-                        LaunchedEffect(isAutoScrollEnabled, targetOffset, isInitialLayout) {
-                            if (isAutoScrollEnabled || isInitialLayout) frozenOffset.floatValue = targetOffset
-                        }
-                        val animatedOffset by animateFloatAsState(
-                            targetValue = if (isAutoScrollEnabled) targetOffset else frozenOffset.floatValue,
-                            animationSpec = if (isInitialLayout || !isAutoScrollEnabled) snap() 
-                                            else {
-                                                tween(750, (distance * LYRICS_STAGGER_DELAY_PER_DISTANCE).coerceAtMost(LYRICS_STAGGER_DELAY_MAX_MS), FastOutSlowInEasing)
-                                            },
-                            label = "lyricStaggeredOffset_$listIndex"
-                        )
-
                         Box(
-                            modifier = Modifier.fillMaxWidth().layout { m, c -> 
-                                val p = m.measure(c.copy(maxHeight = Constraints.Infinity))
-                                layout(p.width, 0) { p.place(0, 0) }
-                            }.offset { IntOffset(0, (animatedOffset + userManualOffset).roundToInt()) }
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .layout { m, c -> 
+                                    val p = m.measure(c.copy(maxHeight = Constraints.Infinity))
+                                    layout(p.width, 0) { p.place(0, 0) }
+                                }
+                                .offset {
+                                    val y = contentTop + (positions.getOrElse(listIndex) { listIndex * lineHeightPx }) - scrollOffset.value
+                                    IntOffset(0, y.roundToInt())
+                                }
                         ) {
                             when (listItem) {
                                 is LyricsListItem.Indicator -> {
-                                    val visible =
-                                        isAutoScrollEnabled &&
-                                            currentEffectivePosition >= listItem.gapStartMs &&
-                                            currentEffectivePosition <= listItem.gapEndMs - 650L
-                                    IntervalIndicator(listItem.gapStartMs, listItem.gapEndMs - 650L, currentEffectivePosition, visible, expressiveAccent,
-                                        Modifier.fillMaxWidth().onSizeChanged { itemHeights[listIndex] = it.height }.padding(horizontal = 24.dp).wrapContentWidth(Alignment.CenterHorizontally))
+                                    val visible = isAutoScrollEnabled && (listIndex == activeIndicatorListIndex)
+                                    IntervalIndicator(
+                                        gapStartMs = listItem.gapStartMs,
+                                        gapEndMs = listItem.gapEndMs - 650L,
+                                        currentPositionProvider = { currentPositionRef.position },
+                                        visible = visible,
+                                        color = expressiveAccent,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .onSizeChanged { onItemHeightChanged.value(listIndex, it.height) }
+                                            .padding(horizontal = 24.dp)
+                                            .wrapContentWidth(Alignment.CenterHorizontally)
+                                    )
                                 }
                                 is LyricsListItem.Line -> {
                                     val index = listItem.index
                                     val item = listItem.entry
                                     val isActiveLine = activeLineIndices.contains(index)
-                                    val pairedMainLineIndex = if (item.isBackground) (index - 1 downTo 0).firstOrNull { lines.getOrNull(it)?.isBackground == false } ?: -1 else -1
-                                    
-                                    val isInGapWithMain = if (item.isBackground && pairedMainLineIndex != -1) {
-                                        val pairedMainLine = lines[pairedMainLineIndex]
-                                        currentEffectivePosition >= pairedMainLine.time && currentEffectivePosition <= item.time
-                                    } else false
-                                    
-                                    val bgVisible = item.isBackground && (activeLineIndices.contains(pairedMainLineIndex) || activeLineIndices.contains(index) || isInGapWithMain)
-                                    
+                                    val bgVisible = if (item.isBackground) visibleBackgroundLineIndices.contains(index) else false
+
                                     LyricsLine(
                                         index = index, item = item, isSynced = isSynced,
                                         isActiveLine = isActiveLine,
                                         bgVisible = bgVisible, isSelected = selectedIndices.contains(index),
-                                        isSelectionModeActive = isSelectionModeActive, currentPositionState = currentPositionState,
+                                        isSelectionModeActive = isSelectionModeActive,
+                                        sliderPositionProvider = sliderPositionProvider,
                                         lyricsOffset = (currentSong?.song?.lyricsOffset ?: 0).toLong(),
-                                        playerConnection = playerConnection, lyricsTextSize = 36f, lyricsLineSpacing = 1.3f,
+                                        playerConnection = playerConnection, lyricsTextSize = LYRICS_TEXT_SIZE_SP, lyricsLineSpacing = LYRICS_LINE_SPACING,
                                         expressiveAccent = expressiveAccent, lyricsTextPosition = lyricsTextPosition,
                                         respectAgentPositioning = respectAgentPositioning, isAutoScrollEnabled = isAutoScrollEnabled,
-                                        displayedCurrentLineIndex = deferredCurrentLineIndex, romanizeAsMain = romanizeAsMain,
+                                        displayedCurrentLineIndex = if (isAutoScrollEnabled) anchoredLineIndex else index, romanizeAsMain = romanizeAsMain,
                                         enabledLanguages = enabledLanguages, romanizeLyrics = currentSong?.romanizeLyrics == true,
-                                        onSizeChanged = { itemHeights[listIndex] = it },
+                                        onSizeChanged = { onItemHeightChanged.value(listIndex, it) },
                                         onClick = {
                                             if (isSelectionModeActive) {
                                                 if (selectedIndices.contains(index)) {
@@ -783,15 +977,14 @@ fun ExperimentalLyrics(
                                                     if (selectedIndices.isEmpty()) isSelectionModeActive = false
                                                 } else if (selectedIndices.size < maxSelectionLimit) selectedIndices.add(index)
                                                 else showMaxSelectionToast = true
-                                            } else if (changeLyrics && !isGuest) {
+                                            } else if (isSynced && changeLyrics && !isGuest) {
                                                 if (item.time < playerConnection.player.duration + 30000L) {
+                                                    // Records the tap target; the jump landing on it
+                                                    // glides, a jump anywhere else snaps (see auto-scroll).
+                                                    pendingTapSeekMs = item.time
                                                     playerConnection.seekTo((item.time - (currentSong?.song?.lyricsOffset ?: 0)).coerceAtLeast(0))
-                                                } else {
-                                                    scrollTargetIndex = index
-                                                    deferredCurrentLineIndex = index
                                                 }
                                                 isAutoScrollEnabled = true
-                                                lastPreviewTime = 0L
                                             }
                                         },
                                         onLongClick = {
@@ -805,6 +998,7 @@ fun ExperimentalLyrics(
                             }
                         }
                     }
+                }
                 }
             }
         }
@@ -889,4 +1083,38 @@ fun ExperimentalLyrics(
             }
         )
     }
+}
+
+private fun findStartIndex(positions: FloatArray, minListY: Float): Int {
+    if (positions.isEmpty()) return 0
+    var low = 0
+    var high = positions.size - 1
+    var result = 0
+    while (low <= high) {
+        val mid = (low + high) ushr 1
+        if (positions[mid] >= minListY) {
+            result = mid
+            high = mid - 1
+        } else {
+            low = mid + 1
+        }
+    }
+    return (result - 3).coerceAtLeast(0)
+}
+
+private fun findEndIndex(positions: FloatArray, maxListY: Float): Int {
+    if (positions.isEmpty()) return 0
+    var low = 0
+    var high = positions.size - 1
+    var result = positions.size - 1
+    while (low <= high) {
+        val mid = (low + high) ushr 1
+        if (positions[mid] <= maxListY) {
+            result = mid
+            low = mid + 1
+        } else {
+            high = mid - 1
+        }
+    }
+    return (result + 3).coerceAtMost(positions.size - 1)
 }
