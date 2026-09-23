@@ -1,8 +1,3 @@
-/**
- * Metrolist Project (C) 2026
- * Licensed under GPL-3.0 | See git history for contributors
- */
-
 package com.metrolist.music.lyrics
 
 import android.content.Context
@@ -23,5 +18,17 @@ object BetterLyricsProvider : LyricsProvider {
         artist: String,
         duration: Int,
         album: String?,
-    ): Result<String> = BetterLyrics.getLyrics(title, artist, duration, album)
+    ): Result<String> = BetterLyrics.getLyrics(id, title, artist, duration, album)
+
+    override suspend fun getAllLyrics(
+        context: Context,
+        id: String,
+        title: String,
+        artist: String,
+        duration: Int,
+        album: String?,
+        callback: (String) -> Unit,
+    ) {
+        getLyrics(context, id, title, artist, duration, album).getOrNull()?.let(callback)
+    }
 }

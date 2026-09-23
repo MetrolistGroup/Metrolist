@@ -1,12 +1,13 @@
 package com.metrolist.music.betterlyrics
 
 import com.metrolist.music.betterlyrics.models.TTMLResponse
+import com.metrolist.music.betterlyrics.models.UnisonResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
-import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.http.HttpStatusCode
@@ -45,6 +46,47 @@ object BetterLyrics {
         }
     }
 
+    private suspend fun fetchFromUnison(
+        videoId: String?,
+        title: String,
+        artist: String,
+    ): String? = runCatching {
+        // 1. Ricerca prioritaria tramite Video ID di YouTube
+        if (!videoId.isNullOrBlank()) {
+            Timber.tag(TAG).d("Querying Unison with videoId: $videoId")
+            val resp = client.get("https://unison.betterlyrics.org/lyrics") {
+                parameter("v", videoId)
+            }
+            if (resp.status == HttpStatusCode.OK) {
+                val body = resp.body<UnisonResponse>()
+                val ttml = body.data?.lyrics?.trim()
+                if (!ttml.isNullOrEmpty() && (ttml.startsWith("<tt") || ttml.startsWith("<?xml"))) {
+                    Timber.tag(TAG).i("Found TTML on Unison via videoId: $videoId")
+                    return@runCatching ttml
+                }
+            }
+        }
+
+        // 2. Ricerca di riserva tramite Titolo e Artista
+        Timber.tag(TAG).d("Querying Unison with song: $title, artist: $artist")
+        val resp2 = client.get("https://unison.betterlyrics.org/lyrics") {
+            parameter("song", title)
+            parameter("artist", artist)
+        }
+        if (resp2.status == HttpStatusCode.OK) {
+            val body = resp2.body<UnisonResponse>()
+            val ttml = body.data?.lyrics?.trim()
+            if (!ttml.isNullOrEmpty() && (ttml.startsWith("<tt") || ttml.startsWith("<?xml"))) {
+                Timber.tag(TAG).i("Found TTML on Unison via metadata: $title - $artist")
+                return@runCatching ttml
+            }
+        }
+        null
+    }.getOrElse { e ->
+        Timber.tag(TAG).e(e, "Exception during fetchFromUnison")
+        null
+    }
+
     private suspend fun fetchTTML(
         artist: String,
         title: String,
@@ -63,8 +105,7 @@ object BetterLyrics {
             }
         }
         if (response.status == HttpStatusCode.OK) {
-            val ttml = response.body<TTMLResponse>().ttml?.trim()?.takeIf { it.isNotEmpty() }
-            ttml
+            response.body<TTMLResponse>().ttml?.trim()?.takeIf { it.isNotEmpty() }
         } else {
             Timber.tag(TAG).w("API returned status: ${response.status}")
             null
@@ -75,22 +116,22 @@ object BetterLyrics {
     }
 
     suspend fun getLyrics(
+        videoId: String? = null,
         title: String,
         artist: String,
         duration: Int,
         album: String? = null,
     ) = runCatching {
-        // Use exact title and artist - no normalization to ensure correct sync
-        // Normalizing can return wrong lyrics (e.g., radio edit vs original)
-        val ttml =
-            fetchTTML(artist, title, duration, album)
-                ?: throw IllegalStateException("Lyrics unavailable")
+        // Interroga prima Unison; se non trova nulla, fa fallback sul server legacy
+        val ttml = fetchFromUnison(videoId, title, artist)
+            ?: fetchTTML(artist, title, duration, album)
+            ?: throw IllegalStateException("Lyrics unavailable")
 
         val parsedLines = TTMLParser.parseTTML(ttml)
         if (parsedLines.isEmpty()) {
             throw IllegalStateException("Failed to parse lyrics")
         }
-        
+
         TTMLParser.toLRC(parsedLines)
     }
 }
