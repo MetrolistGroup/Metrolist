@@ -6,15 +6,15 @@
 package com.metrolist.music.lyrics
 
 import android.content.Context
-import com.metrolist.lrclib.LrcLib
-import com.metrolist.music.constants.EnableLrcLibKey
+import com.metrolist.music.betterlyrics.BetterLyrics
+import com.metrolist.music.constants.EnableBetterLyricsKey
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.get
 
-object LrcLibLyricsProvider : LyricsProvider {
-    override val name = "LrcLib"
+object BetterLyricsProvider : LyricsProvider {
+    override val name = "BetterLyrics"
 
-    override fun isEnabled(context: Context): Boolean = context.dataStore[EnableLrcLibKey] ?: true
+    override fun isEnabled(context: Context): Boolean = context.dataStore[EnableBetterLyricsKey] ?: true
 
     override suspend fun getLyrics(
         context: Context,
@@ -23,7 +23,7 @@ object LrcLibLyricsProvider : LyricsProvider {
         artist: String,
         duration: Int,
         album: String?,
-    ): Result<String> = LrcLib.getLyrics(title, artist, duration, album)
+    ): Result<String> = BetterLyrics.getLyrics(id, title, artist, duration, album)
 
     override suspend fun getAllLyrics(
         context: Context,
@@ -34,6 +34,6 @@ object LrcLibLyricsProvider : LyricsProvider {
         album: String?,
         callback: (String) -> Unit,
     ) {
-        LrcLib.getAllLyrics(title, artist, duration, album, callback)
+        getLyrics(context, id, title, artist, duration, album).getOrNull()?.let(callback)
     }
 }
