@@ -14,6 +14,9 @@ data class PersistQueue(
     val position: Long,
     val queueType: QueueType = QueueType.LIST,
     val queueData: QueueData? = null,
+    val playlistBrowseId: String? = null,
+    val playlistId: String? = null,
+    val playlistIsEditable: Boolean = false,
 ) : Serializable
 
 sealed class QueueType : Serializable {

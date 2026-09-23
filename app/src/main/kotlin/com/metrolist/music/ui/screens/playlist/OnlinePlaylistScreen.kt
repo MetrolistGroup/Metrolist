@@ -288,6 +288,7 @@ fun OnlinePlaylistScreen(
                                                 playerConnection.playQueue(
                                                     YouTubePlaylistQueue(
                                                         playlistId = playlist.id,
+                                                        isEditable = playlist.isEditable,
                                                         playlistTitle = playlist.title,
                                                         initialSongs = filteredSongs.map { it.second },
                                                         initialContinuation = viewModel.continuation,
@@ -332,7 +333,17 @@ fun OnlinePlaylistScreen(
                                 } else {
                                     IconButton(onClick = {
                                         menuState.show {
-                                            YouTubeSongMenu(songItem, menuState::dismiss)
+                                            YouTubeSongMenu(
+                                                song = songItem,
+                                                playlistId = playlist.id,
+                                                isEditable = playlist.isEditable,
+                                                onSongRemovedFromPlaylist = {
+                                                    songItem.setVideoId?.let { setVideoId ->
+                                                        viewModel.removeSongFromLocalList(songItem.id, setVideoId)
+                                                    }
+                                                },
+                                                onDismiss = menuState::dismiss
+                                            )
                                         }
                                     }) {
                                         Icon(painterResource(R.drawable.more_vert), null)
@@ -690,6 +701,7 @@ private fun OnlinePlaylistHeader(
                         playerConnection.playQueue(
                             YouTubePlaylistQueue(
                                 playlistId = playlist.id,
+                                isEditable = playlist.isEditable,
                                 playlistTitle = playlist.title,
                                 initialSongs = songs,
                                 initialContinuation = continuation,

@@ -663,9 +663,8 @@ fun LocalPlaylistScreen(
                                                 playerConnection.togglePlayPause()
                                             } else {
                                                 playerConnection.playQueue(
-                                                    ListQueue(
-                                                        title = playlist!!.playlist.name,
-                                                        items = songs.map { it.song.toMediaItem() },
+                                                    playlist!!.toListQueue(
+                                                        songs,
                                                         startIndex = songs.indexOfFirst { it.map.id == song.map.id },
                                                     ),
                                                 )
@@ -1324,10 +1323,7 @@ fun LocalPlaylistHeader(
             Surface(
                 onClick = {
                     playerConnection.playQueue(
-                        ListQueue(
-                            title = playlist.playlist.name,
-                            items = songs.shuffled().map { it.song.toMediaItem() },
-                        ),
+                        playlist.toListQueue(songs.shuffled()),
                     )
                 },
                 shape = CircleShape,
@@ -1350,10 +1346,7 @@ fun LocalPlaylistHeader(
             Surface(
                 onClick = {
                     playerConnection.playQueue(
-                        ListQueue(
-                            title = playlist.playlist.name,
-                            items = songs.map { it.song.toMediaItem() },
-                        ),
+                        playlist.toListQueue(songs),
                     )
                 },
                 color = MaterialTheme.colorScheme.primary,
@@ -1446,6 +1439,28 @@ fun LocalPlaylistHeader(
         }
     }
 }
+
+/**
+ * Builds a queue that carries the playlist context needed by "remove from playlist": the browse id
+ * to edit remotely, the local playlist id to edit in the database, and each row's setVideoId so a
+ * song added to the playlist more than once stays distinguishable while playing.
+ */
+fun Playlist.toListQueue(
+    songs: List<PlaylistSong>,
+    startIndex: Int = 0,
+): ListQueue =
+    ListQueue(
+        title = playlist.name,
+        items = songs.map {
+            it.song.toMediaMetadata()
+                .copy(setVideoId = it.map.setVideoId)
+                .toMediaItem()
+        },
+        startIndex = startIndex,
+        playlistBrowseId = playlist.browseId,
+        playlistId = playlist.id,
+        playlistIsEditable = playlist.isEditable,
+    )
 
 fun uriToByteArray(
     context: Context,
