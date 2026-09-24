@@ -13,6 +13,7 @@ import com.metrolist.innertube.models.ArtistItem
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.PodcastItem
 import com.metrolist.innertube.models.SongItem
+import com.metrolist.innertube.pages.PlaylistPage
 import com.metrolist.innertube.utils.completed
 import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.lastfm.LastFM
@@ -90,6 +91,14 @@ internal fun localSongIndexesAbsentFromRemote(
             false
         }
     }
+}
+
+internal fun isGenuineEmptyPlaylist(page: PlaylistPage): Boolean {
+    if (page.songs.isNotEmpty()) return false
+    val advertised = page.playlist.songCountText?.let {
+        Regex("""\d+""").find(it)?.value?.toIntOrNull()
+    } ?: return false
+    return advertised == 0
 }
 
 @Singleton
@@ -1402,8 +1411,8 @@ class SyncUtils @Inject constructor(
                     val songs = page.songs.map(SongItem::toMediaMetadata)
                     Timber.d("syncPlaylist: Fetched ${songs.size} songs from remote")
 
-                    if (songs.isEmpty()) {
-                        Timber.w("syncPlaylist: Remote playlist is empty, skipping sync")
+                    if (songs.isEmpty() && !isGenuineEmptyPlaylist(page)) {
+                        Timber.w("syncPlaylist: Empty fetch but remote advertises songs, skipping sync")
                         return@onSuccess
                     }
 
@@ -1433,6 +1442,7 @@ class SyncUtils @Inject constructor(
                     }
                     val preservedSongs = localSongIndexesAbsentFromRemote(localIds, remoteIds)
                         .map(localSongs::get)
+                        .filter { it.setVideoId == null }
 
                     database.withTransaction {
                         database.clearPlaylist(playlistId)
