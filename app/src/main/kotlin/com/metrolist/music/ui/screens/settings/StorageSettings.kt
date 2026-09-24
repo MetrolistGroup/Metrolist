@@ -47,6 +47,7 @@ import coil3.annotation.DelicateCoilApi
 import coil3.annotation.ExperimentalCoilApi
 import coil3.imageLoader
 import com.metrolist.music.LocalDatabase
+import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
@@ -77,6 +78,7 @@ fun StorageSettings(
 ) {
     val context = LocalContext.current
     val database = LocalDatabase.current
+    val downloadUtil = LocalDownloadUtil.current
     val imageDiskCache = context.imageLoader.diskCache ?: return
     val playerCache = LocalPlayerConnection.current?.service?.playerCache ?: return
     val downloadCache = LocalPlayerConnection.current?.service?.downloadCache ?: return
@@ -176,9 +178,17 @@ fun StorageSettings(
             onDismiss = { clearDownloads = false },
             onConfirm = {
                 coroutineScope.launch(Dispatchers.IO) {
+                    // Prefer DownloadManager so Listener.onDownloadRemoved clears flags.
+                    downloadUtil.downloads.value.keys.toList().forEach { id ->
+                        downloadUtil.downloadManager.removeDownload(id)
+                    }
+                    // Wipe any remaining SimpleCache keys (orphans not tracked by DownloadManager).
                     downloadCache.keys.forEach { key ->
                         downloadCache.removeResource(key)
                     }
+                    // Ensure Room isDownloaded/dateDownload flags are cleared even if
+                    // removeResource alone skipped DownloadManager listeners (issue #833).
+                    database.clearAllDownloadedInfo()
                 }
                 clearDownloads = false
             },
