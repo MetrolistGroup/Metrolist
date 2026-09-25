@@ -881,4 +881,5 @@
     <string name="update_action">Aktualizovat</string>
     <string name="discord_integration">Integrace Discordu</string>
     <string name="enable_discord_rpc">Povolit stav na Discordu</string>
+    <string name="force_bottom_navbar">Vynutit spodní navigační lištu</string>
 </resources>
