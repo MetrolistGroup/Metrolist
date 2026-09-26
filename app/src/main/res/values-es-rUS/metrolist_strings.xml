@@ -165,7 +165,7 @@
     <string name="updater">Actualizador</string>
     <string name="check_for_updates">Buscar actualizaciones automáticamente</string>
     <string name="update_notifications">Habilitar las notificaciones de actualización</string>
-    <string name="update_available_title">Actualización disponible</string>
+    <string name="update_available_title">Nueva actualización disponible</string>
     <string name="update_channel_name">Actualizaciones de la app</string>
     <string name="update_channel_desc">Notificacion de nuevas versiones de la aplicación</string>
     <string name="audio_offload">Habilitar audio offload</string>
@@ -847,8 +847,8 @@
     <string name="stream_source_web_creator_desc">Cliente web de Creator.</string>
     <string name="playlist_unavailable">Lista de reproducción no disponible</string>
     <string name="kmp_upgrade_title">Metrolist KMP %s está disponible</string>
-    <string name="kmp_upgrade_warning">Metrolist KMP está en acceso anticipado.</string>
-    <string name="kmp_upgrade_action">Actualizar a KMP</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP está en acceso anticipado. Es posible que encuentres errores o funciones incompletas.</string>
+    <string name="kmp_upgrade_action">Prueba KMP</string>
     <string name="kmp_upgrade_later">Ahora no</string>
     <string name="android_auto_search_options">Opciones de búsqueda</string>
     <string name="android_auto_search_local_songs_limit">Límite de búsqueda de canciones</string>
@@ -867,4 +867,13 @@
     <string name="error_no_internet_connection">Sin conexión a internet</string>
     <string name="error_offline_playback">No tienes conexión. Conéctate a internet o reproduce una canción descargada para uso sin conexión.</string>
     <string name="error_explicit_login_recommended">La reproducción explícita funciona mejor si inicias sesión.</string>
+    <string name="enable_zemer">Hablitar Zemer</string>
+    <string name="force_bottom_navbar">Forzar la barra de navegación inferior</string>
+    <string name="playlist_created_locally">Sincronización con Youtube fallida. La lista de reproducción se ha creado localmente.</string>
+    <string name="update_available_message">Metrolist %s está listo para descargar.</string>
+    <string name="update_action">Actualizar</string>
+    <string name="ai_provider_inception_help">Visita https://platform.inceptionlabs.ai para las claves de API.</string>
+    <string name="discord_integration">Integración con Discord</string>
+    <string name="enable_discord_rpc">Habilitar Rich Presence</string>
+    <string name="enable_zemer_desc">Letras para música judía</string>
 </resources>
