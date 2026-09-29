@@ -270,12 +270,10 @@ constructor(
                                     val songId = download.request.id
                                     removeFromPlayerCache(songId)
                                     // Skip if a clear-all started after this completion was observed.
+                                    // Do not "undo" after writing: an older completion's undo can
+                                    // clear a newer download that finished in the same window.
                                     if (clearDownloadsGeneration.get() != generation) return@launch
                                     database.updateDownloadedInfo(songId, true, LocalDateTime.now())
-                                    // Undo if clear-all raced past the check above.
-                                    if (clearDownloadsGeneration.get() != generation) {
-                                        database.updateDownloadedInfo(songId, false, null)
-                                    }
                                 }
                                 Download.STATE_FAILED,
                                 Download.STATE_STOPPED,

@@ -181,26 +181,55 @@ fun StorageSettings(
                 coroutineScope.launch(Dispatchers.IO) {
                     // Invalidate in-flight completion callbacks before removing resources.
                     downloadUtil.beginClearAllDownloads()
+                    val removedIds = mutableListOf<String>()
                     try {
                         // Prefer DownloadManager so Listener.onDownloadRemoved clears flags.
+                        // Only treat an id as cleared when removeDownload succeeds; a failed
+                        // remove leaves DownloadManager state intact so redownload stays possible.
                         downloadUtil.downloads.value.keys.toList().forEach { id ->
                             runCatching {
                                 downloadUtil.downloadManager.removeDownload(id)
+                            }.onSuccess {
+                                removedIds += id
                             }.onFailure { error ->
                                 Timber.e(error, "Failed to remove download %s", id)
                             }
                         }
-                        // Wipe any remaining SimpleCache keys (orphans not tracked by DownloadManager).
+                        // Wipe cache keys for successfully removed downloads + orphans not in DM.
+                        val dmIds = downloadUtil.downloads.value.keys
                         downloadCache.keys.forEach { key ->
-                            runCatching {
-                                downloadCache.removeResource(key)
-                            }.onFailure { error ->
-                                Timber.e(error, "Failed to remove download cache key %s", key)
+                            if (key in removedIds || key !in dmIds) {
+                                runCatching {
+                                    downloadCache.removeResource(key)
+                                }.onFailure { error ->
+                                    Timber.e(error, "Failed to remove download cache key %s", key)
+                                }
                             }
                         }
                     } finally {
-                        // Always reset Room download flags even if a removal threw (issue #833).
-                        database.clearAllDownloadedInfo()
+                        // Reset Room flags for ids we actually removed. If every remove failed,
+                        // leave flags alone so the user can retry. If all succeeded (or there
+                        // were no DM entries), clear all explicit-download rows.
+                        if (removedIds.isNotEmpty() &&
+                            removedIds.size == downloadUtil.downloads.value.keys.size
+                        ) {
+                            // downloads map may already be empty after onDownloadRemoved
+                        }
+                        if (removedIds.isNotEmpty()) {
+                            // Clear all explicit downloads when we removed everything we knew about,
+                            // including orphans that only lived in Room.
+                            val remaining = downloadUtil.downloads.value.keys
+                            if (remaining.isEmpty()) {
+                                database.clearAllDownloadedInfo()
+                            } else {
+                                removedIds.forEach { id ->
+                                    database.updateDownloadedInfo(id, false, null)
+                                }
+                            }
+                        } else if (downloadUtil.downloads.value.isEmpty()) {
+                            // No DM entries (orphans-only): still wipe Room download flags.
+                            database.clearAllDownloadedInfo()
+                        }
                     }
                 }
                 clearDownloads = false
