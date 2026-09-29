@@ -3,6 +3,7 @@ package com.metrolist.music.utils
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.pages.PlaylistPage
+import com.metrolist.music.db.entities.PlaylistSongMap
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -71,5 +72,161 @@ class PlaylistSyncTest {
                 songs = listOf(SongItem(id = "a", title = "A", artists = emptyList(), thumbnail = "")),
             )
         assertEquals(false, isGenuineEmptyPlaylist(page))
+    }
+
+    private fun localMap(songId: String, position: Int, setVideoId: String? = null) =
+        PlaylistSongMap(playlistId = "playlist", songId = songId, position = position, setVideoId = setVideoId)
+
+    private fun remoteSong(id: String, setVideoId: String? = null) =
+        SongItem(id = id, title = id, artists = emptyList(), thumbnail = "", setVideoId = setVideoId)
+
+    @Test
+    fun `backfill fills null setVideoIds positionally`() {
+        assertEquals(
+            listOf(localMap("a", 0, "set-a")),
+            setVideoIdBackfills(
+                listOf(localMap("a", 0), localMap("b", 1, "set-b")),
+                listOf("set-a", "set-b"),
+            ),
+        )
+    }
+
+    @Test
+    fun `backfill returns empty when already in sync`() {
+        assertEquals(
+            emptyList<PlaylistSongMap>(),
+            setVideoIdBackfills(
+                listOf(localMap("a", 0, "set-a")),
+                listOf("set-a"),
+            ),
+        )
+    }
+
+    @Test
+    fun `backfill returns empty on size mismatch`() {
+        assertEquals(
+            emptyList<PlaylistSongMap>(),
+            setVideoIdBackfills(
+                listOf(localMap("a", 0)),
+                listOf("set-a", "set-b"),
+            ),
+        )
+    }
+
+    @Test
+    fun `backfill skips null remote setVideoIds`() {
+        assertEquals(
+            emptyList<PlaylistSongMap>(),
+            setVideoIdBackfills(
+                listOf(localMap("a", 0)),
+                listOf(null),
+            ),
+        )
+    }
+
+    @Test
+    fun `added songs map newest remote occurrence onto pending row appended at end`() {
+        assertEquals(
+            listOf(localMap("x", 1, "set-x-new")),
+            setVideoIdUpdatesForAddedSongs(
+                addedSongIds = listOf("x"),
+                remoteSongs = listOf(remoteSong("y", "set-y"), remoteSong("x", "set-x-new")),
+                localSongs = listOf(localMap("y", 0, "set-y"), localMap("x", 1)),
+            ),
+        )
+    }
+
+    @Test
+    fun `added songs map newest remote occurrence onto pending row prepended at start`() {
+        assertEquals(
+            listOf(localMap("x", 0, "set-x-new")),
+            setVideoIdUpdatesForAddedSongs(
+                addedSongIds = listOf("x"),
+                remoteSongs = listOf(remoteSong("x", "set-x-new"), remoteSong("y", "set-y")),
+                localSongs = listOf(localMap("x", 0), localMap("y", 1, "set-y")),
+            ),
+        )
+    }
+
+    @Test
+    fun `added songs leave rows that already carry a setVideoId untouched`() {
+        assertEquals(
+            emptyList<PlaylistSongMap>(),
+            setVideoIdUpdatesForAddedSongs(
+                addedSongIds = listOf("x"),
+                remoteSongs = listOf(remoteSong("x", "set-x-new")),
+                localSongs = listOf(localMap("x", 0, "set-x-old")),
+            ),
+        )
+    }
+
+    @Test
+    fun `added songs return empty when song is missing remotely`() {
+        assertEquals(
+            emptyList<PlaylistSongMap>(),
+            setVideoIdUpdatesForAddedSongs(
+                addedSongIds = listOf("x"),
+                remoteSongs = listOf(remoteSong("y", "set-y")),
+                localSongs = listOf(localMap("x", 0), localMap("y", 1, "set-y")),
+            ),
+        )
+    }
+
+    @Test
+    fun `added songs map duplicate occurrences from newest backwards`() {
+        assertEquals(
+            listOf(localMap("x", 1, "set-x-2"), localMap("x", 0, "set-x-1")),
+            setVideoIdUpdatesForAddedSongs(
+                addedSongIds = listOf("x"),
+                remoteSongs = listOf(remoteSong("x", "set-x-1"), remoteSong("x", "set-x-2")),
+                localSongs = listOf(localMap("x", 0), localMap("x", 1)),
+            ),
+        )
+    }
+
+    @Test
+    fun `added songs never reuse an already known setVideoId`() {
+        assertEquals(
+            emptyList<PlaylistSongMap>(),
+            setVideoIdUpdatesForAddedSongs(
+                addedSongIds = listOf("x"),
+                remoteSongs = listOf(remoteSong("y", "set-y"), remoteSong("x", "set-y")),
+                localSongs = listOf(localMap("x", 0), localMap("y", 1, "set-y")),
+            ),
+        )
+    }
+
+    @Test
+    fun `added songs ignore remote setVideoIds already stored locally`() {
+        assertEquals(
+            listOf(localMap("x", 1, "set-x-new")),
+            setVideoIdUpdatesForAddedSongs(
+                addedSongIds = listOf("x"),
+                remoteSongs = listOf(remoteSong("x", "set-x-new"), remoteSong("x", "set-x-old")),
+                localSongs = listOf(localMap("x", 0, "set-x-old"), localMap("x", 1)),
+            ),
+        )
+    }
+
+    @Test
+    fun `confirmed remote deletion is dropped while unconfirmed local addition is preserved`() {
+        assertEquals(
+            listOf(localMap("b", 1)),
+            preservedLocalSongs(
+                listOf(localMap("a", 0, "set-a"), localMap("b", 1), localMap("c", 2, "set-c")),
+                listOf("a"),
+            ),
+        )
+    }
+
+    @Test
+    fun `duplicate pending copy is preserved while synced copy is consumed`() {
+        assertEquals(
+            listOf(localMap("x", 1)),
+            preservedLocalSongs(
+                listOf(localMap("x", 0, "set-x"), localMap("x", 1)),
+                listOf("x"),
+            ),
+        )
     }
 }

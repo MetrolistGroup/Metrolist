@@ -24,6 +24,7 @@ import com.metrolist.music.constants.SYNC_COOLDOWN
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.ArtistEntity
 import com.metrolist.music.db.entities.PlaylistEntity
+import com.metrolist.music.db.entities.PlaylistSongMap
 import com.metrolist.music.db.entities.PodcastEntity
 import com.metrolist.music.db.entities.SetVideoIdEntity
 import com.metrolist.music.db.entities.SongEntity
@@ -99,6 +100,73 @@ internal fun isGenuineEmptyPlaylist(page: PlaylistPage): Boolean {
         Regex("""\d+""").find(it)?.value?.toIntOrNull()
     } ?: return false
     return advertised == 0
+}
+
+/**
+ * Decides which local rows survive a playlist sync. A local song absent from the
+ * remote playlist is kept only when it was never confirmed remotely (null
+ * setVideoId, i.e. a pending local addition); a confirmed song deleted on YouTube
+ * is dropped so the deletion propagates.
+ */
+internal fun preservedLocalSongs(
+    localSongs: List<PlaylistSongMap>,
+    remoteIds: List<String>,
+): List<PlaylistSongMap> =
+    localSongIndexesAbsentFromRemote(localSongs.map { it.songId }, remoteIds)
+        .map(localSongs::get)
+        .filter { it.setVideoId == null }
+
+/**
+ * Positional backfill of YouTube setVideoIds for playlists whose local and remote
+ * song order already matches. Returns copies of the local rows whose stored
+ * setVideoId differs from the remote one. Only meaningful when both lists have
+ * the same size and order (the sync early-return path).
+ */
+internal fun setVideoIdBackfills(
+    localSongs: List<PlaylistSongMap>,
+    remoteSetVideoIds: List<String?>,
+): List<PlaylistSongMap> {
+    if (localSongs.size != remoteSetVideoIds.size) return emptyList()
+    return localSongs.indices.mapNotNull { index ->
+        val remoteSetVideoId = remoteSetVideoIds[index]
+        val local = localSongs[index]
+        if (remoteSetVideoId != null && local.setVideoId != remoteSetVideoId) {
+            local.copy(setVideoId = remoteSetVideoId)
+        } else {
+            null
+        }
+    }
+}
+
+/**
+ * Maps freshly confirmed remote additions to the local rows that are still missing
+ * their setVideoId. Remote setVideoIds already stored locally are discarded, so what
+ * remains are the new occurrences no matter where YouTube placed them. Those are
+ * matched newest-first against the pending local rows (highest position first).
+ * Rows that already carry a setVideoId are left untouched.
+ */
+internal fun setVideoIdUpdatesForAddedSongs(
+    addedSongIds: Collection<String>,
+    remoteSongs: List<SongItem>,
+    localSongs: List<PlaylistSongMap>,
+): List<PlaylistSongMap> {
+    if (addedSongIds.isEmpty() || remoteSongs.isEmpty() || localSongs.isEmpty()) return emptyList()
+    val knownSetVideoIds = localSongs.mapNotNull { it.setVideoId }.toSet()
+    val remoteById = remoteSongs.groupBy { it.id }
+    val updates = mutableListOf<PlaylistSongMap>()
+    for (songId in addedSongIds.toSet()) {
+        val newRemoteSetVideoIds = remoteById[songId].orEmpty()
+            .mapNotNull { it.setVideoId }
+            .filter { it !in knownSetVideoIds }
+        if (newRemoteSetVideoIds.isEmpty()) continue
+        val pendingRows = localSongs
+            .filter { it.songId == songId && it.setVideoId == null }
+            .sortedByDescending { it.position }
+        newRemoteSetVideoIds.asReversed()
+            .zip(pendingRows) { remoteSetVideoId, row -> row.copy(setVideoId = remoteSetVideoId) }
+            .let(updates::addAll)
+    }
+    return updates
 }
 
 @Singleton
@@ -1425,12 +1493,17 @@ class SyncUtils @Inject constructor(
                         val metadataRepairs = songs.filter {
                             it.id in songIdsWithoutArtists && it.artists.isNotEmpty()
                         }
-                        if (metadataRepairs.isNotEmpty()) {
+                        // A locally added song keeps a null setVideoId until a full rewrite
+                        // persists the remote one. Backfill it here so a later remote deletion
+                        // is not mistaken for a pending local addition.
+                        val setVideoIdRepairs = setVideoIdBackfills(localSongs, songs.map { it.setVideoId })
+                        if (metadataRepairs.isNotEmpty() || setVideoIdRepairs.isNotEmpty()) {
                             database.withTransaction {
                                 metadataRepairs.forEach(::insert)
+                                setVideoIdRepairs.forEach { database.update(it) }
                             }
                         }
-                        Timber.d("syncPlaylist: Local and remote are in sync, no changes needed")
+                        Timber.d("syncPlaylist: Local and remote are in sync, backfilled ${setVideoIdRepairs.size} setVideoIds")
                         return@onSuccess
                     }
 
@@ -1440,9 +1513,7 @@ class SyncUtils @Inject constructor(
                     val metadataInserts = songs.filter {
                         it.id !in localIdSet || it.id in songIdsWithoutArtists
                     }
-                    val preservedSongs = localSongIndexesAbsentFromRemote(localIds, remoteIds)
-                        .map(localSongs::get)
-                        .filter { it.setVideoId == null }
+                    val preservedSongs = preservedLocalSongs(localSongs, remoteIds)
 
                     database.withTransaction {
                         database.clearPlaylist(playlistId)
@@ -1569,20 +1640,53 @@ class SyncUtils @Inject constructor(
         markPlaylistModifying(playlistId)
         syncScope.launch {
             try {
+                val confirmed = mutableListOf<String>()
                 songIds.forEach { songId ->
                     try {
                         runQueuedPlaylistEdit {
                             YouTube.addToPlaylist(browseId, songId).getOrThrow()
                         }
+                        confirmed.add(songId)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         Timber.e(e, "Failed to add song $songId to playlist $browseId")
                     }
                 }
+                backfillAddedSetVideoIds(browseId, playlistId, confirmed)
             } finally {
                 unmarkPlaylistModifying(playlistId)
             }
+        }
+    }
+
+    private suspend fun backfillAddedSetVideoIds(
+        browseId: String,
+        playlistId: String,
+        confirmedSongIds: List<String>,
+    ) {
+        if (confirmedSongIds.isEmpty()) return
+        // The add response is not parsed today, so read the playlist back. A row left with a
+        // null setVideoId would otherwise be mistaken for a pending local addition and
+        // survive a later remote deletion.
+        runCatching {
+            YouTube.playlist(browseId).completed().getOrThrow()
+        }.onSuccess { page ->
+            try {
+                val localSongs = database.playlistSongMaps(playlistId, from = 0)
+                val updates = setVideoIdUpdatesForAddedSongs(confirmedSongIds, page.songs, localSongs)
+                if (updates.isNotEmpty()) {
+                    database.withTransaction {
+                        updates.forEach { database.update(it) }
+                    }
+                    Timber.d("backfillAddedSetVideoIds: Stored ${updates.size} setVideoIds for playlist $playlistId")
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Timber.e(e, "backfillAddedSetVideoIds: Failed to store setVideoIds for playlist $playlistId")
+            }
+        }.onFailure { e ->
+            Timber.w("backfillAddedSetVideoIds: Could not fetch playlist $browseId to store setVideoIds: ${e.message}")
         }
     }
 
