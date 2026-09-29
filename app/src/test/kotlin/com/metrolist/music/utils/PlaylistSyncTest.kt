@@ -239,6 +239,7 @@ class PlaylistSyncTest {
             preservedLocalSongs(
                 listOf(localMap("a", 0, "set-a"), localMap("b", 1), localMap("c", 2, "set-c")),
                 listOf("a"),
+                listOf("set-a"),
             ),
         )
     }
@@ -250,6 +251,7 @@ class PlaylistSyncTest {
             preservedLocalSongs(
                 listOf(localMap("x", 0, "set-x"), localMap("x", 1)),
                 listOf("x"),
+                listOf("set-x"),
             ),
         )
     }
@@ -261,6 +263,7 @@ class PlaylistSyncTest {
             preservedLocalSongs(
                 listOf(localMap("x", 0), localMap("x", 1)),
                 listOf("x"),
+                listOf("set-x"),
             ),
         )
     }
@@ -272,6 +275,7 @@ class PlaylistSyncTest {
             preservedLocalSongs(
                 listOf(localMap("x", 0), localMap("x", 1, "set-old")),
                 listOf("x"),
+                listOf("set-old"),
             ),
         )
     }
@@ -283,6 +287,79 @@ class PlaylistSyncTest {
             preservedLocalSongs(
                 listOf(localMap("x", 0), localMap("x", 1, "set-old")),
                 emptyList(),
+                emptyList(),
+            ),
+        )
+    }
+
+    @Test
+    fun `confirmed occurrence claimed by setVideoId, not by songId`() {
+        assertEquals(
+            emptyList<PlaylistSongMap>(),
+            preservedLocalSongs(
+                listOf(localMap("x", 0), localMap("x", 1, "set-old")),
+                listOf("x"),
+                listOf("set-new"),
+            ),
+        )
+    }
+
+    @Test
+    fun `readded occurrence does not confirm the deleted copy in reverse order`() {
+        assertEquals(
+            emptyList<PlaylistSongMap>(),
+            preservedLocalSongs(
+                listOf(localMap("x", 0, "set-old"), localMap("x", 1)),
+                listOf("x"),
+                listOf("set-new"),
+            ),
+        )
+    }
+
+    @Test
+    fun `extra confirmed copy beyond remote count is dropped`() {
+        assertEquals(
+            emptyList<PlaylistSongMap>(),
+            preservedLocalSongs(
+                listOf(localMap("x", 0, "set-1"), localMap("x", 1, "set-2")),
+                listOf("x"),
+                listOf("set-1"),
+            ),
+        )
+    }
+
+    @Test
+    fun `confirmed row is dropped when the remote occurrence has no setVideoId`() {
+        assertEquals(
+            emptyList<PlaylistSongMap>(),
+            preservedLocalSongs(
+                listOf(localMap("x", 0, "set-a")),
+                listOf("x"),
+                listOf(null),
+            ),
+        )
+    }
+
+    @Test
+    fun `mixed confirmed and pending duplicates keep only the unmatched pending copy`() {
+        assertEquals(
+            listOf(localMap("x", 2)),
+            preservedLocalSongs(
+                listOf(localMap("x", 0, "set-1"), localMap("x", 1), localMap("x", 2)),
+                listOf("x", "x"),
+                listOf("set-1", "set-new"),
+            ),
+        )
+    }
+
+    @Test
+    fun `pending row takes the leftover occurrence when remote has no setVideoId`() {
+        assertEquals(
+            emptyList<PlaylistSongMap>(),
+            preservedLocalSongs(
+                listOf(localMap("x", 0, "set-a"), localMap("x", 1)),
+                listOf("x"),
+                listOf(null),
             ),
         )
     }

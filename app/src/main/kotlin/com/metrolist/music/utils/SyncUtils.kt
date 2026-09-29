@@ -103,24 +103,46 @@ internal fun isGenuineEmptyPlaylist(page: PlaylistPage): Boolean {
 }
 
 /**
- * Decides which local rows survive a playlist sync. A local song absent from the
- * remote playlist is kept only when it was never confirmed remotely (null
- * setVideoId, i.e. a pending local addition); a confirmed song deleted on YouTube
- * is dropped so the deletion propagates. Confirmed rows claim remote occurrences
- * before pending ones, so a pending duplicate can never consume the occurrence
- * that belongs to a confirmed copy.
+ * Decides which local rows survive a playlist sync. Confirmed rows (non-null
+ * setVideoId) claim the exact remote occurrence carrying their setVideoId, so a
+ * deleted-and-readded song is never mistaken for its old copy. A confirmed row
+ * with no matching remote occurrence was deleted on YouTube and is dropped so the
+ * deletion propagates. Only pending rows (null setVideoId) can survive: they match
+ * by songId against the leftover remote occurrences, and those without a match are
+ * preserved as pending local additions.
  */
 internal fun preservedLocalSongs(
     localSongs: List<PlaylistSongMap>,
     remoteIds: List<String>,
+    remoteSetVideoIds: List<String?>,
 ): List<PlaylistSongMap> {
-    // Rows with a setVideoId come first (false sorts before true).
-    val claimOrder = localSongs.indices.sortedBy { localSongs[it].setVideoId == null }
-    return localSongIndexesAbsentFromRemote(claimOrder.map { localSongs[it].songId }, remoteIds)
-        .map { claimOrder[it] }
-        .sorted() // back to playlist order, so preserved rows keep their relative positions
+    require(remoteIds.size == remoteSetVideoIds.size)
+    val consumedRemote = BooleanArray(remoteIds.size)
+    val consumedLocal = BooleanArray(localSongs.size)
+
+    // Confirmed rows claim the exact remote occurrence carrying their setVideoId.
+    val remoteBySetVideoId = mutableMapOf<String, ArrayDeque<Int>>()
+    remoteIds.indices.forEach { index ->
+        remoteSetVideoIds[index]?.let { setVideoId ->
+            remoteBySetVideoId.getOrPut(setVideoId) { ArrayDeque() }.add(index)
+        }
+    }
+    localSongs.forEachIndexed { index, row ->
+        val claimed = row.setVideoId?.let { remoteBySetVideoId[it]?.removeFirstOrNull() }
+        if (claimed != null) {
+            consumedLocal[index] = true
+            consumedRemote[claimed] = true
+        }
+    }
+
+    // Only pending rows can survive. They match by songId against the leftover remote occurrences.
+    val pending = localSongs.indices.filter {
+        !consumedLocal[it] && localSongs[it].setVideoId == null
+    }
+    val remaining = remoteIds.indices.filterNot { consumedRemote[it] }.map(remoteIds::get)
+    return localSongIndexesAbsentFromRemote(pending.map { localSongs[it].songId }, remaining)
+        .map { pending[it] }
         .map(localSongs::get)
-        .filter { it.setVideoId == null }
 }
 
 /**
@@ -1522,7 +1544,7 @@ class SyncUtils @Inject constructor(
                     val metadataInserts = songs.filter {
                         it.id !in localIdSet || it.id in songIdsWithoutArtists
                     }
-                    val preservedSongs = preservedLocalSongs(localSongs, remoteIds)
+                    val preservedSongs = preservedLocalSongs(localSongs, remoteIds, songs.map { it.setVideoId })
 
                     database.withTransaction {
                         database.clearPlaylist(playlistId)
