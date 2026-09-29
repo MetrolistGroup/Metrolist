@@ -95,11 +95,38 @@ constructor(
     /**
      * Bumped when the user clears all downloads so in-flight STATE_COMPLETED handlers
      * do not re-set isDownloaded after metadata was wiped.
+     * Paired with [downloadMetaLock] so the generation check and Room write are atomic
+     * with clear-all's generation bump + metadata reset.
      */
     private val clearDownloadsGeneration = AtomicLong(0)
 
+    /** Serializes clear-all generation changes with completion metadata writes. */
+    private val downloadMetaLock = Any()
+
     /** Call before bulk-removing downloads / clearing download metadata. */
-    fun beginClearAllDownloads(): Long = clearDownloadsGeneration.incrementAndGet()
+    fun beginClearAllDownloads(): Long =
+        synchronized(downloadMetaLock) {
+            clearDownloadsGeneration.incrementAndGet()
+        }
+
+    /**
+     * Mark a song downloaded only if [generation] is still the current clear-all epoch.
+     * Holds [downloadMetaLock] across the check and write so clear-all cannot reset flags
+     * between them.
+     */
+    fun markDownloadedIfGenerationCurrent(songId: String, generation: Long) {
+        synchronized(downloadMetaLock) {
+            if (clearDownloadsGeneration.get() != generation) return
+            database.updateDownloadedInfo(songId, true, LocalDateTime.now())
+        }
+    }
+
+    /** Room bulk clear under the same lock as completion writes. */
+    fun clearAllDownloadedInfoLocked() {
+        synchronized(downloadMetaLock) {
+            database.clearAllDownloadedInfo()
+        }
+    }
 
     val downloads = MutableStateFlow<Map<String, Download>>(emptyMap())
 
@@ -269,11 +296,8 @@ constructor(
                                     val generation = clearDownloadsGeneration.get()
                                     val songId = download.request.id
                                     removeFromPlayerCache(songId)
-                                    // Skip if a clear-all started after this completion was observed.
-                                    // Do not "undo" after writing: an older completion's undo can
-                                    // clear a newer download that finished in the same window.
-                                    if (clearDownloadsGeneration.get() != generation) return@launch
-                                    database.updateDownloadedInfo(songId, true, LocalDateTime.now())
+                                    // Check+write under downloadMetaLock (see markDownloadedIfGenerationCurrent).
+                                    markDownloadedIfGenerationCurrent(songId, generation)
                                 }
                                 Download.STATE_FAILED,
                                 Download.STATE_STOPPED,

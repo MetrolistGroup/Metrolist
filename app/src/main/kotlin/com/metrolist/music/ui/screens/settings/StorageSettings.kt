@@ -181,51 +181,48 @@ fun StorageSettings(
                 coroutineScope.launch(Dispatchers.IO) {
                     // Invalidate in-flight completion callbacks before removing resources.
                     downloadUtil.beginClearAllDownloads()
-                    val removedIds = mutableListOf<String>()
-                    val clearedCacheKeys = mutableListOf<String>()
-                    try {
-                        // Prefer DownloadManager so Listener.onDownloadRemoved clears flags.
-                        // Only treat an id as cleared when removeDownload succeeds; a failed
-                        // remove leaves DownloadManager state intact so redownload stays possible.
-                        downloadUtil.downloads.value.keys.toList().forEach { id ->
+                    val pendingIds = downloadUtil.downloads.value.keys.toList()
+                    // removeDownload only enqueues work on Media3's handler — do not treat
+                    // a successful enqueue as a completed removal (wait for onDownloadRemoved).
+                    pendingIds.forEach { id ->
+                        runCatching {
+                            downloadUtil.downloadManager.removeDownload(id)
+                        }.onFailure { error ->
+                            Timber.e(error, "Failed to enqueue removeDownload for %s", id)
+                        }
+                    }
+                    // Wait until Listener.onDownloadRemoved has drained the in-memory map
+                    // for the ids we asked to remove (or timeout).
+                    val deadline = System.currentTimeMillis() + 15_000
+                    while (
+                        System.currentTimeMillis() < deadline &&
+                        downloadUtil.downloads.value.keys.any { it in pendingIds }
+                    ) {
+                        delay(50)
+                    }
+                    val stillPresent = downloadUtil.downloads.value.keys.intersect(pendingIds.toSet())
+                    if (stillPresent.isNotEmpty()) {
+                        Timber.w(
+                            "Clear downloads timed out with %d entries still in DownloadManager: %s",
+                            stillPresent.size,
+                            stillPresent.take(8),
+                        )
+                    }
+                    // Wipe download SimpleCache. Orphan keys (no DM entry) are always safe;
+                    // keys still present after timeout are left so a stuck DM entry keeps its file.
+                    val dmIds = downloadUtil.downloads.value.keys
+                    downloadCache.keys.toList().forEach { key ->
+                        if (key !in dmIds) {
                             runCatching {
-                                downloadUtil.downloadManager.removeDownload(id)
-                            }.onSuccess {
-                                removedIds += id
+                                downloadCache.removeResource(key)
                             }.onFailure { error ->
-                                Timber.e(error, "Failed to remove download %s", id)
-                            }
-                        }
-                        // Wipe cache keys for successfully removed downloads + orphans not in DM.
-                        val dmIds = downloadUtil.downloads.value.keys
-                        downloadCache.keys.forEach { key ->
-                            if (key in removedIds || key !in dmIds) {
-                                runCatching {
-                                    downloadCache.removeResource(key)
-                                }.onSuccess {
-                                    clearedCacheKeys += key
-                                }.onFailure { error ->
-                                    Timber.e(error, "Failed to remove download cache key %s", key)
-                                }
-                            }
-                        }
-                    } finally {
-                        // Room flags: full clear when DM is empty (all removes ok or orphans-only).
-                        // Otherwise clear successful removes + cache orphans we wiped, so a Room
-                        // row cannot stay "downloaded" after its file was deleted as an orphan
-                        // while another DM entry still remains (failed remove path).
-                        val remaining = downloadUtil.downloads.value.keys
-                        if (remaining.isEmpty()) {
-                            database.clearAllDownloadedInfo()
-                        } else {
-                            val flagIds = (removedIds + clearedCacheKeys)
-                                .toSet()
-                                .filter { it !in remaining }
-                            flagIds.forEach { id ->
-                                database.updateDownloadedInfo(id, false, null)
+                                Timber.e(error, "Failed to remove download cache key %s", key)
                             }
                         }
                     }
+                    // Bulk clear only isDownloaded=1 rows (preserves Cache Playlist dateDownload).
+                    // Serialized with completion writes via downloadMetaLock.
+                    downloadUtil.clearAllDownloadedInfoLocked()
                 }
                 clearDownloads = false
             },
