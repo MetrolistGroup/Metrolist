@@ -128,6 +128,20 @@ constructor(
         }
     }
 
+    /**
+     * Clear explicit-download Room flags except songs still tracked by DownloadManager
+     * ([keepIds]). Preserves Cache Playlist rows and in-flight/new downloads.
+     */
+    fun clearDownloadedInfoExceptLocked(keepIds: Collection<String>) {
+        synchronized(downloadMetaLock) {
+            if (keepIds.isEmpty()) {
+                database.clearAllDownloadedInfo()
+            } else {
+                database.clearDownloadedInfoExcept(keepIds.toList())
+            }
+        }
+    }
+
     val downloads = MutableStateFlow<Map<String, Download>>(emptyMap())
 
     private val dataSourceFactory =

@@ -220,19 +220,13 @@ fun StorageSettings(
                             }
                         }
                     }
-                    // Room flags: full bulk clear only when every requested remove confirmed.
-                    // If some DM entries timed out, keep their isDownloaded flags (files remain)
-                    // and only clear flags for ids that actually left the map + other orphans
-                    // via bulk clear is wrong — use bulk only when stillPresent is empty.
-                    // Bulk clear preserves Cache Playlist (isDownloaded=0) dateDownload rows.
-                    if (stillPresent.isEmpty()) {
-                        downloadUtil.clearAllDownloadedInfoLocked()
-                    } else {
-                        val removedConfirmed = pendingIds.filter { it !in stillPresent }
-                        removedConfirmed.forEach { id ->
-                            database.updateDownloadedInfo(id, false, null)
-                        }
-                    }
+                    // Room flags: clear isDownloaded=1 except ids still in DownloadManager.
+                    // That keeps (a) timed-out removes that still have files, and (b) downloads
+                    // started during clear-all that finished before this reset — without wiping
+                    // their flags while DM still holds the completed entry.
+                    // Cache Playlist rows (isDownloaded=0) are never touched.
+                    val keepIds = downloadUtil.downloads.value.keys
+                    downloadUtil.clearDownloadedInfoExceptLocked(keepIds)
                 }
                 clearDownloads = false
             },
