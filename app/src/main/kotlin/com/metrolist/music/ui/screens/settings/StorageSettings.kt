@@ -207,28 +207,16 @@ fun StorageSettings(
                             }
                         }
                     } finally {
-                        // Reset Room flags for ids we actually removed. If every remove failed,
-                        // leave flags alone so the user can retry. If all succeeded (or there
-                        // were no DM entries), clear all explicit-download rows.
-                        if (removedIds.isNotEmpty() &&
-                            removedIds.size == downloadUtil.downloads.value.keys.size
-                        ) {
-                            // downloads map may already be empty after onDownloadRemoved
-                        }
-                        if (removedIds.isNotEmpty()) {
-                            // Clear all explicit downloads when we removed everything we knew about,
-                            // including orphans that only lived in Room.
-                            val remaining = downloadUtil.downloads.value.keys
-                            if (remaining.isEmpty()) {
-                                database.clearAllDownloadedInfo()
-                            } else {
-                                removedIds.forEach { id ->
-                                    database.updateDownloadedInfo(id, false, null)
-                                }
-                            }
-                        } else if (downloadUtil.downloads.value.isEmpty()) {
-                            // No DM entries (orphans-only): still wipe Room download flags.
+                        // Room flags: full clear when DM is empty (all removes ok or orphans-only);
+                        // otherwise only clear ids whose removeDownload succeeded so a failed
+                        // remove cannot block redownload while flags/files are already gone.
+                        val remaining = downloadUtil.downloads.value.keys
+                        if (remaining.isEmpty()) {
                             database.clearAllDownloadedInfo()
+                        } else {
+                            removedIds.forEach { id ->
+                                database.updateDownloadedInfo(id, false, null)
+                            }
                         }
                     }
                 }
