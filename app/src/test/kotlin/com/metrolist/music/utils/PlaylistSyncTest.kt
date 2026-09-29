@@ -177,7 +177,7 @@ class PlaylistSyncTest {
         assertEquals(
             listOf(localMap("x", 1, "set-x-2"), localMap("x", 0, "set-x-1")),
             setVideoIdUpdatesForAddedSongs(
-                addedSongIds = listOf("x"),
+                addedSongIds = listOf("x", "x"),
                 remoteSongs = listOf(remoteSong("x", "set-x-1"), remoteSong("x", "set-x-2")),
                 localSongs = listOf(localMap("x", 0), localMap("x", 1)),
             ),
@@ -209,6 +209,30 @@ class PlaylistSyncTest {
     }
 
     @Test
+    fun `added songs skip ambiguous duplicates when only one add succeeded`() {
+        assertEquals(
+            emptyList<PlaylistSongMap>(),
+            setVideoIdUpdatesForAddedSongs(
+                addedSongIds = listOf("x"),
+                remoteSongs = listOf(remoteSong("x", "set-x-1")),
+                localSongs = listOf(localMap("x", 0), localMap("x", 1)),
+            ),
+        )
+    }
+
+    @Test
+    fun `added songs skip when remote has more new occurrences than confirmed adds`() {
+        assertEquals(
+            emptyList<PlaylistSongMap>(),
+            setVideoIdUpdatesForAddedSongs(
+                addedSongIds = listOf("x"),
+                remoteSongs = listOf(remoteSong("x", "set-x-1"), remoteSong("x", "set-x-2")),
+                localSongs = listOf(localMap("x", 0)),
+            ),
+        )
+    }
+
+    @Test
     fun `confirmed remote deletion is dropped while unconfirmed local addition is preserved`() {
         assertEquals(
             listOf(localMap("b", 1)),
@@ -225,6 +249,17 @@ class PlaylistSyncTest {
             listOf(localMap("x", 1)),
             preservedLocalSongs(
                 listOf(localMap("x", 0, "set-x"), localMap("x", 1)),
+                listOf("x"),
+            ),
+        )
+    }
+
+    @Test
+    fun `unresolved duplicate stays pending and the next sync keeps one pending copy`() {
+        assertEquals(
+            listOf(localMap("x", 1)),
+            preservedLocalSongs(
+                listOf(localMap("x", 0), localMap("x", 1)),
                 listOf("x"),
             ),
         )

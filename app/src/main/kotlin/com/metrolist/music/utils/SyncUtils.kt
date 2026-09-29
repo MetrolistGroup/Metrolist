@@ -141,9 +141,11 @@ internal fun setVideoIdBackfills(
 /**
  * Maps freshly confirmed remote additions to the local rows that are still missing
  * their setVideoId. Remote setVideoIds already stored locally are discarded, so what
- * remains are the new occurrences no matter where YouTube placed them. Those are
- * matched newest-first against the pending local rows (highest position first).
- * Rows that already carry a setVideoId are left untouched.
+ * remains are the new occurrences no matter where YouTube placed them. Pending rows
+ * of the same song are indistinguishable, so a song is only backfilled when the
+ * number of confirmed adds, pending local rows and new remote occurrences all agree.
+ * Otherwise the rows stay pending and the next sync resolves them. Matching is
+ * newest-first (highest position first).
  */
 internal fun setVideoIdUpdatesForAddedSongs(
     addedSongIds: Collection<String>,
@@ -154,14 +156,14 @@ internal fun setVideoIdUpdatesForAddedSongs(
     val knownSetVideoIds = localSongs.mapNotNull { it.setVideoId }.toSet()
     val remoteById = remoteSongs.groupBy { it.id }
     val updates = mutableListOf<PlaylistSongMap>()
-    for (songId in addedSongIds.toSet()) {
+    for ((songId, confirmedCount) in addedSongIds.groupingBy { it }.eachCount()) {
         val newRemoteSetVideoIds = remoteById[songId].orEmpty()
             .mapNotNull { it.setVideoId }
             .filter { it !in knownSetVideoIds }
-        if (newRemoteSetVideoIds.isEmpty()) continue
         val pendingRows = localSongs
             .filter { it.songId == songId && it.setVideoId == null }
             .sortedByDescending { it.position }
+        if (newRemoteSetVideoIds.size != confirmedCount || pendingRows.size != confirmedCount) continue
         newRemoteSetVideoIds.asReversed()
             .zip(pendingRows) { remoteSetVideoId, row -> row.copy(setVideoId = remoteSetVideoId) }
             .let(updates::addAll)
