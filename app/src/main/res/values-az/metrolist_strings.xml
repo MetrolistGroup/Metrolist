@@ -332,7 +332,7 @@
     <string name="varispeed_description">Tonu (pitch) səsləndirmə sürəti ilə əlaqələndirin; nəticədə maqnit lentindəki kimi sürətlənmə və yavaşıma effektləri əldə olunur</string>
     <string name="audio_track_playback_params">Aparat təminatı səviyyəsində audio emalından istifadə edin</string>
     <string name="audio_track_playback_params_description">Sürət və ya ton (pitch) dəyişiklikləri üçün proqram təminatı səviyyəsində emal əvəzinə Android-in AudioTrack funksiyasından istifadə edin. Bu, həddindən artıq yüksək və ya aşağı ton dəyərləri üçün daha etibarlıdır</string>
-    <string name="google_cast">Google Cast</string>
+    <string name="google_cast">google_cast</string>
     <string name="google_cast_description">Audionu Chromecast və digər Cast dəstəkli cihazlara ötürün</string>
     <string name="lyrics_romanize_as_main">Romanizasiya olunmuş sözləri əsas olaraq göstər</string>
     <string name="integrations">İnteqrasiyalar</string>
@@ -419,7 +419,7 @@
     <string name="import_from_file">Fayldan idxal et</string>
     <plurals name="band_count">
         <item quantity="one">%d qrup</item>
-        <item quantity="other">%d qrup</item>
+        <item quantity="other">%d qruplar</item>
     </plurals>
     <string name="delete_profile_desc">Profili sil</string>
     <string name="delete_profile_confirmation">%1$s-i silmək istədiyinizə əminsinizmi? Bu əməliyyatı geri qaytarmaq mümkün deyil</string>
@@ -759,7 +759,7 @@
     <string name="subscribe_to_podcast">Podkastı kitabxanaya saxla</string>
     <plurals name="n_episode">
         <item quantity="one">%d-ci epizod</item>
-        <item quantity="other">%d-ci epizod</item>
+        <item quantity="other">%d-ci epizodlar</item>
     </plurals>
     <string name="filter_episodes">Epizodlar</string>
     <string name="filter_profiles">Profillər</string>
@@ -770,7 +770,7 @@
     <string name="no_downloaded_episodes">Yüklənmiş epizod yoxdur</string>
     <plurals name="n_channel">
         <item quantity="one">%d kanal</item>
-        <item quantity="other">%d kanal</item>
+        <item quantity="other">%d kanallar</item>
     </plurals>
     <string name="restore_confirm_title">Ehtiyat nüsxə bərpa edilsin?</string>
     <string name="restore_confirm_message">Bu, tətbiq məlumatlarınızı seçilmiş ehtiyat nüsxədən bərpa edəcək</string>
@@ -796,7 +796,7 @@
     <string name="deleting">Silinir…</string>
     <string name="android_auto">Android Auto</string>
     <string name="android_auto_visible_sections">Görünən bölmələr</string>
-    <string name="android_auto_reorder_hint">Bölməni aktivləşdirmək və ya deaktiv etmək üçün vurun.\nSırasını dəyişmək üçün sürükləmə sapına uzun basın. Birinci bölmə standart olaraq göstəriləcək.</string>
+    <string name="android_auto_reorder_hint">Hər hansı bölməni aktivləşdirmək və ya deaktiv etmək üçün ona toxunun.\nSıralamanı dəyişdirmək üçün sürüşdürmə işarəsini uzun müddət basıb saxlayın. İlkin olaraq birinci bölmə göstəriləcək.</string>
     <string name="android_auto_youtube_playlists">YouTube təklif etdiyi pleylistləri göstər</string>
     <string name="android_auto_youtube_playlists_desc">Android Auto istifadə edərkən pleylistlər bölməsində YouTube Music-in tövsiyə etdiyi pleylistləri göstərin</string>
     <string name="android_auto_target_playlist">Təyinat yerini tez əlavə et</string>
@@ -849,7 +849,7 @@
     <string name="stream_source_web_remix_desc">Əsas müştəri. Autentifikasiyadan keçib; əksər trekləri əhatə edir.</string>
     <string name="stream_source_tvhtml5">TVHTML5</string>
     <string name="stream_source_tvhtml5_desc">TV müştərisi. Etibarlı ehtiyat variant.</string>
-    <string name="stream_source_visionos">visionOS</string>
+    <string name="stream_source_visionos">GörünənOS</string>
     <string name="stream_source_visionos_desc">Apple Vision. Məhsuldarlığın məhdudlaşdırılması yoxdur; çox etibarlıdır.</string>
     <string name="stream_source_android_vr">Android VR</string>
     <string name="stream_source_android_vr_desc">Android VR müştəriləri (bütün versiyalar).</string>
@@ -869,4 +869,5 @@
     <string name="error_offline_playback">Oflaynsınız. İnternetə qoşulun və ya oflayn istifadə üçün yüklənmiş treki oxudun.</string>
     <string name="error_explicit_login_recommended">Açıq-aydın oxutma daxil olmuş hesabla daha yaxşı işləyir.</string>
     <string name="ai_provider_inception_help">API açarları üçün https://platform.inceptionlabs.ai saytına daxil olun</string>
+    <string name="force_bottom_navbar">Alt naviqasiya panelini məcburi tətbiq et</string>
 </resources>
