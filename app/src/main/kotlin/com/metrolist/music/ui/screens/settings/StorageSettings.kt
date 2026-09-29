@@ -182,6 +182,7 @@ fun StorageSettings(
                     // Invalidate in-flight completion callbacks before removing resources.
                     downloadUtil.beginClearAllDownloads()
                     val removedIds = mutableListOf<String>()
+                    val clearedCacheKeys = mutableListOf<String>()
                     try {
                         // Prefer DownloadManager so Listener.onDownloadRemoved clears flags.
                         // Only treat an id as cleared when removeDownload succeeds; a failed
@@ -201,20 +202,26 @@ fun StorageSettings(
                             if (key in removedIds || key !in dmIds) {
                                 runCatching {
                                     downloadCache.removeResource(key)
+                                }.onSuccess {
+                                    clearedCacheKeys += key
                                 }.onFailure { error ->
                                     Timber.e(error, "Failed to remove download cache key %s", key)
                                 }
                             }
                         }
                     } finally {
-                        // Room flags: full clear when DM is empty (all removes ok or orphans-only);
-                        // otherwise only clear ids whose removeDownload succeeded so a failed
-                        // remove cannot block redownload while flags/files are already gone.
+                        // Room flags: full clear when DM is empty (all removes ok or orphans-only).
+                        // Otherwise clear successful removes + cache orphans we wiped, so a Room
+                        // row cannot stay "downloaded" after its file was deleted as an orphan
+                        // while another DM entry still remains (failed remove path).
                         val remaining = downloadUtil.downloads.value.keys
                         if (remaining.isEmpty()) {
                             database.clearAllDownloadedInfo()
                         } else {
-                            removedIds.forEach { id ->
+                            val flagIds = (removedIds + clearedCacheKeys)
+                                .toSet()
+                                .filter { it !in remaining }
+                            flagIds.forEach { id ->
                                 database.updateDownloadedInfo(id, false, null)
                             }
                         }
