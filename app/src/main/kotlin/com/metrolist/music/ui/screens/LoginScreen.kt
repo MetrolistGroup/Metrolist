@@ -280,7 +280,12 @@ fun LoginScreen(
                             return@launch
                         }
                     if (stage == LoginStage.SwitchingAccount) {
-                        finalizeLogin(authData)
+                        val selectedDataSyncId = selectedAccount?.dataSyncId?.substringBefore("||")
+                        finalizeLogin(
+                            authData.copy(
+                                dataSyncId = selectedDataSyncId?.takeIf(String::isNotBlank) ?: authData.dataSyncId,
+                            ),
+                        )
                     } else {
                         checkAvailableAccounts(authData)
                     }

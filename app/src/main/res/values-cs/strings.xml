@@ -230,7 +230,6 @@
     <string name="translation_models">Modely překladů</string>
     <string name="clear_translation_models">Vymazat modely překladů</string>
     <string name="remove_from_playlist">Odstranit z playlistu</string>
-    <string name="discord_integration">Integrace Discordu</string>
     <string name="squiggly">Klikatá</string>
     <string name="duplicates_description_single">Skladba se již nachází ve vašem playlistu</string>
     <string name="keep_listening">Poslouchejte dál</string>
@@ -283,7 +282,6 @@
     <string name="theme">Motiv</string>
     <string name="player_text_alignment">Zarovnání textu přehrávače</string>
     <string name="discord_information">Metrolist používá knihovnu KizzyRPC, aby mohl nastavit váš stav na Discordu. Tato funkce zahrnuje připojení k bráně Discord, což může být považováno za porušení podmínek společnosti Discord. Neexistují nicméně žádné známé případy uzamčení účtu z tohoto důvodu. Používejte na vlastní nebezpečí. \n \nMetrolist pouze extrahuje váš token, vše ostatní je uloženo lokálně.</string>
-    <string name="enable_discord_rpc">Povolit stav na Discordu</string>
     <string name="action_logout">Odhlásit se</string>
     <string name="use_login_for_browse">Použít účet pro procházení obsahu</string>
     <string name="use_login_for_browse_desc">Může ovlivnit obsah, který se vám zobrazí – při přihlášení například mohou být zobrazena například alba, která jsou dostupná pouze s Premium účtem</string>

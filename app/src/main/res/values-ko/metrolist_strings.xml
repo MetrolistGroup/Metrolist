@@ -785,4 +785,11 @@
     <string name="wizard_multiple_variants">여러 변형 가능</string>
     <string name="wizard_select_eq_profiles">%s용 EQ 프로필 선택</string>
     <string name="wizard_save_profiles">프로필 저장</string>
+    <string name="add_to_playlist_position">재생목록 추가 위치</string>
+    <string name="playlist_position_beginning">재생목록의 시작</string>
+    <string name="playlist_position_beginning_desc">새로 추가된 곡이 기존 곡보다 앞에 추가됩니다</string>
+    <string name="playlist_position_end">재생목록의 끝</string>
+    <string name="playlist_position_end_desc">새로 추가된 곡이 기존 곡보다 뒤에 추가됩니다</string>
+    <string name="error_no_internet_connection">인터넷 연결 없음</string>
+    <string name="error_offline_playback">오프라인입니다. 인터넷에 연결하거나 다운로드한 곡을 재생할 수 있습니다.</string>
 </resources>

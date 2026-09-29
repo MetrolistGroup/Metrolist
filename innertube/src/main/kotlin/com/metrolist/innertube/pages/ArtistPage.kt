@@ -2,7 +2,6 @@ package com.metrolist.innertube.pages
 
 import com.metrolist.innertube.models.Album
 import com.metrolist.innertube.models.AlbumItem
-import com.metrolist.innertube.models.Artist
 import com.metrolist.innertube.models.ArtistItem
 import com.metrolist.innertube.models.BrowseEndpoint
 import com.metrolist.innertube.models.EpisodeItem
@@ -20,7 +19,6 @@ import com.metrolist.innertube.utils.parseTime
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.models.filterExplicit
 import com.metrolist.innertube.models.getItems
-import com.metrolist.innertube.models.splitArtistsByConjunction
 import com.metrolist.innertube.models.splitBySeparator
 
 data class ArtistSection(
@@ -80,16 +78,7 @@ data class ArtistPage(
 
             val subtitleGroups = subtitleLine?.splitBySeparator()
 
-            val artistRuns = subtitleGroups
-                ?.getOrNull(0)
-                ?.splitArtistsByConjunction()
-                ?.filter { it.text.isNotBlank() && it.text != "&" && it.text != "," }
-                ?.map { run ->
-                    Artist(
-                        name = run.text.trim(),
-                        id = run.navigationEndpoint?.browseEndpoint?.browseId
-                    )
-                }
+            val artists = PageHelper.extractArtists(subtitleLine)
 
             val album = renderer.flexColumns.lastOrNull()
                 ?.musicResponsiveListItemFlexColumnRenderer?.text?.runs
@@ -128,13 +117,18 @@ data class ArtistPage(
                 title = renderer.flexColumns.firstOrNull()
                     ?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.firstOrNull()
                     ?.text ?: return null,
-                artists = artistRuns ?: return null,
+                artists = artists,
                 album = album,
-                duration = durationFromSubtitle
-                    ?: renderer.fixedColumns?.firstOrNull()
-                        ?.musicResponsiveListItemFlexColumnRenderer?.text
-                        ?.runs?.firstOrNull()
-                        ?.text?.parseTime(),
+                duration =
+                    durationFromSubtitle
+                        ?: renderer.fixedColumns
+                            ?.firstOrNull()
+                            ?.musicResponsiveListItemFlexColumnRenderer
+                            ?.text
+                            ?.runs
+                            ?.firstOrNull()
+                            ?.text
+                            ?.parseTime(),
                 musicVideoType = renderer.musicVideoType,
                 thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: return null,
                 explicit = renderer.badges?.find {
@@ -150,27 +144,23 @@ data class ArtistPage(
         private fun fromMusicTwoRowItemRenderer(renderer: MusicTwoRowItemRenderer): YTItem? {
             return when {
                 renderer.isSong -> {
-                    val subtitleRuns = renderer.subtitle?.runs ?: return null
-                    val expandedRuns = subtitleRuns.splitArtistsByConjunction()
-                    val artistRuns = expandedRuns.filter { run ->
-                        run.text.isNotBlank() && run.text != "&" && run.text != "," &&
-                        run.navigationEndpoint?.browseEndpoint?.browseId?.startsWith("UC") == true
-                    }
-                    val subtitleGroups = subtitleRuns.splitBySeparator()
+                    val subtitleRuns = renderer.subtitle?.runs
+                    val subtitleGroups = subtitleRuns.orEmpty().splitBySeparator()
                     SongItem(
                         id = renderer.navigationEndpoint.watchEndpoint?.videoId ?: return null,
-                        title = renderer.title.runs?.firstOrNull()?.text ?: return null,
-                        artists = artistRuns.map { run ->
-                            Artist(
-                                name = run.text.trim(),
-                                id = run.navigationEndpoint?.browseEndpoint?.browseId
-                            )
-                        }.ifEmpty { null } ?: return null,
+                        title =
+                            renderer.title.runs
+                                ?.firstOrNull()
+                                ?.text ?: return null,
+                        artists = PageHelper.extractArtists(subtitleRuns),
                         album = null,
-                        duration = subtitleGroups.lastOrNull()
-                            ?.firstOrNull()
-                            ?.takeIf { it.navigationEndpoint == null }
-                            ?.text?.parseTime(),
+                        duration =
+                            subtitleGroups
+                                .lastOrNull()
+                                ?.firstOrNull()
+                                ?.takeIf { it.navigationEndpoint == null }
+                                ?.text
+                                ?.parseTime(),
                         musicVideoType = renderer.musicVideoType,
                         thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         explicit = renderer.subtitleBadges?.find {
@@ -198,12 +188,15 @@ data class ArtistPage(
                 renderer.isPlaylist -> {
                     // Playlist from YouTube Music
                     PlaylistItem(
-                        id = renderer.navigationEndpoint.browseEndpoint?.browseId?.removePrefix("VL") ?: return null,
-                        title = renderer.title.runs?.firstOrNull()?.text ?: return null,
-                        author = Artist(
-                            name = renderer.subtitle?.runs?.firstOrNull()?.text ?: return null,
-                            id = null
-                        ),
+                        id =
+                            renderer.navigationEndpoint.browseEndpoint
+                                ?.browseId
+                                ?.removePrefix("VL") ?: return null,
+                        title =
+                            renderer.title.runs
+                                ?.firstOrNull()
+                                ?.text ?: return null,
+                        author = PlaylistPage.ownerFromByline(renderer.subtitle?.runs),
                         songCountText = null,
                         thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         playEndpoint = renderer.thumbnailOverlay
@@ -243,10 +236,11 @@ data class ArtistPage(
                         ?.watchEndpoint?.videoId ?: return null
                     EpisodeItem(
                         id = videoId,
-                        title = renderer.title.runs?.firstOrNull()?.text ?: return null,
-                        author = renderer.subtitle?.runs?.firstOrNull()?.let {
-                            Artist(name = it.text, id = it.navigationEndpoint?.browseEndpoint?.browseId)
-                        },
+                        title =
+                            renderer.title.runs
+                                ?.firstOrNull()
+                                ?.text ?: return null,
+                        author = PageHelper.extractArtists(renderer.subtitle?.runs).firstOrNull(),
                         thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         endpoint = WatchEndpoint(videoId = videoId),
                         publishDateText = renderer.subtitle?.runs?.lastOrNull()?.text,
@@ -256,11 +250,16 @@ data class ArtistPage(
                 renderer.isPodcast -> {
                     PodcastItem(
                         id = renderer.navigationEndpoint.browseEndpoint?.browseId ?: return null,
-                        title = renderer.title.runs?.firstOrNull()?.text ?: return null,
-                        author = renderer.subtitle?.runs?.firstOrNull()?.let {
-                            Artist(name = it.text, id = it.navigationEndpoint?.browseEndpoint?.browseId)
-                        },
-                        episodeCountText = renderer.subtitle?.runs?.lastOrNull()?.text,
+                        title =
+                            renderer.title.runs
+                                ?.firstOrNull()
+                                ?.text ?: return null,
+                        author = PodcastPage.extractPodcastByline(renderer.subtitle?.runs).firstOrNull(),
+                        episodeCountText =
+                            renderer.subtitle
+                                ?.runs
+                                ?.lastOrNull()
+                                ?.text,
                         thumbnail = renderer.thumbnailRenderer.getThumbnailUrl(),
                         playEndpoint = renderer.thumbnailOverlay
                             ?.musicItemThumbnailOverlayRenderer?.content

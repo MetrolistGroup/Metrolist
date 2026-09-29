@@ -763,6 +763,7 @@ class HomeViewModel @Inject constructor(
                     if (!cookie.isNullOrEmpty()) {
                         YouTube.cookie = cookie
                         accountName.value = savedAccountName.orEmpty().ifBlank { "Guest" }
+                        loadAccountInfo()
                     } else {
                         accountName.value = "Guest"
                         accountImageUrl.value = null

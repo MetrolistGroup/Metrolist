@@ -32,6 +32,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.datastore.preferences.core.Preferences
@@ -433,6 +434,7 @@ class MusicService :
     @Volatile
     private var loudnessLevelCached: LoudnessLevel = LoudnessLevel.BALANCED
 
+    private var cachedNormalizationMediaId: String? = null
     private var cachedNormalizationGainMb: Int? = null
     private var cachedNormalizationEnabled: Boolean = false
 
@@ -559,6 +561,7 @@ class MusicService :
                 when (intent.action) {
                     Intent.ACTION_SCREEN_OFF -> {
                         isScreenOff = true
+                        stopWidgetUpdates()
                         Timber.tag("DiscordSvc").i("SCREEN_OFF: cancelling pause timeout, delaying disconnect 10m")
                         screenOffHandler.removeCallbacks(pauseTimeout)
                         screenOffHandler.postDelayed(screenOffTimeout, 600_000)
@@ -566,6 +569,9 @@ class MusicService :
 
                     Intent.ACTION_SCREEN_ON -> {
                         isScreenOff = false
+                        if (::player.isInitialized && player.isPlaying) {
+                            startWidgetUpdates()
+                        }
                         Timber.tag("DiscordSvc").i("SCREEN_ON: removing disconnect delay")
                         screenOffHandler.removeCallbacks(screenOffTimeout)
                         screenOffHandler.removeCallbacks(pauseTimeout)
@@ -730,6 +736,7 @@ class MusicService :
         connectivityManager = getSystemService()!!
         connectivityObserver = NetworkConnectivityObserver(this)
 
+        isScreenOff = getSystemService<PowerManager>()?.isInteractive == false
         val screenStateFilter =
             IntentFilter().apply {
                 addAction(Intent.ACTION_SCREEN_ON)
@@ -920,7 +927,7 @@ class MusicService :
                 .distinctUntilChanged(),
         ) { format, normalizeAudio, loudnessLevel ->
             Triple(format, normalizeAudio, loudnessLevel)
-        }.collectLatest(scope) { (format, normalizeAudio, loudnessLevel) ->
+        }.collectLatest(scope) { (_, normalizeAudio, loudnessLevel) ->
             normalizationEnabledCached = normalizeAudio
             loudnessLevelCached = loudnessLevel
             setupAudioNormalization()
@@ -1253,9 +1260,18 @@ class MusicService :
         // Save queue periodically to prevent queue loss from crash or force kill
         scope.launch {
             while (isActive) {
-                delay(15.seconds)
+                delay(60.seconds)
                 if (cachedPersistentQueue) {
                     saveQueueToDisk()
+                }
+            }
+        }
+
+        scope.launch {
+            while (isActive) {
+                delay(15.seconds)
+                if (cachedPersistentQueue) {
+                    savePlayerStateToDisk()
                 }
                 val currentMetadata = player.currentMediaItem?.metadata
                 if (currentMetadata?.isEpisode == true && player.isPlaying && player.currentPosition > 0) {
@@ -1264,22 +1280,10 @@ class MusicService :
                 }
             }
         }
-
-        scope.launch {
-            while (isActive) {
-                delay(10.seconds)
-                if (cachedPersistentQueue && player.isPlaying) {
-                    saveQueueToDisk()
-                }
-            }
-        }
     }
 
     private fun createExoPlayer(prefs: Preferences? = null): ExoPlayer {
-        val normalizationProcessor = VolumeNormalizationAudioProcessor().also {
-            it.enabled = cachedNormalizationEnabled
-            cachedNormalizationGainMb?.let { gain -> it.setTargetGain(gain) }
-        }
+        val normalizationProcessor = VolumeNormalizationAudioProcessor()
         val eqProcessor = CustomEqualizerAudioProcessor()
 
         val silenceProcessor = SilenceDetectorAudioProcessor { handleLongSilenceDetected() }
@@ -1299,10 +1303,13 @@ class MusicService :
             }
         }
 
+        var createdPlayer: ExoPlayer? = null
         val player =
             ExoPlayer
                 .Builder(this)
-                .setMediaSourceFactory(createMediaSourceFactory())
+                .setMediaSourceFactory(
+                    createMediaSourceFactory(normalizationProcessor) { createdPlayer },
+                )
                 .setRenderersFactory(createRenderersFactory(normalizationProcessor, eqProcessor, silenceProcessor, useAudioTrackPlaybackParams))
                 .setLoadControl(
                     // Start playback once ~750ms is buffered (media3's default is 1000ms) so first
@@ -1326,6 +1333,7 @@ class MusicService :
                 .setSeekForwardIncrementMs(5000)
                 .setDeviceVolumeControlEnabled(true)
                 .build()
+        createdPlayer = player
 
         playerNormalizationProcessors[player] = normalizationProcessor
         playerSilenceProcessors[player] = silenceProcessor
@@ -2253,20 +2261,89 @@ class MusicService :
 
     private fun applyCachedAudioNormalizationNow() {
         if (isCrossfading) return
+        val processor = playerNormalizationProcessors[player] ?: return
         try {
             val gain = cachedNormalizationGainMb
-            if (cachedNormalizationEnabled && gain != null) {
-                playerNormalizationProcessors.values.forEach {
-                    it.setTargetGain(gain)
-                    it.enabled = true
-                }
+            if (cachedNormalizationMediaId == player.currentMediaItem?.mediaId &&
+                cachedNormalizationEnabled &&
+                gain != null
+            ) {
+                processor.setTargetGain(gain)
+                processor.enabled = true
             } else {
-                playerNormalizationProcessors.values.forEach { it.enabled = false }
+                processor.enabled = false
             }
         } catch (e: Exception) {
             reportException(e)
-            playerNormalizationProcessors.values.forEach { it.enabled = false }
+            processor.enabled = false
         }
+    }
+
+    private fun applyAudioNormalization(
+        processor: VolumeNormalizationAudioProcessor,
+        mediaId: String,
+        loudnessDb: Double?,
+        perceptualLoudnessDb: Double?,
+        updateCache: Boolean,
+    ) {
+        val gain =
+            if (normalizationEnabledCached) {
+                normalizationGainMb(loudnessDb, perceptualLoudnessDb, loudnessLevelCached.targetLufs)
+            } else {
+                null
+            }
+
+        if (gain != null) {
+            processor.setTargetGain(gain)
+            processor.enabled = true
+        } else {
+            processor.setTargetGain(0)
+            processor.enabled = false
+        }
+
+        if (updateCache) {
+            cachedNormalizationMediaId = mediaId
+            cachedNormalizationGainMb = gain
+            cachedNormalizationEnabled = gain != null
+        }
+    }
+
+    private fun applyAudioNormalizationBeforePlayback(
+        processor: VolumeNormalizationAudioProcessor,
+        playerProvider: () -> ExoPlayer?,
+        mediaId: String,
+        loudnessDb: Double?,
+        perceptualLoudnessDb: Double?,
+        preserveCachedIfMissing: Boolean = false,
+    ) = runBlocking(Dispatchers.Main.immediate) {
+        val targetPlayer = playerProvider() ?: return@runBlocking
+        if (playerNormalizationProcessors[targetPlayer] !== processor ||
+            targetPlayer.currentMediaItem?.mediaId != mediaId
+        ) {
+            return@runBlocking
+        }
+
+        val isCurrentPlayer = ::player.isInitialized && targetPlayer === player
+        if (preserveCachedIfMissing &&
+            loudnessDb == null &&
+            perceptualLoudnessDb == null &&
+            isCurrentPlayer &&
+            cachedNormalizationMediaId == mediaId
+        ) {
+            return@runBlocking
+        }
+        if (isCurrentPlayer) {
+            loudnessSetupGeneration++
+            loudnessSetupJob?.cancel()
+            loudnessSetupJob = null
+        }
+        applyAudioNormalization(
+            processor = processor,
+            mediaId = mediaId,
+            loudnessDb = loudnessDb,
+            perceptualLoudnessDb = perceptualLoudnessDb,
+            updateCache = isCurrentPlayer,
+        )
     }
 
     private fun setupAudioNormalization() {
@@ -2286,55 +2363,27 @@ class MusicService :
                         database.format(currentMediaId).first()
                     }
 
-                    val targetLufs = loudnessLevelCached.targetLufs
-
                     Timber.tag(TAG).d("Audio normalization enabled: $normalizeAudio")
-                    
-                    val measuredLufs: Double? = format?.perceptualLoudnessDb
-                        ?: format?.loudnessDb?.let { it + LoudnessLevel.AGGRESSIVE.targetLufs }
 
                     withContext(Dispatchers.Main) {
                         if (!isActive || requestGeneration != loudnessSetupGeneration) return@withContext
                         if (player.currentMediaItem?.mediaId != currentMediaId) return@withContext
 
-                        when {
-                            measuredLufs != null -> {
-                                val loudnessDb = measuredLufs - targetLufs
-                                val targetGain = (-loudnessDb * 100.0).toInt()
-                                val clampedGain = targetGain.coerceIn(MIN_GAIN_MB, MAX_GAIN_MB)
-
-                                cachedNormalizationGainMb = clampedGain
-                                cachedNormalizationEnabled = true
-                                if (isCrossfading) {
-                                    playerNormalizationProcessors[player]?.let {
-                                        it.setTargetGain(clampedGain)
-                                        it.enabled = true
-                                    }
-                                } else {
-                                    playerNormalizationProcessors.values.forEach {
-                                        it.setTargetGain(clampedGain)
-                                        it.enabled = true
-                                    }
-                                }
-                            }
-                            format == null -> {
-                                Timber.tag(TAG).d("Loudness row not ready yet; keeping cached normalization state")
-                                if (isCrossfading) return@withContext
-                            }
-                            else -> {
-                                cachedNormalizationGainMb = 0
-                                cachedNormalizationEnabled = false
-                                if (isCrossfading) return@withContext
-                                playerNormalizationProcessors.values.forEach {
-                                    it.setTargetGain(0)
-                                    it.enabled = false
-                                }
-                            }
+                        val processor = playerNormalizationProcessors[player] ?: return@withContext
+                        if (format != null || cachedNormalizationMediaId != currentMediaId) {
+                            applyAudioNormalization(
+                                processor = processor,
+                                mediaId = currentMediaId,
+                                loudnessDb = format?.loudnessDb,
+                                perceptualLoudnessDb = format?.perceptualLoudnessDb,
+                                updateCache = true,
+                            )
                         }
                     }
                 } else {
                     withContext(Dispatchers.Main) {
                         if (!isActive || requestGeneration != loudnessSetupGeneration) return@withContext
+                        cachedNormalizationMediaId = null
                         cachedNormalizationGainMb = null
                         cachedNormalizationEnabled = false
                         playerNormalizationProcessors.values.forEach { it.enabled = false }
@@ -2566,21 +2615,21 @@ class MusicService :
 
             val repeatMode = player.repeatMode
 
-            if (repeatMode == REPEAT_MODE_ALL && player.mediaItemCount > 0) {
+            if (player.playWhenReady && repeatMode == REPEAT_MODE_ALL && player.mediaItemCount > 0) {
                 player.seekTo(0, 0)
                 player.prepare()
                 player.play()
                 return
             }
 
-            if (repeatMode == REPEAT_MODE_ONE) {
+            if (player.playWhenReady && repeatMode == REPEAT_MODE_ONE) {
                 player.seekTo(player.currentMediaItemIndex, 0)
                 player.prepare()
                 player.play()
                 return
             }
 
-            if (cachedAutoplay && player.hasNextMediaItem()) {
+            if (player.playWhenReady && cachedAutoplay && player.hasNextMediaItem()) {
                 player.seekToNextMediaItem()
                 player.prepare()
                 if (castConnectionHandler?.isCasting?.value != true) {
@@ -3723,19 +3772,28 @@ class MusicService :
         }
     }
 
-    private fun createDataSourceFactory(): DataSource.Factory {
+    private fun createDataSourceFactory(
+        normalizationProcessor: VolumeNormalizationAudioProcessor,
+        playerProvider: () -> ExoPlayer?,
+    ): DataSource.Factory {
         return ResolvingDataSource.Factory(createCacheDataSource()) { dataSpec ->
             val mediaId = dataSpec.key ?: error("No media id")
+            val storedFormat = runBlocking(Dispatchers.IO) { database.format(mediaId).first() }
+            applyAudioNormalizationBeforePlayback(
+                processor = normalizationProcessor,
+                playerProvider = playerProvider,
+                mediaId = mediaId,
+                loudnessDb = storedFormat?.loudnessDb,
+                perceptualLoudnessDb = storedFormat?.perceptualLoudnessDb,
+                preserveCachedIfMissing = true,
+            )
 
             val shouldBypassCache = bypassCacheForQualityChange.contains(mediaId)
 
             if (!shouldBypassCache) {
                 val usePlayerCache = dataStore.get(EnableSongCacheKey, true)
 
-                val contentLength =
-                    runBlocking(Dispatchers.IO) {
-                        database.song(mediaId).first()?.format?.contentLength
-                    }
+                val contentLength = storedFormat?.contentLength
                 val requiredLength =
                     when {
                         dataSpec.length >= 0 -> dataSpec.length
@@ -3823,6 +3881,13 @@ class MusicService :
                 if (loudnessDb == null && perceptualLoudnessDb == null) {
                     Timber.tag(TAG).w("No loudness data available from YouTube for video: $mediaId")
                 }
+                applyAudioNormalizationBeforePlayback(
+                    processor = normalizationProcessor,
+                    playerProvider = playerProvider,
+                    mediaId = mediaId,
+                    loudnessDb = loudnessDb,
+                    perceptualLoudnessDb = perceptualLoudnessDb,
+                )
 
                 format.contentLength?.let { contentLength ->
                     database.query {
@@ -3886,9 +3951,12 @@ class MusicService :
         }
     }
 
-    private fun createMediaSourceFactory() =
+    private fun createMediaSourceFactory(
+        normalizationProcessor: VolumeNormalizationAudioProcessor,
+        playerProvider: () -> ExoPlayer?,
+    ) =
         DefaultMediaSourceFactory(
-            createDataSourceFactory(),
+            createDataSourceFactory(normalizationProcessor, playerProvider),
             ExtractorsFactory {
                 arrayOf(MatroskaExtractor(), FragmentedMp4Extractor(), Mp4Extractor())
             },
@@ -4030,17 +4098,6 @@ class MusicService :
                     position = 0,
                 )
 
-            val persistPlayerState =
-                PersistPlayerState(
-                    playWhenReady = player.playWhenReady,
-                    repeatMode = player.repeatMode,
-                    shuffleModeEnabled = player.shuffleModeEnabled,
-                    volume = playerVolume.value,
-                    currentPosition = player.currentPosition,
-                    currentMediaItemIndex = player.currentMediaItemIndex,
-                    playbackState = player.playbackState,
-                )
-
             runCatching {
                 filesDir.resolve(PERSISTENT_QUEUE_FILE).outputStream().use { fos ->
                     ObjectOutputStream(fos).use { oos ->
@@ -4064,21 +4121,34 @@ class MusicService :
                 Timber.tag(TAG).e(it, "Failed to save automix")
                 reportException(it)
             }
-
-            runCatching {
-                filesDir.resolve(PERSISTENT_PLAYER_STATE_FILE).outputStream().use { fos ->
-                    ObjectOutputStream(fos).use { oos ->
-                        oos.writeObject(persistPlayerState)
-                    }
-                }
-                Timber.tag(TAG).d("Player state saved successfully")
-            }.onFailure {
-                Timber.tag(TAG).e(it, "Failed to save player state")
-                reportException(it)
-            }
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Error during queue save operation")
             reportException(e)
+        }
+    }
+
+    private fun savePlayerStateToDisk() {
+        if (player.mediaItemCount == 0) return
+
+        val playerState = PersistPlayerState(
+            playWhenReady = player.playWhenReady,
+            repeatMode = player.repeatMode,
+            shuffleModeEnabled = player.shuffleModeEnabled,
+            volume = playerVolume.value,
+            currentPosition = player.currentPosition,
+            currentMediaItemIndex = player.currentMediaItemIndex,
+            playbackState = player.playbackState,
+        )
+        runCatching {
+            filesDir.resolve(PERSISTENT_PLAYER_STATE_FILE).outputStream().use { fos ->
+                ObjectOutputStream(fos).use { oos ->
+                    oos.writeObject(playerState)
+                }
+            }
+            Timber.tag(TAG).d("Player state saved successfully")
+        }.onFailure {
+            Timber.tag(TAG).e(it, "Failed to save player state")
+            reportException(it)
         }
     }
 
@@ -4199,6 +4269,7 @@ class MusicService :
         castConnectionHandler?.release()
         if (dataStore.get(PersistentQueueKey, true)) {
             saveQueueToDisk()
+            savePlayerStateToDisk()
         }
         screenOffHandler.removeCallbacks(screenOffTimeout)
         screenOffHandler.removeCallbacks(pauseTimeout)
@@ -4618,13 +4689,20 @@ class MusicService :
 
     private fun startWidgetUpdates() {
         widgetUpdateJob?.cancel()
+        if (isScreenOff) {
+            widgetUpdateJob = null
+            return
+        }
         widgetUpdateJob =
             scope.launch {
                 while (isActive) {
+                    delay(1.seconds)
                     if (player.isPlaying) {
-                        updateWidgetUI(true)
+                        widgetManager.updateProgress(
+                            duration = if (player.duration != C.TIME_UNSET) player.duration else 0,
+                            currentPosition = player.currentPosition,
+                        )
                     }
-                    delay(200)
                 }
             }
     }
@@ -4930,9 +5008,6 @@ class MusicService :
 
         private const val INITIAL_BUFFER_RECOVERY_DELAY_MS = 15_000L
         private const val INITIAL_BUFFER_RECOVERY_POSITION_MS = 5_000L
-        private const val MAX_GAIN_MB = 300 // Maximum gain in millibels (3 dB)
-        private const val MIN_GAIN_MB = -1500 // Minimum gain in millibels (-15 dB)
-
         private const val TAG = "MusicService"
 
         @Volatile
@@ -4942,4 +5017,15 @@ class MusicService :
         @Volatile
         var shutdownDeferred = kotlinx.coroutines.CompletableDeferred<Unit>().apply { complete(Unit) }
     }
+}
+
+internal fun normalizationGainMb(
+    loudnessDb: Double?,
+    perceptualLoudnessDb: Double?,
+    targetLufs: Float,
+): Int? {
+    val measuredLufs = perceptualLoudnessDb ?: loudnessDb?.let { it + LoudnessLevel.AGGRESSIVE.targetLufs }
+    return measuredLufs
+        ?.let { (-(it - targetLufs) * 100.0).toInt() }
+        ?.coerceIn(-1500, 300)
 }

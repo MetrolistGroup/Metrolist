@@ -150,7 +150,7 @@
     <string name="updater">Actualizator</string>
     <string name="check_for_updates">Verifică automat pentru actualizări</string>
     <string name="update_notifications">Activează notificările pentru actualizări</string>
-    <string name="update_available_title">Actualizare disponibilă</string>
+    <string name="update_available_title">Actualizare nouă disponibilă</string>
     <string name="update_channel_name">Actualizări ale aplicației</string>
     <string name="update_channel_desc">Notificări despre versiuni noi ale aplicației</string>
     <string name="integrations">Integrări</string>
@@ -814,8 +814,6 @@
     <string name="discord_error_token_refresh_failed">Sesiunea de Discord a expirat. Te rugăm să te reconectezi.</string>
     <string name="discord_error_invalid_scope">Discord a respins conexiunea. Te rugăm să te reconectezi și să acorzi permisiunea necesară.</string>
     <string name="discord_error_banner_title">Eroare Discord</string>
-    <string name="discord_integration">Integrare Discord</string>
-    <string name="enable_discord_rpc">Activează Rich Presence</string>
     <string name="discord_state">Stare</string>
     <string name="discord_details">Detalii</string>
     <string name="discord_enable_button_1">Afișează butonul 1</string>
@@ -849,8 +847,8 @@
     <string name="enable_dynamic_icon_desc">Folosește culori dinamice pentru pictograma aplicației. Atunci când această opțiune este dezactivată, pictograma folosește culori solide.</string>
     <string name="playlist_unavailable">Playlist indisponibil</string>
     <string name="kmp_upgrade_title">Metrolist KMP %s este disponibil</string>
-    <string name="kmp_upgrade_warning">Metrolist KMP este în acces anticipat. Caracteristicile pot fi stricate, incomplete sau să se modifice fără notificare prealabilă.</string>
-    <string name="kmp_upgrade_action">Fă upgrade către KMP</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP este încă în dezvoltare. Este posibil să întâmpini bug-uri sau funcții incomplete.</string>
+    <string name="kmp_upgrade_action">Încearcă KMP</string>
     <string name="kmp_upgrade_later">Nu acum</string>
     <string name="android_auto_search_options">Opțiuni de căutare</string>
     <string name="android_auto_search_local_songs_limit">Limită de căutare melodii</string>
@@ -861,4 +859,20 @@
     <string name="youtube_channels_failed">Nu s-au putut obține canalele de YouTube pentru acest cont. Te rugăm să încerci din nou.</string>
     <string name="authentication_data_extraction_failed">Nu s-a putut citi sesiunea de YouTube Music. Te rugăm să încerci din nou.</string>
     <string name="login_failed_with_error">Autentificare eșuată: %1$s</string>
+    <string name="add_to_playlist_position">Poziția adăugării în playlist</string>
+    <string name="playlist_position_beginning">Începutul playlistului</string>
+    <string name="playlist_position_beginning_desc">Melodiile noi adăugate vor apărea înainte de melodiile existente</string>
+    <string name="playlist_position_end">Finalul playlistului</string>
+    <string name="playlist_position_end_desc">Melodiile noi adăugate vor apărea după melodiile existente</string>
+    <string name="playlist_created_locally">Sincronizarea cu YouTube a eșuat. Playlistul a fost creat local.</string>
+    <string name="error_no_internet_connection">Fără conexiune la internet</string>
+    <string name="error_offline_playback">Ești offline. Conectează-te la internet sau redă o piesă descărcată pentru redare offline.</string>
+    <string name="error_explicit_login_recommended">Redarea explicită funcționează cel mai bine cu un cont autentificat.</string>
+    <string name="ai_provider_inception_help">Vizitează https://platform.inceptionlabs.ai pentru chei API</string>
+    <string name="enable_zemer">Activează Zemer</string>
+    <string name="enable_zemer_desc">Versuri pentru muzica evreiască</string>
+    <string name="update_available_message">Metrolist %s este gata de descărcare.</string>
+    <string name="update_action">Actualizează</string>
+    <string name="discord_integration">Integrare Discord</string>
+    <string name="enable_discord_rpc">Activează Rich Presence</string>
 </resources>

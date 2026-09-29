@@ -174,6 +174,26 @@ class PlaylistWidgetManager @Inject constructor(
         }
     }
 
+    fun updateProgress(
+        duration: Long,
+        currentPosition: Long,
+    ) {
+        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val widgetIds = appWidgetManager.getAppWidgetIds(
+            ComponentName(context, PlaylistWidgetReceiver::class.java),
+        )
+        if (widgetIds.isEmpty()) return
+
+        val level = if (duration > 0) {
+            ((currentPosition.toDouble() / duration) * 10000).toInt().coerceIn(0, 10000)
+        } else {
+            0
+        }
+        val views = RemoteViews(context.packageName, R.layout.widget_playlist)
+        views.setInt(R.id.widget_playlist_progress_fill, "setImageLevel", level)
+        appWidgetManager.partiallyUpdateAppWidget(widgetIds, views)
+    }
+
     @OptIn(FlowPreview::class)
     private fun observeQuickPickChanges() {
         combine(

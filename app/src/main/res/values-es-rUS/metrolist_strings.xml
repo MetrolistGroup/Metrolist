@@ -815,8 +815,6 @@
     <string name="discord_error_token_refresh_failed">La sesión de Discord ha caducado. Por favor, vuelve a conectarte.</string>
     <string name="discord_error_invalid_scope">Discord rechazó la conexión. Por favor, vuelve a conectarte y concede el permiso necesario.</string>
     <string name="discord_error_banner_title">Error de Discord</string>
-    <string name="discord_integration">Integración con Discord</string>
-    <string name="enable_discord_rpc">Activar Rich Presence</string>
     <string name="discord_state">Estado</string>
     <string name="discord_details">Detalles</string>
     <string name="discord_enable_button_1">Mostrar botón 1</string>
@@ -861,4 +859,12 @@
     <string name="youtube_channels_failed">No pude recuperar los canales de YouTube de esta cuenta. Por favor, inténtalo de nuevo.</string>
     <string name="authentication_data_extraction_failed">No pude leer la sesión de YouTube Music. Por favor, inténtalo de nuevo.</string>
     <string name="login_failed_with_error">Inicio de sesión fallido: %1$s</string>
+    <string name="add_to_playlist_position">Añadir a la posición de la lista de reproducción</string>
+    <string name="playlist_position_beginning">Inicio de la lista de reproducción</string>
+    <string name="playlist_position_beginning_desc">Las canciones nuevas aparecen antes de las canciones existentes</string>
+    <string name="playlist_position_end">Fin de la lista de reproducción</string>
+    <string name="playlist_position_end_desc">Las canciones nuevas aparecen después de las canciones existentes</string>
+    <string name="error_no_internet_connection">Sin conexión a internet</string>
+    <string name="error_offline_playback">No tienes conexión. Conéctate a internet o reproduce una canción descargada para uso sin conexión.</string>
+    <string name="error_explicit_login_recommended">La reproducción explícita funciona mejor si inicias sesión.</string>
 </resources>

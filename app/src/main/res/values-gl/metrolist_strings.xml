@@ -407,8 +407,6 @@
     <string name="discord_error_invalid_scope">Discord rexeitou a conexión. Por favor, volver a conectarte e concede o permiso solicitado.</string>
     <string name="discord_error_banner_title">Erro de Discord</string>
     <string name="discord_rpc_preview">Vista previa de Rich Presence</string>
-    <string name="discord_integration">Integración con Discord</string>
-    <string name="enable_discord_rpc">Activar Rich Presence</string>
     <string name="discord_advanced_mode">Modo avanzado</string>
     <string name="discord_advanced_mode_description">Amosar opcións adicionais de personalización de Rich Presence</string>
     <string name="discord_presence">Presencia</string>

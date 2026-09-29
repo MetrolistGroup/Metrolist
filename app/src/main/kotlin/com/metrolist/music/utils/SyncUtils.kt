@@ -283,12 +283,14 @@ class SyncUtils @Inject constructor(
     private suspend fun <T> withRetry(
         maxRetries: Int = MAX_RETRIES,
         initialDelay: Long = INITIAL_RETRY_DELAY_MS,
-        block: suspend () -> T
-    ): Result<T> {
+        block: suspend () -> Result<T>
+    ): Result<Result<T>> {
         var currentDelay = initialDelay
         repeat(maxRetries) { attempt ->
             try {
-                return Result.success(block())
+                val result = block()
+                result.getOrThrow()
+                return Result.success(result)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -667,19 +669,10 @@ class SyncUtils @Inject constructor(
                 try {
                     val remoteSongs = page.songs
                     val remoteIds = remoteSongs.map { it.id }.toSet()
-                    val localSongs = database.likedSongEntitiesByNameAsc()
-                    val advertisedCount = page.playlist.songCountText?.filter { it.isDigit() }?.toIntOrNull()
-                    check(advertisedCount == null || remoteSongs.size >= advertisedCount) {
-                        "Liked-song response was incomplete (${remoteSongs.size}/$advertisedCount)"
-                    }
                     val songIdsWithoutArtists = findSongIdsWithoutArtists(remoteIds)
                     val now = LocalDateTime.now()
 
                     database.withTransaction {
-                        localSongs.filterNot { it.id in remoteIds }.forEach { song ->
-                            update(song.localToggleLike())
-                        }
-
                         remoteSongs.forEachIndexed { index, song ->
                             val dbSong = songEntity(song.id)
                             val timestamp = dbSong?.likedDate ?: now.minusSeconds(index.toLong())
@@ -725,15 +718,10 @@ class SyncUtils @Inject constructor(
                 try {
                     val remoteSongs = page.items.filterIsInstance<SongItem>().reversed()
                     val remoteIds = remoteSongs.map { it.id }.toSet()
-                    val localSongs = database.librarySongEntitiesByNameAsc()
                     val songIdsWithoutArtists = findSongIdsWithoutArtists(remoteIds)
                     val now = LocalDateTime.now()
 
                     database.withTransaction {
-                        localSongs.filterNot { it.id in remoteIds }.forEach { song ->
-                            update(song.withLibraryMembership(isInLibrary = false))
-                        }
-
                         remoteSongs.forEachIndexed { index, song ->
                             val dbSong = songEntity(song.id)
                             val timestamp = now.minusSeconds((remoteSongs.lastIndex - index).toLong())
@@ -842,19 +830,6 @@ class SyncUtils @Inject constructor(
             result.onSuccess { page ->
                 try {
                     val remoteAlbums = page.items.filterIsInstance<AlbumItem>().reversed()
-                    val remoteIds = remoteAlbums.map { it.id }.toSet()
-                    val localAlbums = database.likedAlbumEntitiesByNameAsc()
-
-                    if (remoteIds.isNotEmpty()) {
-                        localAlbums.filterNot { it.id in remoteIds }.forEach { album ->
-                            try {
-                                database.update(album.localToggleLike())
-                                delay(DB_OPERATION_DELAY_MS)
-                            } catch (e: Exception) {
-                                Timber.e(e, "Failed to update album: ${album.id}")
-                            }
-                        }
-                    }
 
                     remoteAlbums.forEach { album ->
                         try {

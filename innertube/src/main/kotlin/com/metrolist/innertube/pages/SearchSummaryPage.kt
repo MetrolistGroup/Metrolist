@@ -2,7 +2,6 @@ package com.metrolist.innertube.pages
 
 import com.metrolist.innertube.models.Album
 import com.metrolist.innertube.models.AlbumItem
-import com.metrolist.innertube.models.Artist
 import com.metrolist.innertube.models.ArtistItem
 import com.metrolist.innertube.models.MusicCardShelfRenderer
 import com.metrolist.innertube.models.PlaylistItem
@@ -12,7 +11,6 @@ import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.models.filterExplicit
 import com.metrolist.innertube.models.filterVideoSongs
 import com.metrolist.innertube.models.filterYoutubeShorts
-import com.metrolist.innertube.models.oddElements
 import com.metrolist.innertube.models.splitBySeparator
 import com.metrolist.innertube.utils.parseTime
 
@@ -86,15 +84,9 @@ data class SearchSummaryPage(
                             renderer.title.runs
                                 ?.firstOrNull()
                                 ?.text ?: return null,
-                        artists =
-                            subtitle?.getOrNull(1)?.oddElements()?.map {
-                                Artist(
-                                    name = it.text,
-                                    id = it.navigationEndpoint?.browseEndpoint?.browseId,
-                                )
-                            } ?: return null,
+                        artists = PageHelper.extractArtists(renderer.subtitle.runs),
                         album =
-                            subtitle.getOrNull(2)?.firstOrNull()?.takeIf { it.navigationEndpoint?.browseEndpoint != null }?.let {
+                            subtitle?.getOrNull(2)?.firstOrNull()?.takeIf { it.navigationEndpoint?.browseEndpoint != null }?.let {
                                 Album(
                                     name = it.text,
                                     id = it.navigationEndpoint?.browseEndpoint?.browseId!!,
@@ -102,7 +94,7 @@ data class SearchSummaryPage(
                             },
                         duration =
                             subtitle
-                                .lastOrNull()
+                                ?.lastOrNull()
                                 ?.firstOrNull()
                                 ?.text
                                 ?.parseTime(),
@@ -152,13 +144,7 @@ data class SearchSummaryPage(
                             renderer.title.runs
                                 ?.firstOrNull()
                                 ?.text ?: return null,
-                        artists =
-                            subtitle?.getOrNull(1)?.oddElements()?.map {
-                                Artist(
-                                    name = it.text,
-                                    id = it.navigationEndpoint?.browseEndpoint?.browseId,
-                                )
-                            } ?: return null,
+                        artists = PageHelper.extractArtists(renderer.subtitle.runs),
                         year = null,
                         thumbnail = renderer.thumbnail.getThumbnailUrl() ?: return null,
                         explicit =
@@ -177,11 +163,7 @@ data class SearchSummaryPage(
                             renderer.header?.musicCardShelfHeaderBasicRenderer?.title?.runs
                                 ?.joinToString(separator = "") { it.text }
                                 ?: return null,
-                        author =
-                            Artist(
-                                id = null,
-                                name = renderer.subtitle.runs?.joinToString { it.text } ?: return null,
-                            ),
+                        author = PageHelper.extractArtists(renderer.subtitle.runs).firstOrNull(),
                         songCountText = null,
                         thumbnail = renderer.thumbnail.getThumbnailUrl() ?: return null,
                         playEndpoint =
@@ -209,11 +191,7 @@ data class SearchSummaryPage(
                             renderer.header?.musicCardShelfHeaderBasicRenderer?.title?.runs
                                 ?.joinToString(separator = "") { it.text }
                                 ?: return null,
-                        author =
-                            Artist(
-                                id = null,
-                                name = renderer.subtitle.runs?.joinToString { it.text } ?: return null,
-                            ),
+                        author = PageHelper.extractArtists(renderer.subtitle.runs).firstOrNull(),
                         episodeCountText = null,
                         thumbnail = renderer.thumbnail.getThumbnailUrl() ?: return null,
                         playEndpoint =

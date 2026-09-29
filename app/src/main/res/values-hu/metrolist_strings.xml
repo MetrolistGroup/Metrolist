@@ -816,8 +816,6 @@
     <string name="discord_error_token_refresh_failed">A Discord-munkamenet lejárt. Kérlek, csatlakozz újra.</string>
     <string name="discord_error_invalid_scope">A Discord elutasította a kapcsolódást. Kérlek, csatlakozz újra, és add meg a szükséges engedélyt.</string>
     <string name="discord_error_banner_title">Discord-hiba</string>
-    <string name="discord_integration">Discord-integráció</string>
-    <string name="enable_discord_rpc">Rich Presence engedélyezése</string>
     <string name="discord_state">Állapot</string>
     <string name="discord_details">Részletek</string>
     <string name="discord_enable_button_1">1. gomb megjelenítése</string>

@@ -150,7 +150,7 @@
     <string name="updater">Aggiornamenti</string>
     <string name="check_for_updates">Controlla automaticamente se ci sono aggiornamenti</string>
     <string name="update_notifications">Attiva le notifiche sugli aggiornamenti</string>
-    <string name="update_available_title">Un aggiornamento è disponibile</string>
+    <string name="update_available_title">Nuovo aggiornamento disponibile</string>
     <string name="update_channel_name">Aggiornamenti dell\'app</string>
     <string name="update_channel_desc">Notifiche sulle nuove versioni app</string>
     <string name="enable_scrobbling">Attiva scrobbling</string>
@@ -768,7 +768,7 @@
     <string name="clear_search">Cancella ricerca</string>
     <string name="close_chip">Chiudi</string>
     <string name="switch_to_list_view">Passa alla visualizzazione elenco</string>
-    <string name="switch_to_grid_view">Passa alla visualizzazione griglia</string>
+    <string name="switch_to_grid_view">Passa alla vista griglia</string>
     <string name="more_options">Più opzioni</string>
     <string name="autoplay">Riproduzione automatica</string>
     <string name="autoplay_desc">Riproduci automaticamente il brano successivo al termine di quello corrente</string>
@@ -833,8 +833,6 @@
     <string name="discord_error_token_refresh_failed">La sessione Discord è scaduta. Per favore riconnettiti.</string>
     <string name="discord_error_invalid_scope">Discord ha rifiutato la connessione. Riconnettiti e concedi l\'autorizzazione richiesta.</string>
     <string name="discord_error_banner_title">Errore di Discord</string>
-    <string name="discord_integration">Integrazione Discord</string>
-    <string name="enable_discord_rpc">Abilita Rich Presence</string>
     <string name="discord_state">Stato</string>
     <string name="discord_details">Dettagli</string>
     <string name="discord_enable_button_1">Mostra pulsante 1</string>
@@ -852,8 +850,8 @@
     <string name="android_auto_search_local_songs_limit">Limite di ricerca dei brani</string>
     <string name="android_auto_search_options">Opzioni di ricerca</string>
     <string name="kmp_upgrade_title">Metrolist KMP %s è disponibile</string>
-    <string name="kmp_upgrade_warning">Metrolist KMP è in accesso di anteprima. Le funzionalità potrebbero non essere state correttamente implementate, essere incomplete o modificate senza preavviso.</string>
-    <string name="kmp_upgrade_action">Aggiorna a KMP</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP è ancora in sviluppo. Potresti riscontrare bug o funzionalità incomplete.</string>
+    <string name="kmp_upgrade_action">Prova la versione KMP</string>
     <string name="kmp_upgrade_later">Non ora</string>
     <string name="playlist_position_beginning">Inizio della playlist</string>
     <string name="playlist_position_beginning_desc">I brani appena aggiunti vengono mostrati prima dei brani già presenti</string>
@@ -866,4 +864,16 @@
     <string name="youtube_channels_failed">Impossibile ottenere i canali di YouTube di questo account. Per favore riprova.</string>
     <string name="authentication_data_extraction_failed">Impossibile leggere la sessione di YouTube Music. Per favore riprova.</string>
     <string name="login_failed_with_error">Accesso non riuscito: %1$s</string>
+    <string name="error_explicit_login_recommended">La riproduzione esplicita funziona meglio se si è fatto l\'accesso.</string>
+    <string name="error_offline_playback">Sei disconnesso. Connettiti a internet o riproduci una traccia scaricata per riprodurla offline.</string>
+    <string name="error_no_internet_connection">Nessuna connessione a internet</string>
+    <string name="enable_zemer">Attiva Zemer</string>
+    <string name="enable_zemer_desc">Testi per musica in ebraico</string>
+    <string name="playlist_created_locally">Sincronizzazione con YouTube fallita. La playlist è stata creata localmente.</string>
+    <string name="update_available_message">Metrolist %s è pronto per essere scaricato.</string>
+    <string name="update_action">Aggiorna</string>
+    <string name="ai_provider_inception_help">Visita https://platform.inceptionlabs.ai per ottenere le chiavi API</string>
+    <string name="discord_integration">Integrazione Discord</string>
+    <string name="enable_discord_rpc">Abilita la Rich Presence</string>
+    <string name="force_bottom_navbar">Forza la barra di navigazione in basso</string>
 </resources>

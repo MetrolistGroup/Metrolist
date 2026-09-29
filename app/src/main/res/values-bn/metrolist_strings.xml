@@ -809,4 +809,7 @@
     <string name="discord_status_not_initialized">শুরু করা হয়নি</string>
     <string name="discord_error_loopback_timeout">ডিসকর্ড সময়মতো সাড়া দেয়নি। অনুগ্রহ করে আবার চেষ্টা করুন।</string>
     <string name="discord_error_loopback_unbound">একটি লোকাল কলব্যাক পোর্ট খোলা সম্ভব হয়নি। অনুগ্রহ করে একটি পোর্ট খালি করুন এবং আবার চেষ্টা করুন।</string>
+    <string name="playlist_position_beginning">প্লেলিস্টের শুরু</string>
+    <string name="playlist_position_end">প্লেলিস্ট শেষ</string>
+    <string name="playlist_position_end_desc">নতুন যোগ করা গানগুলো বিদ্যমান গানের পরে প্রদর্শিত হবে</string>
 </resources>

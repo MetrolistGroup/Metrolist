@@ -146,7 +146,7 @@
     <string name="updater">Pembaruan</string>
     <string name="check_for_updates">Periksa pembaruan secara otomatis</string>
     <string name="update_notifications">Aktifkan notifikasi pembaruan</string>
-    <string name="update_available_title">Pembaruan tersedia</string>
+    <string name="update_available_title">Pembaruan baru tersedia</string>
     <string name="integrations">Integrasi</string>
     <string name="lastfm_integration">Integrasi Last.fm</string>
     <string name="username">Username</string>
@@ -802,8 +802,6 @@
     <string name="discord_error_token_refresh_failed">Sesi Discord telah berakhir. Silakan sambungkan kembali.</string>
     <string name="discord_error_invalid_scope">Discord menolak koneksi. Silakan sambungkan kembali dan berikan izin yang diperlukan.</string>
     <string name="discord_error_banner_title">Kesalahan Discord</string>
-    <string name="discord_integration">Integrasi Discord</string>
-    <string name="enable_discord_rpc">Aktifkan Rich Presence</string>
     <string name="discord_state">Status</string>
     <string name="discord_details">Detail</string>
     <string name="discord_enable_button_1">Tampilkan tombol 1</string>
@@ -836,9 +834,9 @@
     <string name="enable_landscape_scaling">Pengukuran landscape</string>
     <string name="enable_dynamic_icon">Warna ikon dinamis</string>
     <string name="kmp_upgrade_title">Metrolist KMP %s sudah tersedia</string>
-    <string name="kmp_upgrade_warning">Metrolist KMP saat ini masih dalam tahap akses awal. Beberapa fitur mungkin belum berfungsi dengan baik, belum lengkap, atau dapat berubah tanpa pemberitahuan sebelumnya.</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP masih dalam pengembangan. Anda mungkin menemui bug atau fitur yang belum lengkap.</string>
     <string name="kmp_upgrade_later">Jangan sekarang</string>
-    <string name="kmp_upgrade_action">Perbarui ke KMP</string>
+    <string name="kmp_upgrade_action">Coba KMP</string>
     <string name="android_auto_search_options">Opsi Pencarian</string>
     <string name="android_auto_search_local_songs_limit">Batas Pencarian Musik</string>
     <string name="android_auto_search_local_songs_limit_desc">Batasi jumlah lagu lokal yang ditampilkan dalam hasil pencarian. Disarankan untuk tidak mengaturnya menjadi tanpa batas agar aplikasi tidak mengalami crash karena kehabisan memori.</string>
@@ -849,4 +847,21 @@
     <string name="choose_youtube_channel">Pilih channel Youtube</string>
     <string name="choose_youtube_channel_description">Akun Google ini memiliki beberapa channel. Pilih channel yang ingin Anda gunakan.</string>
     <string name="youtube_channels_failed">Tidak dapat mengambil saluran YouTube untuk akun ini. Silakan coba lagi.</string>
+    <string name="enable_zemer">Aktifkan Zemer</string>
+    <string name="enable_zemer_desc">Lirik untuk musik Yahudi</string>
+    <string name="add_to_playlist_position">Tambahkan ke posisi daftar putar</string>
+    <string name="playlist_position_beginning">Awal daftar putar</string>
+    <string name="playlist_position_beginning_desc">Lagu yang baru ditambahkan muncul sebelum lagu yang sudah ada</string>
+    <string name="playlist_position_end">Akhir daftar putar</string>
+    <string name="playlist_position_end_desc">Lagu yang baru ditambahkan muncul setelah lagu yang sudah ada</string>
+    <string name="playlist_created_locally">Sinkronisasi YouTube gagal. Daftar putar dibuat secara lokal.</string>
+    <string name="update_available_message">Metrolist %s siap diunduh.</string>
+    <string name="update_action">Perbarui</string>
+    <string name="error_no_internet_connection">Tidak ada koneksi internet</string>
+    <string name="error_offline_playback">Anda sedang offline. Hubungkan ke internet, atau putar trek yang telah diunduh untuk penggunaan offline.</string>
+    <string name="error_explicit_login_recommended">Pemutaran konten eksplisit bekerja lebih baik dengan akun yang sudah login.</string>
+    <string name="ai_provider_inception_help">Kunjungi https://platform.inceptionlabs.ai untuk mendapatkan kunci API</string>
+    <string name="discord_integration">Integrasi Discord</string>
+    <string name="enable_discord_rpc">Aktifkan Rich Presence</string>
+    <string name="force_bottom_navbar">Paksakan bilah navigasi bawah</string>
 </resources>

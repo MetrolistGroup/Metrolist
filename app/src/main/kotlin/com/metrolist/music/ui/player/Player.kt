@@ -67,6 +67,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -1448,9 +1449,14 @@ fun BottomSheetPlayer(
                 }
 
                 SliderStyle.SLIM -> {
+                    val sliderValue = (sliderPosition ?: effectivePosition).toFloat()
+                    val sliderRange = 0f..(if (duration == C.TIME_UNSET) 0f else duration.toFloat())
+                    val sliderState = remember(sliderRange) {
+                        SliderState(value = sliderValue, trackRange = sliderRange)
+                    }
+                    sliderState.value = sliderValue
                     Slider(
-                        value = (sliderPosition ?: effectivePosition).toFloat(),
-                        valueRange = 0f..(if (duration == C.TIME_UNSET) 0f else duration.toFloat()),
+                        state = sliderState,
                         onValueChange = {
                             if (!isListenTogetherGuest) {
                                 sliderPosition = it.toLong()

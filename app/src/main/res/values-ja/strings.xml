@@ -254,14 +254,12 @@
     <string name="backup_create_success">バックアップの作成に成功しました</string>
     <string name="backup_create_failed">バックアップを作成できませんでした</string>
     <string name="restore_failed">バックアップの復元に失敗しました</string>
-    <string name="discord_integration">Discordと連携</string>
     <string name="discord_information">Metrolistは、Discordアカウントのステータスを設定するためにKizzyRPCライブラリを使用しています。Discordのゲートウェイ接続を利用するため、Discordの利用規約に違反する可能性があります。ただし、これを理由にユーザーのアカウントが停止された事例は確認されていません。自己責任で使用してください。\n\nMetrolistはトークンのみを取得し、それ以外の情報はすべてデバイス内に保存されます。</string>
     <string name="dismiss">非表示</string>
     <string name="options">オプション</string>
     <string name="preview">プレビュー</string>
     <string name="login_failed">ログインに失敗しました</string>
     <string name="action_logout">ログアウト</string>
-    <string name="enable_discord_rpc">再生状況を共有</string>
     <string name="about">アプリについて</string>
     <string name="app_version">アプリのバージョン</string>
     <string name="new_version_available">アップデートがあります</string>

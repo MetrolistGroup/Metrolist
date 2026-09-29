@@ -16,7 +16,7 @@ Tính năng:
 - Chuẩn hóa âm thanh
 - Điều chỉnh tốc độ hoặc cao độ
 - Quản lý danh sách phát cục bộ
-- Sắp xếp lại bài hát trong danh sách phát hoặc hàng chờ
+- Sắp xếp lại bài hát trong danh sách phát hoặc danh sách chờ
 - Giao diện Sáng - Tối - Đen - Màu động
 - Hẹn giờ ngủ
 - Thiết kế Material 3

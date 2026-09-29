@@ -11,7 +11,6 @@ import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.PodcastItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.YTItem
-import com.metrolist.innertube.models.oddElements
 import com.metrolist.innertube.models.splitBySeparator
 import com.metrolist.innertube.utils.parseTime
 
@@ -32,7 +31,7 @@ object SearchPage {
                 ?.text
                 ?.runs
                 ?.splitBySeparator()
-                ?: return null
+                .orEmpty()
         return when {
             // CRITICAL: Check isEpisode BEFORE isSong — both can match isSong (watchEndpoint or
             // null navigationEndpoint), so episodes must be identified first.
@@ -142,13 +141,14 @@ object SearchPage {
                             ?.runs
                             ?.firstOrNull()
                             ?.text ?: return null,
-                    artists = artists.ifEmpty { return null },
-                    album = albumRun?.let {
-                        Album(
-                            name = it.text,
-                            id = it.navigationEndpoint?.browseEndpoint?.browseId ?: return@let null,
-                        )
-                    },
+                    artists = artists,
+                    album =
+                        albumRun?.let {
+                            Album(
+                                name = it.text,
+                                id = it.navigationEndpoint?.browseEndpoint?.browseId ?: return@let null,
+                            )
+                        },
                     duration = PageHelper.extractDuration(metadataRuns),
                     musicVideoType = renderer.musicVideoType,
                     thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: return null,
@@ -240,13 +240,7 @@ object SearchPage {
                             ?.runs
                             ?.firstOrNull()
                             ?.text ?: return null,
-                    artists =
-                        secondaryLine.getOrNull(1)?.oddElements()?.map {
-                            Artist(
-                                name = it.text,
-                                id = it.navigationEndpoint?.browseEndpoint?.browseId,
-                            )
-                        } ?: return null,
+                    artists = PageHelper.extractArtists(secondaryLine.getOrNull(1)),
                     year =
                         secondaryLine
                             .getOrNull(2)
@@ -276,11 +270,16 @@ object SearchPage {
                             ?.firstOrNull()
                             ?.text ?: return null,
                     author =
-                        PageHelper.extractArtists(
-                            renderer.flexColumns
-                                .drop(1)
-                                .flatMap { it.musicResponsiveListItemFlexColumnRenderer.text?.runs.orEmpty() },
-                        ).firstOrNull() ?: return null,
+                        PageHelper
+                            .extractArtists(
+                                renderer.flexColumns
+                                    .drop(1)
+                                    .flatMap {
+                                        it.musicResponsiveListItemFlexColumnRenderer.text
+                                            ?.runs
+                                            .orEmpty()
+                                    },
+                            ).firstOrNull(),
                     songCountText =
                         renderer.flexColumns
                             .getOrNull(1)

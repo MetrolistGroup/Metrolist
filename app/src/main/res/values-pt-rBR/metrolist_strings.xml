@@ -97,7 +97,7 @@
     <string name="background_color">Cor de fundo</string>
     <string name="auto_download_on_like">Baixar automaticamente ao curtir</string>
     <string name="auto_download_on_like_desc">Baixa músicas automaticamente quando você as curte</string>
-    <string name="please_wait">Por favor aguarde</string>
+    <string name="please_wait">Por favor, aguarde</string>
     <string name="generating_image">Gerando imagem…</string>
     <string name="lyrics_auto_scroll">Rolar letra automaticamente</string>
     <string name="import_online">Importar uma playlist M3U</string>
@@ -150,7 +150,7 @@
     <string name="updater">Atualizador</string>
     <string name="check_for_updates">Conferir se há atualizações automaticamente</string>
     <string name="update_notifications">Ativar notificações de atualizações</string>
-    <string name="update_available_title">Atualização disponível</string>
+    <string name="update_available_title">Nova atualização disponível</string>
     <string name="update_channel_name">Atualizações do aplicativo</string>
     <string name="update_channel_desc">Notificações sobre novas versões do app</string>
     <string name="integrations">Integrações</string>
@@ -815,12 +815,10 @@
     <string name="discord_error_token_refresh_failed">A sessão do Discord expirou. Reconecte-se.</string>
     <string name="discord_error_invalid_scope">Discord recusou a conexão. Conecte-se novamente e conceda a permissão necessária.</string>
     <string name="discord_error_banner_title">Erro do Discord</string>
-    <string name="discord_integration">Integração com Discord</string>
     <string name="not_applicable">N/A</string>
     <string name="enable_dynamic_icon_desc">Usa cores dinâmicas do tema no ícone do app. Quando desabilitado, o ícone usa cores sólidas.</string>
     <string name="enable_landscape_scaling">Escala No Modo Paisagem</string>
     <string name="enable_landscape_scaling_desc">Escala a interface no modo paisagem para telas maiores</string>
-    <string name="enable_discord_rpc">Habilitar Rich Presence</string>
     <string name="discord_state">Estado</string>
     <string name="format_cipher_support_added">Suporte a criptografia adicionado</string>
     <string name="discord_details">Detalhes</string>
@@ -850,8 +848,8 @@
     <string name="android_auto_search_options">Opções de pesquisa</string>
     <string name="android_auto_search_local_songs_limit">limite de pesquisa de músicas</string>
     <string name="kmp_upgrade_title">Metrolist KMP %s está disponível</string>
-    <string name="kmp_upgrade_warning">O Metrolist KMP está em acesso antecipado. Funcionalidades podem estar quebradas, incompletas ou sofrer alterações sem aviso prévio.</string>
-    <string name="kmp_upgrade_action">Atualizar para KMP</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP ainda está em desenvolvimento. Você pode encontrar bugs ou recursos incompletos.</string>
+    <string name="kmp_upgrade_action">Tentar KMP</string>
     <string name="android_auto_search_local_songs_limit_desc">Limite o número de músicas locais exibidas nos resultados da pesquisa. Recomenda-se não definir como ilimitado para evitar travamentos de memória</string>
     <string name="stream_source_visionos_desc">Apple Vision. Sem limitação de velocidade; muito confiável.</string>
     <string name="stream_source_web_creator_desc">Cliente web do Creator.</string>
@@ -866,4 +864,15 @@
     <string name="playlist_position_beginning_desc">Músicas recém-adicionadas aparecem antes das existentes</string>
     <string name="playlist_position_end">Fim da playlist</string>
     <string name="playlist_position_end_desc">Músicas recém-adicionadas aparecem depois das existentes</string>
+    <string name="error_no_internet_connection">Sem conexão com a internet</string>
+    <string name="error_offline_playback">Você está offline. Conecte-se à internet ou reproduza uma faixa baixada para uso offline.</string>
+    <string name="error_explicit_login_recommended">A reprodução de conteúdo explícito funciona melhor com uma conta conectada.</string>
+    <string name="playlist_created_locally">Sincronização do YouTube falhou. Playlist criada localmente.</string>
+    <string name="update_action">Atualizar</string>
+    <string name="ai_provider_inception_help">Visite https://platform.inceptionlabs.ai para chave API</string>
+    <string name="enable_zemer">Ativar Zemer</string>
+    <string name="enable_zemer_desc">Letras por Jewish music</string>
+    <string name="update_available_message">Metrolist %s está pronto para download.</string>
+    <string name="discord_integration">Integração com o Discord</string>
+    <string name="enable_discord_rpc">Habilitar o Rich Presence</string>
 </resources>

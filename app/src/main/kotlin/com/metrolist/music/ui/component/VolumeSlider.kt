@@ -20,6 +20,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.rememberSliderState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -60,6 +61,8 @@ fun VolumeSlider(
     accentColor: Color = MaterialTheme.colorScheme.primary
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val sliderState = rememberSliderState(value = value)
+    sliderState.value = value
 
     val volumeOffIcon = painterResource(R.drawable.volume_off)
     val volumeMuteIcon = painterResource(R.drawable.volume_mute)
@@ -84,11 +87,10 @@ fun VolumeSlider(
     val stopIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     Slider(
-        value = value,
+        state = sliderState,
         onValueChange = onValueChange,
         modifier = modifier,
         enabled = enabled,
-        valueRange = 0f..1f,
         onValueChangeFinished = onValueChangeFinished,
         colors = colors,
         interactionSource = interactionSource,

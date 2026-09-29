@@ -650,8 +650,6 @@
     <string name="discord_error_invalid_scope">Discord отказа връзката. Моля свържете се отново и разрешете желаното право.</string>
     <string name="discord_error_banner_title">Discord грешка</string>
     <string name="discord_rpc_preview">Преглед на Rich Presence</string>
-    <string name="discord_integration">Discord интеграция</string>
-    <string name="enable_discord_rpc">­Включи Rich Presence</string>
     <string name="discord_advanced_mode">Разширен режим</string>
     <string name="discord_advanced_mode_description">Персонализирай всяко поле във вашият Rich Presence с запълващи елементи</string>
     <string name="discord_presence">Състояние</string>

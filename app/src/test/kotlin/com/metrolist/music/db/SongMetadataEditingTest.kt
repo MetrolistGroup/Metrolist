@@ -13,6 +13,7 @@ import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.Artist
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.pages.AlbumPage
+import com.metrolist.music.db.entities.AlbumArtistMap
 import com.metrolist.music.db.entities.AlbumEntity
 import com.metrolist.music.db.entities.ArtistEntity
 import com.metrolist.music.db.entities.SongArtistMap
@@ -88,6 +89,103 @@ class SongMetadataEditingTest {
             assertEquals("Edited title", refreshedSong.song.title)
             assertEquals(200, refreshedSong.song.duration)
             assertEquals(listOf("edited-artist"), refreshedSong.orderedArtists.map { it.id })
+        }
+
+    @Test
+    fun `album refresh without trusted credits preserves existing artist associations`() =
+        runBlocking {
+            val artist = ArtistEntity(id = "saved-artist", name = "Saved artist")
+            val album = AlbumEntity(id = "album", title = "Album", songCount = 1, duration = 100)
+            database.dao.insert(artist)
+            database.dao.insert(album)
+            database.dao.insert(SongEntity(id = "song", title = "Song", duration = 100))
+            database.dao.insert(SongArtistMap(songId = "song", artistId = artist.id, position = 0))
+            database.dao.insert(AlbumArtistMap(albumId = album.id, artistId = artist.id, order = 0))
+
+            database.dao.update(
+                album = album,
+                artists = listOf(artist),
+                albumPage =
+                    AlbumPage(
+                        album =
+                            AlbumItem(
+                                browseId = album.id,
+                                playlistId = "playlist",
+                                title = "Album",
+                                artists = null,
+                                thumbnail = "thumbnail",
+                            ),
+                        songs =
+                            listOf(
+                                SongItem(
+                                    id = "song",
+                                    title = "Song",
+                                    artists = emptyList(),
+                                    album = Album("Album", album.id),
+                                    duration = 100,
+                                    thumbnail = "thumbnail",
+                                ),
+                            ),
+                        otherVersions = emptyList(),
+                    ),
+            )
+
+            assertEquals("Saved artist", database.dao.getArtistById(artist.id)?.name)
+            assertEquals(listOf(artist.id), database.dao.albumArtistMaps(album.id).map { it.artistId })
+            assertEquals(
+                listOf(artist.id),
+                database.dao
+                    .song("song")
+                    .first()!!
+                    .orderedArtists
+                    .map { it.id },
+            )
+        }
+
+    @Test
+    fun `partial album credits do not delete shared artist entities`() =
+        runBlocking {
+            val primary = ArtistEntity(id = "primary", name = "Primary")
+            val featured = ArtistEntity(id = "featured", name = "Featured")
+            val album = AlbumEntity(id = "album", title = "Album", songCount = 1, duration = 100)
+            val otherAlbum = AlbumEntity(id = "other-album", title = "Other album", songCount = 0, duration = 0)
+            listOf(primary, featured).forEach(database.dao::insert)
+            listOf(album, otherAlbum).forEach(database.dao::insert)
+            database.dao.insert(SongEntity(id = "shared-song", title = "Shared song"))
+            database.dao.insert(SongArtistMap(songId = "shared-song", artistId = featured.id, position = 0))
+            database.dao.insert(AlbumArtistMap(albumId = album.id, artistId = primary.id, order = 0))
+            database.dao.insert(AlbumArtistMap(albumId = album.id, artistId = featured.id, order = 1))
+            database.dao.insert(AlbumArtistMap(albumId = otherAlbum.id, artistId = featured.id, order = 0))
+
+            database.dao.update(
+                album = album,
+                artists = listOf(primary, featured),
+                albumPage =
+                    AlbumPage(
+                        album =
+                            AlbumItem(
+                                browseId = album.id,
+                                playlistId = "playlist",
+                                title = "Album",
+                                artists = listOf(Artist("Primary", primary.id)),
+                                thumbnail = "thumbnail",
+                            ),
+                        songs = emptyList(),
+                        otherVersions = emptyList(),
+                    ),
+            )
+
+            assertEquals("Featured", database.dao.getArtistById(featured.id)?.name)
+            assertEquals(listOf(primary.id), database.dao.albumArtistMaps(album.id).map { it.artistId })
+            assertEquals(listOf(featured.id), database.dao.albumArtistMaps(otherAlbum.id).map { it.artistId })
+            assertEquals(
+                listOf(featured.id),
+                database.dao
+                    .song("shared-song")
+                    .first()!!
+                    .orderedArtists
+                    .map { it.id },
+            )
         }
 
     @Test

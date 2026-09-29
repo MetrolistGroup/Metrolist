@@ -798,8 +798,6 @@
     <string name="discord_error_token_refresh_failed">เซสชัน Discord หมดอายุแล้ว โปรดเชื่อมต่อใหม่</string>
     <string name="discord_error_invalid_scope">Discord ปฏิเสธการเชื่อมต่อ โปรดเชื่อมต่อใหม่และอนุญาตสิทธิ์ที่จำเป็น</string>
     <string name="discord_error_banner_title">ข้อผิดพลาดของ Discord</string>
-    <string name="discord_integration">การเชื่อมต่อกับ Discord</string>
-    <string name="enable_discord_rpc">เปิดใช้งาน Rich Presence</string>
     <string name="discord_state">สถานะ</string>
     <string name="discord_details">รายละเอียด</string>
     <string name="discord_enable_button_1">แสดงปุ่มที่ 1</string>

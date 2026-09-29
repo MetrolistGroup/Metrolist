@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="liked">Geliket</string>
+    <string name="liked">Favoriten</string>
     <string name="offline">Heruntergeladen</string>
     <string name="my_top">Meine Top</string>
     <string name="select">Alles auswählen</string>
@@ -62,7 +62,7 @@
     <string name="charts">Charts</string>
     <string name="years">Jahre</string>
     <string name="weeks">Wochen</string>
-    <string name="remote_history">Fern</string>
+    <string name="remote_history">YTM-Verlauf</string>
     <string name="sync_playlist">Playlist synchronisieren</string>
     <string name="back_button_desc">Zurück</string>
     <string name="continuous">Fortlaufend</string>
@@ -148,7 +148,7 @@
     <string name="updater">Updater</string>
     <string name="check_for_updates">Automatisch nach Updates prüfen</string>
     <string name="update_notifications">Benachrichtigungen zu Updates erhalten</string>
-    <string name="update_available_title">Update verfügbar</string>
+    <string name="update_available_title">Neues Update verfügbar</string>
     <string name="update_channel_name">App-Updates</string>
     <string name="update_channel_desc">Benachrichtigungen über neue App Versionen</string>
     <string name="integrations">Integrationen</string>
@@ -808,8 +808,6 @@
     <string name="discord_error_token_refresh_failed">Die Discord-Sitzung ist abgelaufen. Bitte stelle die Verbindung erneut her.</string>
     <string name="discord_error_invalid_scope">Discord hat die Verbindung abgelehnt. Bitte stelle die Verbindung erneut her und erteile die erforderliche Berechtigung.</string>
     <string name="discord_error_banner_title">Discord-Fehler</string>
-    <string name="discord_integration">Discord-Integration</string>
-    <string name="enable_discord_rpc">„Rich Presence“ aktivieren</string>
     <string name="discord_state">Status</string>
     <string name="discord_details">Details</string>
     <string name="discord_enable_button_1">Schaltfläche 1 anzeigen</string>
@@ -842,8 +840,8 @@
     <string name="enable_dynamic_icon_desc">Verwenden Sie dynamische Designfarben für das App-Symbol. Wenn diese Option deaktiviert ist, wird das Symbol in Volltonfarben angezeigt.</string>
     <string name="enable_landscape_scaling">Skalierung im Querformat</string>
     <string name="kmp_upgrade_title">Metrolist KMP %s ist verfügbar</string>
-    <string name="kmp_upgrade_warning">Metrolist KMP befindet sich in der Früh-Zugangs-Phase. Funktionen können fehlerhaft oder unvollständig sein oder sich ohne Vorankündigung ändern.</string>
-    <string name="kmp_upgrade_action">Auf KMP aktualisieren</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP befindet sich noch in der Entwicklung. Es kann zu Fehlern oder unvollständigen Funktionen kommen.</string>
+    <string name="kmp_upgrade_action">Probieren Sie KMP aus</string>
     <string name="kmp_upgrade_later">Nicht jetzt</string>
     <string name="android_auto_search_options">Suchoptionen</string>
     <string name="android_auto_search_local_songs_limit">Suchlimit für Songs</string>
@@ -855,4 +853,21 @@
     <string name="youtube_channels_failed">Infos für den YouTube-Kanal konnten nicht aufgerufen werden. Bitte probiere es nochmal.</string>
     <string name="authentication_data_extraction_failed">Die YouTube Music-Sitzung konnte nicht gelesen werden. Bitte versuche es nochmal.</string>
     <string name="login_failed_with_error">Fehler bei der Anmeldung: %1$s</string>
+    <string name="add_to_playlist_position">Zur Playlist hinzufügen – Position</string>
+    <string name="playlist_position_beginning">Am Anfang der Playlist</string>
+    <string name="playlist_position_beginning_desc">Neu hinzugefügte Songs werden vor den bereits vorhandenen Songs angezeigt</string>
+    <string name="playlist_position_end">Am Ende der Playlist</string>
+    <string name="playlist_position_end_desc">Neu hinzugefügte Songs erscheinen hinter den bereits vorhandenen Songs</string>
+    <string name="error_explicit_login_recommended">Die Wiedergabe expliziter Songs funktioniert besser, wenn Sie bei einem Konto angemeldet sind.</string>
+    <string name="error_no_internet_connection">Keine Internet Verbindung</string>
+    <string name="error_offline_playback">Du bist offline. Verbinde dich mit dem Internet oder spiele ein heruntergelades Lied ab.</string>
+    <string name="enable_zemer_desc">Songtexte für jüdische Musik</string>
+    <string name="playlist_created_locally">YouTube-Synchronisierung fehlgeschlagen. Playlist lokal erstellt.</string>
+    <string name="update_available_message">Metrolist %s steht zum Download bereit.</string>
+    <string name="update_action">Update</string>
+    <string name="ai_provider_inception_help">Für API-Schlüssel, besuche: https://platform.inceptionlabs.ai</string>
+    <string name="enable_zemer">Zemer aktivieren</string>
+    <string name="discord_integration">Discord-Integration</string>
+    <string name="enable_discord_rpc">„Rich Presence“ aktivieren</string>
+    <string name="force_bottom_navbar">Navigationsleiste unten erzwingen</string>
 </resources>

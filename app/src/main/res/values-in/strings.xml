@@ -262,11 +262,9 @@
     <string name="disable_screenshot">Nonaktifkan tangkapan layar</string>
     <string name="disable_screenshot_desc">Saat opsi ini aktif, tangkapan layar dan tampilan aplikasi pada daftar Aplikasi Terkini akan dinonaktifkan.</string>
     <string name="enable_lrclib">Aktifkan penyedia lirik LrcLib</string>
-    <string name="discord_integration">Integrasi Discord</string>
     <string name="discord_information">Metrolist menggunakan library KizzyRPC untuk mengatur status akun Discord Anda. Hal ini melibatkan penggunaan koneksi Discord Gateway, yang dapat dianggap sebagai pelanggaran TOS Discord. Namun, tidak ada kasus yang diketahui tentang akun pengguna yang ditangguhkan karena alasan ini. Gunakan dengan risiko Anda sendiri.\n\nMetrolist hanya akan mengekstrak token Anda, dan semua data lainnya disimpan secara lokal.</string>
     <string name="dismiss">Tutup</string>
     <string name="preview">Pratinjau</string>
-    <string name="enable_discord_rpc">Aktifkan Rich Presence</string>
     <string name="use_login_for_browse">Login untuk menjelajahi konten</string>
     <string name="use_login_for_browse_desc">Ini dapat memengaruhi konten yang Anda lihat dan misalnya menampilkan album khusus premium jika Anda login dengan akun Premium</string>
     <string name="action_login">Masuk</string>
