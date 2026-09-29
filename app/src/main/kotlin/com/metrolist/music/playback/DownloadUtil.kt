@@ -59,6 +59,7 @@ import timber.log.Timber
 import java.io.IOException
 import java.time.LocalDateTime
 import java.util.concurrent.Executor
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -90,6 +91,15 @@ constructor(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val downloadPreparations = Semaphore(3)
+
+    /**
+     * Bumped when the user clears all downloads so in-flight STATE_COMPLETED handlers
+     * do not re-set isDownloaded after metadata was wiped.
+     */
+    private val clearDownloadsGeneration = AtomicLong(0)
+
+    /** Call before bulk-removing downloads / clearing download metadata. */
+    fun beginClearAllDownloads(): Long = clearDownloadsGeneration.incrementAndGet()
 
     val downloads = MutableStateFlow<Map<String, Download>>(emptyMap())
 
@@ -256,8 +266,16 @@ constructor(
                         scope.launch {
                             when (download.state) {
                                 Download.STATE_COMPLETED -> {
-                                    removeFromPlayerCache(download.request.id)
-                                    database.updateDownloadedInfo(download.request.id, true, LocalDateTime.now())
+                                    val generation = clearDownloadsGeneration.get()
+                                    val songId = download.request.id
+                                    removeFromPlayerCache(songId)
+                                    // Skip if a clear-all started after this completion was observed.
+                                    if (clearDownloadsGeneration.get() != generation) return@launch
+                                    database.updateDownloadedInfo(songId, true, LocalDateTime.now())
+                                    // Undo if clear-all raced past the check above.
+                                    if (clearDownloadsGeneration.get() != generation) {
+                                        database.updateDownloadedInfo(songId, false, null)
+                                    }
                                 }
                                 Download.STATE_FAILED,
                                 Download.STATE_STOPPED,

@@ -68,6 +68,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import okio.ByteString.Companion.encodeUtf8
+import timber.log.Timber
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -178,17 +179,29 @@ fun StorageSettings(
             onDismiss = { clearDownloads = false },
             onConfirm = {
                 coroutineScope.launch(Dispatchers.IO) {
-                    // Prefer DownloadManager so Listener.onDownloadRemoved clears flags.
-                    downloadUtil.downloads.value.keys.toList().forEach { id ->
-                        downloadUtil.downloadManager.removeDownload(id)
+                    // Invalidate in-flight completion callbacks before removing resources.
+                    downloadUtil.beginClearAllDownloads()
+                    try {
+                        // Prefer DownloadManager so Listener.onDownloadRemoved clears flags.
+                        downloadUtil.downloads.value.keys.toList().forEach { id ->
+                            runCatching {
+                                downloadUtil.downloadManager.removeDownload(id)
+                            }.onFailure { error ->
+                                Timber.e(error, "Failed to remove download %s", id)
+                            }
+                        }
+                        // Wipe any remaining SimpleCache keys (orphans not tracked by DownloadManager).
+                        downloadCache.keys.forEach { key ->
+                            runCatching {
+                                downloadCache.removeResource(key)
+                            }.onFailure { error ->
+                                Timber.e(error, "Failed to remove download cache key %s", key)
+                            }
+                        }
+                    } finally {
+                        // Always reset Room download flags even if a removal threw (issue #833).
+                        database.clearAllDownloadedInfo()
                     }
-                    // Wipe any remaining SimpleCache keys (orphans not tracked by DownloadManager).
-                    downloadCache.keys.forEach { key ->
-                        downloadCache.removeResource(key)
-                    }
-                    // Ensure Room isDownloaded/dateDownload flags are cleared even if
-                    // removeResource alone skipped DownloadManager listeners (issue #833).
-                    database.clearAllDownloadedInfo()
                 }
                 clearDownloads = false
             },
