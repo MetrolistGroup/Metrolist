@@ -264,4 +264,26 @@ class PlaylistSyncTest {
             ),
         )
     }
+
+    @Test
+    fun `pending duplicate is preserved when a confirmed copy still exists remotely`() {
+        assertEquals(
+            listOf(localMap("x", 0)),
+            preservedLocalSongs(
+                listOf(localMap("x", 0), localMap("x", 1, "set-old")),
+                listOf("x"),
+            ),
+        )
+    }
+
+    @Test
+    fun `pending and confirmed duplicates are both handled when remote has none`() {
+        assertEquals(
+            listOf(localMap("x", 0)),
+            preservedLocalSongs(
+                listOf(localMap("x", 0), localMap("x", 1, "set-old")),
+                emptyList(),
+            ),
+        )
+    }
 }

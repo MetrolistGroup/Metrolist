@@ -106,15 +106,22 @@ internal fun isGenuineEmptyPlaylist(page: PlaylistPage): Boolean {
  * Decides which local rows survive a playlist sync. A local song absent from the
  * remote playlist is kept only when it was never confirmed remotely (null
  * setVideoId, i.e. a pending local addition); a confirmed song deleted on YouTube
- * is dropped so the deletion propagates.
+ * is dropped so the deletion propagates. Confirmed rows claim remote occurrences
+ * before pending ones, so a pending duplicate can never consume the occurrence
+ * that belongs to a confirmed copy.
  */
 internal fun preservedLocalSongs(
     localSongs: List<PlaylistSongMap>,
     remoteIds: List<String>,
-): List<PlaylistSongMap> =
-    localSongIndexesAbsentFromRemote(localSongs.map { it.songId }, remoteIds)
+): List<PlaylistSongMap> {
+    // Rows with a setVideoId come first (false sorts before true).
+    val claimOrder = localSongs.indices.sortedBy { localSongs[it].setVideoId == null }
+    return localSongIndexesAbsentFromRemote(claimOrder.map { localSongs[it].songId }, remoteIds)
+        .map { claimOrder[it] }
+        .sorted() // back to playlist order, so preserved rows keep their relative positions
         .map(localSongs::get)
         .filter { it.setVideoId == null }
+}
 
 /**
  * Positional backfill of YouTube setVideoIds for playlists whose local and remote
