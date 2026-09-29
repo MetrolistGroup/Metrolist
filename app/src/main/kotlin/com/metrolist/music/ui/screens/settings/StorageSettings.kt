@@ -208,11 +208,14 @@ fun StorageSettings(
                             stillPresent.take(8),
                         )
                     }
-                    // Wipe download SimpleCache. Orphan keys (no DM entry) are always safe;
-                    // keys still present after timeout are left so a stuck DM entry keeps its file.
-                    val dmIds = downloadUtil.downloads.value.keys
+                    // Single post-wait snapshot of DownloadManager ids for BOTH cache wipe and
+                    // Room keep-set. Using two snapshots raced: a download started after the
+                    // first snapshot could lose its cache file then keep isDownloaded.
+                    val liveDmIds = downloadUtil.downloads.value.keys.toSet()
+                    // Wipe SimpleCache only for keys not in the live DM (removed or orphan).
+                    // Timed-out and in-flight/new downloads keep their files.
                     downloadCache.keys.toList().forEach { key ->
-                        if (key !in dmIds) {
+                        if (key !in liveDmIds) {
                             runCatching {
                                 downloadCache.removeResource(key)
                             }.onFailure { error ->
@@ -220,13 +223,9 @@ fun StorageSettings(
                             }
                         }
                     }
-                    // Room flags: clear isDownloaded=1 except ids still in DownloadManager.
-                    // That keeps (a) timed-out removes that still have files, and (b) downloads
-                    // started during clear-all that finished before this reset — without wiping
-                    // their flags while DM still holds the completed entry.
+                    // Room: clear isDownloaded=1 except live DM ids (same snapshot as cache).
                     // Cache Playlist rows (isDownloaded=0) are never touched.
-                    val keepIds = downloadUtil.downloads.value.keys
-                    downloadUtil.clearDownloadedInfoExceptLocked(keepIds)
+                    downloadUtil.clearDownloadedInfoExceptLocked(liveDmIds)
                 }
                 clearDownloads = false
             },
