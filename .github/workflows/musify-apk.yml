@@ -1,0 +1,74 @@
+name: Build Musify APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - "app/**"
+      - "gradle/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
+      - "gradlew"
+      - ".github/workflows/musify-apk.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: musify-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    name: Build Android APKs
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Build Musify APKs
+        run: ./gradlew --no-daemon --console=plain assembleGmsDebug assembleGmsRelease --warning-mode summary
+        env:
+          METROLIST_APPLICATION_ID: exe.musify.app
+          METROLIST_APP_NAME: Musify
+          METROLIST_BUILD_COMMIT: ${{ github.sha }}
+          PULL_REQUEST: "false"
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+
+      - name: Prepare APK artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          DEBUG_APK="$(find app/build/outputs/apk/gms/debug -maxdepth 1 -type f -name '*.apk' ! -name '*-androidTest*.apk' | head -n 1)"
+          RELEASE_APK="$(find app/build/outputs/apk/gms/release -maxdepth 1 -type f -name '*.apk' ! -name '*-androidTest*.apk' | head -n 1)"
+          test -n "$DEBUG_APK"
+          test -n "$RELEASE_APK"
+          cp "$DEBUG_APK" artifacts/Musify-debug.apk
+          cp "$RELEASE_APK" artifacts/Musify-release-unsigned.apk
+          sha256sum artifacts/*.apk | tee artifacts/SHA256SUMS.txt
+
+      - name: Upload Musify APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: Musify-APKs
+          path: artifacts/*
+          if-no-files-found: error
+          retention-days: 14
