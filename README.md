@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="fastlane/metadata/android/en-US/images/icon.png" alt="Metrolist app icon" width="200" />
+<img src="assets/musify-logo.svg" alt="Musify app icon" width="200" />
 
-# Metrolist
+# Musify
 
 ### YouTube Music client for Android
 
@@ -15,9 +15,9 @@
 <br/>
 <br/>
 
-[![Latest release](https://img.shields.io/github/v/release/MetrolistGroup/Metrolist?style=for-the-badge&labelColor=0d1117)](https://github.com/MetrolistGroup/Metrolist/releases)
-[![License](https://img.shields.io/github/license/MetrolistGroup/metrolist?style=for-the-badge&labelColor=0d1117)](https://github.com/MetrolistGroup/Metrolist/blob/main/LICENSE)
-[![Downloads](https://img.shields.io/github/downloads/MetrolistGroup/Metrolist/total?style=for-the-badge&labelColor=0d1117)](https://github.com/MetrolistGroup/Metrolist/releases)
+[![Latest release](https://img.shields.io/github/v/release/RahulExe69/Musify?style=for-the-badge&labelColor=0d1117)](https://github.com/RahulExe69/Musify/releases)
+[![License](https://img.shields.io/github/license/RahulExe69/Musify?style=for-the-badge&labelColor=0d1117)](https://github.com/RahulExe69/Musify/blob/main/LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/RahulExe69/Musify/total?style=for-the-badge&labelColor=0d1117)](https://github.com/RahulExe69/Musify/releases)
 
 <br/>
 
@@ -32,8 +32,8 @@
 
 > [!WARNING]
 > # MAINTENANCE MODE
-> Metrolist is currently in maintenance mode. This means we will only be fixing bugs and making minor improvements. Please do not submit PRs for new features or major changes, as they will not be accepted.  
-> The app is **NOT** dead, please stay tuned for updates on our discord (found above).
+> Musify currently follows the upstream Metrolist maintenance baseline. This means we will only be fixing bugs and making minor improvements. Please do not submit PRs for new features or major changes, as they will not be accepted.  
+> Musify is a rebranded fork of Metrolist. Upstream community links are retained where they are still relevant.
 
 > [!WARNING]
 > **Regional Restriction** - If YouTube Music is unavailable in your region, this app will not work without a **VPN or proxy** connecting to a supported region.
@@ -141,13 +141,13 @@
   </tr>
   <tr>
     <td align="center">
-      <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/MetrolistGroup/Metrolist/">
-        <img src="assets/badges/obtainium.svg" alt="Add Metrolist to Obtainium" height="100">
+      <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/RahulExe69/Musify/">
+        <img src="assets/badges/obtainium.svg" alt="Add Musify to Obtainium" height="100">
       </a>
     </td>
     <td align="center">
-      <a href="https://apt.izzysoft.de/fdroid/index/apk/com.metrolist.music">
-        <img src="assets/badges/izzyondroid.svg" alt="Get Metrolist on IzzyOnDroid" height="100">
+      <a href="https://github.com/RahulExe69/Musify/releases">
+        <img src="assets/badges/izzyondroid.svg" alt="See Musify releases on GitHub" height="100">
       </a>
     </td>
   </tr>
@@ -157,13 +157,13 @@
   </tr>
   <tr>
     <td align="center">
-      <a href="https://www.openapk.net/metrolist/com.metrolist.music/">
-        <img src="assets/badges/openapk.svg" alt="Get Metrolist on OpenAPK" height="100">
+      <a href="https://github.com/RahulExe69/Musify/releases">
+        <img src="assets/badges/openapk.svg" alt="See Musify releases on GitHub" height="100">
       </a>
     </td>
     <td align="center">
-      <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest/download/Metrolist.apk">
-        <img src="assets/badges/github-stable.svg" alt="Get the stable Metrolist release on GitHub" height="100">
+      <a href="https://github.com/RahulExe69/Musify/releases/latest/download/Musify.apk">
+        <img src="assets/badges/github-stable.svg" alt="Get the stable Musify release on GitHub" height="100">
       </a>
     </td>
   </tr>
@@ -177,8 +177,8 @@
   </tr>
   <tr>
     <td align="center">
-      <a href="https://github.com/MetrolistGroup/Metrolist/releases/download/nightly/Metrolist-with-Google-Cast.apk">
-        <img src="assets/badges/github-nightly.svg" alt="Get the Metrolist nightly build on GitHub" height="120">
+      <a href="https://github.com/RahulExe69/Musify/releases/download/nightly/Musify-with-Google-Cast.apk">
+        <img src="assets/badges/github-nightly.svg" alt="Get the Musify nightly build on GitHub" height="120">
       </a>
     </td>
   </tr>
@@ -204,13 +204,13 @@
 
 [![Translation status](https://img.shields.io/weblate/progress/metrolist?style=for-the-badge&labelColor=0d1117)](https://hosted.weblate.org/engage/metrolist/)
 
-<h3>We use Weblate to translate Metrolist. <a href="https://hosted.weblate.org/projects/Metrolist/">Help us bring Metrolist to more people!</a></h3>
+<h3>Translations currently use the upstream Weblate project for Metrolist. <a href="https://hosted.weblate.org/projects/Metrolist/">Help us bring Metrolist to more people!</a></h3>
 
 <a href="https://hosted.weblate.org/projects/Metrolist/">
   <img src="https://hosted.weblate.org/widget/Metrolist/horizontal-auto.svg" alt="Translation status" />
 </a>
 
-<h3>Thank you! Every translation makes Metrolist a little more accessible to someone, somewhere in the world.</h3>
+<h3>Thank you! Every translation helps make the Musify/Metrolist codebase more accessible.</h3>
 
 </div>
 
@@ -220,7 +220,7 @@
 
 <h1><a id="support-the-project"></a>Support the Project</h1>
 
-<h3>Metrolist is free and open-source. If it brings you joy, consider supporting its development!</h3>
+<h3>Musify is a free and open-source rebranded fork of Metrolist.</h3>
 
 #### Monero (XMR)
 
@@ -244,7 +244,7 @@
 
 <h1>Special Thanks</h1>
 
-<h3>Metrolist stands on the shoulders of incredible open-source work.</h3>
+<h3>Musify builds on the open-source Metrolist project and its upstream dependencies.</h3>
 
 <h3>Main Inspirations</h3>
 
@@ -318,8 +318,8 @@
 
 <h3>This project wouldn't exist without these amazing people!</h3>
 
-<a href="https://github.com/MetrolistGroup/Metrolist/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=MetrolistGroup/Metrolist" alt="Contributors" />
+<a href="https://github.com/RahulExe69/Musify/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=RahulExe69/Musify" alt="Musify contributors" />
 </a>
 
 </div>
@@ -342,7 +342,7 @@ All trademarks, service marks, and intellectual property rights referenced in th
 
 <br/>
 
-**Made with ❤️ by [Mo Agamy](https://github.com/mostafaalagamy)**
+**Based on Metrolist by [Mo Agamy](https://github.com/mostafaalagamy) and its contributors**
 
 **This project stands with Palestine 🇵🇸**
 
