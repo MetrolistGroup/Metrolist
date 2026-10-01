@@ -62,8 +62,8 @@ jobs:
       - name: Build Release APK
         run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release --warning-mode summary
         env:
-          METROLIST_APPLICATION_ID: com.metrolist.music
-          METROLIST_APP_NAME: Metrolist Nightly
+          METROLIST_APPLICATION_ID: exe.musify.app
+          METROLIST_APP_NAME: Musify Nightly
           METROLIST_BUILD_COMMIT: ${{ github.sha }}
           PULL_REQUEST: "false"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
@@ -174,7 +174,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          mv nightly/app-universal-with-Google-Cast.apk nightly/Metrolist-with-Google-Cast.apk
+          mv nightly/app-universal-with-Google-Cast.apk nightly/Musify-with-Google-Cast.apk
 
           PREVIOUS_NIGHTLY_SHA=$(gh release view nightly --json targetCommitish --jq .targetCommitish 2>/dev/null || true)
           {
@@ -196,7 +196,7 @@ jobs:
           gh release create nightly \
             nightly/Metrolist-with-Google-Cast.apk \
             --target "$GITHUB_SHA" \
-            --title "Metrolist Nightly" \
+            --title "Musify Nightly" \
             --notes-file nightly-notes.md \
             --generate-notes \
             --prerelease \
