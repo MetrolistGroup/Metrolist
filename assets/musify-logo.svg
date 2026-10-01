@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Musify logo</title>
+  <desc id="desc">A white geometric M mark on a purple gradient background.</desc>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9C8CFF"/>
+      <stop offset="1" stop-color="#4B45C7"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <path fill="#fff" d="M92 114h76l88 106 88-106h76v284h-88V250l-76 92-76-92v148H92z"/>
+</svg>
