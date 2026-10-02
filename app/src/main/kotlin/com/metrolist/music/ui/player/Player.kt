@@ -955,35 +955,74 @@ fun BottomSheetPlayer(
                     label = "ThumbnailAnimation",
                 ) { showLyrics ->
                     if (showLyrics) {
+                        val showThumbnailOverlay =
+                            (isListenTogetherGuest && isMuted) ||
+                                (!isListenTogetherGuest && (!effectiveIsPlaying || playbackState == STATE_ENDED))
                         Row {
-                            if (hidePlayerThumbnail) {
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .size(56.dp)
-                                            .clip(RoundedCornerShape(ThumbnailCornerRadius))
-                                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.small_icon),
-                                        contentDescription = null,
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .size(56.dp)
+                                        .clip(RoundedCornerShape(ThumbnailCornerRadius))
+                                        .clickable {
+                                            if (isListenTogetherGuest) {
+                                                playerConnection.toggleMute()
+                                            } else if (isCasting) {
+                                                if (castIsPlaying) castHandler?.pause() else castHandler?.play()
+                                            } else if (playbackState == STATE_ENDED) {
+                                                playerConnection.player.seekTo(0, 0)
+                                                playerConnection.player.playWhenReady = true
+                                            } else {
+                                                playerConnection.togglePlayPause()
+                                            }
+                                        },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (hidePlayerThumbnail) {
+                                    Box(
                                         modifier =
                                             Modifier
-                                                .size(32.dp),
-                                        tint = textButtonColor.copy(alpha = 0.7f),
+                                                .fillMaxSize()
+                                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.small_icon),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(32.dp),
+                                            tint = textButtonColor.copy(alpha = 0.7f),
+                                        )
+                                    }
+                                } else {
+                                    AsyncImage(
+                                        model = mediaMetadata.thumbnailUrl,
+                                        contentDescription = null,
+                                        contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize(),
                                     )
                                 }
-                            } else {
-                                AsyncImage(
-                                    model = mediaMetadata.thumbnailUrl,
-                                    contentDescription = null,
-                                    contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
-                                    modifier =
-                                        Modifier
-                                            .size(56.dp)
-                                            .clip(RoundedCornerShape(ThumbnailCornerRadius)),
-                                )
+                                if (showThumbnailOverlay) {
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxSize()
+                                                .background(Color.Black.copy(alpha = 0.4f)),
+                                    )
+                                    Icon(
+                                        painter =
+                                            painterResource(
+                                                when {
+                                                    isListenTogetherGuest ->
+                                                        if (isMuted) R.drawable.volume_off else R.drawable.volume_up
+                                                    playbackState == STATE_ENDED -> R.drawable.replay
+                                                    else -> R.drawable.play
+                                                },
+                                            ),
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                }
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                         }
