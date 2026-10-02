@@ -956,15 +956,18 @@ fun BottomSheetPlayer(
                 ) { showLyrics ->
                     if (showLyrics) {
                         val showThumbnailOverlay =
-                            (isListenTogetherGuest && isMuted) ||
-                                (!isListenTogetherGuest && (!effectiveIsPlaying || playbackState == STATE_ENDED))
+                            isFullScreen &&
+                                (
+                                    (isListenTogetherGuest && isMuted) ||
+                                        (!isListenTogetherGuest && (!effectiveIsPlaying || playbackState == STATE_ENDED))
+                                )
                         Row {
                             Box(
                                 modifier =
                                     Modifier
                                         .size(56.dp)
                                         .clip(RoundedCornerShape(ThumbnailCornerRadius))
-                                        .clickable {
+                                        .clickable(enabled = isFullScreen) {
                                             if (isListenTogetherGuest) {
                                                 playerConnection.toggleMute()
                                             } else if (isCasting) {
