@@ -6,10 +6,8 @@
 package com.metrolist.music.ui.component
 
 import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -80,49 +79,46 @@ fun CreatePlaylistDialog(
         extraContent = {
             if (allowSyncing) {
                 Row(
-                    modifier = Modifier.padding(vertical = 16.dp, horizontal = 40.dp),
+                    modifier = Modifier.padding(top = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.sync_playlist),
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
                             text = stringResource(R.string.allows_for_sync_witch_youtube),
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.fillMaxWidth(0.7f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.End,
-                    ) {
-                        Switch(
-                            checked = syncedPlaylist,
-                            onCheckedChange = {
-                                coroutineScope.launch {
-                                    val isYtmSyncEnabled = withContext(Dispatchers.IO) { context.isSyncEnabled() }
-                                    if (!isSignedIn && !syncedPlaylist) {
-                                        Toast
-                                            .makeText(
-                                                context,
-                                                notLoggedInYoutubeStr,
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
-                                    } else if (!isYtmSyncEnabled) {
-                                        Toast
-                                            .makeText(
-                                                context,
-                                                syncDisabledStr,
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
-                                    } else {
-                                        syncedPlaylist = !syncedPlaylist
-                                    }
+                    Switch(
+                        modifier = Modifier.padding(start = 12.dp),
+                        checked = syncedPlaylist,
+                        onCheckedChange = {
+                            coroutineScope.launch {
+                                val isYtmSyncEnabled = withContext(Dispatchers.IO) { context.isSyncEnabled() }
+                                if (!isSignedIn && !syncedPlaylist) {
+                                    Toast
+                                        .makeText(
+                                            context,
+                                            notLoggedInYoutubeStr,
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                } else if (!isYtmSyncEnabled) {
+                                    Toast
+                                        .makeText(
+                                            context,
+                                            syncDisabledStr,
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                } else {
+                                    syncedPlaylist = !syncedPlaylist
                                 }
-                            },
-                        )
-                    }
+                            }
+                        },
+                    )
                 }
             }
         },
