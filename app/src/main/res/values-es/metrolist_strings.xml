@@ -875,4 +875,5 @@
     <string name="update_action">Actualizar</string>
     <string name="discord_integration">Integración con Discord</string>
     <string name="enable_discord_rpc">Activar Rich Presence</string>
+    <string name="force_bottom_navbar">Forzar la barra de navegación inferior</string>
 </resources>
