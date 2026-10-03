@@ -36,7 +36,6 @@ jobs:
       METROLIST_APP_NAME: Musify
       METROLIST_BUILD_COMMIT: ${{ github.sha }}
       MUSIFY_VERSION_NAME: ${{ inputs.version_name }}
-      MUSIFY_VERSION_NAME: ${{ inputs.version_name }}
       PULL_REQUEST: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
       GITHUB_EVENT_NAME: ${{ github.event_name }}
       LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
