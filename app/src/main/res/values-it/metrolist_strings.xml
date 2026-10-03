@@ -876,4 +876,7 @@
     <string name="discord_integration">Integrazione Discord</string>
     <string name="enable_discord_rpc">Abilita la Rich Presence</string>
     <string name="force_bottom_navbar">Forza la barra di navigazione in basso</string>
+    <string name="other">Altro</string>
+    <string name="player_pause">Pausa</string>
+    <string name="top_result">Miglior risultato</string>
 </resources>
