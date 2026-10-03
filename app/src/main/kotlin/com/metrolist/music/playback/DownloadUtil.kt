@@ -59,6 +59,7 @@ import timber.log.Timber
 import java.io.IOException
 import java.time.LocalDateTime
 import java.util.concurrent.Executor
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -90,6 +91,56 @@ constructor(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val downloadPreparations = Semaphore(3)
+
+    /**
+     * Bumped when the user clears all downloads so in-flight STATE_COMPLETED handlers
+     * do not re-set isDownloaded after metadata was wiped.
+     * Paired with [downloadMetaLock] so the generation check and Room write are atomic
+     * with clear-all's generation bump + metadata reset.
+     */
+    private val clearDownloadsGeneration = AtomicLong(0)
+
+    /** Serializes clear-all generation changes with completion metadata writes. */
+    private val downloadMetaLock = Any()
+
+    /** Call before bulk-removing downloads / clearing download metadata. */
+    fun beginClearAllDownloads(): Long =
+        synchronized(downloadMetaLock) {
+            clearDownloadsGeneration.incrementAndGet()
+        }
+
+    /**
+     * Mark a song downloaded only if [generation] is still the current clear-all epoch.
+     * Holds [downloadMetaLock] across the check and write so clear-all cannot reset flags
+     * between them.
+     */
+    fun markDownloadedIfGenerationCurrent(songId: String, generation: Long) {
+        synchronized(downloadMetaLock) {
+            if (clearDownloadsGeneration.get() != generation) return
+            database.updateDownloadedInfo(songId, true, LocalDateTime.now())
+        }
+    }
+
+    /** Room bulk clear under the same lock as completion writes. */
+    fun clearAllDownloadedInfoLocked() {
+        synchronized(downloadMetaLock) {
+            database.clearAllDownloadedInfo()
+        }
+    }
+
+    /**
+     * Clear explicit-download Room flags except songs still tracked by DownloadManager
+     * ([keepIds]). Preserves Cache Playlist rows and in-flight/new downloads.
+     */
+    fun clearDownloadedInfoExceptLocked(keepIds: Collection<String>) {
+        synchronized(downloadMetaLock) {
+            if (keepIds.isEmpty()) {
+                database.clearAllDownloadedInfo()
+            } else {
+                database.clearDownloadedInfoExcept(keepIds.toList())
+            }
+        }
+    }
 
     val downloads = MutableStateFlow<Map<String, Download>>(emptyMap())
 
@@ -256,8 +307,11 @@ constructor(
                         scope.launch {
                             when (download.state) {
                                 Download.STATE_COMPLETED -> {
-                                    removeFromPlayerCache(download.request.id)
-                                    database.updateDownloadedInfo(download.request.id, true, LocalDateTime.now())
+                                    val generation = clearDownloadsGeneration.get()
+                                    val songId = download.request.id
+                                    removeFromPlayerCache(songId)
+                                    // Check+write under downloadMetaLock (see markDownloadedIfGenerationCurrent).
+                                    markDownloadedIfGenerationCurrent(songId, generation)
                                 }
                                 Download.STATE_FAILED,
                                 Download.STATE_STOPPED,

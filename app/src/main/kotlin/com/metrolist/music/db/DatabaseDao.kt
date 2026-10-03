@@ -1257,6 +1257,22 @@ interface DatabaseDao {
     @Query("UPDATE song SET isDownloaded = :downloaded, dateDownload = :date WHERE id = :songId")
     fun updateDownloadedInfo(songId: String, downloaded: Boolean, date: LocalDateTime?)
 
+    // Only explicit downloads (isDownloaded = 1). Cache Playlist rows keep dateDownload
+    // with isDownloaded = 0 so they stay visible after "Clear downloads".
+    @Query("UPDATE song SET isDownloaded = 0, dateDownload = NULL WHERE isDownloaded = 1")
+    fun clearAllDownloadedInfo()
+
+    /**
+     * Clear download flags for explicit downloads except [keepIds] (e.g. DownloadManager
+     * entries still present — timed-out removes or downloads started during clear-all).
+     * Empty [keepIds] is not supported; call [clearAllDownloadedInfo] instead.
+     */
+    @Query(
+        "UPDATE song SET isDownloaded = 0, dateDownload = NULL " +
+            "WHERE isDownloaded = 1 AND id NOT IN (:keepIds)",
+    )
+    fun clearDownloadedInfoExcept(keepIds: List<String>)
+
     @Query("UPDATE song SET playbackPosition = :position WHERE id = :songId")
     fun updatePlaybackPosition(songId: String, position: Long?)
 
