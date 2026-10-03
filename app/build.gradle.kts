@@ -45,7 +45,9 @@ android {
         val baseVersionName = requireNotNull(versionName)
         buildConfigField("String", "BASE_VERSION_NAME", "\"$baseVersionName\"")
         if (System.getenv("MUSIFY_VERSION_NAME").isNullOrBlank()) {
+            if (System.getenv("MUSIFY_VERSION_NAME").isNullOrBlank()) {
             buildCommit?.let { versionName = "$baseVersionName+$it" }
+        }
         }
         resValue("string", "app_name", appNameOverride ?: "Musify")
 
