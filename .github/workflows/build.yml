@@ -12,27 +12,17 @@ on:
           - release
           - both
         default: both
-  push:
-    branches: ["main"]
-    paths-ignore:
-      - "README.md"
-      - "fastlane/**"
-      - "assets/**"
-      - ".github/**/*.md"
-      - ".github/FUNDING.yml"
-      - ".github/ISSUE_TEMPLATE/**"
-  pull_request:
-    branches: ["**"]
-    paths-ignore:
-      - "app/src/main/res/values-*/strings.xml"
-      - "app/src/main/res/values-*/metrolist_strings.xml"
-      - "fastlane/**"
+      version_name:
+        description: "Version name for this build"
+        required: true
+        type: string
+        default: "1.0.10"
 
 permissions:
   contents: read
 
 concurrency:
-  group: musify-build-\${{ github.workflow }}-\${{ github.ref }}
+  group: musify-build-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -44,11 +34,12 @@ jobs:
     env:
       METROLIST_APPLICATION_ID: exe.musify.app
       METROLIST_APP_NAME: Musify
-      METROLIST_BUILD_COMMIT: \${{ github.sha }}
-      PULL_REQUEST: \${{ github.event_name == 'pull_request' && 'true' || 'false' }}
-      GITHUB_EVENT_NAME: \${{ github.event_name }}
-      LASTFM_API_KEY: \${{ secrets.LASTFM_API_KEY }}
-      LASTFM_SECRET: \${{ secrets.LASTFM_SECRET }}
+      METROLIST_BUILD_COMMIT: ${{ github.sha }}
+      MUSIFY_VERSION_NAME: ${{ inputs.version_name }}
+      PULL_REQUEST: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
+      GITHUB_EVENT_NAME: ${{ github.event_name }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
 
     steps:
       - name: Checkout source
@@ -67,7 +58,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Prepare debug keystore
-        if: github.event_name == 'pull_request' || github.event_name == 'push' || inputs.build_type == 'debug' || inputs.build_type == 'both'
+        if: inputs.build_type == 'debug' || inputs.build_type == 'both'
         shell: bash
         run: |
           set -euo pipefail
@@ -84,45 +75,34 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
           fi
 
+      - name: Validate version input
+        shell: bash
+        run: |
+          if [[ ! "$MUSIFY_VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must use MAJOR.MINOR.PATCH format, such as 1.0.10."
+            exit 1
+          fi
+
       - name: Build selected APKs
         shell: bash
         run: |
           set -euo pipefail
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            BUILD_TYPE="debug"
-          elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            BUILD_TYPE="both"
-          else
-            BUILD_TYPE="\${{ inputs.build_type }}"
-          fi
-
-          case "$BUILD_TYPE" in
-            debug)
-              ./gradlew --no-daemon --console=plain assembleGmsDebug --warning-mode summary
-              ;;
-            release)
-              ./gradlew --no-daemon --console=plain assembleGmsRelease --warning-mode summary
-              ;;
-            both)
-              ./gradlew --no-daemon --console=plain assembleGmsDebug assembleGmsRelease --warning-mode summary
-              ;;
-            *)
-              echo "::error::Unknown build type: $BUILD_TYPE"
-              exit 1
-              ;;
+          case "${{ inputs.build_type }}" in
+            debug) ./gradlew --no-daemon --console=plain assembleGmsDebug --warning-mode summary ;;
+            release) ./gradlew --no-daemon --console=plain assembleGmsRelease --warning-mode summary ;;
+            both) ./gradlew --no-daemon --console=plain assembleGmsDebug assembleGmsRelease --warning-mode summary ;;
+            *) echo "::error::Unknown build type"; exit 1 ;;
           esac
-
-          echo "BUILD_TYPE=$BUILD_TYPE" >> "$GITHUB_ENV"
 
       - name: Sign release APK
         if: env.BUILD_TYPE == 'release' || env.BUILD_TYPE == 'both'
         uses: ilharp/sign-android-release@v2.0.0
         with:
           releaseDir: app/build/outputs/apk/gms/release/
-          signingKey: \${{ secrets.KEYSTORE }}
-          keyAlias: \${{ secrets.KEY_ALIAS }}
-          keyStorePassword: \${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword: \${{ secrets.KEY_PASSWORD }}
+          signingKey: ${{ secrets.KEYSTORE }}
+          keyAlias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
           buildToolsVersion: 36.0.0
 
       - name: Prepare APK artifacts
@@ -134,7 +114,7 @@ jobs:
           if [ "$BUILD_TYPE" = "debug" ] || [ "$BUILD_TYPE" = "both" ]; then
             DEBUG_APK="$(find app/build/outputs/apk/gms/debug -maxdepth 1 -type f -name '*.apk' ! -name '*-androidTest*.apk' | head -n 1)"
             test -n "$DEBUG_APK"
-            cp "$DEBUG_APK" artifacts/Musify-debug.apk
+            cp "$DEBUG_APK" artifacts/Musify-v${MUSIFY_VERSION_NAME}-debug.apk
           fi
 
           if [ "$BUILD_TYPE" = "release" ] || [ "$BUILD_TYPE" = "both" ]; then
@@ -144,7 +124,7 @@ jobs:
               find app/build/outputs/apk/gms/release -maxdepth 2 -type f -name '*.apk' -print
               exit 1
             fi
-            cp "$RELEASE_APK" artifacts/Musify-release.apk
+            cp "$RELEASE_APK" artifacts/Musify-v${MUSIFY_VERSION_NAME}-release.apk
           fi
 
           sha256sum artifacts/*.apk | tee artifacts/SHA256SUMS.txt
@@ -153,7 +133,7 @@ jobs:
       - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Musify-APKs
+          name: Musify-v${{ inputs.version_name }}-APKs
           path: artifacts/*
           if-no-files-found: error
           retention-days: 14
