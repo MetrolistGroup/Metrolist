@@ -75,9 +75,15 @@ object VoiceSearchMatcher {
 
         val titleCoverage = matchedTitle.toDouble() / titleTokens.size
         val queryCoverage = matchedQuery.toDouble() / queryTokens.size
-        return if (titleCoverage + queryCoverage > 0)
+        val score = if (titleCoverage + queryCoverage > 0)
             (2.0 * titleCoverage * queryCoverage) / (titleCoverage + queryCoverage)   // harmonic mean
         else 0.0
+
+        return if (queryCoverage > 0.9 && titleCoverage <= 0.5) {
+            score * 0.85
+        } else {
+            score
+        }
     }
 
 
