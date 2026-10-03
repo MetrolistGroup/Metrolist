@@ -113,6 +113,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
@@ -961,13 +965,32 @@ fun BottomSheetPlayer(
                                     (isListenTogetherGuest && isMuted) ||
                                         (!isListenTogetherGuest && (!effectiveIsPlaying || playbackState == STATE_ENDED))
                                 )
+                        val thumbnailActionLabel =
+                            if (isListenTogetherGuest) {
+                                if (isMuted) stringResource(R.string.unmute) else stringResource(R.string.mute)
+                            } else if (effectiveIsPlaying) {
+                                stringResource(R.string.pause)
+                            } else {
+                                stringResource(R.string.play)
+                            }
                         Row {
                             Box(
                                 modifier =
                                     Modifier
                                         .size(56.dp)
                                         .clip(RoundedCornerShape(ThumbnailCornerRadius))
-                                        .clickable(enabled = isFullScreen) {
+                                        .then(
+                                            if (isFullScreen) {
+                                                Modifier.semantics { contentDescription = thumbnailActionLabel }
+                                            } else {
+                                                Modifier.clearAndSetSemantics {}
+                                            },
+                                        )
+                                        .clickable(
+                                            enabled = isFullScreen,
+                                            role = Role.Button,
+                                            onClickLabel = thumbnailActionLabel,
+                                        ) {
                                             if (isListenTogetherGuest) {
                                                 playerConnection.toggleMute()
                                             } else if (isCasting) {
