@@ -44,7 +44,9 @@ android {
         versionName = System.getenv("MUSIFY_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "13.7.0"
         val baseVersionName = requireNotNull(versionName)
         buildConfigField("String", "BASE_VERSION_NAME", "\"$baseVersionName\"")
-        buildCommit?.let { versionName = "$baseVersionName+$it" }
+        if (System.getenv("MUSIFY_VERSION_NAME").isNullOrBlank()) {
+            buildCommit?.let { versionName = "$baseVersionName+$it" }
+        }
         resValue("string", "app_name", appNameOverride ?: "Musify")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
