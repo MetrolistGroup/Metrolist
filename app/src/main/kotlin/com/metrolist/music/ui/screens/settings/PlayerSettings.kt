@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.settings
 
+import android.os.Build
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -53,6 +54,7 @@ import com.metrolist.music.constants.DisableLoadMoreWhenRepeatAllKey
 import com.metrolist.music.constants.EnableGoogleCastKey
 import com.metrolist.music.constants.HistoryDuration
 import com.metrolist.music.constants.KeepScreenOn
+import com.metrolist.music.constants.LiveUpdateKey
 import com.metrolist.music.constants.LoudnessLevel
 import com.metrolist.music.constants.LoudnessLevelKey
 import com.metrolist.music.constants.PauseOnMute
@@ -216,6 +218,10 @@ fun PlayerSettings(
     )
     val (keepScreenOn, onKeepScreenOnChange) = rememberPreference(
         KeepScreenOn,
+        defaultValue = false
+    )
+    val (liveUpdate, onLiveUpdateChange) = rememberPreference(
+        LiveUpdateKey,
         defaultValue = false
     )
     val (historyDuration, onHistoryDurationChange) = rememberPreference(
@@ -1005,7 +1011,7 @@ fun PlayerSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.misc),
-            items = listOf(
+            items = listOfNotNull(
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.clear_all),
                     title = { Text(stringResource(R.string.stop_music_on_task_clear)) },
@@ -1085,7 +1091,32 @@ fun PlayerSettings(
                         )
                     },
                     onClick = { onKeepScreenOnChange(!keepScreenOn) }
-                )
+                ),
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.notification),
+                        title = { Text(stringResource(R.string.live_update)) },
+                        description = { Text(stringResource(R.string.live_update_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = liveUpdate,
+                                onCheckedChange = onLiveUpdateChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter = painterResource(
+                                            id = if (liveUpdate) R.drawable.check else R.drawable.close
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            )
+                        },
+                        onClick = { onLiveUpdateChange(!liveUpdate) }
+                    )
+                } else {
+                    null
+                }
             )
         )
         Spacer(modifier = Modifier.height(16.dp))

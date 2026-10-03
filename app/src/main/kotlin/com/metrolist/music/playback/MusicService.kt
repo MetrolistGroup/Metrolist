@@ -141,6 +141,7 @@ import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.HistoryDuration
 import com.metrolist.music.constants.LastFMUseNowPlaying
+import com.metrolist.music.constants.LiveUpdateKey
 import com.metrolist.music.constants.MediaSessionConstants
 import com.metrolist.music.constants.MediaSessionConstants.CommandAddToTargetPlaylist
 import com.metrolist.music.constants.MediaSessionConstants.CommandToggleLike
@@ -466,6 +467,12 @@ class MusicService :
     @Volatile
     private var latestMediaNotification: Notification? = null
 
+    private var liveUpdateEnabled = false
+    private var liveUpdateJob: Job? = null
+
+    // Starts non-null so the first update also clears a Live Update left behind by a killed process.
+    private var postedLiveUpdate: Any? = Unit
+
     private var scrobbleManager: ScrobbleManager? = null
 
     val automixItems = MutableStateFlow<List<MediaItem>>(emptyList())
@@ -657,6 +664,7 @@ class MusicService :
                     val trackingCallback =
                         MediaNotification.Provider.Callback { notification ->
                             latestMediaNotification = notification.notification
+                            updateLiveUpdate()
                             onNotificationChangedCallback.onNotificationChanged(notification)
                         }
 
@@ -668,6 +676,7 @@ class MusicService :
                             trackingCallback,
                         ).also { mediaNotification ->
                             latestMediaNotification = mediaNotification.notification
+                            updateLiveUpdate()
                         }
                 }
 
@@ -871,6 +880,14 @@ class MusicService :
             updateNotification()
             updateWidgetUI(player.isPlaying)
         }
+
+        dataStore.data
+            .map { it[LiveUpdateKey] ?: false }
+            .distinctUntilChanged()
+            .collect(scope) {
+                liveUpdateEnabled = it
+                updateLiveUpdate()
+            }
 
         combine(
             currentMediaMetadata.distinctUntilChangedBy { it?.id },
@@ -2752,6 +2769,7 @@ class MusicService :
             )
         ) {
             scheduleCrossfade()
+            updateLiveUpdate()
             val isBufferingOrReady =
                 player.playbackState == Player.STATE_BUFFERING || player.playbackState == Player.STATE_READY
             if (isBufferingOrReady && player.playWhenReady) {
@@ -4209,6 +4227,63 @@ class MusicService :
             .build()
     }
 
+    /**
+     * Mirrors the playing song into an Android 16 Live Update (status bar chip, ColorOS Live Alerts).
+     * The system never promotes MediaStyle notifications, so this is a second, plain notification.
+     */
+    private fun updateLiveUpdate() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) return
+        liveUpdateJob?.cancel()
+        val shouldShow =
+            liveUpdateEnabled &&
+                player.playWhenReady &&
+                (player.playbackState == Player.STATE_READY || player.playbackState == Player.STATE_BUFFERING)
+        if (!shouldShow) {
+            if (postedLiveUpdate != null) {
+                getSystemService<NotificationManager>()?.cancel(LIVE_UPDATE_NOTIFICATION_ID)
+                postedLiveUpdate = null
+            }
+            return
+        }
+
+        // Android drops updates from apps that notify too often, which would strand a stale title
+        // after rapid skips, so post only once the track change has settled.
+        liveUpdateJob =
+            scope.launch {
+                delay(500)
+                val title = player.mediaMetadata.title?.toString()
+                if (title.isNullOrBlank()) return@launch
+                val artist = player.mediaMetadata.artist
+                // The media notification may still belong to the previous song.
+                val artwork =
+                    latestMediaNotification
+                        ?.takeIf { it.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() == title }
+                        ?.getLargeIcon()
+                val content = listOf(player.currentMediaItem?.mediaId, title, artist?.toString(), artwork != null)
+                if (content == postedLiveUpdate) return@launch
+                postedLiveUpdate = content
+
+                // Not gated on canPostPromotedNotifications(): ColorOS 16 reports false yet still shows it.
+                getSystemService<NotificationManager>()?.notify(
+                    LIVE_UPDATE_NOTIFICATION_ID,
+                    NotificationCompat
+                        .Builder(this@MusicService, CHANNEL_ID)
+                        .setSmallIcon(R.drawable.small_icon)
+                        .setContentTitle(title)
+                        .setContentText(artist)
+                        .setLargeIcon(artwork)
+                        .setContentIntent(mediaSession?.sessionActivity)
+                        .setOngoing(true)
+                        .setSilent(true)
+                        .setShowWhen(false)
+                        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                        .setRequestPromotedOngoing(true)
+                        .setShortCriticalText(liveUpdateChipText(title))
+                        .build(),
+                )
+            }
+    }
+
     private fun startForegroundSafely(
         notification: Notification,
         deniedMessage: String,
@@ -4243,6 +4318,8 @@ class MusicService :
 
     override fun onDestroy() {
         isRunning = false
+        liveUpdateEnabled = false
+        updateLiveUpdate()
 
         if (!::player.isInitialized) {
             try {
@@ -4998,6 +5075,7 @@ class MusicService :
 
         const val CHANNEL_ID = "music_channel_01"
         const val NOTIFICATION_ID = 888
+        private const val LIVE_UPDATE_NOTIFICATION_ID = 889
         const val ERROR_CODE_NO_STREAM = 1000001
         const val CHUNK_LENGTH = 512 * 1024L
         const val PERSISTENT_QUEUE_FILE = "persistent_queue.data"
@@ -5017,6 +5095,16 @@ class MusicService :
         @Volatile
         var shutdownDeferred = kotlinx.coroutines.CompletableDeferred<Unit>().apply { complete(Unit) }
     }
+}
+
+/**
+ * Clips [title] for the status bar chip, which AOSP shows only if it fits in 74dp:
+ * about 7 Latin or 5 full-width (CJK, kana, Hangul, emoji) characters.
+ */
+internal fun liveUpdateChipText(title: String): String {
+    val maxLength = if (title.take(7).any { it.code >= 0x2E80 }) 5 else 7
+    if (title.length <= maxLength) return title
+    return title.take(maxLength - 1).dropLastWhile(Char::isHighSurrogate).trimEnd() + "…"
 }
 
 internal fun normalizationGainMb(

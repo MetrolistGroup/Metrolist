@@ -347,6 +347,8 @@
     <string name="pause_music_when_media_is_muted">Pause music when media is muted</string>
     <string name="resume_on_bluetooth_connect">Resume on Bluetooth connection</string>
     <string name="keep_screen_on_when_player_is_expanded">Keep screen on when player is expanded</string>
+    <string name="live_update">Live Update</string>
+    <string name="live_update_desc">Show the playing song in the status bar chip or Live Alerts. Uses a separate notification and may need to be allowed in system settings</string>
 
     <string name="crossfade">Crossfade</string>
     <string name="crossfade_desc">Fades out the current song as the next one fades in</string>
