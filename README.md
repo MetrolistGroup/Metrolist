@@ -162,7 +162,7 @@
       </a>
     </td>
     <td align="center">
-      <a href="https://github.com/RahulExe69/7xTune/releases/latest/download/7xTune.apk">
+      <a href="https://github.com/RahulExe69/7xTune/releases">
         <img src="assets/badges/github-stable.svg" alt="Get the stable 7xTune release on GitHub" height="100">
       </a>
     </td>
@@ -177,7 +177,7 @@
   </tr>
   <tr>
     <td align="center">
-      <a href="https://github.com/RahulExe69/7xTune/releases/download/nightly/7xTune-with-Google-Cast.apk">
+      <a href="https://github.com/RahulExe69/7xTune/releases">
         <img src="assets/badges/github-nightly.svg" alt="Get the 7xTune nightly build on GitHub" height="120">
       </a>
     </td>
