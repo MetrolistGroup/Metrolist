@@ -1,6 +1,6 @@
-# Metrolist Dev Guide
+# 7xTune Dev Guide
 
-This file outlines the process of setting up a local dev environment for Metrolist.
+This file outlines the process of setting up a local dev environment for 7xTune.
 
 ## Prerequisites
 
@@ -12,8 +12,8 @@ This file outlines the process of setting up a local dev environment for Metroli
 This has been tested on Linux, but should work on other platforms with some adjustments.
 
 ```bash
-git clone https://github.com/MetrolistGroup/Metrolist
-cd Metrolist
+git clone https://github.com/RahulExe69/7xTune.git
+cd 7xTune
 git submodule update --init --recursive
 cd ..
 [ ! -f "app/persistent-debug.keystore" ] && keytool -genkeypair -v -keystore app/persistent-debug.keystore -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || echo "Keystore already exists."
@@ -37,5 +37,5 @@ This project uses GitHub Secrets to securely store API keys for building release
 
 ## AI note
 
-Metrolist does allow LLM generated contributions, but you should follow guidelines in AGENTS.md to ensure the quality of the contributions. Please use the ponytail skill from this url - https://github.com/DietrichGebert/ponytail/raw/refs/heads/main/skills/ponytail/SKILL.md - this is needed to keep work minimal and clean.  
+7xTune does allow LLM generated contributions, but you should follow guidelines in AGENTS.md to ensure the quality of the contributions. Please use the ponytail skill from this url - https://github.com/DietrichGebert/ponytail/raw/refs/heads/main/skills/ponytail/SKILL.md - this is needed to keep work minimal and clean.  
 Do not try to hide your LLM contributions, we know what you are doing.
