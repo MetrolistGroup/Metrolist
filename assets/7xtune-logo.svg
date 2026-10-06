@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">7xTune logo</title>
+  <desc id="desc">A white geometric 7X mark on a purple gradient background.</desc>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7C6BFF"/>
+      <stop offset="1" stop-color="#4734C7"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <path fill="#fff" d="M78 120h210l-65 90h47L180 398h-65l80-141H76z"/>
+  <path fill="#fff" d="M286 160h58l36 62 36-62h58l-66 100 66 92h-58l-36-60-38 60h-58l66-92z"/>
+</svg>
