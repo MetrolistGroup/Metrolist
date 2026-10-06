@@ -39,9 +39,9 @@ object Updater {
     private var cachedAllReleases: List<ReleaseInfo> = emptyList()
     
     private const val CHECK_INTERVAL_MILLIS = 2 * 60 * 60 * 1000L // 2 hours
-    private const val GITHUB_API_BASE = "https://api.github.com/repos/RahulExe69/Musify"
-    private const val KMP_LATEST_RELEASE_URL = "https://api.github.com/repos/RahulExe69/Musify/releases/latest"
-    private const val KMP_APK_NAME = "Musify-universal-gms.apk"
+    private const val GITHUB_API_BASE = "https://api.github.com/repos/RahulExe69/7xTune"
+    private const val KMP_LATEST_RELEASE_URL = "https://api.github.com/repos/RahulExe69/7xTune/releases/latest"
+    private val KMP_APK_NAMES = setOf("7xTune-universal-gms.apk", "Musify-universal-gms.apk")
 
     /**
      * Compares two version strings.
@@ -98,9 +98,9 @@ object Updater {
             
             // Parse architecture and variant from filename
             val (arch, variant) = when {
-                name == "Musify-universal-foss.apk" -> "universal" to "foss"
-                name == "Musify-universal-gms.apk" -> "universal" to "gms"
-                name.matches(Regex("Musify-v[0-9]+\\.[0-9]+\\.[0-9]+-release\\.apk")) -> "universal" to "gms"
+                name == "7xTune-universal-foss.apk" || name == "Musify-universal-foss.apk" -> "universal" to "foss"
+                name == "7xTune-universal-gms.apk" || name == "Musify-universal-gms.apk" -> "universal" to "gms"
+                name.matches(Regex("(?:7xTune|Musify)-v[0-9]+\\.[0-9]+\\.[0-9]+-release\\.apk")) -> "universal" to "gms"
                 name == "Metrolist.apk" -> "universal" to "foss"
                 name == "Metrolist-with-Google-Cast.apk" -> "universal" to "gms"
                 name.startsWith("app-") && name.endsWith("-release.apk") -> {
@@ -196,7 +196,7 @@ object Updater {
 
     internal fun parseKmpRelease(response: String): ReleaseInfo? {
         val release = JSONObject(response)
-        val assets = parseAssets(release.getJSONArray("assets")).filter { it.name == KMP_APK_NAME }
+        val assets = parseAssets(release.getJSONArray("assets")).filter { it.name in KMP_APK_NAMES }
         val tagName = release.getString("tag_name")
 
         return ReleaseInfo(
