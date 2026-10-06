@@ -37,6 +37,6 @@ dependencyResolutionManagement {
 }
 
 // F-Droid doesn't support foojay-resolver plugin
-rootProject.name = "Musify"
+rootProject.name = "7xTune"
 include(":app")
 include(":innertube")
