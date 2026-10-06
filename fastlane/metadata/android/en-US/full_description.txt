@@ -1,5 +1,4 @@
-Material 3 YouTube Music client for Android
-
+Material 3 YouTube Music client for Android — 7xTune
 Features:
 
 - Play any song or video from YT Music
