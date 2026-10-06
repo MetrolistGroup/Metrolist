@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="assets/musify-logo.svg" alt="Musify app icon" width="200" />
+<img src="assets/musify-logo.svg" alt="7xTune app icon" width="200" />
 
-# Musify
+# 7xTune
 
 ### YouTube Music client for Android
 
@@ -15,9 +15,9 @@
 <br/>
 <br/>
 
-[![Latest release](https://img.shields.io/github/v/release/RahulExe69/Musify?style=for-the-badge&labelColor=0d1117)](https://github.com/RahulExe69/Musify/releases)
-[![License](https://img.shields.io/github/license/RahulExe69/Musify?style=for-the-badge&labelColor=0d1117)](https://github.com/RahulExe69/Musify/blob/main/LICENSE)
-[![Downloads](https://img.shields.io/github/downloads/RahulExe69/Musify/total?style=for-the-badge&labelColor=0d1117)](https://github.com/RahulExe69/Musify/releases)
+[![Latest release](https://img.shields.io/github/v/release/RahulExe69/7xTune?style=for-the-badge&labelColor=0d1117)](https://github.com/RahulExe69/7xTune/releases)
+[![License](https://img.shields.io/github/license/RahulExe69/7xTune?style=for-the-badge&labelColor=0d1117)](https://github.com/RahulExe69/7xTune/blob/main/LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/RahulExe69/7xTune/total?style=for-the-badge&labelColor=0d1117)](https://github.com/RahulExe69/7xTune/releases)
 
 <br/>
 
@@ -32,8 +32,8 @@
 
 > [!WARNING]
 > # MAINTENANCE MODE
-> Musify currently follows the upstream Metrolist maintenance baseline. This means we will only be fixing bugs and making minor improvements. Please do not submit PRs for new features or major changes, as they will not be accepted.  
-> Musify is a rebranded fork of Metrolist. Upstream community links are retained where they are still relevant.
+> 7xTune currently follows the upstream Metrolist maintenance baseline. This means we will only be fixing bugs and making minor improvements. Please do not submit PRs for new features or major changes, as they will not be accepted.  
+> 7xTune is a rebranded fork of Metrolist. Upstream community links are retained where they are still relevant.
 
 > [!WARNING]
 > **Regional Restriction** - If YouTube Music is unavailable in your region, this app will not work without a **VPN or proxy** connecting to a supported region.
@@ -141,13 +141,13 @@
   </tr>
   <tr>
     <td align="center">
-      <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/RahulExe69/Musify/">
-        <img src="assets/badges/obtainium.svg" alt="Add Musify to Obtainium" height="100">
+      <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/RahulExe69/7xTune/">
+        <img src="assets/badges/obtainium.svg" alt="Add 7xTune to Obtainium" height="100">
       </a>
     </td>
     <td align="center">
-      <a href="https://github.com/RahulExe69/Musify/releases">
-        <img src="assets/badges/izzyondroid.svg" alt="See Musify releases on GitHub" height="100">
+      <a href="https://github.com/RahulExe69/7xTune/releases">
+        <img src="assets/badges/izzyondroid.svg" alt="See 7xTune releases on GitHub" height="100">
       </a>
     </td>
   </tr>
@@ -157,13 +157,13 @@
   </tr>
   <tr>
     <td align="center">
-      <a href="https://github.com/RahulExe69/Musify/releases">
-        <img src="assets/badges/openapk.svg" alt="See Musify releases on GitHub" height="100">
+      <a href="https://github.com/RahulExe69/7xTune/releases">
+        <img src="assets/badges/openapk.svg" alt="See 7xTune releases on GitHub" height="100">
       </a>
     </td>
     <td align="center">
-      <a href="https://github.com/RahulExe69/Musify/releases/latest/download/Musify.apk">
-        <img src="assets/badges/github-stable.svg" alt="Get the stable Musify release on GitHub" height="100">
+      <a href="https://github.com/RahulExe69/7xTune/releases/latest/download/7xTune.apk">
+        <img src="assets/badges/github-stable.svg" alt="Get the stable 7xTune release on GitHub" height="100">
       </a>
     </td>
   </tr>
@@ -177,8 +177,8 @@
   </tr>
   <tr>
     <td align="center">
-      <a href="https://github.com/RahulExe69/Musify/releases/download/nightly/Musify-with-Google-Cast.apk">
-        <img src="assets/badges/github-nightly.svg" alt="Get the Musify nightly build on GitHub" height="120">
+      <a href="https://github.com/RahulExe69/7xTune/releases/download/nightly/7xTune-with-Google-Cast.apk">
+        <img src="assets/badges/github-nightly.svg" alt="Get the 7xTune nightly build on GitHub" height="120">
       </a>
     </td>
   </tr>
@@ -210,7 +210,7 @@
   <img src="https://hosted.weblate.org/widget/Metrolist/horizontal-auto.svg" alt="Translation status" />
 </a>
 
-<h3>Thank you! Every translation helps make the Musify/Metrolist codebase more accessible.</h3>
+<h3>Thank you! Every translation helps make the 7xTune/Metrolist codebase more accessible.</h3>
 
 </div>
 
@@ -220,7 +220,7 @@
 
 <h1><a id="support-the-project"></a>Support the Project</h1>
 
-<h3>Musify is a free and open-source rebranded fork of Metrolist.</h3>
+<h3>7xTune is a free and open-source rebranded fork of Metrolist.</h3>
 
 #### Monero (XMR)
 
@@ -244,7 +244,7 @@
 
 <h1>Special Thanks</h1>
 
-<h3>Musify builds on the open-source Metrolist project and its upstream dependencies.</h3>
+<h3>7xTune builds on the open-source Metrolist project and its upstream dependencies.</h3>
 
 <h3>Main Inspirations</h3>
 
@@ -318,8 +318,8 @@
 
 <h3>This project wouldn't exist without these amazing people!</h3>
 
-<a href="https://github.com/RahulExe69/Musify/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=RahulExe69/Musify" alt="Musify contributors" />
+<a href="https://github.com/RahulExe69/7xTune/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=RahulExe69/7xTune" alt="7xTune contributors" />
 </a>
 
 </div>
