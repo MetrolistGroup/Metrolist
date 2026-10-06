@@ -551,7 +551,7 @@ fun DailyDiscoverCard(
                     ImageRequest
                         .Builder(LocalContext.current)
                         .data(dailyDiscover.recommendation.thumbnail?.resize(1080, 1080))
-                        .crossfade(true)
+                        .crossfade(false)
                         .build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
@@ -796,7 +796,7 @@ fun HomeScreen(
             lazylistState.layoutInfo.visibleItemsInfo
                 .lastOrNull()
                 ?.index
-        }.collect { lastVisibleIndex ->
+        }.distinctUntilChanged().collect { lastVisibleIndex ->
             val len = lazylistState.layoutInfo.totalItemsCount
             if (lastVisibleIndex != null && lastVisibleIndex >= len - 3) {
                 viewModel.loadMoreYouTubeItems(homePage?.continuation)
