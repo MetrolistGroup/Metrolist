@@ -29,5 +29,8 @@ class UpdaterTest {
         assertEquals("", release.description)
         assertEquals("https://example.com/Metrolist.apk", release.assets.single().downloadUrl)
         assertNull(Updater.parseKmpRelease(response.replace("Metrolist.apk", "Metrolist-with-Google-Cast.apk")))
+
+        val brandedResponse = response.replace("Metrolist.apk", "7xTune-universal-gms.apk")
+        assertEquals("1.2.3", checkNotNull(Updater.parseKmpRelease(brandedResponse)).versionName)
     }
 }
