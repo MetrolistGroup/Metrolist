@@ -8,8 +8,10 @@ if (localPropertiesFile.exists()) {
 }
 
 val baseApplicationId = "com.sevenx.tune"
-val applicationIdOverride = System.getenv("SEVENXTUNE_APPLICATION_ID")?.takeIf { it.isNotBlank() }\n    ?: System.getenv("METROLIST_APPLICATION_ID")?.takeIf { it.isNotBlank() }
-val appNameOverride = System.getenv("SEVENXTUNE_APP_NAME")?.takeIf { it.isNotBlank() }\n    ?: System.getenv("METROLIST_APP_NAME")?.takeIf { it.isNotBlank() }
+val applicationIdOverride = System.getenv("SEVENXTUNE_APPLICATION_ID")?.takeIf { it.isNotBlank() }
+    ?: System.getenv("METROLIST_APPLICATION_ID")?.takeIf { it.isNotBlank() }
+val appNameOverride = System.getenv("SEVENXTUNE_APP_NAME")?.takeIf { it.isNotBlank() }
+    ?: System.getenv("METROLIST_APP_NAME")?.takeIf { it.isNotBlank() }
 val buildCommit =
     System.getenv("METROLIST_BUILD_COMMIT")
         ?.trim()
@@ -41,7 +43,8 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 154
-        val versionNameOverride = System.getenv("SEVENXTUNE_VERSION_NAME")?.takeIf { it.isNotBlank() }\n        versionName = versionNameOverride ?: System.getenv("MUSIFY_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "13.7.0"
+        val versionNameOverride = System.getenv("SEVENXTUNE_VERSION_NAME")?.takeIf { it.isNotBlank() }
+        versionName = versionNameOverride ?: System.getenv("MUSIFY_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "13.7.0"
         val baseVersionName = requireNotNull(versionName)
         buildConfigField("String", "BASE_VERSION_NAME", "\"$baseVersionName\"")
         if (versionNameOverride == null && System.getenv("MUSIFY_VERSION_NAME").isNullOrBlank()) {
