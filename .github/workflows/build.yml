@@ -40,6 +40,7 @@ jobs:
       GITHUB_EVENT_NAME: ${{ github.event_name }}
       LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
       LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      HAS_RELEASE_SIGNING: ${{ (secrets.KEYSTORE != '' || secrets.ANDROID_SIGNING_KEY != '') && (secrets.KEY_ALIAS != '' || secrets.ANDROID_KEY_ALIAS != '') && (secrets.KEYSTORE_PASSWORD != '' || secrets.ANDROID_KEYSTORE_PASSWORD != '') }}
 
     steps:
       - name: Checkout source
@@ -83,6 +84,20 @@ jobs:
             exit 1
           fi
 
+      - name: Validate release signing configuration
+        if: inputs.build_type == 'release' || inputs.build_type == 'both'
+        shell: bash
+        env:
+          HAS_RELEASE_SIGNING: ${{ env.HAS_RELEASE_SIGNING }}
+        run: |
+          if [[ "$HAS_RELEASE_SIGNING" != "true" && "${{ inputs.build_type }}" == "release" ]]; then
+            echo "::error::Release signing secrets are missing. Configure KEYSTORE (or ANDROID_SIGNING_KEY), KEY_ALIAS (or ANDROID_KEY_ALIAS), KEYSTORE_PASSWORD (or ANDROID_KEYSTORE_PASSWORD), and optionally KEY_PASSWORD (or ANDROID_KEY_PASSWORD)."
+            exit 1
+          fi
+          if [[ "$HAS_RELEASE_SIGNING" != "true" ]]; then
+            echo "::warning::Release signing secrets are missing. The debug APK will still be built and uploaded; release signing will be skipped for this 'both' run."
+          fi
+
       - name: Build selected APKs
         shell: bash
         run: |
@@ -96,14 +111,14 @@ jobs:
           esac
 
       - name: Sign release APK
-        if: env.BUILD_TYPE == 'release' || env.BUILD_TYPE == 'both'
+        if: (env.BUILD_TYPE == 'release' || env.BUILD_TYPE == 'both') && env.HAS_RELEASE_SIGNING == 'true'
         uses: ilharp/sign-android-release@v2.0.0
         with:
           releaseDir: app/build/outputs/apk/gms/release/
-          signingKey: ${{ secrets.KEYSTORE }}
-          keyAlias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
+          signingKey: ${{ secrets.KEYSTORE || secrets.ANDROID_SIGNING_KEY }}
+          keyAlias: ${{ secrets.KEY_ALIAS || secrets.ANDROID_KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD || secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD || secrets.ANDROID_KEY_PASSWORD }}
           buildToolsVersion: 36.0.0
 
       - name: Prepare APK artifacts
@@ -126,6 +141,10 @@ jobs:
               exit 1
             fi
             cp "$RELEASE_APK" artifacts/7xTune-v${SEVENXTUNE_VERSION_NAME}-release.apk
+          fi
+
+          if [ "$BUILD_TYPE" = "both" ] && [ "$HAS_RELEASE_SIGNING" != "true" ]; then
+            echo "Release APK omitted because signing secrets are unavailable; debug APK is included."
           fi
 
           sha256sum artifacts/*.apk | tee artifacts/SHA256SUMS.txt
