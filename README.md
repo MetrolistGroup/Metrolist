@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/musify-logo.svg" alt="7xTune app icon" width="200" />
+<img src="assets/7xtune-logo.svg" alt="7xTune app icon" width="200" />
 
 # 7xTune
 
