@@ -1,4 +1,4 @@
-name: Musify APK Builder
+name: 7xTune APK Builder
 
 on:
   workflow_dispatch:
@@ -22,20 +22,20 @@ permissions:
   contents: read
 
 concurrency:
-  group: musify-build-${{ github.workflow }}-${{ github.ref }}
+  group: 7xtune-build-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
-    name: Build Musify APKs
+    name: Build 7xTune APKs
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      METROLIST_APPLICATION_ID: exe.musify.app
-      METROLIST_APP_NAME: Musify
+      SEVENXTUNE_APPLICATION_ID: com.sevenx.tune
+      SEVENXTUNE_APP_NAME: 7xTune
       METROLIST_BUILD_COMMIT: ${{ github.sha }}
-      MUSIFY_VERSION_NAME: ${{ inputs.version_name }}
+      SEVENXTUNE_VERSION_NAME: ${{ inputs.version_name }}
       PULL_REQUEST: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
       GITHUB_EVENT_NAME: ${{ github.event_name }}
       LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
@@ -78,7 +78,7 @@ jobs:
       - name: Validate version input
         shell: bash
         run: |
-          if [[ ! "$MUSIFY_VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ ! "$SEVENXTUNE_VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::Version must use MAJOR.MINOR.PATCH format, such as 1.0.10."
             exit 1
           fi
@@ -115,7 +115,7 @@ jobs:
           if [ "$BUILD_TYPE" = "debug" ] || [ "$BUILD_TYPE" = "both" ]; then
             DEBUG_APK="$(find app/build/outputs/apk/gms/debug -maxdepth 1 -type f -name '*.apk' ! -name '*-androidTest*.apk' | head -n 1)"
             test -n "$DEBUG_APK"
-            cp "$DEBUG_APK" artifacts/Musify-v${MUSIFY_VERSION_NAME}-debug.apk
+            cp "$DEBUG_APK" artifacts/7xTune-v${SEVENXTUNE_VERSION_NAME}-debug.apk
           fi
 
           if [ "$BUILD_TYPE" = "release" ] || [ "$BUILD_TYPE" = "both" ]; then
@@ -125,7 +125,7 @@ jobs:
               find app/build/outputs/apk/gms/release -maxdepth 2 -type f -name '*.apk' -print
               exit 1
             fi
-            cp "$RELEASE_APK" artifacts/Musify-v${MUSIFY_VERSION_NAME}-release.apk
+            cp "$RELEASE_APK" artifacts/7xTune-v${SEVENXTUNE_VERSION_NAME}-release.apk
           fi
 
           sha256sum artifacts/*.apk | tee artifacts/SHA256SUMS.txt
@@ -134,7 +134,7 @@ jobs:
       - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Musify-v${{ inputs.version_name }}-APKs
+          name: 7xTune-v${{ inputs.version_name }}-APKs
           path: artifacts/*
           if-no-files-found: error
           retention-days: 14
