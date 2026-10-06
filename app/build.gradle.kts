@@ -9,9 +9,7 @@ if (localPropertiesFile.exists()) {
 
 val baseApplicationId = "com.sevenx.tune"
 val applicationIdOverride = System.getenv("SEVENXTUNE_APPLICATION_ID")?.takeIf { it.isNotBlank() }
-    ?: System.getenv("METROLIST_APPLICATION_ID")?.takeIf { it.isNotBlank() }
 val appNameOverride = System.getenv("SEVENXTUNE_APP_NAME")?.takeIf { it.isNotBlank() }
-    ?: System.getenv("METROLIST_APP_NAME")?.takeIf { it.isNotBlank() }
 val buildCommit =
     System.getenv("METROLIST_BUILD_COMMIT")
         ?.trim()
