@@ -7,9 +7,9 @@ if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
 }
 
-val baseApplicationId = "exe.musify.app"
-val applicationIdOverride = System.getenv("METROLIST_APPLICATION_ID")?.takeIf { it.isNotBlank() }
-val appNameOverride = System.getenv("METROLIST_APP_NAME")?.takeIf { it.isNotBlank() }
+val baseApplicationId = "com.sevenx.tune"
+val applicationIdOverride = System.getenv("SEVENXTUNE_APPLICATION_ID")?.takeIf { it.isNotBlank() }\n    ?: System.getenv("METROLIST_APPLICATION_ID")?.takeIf { it.isNotBlank() }
+val appNameOverride = System.getenv("SEVENXTUNE_APP_NAME")?.takeIf { it.isNotBlank() }\n    ?: System.getenv("METROLIST_APP_NAME")?.takeIf { it.isNotBlank() }
 val buildCommit =
     System.getenv("METROLIST_BUILD_COMMIT")
         ?.trim()
@@ -41,13 +41,13 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 154
-        versionName = System.getenv("MUSIFY_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "13.7.0"
+        val versionNameOverride = System.getenv("SEVENXTUNE_VERSION_NAME")?.takeIf { it.isNotBlank() }\n        versionName = versionNameOverride ?: System.getenv("MUSIFY_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "13.7.0"
         val baseVersionName = requireNotNull(versionName)
         buildConfigField("String", "BASE_VERSION_NAME", "\"$baseVersionName\"")
-        if (System.getenv("MUSIFY_VERSION_NAME").isNullOrBlank()) {
+        if (versionNameOverride == null && System.getenv("MUSIFY_VERSION_NAME").isNullOrBlank()) {
             buildCommit?.let { versionName = "$baseVersionName+$it" }
         }
-        resValue("string", "app_name", appNameOverride ?: "Musify")
+        resValue("string", "app_name", appNameOverride ?: "7xTune")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
@@ -135,7 +135,7 @@ android {
             }
             isDebuggable = true
             if (appNameOverride == null) {
-                resValue("string", "app_name", "Musify Debug")
+                resValue("string", "app_name", "7xTune Debug")
             }
             signingConfig =
                 if (workflowDebugKeystoreFile != null) {
