@@ -6,6 +6,7 @@
 package com.metrolist.music.ui.component
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -50,10 +51,12 @@ fun NavigationTitle(
         modifier = modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.72f))
             .clickable(enabled = onClick != null) {
                 onClick?.invoke()
             }
-            .padding(horizontal = 12.dp, vertical = 12.dp)
+            .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         thumbnail?.invoke()
 
