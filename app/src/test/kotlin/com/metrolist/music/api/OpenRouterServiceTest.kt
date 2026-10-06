@@ -63,6 +63,22 @@ class OpenRouterServiceTest {
     }
 
     @Test
+    fun `openai requests omit parameters gpt-5 models reject`() {
+        val request =
+            buildTranslationRequest(
+                text = "one",
+                targetLanguage = "Spanish",
+                model = "gpt-5.6-luna",
+                mode = "Translated",
+                customSystemPrompt = "",
+                baseUrl = "https://api.openai.com/v1/chat/completions",
+            )
+
+        assertTrue("max_tokens" !in request)
+        assertTrue("temperature" !in request)
+    }
+
+    @Test
     fun `streaming romanization uses the romanization prompt`() {
         val request =
             buildTranslationRequest(

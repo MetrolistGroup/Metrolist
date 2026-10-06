@@ -217,8 +217,12 @@ Output MUST be a JSON object {"lines": [...]} with EXACTLY $lineCount strings.""
             },
         )
         if (model.isNotBlank()) put("model", model)
-        put("temperature", 0.3)
-        put("max_tokens", lineCount * 100)
+        // OpenAI's GPT-5 models reject max_tokens and non-default temperatures, and reasoning tokens
+        // count against any output cap, so let them use their defaults.
+        if (!baseUrl.contains("api.openai.com")) {
+            put("temperature", 0.3)
+            put("max_tokens", lineCount * 100)
+        }
         put(
             "response_format",
             buildJsonObject {

@@ -92,6 +92,10 @@ private fun String.containsRtl(): Boolean {
     return false
 }
 
+// Indic scripts (Devanagari through Sinhala) join glyphs across grapheme clusters, e.g. the
+// Bengali/Devanagari headstroke, so drawing clusters separately leaves seams and overlaps.
+private fun String.containsJoinedIndic(): Boolean = any { it in '\u0900'..'\u0DFF' }
+
 /**
  * Splits a string into Unicode grapheme clusters using BreakIterator.
  * This correctly handles Devanagari, Bengali, Arabic, Hangul, emoji, etc.
@@ -508,7 +512,8 @@ private fun WordLevelLyrics(
             graphemeClusters.map { cluster -> textMeasurer.measure(cluster, lyricStyle) }
         }
         
-        val isRtlText = remember(mainText) { mainText.containsRtl() }
+        // RTL and joined Indic text is drawn as one shaped line with per-word clips instead of per cluster.
+        val drawWholeLine = remember(mainText) { mainText.containsRtl() || mainText.containsJoinedIndic() }
         
         Canvas(modifier = Modifier
             .fillMaxWidth()
@@ -522,7 +527,7 @@ private fun WordLevelLyrics(
             if (!isActiveLine) {
                 drawText(layoutResult, color = lineColor)
             } else {
-                if (isRtlText) {
+                if (drawWholeLine) {
                     val (wordIdxMap, _, _) = charToWordData
                     val wordFactors = effectiveWords.map { word ->
                         val wStartMs = (word.startTime * 1000).toLong()
