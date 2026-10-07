@@ -146,6 +146,7 @@ import com.metrolist.music.ui.component.RandomizeGridItem
 import com.metrolist.music.ui.component.SongGridItem
 import com.metrolist.music.ui.component.SongListItem
 import com.metrolist.music.ui.component.SpeedDialGridItem
+import com.metrolist.music.ui.component.SevenXTuneHomeHero
 import com.metrolist.music.ui.component.YouTubeGridItem
 import com.metrolist.music.ui.component.YouTubeListItem
 import com.metrolist.music.ui.component.shimmer.GridItemPlaceHolder
@@ -1191,51 +1192,18 @@ fun HomeScreen(
                 state = lazylistState,
                 contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
             ) {
-                item(key = "7xtune_brand_header") {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(46.dp)
-                                .clip(RoundedCornerShape(15.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.small_icon),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.size(28.dp),
-                            )
-                        }
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(start = 12.dp),
-                        ) {
-                            Text(
-                                text = "7xTune",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                text = accountName?.takeIf { it.isNotBlank() }?.let { "Good to see you, $it" }
-                                    ?: "Music, your way",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
+                item(key = "7xtune_command_center") {
+                    SevenXTuneHomeHero(
+                        accountName = accountName,
+                        onSearch = { navController.navigate(Screens.Search.route) },
+                        onLibrary = { navController.navigate(Screens.Library.route) },
+                        onHistory = { navController.navigate("history") },
+                        onDownloads = { navController.navigate("cache_playlist/DOWNLOADS") },
+                    )
                 }
 
                 item {
-                    ChipsRow(
-                        chips = homePage?.chips?.map { it to it.title } ?: emptyList(),
+                    ChipsRow(                       chips = homePage?.chips?.map { it to it.title } ?: emptyList(),
                         currentValue = selectedChip,
                         onValueUpdate = {
                             viewModel.toggleChip(it)
