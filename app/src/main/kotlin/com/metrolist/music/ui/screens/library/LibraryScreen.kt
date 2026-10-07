@@ -54,6 +54,7 @@ fun LibraryScreen() {
             LibraryFilter.LIBRARY -> LibraryMixScreen(
                 navController = navController,
                 filterContent = filterContent,
+                onNavigateToFilter = { filterType = it },
                 viewType = libraryViewType,
                 onViewTypeChange = { libraryViewType = it },
             )
