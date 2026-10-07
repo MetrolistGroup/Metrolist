@@ -1048,8 +1048,8 @@ fun HomeScreen(
             val list = mutableListOf<HomeSection>()
             val chipActive = selectedChip != null
 
-            // Keep the same section model as Metrolist: Quick Picks is eligible after
-            // Speed Dial, and the rest of the home sections can be naturally randomized.
+            // Metrolist section model, with 7xTune's requested fixed order:
+            // Quick Picks first, Speed Dial second, then the remaining sections.
             if (!chipActive && speedDialItems.isNotEmpty()) list.add(HomeSection.SpeedDial)
             if (!chipActive && quickPicks?.isNotEmpty() == true) list.add(HomeSection.QuickPicks)
             if (!chipActive && communityPlaylists?.isNotEmpty() == true) list.add(HomeSection.FromTheCommunity)
@@ -1064,7 +1064,7 @@ fun HomeScreen(
                 }
             }
 
-            // Do not filter out the upstream/YouTube Home page's Quick Picks section.
+            // Keep the Home page sections exactly as provided by Metrolist/YouTube.
             homePage?.sections?.indices?.forEach { i ->
                 list.add(HomeSection.HomePageSection(i))
             }
@@ -1139,8 +1139,9 @@ fun HomeScreen(
             }
         }
 
-    // Keep the horizontal grid's scroll position when Quick Picks refreshes.
-    // Resetting it on every list emission caused visible jumps during enrichment.
+    LaunchedEffect(quickPicks) {
+        quickPicksLazyGridState.scrollToItem(0)
+    }
 
     LaunchedEffect(forgottenFavorites) {
         forgottenFavoritesLazyGridState.scrollToItem(0)
