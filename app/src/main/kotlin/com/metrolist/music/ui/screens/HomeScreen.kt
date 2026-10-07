@@ -1048,9 +1048,9 @@ fun HomeScreen(
             val list = mutableListOf<HomeSection>()
             val chipActive = selectedChip != null
 
-            // Reserve the first Home section for Quick Picks while it is loading so Speed Dial
-            // can never jump above it and then be pushed downward when Quick Picks arrives.
-            if (!chipActive && (quickPicks?.isNotEmpty() == true || (isLoading && quickPicks == null))) {
+            // Quick Picks is a fixed top section. Reserve its slot even while the data is
+            // loading so Speed Dial can never become the first visible section.
+            if (!chipActive) {
                 list.add(HomeSection.QuickPicks)
             }
             if (!chipActive && speedDialItems.isNotEmpty()) list.add(HomeSection.SpeedDial)
