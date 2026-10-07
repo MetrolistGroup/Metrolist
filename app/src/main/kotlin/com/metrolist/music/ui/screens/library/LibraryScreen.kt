@@ -31,7 +31,11 @@ fun LibraryScreen() {
     var playlistViewType by rememberEnumPreference(PlaylistViewTypeKey, LibraryViewType.GRID)
 
     val filterContent = @Composable {
-        Row {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp, bottom = 2.dp),
+        ) {
             ChipsRow(
                 chips = listOf(
                     LibraryFilter.PLAYLISTS to stringResource(R.string.filter_playlists),
@@ -54,7 +58,6 @@ fun LibraryScreen() {
             LibraryFilter.LIBRARY -> LibraryMixScreen(
                 navController = navController,
                 filterContent = filterContent,
-                onNavigateToFilter = { filterType = it },
                 viewType = libraryViewType,
                 onViewTypeChange = { libraryViewType = it },
             )
