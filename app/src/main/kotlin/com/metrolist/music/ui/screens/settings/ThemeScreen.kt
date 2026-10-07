@@ -116,7 +116,18 @@ val PaletteColors = listOf(
 fun ThemeScreen(
     navController: NavController,
 ) {
-    val (darkMode, onDarkModeChange) = rememberEnumPreference(DarkModeKey, DarkMode.AUTO)
+    val (storedDarkMode, onStoredDarkModeChange) = rememberEnumPreference(DarkModeKey, DarkMode.ON)
+    val darkMode = DarkMode.ON
+
+    LaunchedEffect(storedDarkMode) {
+        if (storedDarkMode != DarkMode.ON) {
+            onStoredDarkModeChange(DarkMode.ON)
+        }
+    }
+
+    val onDarkModeChange: (DarkMode) -> Unit = {
+        onStoredDarkModeChange(DarkMode.ON)
+    }
     val (pureBlack, onPureBlackChangeRaw) = rememberPreference(PureBlackKey, defaultValue = false)
     val (_, onPureBlackMiniPlayerChange) = rememberPreference(
         PureBlackMiniPlayerKey,
@@ -320,39 +331,7 @@ fun ThemeControls(
                     horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // System mode (AUTO)
-                    ModeCircle(
-                        darkMode = darkMode,
-                        pureBlack = pureBlack,
-                        targetMode = DarkMode.AUTO,
-                        targetPureBlack = pureBlack,
-                        onClick = {
-                            onDarkModeChange(DarkMode.AUTO)
-                        },
-                        showIcon = true
-                    )
-                    
-                    // Vertical divider to separate System from manual modes
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(32.dp)
-                            .background(MaterialTheme.colorScheme.outlineVariant)
-                    )
-                    
-                    // Manual modes (Light, Dark, Pure Black)
-                    ModeCircle(
-                        darkMode = darkMode,
-                        pureBlack = pureBlack,
-                        targetMode = DarkMode.OFF,
-                        targetPureBlack = false,
-                        onClick = {
-                            onDarkModeChange(DarkMode.OFF)
-                            onPureBlackChange(false)
-                        },
-                        showIcon = false
-                    )
-                    
+                    // Dark mode is always enabled. Pure Black remains an optional dark-only variant.
                     ModeCircle(
                         darkMode = darkMode,
                         pureBlack = pureBlack,
@@ -364,7 +343,7 @@ fun ThemeControls(
                         },
                         showIcon = false
                     )
-                    
+
                     ModeCircle(
                         darkMode = darkMode,
                         pureBlack = pureBlack,
