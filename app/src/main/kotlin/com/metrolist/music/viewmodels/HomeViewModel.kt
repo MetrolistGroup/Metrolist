@@ -321,86 +321,55 @@ class HomeViewModel @Inject constructor(
 
     private suspend fun getQuickPicks() {
         val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
-
-        // Always publish a useful local snapshot before doing any network work.
-        // Quick Picks must not depend on YouTube being reachable to render.
-        val localRelatedSongs =
-            database.quickPicks().first().filterVideoSongs(hideVideoSongs)
-        val forgotten =
-            database.forgottenFavorites().first().filterVideoSongs(hideVideoSongs).take(8)
-        val localFallback =
-            (localRelatedSongs + forgotten)
-                .distinctBy { it.id }
-                .shuffled()
-                .take(20)
-
         when (quickPicksEnum.first()) {
             QuickPicks.QUICK_PICKS -> {
-                quickPicks.value = localFallback
+                val relatedSongs = database.quickPicks().first().filterVideoSongs(hideVideoSongs)
+                val forgotten = database.forgottenFavorites().first().filterVideoSongs(hideVideoSongs).take(8)
 
-                // Enrich the local results from YouTube in the background. Batch the local
-                // database lookup instead of issuing one Room query per recommendation.
+                // Use recent listening to enrich Quick Picks with related songs already in the local database.
                 val recentSong = database.latestEvent().first()?.song
+                val ytSimilarSongs = mutableListOf<Song>()
+
                 if (recentSong != null) {
-                    val endpoint =
-                        YouTube.next(WatchEndpoint(videoId = recentSong.id))
-                            .getOrNull()
-                            ?.relatedEndpoint
-
+                    val endpoint = YouTube.next(WatchEndpoint(videoId = recentSong.id)).getOrNull()?.relatedEndpoint
                     if (endpoint != null) {
-                        val recommendedIds =
-                            YouTube.related(endpoint)
-                                .getOrNull()
-                                ?.songs
-                                ?.take(10)
-                                ?.map { it.id }
-                                .orEmpty()
-
-                        if (recommendedIds.isNotEmpty()) {
-                            val localSongsById =
-                                database.getSongsByIds(recommendedIds)
-                                    .filterVideoSongs(hideVideoSongs)
-                                    .associateBy { it.id }
-                            val relatedFromYouTube =
-                                recommendedIds.mapNotNull { localSongsById[it] }
-
-                            val enriched =
-                                (localRelatedSongs + forgotten + relatedFromYouTube)
-                                    .distinctBy { it.id }
-                                    .shuffled()
-                                    .take(20)
-
-                            // Never replace valid content with an empty network result.
-                            if (enriched.isNotEmpty()) {
-                                quickPicks.value = enriched
+                        YouTube.related(endpoint).onSuccess { page ->
+                            page.songs.take(10).forEach { ytSong ->
+                                database.song(ytSong.id).first()?.let { localSong ->
+                                    if (!hideVideoSongs || !localSong.song.isVideo) {
+                                        ytSimilarSongs.add(localSong)
+                                    }
+                                }
                             }
                         }
                     }
                 }
+
+                // Match upstream Metrolist: combine related history, forgotten favorites and local
+                // matches from YouTube recommendations, then keep a compact shuffled set.
+                val combined = (relatedSongs + forgotten + ytSimilarSongs)
+                    .distinctBy { it.id }
+                    .shuffled()
+                    .take(20)
+
+                quickPicks.value = combined.ifEmpty { relatedSongs.shuffled().take(20) }
             }
 
             QuickPicks.LAST_LISTEN -> {
                 val song = database.latestEvent().first()?.song
-                val lastListenRelated =
-                    if (song != null && database.hasRelatedSongs(song.id)) {
-                        database.getRelatedSongs(song.id).first()
+                if (song != null && database.hasRelatedSongs(song.id)) {
+                    quickPicks.value =
+                        database.getRelatedSongs(song.id)
+                            .first()
                             .filterVideoSongs(hideVideoSongs)
                             .shuffled()
                             .take(20)
-                    } else {
-                        emptyList()
-                    }
-
-                // This mode previously left quickPicks null when no last-listen
-                // relationship existed, so the whole section stayed blank forever.
-                quickPicks.value =
-                    (lastListenRelated.ifEmpty { localFallback })
-                        .distinctBy { it.id }
-                        .take(20)
+                } else {
+                    quickPicks.value = emptyList()
+                }
             }
         }
     }
-
     private suspend fun getCommunityPlaylists() {
         val fromTimeStamp = LocalDateTime.now().minusWeeks(4)
         val artistSeeds = database.mostPlayedArtists(fromTimeStamp, limit = 10).first()
