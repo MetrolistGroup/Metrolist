@@ -35,7 +35,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -183,13 +182,6 @@ fun AppNavigationBar(
             MaterialTheme.colorScheme.surfaceContainerHigh
         }
 
-    val borderColor =
-        if (pureBlack) {
-            Color.White.copy(alpha = 0.12f)
-        } else {
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f)
-        }
-
     val selectedIndex =
         navigationItems
             .indexOfFirst { screen ->
@@ -197,36 +189,19 @@ fun AppNavigationBar(
             }
             .coerceAtLeast(0)
 
-    // MainActivity reserves extra bottom space for system navigation insets.
-    // Keep the animated bar itself compact and full-width, leaving that inset transparent.
+    // MainActivity reserves the system gesture/navigation inset below this bar.
+    // Keep the navigation edge-to-edge and flat so it is visually part of the screen.
     Box(modifier = modifier.fillMaxSize()) {
         AnimatedNavigationBar(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(if (slimNav) 48.dp else 56.dp)
-                    .align(Alignment.TopCenter)
-                    .padding(vertical = 2.dp)
-                    .clip(
-                        androidx.compose.foundation.shape.RoundedCornerShape(
-                            if (slimNav) 18.dp else 20.dp,
-                        ),
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = borderColor,
-                        shape =
-                            androidx.compose.foundation.shape.RoundedCornerShape(
-                                if (slimNav) 18.dp else 20.dp,
-                            ),
-                    ),
+                    .height(if (slimNav) 52.dp else 60.dp)
+                    .align(Alignment.TopCenter),
             selectedIndex = selectedIndex,
             barColor = barColor,
             ballColor = MaterialTheme.colorScheme.primary,
-            cornerRadius =
-                shapeCornerRadius(
-                    if (slimNav) 18.dp else 20.dp,
-                ),
+            cornerRadius = shapeCornerRadius(0.dp),
             ballAnimation =
                 Parabolic(
                     tween(
