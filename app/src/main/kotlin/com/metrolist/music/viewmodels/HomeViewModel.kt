@@ -128,6 +128,17 @@ class HomeViewModel @Inject constructor(
     val allLocalItems = MutableStateFlow<List<LocalItem>>(emptyList())
     val allYtItems = MutableStateFlow<List<YTItem>>(emptyList())
 
+    // Speed Dial needs a live session signal because playback history is intentionally
+    // written only after the configured history threshold. This makes newly started
+    // songs available immediately without changing global listening-history semantics.
+    private val sessionRecentlyPlayedSpeedDial = MutableStateFlow<List<YTItem>>(emptyList())
+
+    fun recordSpeedDialPlay(item: YTItem?) {
+        if (item == null || item.id.isBlank()) return
+        sessionRecentlyPlayedSpeedDial.value =
+            listOf(item) + sessionRecentlyPlayedSpeedDial.value.filterNot { it.id == item.id }.take(11)
+    }
+
     val pinnedSpeedDialItems: StateFlow<List<SpeedDialItem>> =
         database.speedDialDao.getAll()
             .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -148,10 +159,18 @@ class HomeViewModel @Inject constructor(
         database.likedSongsByCreateDateAsc()
             .map { songs -> songs.asReversed().take(9).map(::songToSpeedDialItem) }
 
+    private val combinedRecentSpeedDialItems =
+        combine(
+            sessionRecentlyPlayedSpeedDial,
+            recentlyPlayedSongs,
+        ) { session, persisted ->
+            (session + persisted).distinctBy { it.id }
+        }
+
     val speedDialItems: StateFlow<List<YTItem>> =
         combine(
             database.speedDialDao.getAll(),
-            recentlyPlayedSongs,
+            combinedRecentSpeedDialItems,
             frequentlyPlayedSongs,
             keepListening,
             recentlyLikedSongs,

@@ -54,6 +54,17 @@ class HomeSpeedDialTest {
         assertEquals(listOf("pinned"), result.map { it.id })
     }
 
+
+    @Test
+    fun `live session plays are merged ahead of persisted history without duplicates`() {
+        val session = listOf(song("current"), song("older-session"))
+        val persisted = listOf(song("persisted"), song("current").copy(title = "duplicate"))
+
+        val result = (session + persisted).distinctBy { it.id }
+
+        assertEquals(listOf("current", "older-session", "persisted"), result.map { it.id })
+    }
+
     private fun song(id: String) =
         SongItem(
             id = id,

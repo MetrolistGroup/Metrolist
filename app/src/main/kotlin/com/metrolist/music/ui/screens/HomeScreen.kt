@@ -799,6 +799,19 @@ fun HomeScreen(
     val isPlaying by playerConnection.isEffectivelyPlaying.collectAsStateWithLifecycle()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
+    LaunchedEffect(mediaMetadata?.id) {
+        mediaMetadata?.let { metadata ->
+            viewModel.recordSpeedDialPlay(
+                SongItem(
+                    id = metadata.id,
+                    title = metadata.title,
+                    artists = metadata.artists,
+                    thumbnail = metadata.thumbnailUrl ?: "",
+                ),
+            )
+        }
+    }
+
     val quickPicks by viewModel.quickPicks.collectAsStateWithLifecycle()
     val forgottenFavorites by viewModel.forgottenFavorites.collectAsStateWithLifecycle()
     val keepListening by viewModel.keepListening.collectAsStateWithLifecycle()
