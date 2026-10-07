@@ -177,54 +177,63 @@ fun AppNavigationBar(
 
     val barColor =
         if (pureBlack) {
-            Color.Black.copy(alpha = 0.96f)
+            Color.Black
         } else {
             MaterialTheme.colorScheme.surfaceContainerHigh
         }
+
     val borderColor =
         if (pureBlack) {
-            Color.White.copy(alpha = 0.10f)
+            Color.White.copy(alpha = 0.12f)
         } else {
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.32f)
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f)
         }
-    val ballColor = MaterialTheme.colorScheme.primary
 
-    // Exyte's navigation bar provides the moving ball + animated indentation.
-    // The buttons remain 100% 7xTune-owned so routing and long-press behavior stay intact.
+    val selectedIndex =
+        navigationItems
+            .indexOfFirst { screen ->
+                isRouteSelected(currentRoute, screen.route, navigationItems)
+            }
+            .coerceAtLeast(0)
+
     AnimatedNavigationBar(
         modifier =
             modifier
-                .padding(horizontal = 14.dp, vertical = 6.dp)
-                .clip(if (slimNav) androidx.compose.foundation.shape.RoundedCornerShape(23.dp) else androidx.compose.foundation.shape.RoundedCornerShape(27.dp))
+                .fillMaxSize()
+                .padding(vertical = 2.dp)
+                .clip(
+                    androidx.compose.foundation.shape.RoundedCornerShape(
+                        if (slimNav) 18.dp else 20.dp,
+                    ),
+                )
                 .border(
                     width = 1.dp,
                     color = borderColor,
-                    shape = if (slimNav) androidx.compose.foundation.shape.RoundedCornerShape(23.dp) else androidx.compose.foundation.shape.RoundedCornerShape(27.dp),
-                )
-                .height(if (slimNav) 56.dp else 64.dp),
-        selectedIndex =
-            navigationItems.indexOfFirst { screen ->
-                isRouteSelected(currentRoute, screen.route, navigationItems)
-            }.coerceAtLeast(0),
+                    shape =
+                        androidx.compose.foundation.shape.RoundedCornerShape(
+                            if (slimNav) 18.dp else 20.dp,
+                        ),
+                ),
+        selectedIndex = selectedIndex,
         barColor = barColor,
-        ballColor = ballColor,
+        ballColor = MaterialTheme.colorScheme.primary,
         cornerRadius =
             shapeCornerRadius(
-                if (slimNav) 23.dp else 27.dp,
+                if (slimNav) 18.dp else 20.dp,
             ),
         ballAnimation =
             Parabolic(
                 tween(
-                    durationMillis = if (slimNav) 280 else 320,
+                    durationMillis = if (slimNav) 260 else 300,
                 ),
             ),
         indentAnimation =
             StraightIndent(
                 animationSpec = tween(
-                    durationMillis = if (slimNav) 260 else 300,
+                    durationMillis = if (slimNav) 240 else 280,
                 ),
-                indentWidth = if (navigationItems.size <= 3) 58.dp else 48.dp,
-                indentHeight = if (slimNav) 12.dp else 14.dp,
+                indentWidth = if (navigationItems.size <= 3) 54.dp else 46.dp,
+                indentHeight = if (slimNav) 10.dp else 12.dp,
             ),
     ) {
         navigationItems.forEach { screen ->
@@ -280,20 +289,11 @@ fun AppNavigationBar(
                 }
             }
 
-            val iconLift by animateDpAsState(
-                targetValue = if (isSelected) (-10).dp else 0.dp,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMediumLow,
-                ),
-                label = "navIconLift",
-            )
-
             Box(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
                         .clickable(
                             interactionSource = interactionSource,
                             indication = null,
@@ -309,14 +309,11 @@ fun AppNavigationBar(
                     contentDescription = stringResource(screen.titleId),
                     tint =
                         if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimary
+                            Color.Black
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                            Color.White.copy(alpha = 0.82f)
                         },
-                    modifier =
-                        Modifier
-                            .size(if (isSelected) 27.dp else 25.dp)
-                            .offset(y = iconLift),
+                    modifier = Modifier.size(if (isSelected) 27.dp else 25.dp),
                 )
             }
         }
