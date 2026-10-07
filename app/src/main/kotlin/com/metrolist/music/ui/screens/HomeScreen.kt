@@ -1048,10 +1048,10 @@ fun HomeScreen(
             val list = mutableListOf<HomeSection>()
             val chipActive = selectedChip != null
 
-            // Quick Picks is the first home section whenever the upstream/local data is available.
-            // Speed Dial stays immediately below it.
-            if (!chipActive && quickPicks?.isNotEmpty() == true) list.add(HomeSection.QuickPicks)
+            // Keep the same section model as Metrolist: Quick Picks is eligible after
+            // Speed Dial, and the rest of the home sections can be naturally randomized.
             if (!chipActive && speedDialItems.isNotEmpty()) list.add(HomeSection.SpeedDial)
+            if (!chipActive && quickPicks?.isNotEmpty() == true) list.add(HomeSection.QuickPicks)
             if (!chipActive && communityPlaylists?.isNotEmpty() == true) list.add(HomeSection.FromTheCommunity)
             if (!chipActive && dailyDiscover?.isNotEmpty() == true) list.add(HomeSection.DailyDiscover)
             if (!chipActive && keepListening?.isNotEmpty() == true) list.add(HomeSection.KeepListening)
@@ -1064,59 +1064,56 @@ fun HomeScreen(
                 }
             }
 
+            // Do not filter out the upstream/YouTube Home page's Quick Picks section.
             homePage?.sections?.indices?.forEach { i ->
-                val section = homePage?.sections?.getOrNull(i)
-                val isOfficialQuickPicks =
-                    !chipActive && section?.title?.trim()?.equals("Quick Picks", ignoreCase = true) == true
-                if (!isOfficialQuickPicks) {
-                    list.add(HomeSection.HomePageSection(i))
-                }
+                list.add(HomeSection.HomePageSection(i))
             }
 
             if (explorePage?.moodAndGenres != null) list.add(HomeSection.MoodAndGenres)
 
             if (randomizeHomeOrder) {
-                val fixedTopSections =
-                    buildList {
-                        if (list.contains(HomeSection.QuickPicks)) add(HomeSection.QuickPicks)
-                        if (list.contains(HomeSection.SpeedDial)) add(HomeSection.SpeedDial)
-                    }
+                list.sortedByDescending { section ->
+                    val sectionRandom = Random(randomSeed + section.id.hashCode())
 
-                val randomizedSections =
-                    list
-                        .filter { it != HomeSection.QuickPicks && it != HomeSection.SpeedDial }
-                        .sortedByDescending { section ->
-                            val sectionRandom = Random(randomSeed + section.id.hashCode())
+                    val base =
+                        when (section) {
+                            HomeSection.SpeedDial,
+                            HomeSection.QuickPicks,
+                            HomeSection.DailyDiscover,
+                            -> 500
 
-                            val base =
-                                when (section) {
-                                    HomeSection.DailyDiscover -> 500
-                                    HomeSection.KeepListening,
-                                    HomeSection.AccountPlaylists,
-                                    HomeSection.ForgottenFavorites,
-                                    HomeSection.FromTheCommunity -> 300
-                                    else -> 100
-                                }
+                            HomeSection.KeepListening,
+                            HomeSection.AccountPlaylists,
+                            HomeSection.ForgottenFavorites,
+                            HomeSection.FromTheCommunity,
+                            -> 300
 
-                            val modifier =
-                                when (section) {
-                                    HomeSection.DailyDiscover -> sectionRandom.nextInt(-200, 400)
-                                    HomeSection.KeepListening,
-                                    HomeSection.AccountPlaylists,
-                                    HomeSection.ForgottenFavorites,
-                                    HomeSection.FromTheCommunity -> sectionRandom.nextInt(-100, 400)
-                                    else -> sectionRandom.nextInt(-50, 50)
-                                }
-
-                            base + modifier
+                            else -> 100
                         }
 
-                fixedTopSections + randomizedSections
+                    val modifier =
+                        when (section) {
+                            HomeSection.SpeedDial,
+                            HomeSection.QuickPicks,
+                            HomeSection.DailyDiscover,
+                            -> sectionRandom.nextInt(-200, 400)
+
+                            HomeSection.KeepListening,
+                            HomeSection.AccountPlaylists,
+                            HomeSection.ForgottenFavorites,
+                            HomeSection.FromTheCommunity,
+                            -> sectionRandom.nextInt(-100, 400)
+
+                            else -> sectionRandom.nextInt(-50, 50)
+                        }
+
+                    base + modifier
+                }
             } else {
                 val defaultOrder =
                     mapOf(
-                        HomeSection.QuickPicks to 100,
-                        HomeSection.SpeedDial to 90,
+                        HomeSection.SpeedDial to 100,
+                        HomeSection.QuickPicks to 90,
                         HomeSection.FromTheCommunity to 80,
                         HomeSection.DailyDiscover to 70,
                         HomeSection.KeepListening to 60,
