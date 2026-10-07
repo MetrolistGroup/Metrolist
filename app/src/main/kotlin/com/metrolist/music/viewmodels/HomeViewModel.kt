@@ -326,7 +326,7 @@ class HomeViewModel @Inject constructor(
                 val relatedSongs = database.quickPicks().first().filterVideoSongs(hideVideoSongs)
                 val forgotten = database.forgottenFavorites().first().filterVideoSongs(hideVideoSongs).take(8)
 
-                // Use recent listening to enrich Quick Picks with related songs already in the local database.
+                // Get similar songs from YouTube based on recent listening
                 val recentSong = database.latestEvent().first()?.song
                 val ytSimilarSongs = mutableListOf<Song>()
 
@@ -334,6 +334,7 @@ class HomeViewModel @Inject constructor(
                     val endpoint = YouTube.next(WatchEndpoint(videoId = recentSong.id)).getOrNull()?.relatedEndpoint
                     if (endpoint != null) {
                         YouTube.related(endpoint).onSuccess { page ->
+                            // Convert YouTube songs to local Song format if they exist in database
                             page.songs.take(10).forEach { ytSong ->
                                 database.song(ytSong.id).first()?.let { localSong ->
                                     if (!hideVideoSongs || !localSong.song.isVideo) {
@@ -345,39 +346,23 @@ class HomeViewModel @Inject constructor(
                     }
                 }
 
-                // Match upstream Metrolist sources first, then fall back to the user's
-                // real listening history when the related-song map has not been populated yet.
-                val recentHistory =
-                    database.mostPlayedSongs(
-                        fromTimeStamp = LocalDateTime.now().minusWeeks(4),
-                        limit = 20,
-                        offset = 0,
-                        toTimeStamp = LocalDateTime.now(),
-                    ).first().filterVideoSongs(hideVideoSongs)
-
-                val combined = (relatedSongs + forgotten + ytSimilarSongs + recentHistory)
+                // Combine all sources and remove duplicates
+                val combined = (relatedSongs + forgotten + ytSimilarSongs)
                     .distinctBy { it.id }
                     .shuffled()
                     .take(20)
 
-                quickPicks.value = combined.ifEmpty { null }
+                quickPicks.value = combined.ifEmpty { relatedSongs.shuffled().take(20) }
             }
-
             QuickPicks.LAST_LISTEN -> {
                 val song = database.latestEvent().first()?.song
                 if (song != null && database.hasRelatedSongs(song.id)) {
-                    quickPicks.value =
-                        database.getRelatedSongs(song.id)
-                            .first()
-                            .filterVideoSongs(hideVideoSongs)
-                            .shuffled()
-                            .take(20)
-                } else {
-                    quickPicks.value = emptyList()
+                    quickPicks.value = database.getRelatedSongs(song.id).first().filterVideoSongs(hideVideoSongs).shuffled().take(20)
                 }
             }
         }
     }
+
     private suspend fun getCommunityPlaylists() {
         val fromTimeStamp = LocalDateTime.now().minusWeeks(4)
         val artistSeeds = database.mostPlayedArtists(fromTimeStamp, limit = 10).first()
