@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -157,39 +159,55 @@ fun AppNavigationBar(
     onHomeLongHold: (() -> Unit)? = null,
 ) {
     val containerColor =
-        if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainerHigh
+        if (pureBlack) {
+            Color.Black
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        }
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
 
-    // 7xTune "Island Dock":
-    // - selected destination becomes an expanded pill
-    // - inactive destinations remain compact icon buttons
-    // - keeps the existing long-press behaviour for Home/Search
+    // 7xTune expressive dock: compact, floating, and quiet until a destination is selected.
     Surface(
-        modifier = modifier
-            .padding(horizontal = 14.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(30.dp)),
-        shape = RoundedCornerShape(30.dp),
+        modifier =
+            modifier
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .border(
+                    BorderStroke(
+                        1.dp,
+                        if (pureBlack) {
+                            Color.White.copy(alpha = 0.10f)
+                        } else {
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+                        },
+                    ),
+                    RoundedCornerShape(28.dp),
+                ),
+        shape = RoundedCornerShape(28.dp),
         color = containerColor,
-        tonalElevation = 4.dp,
-        shadowElevation = 4.dp,
+        tonalElevation = 2.dp,
+        shadowElevation = 5.dp,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(if (slimNav) 62.dp else 70.dp)
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(if (slimNav) 56.dp else 64.dp)
+                    .padding(horizontal = 7.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         ) {
             navigationItems.forEach { screen ->
-                val isSelected = remember(currentRoute, screen.route) {
-                    isRouteSelected(currentRoute, screen.route, navigationItems)
-                }
+                val isSelected =
+                    remember(currentRoute, screen.route) {
+                        isRouteSelected(currentRoute, screen.route, navigationItems)
+                    }
                 val currentIsSelected by rememberUpdatedState(isSelected)
-                val iconRes = remember(isSelected, screen) {
-                    if (isSelected) screen.iconIdActive else screen.iconIdInactive
-                }
+                val iconRes =
+                    remember(isSelected, screen) {
+                        if (isSelected) screen.iconIdActive else screen.iconIdInactive
+                    }
 
                 val isSearchItem = screen == Screens.Search && onSearchLongClick != null
                 val isHomeHoldItem = screen == Screens.Home && onHomeLongHold != null
@@ -234,62 +252,52 @@ fun AppNavigationBar(
                 }
 
                 Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(if (slimNav) 46.dp else 52.dp),
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .height(if (slimNav) 44.dp else 50.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                if (isSelected) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    Color.Transparent
+                                },
+                            )
+                            .clickable(
+                                interactionSource = interactionSource,
+                                indication = null,
+                            ) {
+                                if (!isSearchItem && !isHomeHoldItem) {
+                                    onItemClick(screen, currentIsSelected)
+                                }
+                            },
                     contentAlignment = androidx.compose.ui.Alignment.Center,
                 ) {
-                    val itemShape = RoundedCornerShape(20.dp)
-                    val itemModifier = Modifier
-                        .fillMaxWidth()
-                        .height(if (slimNav) 46.dp else 52.dp)
-                        .clip(itemShape)
-                        .background(
-                            if (isSelected) {
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
-                            } else {
-                                Color.Transparent
-                            },
-                        )
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = null,
-                        ) {
-                            if (!isSearchItem && !isHomeHoldItem) {
-                                onItemClick(screen, currentIsSelected)
-                            } else {
-                                // Short taps for Home/Search are dispatched by the interaction collector.
-                            }
-                        }
-                        .padding(horizontal = if (isSelected) 12.dp else 6.dp)
-
                     Row(
-                        modifier = itemModifier,
-                        horizontalArrangement = if (isSelected) {
-                            Arrangement.Center
-                        } else {
-                            Arrangement.Center
-                        },
+                        modifier = Modifier.padding(horizontal = if (isSelected) 10.dp else 4.dp),
+                        horizontalArrangement = Arrangement.Center,
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                     ) {
                         Icon(
                             painter = painterResource(id = iconRes),
                             contentDescription = stringResource(screen.titleId),
-                            tint = if (isSelected) {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                            modifier = Modifier.size(if (isSelected) 25.dp else 27.dp),
+                            tint =
+                                if (isSelected) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            modifier = Modifier.size(if (isSelected) 22.dp else 24.dp),
                         )
 
-                        if (isSelected && !slimNav) {
-                            androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
+                        if (isSelected) {
+                            Spacer(Modifier.size(7.dp))
                             Text(
                                 text = stringResource(screen.titleId),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.labelLarge,
+                                style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                         }
