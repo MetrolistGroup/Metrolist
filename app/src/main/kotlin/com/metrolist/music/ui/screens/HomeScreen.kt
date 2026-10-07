@@ -1539,7 +1539,18 @@ fun HomeScreen(
                                     Column(
                                         modifier =
                                             Modifier
-                                                .fillMaxWidth(),
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 12.dp)
+                                                .clip(RoundedCornerShape(24.dp))
+                                                .background(
+                                                    com.metrolist.music.ui.theme.SevenXTunePalette.Surface.copy(alpha = 0.58f),
+                                                )
+                                                .border(
+                                                    1.dp,
+                                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.10f),
+                                                    RoundedCornerShape(24.dp),
+                                                )
+                                                .padding(vertical = 4.dp),
                                     ) {
                                         HorizontalPager(
                                             state = pagerState,
@@ -1855,6 +1866,27 @@ fun HomeScreen(
                                 }
 
                                 item(key = "quick_picks_list") {
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 12.dp)
+                                                .clip(RoundedCornerShape(24.dp))
+                                                .background(
+                                                    Brush.linearGradient(
+                                                        listOf(
+                                                            com.metrolist.music.ui.theme.SevenXTunePalette.SurfaceRaised.copy(alpha = 0.88f),
+                                                            com.metrolist.music.ui.theme.SevenXTunePalette.Surface.copy(alpha = 0.82f),
+                                                        ),
+                                                    ),
+                                                )
+                                                .border(
+                                                    1.dp,
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                                    RoundedCornerShape(24.dp),
+                                                )
+                                                .padding(vertical = 4.dp),
+                                    ) {
                                     LazyHorizontalGrid(
                                         state = quickPicksLazyGridState,
                                         rows = GridCells.Fixed(4),
@@ -1873,12 +1905,10 @@ fun HomeScreen(
                                             key = { "home_quickpick_${it.id}" },
                                         ) { item ->
                                             ytGridItem(item)
-                                        }
-                                    }
+                                        }                                    }
                                 }
                             }
                         }
-
                         HomeSection.FromTheCommunity -> {
                             communityPlaylists?.takeIf { it.isNotEmpty() }?.let { playlists ->
                                 item(key = "community_playlists_title") {
