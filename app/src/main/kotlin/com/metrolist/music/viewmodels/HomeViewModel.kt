@@ -323,33 +323,18 @@ class HomeViewModel @Inject constructor(
         val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
         when (quickPicksEnum.first()) {
             QuickPicks.QUICK_PICKS -> {
-                val relatedSongs =
-                    database.quickPicks().first().filterVideoSongs(hideVideoSongs)
-                val forgotten =
-                    database.forgottenFavorites().first().filterVideoSongs(hideVideoSongs).take(8)
+                val relatedSongs = database.quickPicks().first().filterVideoSongs(hideVideoSongs)
+                val forgotten = database.forgottenFavorites().first().filterVideoSongs(hideVideoSongs).take(8)
 
-                // Publish the fast local set immediately. Do not block the Quick Picks UI on
-                // YouTube network calls; this was the source of the "title + empty space" state.
-                val localBase =
-                    (relatedSongs + forgotten)
-                        .distinctBy { it.id }
-                        .shuffled()
-                        .take(20)
-
-                if (localBase.isNotEmpty()) {
-                    quickPicks.value = localBase
-                }
-
-                // Enrich the list with related songs from YouTube when possible.
+                // Get similar songs from YouTube based on recent listening
                 val recentSong = database.latestEvent().first()?.song
                 val ytSimilarSongs = mutableListOf<Song>()
 
                 if (recentSong != null) {
-                    val endpoint =
-                        YouTube.next(WatchEndpoint(videoId = recentSong.id)).getOrNull()?.relatedEndpoint
-
+                    val endpoint = YouTube.next(WatchEndpoint(videoId = recentSong.id)).getOrNull()?.relatedEndpoint
                     if (endpoint != null) {
                         YouTube.related(endpoint).onSuccess { page ->
+                            // Convert YouTube songs to local Song format if they exist in database
                             page.songs.take(10).forEach { ytSong ->
                                 database.song(ytSong.id).first()?.let { localSong ->
                                     if (!hideVideoSongs || !localSong.song.isVideo) {
@@ -361,40 +346,19 @@ class HomeViewModel @Inject constructor(
                     }
                 }
 
-                val combined =
-                    (relatedSongs + forgotten + ytSimilarSongs)
-                        .distinctBy { it.id }
-                        .shuffled()
-                        .take(20)
+                // Combine all sources and remove duplicates
+                val combined = (relatedSongs + forgotten + ytSimilarSongs)
+                    .distinctBy { it.id }
+                    .shuffled()
+                    .take(20)
 
-                quickPicks.value = combined.ifEmpty { localBase }
+                quickPicks.value = combined.ifEmpty { relatedSongs.shuffled().take(20) }
             }
-
             QuickPicks.LAST_LISTEN -> {
                 val song = database.latestEvent().first()?.song
-
-                val related =
-                    if (song != null && database.hasRelatedSongs(song.id)) {
-                        database
-                            .getRelatedSongs(song.id)
-                            .first()
-                            .filterVideoSongs(hideVideoSongs)
-                            .shuffled()
-                            .take(20)
-                    } else {
-                        emptyList()
-                    }
-
-                // Never leave the section permanently null just because the selected mode has
-                // no related-song map yet. Fall back to the normal Quick Picks sources.
-                quickPicks.value =
-                    related.ifEmpty {
-                        (database.quickPicks().first() + database.forgottenFavorites().first())
-                            .filterVideoSongs(hideVideoSongs)
-                            .distinctBy { it.id }
-                            .shuffled()
-                            .take(20)
-                    }
+                if (song != null && database.hasRelatedSongs(song.id)) {
+                    quickPicks.value = database.getRelatedSongs(song.id).first().filterVideoSongs(hideVideoSongs).shuffled().take(20)
+                }
             }
         }
     }
