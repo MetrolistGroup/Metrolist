@@ -205,6 +205,65 @@ sealed class HomeSection(
     data object MoodAndGenres : HomeSection("mood_and_genres", 5)
 }
 
+internal data class QuickPicksSectionSelection(
+    val hasDedicatedQuickPicks: Boolean,
+    val promotedHomePageSectionIndex: Int?,
+    val suppressedHomePageSectionIndexes: Set<Int>,
+) {
+    val authoritativeSection: HomeSection?
+        get() =
+            when {
+                hasDedicatedQuickPicks -> HomeSection.QuickPicks
+                promotedHomePageSectionIndex != null -> HomeSection.HomePageSection(promotedHomePageSectionIndex)
+                else -> null
+            }
+}
+
+private fun String.normalizedQuickPicksKey(): String =
+    lowercase()
+        .replace(Regex("[^\\p{L}\\p{N}\\s]"), " ")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+
+private fun HomePage.Section.isHomePageQuickPicksCandidate(localizedQuickPicksTitle: String): Boolean {
+    if (items.isEmpty() || items.any { it !is SongItem }) return false
+
+    val normalizedTitle = title.normalizedQuickPicksKey()
+    val quickPicksKeys =
+        setOf(
+            localizedQuickPicksTitle.normalizedQuickPicksKey(),
+            "quick picks",
+        )
+
+    return normalizedTitle in quickPicksKeys
+}
+
+internal fun selectQuickPicksSection(
+    dedicatedQuickPicks: List<Song>?,
+    homePageSections: List<HomePage.Section>,
+    localizedQuickPicksTitle: String,
+): QuickPicksSectionSelection {
+    val quickPicksSectionIndexes =
+        homePageSections.mapIndexedNotNull { index, section ->
+            index.takeIf { section.isHomePageQuickPicksCandidate(localizedQuickPicksTitle) }
+        }
+    val hasDedicatedQuickPicks = !dedicatedQuickPicks.isNullOrEmpty()
+
+    return if (hasDedicatedQuickPicks) {
+        QuickPicksSectionSelection(
+            hasDedicatedQuickPicks = true,
+            promotedHomePageSectionIndex = null,
+            suppressedHomePageSectionIndexes = quickPicksSectionIndexes.toSet(),
+        )
+    } else {
+        QuickPicksSectionSelection(
+            hasDedicatedQuickPicks = false,
+            promotedHomePageSectionIndex = quickPicksSectionIndexes.firstOrNull(),
+            suppressedHomePageSectionIndexes = quickPicksSectionIndexes.toSet(),
+        )
+    }
+}
+
 @Composable
 fun CommunityPlaylistCard(
     item: CommunityPlaylistItem,
@@ -1049,8 +1108,15 @@ fun HomeScreen(
         ) {
             val list = mutableListOf<HomeSection>()
             val chipActive = selectedChip != null
+            val quickPicksSelection =
+                selectQuickPicksSection(
+                    dedicatedQuickPicks = quickPicks,
+                    homePageSections = homePage?.sections.orEmpty(),
+                    localizedQuickPicksTitle = quickPicksSectionTitle,
+                )
+            val authoritativeQuickPicksSection = quickPicksSelection.authoritativeSection
 
-            if (!chipActive && quickPicks?.isNotEmpty() == true) list.add(HomeSection.QuickPicks)
+            if (!chipActive && authoritativeQuickPicksSection != null) list.add(authoritativeQuickPicksSection)
             if (!chipActive && speedDialItems.isNotEmpty()) list.add(HomeSection.SpeedDial)
             if (!chipActive && communityPlaylists?.isNotEmpty() == true) list.add(HomeSection.FromTheCommunity)
             if (!chipActive && dailyDiscover?.isNotEmpty() == true) list.add(HomeSection.DailyDiscover)
@@ -1064,18 +1130,12 @@ fun HomeScreen(
                 }
             }
 
-            val quickPickIds = quickPicks.orEmpty().map { it.id }.toSet()
-            homePage?.sections?.forEachIndexed { i, section ->
-                val sectionSongIds = section.items.filterIsInstance<SongItem>().map { it.id }
-                val isDuplicateQuickPicksSection =
+            homePage?.sections?.forEachIndexed { i, _ ->
+                val shouldSuppressSection =
                     !chipActive &&
-                        quickPickIds.isNotEmpty() &&
-                        section.title.equals(quickPicksSectionTitle, ignoreCase = true) &&
-                        sectionSongIds.isNotEmpty() &&
-                        sectionSongIds.size == quickPickIds.size &&
-                        sectionSongIds.toSet() == quickPickIds
+                        i in quickPicksSelection.suppressedHomePageSectionIndexes
 
-                if (!isDuplicateQuickPicksSection) {
+                if (!shouldSuppressSection) {
                     list.add(HomeSection.HomePageSection(i))
                 }
             }
@@ -1087,13 +1147,15 @@ fun HomeScreen(
                 // Metrolist's real section generation while matching 7xTune's desired layout.
                 val fixedTopSections =
                     buildList {
-                        if (list.contains(HomeSection.QuickPicks)) add(HomeSection.QuickPicks)
+                        if (authoritativeQuickPicksSection != null && list.contains(authoritativeQuickPicksSection)) {
+                            add(authoritativeQuickPicksSection)
+                        }
                         if (list.contains(HomeSection.SpeedDial)) add(HomeSection.SpeedDial)
                     }
 
                 val randomizedSections =
                     list
-                        .filter { it != HomeSection.QuickPicks && it != HomeSection.SpeedDial }
+                        .filter { it != authoritativeQuickPicksSection && it != HomeSection.SpeedDial }
                         .sortedByDescending { section ->
                             val sectionRandom = Random(randomSeed + section.id.hashCode())
 
@@ -1130,7 +1192,7 @@ fun HomeScreen(
             } else {
                 val defaultOrder =
                     mapOf(
-                        HomeSection.QuickPicks to 100,
+                        authoritativeQuickPicksSection to 100,
                         HomeSection.SpeedDial to 90,
                         HomeSection.FromTheCommunity to 80,
                         HomeSection.DailyDiscover to 70,
