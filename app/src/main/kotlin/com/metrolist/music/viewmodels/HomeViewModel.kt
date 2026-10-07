@@ -78,6 +78,16 @@ data class CommunityPlaylistItem(
     val songs: List<SongItem>
 )
 
+internal fun buildSpeedDialItems(
+    pinned: List<YTItem>,
+    keepListening: List<YTItem>,
+    quickPicks: List<YTItem>,
+    home: List<YTItem>,
+): List<YTItem> =
+    (pinned + keepListening + quickPicks + home)
+        .distinctBy { it.id }
+        .take(27)
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     @ApplicationContext val context: Context,
@@ -123,76 +133,54 @@ class HomeViewModel @Inject constructor(
             database.speedDialDao.getAll(),
             keepListening,
             quickPicks,
-        ) { pinned, keepListening, quick ->
-            val pinnedItems = pinned.map { it.toYTItem() }
-            val filled = pinnedItems.toMutableList()
-            val targetSize = 27
-
-            if (filled.size < targetSize) {
-                // Keep Listening (History/Heavy Rotation)
-                keepListening?.let { items ->
-                    val needed = targetSize - filled.size
-                    val available =
-                        items
-                            .filter { item -> filled.none { pinnedItem -> pinnedItem.id == item.id } }
-                            .mapNotNull { item ->
-                                when (item) {
-                                    is Song ->
-                                        SongItem(
-                                            id = item.id,
-                                            title = item.title,
-                                            artists = item.artists.map { Artist(name = it.name, id = it.id) },
-                                            thumbnail = item.thumbnailUrl ?: "",
-                                            explicit = false,
-                                        )
-
-                                    is Album ->
-                                        AlbumItem(
-                                            browseId = item.id,
-                                            playlistId = item.album.playlistId ?: "",
-                                            title = item.title,
-                                            artists = item.artists.map { Artist(name = it.name, id = it.id) },
-                                            year = item.album.year,
-                                            thumbnail = item.thumbnailUrl ?: "",
-                                        )
-
-                                    is com.metrolist.music.db.entities.Artist ->
-                                        ArtistItem(
-                                            id = item.id,
-                                            title = item.title,
-                                            thumbnail = item.thumbnailUrl,
-                                            shuffleEndpoint = null,
-                                            radioEndpoint = null,
-                                        )
-
-                                    else -> null
-                                }
-                            }
-                    filled.addAll(available.take(needed))
-                }
-            }
-
-            if (filled.size < targetSize) {
-                // Quick Picks
-                quick?.let { songs ->
-                    val needed = targetSize - filled.size
-                    val available =
-                        songs
-                            .filter { song -> filled.none { pinnedItem -> pinnedItem.id == song.id } }
-                            .map { song ->
+            homePage,
+        ) { pinned, keepListening, quick, home ->
+            buildSpeedDialItems(
+                pinned = pinned.map { it.toYTItem() },
+                keepListening =
+                    keepListening.orEmpty().mapNotNull { item ->
+                        when (item) {
+                            is Song ->
                                 SongItem(
-                                    id = song.id,
-                                    title = song.title,
-                                    artists = song.artists.map { Artist(name = it.name, id = it.id) },
-                                    thumbnail = song.thumbnailUrl ?: "",
-                                    explicit = false,
+                                    id = item.id,
+                                    title = item.title,
+                                    artists = item.artists.map { Artist(name = it.name, id = it.id) },
+                                    thumbnail = item.thumbnailUrl ?: "",
                                 )
-                            }
-                    filled.addAll(available.take(needed))
-                }
-            }
 
-            filled.take(targetSize)
+                            is Album ->
+                                AlbumItem(
+                                    browseId = item.id,
+                                    playlistId = item.album.playlistId ?: "",
+                                    title = item.title,
+                                    artists = item.artists.map { Artist(name = it.name, id = it.id) },
+                                    year = item.album.year,
+                                    thumbnail = item.thumbnailUrl ?: "",
+                                )
+
+                            is com.metrolist.music.db.entities.Artist ->
+                                ArtistItem(
+                                    id = item.id,
+                                    title = item.title,
+                                    thumbnail = item.thumbnailUrl,
+                                    shuffleEndpoint = null,
+                                    radioEndpoint = null,
+                                )
+
+                            else -> null
+                        }
+                    },
+                quickPicks =
+                    quick.orEmpty().map { song ->
+                        SongItem(
+                            id = song.id,
+                            title = song.title,
+                            artists = song.artists.map { Artist(name = it.name, id = it.id) },
+                            thumbnail = song.thumbnailUrl ?: "",
+                        )
+                    },
+                home = home?.sections.orEmpty().flatMap { it.items },
+            )
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     suspend fun getRandomItem(): YTItem? {

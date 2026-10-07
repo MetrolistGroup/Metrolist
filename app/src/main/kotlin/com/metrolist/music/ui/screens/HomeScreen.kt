@@ -699,6 +699,7 @@ fun HomeScreen(
     val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
     val (randomizeHomeOrder) = rememberPreference(RandomizeHomeOrderKey, true)
     val autoRadioQueue by rememberPreference(AutoRadioQueueKey, defaultValue = true)
+    val quickPicksSectionTitle = stringResource(R.string.quick_picks)
 
     LaunchedEffect(Unit) { viewModel.loadHomeData() }
 
@@ -1044,14 +1045,13 @@ fun HomeScreen(
             homePage?.sections,
             explorePage?.moodAndGenres,
             isLoading,
+            quickPicksSectionTitle,
         ) {
             val list = mutableListOf<HomeSection>()
             val chipActive = selectedChip != null
 
-            // Metrolist section model, with 7xTune's requested fixed order:
-            // Quick Picks first, Speed Dial second, then the remaining sections.
-            if (!chipActive && speedDialItems.isNotEmpty()) list.add(HomeSection.SpeedDial)
             if (!chipActive && quickPicks?.isNotEmpty() == true) list.add(HomeSection.QuickPicks)
+            if (!chipActive && speedDialItems.isNotEmpty()) list.add(HomeSection.SpeedDial)
             if (!chipActive && communityPlaylists?.isNotEmpty() == true) list.add(HomeSection.FromTheCommunity)
             if (!chipActive && dailyDiscover?.isNotEmpty() == true) list.add(HomeSection.DailyDiscover)
             if (!chipActive && keepListening?.isNotEmpty() == true) list.add(HomeSection.KeepListening)
@@ -1064,9 +1064,20 @@ fun HomeScreen(
                 }
             }
 
-            // Keep the Home page sections exactly as provided by Metrolist/YouTube.
-            homePage?.sections?.indices?.forEach { i ->
-                list.add(HomeSection.HomePageSection(i))
+            val quickPickIds = quickPicks.orEmpty().map { it.id }.toSet()
+            homePage?.sections?.forEachIndexed { i, section ->
+                val sectionSongIds = section.items.filterIsInstance<SongItem>().map { it.id }
+                val isDuplicateQuickPicksSection =
+                    !chipActive &&
+                        quickPickIds.isNotEmpty() &&
+                        section.title.equals(quickPicksSectionTitle, ignoreCase = true) &&
+                        sectionSongIds.isNotEmpty() &&
+                        sectionSongIds.size == quickPickIds.size &&
+                        sectionSongIds.toSet() == quickPickIds
+
+                if (!isDuplicateQuickPicksSection) {
+                    list.add(HomeSection.HomePageSection(i))
+                }
             }
 
             if (explorePage?.moodAndGenres != null) list.add(HomeSection.MoodAndGenres)
