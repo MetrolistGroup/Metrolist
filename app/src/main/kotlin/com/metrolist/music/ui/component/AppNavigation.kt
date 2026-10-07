@@ -4,10 +4,7 @@
  */
 
 package com.metrolist.music.ui.component
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.ui.graphics.graphicsLayer
 
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.background
@@ -35,9 +32,9 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -166,42 +163,41 @@ fun AppNavigationBar(
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
 
-    // LumaBar-inspired native Compose dock:
-    // glass pill, icon-only destinations, one moving active glow, and springy active icon.
+    // 7xTune Floating Dock: a lightweight, polished capsule with a clear active state.
     Surface(
         modifier =
             modifier
                 .padding(horizontal = 14.dp, vertical = 6.dp)
-                .clip(RoundedCornerShape(34.dp))
+                .clip(RoundedCornerShape(28.dp))
                 .border(
                     BorderStroke(
                         1.dp,
                         if (pureBlack) {
-                            Color.White.copy(alpha = 0.12f)
+                            Color.White.copy(alpha = 0.10f)
                         } else {
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.50f)
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
                         },
                     ),
-                    RoundedCornerShape(34.dp),
+                    RoundedCornerShape(28.dp),
                 ),
-        shape = RoundedCornerShape(34.dp),
+        shape = RoundedCornerShape(28.dp),
         color =
             if (pureBlack) {
-                Color.Black.copy(alpha = 0.78f)
+                Color.Black.copy(alpha = 0.92f)
             } else {
-                MaterialTheme.colorScheme.surface.copy(alpha = 0.70f)
+                MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.96f)
             },
-        tonalElevation = 0.dp,
-        shadowElevation = 10.dp,
+        tonalElevation = 2.dp,
+        shadowElevation = 5.dp,
     ) {
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(if (slimNav) 62.dp else 70.dp)
-                    .padding(horizontal = 8.dp, vertical = 7.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    .height(if (slimNav) 58.dp else 64.dp)
+                    .padding(horizontal = 6.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             navigationItems.forEach { screen ->
                 val isSelected =
@@ -258,22 +254,19 @@ fun AppNavigationBar(
                     }
                 }
 
-                val iconScale by animateFloatAsState(
-                    targetValue = if (isSelected) 1.38f else 1f,
-                    animationSpec =
-                        spring(
-                            dampingRatio = 0.58f,
-                            stiffness = 520f,
-                        ),
-                    label = "luma_icon_scale",
-                )
-
                 Box(
                     modifier =
                         Modifier
                             .weight(1f)
-                            .height(if (slimNav) 48.dp else 56.dp)
-                            .clip(CircleShape)
+                            .height(if (slimNav) 44.dp else 50.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                if (isSelected) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    Color.Transparent
+                                },
+                            )
                             .clickable(
                                 interactionSource = interactionSource,
                                 indication = null,
@@ -282,47 +275,18 @@ fun AppNavigationBar(
                                     onItemClick(screen, currentIsSelected)
                                 }
                             },
-                    contentAlignment = androidx.compose.ui.Alignment.Center,
+                    contentAlignment = Alignment.Center,
                 ) {
-                    // Active indicator glow. Keeping this inside the item gives the same visual
-                    // language as the 21st.dev component while retaining native navigation.
-                    if (isSelected) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .size(if (slimNav) 50.dp else 58.dp)
-                                    .graphicsLayer {
-                                        alpha = 0.92f
-                                    }
-                                    .background(
-                                        Brush.radialGradient(
-                                            listOf(
-                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.70f),
-                                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.34f),
-                                                Color.Transparent,
-                                            ),
-                                        ),
-                                        CircleShape,
-                                    ),
-                        )
-                    }
-
                     Icon(
                         painter = painterResource(id = iconRes),
                         contentDescription = stringResource(screen.titleId),
                         tint =
                             if (isSelected) {
-                                MaterialTheme.colorScheme.primary
+                                MaterialTheme.colorScheme.onPrimaryContainer
                             } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.82f)
+                                MaterialTheme.colorScheme.onSurfaceVariant
                             },
-                        modifier =
-                            Modifier
-                                .size(24.dp)
-                                .graphicsLayer {
-                                    scaleX = iconScale
-                                    scaleY = iconScale
-                                },
+                        modifier = Modifier.size(if (isSelected) 28.dp else 25.dp),
                     )
                 }
             }
