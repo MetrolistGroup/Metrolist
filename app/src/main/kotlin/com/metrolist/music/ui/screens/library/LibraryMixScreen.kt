@@ -65,6 +65,7 @@ import com.metrolist.music.constants.CONTENT_TYPE_PLAYLIST
 import com.metrolist.music.constants.GridItemSize
 import com.metrolist.music.constants.GridItemsSizeKey
 import com.metrolist.music.constants.GridThumbnailHeight
+import com.metrolist.music.constants.LibraryFilter
 import com.metrolist.music.constants.LibraryViewType
 import com.metrolist.music.constants.MixSortDescendingKey
 import com.metrolist.music.constants.MixSortType
@@ -116,6 +117,7 @@ import java.util.UUID
 fun LibraryMixScreen(
     navController: NavController,
     filterContent: @Composable () -> Unit,
+    onNavigateToFilter: (LibraryFilter) -> Unit,
     viewType: LibraryViewType,
     onViewTypeChange: (LibraryViewType) -> Unit,
     viewModel: LibraryMixViewModel = hiltViewModel(),
@@ -373,6 +375,20 @@ fun LibraryMixScreen(
         }
     }
 
+    val dashboardVisible = !isSearchActive && searchQuery.isBlank()
+
+    val dashboardContent = @Composable {
+        SevenXTuneLibraryDashboard(
+            onCategorySelected = onNavigateToFilter,
+            onLiked = { navController.navigate("auto_playlist/liked") },
+            onDownloaded = { navController.navigate("auto_playlist/downloaded") },
+            onCached = { navController.navigate("cache_playlist/cached") },
+            onTop = { navController.navigate("top_playlist/$topSize") },
+            onUploaded = { navController.navigate("auto_playlist/uploaded") },
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        )
+    }
+
     val headerContent = @Composable {
         LibrarySearchHeader(
             isSearchActive = isSearchActive,
@@ -455,11 +471,13 @@ fun LibraryMixScreen(
                     state = lazyListState,
                     contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
                 ) {
-                    item(
-                        key = "filter",
-                        contentType = CONTENT_TYPE_HEADER,
-                    ) {
-                        filterContent()
+                    if (dashboardVisible) {
+                        item(
+                            key = "dashboard",
+                            contentType = CONTENT_TYPE_HEADER,
+                        ) {
+                            dashboardContent()
+                        }
                     }
 
                     item(
@@ -469,7 +487,7 @@ fun LibraryMixScreen(
                         headerContent()
                     }
 
-                    if (showLikedPlaylist) {
+                    if (!dashboardVisible && showLikedPlaylist) {
                         item(
                             key = "likedPlaylist",
                             contentType = { CONTENT_TYPE_PLAYLIST },
@@ -487,7 +505,7 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    if (showDownloadedPlaylist) {
+                    if (!dashboardVisible && showDownloadedPlaylist) {
                         item(
                             key = "downloadedPlaylist",
                             contentType = { CONTENT_TYPE_PLAYLIST },
@@ -506,7 +524,7 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    if (showCachedPlaylists) {
+                    if (!dashboardVisible && showCachedPlaylists) {
                         item(
                             key = "cachedPlaylist",
                             contentType = { CONTENT_TYPE_PLAYLIST },
@@ -525,7 +543,7 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    if (showTopPlaylists) {
+                    if (!dashboardVisible && showTopPlaylists) {
                         item(
                             key = "TopPlaylist",
                             contentType = { CONTENT_TYPE_PLAYLIST },
@@ -543,7 +561,7 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    if (showUploadedPlaylists) {
+                    if (!dashboardVisible && showUploadedPlaylists) {
                         item(
                             key = "uploadedPlaylist",
                             contentType = { CONTENT_TYPE_PLAYLIST },
@@ -781,12 +799,14 @@ fun LibraryMixScreen(
                         ),
                     contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
                 ) {
-                    item(
-                        key = "filter",
-                        span = { GridItemSpan(maxLineSpan) },
-                        contentType = CONTENT_TYPE_HEADER,
-                    ) {
-                        filterContent()
+                    if (dashboardVisible) {
+                        item(
+                            key = "dashboard",
+                            span = { GridItemSpan(maxLineSpan) },
+                            contentType = CONTENT_TYPE_HEADER,
+                        ) {
+                            dashboardContent()
+                        }
                     }
 
                     item(
@@ -797,7 +817,7 @@ fun LibraryMixScreen(
                         headerContent()
                     }
 
-                    if (showLikedPlaylist) {
+                    if (!dashboardVisible && showLikedPlaylist) {
                         item(
                             key = "likedPlaylist",
                             contentType = { CONTENT_TYPE_PLAYLIST },
@@ -818,7 +838,7 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    if (showDownloadedPlaylist) {
+                    if (!dashboardVisible && showDownloadedPlaylist) {
                         item(
                             key = "downloadedPlaylist",
                             contentType = { CONTENT_TYPE_PLAYLIST },
@@ -840,7 +860,7 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    if (showCachedPlaylists) {
+                    if (!dashboardVisible && showCachedPlaylists) {
                         item(
                             key = "cachedPlaylist",
                             contentType = { CONTENT_TYPE_PLAYLIST },
@@ -862,7 +882,7 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    if (showTopPlaylists) {
+                    if (!dashboardVisible && showTopPlaylists) {
                         item(
                             key = "TopPlaylist",
                             contentType = { CONTENT_TYPE_PLAYLIST },
@@ -883,7 +903,7 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    if (showUploadedPlaylists) {
+                    if (!dashboardVisible && showUploadedPlaylists) {
                         item(
                             key = "uploadedPlaylist",
                             contentType = { CONTENT_TYPE_PLAYLIST },
