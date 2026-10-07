@@ -1838,7 +1838,7 @@ fun HomeScreen(
                                                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                                 menuState.show {
                                                                     SongMenu(
-                                                                        originalSong = song!!,
+                                                                        originalSong = song,
                                                                         onDismiss = menuState::dismiss,
                                                                     )
                                                                 }
