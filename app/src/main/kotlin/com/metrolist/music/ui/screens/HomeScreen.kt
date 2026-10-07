@@ -1137,9 +1137,8 @@ fun HomeScreen(
             }
         }
 
-    LaunchedEffect(quickPicks) {
-        quickPicksLazyGridState.scrollToItem(0)
-    }
+    // Keep the horizontal grid's scroll position when Quick Picks refreshes.
+    // Resetting it on every list emission caused visible jumps during enrichment.
 
     LaunchedEffect(forgottenFavorites) {
         forgottenFavoritesLazyGridState.scrollToItem(0)
