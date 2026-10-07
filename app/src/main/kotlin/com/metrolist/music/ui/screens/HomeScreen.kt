@@ -1905,10 +1905,12 @@ fun HomeScreen(
                                             key = { "home_quickpick_${it.id}" },
                                         ) { item ->
                                             ytGridItem(item)
-                                        }                                    }
+                                        }
+                                    }
                                 }
                             }
                         }
+                    }
                         HomeSection.FromTheCommunity -> {
                             communityPlaylists?.takeIf { it.isNotEmpty() }?.let { playlists ->
                                 item(key = "community_playlists_title") {

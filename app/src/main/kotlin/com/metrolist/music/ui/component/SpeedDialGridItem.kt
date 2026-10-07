@@ -1,6 +1,7 @@
 package com.metrolist.music.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -28,6 +29,7 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.music.R
 import com.metrolist.music.constants.ThumbnailCornerRadius
+import com.metrolist.music.ui.theme.SevenXTuneShapes
 import com.metrolist.music.ui.utils.resize
 
 @Composable
@@ -38,78 +40,82 @@ fun SpeedDialGridItem(
     isActive: Boolean = false,
     isPlaying: Boolean = false,
 ) {
+    val shape = SevenXTuneShapes.medium
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(1f) // Square aspect ratio
-            .clip(RoundedCornerShape(ThumbnailCornerRadius))
+        modifier = modifier.fillMaxWidth().aspectRatio(1f).clip(shape).border(
+            width = if (isActive) 1.5.dp else 1.dp,
+            brush = Brush.linearGradient(
+                listOf(
+                    MaterialTheme.colorScheme.primary.copy(alpha = if (isActive) 0.70f else 0.30f),
+                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
+                )
+            ),
+            shape = shape,
+        ),
     ) {
-        // Thumbnail
         ItemThumbnail(
             thumbnailUrl = item.thumbnail?.resize(200, 200),
             isActive = isActive,
             isPlaying = isPlaying,
             shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(ThumbnailCornerRadius),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         )
-
-        // Gradient Overlay for Text Readability and Icon Contrast
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Black.copy(alpha = 0.4f), // Top scrim for icon visibility on bright covers
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.6f),
-                            Color.Black.copy(alpha = 0.9f)
-                        )
+            modifier = Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color.Black.copy(alpha = 0.18f),
+                        Color.Transparent,
+                        Color.Black.copy(alpha = 0.46f),
+                        Color.Black.copy(alpha = 0.88f),
                     )
                 )
+            )
         )
-
-        // Title and Chevron
+        if (isPinned) {
+            Box(
+                modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.90f))
+                    .padding(horizontal = 7.dp, vertical = 5.dp),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_push_pin),
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+        }
         Row(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(8.dp) // Reduced padding for tighter layout
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(9.dp),
+            verticalAlignment = Alignment.Bottom,
         ) {
             Text(
                 text = item.title,
-                style = MaterialTheme.typography.titleSmall, // Smaller, punchier font
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
-            
-            // Navigation Chevron for browsable items (Album, Playlist, Artist)
             if (item !is SongItem) {
-                Icon(
-                    painter = painterResource(R.drawable.navigate_next),
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
+                Box(
+                    modifier = Modifier.padding(start = 6.dp).size(28.dp).clip(RoundedCornerShape(10.dp))
+                        .background(Color.Black.copy(alpha = 0.42f))
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.navigate_next),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
         }
-    }
-        // Pinned Icon
-        if (isPinned) {
-            Icon(
-                painter = painterResource(R.drawable.ic_push_pin),
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .size(16.dp)
-            )
-        }
-
-
     }
 }
