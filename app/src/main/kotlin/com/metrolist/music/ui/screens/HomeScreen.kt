@@ -1882,7 +1882,8 @@ fun HomeScreen(
                             }
                         }
 
-                        HomeSection.FromTheCommunity -> {
+                                                }
+HomeSection.FromTheCommunity -> {
                             communityPlaylists?.takeIf { it.isNotEmpty() }?.let { playlists ->
                                 item(key = "community_playlists_title") {
                                     NavigationTitle(
