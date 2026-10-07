@@ -1758,32 +1758,6 @@ fun HomeScreen(
                         }
 
                         HomeSection.QuickPicks -> {
-                            if (quickPicks?.isNullOrEmpty() != false) {
-                                item(key = "quick_picks_loading_title") {
-                                    NavigationTitle(title = stringResource(R.string.quick_picks))
-                                }
-                                item(key = "quick_picks_loading") {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(72.dp)
-                                            .padding(horizontal = 16.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        repeat(4) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .width(horizontalLazyGridItemWidth)
-                                                    .height(56.dp)
-                                                    .clip(RoundedCornerShape(18.dp))
-                                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                                    ,
-                                            )
-                                        }
-                                    }
-                                }
-                            } else {
                             quickPicks?.takeIf { it.isNotEmpty() }?.let { quickPicks ->
                                 item(key = "quick_picks_title") {
                                     val quickPicksTitle = stringResource(R.string.quick_picks)
@@ -1822,11 +1796,16 @@ fun HomeScreen(
                                             items(
                                                 items = quickPicks.distinctBy { it.id },
                                                 key = { "home_quickpick_${it.id}" },
-                                            ) { song ->
+                                            ) { originalSong ->
+                                            // fetch song from database to keep updated
+                                            val song by database
+                                                .song(originalSong.id)
+                                                .collectAsStateWithLifecycle(initialValue = originalSong)
+
                                             SongListItem(
-                                                song = song,
+                                                song = song!!,
                                                 showInLibraryIcon = true,
-                                                isActive = song.id == mediaMetadata?.id,
+                                                isActive = song!!.id == mediaMetadata?.id,
                                                 isPlaying = isPlaying,
                                                 isSwipeable = false,
                                                 trailingContent = {
@@ -1834,7 +1813,7 @@ fun HomeScreen(
                                                         onClick = {
                                                             menuState.show {
                                                                 SongMenu(
-                                                                    originalSong = song,
+                                                                    originalSong = song!!,
                                                                     onDismiss = menuState::dismiss,
                                                                 )
                                                             }
@@ -1852,18 +1831,18 @@ fun HomeScreen(
                                                         .combinedClickable(
                                                             onClick = {
                                                                 if (!isListenTogetherGuest) {
-                                                                    if (song.id == mediaMetadata?.id) {
+                                                                    if (song!!.id == mediaMetadata?.id) {
                                                                         playerConnection.togglePlayPause()
                                                                     } else {
                                                                         playerConnection.playQueue(
                                                                             if (autoRadioQueue) {
                                                                                 YouTubeQueue.radio(
-                                                                                    song.toMediaMetadata(),
+                                                                                    song!!.toMediaMetadata(),
                                                                                 )
                                                                             } else {
                                                                                 ListQueue(
-                                                                                    title = song.title,
-                                                                                    items = listOf(song.toMediaItem())
+                                                                                    title = song!!.title,
+                                                                                    items = listOf(song!!.toMediaItem())
                                                                                 )
                                                                             }
                                                                         )
@@ -1874,7 +1853,7 @@ fun HomeScreen(
                                                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                                 menuState.show {
                                                                     SongMenu(
-                                                                        originalSong = song,
+                                                                        originalSong = song!!,
                                                                         onDismiss = menuState::dismiss,
                                                                     )
                                                                 }
@@ -1887,8 +1866,7 @@ fun HomeScreen(
                             }
                         }
 
-                                                }
-HomeSection.FromTheCommunity -> {
+                        HomeSection.FromTheCommunity -> {
                             communityPlaylists?.takeIf { it.isNotEmpty() }?.let { playlists ->
                                 item(key = "community_playlists_title") {
                                     NavigationTitle(
