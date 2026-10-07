@@ -1067,7 +1067,12 @@ fun HomeScreen(
             }
 
             homePage?.sections?.indices?.forEach { i ->
-                list.add(HomeSection.HomePageSection(i))
+                val section = homePage?.sections?.getOrNull(i)
+                val isOfficialQuickPicks =
+                    !chipActive && section?.title?.trim()?.equals("Quick Picks", ignoreCase = true) == true
+                if (!isOfficialQuickPicks) {
+                    list.add(HomeSection.HomePageSection(i))
+                }
             }
 
             if (explorePage?.moodAndGenres != null) list.add(HomeSection.MoodAndGenres)
