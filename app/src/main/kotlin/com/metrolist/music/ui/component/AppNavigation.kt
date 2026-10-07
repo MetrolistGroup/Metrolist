@@ -166,40 +166,40 @@ fun AppNavigationBar(
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
 
-    // Native Compose interpretation of 21st.dev's LumaBar:
-    // translucent floating pill + active glow + springy active icon.
+    // LumaBar-inspired native Compose dock:
+    // glass pill, icon-only destinations, one moving active glow, and springy active icon.
     Surface(
         modifier =
             modifier
-                .padding(horizontal = 12.dp, vertical = 6.dp)
-                .clip(RoundedCornerShape(30.dp))
+                .padding(horizontal = 14.dp, vertical = 6.dp)
+                .clip(RoundedCornerShape(34.dp))
                 .border(
                     BorderStroke(
                         1.dp,
                         if (pureBlack) {
                             Color.White.copy(alpha = 0.12f)
                         } else {
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.50f)
                         },
                     ),
-                    RoundedCornerShape(30.dp),
+                    RoundedCornerShape(34.dp),
                 ),
-        shape = RoundedCornerShape(30.dp),
+        shape = RoundedCornerShape(34.dp),
         color =
             if (pureBlack) {
-                Color.Black.copy(alpha = 0.82f)
+                Color.Black.copy(alpha = 0.78f)
             } else {
-                MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)
+                MaterialTheme.colorScheme.surface.copy(alpha = 0.70f)
             },
-        tonalElevation = 1.dp,
-        shadowElevation = 8.dp,
+        tonalElevation = 0.dp,
+        shadowElevation = 10.dp,
     ) {
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(if (slimNav) 58.dp else 66.dp)
-                    .padding(horizontal = 6.dp, vertical = 5.dp),
+                    .height(if (slimNav) 62.dp else 70.dp)
+                    .padding(horizontal = 8.dp, vertical = 7.dp),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         ) {
@@ -221,6 +221,7 @@ fun AppNavigationBar(
                 if (isSearchItem || isHomeHoldItem) {
                     LaunchedEffect(interactionSource) {
                         var isLongClick = false
+
                         interactionSource.interactions.collectLatest { interaction ->
                             when (interaction) {
                                 is PressInteraction.Press -> {
@@ -234,6 +235,7 @@ fun AppNavigationBar(
                                     )
                                     isLongClick = true
                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+
                                     if (isHomeHoldItem) {
                                         onHomeLongHold?.invoke()
                                     } else {
@@ -257,30 +259,21 @@ fun AppNavigationBar(
                 }
 
                 val iconScale by animateFloatAsState(
-                    targetValue = if (isSelected) 1.28f else 1f,
+                    targetValue = if (isSelected) 1.38f else 1f,
                     animationSpec =
                         spring(
-                            dampingRatio = 0.62f,
-                            stiffness = 700f,
+                            dampingRatio = 0.58f,
+                            stiffness = 520f,
                         ),
-                    label = "nav_icon_scale",
-                )
-                val glowAlpha by animateFloatAsState(
-                    targetValue = if (isSelected) 1f else 0f,
-                    animationSpec =
-                        spring(
-                            dampingRatio = 0.8f,
-                            stiffness = 500f,
-                        ),
-                    label = "nav_glow_alpha",
+                    label = "luma_icon_scale",
                 )
 
                 Box(
                     modifier =
                         Modifier
                             .weight(1f)
-                            .height(if (slimNav) 48.dp else 54.dp)
-                            .clip(RoundedCornerShape(24.dp))
+                            .height(if (slimNav) 48.dp else 56.dp)
+                            .clip(CircleShape)
                             .clickable(
                                 interactionSource = interactionSource,
                                 indication = null,
@@ -291,71 +284,46 @@ fun AppNavigationBar(
                             },
                     contentAlignment = androidx.compose.ui.Alignment.Center,
                 ) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(if (slimNav) 54.dp else 60.dp)
-                                .graphicsLayer {
-                                    alpha = glowAlpha * 0.9f
-                                    scaleX = 1.12f
-                                    scaleY = 1.12f
-                                }
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.radialGradient(
-                                        listOf(
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.74f),
-                                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f),
-                                            Color.Transparent,
+                    // Active indicator glow. Keeping this inside the item gives the same visual
+                    // language as the 21st.dev component while retaining native navigation.
+                    if (isSelected) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(if (slimNav) 50.dp else 58.dp)
+                                    .graphicsLayer {
+                                        alpha = 0.92f
+                                    }
+                                    .background(
+                                        Brush.radialGradient(
+                                            listOf(
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.70f),
+                                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.34f),
+                                                Color.Transparent,
+                                            ),
                                         ),
+                                        CircleShape,
                                     ),
-                                ),
-                    )
+                        )
+                    }
 
-                    Box(
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = stringResource(screen.titleId),
+                        tint =
+                            if (isSelected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.82f)
+                            },
                         modifier =
                             Modifier
-                                .size(if (slimNav) 46.dp else 50.dp)
+                                .size(24.dp)
                                 .graphicsLayer {
                                     scaleX = iconScale
                                     scaleY = iconScale
-                                }
-                                .clip(CircleShape)
-                                .background(
-                                    if (isSelected) {
-                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.94f)
-                                    } else {
-                                        Color.Transparent
-                                    },
-                                ),
-                        contentAlignment = androidx.compose.ui.Alignment.Center,
-                    ) {
-                        Icon(
-                            painter = painterResource(id = iconRes),
-                            contentDescription = stringResource(screen.titleId),
-                            tint =
-                                if (isSelected) {
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
                                 },
-                            modifier = Modifier.size(23.dp),
-                        )
-                    }
-
-                    if (isSelected && !slimNav) {
-                        Text(
-                            text = stringResource(screen.titleId),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier =
-                                Modifier
-                                    .align(androidx.compose.ui.Alignment.BottomCenter)
-                                    .padding(bottom = 1.dp),
-                        )
-                    }
+                    )
                 }
             }
         }
