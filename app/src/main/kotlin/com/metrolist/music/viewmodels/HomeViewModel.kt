@@ -105,7 +105,8 @@ class HomeViewModel @Inject constructor(
         it[QuickPicksKey].toEnum(QuickPicks.QUICK_PICKS)
     }.distinctUntilChanged()
 
-    val quickPicks = MutableStateFlow<List<Song>?>(null)
+    private val quickPicksLoader = QuickPicksLoader<Song> { it.id }
+    val quickPicks: StateFlow<List<Song>?> = quickPicksLoader.items
     val dailyDiscover = MutableStateFlow<List<DailyDiscoverItem>?>(null)
     val forgottenFavorites = MutableStateFlow<List<Song>?>(null)
     val keepListening = MutableStateFlow<List<LocalItem>?>(null)
@@ -322,44 +323,46 @@ class HomeViewModel @Inject constructor(
     private suspend fun getQuickPicks() {
         val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
         when (quickPicksEnum.first()) {
-            QuickPicks.QUICK_PICKS -> {
-                val relatedSongs = database.quickPicks().first().filterVideoSongs(hideVideoSongs)
-                val forgotten = database.forgottenFavorites().first().filterVideoSongs(hideVideoSongs).take(8)
+            QuickPicks.QUICK_PICKS -> quickPicksLoader.load(
+                local = {
+                    val relatedSongs = database.quickPicks().first().filterVideoSongs(hideVideoSongs)
+                    val forgotten = database.forgottenFavorites().first().filterVideoSongs(hideVideoSongs).take(8)
+                    relatedSongs + forgotten
+                },
+                similar = {
+                    // Get similar songs from YouTube based on recent listening
+                    val recentSong = database.latestEvent().first()?.song
+                    val ytSimilarSongs = mutableListOf<Song>()
 
-                // Get similar songs from YouTube based on recent listening
-                val recentSong = database.latestEvent().first()?.song
-                val ytSimilarSongs = mutableListOf<Song>()
-
-                if (recentSong != null) {
-                    val endpoint = YouTube.next(WatchEndpoint(videoId = recentSong.id)).getOrNull()?.relatedEndpoint
-                    if (endpoint != null) {
-                        YouTube.related(endpoint).onSuccess { page ->
-                            // Convert YouTube songs to local Song format if they exist in database
-                            page.songs.take(10).forEach { ytSong ->
-                                database.song(ytSong.id).first()?.let { localSong ->
-                                    if (!hideVideoSongs || !localSong.song.isVideo) {
-                                        ytSimilarSongs.add(localSong)
+                    if (recentSong != null) {
+                        val endpoint = YouTube.next(WatchEndpoint(videoId = recentSong.id)).getOrNull()?.relatedEndpoint
+                        if (endpoint != null) {
+                            YouTube.related(endpoint).onSuccess { page ->
+                                // Convert YouTube songs to local Song format if they exist in database
+                                page.songs.take(10).forEach { ytSong ->
+                                    database.song(ytSong.id).first()?.let { localSong ->
+                                        if (!hideVideoSongs || !localSong.song.isVideo) {
+                                            ytSimilarSongs.add(localSong)
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-
-                // Combine all sources and remove duplicates
-                val combined = (relatedSongs + forgotten + ytSimilarSongs)
-                    .distinctBy { it.id }
-                    .shuffled()
-                    .take(20)
-
-                quickPicks.value = combined.ifEmpty { relatedSongs.shuffled().take(20) }
-            }
-            QuickPicks.LAST_LISTEN -> {
-                val song = database.latestEvent().first()?.song
-                if (song != null && database.hasRelatedSongs(song.id)) {
-                    quickPicks.value = database.getRelatedSongs(song.id).first().filterVideoSongs(hideVideoSongs).shuffled().take(20)
-                }
-            }
+                    ytSimilarSongs
+                },
+            )
+            QuickPicks.LAST_LISTEN -> quickPicksLoader.load(
+                local = {
+                    val song = database.latestEvent().first()?.song
+                    if (song != null && database.hasRelatedSongs(song.id)) {
+                        database.getRelatedSongs(song.id).first().filterVideoSongs(hideVideoSongs)
+                    } else {
+                        emptyList()
+                    }
+                },
+                similar = { emptyList() },
+            )
         }
     }
 
