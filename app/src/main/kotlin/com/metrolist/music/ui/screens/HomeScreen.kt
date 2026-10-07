@@ -1773,7 +1773,7 @@ fun HomeScreen(
                                                     .height(56.dp)
                                                     .clip(RoundedCornerShape(18.dp))
                                                     .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                                    .animateContentSize(),
+                                                    ,
                                             )
                                         }
                                     }
