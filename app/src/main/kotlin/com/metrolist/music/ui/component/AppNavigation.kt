@@ -17,6 +17,7 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -196,125 +197,131 @@ fun AppNavigationBar(
             }
             .coerceAtLeast(0)
 
-    AnimatedNavigationBar(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .padding(vertical = 2.dp)
-                .clip(
-                    androidx.compose.foundation.shape.RoundedCornerShape(
-                        if (slimNav) 18.dp else 20.dp,
-                    ),
-                )
-                .border(
-                    width = 1.dp,
-                    color = borderColor,
-                    shape =
+    // MainActivity reserves extra bottom space for system navigation insets.
+    // Keep the animated bar itself compact and full-width, leaving that inset transparent.
+    Box(modifier = modifier.fillMaxSize()) {
+        AnimatedNavigationBar(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(if (slimNav) 48.dp else 56.dp)
+                    .align(Alignment.TopCenter)
+                    .padding(vertical = 2.dp)
+                    .clip(
                         androidx.compose.foundation.shape.RoundedCornerShape(
                             if (slimNav) 18.dp else 20.dp,
                         ),
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = borderColor,
+                        shape =
+                            androidx.compose.foundation.shape.RoundedCornerShape(
+                                if (slimNav) 18.dp else 20.dp,
+                            ),
+                    ),
+            selectedIndex = selectedIndex,
+            barColor = barColor,
+            ballColor = MaterialTheme.colorScheme.primary,
+            cornerRadius =
+                shapeCornerRadius(
+                    if (slimNav) 18.dp else 20.dp,
                 ),
-        selectedIndex = selectedIndex,
-        barColor = barColor,
-        ballColor = MaterialTheme.colorScheme.primary,
-        cornerRadius =
-            shapeCornerRadius(
-                if (slimNav) 18.dp else 20.dp,
-            ),
-        ballAnimation =
-            Parabolic(
-                tween(
-                    durationMillis = if (slimNav) 260 else 300,
+            ballAnimation =
+                Parabolic(
+                    tween(
+                        durationMillis = if (slimNav) 260 else 300,
+                    ),
                 ),
-            ),
-        indentAnimation =
-            StraightIndent(
-                animationSpec = tween(
-                    durationMillis = if (slimNav) 240 else 280,
+            indentAnimation =
+                StraightIndent(
+                    animationSpec = tween(
+                        durationMillis = if (slimNav) 240 else 280,
+                    ),
+                    indentWidth = if (navigationItems.size <= 3) 54.dp else 46.dp,
+                    indentHeight = if (slimNav) 10.dp else 12.dp,
                 ),
-                indentWidth = if (navigationItems.size <= 3) 54.dp else 46.dp,
-                indentHeight = if (slimNav) 10.dp else 12.dp,
-            ),
-    ) {
-        navigationItems.forEach { screen ->
-            val isSelected = remember(currentRoute, screen.route) {
-                isRouteSelected(currentRoute, screen.route, navigationItems)
-            }
-            val currentIsSelected by rememberUpdatedState(isSelected)
-            val iconRes = remember(isSelected, screen) {
-                if (isSelected) screen.iconIdActive else screen.iconIdInactive
-            }
+        ) {
+            navigationItems.forEach { screen ->
+                val isSelected = remember(currentRoute, screen.route) {
+                    isRouteSelected(currentRoute, screen.route, navigationItems)
+                }
+                val currentIsSelected by rememberUpdatedState(isSelected)
+                val iconRes = remember(isSelected, screen) {
+                    if (isSelected) screen.iconIdActive else screen.iconIdInactive
+                }
 
-            val isSearchItem = screen == Screens.Search && onSearchLongClick != null
-            val isHomeHoldItem = screen == Screens.Home && onHomeLongHold != null
-            val interactionSource = remember { MutableInteractionSource() }
+                val isSearchItem = screen == Screens.Search && onSearchLongClick != null
+                val isHomeHoldItem = screen == Screens.Home && onHomeLongHold != null
+                val interactionSource = remember { MutableInteractionSource() }
 
-            if (isSearchItem || isHomeHoldItem) {
-                LaunchedEffect(interactionSource) {
-                    var isLongClick = false
+                if (isSearchItem || isHomeHoldItem) {
+                    LaunchedEffect(interactionSource) {
+                        var isLongClick = false
 
-                    interactionSource.interactions.collectLatest { interaction ->
-                        when (interaction) {
-                            is PressInteraction.Press -> {
-                                isLongClick = false
-                                delay(
+                        interactionSource.interactions.collectLatest { interaction ->
+                            when (interaction) {
+                                is PressInteraction.Press -> {
+                                    isLongClick = false
+                                    delay(
+                                        if (isHomeHoldItem) {
+                                            15_000L
+                                        } else {
+                                            viewConfiguration.longPressTimeoutMillis
+                                        },
+                                    )
+                                    isLongClick = true
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+
                                     if (isHomeHoldItem) {
-                                        15_000L
+                                        onHomeLongHold?.invoke()
                                     } else {
-                                        viewConfiguration.longPressTimeoutMillis
-                                    },
-                                )
-                                isLongClick = true
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-
-                                if (isHomeHoldItem) {
-                                    onHomeLongHold?.invoke()
-                                } else {
-                                    onSearchLongClick?.invoke()
+                                        onSearchLongClick?.invoke()
+                                    }
                                 }
-                            }
 
-                            is PressInteraction.Release -> {
-                                if (!isLongClick) {
-                                    onItemClick(screen, currentIsSelected)
+                                is PressInteraction.Release -> {
+                                    if (!isLongClick) {
+                                        onItemClick(screen, currentIsSelected)
+                                    }
+                                    isLongClick = false
                                 }
-                                isLongClick = false
-                            }
 
-                            is PressInteraction.Cancel -> {
-                                isLongClick = false
+                                is PressInteraction.Cancel -> {
+                                    isLongClick = false
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = null,
-                        ) {
-                            if (!isSearchItem && !isHomeHoldItem) {
-                                onItemClick(screen, currentIsSelected)
-                            }
-                        },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(id = iconRes),
-                    contentDescription = stringResource(screen.titleId),
-                    tint =
-                        if (isSelected) {
-                            Color.Black
-                        } else {
-                            Color.White.copy(alpha = 0.82f)
-                        },
-                    modifier = Modifier.size(if (isSelected) 27.dp else 25.dp),
-                )
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
+                            .clickable(
+                                interactionSource = interactionSource,
+                                indication = null,
+                            ) {
+                                if (!isSearchItem && !isHomeHoldItem) {
+                                    onItemClick(screen, currentIsSelected)
+                                }
+                            },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = stringResource(screen.titleId),
+                        tint =
+                            if (isSelected) {
+                                Color.Black
+                            } else {
+                                Color.White.copy(alpha = 0.82f)
+                            },
+                        modifier = Modifier.size(if (isSelected) 27.dp else 25.dp),
+                    )
+                }
             }
         }
     }
