@@ -35,8 +35,9 @@ fun MetrolistTheme(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
-    // Determine if system dynamic colors should be used (Android S+ and default theme color)
-    val useSystemDynamicColor = (themeColor == DefaultThemeColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+    // 7xTune keeps a stable brand palette instead of inheriting the device wallpaper palette.
+    // This makes the app visually distinct from the upstream/default Material presentation.
+    val useSystemDynamicColor = false
 
     // Select the appropriate color scheme generation method
     val baseColorScheme = if (useSystemDynamicColor) {
@@ -54,11 +55,35 @@ fun MetrolistTheme(
 
     // Apply pureBlack modification if needed, similar to original logic
     val colorScheme = remember(baseColorScheme, pureBlack, darkTheme) {
-        if (darkTheme && pureBlack) {
-            baseColorScheme.pureBlack(true)
+        val branded = if (themeColor == DefaultThemeColor) {
+            if (darkTheme) {
+                baseColorScheme.copy(
+                    primary = Color(0xFFC77DFF),
+                    onPrimary = Color(0xFF2B0A44),
+                    primaryContainer = Color(0xFF612D8C),
+                    onPrimaryContainer = Color(0xFFF6D8FF),
+                    secondary = Color(0xFF78D6FF),
+                    onSecondary = Color(0xFF003546),
+                    tertiary = Color(0xFFFF8BB8),
+                    onTertiary = Color(0xFF4A1128),
+                )
+            } else {
+                baseColorScheme.copy(
+                    primary = Color(0xFF7026B5),
+                    onPrimary = Color.White,
+                    primaryContainer = Color(0xFFECD7FF),
+                    onPrimaryContainer = Color(0xFF2B0A44),
+                    secondary = Color(0xFF006B87),
+                    onSecondary = Color.White,
+                    tertiary = Color(0xFF9B184F),
+                    onTertiary = Color.White,
+                )
+            }
         } else {
             baseColorScheme
         }
+
+        if (darkTheme && pureBlack) branded.pureBlack(true) else branded
     }
 
     // Use standard MaterialTheme instead of MaterialExpressiveTheme
