@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.component
 
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.background
@@ -34,12 +35,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -158,44 +161,44 @@ fun AppNavigationBar(
     onSearchLongClick: (() -> Unit)? = null,
     onHomeLongHold: (() -> Unit)? = null,
 ) {
-    val containerColor =
-        if (pureBlack) {
-            Color.Black
-        } else {
-            MaterialTheme.colorScheme.surfaceContainer
-        }
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
 
-    // 7xTune expressive dock: compact, floating, and quiet until a destination is selected.
+    // Native Compose interpretation of 21st.dev's LumaBar:
+    // translucent floating pill + active glow + springy active icon.
     Surface(
         modifier =
             modifier
                 .padding(horizontal = 12.dp, vertical = 6.dp)
-                .clip(RoundedCornerShape(28.dp))
+                .clip(RoundedCornerShape(30.dp))
                 .border(
                     BorderStroke(
                         1.dp,
                         if (pureBlack) {
-                            Color.White.copy(alpha = 0.10f)
+                            Color.White.copy(alpha = 0.12f)
                         } else {
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
                         },
                     ),
-                    RoundedCornerShape(28.dp),
+                    RoundedCornerShape(30.dp),
                 ),
-        shape = RoundedCornerShape(28.dp),
-        color = containerColor,
-        tonalElevation = 2.dp,
-        shadowElevation = 5.dp,
+        shape = RoundedCornerShape(30.dp),
+        color =
+            if (pureBlack) {
+                Color.Black.copy(alpha = 0.82f)
+            } else {
+                MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)
+            },
+        tonalElevation = 1.dp,
+        shadowElevation = 8.dp,
     ) {
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(if (slimNav) 56.dp else 64.dp)
-                    .padding(horizontal = 7.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    .height(if (slimNav) 58.dp else 66.dp)
+                    .padding(horizontal = 6.dp, vertical = 5.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         ) {
             navigationItems.forEach { screen ->
@@ -251,19 +254,31 @@ fun AppNavigationBar(
                     }
                 }
 
+                val iconScale by animateFloatAsState(
+                    targetValue = if (isSelected) 1.28f else 1f,
+                    animationSpec =
+                        spring(
+                            dampingRatio = 0.62f,
+                            stiffness = 700f,
+                        ),
+                    label = "nav_icon_scale",
+                )
+                val glowAlpha by animateFloatAsState(
+                    targetValue = if (isSelected) 1f else 0f,
+                    animationSpec =
+                        spring(
+                            dampingRatio = 0.8f,
+                            stiffness = 500f,
+                        ),
+                    label = "nav_glow_alpha",
+                )
+
                 Box(
                     modifier =
                         Modifier
                             .weight(1f)
-                            .height(if (slimNav) 44.dp else 50.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(
-                                if (isSelected) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else {
-                                    Color.Transparent
-                                },
-                            )
+                            .height(if (slimNav) 48.dp else 54.dp)
+                            .clip(RoundedCornerShape(24.dp))
                             .clickable(
                                 interactionSource = interactionSource,
                                 indication = null,
@@ -274,10 +289,44 @@ fun AppNavigationBar(
                             },
                     contentAlignment = androidx.compose.ui.Alignment.Center,
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = if (isSelected) 10.dp else 4.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(if (slimNav) 54.dp else 60.dp)
+                                .graphicsLayer {
+                                    alpha = glowAlpha * 0.9f
+                                    scaleX = 1.12f
+                                    scaleY = 1.12f
+                                }
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.radialGradient(
+                                        listOf(
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.74f),
+                                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f),
+                                            Color.Transparent,
+                                        ),
+                                    ),
+                                ),
+                    )
+
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(if (slimNav) 46.dp else 50.dp)
+                                .graphicsLayer {
+                                    scaleX = iconScale
+                                    scaleY = iconScale
+                                }
+                                .clip(CircleShape)
+                                .background(
+                                    if (isSelected) {
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.94f)
+                                    } else {
+                                        Color.Transparent
+                                    },
+                                ),
+                        contentAlignment = androidx.compose.ui.Alignment.Center,
                     ) {
                         Icon(
                             painter = painterResource(id = iconRes),
@@ -288,19 +337,22 @@ fun AppNavigationBar(
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant
                                 },
-                            modifier = Modifier.size(if (isSelected) 22.dp else 24.dp),
+                            modifier = Modifier.size(23.dp),
                         )
+                    }
 
-                        if (isSelected) {
-                            Spacer(Modifier.size(7.dp))
-                            Text(
-                                text = stringResource(screen.titleId),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
-                        }
+                    if (isSelected && !slimNav) {
+                        Text(
+                            text = stringResource(screen.titleId),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier =
+                                Modifier
+                                    .align(androidx.compose.ui.Alignment.BottomCenter)
+                                    .padding(bottom = 1.dp),
+                        )
                     }
                 }
             }
