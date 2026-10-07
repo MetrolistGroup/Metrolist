@@ -2112,7 +2112,7 @@ fun HomeScreen(
                                             SongListItem(
                                                 song = song!!,
                                                 showInLibraryIcon = true,
-                                                isActive = song.id == mediaMetadata?.id,
+                                                isActive = song?.id == mediaMetadata?.id,
                                                 isPlaying = isPlaying,
                                                 isSwipeable = false,
                                                 trailingContent = {
