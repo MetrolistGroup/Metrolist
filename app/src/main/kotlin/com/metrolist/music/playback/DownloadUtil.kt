@@ -18,6 +18,7 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadNotificationHelper
+import androidx.media3.exoplayer.offline.DownloadProgress
 import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
 import coil3.imageLoader
@@ -26,8 +27,12 @@ import coil3.request.ImageRequest
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertubex.extraction.ContentHints
+import android.widget.Toast
+import com.metrolist.music.R
 import com.metrolist.music.constants.AudioQuality
 import com.metrolist.music.constants.AudioQualityKey
+import com.metrolist.music.constants.DownloadStorageUriKey
+import com.metrolist.music.constants.DownloadToStorageKey
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.AlbumEntity
 import com.metrolist.music.db.entities.FormatEntity
@@ -38,11 +43,14 @@ import com.metrolist.music.di.PlayerCache
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.utils.InnerTubeXPlayer
+import com.metrolist.music.utils.dataStore
+import com.metrolist.music.utils.get
 import com.metrolist.music.utils.enumPreference
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -71,6 +79,7 @@ constructor(
     val databaseProvider: DatabaseProvider,
     @DownloadCache val downloadCache: Cache,
     @PlayerCache val playerCache: Cache,
+    val storageDownloader: StorageDownloader,
 ) {
     private val TAG = "DownloadUtil"
     private val connectivityManager = context.getSystemService<ConnectivityManager>()!!
@@ -318,12 +327,52 @@ constructor(
 
     fun getDownload(songId: String): Flow<Download?> = downloads.map { it[songId] }
 
+    fun updateExternalDownloadProgress(
+        songId: String,
+        state: Int,
+        bytesDownloaded: Long = 0L,
+        totalBytes: Long = 0L,
+    ) {
+        val request = DownloadRequest.Builder(songId, songId.toUri()).build()
+        val progress = DownloadProgress().apply {
+            this.bytesDownloaded = bytesDownloaded
+            this.percentDownloaded = if (totalBytes > 0) (bytesDownloaded * 100f / totalBytes).coerceIn(0f, 100f) else -1f
+        }
+        val download = Download(
+            request,
+            state,
+            System.currentTimeMillis(),
+            System.currentTimeMillis(),
+            totalBytes,
+            Download.STOP_REASON_NONE,
+            Download.FAILURE_REASON_NONE,
+            progress,
+        )
+        downloads.update { it + (songId to download) }
+    }
+
+    fun removeExternalDownload(songId: String) {
+        downloads.update { it - songId }
+    }
+
     fun download(song: Song) = download(song.toMediaMetadata())
 
     fun download(song: SongItem) = download(song.toMediaMetadata())
 
     fun download(mediaMetadata: MediaMetadata) {
         scope.launch {
+            if (context.dataStore[DownloadToStorageKey] == true) {
+                val folderUriString = context.dataStore[DownloadStorageUriKey]
+                if (folderUriString.isNullOrBlank()) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, R.string.please_select_download_folder, Toast.LENGTH_LONG).show()
+                    }
+                    return@launch
+                }
+                storageDownloader.downloadToStorage(mediaMetadata, folderUriString)
+                return@launch
+            }
+
             downloadPreparations.withPermit {
                 if (!shouldPrepareDownload(downloads.value[mediaMetadata.id]?.state)) return@withPermit
 

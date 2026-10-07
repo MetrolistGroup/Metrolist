@@ -994,4 +994,18 @@
     <string name="stream_source_web_creator_desc">Creator web client.</string>
     <string name="top_result">Top result</string>
     <string name="other">Other</string>
+
+    <!-- Storage & SD Card Download -->
+    <string name="download_to_storage">Download to external storage</string>
+    <string name="download_to_storage_desc">Save audio files directly to device storage or SD card instead of in-app cache</string>
+    <string name="download_storage_location">Download location</string>
+    <string name="download_storage_location_not_set">Not configured (tap to select folder or SD card)</string>
+    <string name="download_format">Preferred audio format</string>
+    <string name="download_format_desc">Format used when saving audio files to external storage</string>
+    <string name="download_format_opus">Opus (.opus) – Highest Quality (~160 kbps)</string>
+    <string name="download_format_m4a">AAC (.m4a) – High Compatibility (128 kbps)</string>
+    <string name="please_select_download_folder">Please select a download folder in Settings > Storage first</string>
+    <string name="downloading_to_storage">Downloading to storage…</string>
+    <string name="download_completed">Download completed</string>
+    <string name="download_failed">Download failed</string>
 </resources>

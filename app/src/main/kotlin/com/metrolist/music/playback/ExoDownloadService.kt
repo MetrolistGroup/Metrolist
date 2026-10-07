@@ -36,6 +36,11 @@ class ExoDownloadService : DownloadService(
                 downloadManager.removeDownload(download.request.id)
             }
         }
+        if (intent?.action == DownloadService.ACTION_REMOVE_DOWNLOAD) {
+            intent.getStringExtra(DownloadService.KEY_CONTENT_ID)?.let { contentId ->
+                downloadUtil.storageDownloader.deleteFromStorage(contentId)
+            }
+        }
         return super.onStartCommand(intent, flags, startId)
     }
 

@@ -157,6 +157,18 @@ val MaxImageCacheSizeKey = intPreferencesKey("maxImageCacheSize")
 val MaxSongCacheSizeKey = intPreferencesKey("maxSongCacheSize")
 val EnableSongCacheKey = booleanPreferencesKey("enableSongCache")
 
+val DownloadToStorageKey = booleanPreferencesKey("downloadToStorage")
+val DownloadStorageUriKey = stringPreferencesKey("downloadStorageUri")
+val DownloadFormatKey = stringPreferencesKey("downloadFormat")
+
+enum class DownloadAudioFormat(
+    val extension: String,
+    val mimeType: String,
+) {
+    OPUS("opus", "audio/opus"),
+    M4A("m4a", "audio/mp4"),
+}
+
 val PauseListenHistoryKey = booleanPreferencesKey("pauseListenHistory")
 val PauseSearchHistoryKey = booleanPreferencesKey("pauseSearchHistory")
 val DisableScreenshotKey = booleanPreferencesKey("disableScreenshot")

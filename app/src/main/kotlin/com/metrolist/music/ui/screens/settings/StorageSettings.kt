@@ -50,6 +50,10 @@ import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
+import com.metrolist.music.constants.DownloadAudioFormat
+import com.metrolist.music.constants.DownloadFormatKey
+import com.metrolist.music.constants.DownloadStorageUriKey
+import com.metrolist.music.constants.DownloadToStorageKey
 import com.metrolist.music.constants.EnableSongCacheKey
 import com.metrolist.music.constants.MaxImageCacheSizeKey
 import com.metrolist.music.constants.MaxSongCacheSizeKey
@@ -58,8 +62,14 @@ import com.metrolist.music.ui.component.ActionPromptDialog
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
+import android.content.Intent
+import android.net.Uri
 import android.text.format.Formatter
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.documentfile.provider.DocumentFile
 import com.metrolist.music.ui.utils.backToMain
+import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -67,6 +77,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import okio.ByteString.Companion.encodeUtf8
+import timber.log.Timber
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -96,6 +107,34 @@ fun StorageSettings(
         key = EnableSongCacheKey,
         defaultValue = true
     )
+    val (downloadToStorage, onDownloadToStorageChange) = rememberPreference(
+        key = DownloadToStorageKey,
+        defaultValue = false,
+    )
+    val (downloadStorageUri, onDownloadStorageUriChange) = rememberPreference(
+        key = DownloadStorageUriKey,
+        defaultValue = "",
+    )
+    val (downloadFormat, onDownloadFormatChange) = rememberEnumPreference(
+        key = DownloadFormatKey,
+        defaultValue = DownloadAudioFormat.OPUS,
+    )
+
+    val folderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                )
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to persist URI permission for $uri")
+            }
+            onDownloadStorageUriChange(uri.toString())
+        }
+    }
 
     var clearDownloads by remember { mutableStateOf(false) }
     var clearCacheDialog by remember { mutableStateOf(false) }
@@ -299,22 +338,87 @@ fun StorageSettings(
         Material3SettingsGroup(
             title = stringResource(R.string.storage),
             items =
-                listOf(
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.storage),
-                        title = { Text(stringResource(R.string.downloaded_songs)) },
-                        description = {
-                            Text(text = Formatter.formatShortFileSize(context, downloadCacheSize))
-                        },
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.clear_all),
-                        title = { Text(stringResource(R.string.clear_all_downloads)) },
-                        onClick = {
-                            clearDownloads = true
-                        },
-                    ),
-                ),
+                buildList {
+                    add(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.download),
+                            title = { Text(stringResource(R.string.download_to_storage)) },
+                            description = { Text(stringResource(R.string.download_to_storage_desc)) },
+                            trailingContent = {
+                                Switch(
+                                    checked = downloadToStorage,
+                                    onCheckedChange = onDownloadToStorageChange,
+                                    thumbContent = {
+                                        Icon(
+                                            painter = painterResource(
+                                                id = if (downloadToStorage) R.drawable.check else R.drawable.close,
+                                            ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize),
+                                        )
+                                    },
+                                )
+                            },
+                            onClick = { onDownloadToStorageChange(!downloadToStorage) },
+                        )
+                    )
+                    if (downloadToStorage) {
+                        add(
+                            Material3SettingsItem(
+                                icon = painterResource(R.drawable.storage),
+                                title = { Text(stringResource(R.string.download_storage_location)) },
+                                description = {
+                                    val folderName = remember(downloadStorageUri) {
+                                        if (downloadStorageUri.isNotBlank()) {
+                                            tryOrNull {
+                                                DocumentFile.fromTreeUri(context, Uri.parse(downloadStorageUri))?.name
+                                            } ?: Uri.parse(downloadStorageUri).lastPathSegment
+                                        } else null
+                                    }
+                                    Text(folderName ?: stringResource(R.string.download_storage_location_not_set))
+                                },
+                                onClick = { folderLauncher.launch(null) },
+                            )
+                        )
+                        add(
+                            Material3SettingsItem(
+                                icon = painterResource(R.drawable.library_music),
+                                title = { Text(stringResource(R.string.download_format)) },
+                                description = {
+                                    Text(
+                                        when (downloadFormat) {
+                                            DownloadAudioFormat.OPUS -> stringResource(R.string.download_format_opus)
+                                            DownloadAudioFormat.M4A -> stringResource(R.string.download_format_m4a)
+                                        }
+                                    )
+                                },
+                                onClick = {
+                                    onDownloadFormatChange(
+                                        if (downloadFormat == DownloadAudioFormat.OPUS) DownloadAudioFormat.M4A else DownloadAudioFormat.OPUS
+                                    )
+                                },
+                            )
+                        )
+                    }
+                    add(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.storage),
+                            title = { Text(stringResource(R.string.downloaded_songs)) },
+                            description = {
+                                Text(text = Formatter.formatShortFileSize(context, downloadCacheSize))
+                            },
+                        )
+                    )
+                    add(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.clear_all),
+                            title = { Text(stringResource(R.string.clear_all_downloads)) },
+                            onClick = {
+                                clearDownloads = true
+                            },
+                        )
+                    )
+                },
         )
 
         Material3SettingsGroup(
