@@ -208,16 +208,10 @@ sealed class HomeSection(
 
 internal data class QuickPicksSectionSelection(
     val hasDedicatedQuickPicks: Boolean,
-    val promotedHomePageSectionIndex: Int?,
     val suppressedHomePageSectionIndexes: Set<Int>,
 ) {
     val authoritativeSection: HomeSection?
-        get() =
-            when {
-                hasDedicatedQuickPicks -> HomeSection.QuickPicks
-                promotedHomePageSectionIndex != null -> HomeSection.HomePageSection(promotedHomePageSectionIndex)
-                else -> null
-            }
+        get() = HomeSection.QuickPicks.takeIf { hasDedicatedQuickPicks }
 }
 
 private fun String.normalizedQuickPicksKey(): String =
@@ -240,7 +234,7 @@ private fun HomePage.Section.isHomePageQuickPicksCandidate(localizedQuickPicksTi
 }
 
 internal fun selectQuickPicksSection(
-    dedicatedQuickPicks: List<Song>?,
+    dedicatedQuickPicks: List<YTItem>?,
     homePageSections: List<HomePage.Section>,
     localizedQuickPicksTitle: String,
 ): QuickPicksSectionSelection {
@@ -248,99 +242,83 @@ internal fun selectQuickPicksSection(
         homePageSections.mapIndexedNotNull { index, section ->
             index.takeIf { section.isHomePageQuickPicksCandidate(localizedQuickPicksTitle) }
         }
-    val hasDedicatedQuickPicks = !dedicatedQuickPicks.isNullOrEmpty()
 
-    return if (hasDedicatedQuickPicks) {
-        QuickPicksSectionSelection(
-            hasDedicatedQuickPicks = true,
-            promotedHomePageSectionIndex = null,
-            suppressedHomePageSectionIndexes = quickPicksSectionIndexes.toSet(),
-        )
-    } else {
-        QuickPicksSectionSelection(
-            hasDedicatedQuickPicks = false,
-            promotedHomePageSectionIndex = quickPicksSectionIndexes.firstOrNull(),
-            suppressedHomePageSectionIndexes = quickPicksSectionIndexes.toSet(),
-        )
-    }
+    // The active shelf is always 7xTune's personal engine. Any HomePage Quick Picks shelf
+    // is suppressed so the two systems can never compete for the same section.
+    return QuickPicksSectionSelection(
+        hasDedicatedQuickPicks = !dedicatedQuickPicks.isNullOrEmpty(),
+        suppressedHomePageSectionIndexes = quickPicksSectionIndexes.toSet(),
+    )
 }
 
-/** Orders Home sections, keeping Quick Picks then Speed Dial at the top in both ordering modes. */
+/** Keeps our Quick Picks first and Speed Dial second, regardless of Home ordering mode. */
 internal fun orderHomeSections(
     sections: List<HomeSection>,
     quickPicksSection: HomeSection?,
     randomize: Boolean,
     randomSeed: Long,
-): List<HomeSection> =
-    if (randomize) {
-        // Keep Quick Picks + Speed Dial pinned at the very top. This preserves
-        // Metrolist's real section generation while matching 7xTune's desired layout.
-        val fixedTopSections =
-            buildList {
-                if (quickPicksSection != null && sections.contains(quickPicksSection)) {
-                    add(quickPicksSection)
-                }
-                if (sections.contains(HomeSection.SpeedDial)) add(HomeSection.SpeedDial)
+): List<HomeSection> {
+    val fixedTopSections =
+        buildList {
+            if (quickPicksSection != null && sections.contains(quickPicksSection)) {
+                add(quickPicksSection)
             }
+            if (sections.contains(HomeSection.SpeedDial)) add(HomeSection.SpeedDial)
+        }
 
-        val randomizedSections =
-            sections
-                .filter { it != quickPicksSection && it != HomeSection.SpeedDial }
-                .sortedByDescending { section ->
-                    val sectionRandom = Random(randomSeed + section.id.hashCode())
+    val remainingSections = sections.filter { it !in fixedTopSections.toSet() }
 
-                    val base =
-                        when (section) {
-                            HomeSection.DailyDiscover -> 500
+    val orderedRemaining =
+        if (randomize) {
+            remainingSections.sortedByDescending { section ->
+                val sectionRandom = Random(randomSeed + section.id.hashCode())
 
-                            HomeSection.KeepListening,
-                            HomeSection.AccountPlaylists,
-                            HomeSection.ForgottenFavorites,
-                            HomeSection.FromTheCommunity,
-                            -> 300
+                val base =
+                    when (section) {
+                        HomeSection.DailyDiscover -> 500
+                        HomeSection.KeepListening,
+                        HomeSection.AccountPlaylists,
+                        HomeSection.ForgottenFavorites,
+                        HomeSection.FromTheCommunity,
+                        -> 300
+                        else -> 100
+                    }
 
-                            else -> 100
-                        }
+                val modifier =
+                    when (section) {
+                        HomeSection.DailyDiscover -> sectionRandom.nextInt(-200, 400)
+                        HomeSection.KeepListening,
+                        HomeSection.AccountPlaylists,
+                        HomeSection.ForgottenFavorites,
+                        HomeSection.FromTheCommunity,
+                        -> sectionRandom.nextInt(-100, 400)
+                        else -> sectionRandom.nextInt(-50, 50)
+                    }
 
-                    val modifier =
-                        when (section) {
-                            HomeSection.DailyDiscover -> sectionRandom.nextInt(-200, 400)
+                base + modifier
+            }
+        } else {
+            val defaultOrder =
+                mapOf(
+                    HomeSection.FromTheCommunity to 80,
+                    HomeSection.DailyDiscover to 70,
+                    HomeSection.KeepListening to 60,
+                    HomeSection.AccountPlaylists to 50,
+                    HomeSection.ForgottenFavorites to 40,
+                    HomeSection.MoodAndGenres to 10,
+                )
 
-                            HomeSection.KeepListening,
-                            HomeSection.AccountPlaylists,
-                            HomeSection.ForgottenFavorites,
-                            HomeSection.FromTheCommunity,
-                            -> sectionRandom.nextInt(-100, 400)
-
-                            else -> sectionRandom.nextInt(-50, 50)
-                        }
-
-                    base + modifier
+            remainingSections.sortedByDescending { section ->
+                when (section) {
+                    is HomeSection.SimilarRecommendation -> 30 - section.index
+                    is HomeSection.HomePageSection -> 20 - section.index
+                    else -> defaultOrder[section] ?: 0
                 }
-
-        fixedTopSections + randomizedSections
-    } else {
-        val defaultOrder =
-            mapOf(
-                HomeSection.SpeedDial to 90,
-                HomeSection.FromTheCommunity to 80,
-                HomeSection.DailyDiscover to 70,
-                HomeSection.KeepListening to 60,
-                HomeSection.AccountPlaylists to 50,
-                HomeSection.ForgottenFavorites to 40,
-                HomeSection.MoodAndGenres to 10,
-            )
-
-        sections.sortedByDescending { section ->
-            when (section) {
-                // A promoted HomePage Quick Picks section must outrank the generic HomePageSection weight.
-                quickPicksSection -> 100
-                is HomeSection.SimilarRecommendation -> 30 - section.index
-                is HomeSection.HomePageSection -> 20 - section.index
-                else -> defaultOrder[section] ?: 0
             }
         }
-    }
+
+    return fixedTopSections + orderedRemaining
+}
 
 @Composable
 fun CommunityPlaylistCard(
@@ -1889,74 +1867,12 @@ fun HomeScreen(
                                             Modifier
                                                 .fillMaxWidth()
                                                 .height(ListItemHeight * 4),
-                                        ) {
-                                            items(
-                                                items = quickPicks.distinctBy { it.id },
-                                                key = { "home_quickpick_${it.id}" },
-                                            ) { originalSong ->
-                                            // fetch song from database to keep updated
-                                            val song by database
-                                                .song(originalSong.id)
-                                                .collectAsStateWithLifecycle(initialValue = originalSong)
-
-                                            SongListItem(
-                                                song = song!!,
-                                                showInLibraryIcon = true,
-                                                isActive = song!!.id == mediaMetadata?.id,
-                                                isPlaying = isPlaying,
-                                                isSwipeable = false,
-                                                trailingContent = {
-                                                    IconButton(
-                                                        onClick = {
-                                                            menuState.show {
-                                                                SongMenu(
-                                                                    originalSong = song!!,
-                                                                    onDismiss = menuState::dismiss,
-                                                                )
-                                                            }
-                                                        },
-                                                    ) {
-                                                        Icon(
-                                                            painter = painterResource(R.drawable.more_vert),
-                                                            contentDescription = null,
-                                                        )
-                                                    }
-                                                },
-                                                modifier =
-                                                    Modifier
-                                                        .width(horizontalLazyGridItemWidth)
-                                                        .combinedClickable(
-                                                            onClick = {
-                                                                if (!isListenTogetherGuest) {
-                                                                    if (song!!.id == mediaMetadata?.id) {
-                                                                        playerConnection.togglePlayPause()
-                                                                    } else {
-                                                                        playerConnection.playQueue(
-                                                                            if (autoRadioQueue) {
-                                                                                YouTubeQueue.radio(
-                                                                                    song!!.toMediaMetadata(),
-                                                                                )
-                                                                            } else {
-                                                                                ListQueue(
-                                                                                    title = song!!.title,
-                                                                                    items = listOf(song!!.toMediaItem())
-                                                                                )
-                                                                            }
-                                                                        )
-                                                                    }
-                                                                }
-                                                            },
-                                                            onLongClick = {
-                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                                menuState.show {
-                                                                    SongMenu(
-                                                                        originalSong = song!!,
-                                                                        onDismiss = menuState::dismiss,
-                                                                    )
-                                                                }
-                                                            },
-                                                        ),
-                                            )
+                                    ) {
+                                        items(
+                                            items = quickPicks.distinctBy { it.id },
+                                            key = { "home_quickpick_${it.id}" },
+                                        ) { item ->
+                                            ytGridItem(item)
                                         }
                                     }
                                 }

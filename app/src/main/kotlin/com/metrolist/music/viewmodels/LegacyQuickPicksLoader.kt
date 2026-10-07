@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Owns the Quick Picks list shown on Home so a refresh never blanks it.
+ * Legacy Quick Picks loader retained for reference; the active Home shelf uses PersonalQuickPicksEngine.
  *
  * - The last good list stays published while a new one is computed, and an empty result never
  *   replaces a non-empty list.
@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
  *   a refresh replaces the visible list once instead of reshuffling it twice.
  * - Only the newest load may publish; starting a load cancels the one it supersedes.
  */
-internal class QuickPicksLoader<T>(
+internal class LegacyQuickPicksLoader<T>(
     private val limit: Int = 20,
     private val shuffle: (List<T>) -> List<T> = { it.shuffled() },
     private val idOf: (T) -> Any,

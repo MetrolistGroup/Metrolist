@@ -29,8 +29,6 @@ import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.HideYoutubeShortsKey
 import com.metrolist.music.constants.InnerTubeCookieKey
-import com.metrolist.music.constants.QuickPicks
-import com.metrolist.music.constants.QuickPicksKey
 import com.metrolist.music.constants.ShowWrappedCardKey
 import com.metrolist.music.constants.WrappedSeenKey
 import com.metrolist.music.db.MusicDatabase
@@ -39,7 +37,6 @@ import com.metrolist.music.db.entities.LocalItem
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.extensions.filterVideoSongs
-import com.metrolist.music.extensions.toEnum
 import com.metrolist.music.models.SimilarRecommendation
 import com.metrolist.music.ui.screens.wrapped.WrappedAudioService
 import com.metrolist.music.ui.screens.wrapped.WrappedManager
@@ -80,17 +77,6 @@ data class CommunityPlaylistItem(
     val songs: List<SongItem>
 )
 
-internal fun buildSpeedDialItems(
-    pinned: List<YTItem>,
-    recent: List<YTItem>,
-    frequent: List<YTItem>,
-    resume: List<YTItem>,
-    favorites: List<YTItem>,
-): List<YTItem> =
-    (pinned + recent.take(8) + frequent.take(7) + resume.take(5) + favorites.take(6))
-        .distinctBy { it.id }
-        .take(27)
-
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     @ApplicationContext val context: Context,
@@ -104,12 +90,8 @@ class HomeViewModel @Inject constructor(
     val isLoading = MutableStateFlow(false)
     val isRandomizing = MutableStateFlow(false)
 
-    private val quickPicksEnum = context.dataStore.data.map {
-        it[QuickPicksKey].toEnum(QuickPicks.QUICK_PICKS)
-    }.distinctUntilChanged()
-
-    private val quickPicksLoader = QuickPicksLoader<Song> { it.id }
-    val quickPicks: StateFlow<List<Song>?> = quickPicksLoader.items
+    // Personal Quick Picks are generated only on Home load/refresh and remain stable for the session.
+    val quickPicks = MutableStateFlow<List<YTItem>?>(null)
     val dailyDiscover = MutableStateFlow<List<DailyDiscoverItem>?>(null)
     val forgottenFavorites = MutableStateFlow<List<Song>?>(null)
     val keepListening = MutableStateFlow<List<LocalItem>?>(null)
@@ -128,9 +110,8 @@ class HomeViewModel @Inject constructor(
     val allLocalItems = MutableStateFlow<List<LocalItem>>(emptyList())
     val allYtItems = MutableStateFlow<List<YTItem>>(emptyList())
 
-    // Speed Dial needs a live session signal because playback history is intentionally
-    // written only after the configured history threshold. This makes newly started
-    // songs available immediately without changing global listening-history semantics.
+    // Speed Dial is an access surface, not a recommendation feed:
+    // pins -> most played -> liked -> saved playlists -> recent -> resume.
     private val sessionRecentlyPlayedSpeedDial = MutableStateFlow<List<YTItem>>(emptyList())
 
     fun recordSpeedDialPlay(item: YTItem?) {
@@ -144,20 +125,23 @@ class HomeViewModel @Inject constructor(
             .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private val recentlyPlayedSongs =
-        database.recentlyPlayedSongs(limit = 12)
+        database.recentlyPlayedSongs(limit = 20)
             .map { songs -> songs.map(::songToSpeedDialItem) }
 
     private val frequentlyPlayedSongs =
         database.mostPlayedSongs(
             fromTimeStamp = LocalDateTime.now().minusWeeks(4),
-            limit = 12,
+            limit = 20,
             offset = 0,
             toTimeStamp = LocalDateTime.now(),
         ).map { songs -> songs.map(::songToSpeedDialItem) }
 
     private val recentlyLikedSongs =
         database.likedSongsByCreateDateAsc()
-            .map { songs -> songs.asReversed().take(9).map(::songToSpeedDialItem) }
+            .map { songs -> songs.asReversed().take(20).map(::songToSpeedDialItem) }
+
+    private val savedSpeedDialPlaylists =
+        accountPlaylists.map { it.orEmpty() }
 
     private val combinedRecentSpeedDialItems =
         combine(
@@ -167,14 +151,22 @@ class HomeViewModel @Inject constructor(
             (session + persisted).distinctBy { it.id }
         }
 
+    private val automaticSpeedDialSources =
+        combine(
+            frequentlyPlayedSongs,
+            recentlyLikedSongs,
+            savedSpeedDialPlaylists,
+        ) { frequent, liked, playlists ->
+            Triple(frequent, liked, playlists)
+        }
+
     val speedDialItems: StateFlow<List<YTItem>> =
         combine(
             database.speedDialDao.getAll(),
+            automaticSpeedDialSources,
             combinedRecentSpeedDialItems,
-            frequentlyPlayedSongs,
             keepListening,
-            recentlyLikedSongs,
-        ) { pinned, recent, frequent, keepListening, favorites ->
+        ) { pinned, automatic, recent, keepListening ->
             val resumeItems = keepListening.orEmpty().mapNotNull { item ->
                 when (item) {
                     is Song -> songToSpeedDialItem(item)
@@ -196,12 +188,14 @@ class HomeViewModel @Inject constructor(
                     else -> null
                 }
             }
-            buildSpeedDialItems(
+
+            buildPersonalSpeedDialItems(
                 pinned = pinned.map { it.toYTItem() },
+                mostPlayed = automatic.first,
+                liked = automatic.second,
+                savedPlaylists = automatic.third,
                 recent = recent,
-                frequent = frequent,
                 resume = resumeItems,
-                favorites = favorites,
             )
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
@@ -223,15 +217,7 @@ class HomeViewModel @Inject constructor(
             val otherSources = mutableListOf<YTItem>()
 
             quickPicks.value?.let { songs ->
-                userSongs.addAll(songs.map { song ->
-                    SongItem(
-                        id = song.id,
-                        title = song.title,
-                        artists = song.artists.map { Artist(name = it.name, id = it.id) },
-                        thumbnail = song.thumbnailUrl ?: "",
-                        explicit = false
-                    )
-                })
+                userSongs.addAll(songs)
             }
 
             keepListening.value?.let { items ->
@@ -349,55 +335,97 @@ class HomeViewModel @Inject constructor(
         dailyDiscover.value = items.toList().distinctBy { it.recommendation.id }.shuffled()
     }
 
+    /**
+     * Builds our own Quick Picks shelf.
+     *
+     * The list is generated once per Home load, so playback/recomposition does not reshuffle it.
+     * Manual Home refresh and a new HomeViewModel generate a new selection.
+     */
     private suspend fun getQuickPicks() {
         val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
-        when (quickPicksEnum.first()) {
-            QuickPicks.QUICK_PICKS -> quickPicksLoader.load(
-                local = {
-                    coroutineScope {
-                        val relatedSongs = async(Dispatchers.IO) { database.quickPicks().first().filterVideoSongs(hideVideoSongs) }
-                        val forgotten = async(Dispatchers.IO) { database.forgottenFavorites().first().filterVideoSongs(hideVideoSongs).take(8) }
-                        relatedSongs.await() + forgotten.await()
-                    }
-                },
-                similar = {
-                    // Get similar songs from YouTube based on recent listening
-                    val recentSong = database.latestEvent().first()?.song
-                    val ytSimilarSongs = mutableListOf<Song>()
+        val now = LocalDateTime.now()
+        val fromTimeStamp = now.minusWeeks(12)
 
-                    if (recentSong != null) {
-                        val endpoint = YouTube.next(WatchEndpoint(videoId = recentSong.id)).getOrNull()?.relatedEndpoint
-                        if (endpoint != null) {
-                            YouTube.related(endpoint).onSuccess { page ->
-                                // Run local lookups concurrently while preserving YouTube's result order.
-                                val localSongs = coroutineScope {
-                                    page.songs.take(10).map { ytSong ->
-                                        async(Dispatchers.IO) {
-                                            database.song(ytSong.id).first()?.takeIf { localSong ->
-                                                !hideVideoSongs || !localSong.song.isVideo
-                                            }
-                                        }
-                                    }.awaitAll().filterNotNull()
-                                }
-                                ytSimilarSongs.addAll(localSongs)
+        val familiarSongs = database
+            .mostPlayedSongs(
+                fromTimeStamp = fromTimeStamp,
+                limit = 40,
+                offset = 0,
+                toTimeStamp = now,
+            ).first()
+            .filterVideoSongs(hideVideoSongs)
+
+        val recentSongs = database
+            .recentlyPlayedSongs(limit = 30)
+            .first()
+            .filterVideoSongs(hideVideoSongs)
+
+        val likedSongs = database
+            .likedSongsByCreateDateAsc()
+            .first()
+            .asReversed()
+            .filterVideoSongs(hideVideoSongs)
+            .take(30)
+
+        val relatedSongs =
+            coroutineScope {
+                seedSongs.map { seed ->
+                    async(Dispatchers.IO) {
+                        database
+                            .getRelatedSongs(seed.id)
+                            .first()
+                            .filterVideoSongs(hideVideoSongs)
+                    }
+                }.awaitAll().flatten().distinctBy { it.id }
+            }
+
+val forgottenSongs = database
+            .forgottenFavorites()
+            .first()
+            .filterVideoSongs(hideVideoSongs)
+            .take(20)
+
+        val seedSongs =
+            (familiarSongs.take(6) + recentSongs.take(6) + likedSongs.take(6))
+                .distinctBy { it.id }
+                .take(8)
+
+        val youtubeRelated =
+            coroutineScope {
+                seedSongs.map { seed ->
+                    async(Dispatchers.IO) {
+                        val endpoint =
+                            YouTube
+                                .next(WatchEndpoint(videoId = seed.id))
+                                .getOrNull()
+                                ?.relatedEndpoint
+                                ?: return@async emptyList<YTItem>()
+
+                        YouTube
+                            .related(endpoint)
+                            .getOrNull()
+                            ?.songs
+                            .orEmpty()
+                            .filter { item ->
+                                !item.explicit && (!hideVideoSongs || !item.isVideoSong)
                             }
-                        }
+                            .take(12)
+                            .map { it as YTItem }
                     }
-                    ytSimilarSongs
-                },
+                }.awaitAll().flatten()
+            }
+
+        val freshSeed = System.currentTimeMillis()
+
+        quickPicks.value =
+            PersonalQuickPicksEngine.build(
+                familiar = familiarSongs.map(::songToSpeedDialItem) + recentSongs.take(10).map(::songToSpeedDialItem),
+                related = relatedSongs.map(::songToSpeedDialItem) + youtubeRelated,
+                liked = likedSongs.map(::songToSpeedDialItem),
+                discovery = forgottenSongs.map(::songToSpeedDialItem) + youtubeRelated.take(24),
+                seed = freshSeed,
+                limit = 20,
             )
-            QuickPicks.LAST_LISTEN -> quickPicksLoader.load(
-                local = {
-                    val song = database.latestEvent().first()?.song
-                    if (song != null && database.hasRelatedSongs(song.id)) {
-                        database.getRelatedSongs(song.id).first().filterVideoSongs(hideVideoSongs)
-                    } else {
-                        emptyList()
-                    }
-                },
-                similar = { emptyList() },
-            )
-        }
     }
 
     private suspend fun getCommunityPlaylists() {
@@ -475,7 +503,7 @@ class HomeViewModel @Inject constructor(
         communityPlaylists.value = playlists.shuffled()
     }
 
-    private suspend fun load() {
+    private suspend fun load(regeneratePersonalQuickPicks: Boolean = true) {
         isLoading.value = true
         val hideExplicit = context.dataStore.get(HideExplicitKey, false)
         val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
@@ -485,7 +513,9 @@ class HomeViewModel @Inject constructor(
         // Phase 1: Load essential sections in parallel — local DB (fast) + YouTube home page.
         // isLoading is set to false as soon as all Phase 1 tasks complete so the UI appears quickly.
         coroutineScope {
-            launch(Dispatchers.IO) { getQuickPicks() }
+            if (regeneratePersonalQuickPicks) {
+                launch(Dispatchers.IO) { getQuickPicks() }
+            }
 
             launch(Dispatchers.IO) {
                 forgottenFavorites.value = database.forgottenFavorites().first()
@@ -523,7 +553,9 @@ class HomeViewModel @Inject constructor(
             }
         }
 
-        allLocalItems.value = (quickPicks.value.orEmpty() + forgottenFavorites.value.orEmpty() + keepListening.value.orEmpty())
+        // Quick Picks now contains YouTube items (including unseen recommendations), so it is
+        // intentionally excluded from the LocalItem cache used by legacy helpers.
+        allLocalItems.value = (forgottenFavorites.value.orEmpty() + keepListening.value.orEmpty())
             .filter { it is Song || it is Album }
         isLoading.value = false
 
@@ -721,7 +753,7 @@ class HomeViewModel @Inject constructor(
     private fun <T : Any> List<T>.filterOutNulls(): List<T> =
         (this as List<T?>).filterNotNull()
 
-    fun refresh() {
+    fun refresh(regeneratePersonalQuickPicks: Boolean = true) {
         if (isRefreshing.value) return
         isRefreshing.value = true
         viewModelScope.launch(Dispatchers.IO) {
@@ -741,7 +773,7 @@ class HomeViewModel @Inject constructor(
                     )
                 }
             } else {
-                load()
+                load(regeneratePersonalQuickPicks)
             }
             isRefreshing.value = false
         }
@@ -769,7 +801,9 @@ class HomeViewModel @Inject constructor(
                     wasOffline = true
                 } else if (wasOffline) {
                     wasOffline = false
-                    refresh()
+                    // Reconnect should refresh server-backed sections without generating
+                    // a new personal Quick Picks order mid-session.
+                    refresh(regeneratePersonalQuickPicks = false)
                 }
             }
         }
