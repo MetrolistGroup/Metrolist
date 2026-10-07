@@ -61,6 +61,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import timber.log.Timber
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -325,9 +327,11 @@ class HomeViewModel @Inject constructor(
         when (quickPicksEnum.first()) {
             QuickPicks.QUICK_PICKS -> quickPicksLoader.load(
                 local = {
-                    val relatedSongs = database.quickPicks().first().filterVideoSongs(hideVideoSongs)
-                    val forgotten = database.forgottenFavorites().first().filterVideoSongs(hideVideoSongs).take(8)
-                    relatedSongs + forgotten
+                    coroutineScope {
+                        val relatedSongs = async(Dispatchers.IO) { database.quickPicks().first().filterVideoSongs(hideVideoSongs) }
+                        val forgotten = async(Dispatchers.IO) { database.forgottenFavorites().first().filterVideoSongs(hideVideoSongs).take(8) }
+                        relatedSongs.await() + forgotten.await()
+                    }
                 },
                 similar = {
                     // Get similar songs from YouTube based on recent listening
@@ -338,14 +342,17 @@ class HomeViewModel @Inject constructor(
                         val endpoint = YouTube.next(WatchEndpoint(videoId = recentSong.id)).getOrNull()?.relatedEndpoint
                         if (endpoint != null) {
                             YouTube.related(endpoint).onSuccess { page ->
-                                // Convert YouTube songs to local Song format if they exist in database
-                                page.songs.take(10).forEach { ytSong ->
-                                    database.song(ytSong.id).first()?.let { localSong ->
-                                        if (!hideVideoSongs || !localSong.song.isVideo) {
-                                            ytSimilarSongs.add(localSong)
+                                // Run local lookups concurrently while preserving YouTube's result order.
+                                val localSongs = coroutineScope {
+                                    page.songs.take(10).map { ytSong ->
+                                        async(Dispatchers.IO) {
+                                            database.song(ytSong.id).first()?.takeIf { localSong ->
+                                                !hideVideoSongs || !localSong.song.isVideo
+                                            }
                                         }
-                                    }
+                                    }.awaitAll().filterNotNull()
                                 }
+                                ytSimilarSongs.addAll(localSongs)
                             }
                         }
                     }

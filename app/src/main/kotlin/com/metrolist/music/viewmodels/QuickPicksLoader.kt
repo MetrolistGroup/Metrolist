@@ -10,6 +10,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,18 +40,11 @@ internal class QuickPicksLoader<T>(
     suspend fun load(
         local: suspend () -> List<T>,
         similar: suspend () -> List<T>,
-    ) {
+    ) = coroutineScope {
         val request = begin(currentCoroutineContext()[Job])
 
-        val localItems = local().distinctBy(idOf)
-        currentCoroutineContext().ensureActive()
-
-        val publishedLocal =
-            _items.value.isNullOrEmpty() &&
-                localItems.isNotEmpty() &&
-                publish(request, shuffle(localItems).take(limit))
-
-        val similarItems =
+        val localDeferred = async { local().distinctBy(idOf) }
+        val similarDeferred = async {
             try {
                 similar()
             } catch (e: CancellationException) {
@@ -58,11 +53,21 @@ internal class QuickPicksLoader<T>(
                 reportException(e)
                 emptyList()
             }
-        // YouTube requests are wrapped in runCatching, which also swallows cancellation.
+        }
+
+        val localItems = localDeferred.await()
+        currentCoroutineContext().ensureActive()
+
+        val publishedLocal =
+            _items.value.isNullOrEmpty() &&
+                localItems.isNotEmpty() &&
+                publish(request, shuffle(localItems).take(limit))
+
+        val similarItems = similarDeferred.await()
         currentCoroutineContext().ensureActive()
 
         val localIds = localItems.mapTo(HashSet(), idOf)
-        if (publishedLocal && similarItems.all { idOf(it) in localIds }) return
+        if (publishedLocal && similarItems.all { idOf(it) in localIds }) return@coroutineScope
 
         publish(request, shuffle((localItems + similarItems).distinctBy(idOf)).take(limit))
     }
