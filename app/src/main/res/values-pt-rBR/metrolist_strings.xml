@@ -760,7 +760,7 @@
     <string name="experimental_lyrics_beta_title">Recurso experimental</string>
     <string name="experimental_lyrics_beta_message">O novo componente de letras está em desenvolvimento e pode haver falhas. Tem certeza de que deseja ativá-lo?</string>
     <string name="lyrics_animation_style_title">Estilo de animação letra por letra</string>
-    <string name="parsed_from_link">Analisar pelo link</string>
+    <string name="parsed_from_link">Extraído do link</string>
     <string name="speed">Velocidade de reprodução</string>
     <string name="varispeed">Habilitar velocidade de reprodução variável</string>
     <string name="varispeed_description">Vincular tom à velocidade de reprodução, resultando em efeitos de aceleração e desaceleração estilo fita</string>
@@ -791,7 +791,7 @@
     <string name="loudness_level_loud">Alto (-11 dB)</string>
     <string name="loudness_level_balanced">Balanceado (-14 dB)</string>
     <string name="loudness_level_quiet">Quieto (-19 dB)</string>
-    <string name="mixes">Coletâneas</string>
+    <string name="mixes">Mixes</string>
     <string name="show_most_stats_playlists">Exibir playlists semanais e mensais</string>
     <string name="show_most_stats_playlists_desc">Criar e mostrar playlists baseadas em estatísticas nas Estatísticas e Biblioteca</string>
     <string name="pin">Fixar</string>
@@ -876,4 +876,7 @@
     <string name="discord_integration">Integração com o Discord</string>
     <string name="enable_discord_rpc">Habilitar o Rich Presence</string>
     <string name="force_bottom_navbar">Forçar barra de navegação inferior</string>
+    <string name="player_pause">Pausar</string>
+    <string name="top_result">Principais resultados</string>
+    <string name="other">Outros</string>
 </resources>
