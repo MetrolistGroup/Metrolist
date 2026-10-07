@@ -146,7 +146,6 @@ import com.metrolist.music.ui.component.RandomizeGridItem
 import com.metrolist.music.ui.component.SongGridItem
 import com.metrolist.music.ui.component.SongListItem
 import com.metrolist.music.ui.component.SpeedDialGridItem
-import com.metrolist.music.ui.component.SevenXTuneHomeHero
 import com.metrolist.music.ui.component.YouTubeGridItem
 import com.metrolist.music.ui.component.YouTubeListItem
 import com.metrolist.music.ui.component.shimmer.GridItemPlaceHolder
@@ -1045,8 +1044,8 @@ fun HomeScreen(
             val list = mutableListOf<HomeSection>()
             val chipActive = selectedChip != null
 
-            if (!chipActive && speedDialItems.isNotEmpty()) list.add(HomeSection.SpeedDial)
             if (!chipActive && quickPicks?.isNotEmpty() == true) list.add(HomeSection.QuickPicks)
+            if (!chipActive && speedDialItems.isNotEmpty()) list.add(HomeSection.SpeedDial)
             if (!chipActive && communityPlaylists?.isNotEmpty() == true) list.add(HomeSection.FromTheCommunity)
             if (!chipActive && dailyDiscover?.isNotEmpty() == true) list.add(HomeSection.DailyDiscover)
             if (!chipActive && keepListening?.isNotEmpty() == true) list.add(HomeSection.KeepListening)
@@ -1066,62 +1065,47 @@ fun HomeScreen(
             if (explorePage?.moodAndGenres != null) list.add(HomeSection.MoodAndGenres)
 
             if (randomizeHomeOrder) {
-                list.sortedByDescending { section ->
-                    // Use a stable seed for each section based on the session seed + section ID hash
-                    // This ensures the weight for a specific section remains constant during a session (until refresh)
-                    // even if other sections appear/disappear, preventing jumping.
-                    val sectionRandom = Random(randomSeed + section.id.hashCode())
+                val fixedTopSections =
+                    buildList {
+                        if (list.contains(HomeSection.QuickPicks)) add(HomeSection.QuickPicks)
+                        if (list.contains(HomeSection.SpeedDial)) add(HomeSection.SpeedDial)
+                    }
 
-                    // Flatten the base values to allow for more overlap and variation
-                    // All "main" sections start closer together
-                    val base =
-                        when (section) {
-                            HomeSection.SpeedDial,
-                            HomeSection.QuickPicks,
-                            HomeSection.DailyDiscover,
-                            -> 500
+                val randomizedSections =
+                    list
+                        .filter { it != HomeSection.QuickPicks && it != HomeSection.SpeedDial }
+                        .sortedByDescending { section ->
+                            val sectionRandom = Random(randomSeed + section.id.hashCode())
 
-                            // Top tier starts equal
+                            val base =
+                                when (section) {
+                                    HomeSection.DailyDiscover -> 500
+                                    HomeSection.KeepListening,
+                                    HomeSection.AccountPlaylists,
+                                    HomeSection.ForgottenFavorites,
+                                    HomeSection.FromTheCommunity -> 300
+                                    else -> 100
+                                }
 
-                            HomeSection.KeepListening,
-                            HomeSection.AccountPlaylists,
-                            HomeSection.ForgottenFavorites,
-                            HomeSection.FromTheCommunity,
-                            -> 300
+                            val modifier =
+                                when (section) {
+                                    HomeSection.DailyDiscover -> sectionRandom.nextInt(-200, 400)
+                                    HomeSection.KeepListening,
+                                    HomeSection.AccountPlaylists,
+                                    HomeSection.ForgottenFavorites,
+                                    HomeSection.FromTheCommunity -> sectionRandom.nextInt(-100, 400)
+                                    else -> sectionRandom.nextInt(-50, 50)
+                                }
 
-                            // Middle tier starts equal
-
-                            else -> 100 // Bottom tier
+                            base + modifier
                         }
 
-                    val modifier =
-                        when (section) {
-                            // Top tier: High variance to allow shuffling among themselves
-                            // Range: [500-200, 500+400] = [300, 900]
-                            HomeSection.SpeedDial,
-                            HomeSection.QuickPicks,
-                            HomeSection.DailyDiscover,
-                            -> sectionRandom.nextInt(-200, 400)
-
-                            // Middle tier: Can jump up to challenge top tier, or drop lower
-                            // Range: [300-100, 300+400] = [200, 700]
-                            // This allows them to occasionally appear above a "bad roll" top tier item
-                            HomeSection.KeepListening,
-                            HomeSection.AccountPlaylists,
-                            HomeSection.ForgottenFavorites,
-                            HomeSection.FromTheCommunity,
-                            -> sectionRandom.nextInt(-100, 400)
-
-                            // Bottom tier: Standard variance
-                            else -> sectionRandom.nextInt(-50, 50)
-                        }
-                    base + modifier
-                }
+                fixedTopSections + randomizedSections
             } else {
                 val defaultOrder =
                     mapOf(
-                        HomeSection.SpeedDial to 100,
-                        HomeSection.QuickPicks to 90,
+                        HomeSection.QuickPicks to 100,
+                        HomeSection.SpeedDial to 90,
                         HomeSection.FromTheCommunity to 80,
                         HomeSection.DailyDiscover to 70,
                         HomeSection.KeepListening to 60,
@@ -1192,16 +1176,6 @@ fun HomeScreen(
                 state = lazylistState,
                 contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
             ) {
-                item(key = "7xtune_command_center") {
-                    SevenXTuneHomeHero(
-                        accountName = accountName,
-                        onSearch = { navController.navigate(Screens.Search.route) },
-                        onLibrary = { navController.navigate(Screens.Library.route) },
-                        onHistory = { navController.navigate("history") },
-                        onDownloads = { navController.navigate("cache_playlist/DOWNLOADS") },
-                    )
-                }
-
                 item {
                     ChipsRow(                       chips = homePage?.chips?.map { it to it.title } ?: emptyList(),
                         currentValue = selectedChip,
