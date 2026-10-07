@@ -845,7 +845,7 @@ fun BottomSheetPlayer(
                         AnimatedContent(
                             targetState = mediaMetadata?.thumbnailUrl,
                             transitionSpec = {
-                                fadeIn(tween(800)).togetherWith(fadeOut(tween(800)))
+                                fadeIn(tween(300)).togetherWith(fadeOut(tween(300)))
                             },
                             label = "blurBackground",
                         ) { thumbnailUrl ->
@@ -864,7 +864,7 @@ fun BottomSheetPlayer(
                                         modifier =
                                             Modifier
                                                 .fillMaxSize()
-                                                .blur(if (useDarkTheme) 150.dp else 100.dp),
+                                                .blur(if (useDarkTheme) 64.dp else 48.dp),
                                     )
                                     Box(
                                         modifier =
