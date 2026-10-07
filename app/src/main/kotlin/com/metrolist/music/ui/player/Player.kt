@@ -178,6 +178,7 @@ import com.metrolist.music.ui.menu.PlayerMenu
 import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.theme.PlayerColorExtractor
 import com.metrolist.music.ui.theme.PlayerSliderColors
+import com.metrolist.music.ui.theme.SevenXTunePalette
 import com.metrolist.music.ui.utils.ShowMediaInfo
 import com.metrolist.music.ui.utils.ShowOffsetDialog
 import com.metrolist.music.utils.dataStore
@@ -307,7 +308,7 @@ fun BottomSheetPlayer(
 
     val onBackgroundColor =
         when (playerBackground) {
-            PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.secondary
+            PlayerBackgroundStyle.DEFAULT -> SevenXTunePalette.TextSecondary
             else -> MaterialTheme.colorScheme.onSurface
         }
     val useBlackBackground =
@@ -406,7 +407,7 @@ fun BottomSheetPlayer(
         playerConnection.service.addToQueueAutomix(automix[0], 0)
     }
 
-    val defaultGradientColors = listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surfaceVariant)
+    val defaultGradientColors = listOf(SevenXTunePalette.MidnightSoft, SevenXTunePalette.SurfaceRaised)
     val fallbackColor = MaterialTheme.colorScheme.surface.toArgb()
 
     LaunchedEffect(mediaMetadata?.id, playerBackground) {
@@ -459,7 +460,7 @@ fun BottomSheetPlayer(
     val TextBackgroundColor by animateColorAsState(
         targetValue =
             when (playerBackground) {
-                PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
+                PlayerBackgroundStyle.DEFAULT -> SevenXTunePalette.TextPrimary
                 PlayerBackgroundStyle.BLUR -> Color.White
                 PlayerBackgroundStyle.GRADIENT -> Color.White
             },
@@ -482,7 +483,7 @@ fun BottomSheetPlayer(
                 playerBackground == PlayerBackgroundStyle.GRADIENT -> {
                 when (playerButtonsStyle) {
                     PlayerButtonsStyle.DEFAULT -> {
-                        Pair(Color.White, Color.Black)
+                        Pair(SevenXTunePalette.Violet, Color.White)
                     }
 
                     PlayerButtonsStyle.PRIMARY -> {
@@ -505,9 +506,9 @@ fun BottomSheetPlayer(
                 when (playerButtonsStyle) {
                     PlayerButtonsStyle.DEFAULT -> {
                         if (useDarkTheme) {
-                            Pair(Color.White, Color.Black)
+                            Pair(SevenXTunePalette.Violet, Color.White)
                         } else {
-                            Pair(Color.Black, Color.White)
+                            Pair(Color(0xFF6D37C9), Color.White)
                         }
                     }
 
@@ -536,8 +537,8 @@ fun BottomSheetPlayer(
                 when (playerButtonsStyle) {
                     PlayerButtonsStyle.DEFAULT -> {
                         Pair(
-                            Color.White.copy(alpha = 0.2f),
-                            Color.White,
+                            SevenXTunePalette.SurfaceBright.copy(alpha = 0.82f),
+                            SevenXTunePalette.TextPrimary,
                         )
                     }
 
@@ -561,8 +562,8 @@ fun BottomSheetPlayer(
                 when (playerButtonsStyle) {
                     PlayerButtonsStyle.DEFAULT -> {
                         Pair(
-                            MaterialTheme.colorScheme.surfaceContainerHighest,
-                            MaterialTheme.colorScheme.onSurface,
+                            SevenXTunePalette.SurfaceRaised,
+                            SevenXTunePalette.TextPrimary,
                         )
                     }
 
@@ -816,14 +817,14 @@ fun BottomSheetPlayer(
     val bottomSheetBackgroundColor =
         when (playerBackground) {
             PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT -> {
-                MaterialTheme.colorScheme.surfaceContainer
+                SevenXTunePalette.Surface
             }
 
             else -> {
                 if (useBlackBackground) {
                     Color.Black
                 } else {
-                    MaterialTheme.colorScheme.surfaceContainer
+                    SevenXTunePalette.MidnightSoft
                 }
             }
         }
@@ -838,7 +839,16 @@ fun BottomSheetPlayer(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .background(bottomSheetBackgroundColor),
+                        .background(bottomSheetBackgroundColor)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    SevenXTunePalette.Violet.copy(alpha = 0.10f),
+                                    Color.Transparent,
+                                    SevenXTunePalette.ElectricBlue.copy(alpha = 0.04f),
+                                ),
+                            ),
+                        ),
             ) {
                 when (playerBackground) {
                     PlayerBackgroundStyle.BLUR -> {
@@ -941,6 +951,26 @@ fun BottomSheetPlayer(
                 animationSpec = tween(durationMillis = 90, easing = LinearEasing),
                 label = "playPauseRoundness",
             )
+
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = PlayerHorizontalPadding)
+                        .height(2.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    SevenXTunePalette.Violet.copy(alpha = 0.80f),
+                                    SevenXTunePalette.ElectricBlue.copy(alpha = 0.62f),
+                                    SevenXTunePalette.PulsePink.copy(alpha = 0.56f),
+                                ),
+                            ),
+                        ),
+            )
+
+            Spacer(Modifier.height(10.dp))
 
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
