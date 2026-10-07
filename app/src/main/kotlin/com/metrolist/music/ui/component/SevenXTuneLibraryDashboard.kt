@@ -136,7 +136,7 @@ fun SevenXTuneLibraryDashboard(
 
         LibraryDashboardCard(
             modifier = Modifier.fillMaxWidth(),
-            icon = R.drawable.podcast,
+            icon = R.drawable.radio,
             title = stringResource(R.string.filter_podcasts),
             subtitle = "Shows and episodes",
             onClick = { onCategorySelected(LibraryFilter.PODCASTS) },
