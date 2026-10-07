@@ -267,6 +267,7 @@ dependencies {
     implementation(libs.compose.ui.util)
     implementation(libs.compose.animation)
     implementation(libs.compose.reorderable)
+    implementation(libs.animated.navigation.bar)
 
     implementation(libs.viewmodel.compose)
     implementation(libs.lifecycle.process)
