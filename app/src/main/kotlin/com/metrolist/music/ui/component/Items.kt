@@ -698,7 +698,7 @@ fun ArtistGridItem(
     thumbnailContent = {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
-                .data(artist.artist.thumbnailUrl?.resize(544, 544))
+                .data(artist.artist.thumbnailUrl?.resize(360, 360))
                 .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                 .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                 .networkCachePolicy(coil3.request.CachePolicy.ENABLED)
@@ -1219,7 +1219,7 @@ fun YouTubeListItem(
 
     if (item is SongItem && isSwipeable && swipeEnabled) {
         SwipeToSongBox(
-            mediaItem = item.copy(thumbnail = item.thumbnail.resize(1080, 1080)).toMediaItem(),
+            mediaItem = item.copy(thumbnail = item.thumbnail.resize(720, 720)).toMediaItem(),
             modifier = Modifier.fillMaxWidth()
         ) {
             content()
@@ -1489,7 +1489,7 @@ fun ItemThumbnail(
         if (albumIndex == null) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(thumbnailUrl?.resize(544, 544))
+                    .data(thumbnailUrl?.resize(360, 360))
                     .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                     .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                     .networkCachePolicy(coil3.request.CachePolicy.ENABLED)
@@ -1569,7 +1569,7 @@ fun LocalThumbnail(
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
-                .data(thumbnailUrl)
+                .data(thumbnailUrl?.resize(360, 360))
                 .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                 .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                 .networkCachePolicy(coil3.request.CachePolicy.ENABLED)
