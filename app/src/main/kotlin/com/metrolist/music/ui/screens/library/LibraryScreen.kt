@@ -7,6 +7,7 @@ package com.metrolist.music.ui.screens.library
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -160,6 +161,7 @@ private fun LibraryFilterBar(
                 modifier =
                     Modifier
                         .clip(tabShape)
+                        .clickable { onValueUpdate(filter) }
                         .background(
                             if (selected) {
                                 Brush.linearGradient(
