@@ -5,21 +5,18 @@
 
 package com.metrolist.music.ui.component
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -43,10 +40,6 @@ import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.exyte.animatednavbar.AnimatedNavigationBar
-import com.exyte.animatednavbar.animation.balltrajectory.Parabolic
-import com.exyte.animatednavbar.animation.indendshape.StraightIndent
-import com.exyte.animatednavbar.animation.indendshape.shapeCornerRadius
 import com.metrolist.music.ui.screens.Screens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -85,7 +78,7 @@ fun AppNavigationRail(
     onSearchLongClick: (() -> Unit)? = null,
     onHomeLongHold: (() -> Unit)? = null,
 ) {
-    val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainerHigh
+    val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surface
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
 
@@ -139,9 +132,9 @@ fun AppNavigationRail(
             NavigationRailItem(
                 selected = isSelected,
                 colors = NavigationRailItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedIconColor = Color.White,
                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
                 ),
                 onClick = {
                     if (!isSearchItem && !isHomeHoldItem) {
@@ -176,52 +169,48 @@ fun AppNavigationBar(
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
 
-    val barColor =
-        if (pureBlack) {
-            Color.Black
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        }
-
-    val selectedIndex =
-        navigationItems
-            .indexOfFirst { screen ->
-                isRouteSelected(currentRoute, screen.route, navigationItems)
-            }
-            .coerceAtLeast(0)
-
-    // MainActivity reserves the system gesture/navigation inset below this bar.
-    // Keep the navigation edge-to-edge and flat so it is visually part of the screen.
-    Box(modifier = modifier.fillMaxSize()) {
-        AnimatedNavigationBar(
+    // 7xTune's bottom dock is intentionally separate from the Material navigation bar
+    // pattern: a floating capsule with a branded active "pulse" rather than a generic
+    // indicator or notch.
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 5.dp)
                     .height(if (slimNav) 52.dp else 60.dp)
-                    .align(Alignment.TopCenter),
-            selectedIndex = selectedIndex,
-            barColor = barColor,
-            ballColor = MaterialTheme.colorScheme.primary,
-            cornerRadius = shapeCornerRadius(0.dp),
-            ballAnimation =
-                Parabolic(
-                    tween(
-                        durationMillis = if (slimNav) 260 else 300,
-                    ),
-                ),
-            indentAnimation =
-                StraightIndent(
-                    animationSpec = tween(
-                        durationMillis = if (slimNav) 240 else 280,
-                    ),
-                    indentWidth = if (navigationItems.size <= 3) 54.dp else 46.dp,
-                    indentHeight = if (slimNav) 10.dp else 12.dp,
-                ),
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        if (pureBlack) {
+                            Color.Black
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        },
+                    )
+                    .border(
+                        width = 1.dp,
+                        brush =
+                            androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
+                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
+                                ),
+                            ),
+                        shape = RoundedCornerShape(24.dp),
+                    )
+                    .padding(horizontal = 6.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             navigationItems.forEach { screen ->
-                val isSelected = remember(currentRoute, screen.route) {
-                    isRouteSelected(currentRoute, screen.route, navigationItems)
-                }
+                val isSelected =
+                    remember(currentRoute, screen.route) {
+                        isRouteSelected(currentRoute, screen.route, navigationItems)
+                    }
                 val currentIsSelected by rememberUpdatedState(isSelected)
                 val iconRes = remember(isSelected, screen) {
                     if (isSelected) screen.iconIdActive else screen.iconIdInactive
@@ -274,8 +263,9 @@ fun AppNavigationBar(
                 Box(
                     modifier =
                         Modifier
+                            .weight(1f)
                             .fillMaxSize()
-                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
+                            .clip(RoundedCornerShape(18.dp))
                             .clickable(
                                 interactionSource = interactionSource,
                                 indication = null,
@@ -286,17 +276,42 @@ fun AppNavigationBar(
                             },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        painter = painterResource(id = iconRes),
-                        contentDescription = stringResource(screen.titleId),
-                        tint =
-                            if (isSelected) {
-                                Color.Black
-                            } else {
-                                Color.White.copy(alpha = 0.82f)
-                            },
-                        modifier = Modifier.size(if (isSelected) 27.dp else 25.dp),
-                    )
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(if (slimNav) 40.dp else 44.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    if (isSelected) {
+                                        androidx.compose.ui.graphics.Brush.linearGradient(
+                                            listOf(
+                                                MaterialTheme.colorScheme.primary,
+                                                MaterialTheme.colorScheme.secondary,
+                                            ),
+                                        )
+                                    } else {
+                                        androidx.compose.ui.graphics.Brush.linearGradient(
+                                            listOf(
+                                                Color.Transparent,
+                                                Color.Transparent,
+                                            ),
+                                        )
+                                    },
+                                ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(id = iconRes),
+                            contentDescription = stringResource(screen.titleId),
+                            tint =
+                                if (isSelected) {
+                                    Color.White
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.82f)
+                                },
+                            modifier = Modifier.size(if (isSelected) 24.dp else 23.dp),
+                        )
+                    }
                 }
             }
         }
