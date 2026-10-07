@@ -1758,7 +1758,7 @@ fun HomeScreen(
                         }
 
                         HomeSection.QuickPicks -> {
-                            if (quickPicks?.isNullOrEmpty() != false && isLoading) {
+                            if (quickPicks?.isNullOrEmpty() != false) {
                                 item(key = "quick_picks_loading_title") {
                                     NavigationTitle(title = stringResource(R.string.quick_picks))
                                 }
