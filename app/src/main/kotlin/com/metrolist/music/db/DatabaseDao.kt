@@ -1497,6 +1497,22 @@ interface DatabaseDao {
         lastMondayStart: LocalDateTime,
     ): Flow<List<EventWithSong>>
 
+    /**
+     * Distinct songs ordered by their most recent listening event.
+     * This is intentionally independent from Quick Picks recommendations.
+     */
+    @Transaction
+    @Query(
+        """
+        SELECT song.* FROM song
+        JOIN (SELECT songId, MAX(timestamp) AS lastPlayed FROM event GROUP BY songId) recent
+        ON song.id = recent.songId
+        ORDER BY recent.lastPlayed DESC
+        LIMIT :limit
+        """,
+    )
+    fun recentlyPlayedSongs(limit: Int = 12): Flow<List<Song>>
+
     @Transaction
     @Query("SELECT * FROM event ORDER BY rowId ASC LIMIT 1")
     fun firstEvent(): Flow<EventWithSong?>

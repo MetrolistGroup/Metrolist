@@ -82,11 +82,12 @@ data class CommunityPlaylistItem(
 
 internal fun buildSpeedDialItems(
     pinned: List<YTItem>,
-    keepListening: List<YTItem>,
-    quickPicks: List<YTItem>,
-    home: List<YTItem>,
+    recent: List<YTItem>,
+    frequent: List<YTItem>,
+    resume: List<YTItem>,
+    favorites: List<YTItem>,
 ): List<YTItem> =
-    (pinned + keepListening + quickPicks + home)
+    (pinned + recent.take(8) + frequent.take(7) + resume.take(5) + favorites.take(6))
         .distinctBy { it.id }
         .take(27)
 
@@ -131,60 +132,67 @@ class HomeViewModel @Inject constructor(
         database.speedDialDao.getAll()
             .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    private val recentlyPlayedSongs =
+        database.recentlyPlayedSongs(limit = 12)
+            .map { songs -> songs.map(::songToSpeedDialItem) }
+
+    private val frequentlyPlayedSongs =
+        database.mostPlayedSongs(
+            fromTimeStamp = LocalDateTime.now().minusWeeks(4),
+            limit = 12,
+            offset = 0,
+            toTimeStamp = LocalDateTime.now(),
+        ).map { songs -> songs.map(::songToSpeedDialItem) }
+
+    private val recentlyLikedSongs =
+        database.likedSongsByCreateDateAsc()
+            .map { songs -> songs.asReversed().take(9).map(::songToSpeedDialItem) }
+
     val speedDialItems: StateFlow<List<YTItem>> =
         combine(
             database.speedDialDao.getAll(),
+            recentlyPlayedSongs,
+            frequentlyPlayedSongs,
             keepListening,
-            quickPicks,
-            homePage,
-        ) { pinned, keepListening, quick, home ->
+            recentlyLikedSongs,
+        ) { pinned, recent, frequent, keepListening, favorites ->
+            val resumeItems = keepListening.orEmpty().mapNotNull { item ->
+                when (item) {
+                    is Song -> songToSpeedDialItem(item)
+                    is Album -> AlbumItem(
+                        browseId = item.id,
+                        playlistId = item.album.playlistId ?: "",
+                        title = item.title,
+                        artists = item.artists.map { Artist(name = it.name, id = it.id) },
+                        year = item.album.year,
+                        thumbnail = item.thumbnailUrl ?: "",
+                    )
+                    is com.metrolist.music.db.entities.Artist -> ArtistItem(
+                        id = item.id,
+                        title = item.title,
+                        thumbnail = item.thumbnailUrl,
+                        shuffleEndpoint = null,
+                        radioEndpoint = null,
+                    )
+                    else -> null
+                }
+            }
             buildSpeedDialItems(
                 pinned = pinned.map { it.toYTItem() },
-                keepListening =
-                    keepListening.orEmpty().mapNotNull { item ->
-                        when (item) {
-                            is Song ->
-                                SongItem(
-                                    id = item.id,
-                                    title = item.title,
-                                    artists = item.artists.map { Artist(name = it.name, id = it.id) },
-                                    thumbnail = item.thumbnailUrl ?: "",
-                                )
-
-                            is Album ->
-                                AlbumItem(
-                                    browseId = item.id,
-                                    playlistId = item.album.playlistId ?: "",
-                                    title = item.title,
-                                    artists = item.artists.map { Artist(name = it.name, id = it.id) },
-                                    year = item.album.year,
-                                    thumbnail = item.thumbnailUrl ?: "",
-                                )
-
-                            is com.metrolist.music.db.entities.Artist ->
-                                ArtistItem(
-                                    id = item.id,
-                                    title = item.title,
-                                    thumbnail = item.thumbnailUrl,
-                                    shuffleEndpoint = null,
-                                    radioEndpoint = null,
-                                )
-
-                            else -> null
-                        }
-                    },
-                quickPicks =
-                    quick.orEmpty().map { song ->
-                        SongItem(
-                            id = song.id,
-                            title = song.title,
-                            artists = song.artists.map { Artist(name = it.name, id = it.id) },
-                            thumbnail = song.thumbnailUrl ?: "",
-                        )
-                    },
-                home = home?.sections.orEmpty().flatMap { it.items },
+                recent = recent,
+                frequent = frequent,
+                resume = resumeItems,
+                favorites = favorites,
             )
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    private fun songToSpeedDialItem(song: Song): YTItem =
+        SongItem(
+            id = song.id,
+            title = song.title,
+            artists = song.artists.map { Artist(name = it.name, id = it.id) },
+            thumbnail = song.thumbnailUrl ?: "",
+        )
 
     suspend fun getRandomItem(): YTItem? {
         try {
