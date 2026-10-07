@@ -287,10 +287,10 @@ private fun NewMiniPlayer(
 
     // Memoize colors
     val backgroundColor = when (miniPlayerBackground) {
-        MiniPlayerBackgroundStyle.DEFAULT    -> MaterialTheme.colorScheme.surfaceContainerHigh
-        MiniPlayerBackgroundStyle.TRANSPARENT -> Color.Black.copy(alpha = 0.25f)
-        MiniPlayerBackgroundStyle.BLUR       -> MaterialTheme.colorScheme.surfaceContainer
-        MiniPlayerBackgroundStyle.GRADIENT   -> MaterialTheme.colorScheme.surfaceContainer
+        MiniPlayerBackgroundStyle.DEFAULT -> com.metrolist.music.ui.theme.SevenXTunePalette.SurfaceRaised
+        MiniPlayerBackgroundStyle.TRANSPARENT -> com.metrolist.music.ui.theme.SevenXTunePalette.Midnight.copy(alpha = 0.35f)
+        MiniPlayerBackgroundStyle.BLUR -> com.metrolist.music.ui.theme.SevenXTunePalette.SurfaceRaised
+        MiniPlayerBackgroundStyle.GRADIENT -> com.metrolist.music.ui.theme.SevenXTunePalette.Surface
         MiniPlayerBackgroundStyle.PURE_BLACK -> Color.Black
     }
     val forceLightColors = !useDarkTheme && (miniPlayerBackground == MiniPlayerBackgroundStyle.PURE_BLACK ||
@@ -379,15 +379,44 @@ private fun NewMiniPlayer(
                     .then(if (isTabletLandscape) Modifier.width(500.dp).align(Alignment.Center) else Modifier.fillMaxWidth())
                     .height(64.dp)
                     .offset { IntOffset(offsetXAnimatable.value.roundToInt(), 0) }
-                    .clip(RoundedCornerShape(24.dp))
+                    .clip(com.metrolist.music.ui.theme.SevenXTuneShapes.large)
                     .background(color = backgroundColor)
-                    .border(1.dp, primaryColor.copy(alpha = 0.28f), RoundedCornerShape(24.dp))
+                    .border(
+                        1.dp,
+                        androidx.compose.ui.graphics.Brush.horizontalGradient(
+                            listOf(
+                                primaryColor.copy(alpha = 0.34f),
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f),
+                                primaryColor.copy(alpha = 0.22f),
+                            ),
+                        ),
+                        com.metrolist.music.ui.theme.SevenXTuneShapes.large,
+                    )
                     .clickable(
                         interactionSource = interactionSource,
                         indication = LocalIndication.current,
                         onClick = onClick
                     ),
         ) {
+            // A tiny spectral line makes the compact player feel like part of the 7xTune brand,
+            // while the artwork-based background modes remain opt-in and unchanged.
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.65f),
+                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.55f),
+                                ),
+                            ),
+                        ),
+            )
+
             when (miniPlayerBackground) {
                 MiniPlayerBackgroundStyle.BLUR -> {
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
@@ -427,7 +456,7 @@ private fun NewMiniPlayer(
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp),
             ) {
                 // Play button with progress - isolated composable
                 NewMiniPlayerPlayButton(

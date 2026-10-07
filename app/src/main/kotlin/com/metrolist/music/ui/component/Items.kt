@@ -16,6 +16,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -58,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -120,6 +122,7 @@ import com.metrolist.music.db.entities.Song
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.playback.queues.LocalAlbumRadio
+import com.metrolist.music.ui.theme.SevenXTunePalette
 import com.metrolist.music.ui.utils.resize
 import com.metrolist.music.utils.joinByBullet
 import com.metrolist.music.utils.joinToArtistString
@@ -1485,6 +1488,25 @@ fun ItemThumbnail(
             .fillMaxSize()
             .aspectRatio(thumbnailRatio)
             .clip(shape)
+            .then(
+                if (isActive) {
+                    Modifier.border(
+                        width = 1.5.dp,
+                        brush =
+                            Brush.sweepGradient(
+                                listOf(
+                                    SevenXTunePalette.Violet,
+                                    SevenXTunePalette.ElectricBlue,
+                                    SevenXTunePalette.PulsePink,
+                                    SevenXTunePalette.Violet,
+                                ),
+                            ),
+                        shape = shape,
+                    )
+                } else {
+                    Modifier
+                },
+            )
     ) {
         if (albumIndex == null) {
             AsyncImage(
@@ -1534,7 +1556,14 @@ fun ItemThumbnail(
         PlayingIndicatorBox(
             isActive = isActive,
             playWhenReady = isPlaying,
-            color = if (albumIndex != null) MaterialTheme.colorScheme.onBackground else Color.White,
+            color =
+                if (isActive) {
+                    SevenXTunePalette.Violet
+                } else if (albumIndex != null) {
+                    MaterialTheme.colorScheme.onBackground
+                } else {
+                    Color.White
+                },
             modifier = Modifier
                 .fillMaxSize()
                 .background(

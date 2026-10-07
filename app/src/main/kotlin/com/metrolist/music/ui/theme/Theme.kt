@@ -25,7 +25,7 @@ import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
 import com.materialkolor.score.Score
 
-val DefaultThemeColor = Color(0xFF9557FF)
+val DefaultThemeColor = Color(0xFF9D72FF)
 
 @Composable
 fun MetrolistTheme(
@@ -35,63 +35,85 @@ fun MetrolistTheme(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
-    // 7xTune keeps a stable brand palette instead of inheriting the device wallpaper palette.
-    // This makes the app visually distinct from the upstream/default Material presentation.
     val useSystemDynamicColor = false
 
-    // Select the appropriate color scheme generation method
     val baseColorScheme = if (useSystemDynamicColor) {
-        // Use standard Material 3 dynamic color functions for system wallpaper colors
         if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     } else {
-        // Use materialKolor only when a specific seed color is provided
         rememberDynamicColorScheme(
-            seedColor = themeColor, // themeColor is guaranteed non-default here
+            seedColor = themeColor,
             isDark = darkTheme,
             specVersion = ColorSpec.SpecVersion.SPEC_2025,
-            style = PaletteStyle.TonalSpot // Keep existing style
+            style = PaletteStyle.TonalSpot,
         )
     }
 
-    // Apply pureBlack modification if needed, similar to original logic
     val colorScheme = remember(baseColorScheme, pureBlack, darkTheme) {
-        val branded = if (themeColor == DefaultThemeColor) {
-            if (darkTheme) {
-                baseColorScheme.copy(
-                    primary = Color(0xFFC77DFF),
-                    onPrimary = Color(0xFF2B0A44),
-                    primaryContainer = Color(0xFF612D8C),
-                    onPrimaryContainer = Color(0xFFF6D8FF),
-                    secondary = Color(0xFF78D6FF),
-                    onSecondary = Color(0xFF003546),
-                    tertiary = Color(0xFFFF8BB8),
-                    onTertiary = Color(0xFF4A1128),
-                )
+        val branded =
+            if (themeColor == DefaultThemeColor) {
+                if (darkTheme) {
+                    baseColorScheme.copy(
+                        primary = SevenXTunePalette.Violet,
+                        onPrimary = Color(0xFF220A4A),
+                        primaryContainer = Color(0xFF442078),
+                        onPrimaryContainer = Color(0xFFEBDDFF),
+                        secondary = SevenXTunePalette.ElectricBlue,
+                        onSecondary = Color(0xFF002F3D),
+                        secondaryContainer = Color(0xFF104C60),
+                        onSecondaryContainer = Color(0xFFC6F1FF),
+                        tertiary = SevenXTunePalette.PulsePink,
+                        onTertiary = Color(0xFF4A0E35),
+                        tertiaryContainer = Color(0xFF68204F),
+                        onTertiaryContainer = Color(0xFFFFD9EE),
+                    )
+                } else {
+                    baseColorScheme.copy(
+                        primary = Color(0xFF6D37C9),
+                        onPrimary = Color.White,
+                        primaryContainer = Color(0xFFE9DDFF),
+                        onPrimaryContainer = Color(0xFF250050),
+                        secondary = Color(0xFF006984),
+                        onSecondary = Color.White,
+                        secondaryContainer = Color(0xFFB9ECFF),
+                        onSecondaryContainer = Color(0xFF001F29),
+                        tertiary = Color(0xFF9E2A6E),
+                        onTertiary = Color.White,
+                        tertiaryContainer = Color(0xFFFFD8EB),
+                        onTertiaryContainer = Color(0xFF3C0826),
+                    )
+                }
             } else {
-                baseColorScheme.copy(
-                    primary = Color(0xFF7026B5),
-                    onPrimary = Color.White,
-                    primaryContainer = Color(0xFFECD7FF),
-                    onPrimaryContainer = Color(0xFF2B0A44),
-                    secondary = Color(0xFF006B87),
-                    onSecondary = Color.White,
-                    tertiary = Color(0xFF9B184F),
-                    onTertiary = Color.White,
-                )
+                baseColorScheme
             }
-        } else {
-            baseColorScheme
-        }
 
-        if (darkTheme && pureBlack) branded.pureBlack(true) else branded
+        branded
+            .midnightPulseSurfaces(darkTheme)
+            .let { if (darkTheme && pureBlack) it.pureBlack(true) else it }
     }
 
-    // Use standard MaterialTheme instead of MaterialExpressiveTheme
     MaterialTheme(
         colorScheme = colorScheme,
+        shapes = SevenXTuneShapes,
         content = content,
     )
 }
+
+private fun ColorScheme.midnightPulseSurfaces(darkTheme: Boolean): ColorScheme =
+    if (!darkTheme) {
+        this
+    } else {
+        copy(
+            background = SevenXTunePalette.Midnight,
+            onBackground = SevenXTunePalette.TextPrimary,
+            surface = SevenXTunePalette.Surface,
+            onSurface = SevenXTunePalette.TextPrimary,
+            surfaceVariant = SevenXTunePalette.SurfaceRaised,
+            onSurfaceVariant = SevenXTunePalette.TextSecondary,
+            inverseSurface = SevenXTunePalette.TextPrimary,
+            inverseOnSurface = SevenXTunePalette.Midnight,
+            surfaceTint = SevenXTunePalette.Violet,
+        )
+    }
 
 fun Bitmap.extractThemeColor(): Color = Color(
     Palette.from(this)
