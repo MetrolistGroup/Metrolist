@@ -1043,11 +1043,16 @@ fun HomeScreen(
             similarRecommendations,
             homePage?.sections,
             explorePage?.moodAndGenres,
+            isLoading,
         ) {
             val list = mutableListOf<HomeSection>()
             val chipActive = selectedChip != null
 
-            if (!chipActive && quickPicks?.isNotEmpty() == true) list.add(HomeSection.QuickPicks)
+            // Reserve the first Home section for Quick Picks while it is loading so Speed Dial
+            // can never jump above it and then be pushed downward when Quick Picks arrives.
+            if (!chipActive && (quickPicks?.isNotEmpty() == true || (isLoading && quickPicks == null))) {
+                list.add(HomeSection.QuickPicks)
+            }
             if (!chipActive && speedDialItems.isNotEmpty()) list.add(HomeSection.SpeedDial)
             if (!chipActive && communityPlaylists?.isNotEmpty() == true) list.add(HomeSection.FromTheCommunity)
             if (!chipActive && dailyDiscover?.isNotEmpty() == true) list.add(HomeSection.DailyDiscover)
@@ -1748,6 +1753,32 @@ fun HomeScreen(
                         }
 
                         HomeSection.QuickPicks -> {
+                            if (quickPicks?.isNullOrEmpty() != false && isLoading) {
+                                item(key = "quick_picks_loading_title") {
+                                    NavigationTitle(title = stringResource(R.string.quick_picks))
+                                }
+                                item(key = "quick_picks_loading") {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(72.dp)
+                                            .padding(horizontal = 16.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        repeat(4) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(horizontalLazyGridItemWidth)
+                                                    .height(56.dp)
+                                                    .clip(RoundedCornerShape(18.dp))
+                                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                                    .animateContentSize(),
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
                             quickPicks?.takeIf { it.isNotEmpty() }?.let { quickPicks ->
                                 item(key = "quick_picks_title") {
                                     val quickPicksTitle = stringResource(R.string.quick_picks)
