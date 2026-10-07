@@ -29,7 +29,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -137,7 +136,6 @@ import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.music.constants.AppBarHeight
 import com.metrolist.music.constants.AppLanguageKey
 import com.metrolist.music.constants.CheckForUpdatesKey
-import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.DefaultOpenTabKey
 import com.metrolist.music.constants.DismissedKmpUpdateKey
 import com.metrolist.music.constants.DismissedStandaloneUpdateKey
@@ -194,7 +192,6 @@ import com.metrolist.music.ui.player.BottomSheetPlayer
 import com.metrolist.music.ui.screens.Screens
 import com.metrolist.music.ui.screens.navigationBuilder
 import com.metrolist.music.ui.screens.settings.ChangelogScreen
-import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.screens.settings.NavigationTab
 import com.metrolist.music.ui.theme.ColorSaver
 import com.metrolist.music.ui.theme.DefaultThemeColor
@@ -598,12 +595,8 @@ class MainActivity : FragmentActivity() {
             }
         }
 
-        val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
-        val isSystemInDarkTheme = isSystemInDarkTheme()
-        val useDarkTheme =
-            remember(darkTheme, isSystemInDarkTheme) {
-                if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
-            }
+        // 7xTune is intentionally dark-mode-only.
+        val useDarkTheme = true
 
         LaunchedEffect(useDarkTheme) {
             setSystemBarAppearance(useDarkTheme)
