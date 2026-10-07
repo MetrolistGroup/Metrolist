@@ -345,14 +345,22 @@ class HomeViewModel @Inject constructor(
                     }
                 }
 
-                // Match upstream Metrolist: combine related history, forgotten favorites and local
-                // matches from YouTube recommendations, then keep a compact shuffled set.
-                val combined = (relatedSongs + forgotten + ytSimilarSongs)
+                // Match upstream Metrolist sources first, then fall back to the user's
+                // real listening history when the related-song map has not been populated yet.
+                val recentHistory =
+                    database.mostPlayedSongs(
+                        fromTimeStamp = LocalDateTime.now().minusWeeks(4),
+                        limit = 20,
+                        offset = 0,
+                        toTimeStamp = LocalDateTime.now(),
+                    ).first().filterVideoSongs(hideVideoSongs)
+
+                val combined = (relatedSongs + forgotten + ytSimilarSongs + recentHistory)
                     .distinctBy { it.id }
                     .shuffled()
                     .take(20)
 
-                quickPicks.value = combined.ifEmpty { relatedSongs.shuffled().take(20) }
+                quickPicks.value = combined.ifEmpty { null }
             }
 
             QuickPicks.LAST_LISTEN -> {
