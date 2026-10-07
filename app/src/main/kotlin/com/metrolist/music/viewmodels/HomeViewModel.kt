@@ -326,7 +326,19 @@ class HomeViewModel @Inject constructor(
                 val relatedSongs = database.quickPicks().first().filterVideoSongs(hideVideoSongs)
                 val forgotten = database.forgottenFavorites().first().filterVideoSongs(hideVideoSongs).take(8)
 
-                // Get similar songs from YouTube based on recent listening
+                // Publish local Quick Picks immediately so the home screen does not wait for
+                // the optional YouTube enrichment request below.
+                val localQuickPicks = (relatedSongs + forgotten)
+                    .distinctBy { it.id }
+
+                quickPicks.value = localQuickPicks
+                    .shuffled()
+                    .take(20)
+                    .ifEmpty { relatedSongs.shuffled().take(20) }
+
+                // Enrich the already-visible local Quick Picks with similar songs from YouTube
+                // based on recent listening. The final combined result preserves the existing
+                // recommendation algorithm; the only change is that local results are shown first.
                 val recentSong = database.latestEvent().first()?.song
                 val ytSimilarSongs = mutableListOf<Song>()
 
@@ -346,13 +358,13 @@ class HomeViewModel @Inject constructor(
                     }
                 }
 
-                // Combine all sources and remove duplicates
-                val combined = (relatedSongs + forgotten + ytSimilarSongs)
+                // Re-publish the final enriched result after the optional network request.
+                val combined = (localQuickPicks + ytSimilarSongs)
                     .distinctBy { it.id }
                     .shuffled()
                     .take(20)
 
-                quickPicks.value = combined.ifEmpty { relatedSongs.shuffled().take(20) }
+                quickPicks.value = combined.ifEmpty { localQuickPicks.shuffled().take(20) }
             }
             QuickPicks.LAST_LISTEN -> {
                 val song = database.latestEvent().first()?.song
