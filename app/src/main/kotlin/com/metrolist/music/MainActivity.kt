@@ -1067,8 +1067,8 @@ class MainActivity : FragmentActivity() {
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                                     Box(
                                                         modifier = Modifier
-                                                            .size(38.dp)
-                                                            .clip(RoundedCornerShape(13.dp))
+                                                            .size(32.dp)
+                                                            .clip(RoundedCornerShape(11.dp))
                                                             .background(MaterialTheme.colorScheme.primaryContainer),
                                                         contentAlignment = Alignment.Center,
                                                     ) {
@@ -1076,7 +1076,7 @@ class MainActivity : FragmentActivity() {
                                                             painter = painterResource(R.drawable.small_icon),
                                                             contentDescription = null,
                                                             tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                            modifier = Modifier.size(25.dp),
+                                                            modifier = Modifier.size(21.dp),
                                                         )
                                                     }
                                                     Column(modifier = Modifier.padding(start = 10.dp)) {
