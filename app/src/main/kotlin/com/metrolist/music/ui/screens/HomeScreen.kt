@@ -1072,43 +1072,50 @@ fun HomeScreen(
             if (explorePage?.moodAndGenres != null) list.add(HomeSection.MoodAndGenres)
 
             if (randomizeHomeOrder) {
-                list.sortedByDescending { section ->
-                    val sectionRandom = Random(randomSeed + section.id.hashCode())
+                // Keep Quick Picks + Speed Dial pinned at the very top. This preserves
+                // Metrolist's real section generation while matching 7xTune's desired layout.
+                val fixedTopSections =
+                    buildList {
+                        if (list.contains(HomeSection.QuickPicks)) add(HomeSection.QuickPicks)
+                        if (list.contains(HomeSection.SpeedDial)) add(HomeSection.SpeedDial)
+                    }
 
-                    val base =
-                        when (section) {
-                            HomeSection.SpeedDial,
-                            HomeSection.QuickPicks,
-                            HomeSection.DailyDiscover,
-                            -> 500
+                val randomizedSections =
+                    list
+                        .filter { it != HomeSection.QuickPicks && it != HomeSection.SpeedDial }
+                        .sortedByDescending { section ->
+                            val sectionRandom = Random(randomSeed + section.id.hashCode())
 
-                            HomeSection.KeepListening,
-                            HomeSection.AccountPlaylists,
-                            HomeSection.ForgottenFavorites,
-                            HomeSection.FromTheCommunity,
-                            -> 300
+                            val base =
+                                when (section) {
+                                    HomeSection.DailyDiscover -> 500
 
-                            else -> 100
+                                    HomeSection.KeepListening,
+                                    HomeSection.AccountPlaylists,
+                                    HomeSection.ForgottenFavorites,
+                                    HomeSection.FromTheCommunity,
+                                    -> 300
+
+                                    else -> 100
+                                }
+
+                            val modifier =
+                                when (section) {
+                                    HomeSection.DailyDiscover -> sectionRandom.nextInt(-200, 400)
+
+                                    HomeSection.KeepListening,
+                                    HomeSection.AccountPlaylists,
+                                    HomeSection.ForgottenFavorites,
+                                    HomeSection.FromTheCommunity,
+                                    -> sectionRandom.nextInt(-100, 400)
+
+                                    else -> sectionRandom.nextInt(-50, 50)
+                                }
+
+                            base + modifier
                         }
 
-                    val modifier =
-                        when (section) {
-                            HomeSection.SpeedDial,
-                            HomeSection.QuickPicks,
-                            HomeSection.DailyDiscover,
-                            -> sectionRandom.nextInt(-200, 400)
-
-                            HomeSection.KeepListening,
-                            HomeSection.AccountPlaylists,
-                            HomeSection.ForgottenFavorites,
-                            HomeSection.FromTheCommunity,
-                            -> sectionRandom.nextInt(-100, 400)
-
-                            else -> sectionRandom.nextInt(-50, 50)
-                        }
-
-                    base + modifier
-                }
+                fixedTopSections + randomizedSections
             } else {
                 val defaultOrder =
                     mapOf(
