@@ -491,11 +491,12 @@ class HomeViewModel @Inject constructor(
         isLoading.value = false
 
         // Phase 2: Heavy multi-request operations — run in background without blocking the UI.
-        viewModelScope.launch(Dispatchers.IO) { getDailyDiscover() }
+        viewModelScope.launch(Dispatchers.IO) { kotlinx.coroutines.delay(800); getDailyDiscover() }
 
-        viewModelScope.launch(Dispatchers.IO) { getCommunityPlaylists() }
+        viewModelScope.launch(Dispatchers.IO) { kotlinx.coroutines.delay(1000); getCommunityPlaylists() }
 
         viewModelScope.launch(Dispatchers.IO) {
+            kotlinx.coroutines.delay(900)
             YouTube.explore().onSuccess { page ->
                 explorePage.value = page.copy(
                     newReleaseAlbums = page.newReleaseAlbums.filterOutNulls().filterExplicit(hideExplicit),
@@ -505,6 +506,7 @@ class HomeViewModel @Inject constructor(
         }
 
         viewModelScope.launch(Dispatchers.IO) {
+            kotlinx.coroutines.delay(1200)
             val artistRecommendations = database.mostPlayedArtists(fromTimeStamp, limit = 15).first()
                 .filter { it.artist.isYouTubeArtist }
                 .shuffled().take(4)
