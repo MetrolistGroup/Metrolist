@@ -318,10 +318,6 @@ fun SearchScreen(
                 }
             }
         },
-        containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-            )
-        },
         containerColor = if (pureBlack) Color.Black else SevenXTunePalette.Midnight,
     ) { paddingValues ->
         Box(
