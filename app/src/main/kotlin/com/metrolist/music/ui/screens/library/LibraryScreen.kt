@@ -199,7 +199,7 @@ private fun LibraryFilterBar(
                             if (selected) {
                                 Color.White
                             } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant,
+                                MaterialTheme.colorScheme.onSurfaceVariant
                             },
                         modifier = Modifier.size(18.dp),
                     )
@@ -211,7 +211,7 @@ private fun LibraryFilterBar(
                             if (selected) {
                                 Color.White
                             } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant,
+                                MaterialTheme.colorScheme.onSurfaceVariant
                             },
                     )
                 }
