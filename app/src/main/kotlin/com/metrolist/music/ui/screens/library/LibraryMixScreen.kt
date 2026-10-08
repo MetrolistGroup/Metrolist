@@ -92,6 +92,7 @@ import com.metrolist.music.ui.component.ArtistListItem
 import com.metrolist.music.ui.component.CreatePlaylistDialog
 import com.metrolist.music.ui.component.LibrarySearchEmptyPlaceholder
 import com.metrolist.music.ui.component.LibrarySearchHeader
+import com.metrolist.music.ui.component.PulseLibraryControls
 import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.ui.component.PlaylistGridItem
 import com.metrolist.music.ui.component.PlaylistListItem
@@ -456,17 +457,13 @@ fun LibraryMixScreen(
                     contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
                 ) {
                     item(
-                        key = "filter",
+                        key = "library_controls",
                         contentType = CONTENT_TYPE_HEADER,
                     ) {
-                        filterContent()
-                    }
-
-                    item(
-                        key = "header",
-                        contentType = CONTENT_TYPE_HEADER,
-                    ) {
-                        headerContent()
+                        PulseLibraryControls(
+                            filterContent = filterContent,
+                            headerContent = headerContent,
+                        )
                     }
 
                     if (showLikedPlaylist) {
@@ -782,19 +779,14 @@ fun LibraryMixScreen(
                     contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
                 ) {
                     item(
-                        key = "filter",
+                        key = "library_controls",
                         span = { GridItemSpan(maxLineSpan) },
                         contentType = CONTENT_TYPE_HEADER,
                     ) {
-                        filterContent()
-                    }
-
-                    item(
-                        key = "header",
-                        span = { GridItemSpan(maxLineSpan) },
-                        contentType = CONTENT_TYPE_HEADER,
-                    ) {
-                        headerContent()
+                        PulseLibraryControls(
+                            filterContent = filterContent,
+                            headerContent = headerContent,
+                        )
                     }
 
                     if (showLikedPlaylist) {

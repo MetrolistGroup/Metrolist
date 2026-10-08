@@ -13,6 +13,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.NavigationRailItemDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -41,6 +43,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.metrolist.music.ui.screens.Screens
 import kotlinx.coroutines.delay
@@ -278,17 +281,18 @@ fun AppNavigationBar(
                             },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Box(
+                    Column(
                         modifier =
                             Modifier
-                                .size(if (slimNav) 40.dp else 44.dp)
-                                .clip(RoundedCornerShape(16.dp))
+                                .fillMaxSize()
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                .clip(RoundedCornerShape(18.dp))
                                 .background(
                                     if (isSelected) {
                                         androidx.compose.ui.graphics.Brush.linearGradient(
                                             listOf(
-                                                MaterialTheme.colorScheme.primary,
-                                                MaterialTheme.colorScheme.secondary,
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
+                                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
                                             ),
                                         )
                                     } else {
@@ -299,19 +303,79 @@ fun AppNavigationBar(
                                             ),
                                         )
                                     },
-                                ),
-                        contentAlignment = Alignment.Center,
+                                )
+                                .padding(horizontal = 8.dp, vertical = 5.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
                     ) {
-                        Icon(
-                            painter = painterResource(id = iconRes),
-                            contentDescription = stringResource(screen.titleId),
-                            tint =
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(if (slimNav) 30.dp else 34.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        if (isSelected) {
+                                            androidx.compose.ui.graphics.Brush.linearGradient(
+                                                listOf(
+                                                    MaterialTheme.colorScheme.primary,
+                                                    MaterialTheme.colorScheme.secondary,
+                                                ),
+                                            )
+                                        } else {
+                                            androidx.compose.ui.graphics.Brush.linearGradient(
+                                                listOf(
+                                                    Color.Transparent,
+                                                    Color.Transparent,
+                                                ),
+                                            )
+                                        },
+                                    ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                painter = painterResource(id = iconRes),
+                                contentDescription = stringResource(screen.titleId),
+                                tint =
+                                    if (isSelected) {
+                                        Color.White
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+                                    },
+                                modifier = Modifier.size(if (isSelected) 21.dp else 20.dp),
+                            )
+                        }
+
+                        Text(
+                            text = stringResource(screen.titleId),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color =
                                 if (isSelected) {
                                     Color.White
                                 } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.82f)
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f)
                                 },
-                            modifier = Modifier.size(if (isSelected) 24.dp else 23.dp),
+                        )
+
+                        Box(
+                            modifier =
+                                Modifier
+                                    .padding(top = 2.dp)
+                                    .size(width = if (isSelected) 22.dp else 4.dp, height = 2.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(
+                                        if (isSelected) {
+                                            androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                                listOf(
+                                                    MaterialTheme.colorScheme.primary,
+                                                    MaterialTheme.colorScheme.secondary,
+                                                    MaterialTheme.colorScheme.tertiary,
+                                                ),
+                                            )
+                                        } else {
+                                            Color.Transparent
+                                        },
+                                    ),
                         )
                     }
                 }

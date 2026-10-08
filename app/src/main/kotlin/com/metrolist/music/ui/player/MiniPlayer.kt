@@ -63,6 +63,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -122,6 +123,7 @@ import coil3.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.metrolist.music.ui.theme.PlayerColorExtractor
+import com.metrolist.music.ui.theme.SevenXTunePalette
 
 /**
  * Stable wrapper for progress state - reads values only during draw phase
@@ -476,6 +478,7 @@ private fun NewMiniPlayer(
                 // Song info - isolated composable
                 NewMiniPlayerSongInfo(
                     mediaMetadata = mediaMetadata,
+                    progressState = progressState,
                     onSurfaceColor = onSurfaceColor,
                     errorColor = errorColor,
                     modifier = Modifier.weight(1f),
@@ -493,19 +496,6 @@ private fun NewMiniPlayer(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                 }
-
-// Subscribe button - isolated composable
-                mediaMetadata?.artists?.firstOrNull()?.id?.let { artistId ->
-                    SubscribeButton(
-                        artistId = artistId,
-                        metadata = mediaMetadata!!,
-                        primaryColor = primaryColor,
-                        outlineColor = outlineColor,
-                        onSurfaceColor = onSurfaceColor,
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
 
 // Favorite button - isolated composable
                 mediaMetadata?.let { FavoriteButton(
@@ -654,6 +644,7 @@ private fun NewMiniPlayerPlayButton(
 @Composable
 private fun NewMiniPlayerSongInfo(
     mediaMetadata: MediaMetadata?,
+    progressState: ProgressState,
     onSurfaceColor: Color,
     errorColor: Color,
     modifier: Modifier = Modifier,
@@ -675,21 +666,53 @@ private fun NewMiniPlayerSongInfo(
                 modifier = Modifier.basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
             )
             Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (metadata.explicit) MIcon.Explicit()
-                 if (metadata.artists.any { it.name.isNotBlank() }) {
-                     Text(
-                         text = metadata.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name },
-                         color = onSurfaceColor.copy(alpha = 0.7f),
+                if (metadata.artists.any { it.name.isNotBlank() }) {
+                    Text(
+                        text = metadata.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name },
+                        color = onSurfaceColor.copy(alpha = 0.70f),
                         fontSize = 12.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Clip,
-                        modifier = Modifier.basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
+                        modifier =
+                            Modifier.basicMarquee(
+                                iterations = 1,
+                                initialDelayMillis = 3000,
+                                velocity = 30.dp,
+                            ),
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(5.dp))
+
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(onSurfaceColor.copy(alpha = 0.10f))
+                        .drawWithContent {
+                            drawContent()
+                            val progress = progressState.progress
+                            drawRoundRect(
+                                brush =
+                                    Brush.horizontalGradient(
+                                        listOf(
+                                            SevenXTunePalette.Violet,
+                                            SevenXTunePalette.ElectricBlue,
+                                            SevenXTunePalette.PulsePink,
+                                        ),
+                                    ),
+                                size = Size(width = size.width * progress, height = size.height),
+                                cornerRadius = CornerRadius(size.height / 2f),
+                            )
+                        },
+            )
 
             AnimatedVisibility(visible = error != null, enter = fadeIn(), exit = fadeOut()) {
                 Text(

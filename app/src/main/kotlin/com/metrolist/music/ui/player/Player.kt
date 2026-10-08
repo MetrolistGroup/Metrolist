@@ -972,14 +972,55 @@ fun BottomSheetPlayer(
 
             Spacer(Modifier.height(10.dp))
 
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+            Box(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = PlayerHorizontalPadding),
+                        .padding(horizontal = PlayerHorizontalPadding)
+                        .clip(RoundedCornerShape(26.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    SevenXTunePalette.SurfaceBright.copy(alpha = 0.88f),
+                                    SevenXTunePalette.Surface.copy(alpha = 0.78f),
+                                ),
+                            ),
+                        )
+                        .border(
+                            1.dp,
+                            Brush.horizontalGradient(
+                                listOf(
+                                    SevenXTunePalette.Violet.copy(alpha = 0.28f),
+                                    SevenXTunePalette.ElectricBlue.copy(alpha = 0.12f),
+                                    SevenXTunePalette.PulsePink.copy(alpha = 0.18f),
+                                ),
+                            ),
+                            RoundedCornerShape(26.dp),
+                        )
+                        .padding(horizontal = 12.dp, vertical = 12.dp),
             ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(2.dp)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        SevenXTunePalette.Violet.copy(alpha = 0.82f),
+                                        SevenXTunePalette.ElectricBlue.copy(alpha = 0.64f),
+                                        SevenXTunePalette.PulsePink.copy(alpha = 0.52f),
+                                    ),
+                                ),
+                            ),
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                 AnimatedContent(
                     targetState = showInlineLyrics,
                     label = "ThumbnailAnimation",
@@ -990,8 +1031,8 @@ fun BottomSheetPlayer(
                                 Box(
                                     modifier =
                                         Modifier
-                                            .size(56.dp)
-                                            .clip(RoundedCornerShape(ThumbnailCornerRadius))
+                                            .size(76.dp)
+                                            .clip(RoundedCornerShape(20.dp))
                                             .background(MaterialTheme.colorScheme.surfaceVariant),
                                     contentAlignment = Alignment.Center,
                                 ) {
@@ -1011,8 +1052,8 @@ fun BottomSheetPlayer(
                                     contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
                                     modifier =
                                         Modifier
-                                            .size(56.dp)
-                                            .clip(RoundedCornerShape(ThumbnailCornerRadius)),
+                                            .size(76.dp)
+                                            .clip(RoundedCornerShape(20.dp)),
                                 )
                             }
                             Spacer(modifier = Modifier.width(12.dp))
@@ -1393,6 +1434,7 @@ fun BottomSheetPlayer(
                             )
                         }
                     }
+                }
                 }
             }
 
