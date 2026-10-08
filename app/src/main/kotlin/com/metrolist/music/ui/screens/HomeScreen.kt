@@ -1699,6 +1699,8 @@ fun HomeScreen(
                                         }
                                     }
                                 }
+                            }
+                        }
 
                         HomeSection.QuickPicks -> {
                             quickPicks?.takeIf { it.isNotEmpty() }?.let { quickPicks ->
