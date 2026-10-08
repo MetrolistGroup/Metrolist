@@ -339,7 +339,8 @@ class MusicService :
 
     private lateinit var audioQuality: com.metrolist.music.constants.AudioQuality
 
-    private var currentQueue: Queue = EmptyQueue
+    private val _currentQueue = MutableStateFlow<Queue>(EmptyQueue)
+    val currentQueue = _currentQueue.asStateFlow()
     var queueTitle: String? = null
 
     val currentMediaMetadata = MutableStateFlow<com.metrolist.music.models.MediaMetadata?>(null)
@@ -1773,7 +1774,7 @@ class MusicService :
             return
         }
 
-        currentQueue = queue
+        _currentQueue.value = queue
         queueTitle = null
         val persistShuffleAcrossQueues = dataStore.get(PersistentShuffleAcrossQueuesKey, false)
         if (!persistShuffleAcrossQueues && !restoringQueue) {
@@ -1835,7 +1836,7 @@ class MusicService :
     }
 
     fun adoptQueue(queue: Queue, title: String? = null, initialQueueSize: Int = 0) {
-        currentQueue = queue
+        _currentQueue.value = queue
         queueTitle = title
         originalQueueSize = initialQueueSize
     }
@@ -1893,7 +1894,7 @@ class MusicService :
                     }
                 }
 
-                currentQueue = radioQueue
+                _currentQueue.value = radioQueue
             } catch (e: Exception) {
                 try {
                     val nextResult =
@@ -2578,13 +2579,13 @@ class MusicService :
         if (cachedAutoLoadMore &&
             reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT &&
             player.mediaItemCount - player.currentMediaItemIndex <= 5 &&
-            currentQueue.hasNextPage() &&
+            _currentQueue.value.hasNextPage() &&
             !(cachedDisableLoadMoreWhenRepeatAll && player.repeatMode == REPEAT_MODE_ALL)
         ) {
             scope.launch(SilentHandler) {
                 val mediaItems =
                     withContext(Dispatchers.IO) {
-                        currentQueue
+                        _currentQueue.value
                             .nextPage()
                             .filterExplicit(cachedHideExplicit)
                             .filterVideoSongs(cachedHideVideoSongs)
@@ -4093,7 +4094,7 @@ class MusicService :
 
         try {
             val persistQueue =
-                currentQueue.toPersistQueue(
+                _currentQueue.value.toPersistQueue(
                     title = queueTitle,
                     items = player.mediaItems.mapNotNull { it.metadata },
                     mediaItemIndex = player.currentMediaItemIndex,
@@ -4508,10 +4509,13 @@ class MusicService :
                 if (targetId.isBlank()) return null
                 val songs = database.playlistSongs(targetId).first()
                 if (songs.isEmpty()) return null
-                val playlistName = database.playlist(targetId).first()?.playlist?.name ?: targetTitle
+                val playlist = database.playlist(targetId).first()?.playlist
                 ListQueue(
-                    title = playlistName,
+                    title = playlist?.name ?: targetTitle,
                     items = songs.map { it.song.toMediaItem() },
+                    playlistBrowseId = playlist?.browseId,
+                    playlistId = playlist?.id,
+                    playlistIsEditable = playlist?.isEditable == true,
                 )
             }
 
@@ -4523,10 +4527,14 @@ class MusicService :
                     ListQueue(
                         title = cachedPlaylist?.playlist?.name ?: targetTitle,
                         items = cachedSongs.map { it.song.toMediaItem() },
+                        playlistBrowseId = cachedPlaylist?.playlist?.browseId,
+                        playlistId = cachedPlaylist?.playlist?.id,
+                        playlistIsEditable = cachedPlaylist?.playlist?.isEditable == true,
                     )
                 } else {
                     YouTubePlaylistQueue(
                         playlistId = targetId,
+                        isEditable = cachedPlaylist?.playlist?.isEditable ?: false,
                         playlistTitle = targetTitle,
                     )
                 }
@@ -4612,13 +4620,9 @@ class MusicService :
                     return@launch
                 }
                 val items = playlistSongs.map { it.song.toMediaItem() }
-                val playlistName =
+                val playlist =
                     withContext(Dispatchers.IO) {
-                        database
-                            .playlist(playlistId)
-                            .first()
-                            ?.playlist
-                            ?.name
+                        database.playlist(playlistId).first()?.playlist
                     }
                 withContext(Dispatchers.IO) {
                     MusicAlarmScheduler.scheduleFromPreferences(this@MusicService)
@@ -4641,10 +4645,13 @@ class MusicService :
                 player.clearMediaItems()
                 playQueue(
                     ListQueue(
-                        title = playlistName,
+                        title = playlist?.name,
                         items = alarmItems,
                         startIndex = 0,
                         position = 0L,
+                        playlistBrowseId = playlist?.browseId,
+                        playlistId = playlist?.id,
+                        playlistIsEditable = playlist?.isEditable == true,
                     ),
                     playWhenReady = true,
                 )
