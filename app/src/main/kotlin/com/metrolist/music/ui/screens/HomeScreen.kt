@@ -252,7 +252,7 @@ internal fun selectQuickPicksSection(
     )
 }
 
-/** Keep Speed Dial first; let Quick Picks follow the normal Home section ordering. */
+/** Keep Speed Dial first, then Quick Picks, then the server's discovery shelves. */
 internal fun orderHomeSections(
     sections: List<HomeSection>,
     quickPicksSection: HomeSection?,
@@ -296,21 +296,18 @@ internal fun orderHomeSections(
                 base + modifier
             }
         } else {
-            val defaultOrder =
-                mapOf(
-                    HomeSection.FromTheCommunity to 80,
-                    HomeSection.DailyDiscover to 70,
-                    HomeSection.KeepListening to 60,
-                    HomeSection.AccountPlaylists to 50,
-                    HomeSection.ForgottenFavorites to 40,
-                    HomeSection.MoodAndGenres to 10,
-                )
-
             remainingSections.sortedByDescending { section ->
                 when (section) {
-                    is HomeSection.SimilarRecommendation -> 30 - section.index
-                    is HomeSection.HomePageSection -> 20 - section.index
-                    else -> defaultOrder[section] ?: 0
+                    HomeSection.QuickPicks -> 1000
+                    is HomeSection.HomePageSection -> 900 - section.index
+                    HomeSection.DailyDiscover -> 800
+                    HomeSection.FromTheCommunity -> 700
+                    HomeSection.KeepListening -> 650
+                    HomeSection.AccountPlaylists -> 600
+                    HomeSection.ForgottenFavorites -> 550
+                    is HomeSection.SimilarRecommendation -> 450 - section.index
+                    HomeSection.MoodAndGenres -> 300
+                    HomeSection.SpeedDial -> 200
                 }
             }
         }
