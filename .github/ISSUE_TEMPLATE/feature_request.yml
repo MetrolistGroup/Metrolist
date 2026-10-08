@@ -1,33 +1,40 @@
 name: Feature request
-description: Suggest an idea for Metrolist
+description: Suggest an improvement for 7xTune
 labels: [enhancement]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping shape 7xTune! Please search existing issues first so related ideas can be discussed together.
+
   - type: checkboxes
     id: checklist
     attributes:
-      label: Checklist
-      description: You should ensure the completion of the task before proceeding to check it off the checklist. Neglecting to do so may impede the efficiency of the issue resolution process. The developer has the right to delete the issue directly if you check the list blindly.
+      label: Before submitting
+      description: A few quick checks help keep feature discussions focused.
       options:
-        - label: I've checked that there is no other issue about this feature request.
+        - label: I checked for an existing issue or discussion about this idea.
           required: true
-        - label: This issue contains only one feature request.
+        - label: This request describes one feature or improvement.
           required: true
-        - label: The title of this issue accurately describes the feature request.
+        - label: The title clearly describes the idea.
           required: true
 
   - type: textarea
     id: feature-description
     attributes:
       label: Feature description
-      description: What feature you want the app to have? Provide detailed description about what it should look like or where it should be added.
+      description: Describe what you would like 7xTune to do and, if useful, where it should appear in the app.
+      placeholder: What would you like to add or improve?
     validations:
       required: true
 
   - type: textarea
     id: why-is-the-feature-requested
     attributes:
-      label: Why do you want this feature?
-      description: Describe the problem or limitation that motivates you to want this feature to be added.
+      label: Why would this be useful?
+      description: Explain the problem, limitation, or use case this feature would address.
+      placeholder: What would this improve for you?
     validations:
       required: true
 
@@ -35,6 +42,5 @@ body:
     id: additional-information
     attributes:
       label: Additional information
-      description: Add any other context or screenshots about the feature request here.
-      placeholder: |
-        Additional details and attachments.
+      description: Add examples, mockups, screenshots, or other context if available.
+      placeholder: Any extra details that might help us understand the idea.
