@@ -918,10 +918,11 @@ object LyricsUtils {
             // は → wa
             // へ → e
             // を → o
-            val correctedReading = when (token.surface) {
-                "は" -> "ワ"
-                "へ" -> "エ"
-                "を" -> "オ"
+            val isParticle = token.partOfSpeechLevel1 == "助詞"
+            val correctedReading = when {
+                isParticle && token.surface == "は" -> "ワ"
+                isParticle && token.surface == "へ" -> "エ"
+                token.surface == "を" -> "オ"
                 else -> reading
             }
     
