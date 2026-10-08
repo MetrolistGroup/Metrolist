@@ -52,6 +52,10 @@ fun LibraryScreen() {
     var playlistViewType by rememberEnumPreference(PlaylistViewTypeKey, LibraryViewType.GRID)
 
     val filterContent = @Composable {
+        LibraryQuickLinks(
+            onHistoryClick = { navController.navigate("history") },
+            onStatsClick = { navController.navigate("stats") },
+        )
         LibraryFilterBar(
             currentValue = filterType,
             onValueUpdate = { selected ->
@@ -71,57 +75,11 @@ fun LibraryScreen() {
                 .fillMaxSize()
                 .background(SevenXTunePalette.Midnight),
     ) {
-        // Compact, opaque collection header: the library content starts immediately
-        // below it, without the large dead zone or content bleeding behind the header.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(SevenXTunePalette.Midnight)
-                .padding(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "YOUR SPACE",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = SevenXTunePalette.ElectricBlue,
-                )
-                Text(
-                    text = "Your library",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = SevenXTunePalette.TextPrimary,
-                )
-            }
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            LibraryUtilityCard(
-                title = stringResource(R.string.history),
-                subtitle = "Your listening history",
-                icon = R.drawable.history,
-                modifier = Modifier.weight(1f),
-                onClick = { navController.navigate("history") },
-            )
-            LibraryUtilityCard(
-                title = stringResource(R.string.stats),
-                subtitle = "Your listening stats",
-                icon = R.drawable.stats,
-                modifier = Modifier.weight(1f),
-                onClick = { navController.navigate("stats") },
-            )
-        }
-
         Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .background(SevenXTunePalette.Midnight),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
         ) {
             when (filterType) {
                 LibraryFilter.LIBRARY ->
@@ -187,9 +145,9 @@ private fun LibraryFilterBar(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .background(SevenXTunePalette.Surface.copy(alpha = 0.78f))
+                .padding(horizontal = 10.dp, vertical = 4.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(SevenXTunePalette.Surface.copy(alpha = 0.68f))
                 .border(
                     1.dp,
                     Brush.horizontalGradient(
@@ -202,14 +160,14 @@ private fun LibraryFilterBar(
                     RoundedCornerShape(22.dp),
                 )
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 6.dp, vertical = 6.dp),
+                .padding(horizontal = 5.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         items.forEach { (filter, resourcePair) ->
             val (titleRes, iconRes) = resourcePair
             val selected = currentValue == filter
-            val tabShape = RoundedCornerShape(16.dp)
+            val tabShape = RoundedCornerShape(14.dp)
 
             Box(
                 modifier =
@@ -239,7 +197,7 @@ private fun LibraryFilterBar(
                             },
                             tabShape,
                         )
-                        .padding(horizontal = 13.dp, vertical = 9.dp),
+                        .padding(horizontal = 11.dp, vertical = 7.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Row(
@@ -255,7 +213,7 @@ private fun LibraryFilterBar(
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(17.dp),
                     )
                     Text(
                         text = stringResource(titleRes),
@@ -276,6 +234,35 @@ private fun LibraryFilterBar(
 
 
 @Composable
+private fun LibraryQuickLinks(
+    onHistoryClick: () -> Unit,
+    onStatsClick: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        LibraryUtilityCard(
+            title = stringResource(R.string.history),
+            subtitle = "Listening history",
+            icon = R.drawable.history,
+            modifier = Modifier.weight(1f),
+            onClick = onHistoryClick,
+        )
+        LibraryUtilityCard(
+            title = stringResource(R.string.stats),
+            subtitle = "Your listening stats",
+            icon = R.drawable.stats,
+            modifier = Modifier.weight(1f),
+            onClick = onStatsClick,
+        )
+    }
+}
+
+@Composable
 private fun LibraryUtilityCard(
     title: String,
     subtitle: String,
@@ -283,52 +270,62 @@ private fun LibraryUtilityCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(18.dp)
     Row(
-        modifier = modifier
-            .clip(shape)
-            .clickable(onClick = onClick)
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.50f),
+        modifier =
+            modifier
+                .height(58.dp)
+                .clip(shape)
+                .clickable(onClick = onClick)
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            SevenXTunePalette.SurfaceRaised.copy(alpha = 0.94f),
+                            SevenXTunePalette.Surface.copy(alpha = 0.78f),
+                        ),
                     ),
-                ),
-            )
-            .border(
-                1.dp,
-                Brush.horizontalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f),
+                )
+                .border(
+                    1.dp,
+                    Brush.horizontalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f),
+                        ),
                     ),
-                ),
-                shape,
-            )
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+                    shape,
+                )
+                .padding(horizontal = 11.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(13.dp))
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
+            modifier =
+                Modifier
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.14f),
+                            ),
+                        ),
+                    ),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 painter = painterResource(icon),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(19.dp),
             )
         }
         Column(
-            modifier = Modifier.padding(start = 10.dp),
+            modifier = Modifier.padding(start = 9.dp),
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
             )
