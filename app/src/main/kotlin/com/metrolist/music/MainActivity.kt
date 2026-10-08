@@ -22,7 +22,6 @@ import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -151,7 +150,6 @@ import com.metrolist.music.constants.ListenTogetherUsernameKey
 import com.metrolist.music.constants.LyricsProviderOrderKey
 import com.metrolist.music.constants.MiniPlayerBottomSpacing
 import com.metrolist.music.constants.MiniPlayerHeight
-import com.metrolist.music.constants.NavigationBarAnimationSpec
 import com.metrolist.music.constants.NavigationBarHeight
 import com.metrolist.music.constants.PauseListenHistoryKey
 import com.metrolist.music.constants.PauseSearchHistoryKey
@@ -803,6 +801,9 @@ class MainActivity : FragmentActivity() {
 
                 val currentRoute = navBackStackEntry?.destination?.route
                 val inSearchScreen = currentRoute?.startsWith("search/") == true
+                val inSettingsScreen =
+                    currentRoute == Screens.Settings.route ||
+                        currentRoute?.startsWith("settings/") == true
                 val navigationItemRoutes =
                     remember(navigationItems) {
                         navigationItems.map { it.route }.toSet()
@@ -838,35 +839,38 @@ class MainActivity : FragmentActivity() {
                         expandedBound = maxHeight,
                     )
 
-                val navigationBarHeight by animateDpAsState(
-                    targetValue =
-                        if (shouldShowNavigationBar && !showRail && !playerBottomSheetState.isExpanded) {
-                            NavigationBarHeight
-                        } else {
-                            0.dp
-                        },
-                    animationSpec = NavigationBarAnimationSpec,
-                    label = "navBarHeight",
-                )
-
                 val playerReadyState =
                     playerConnection?.service?.isPlayerReady?.collectAsStateWithLifecycle()
                         ?: remember { mutableStateOf(false) }
                 val playerReady by playerReadyState
                 val activePlayerConnection = if (playerReady) playerConnection else null
 
+                // The mini-player is intentionally suppressed on immersive Pulse and all
+                // Settings routes; this prevents it from flashing during destination changes.
+                val shouldShowMiniPlayer =
+                    activePlayerConnection != null &&
+                        currentRoute != "wrapped" &&
+                        currentRoute != Screens.Pulse.route &&
+                        !inSettingsScreen
+
+                // Expanded Now Playing owns the whole viewport. Navigation is composed only
+                // when it is actually available, avoiding the delayed hide flash.
+                val shouldShowAppNavigation =
+                    shouldShowNavigationBar && !playerBottomSheetState.isExpanded
+
                 val playerAwareWindowInsets =
                     remember(
                         bottomInset,
                         shouldShowNavigationBar,
                         playerBottomSheetState.isDismissed,
+                        shouldShowMiniPlayer,
                         showRail,
                     ) {
                         var bottom = bottomInset
                         if (shouldShowNavigationBar && !showRail) {
                             bottom += NavigationBarHeight
                         }
-                        if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
+                        if (!playerBottomSheetState.isDismissed && shouldShowMiniPlayer) bottom += MiniPlayerHeight
                         windowsInsets
                             .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
                             .add(WindowInsets(top = AppBarHeight, bottom = bottom))
@@ -1240,12 +1244,9 @@ class MainActivity : FragmentActivity() {
                                     }
                                 }
 
-                            // Pre-calculate values for graphicsLayer to avoid reading state during composition
-                            val navBarTotalHeight = bottomInset + NavigationBarHeight
-
                             if (!showRail && currentRoute != "wrapped") {
                                 Box {
-                                    if (activePlayerConnection != null && currentRoute != Screens.Pulse.route) {
+                                    if (shouldShowMiniPlayer) {
                                         BottomSheetPlayer(
                                             state = playerBottomSheetState,
                                             navController = navController,
@@ -1253,33 +1254,21 @@ class MainActivity : FragmentActivity() {
                                         )
                                     }
 
-                                    AppNavigationBar(
-                                        navigationItems = navigationItems,
-                                        currentRoute = currentRoute,
-                                        onItemClick = onNavItemClick,
-                                        pureBlack = pureBlack,
-                                        slimNav = slimNav,
-                                        onSearchLongClick = onSearchLongClick,
-                                        onHomeLongHold = { showAccountDialog = true },
-                                        modifier =
-                                            Modifier
-                                                .align(Alignment.BottomCenter)
-                                                .height(bottomInset + navPadding)
-                                                // Use graphicsLayer instead of offset to avoid recomposition
-                                                // graphicsLayer runs during draw phase, not composition phase
-                                                .graphicsLayer {
-                                                    val navBarHeightPx = navigationBarHeight.toPx()
-                                                    val totalHeightPx = navBarTotalHeight.toPx()
-
-                                                    translationY =
-                                                        if (navBarHeightPx == 0f) {
-                                                            totalHeightPx
-                                                        } else {
-                                                            // Keep the main navigation reachable even when the player sheet is expanded.
-                                                            totalHeightPx * (1 - navBarHeightPx / NavigationBarHeight.toPx())
-                                                        }
-                                                },
-                                    )
+                                    if (shouldShowAppNavigation) {
+                                        AppNavigationBar(
+                                            navigationItems = navigationItems,
+                                            currentRoute = currentRoute,
+                                            onItemClick = onNavItemClick,
+                                            pureBlack = pureBlack,
+                                            slimNav = slimNav,
+                                            onSearchLongClick = onSearchLongClick,
+                                            onHomeLongHold = { showAccountDialog = true },
+                                            modifier =
+                                                Modifier
+                                                    .align(Alignment.BottomCenter)
+                                                    .height(bottomInset + navPadding),
+                                        )
+                                    }
 
                                     Box(
                                         modifier =
@@ -1287,7 +1276,6 @@ class MainActivity : FragmentActivity() {
                                                 .fillMaxWidth()
                                                 .align(Alignment.BottomCenter)
                                                 .height(bottomInsetDp)
-                                                // Use graphicsLayer for background color changes
                                                 .graphicsLayer {
                                                     val progress = playerBottomSheetState.progress
                                                     alpha =
@@ -1302,14 +1290,12 @@ class MainActivity : FragmentActivity() {
                                     )
                                 }
                             } else {
-                                if (currentRoute != "wrapped") {
-                                    if (activePlayerConnection != null) {
-                                        BottomSheetPlayer(
-                                            state = playerBottomSheetState,
-                                            navController = navController,
-                                            pureBlack = pureBlack,
-                                        )
-                                    }
+                                if (shouldShowMiniPlayer) {
+                                    BottomSheetPlayer(
+                                        state = playerBottomSheetState,
+                                        navController = navController,
+                                        pureBlack = pureBlack,
+                                    )
                                 }
 
                                 Box(
@@ -1366,7 +1352,7 @@ class MainActivity : FragmentActivity() {
                                     }
                                 }
 
-                            if (showRail && currentRoute != "wrapped") {
+                            if (showRail && currentRoute != "wrapped" && shouldShowAppNavigation) {
                                 AppNavigationRail(
                                     navigationItems = navigationItems,
                                     currentRoute = currentRoute,

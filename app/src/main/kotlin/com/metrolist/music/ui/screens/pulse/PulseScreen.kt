@@ -1,5 +1,10 @@
 package com.metrolist.music.ui.screens.pulse
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -8,7 +13,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.asPaddingValues
@@ -16,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -299,22 +308,25 @@ private fun PulsePage(
                 modifier =
                     Modifier
                         .align(Alignment.Center)
-                        .size(72.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.28f))
-                        .graphicsLayer {
-                            alpha = if (isPlaying) 0f else 1f
-                        },
+                        .size(72.dp),
             ) {
-                Icon(
-                    painter = painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
-                    contentDescription =
-                        stringResource(
-                            if (isPlaying) R.string.player_pause else R.string.play,
-                        ),
-                    tint = Color.White,
-                    modifier = Modifier.size(34.dp),
-                )
+                if (!isPlaying) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.28f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.play),
+                            contentDescription = stringResource(R.string.play),
+                            tint = Color.White,
+                            modifier = Modifier.size(34.dp),
+                        )
+                    }
+                }
             }
         }
 
@@ -359,6 +371,12 @@ private fun PulsePage(
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.82f),
             )
+
+            PulseWaveform(
+                isPlaying = isPlaying,
+                modifier = Modifier.padding(top = 2.dp, bottom = 1.dp),
+            )
+
             Text(
                 text = stringResource(R.string.pulse_swipe_hint),
                 style = MaterialTheme.typography.labelSmall,
@@ -385,6 +403,53 @@ private fun PulsePage(
                 icon = R.drawable.add,
                 contentDescription = stringResource(R.string.add_to_queue),
                 onClick = onAddToQueue,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PulseWaveform(
+    isPlaying: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val transition = rememberInfiniteTransition(label = "pulseWaveform")
+    val amplitudes =
+        listOf(0.35f, 0.62f, 0.48f, 0.78f, 0.42f).mapIndexed { index, target ->
+            val animation by transition.animateFloat(
+                initialValue = 0.32f,
+                targetValue = target,
+                animationSpec =
+                    infiniteRepeatable(
+                        animation = tween(
+                            durationMillis = 520 + index * 65,
+                            delayMillis = index * 70,
+                        ),
+                        repeatMode = RepeatMode.Reverse,
+                    ),
+                label = "pulseBar$index",
+            )
+            animation
+        }
+
+    Row(
+        modifier = modifier.height(18.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        amplitudes.forEachIndexed { index, amplitude ->
+            val heightScale = if (isPlaying) amplitude else 0.24f
+            Box(
+                modifier =
+                    Modifier
+                        .width(3.dp)
+                        .height((6f + 12f * heightScale).dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(
+                            Color.White.copy(
+                                alpha = if (isPlaying) 0.86f else 0.36f,
+                            ),
+                        ),
             )
         }
     }

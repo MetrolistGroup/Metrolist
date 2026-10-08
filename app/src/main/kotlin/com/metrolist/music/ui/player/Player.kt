@@ -819,14 +819,14 @@ fun BottomSheetPlayer(
     val bottomSheetBackgroundColor =
         when (playerBackground) {
             PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT -> {
-                SevenXTunePalette.Surface
+                MaterialTheme.colorScheme.surface
             }
 
             else -> {
                 if (useBlackBackground) {
                     Color.Black
                 } else {
-                    SevenXTunePalette.MidnightSoft
+                    MaterialTheme.colorScheme.background
                 }
             }
         }
@@ -845,9 +845,9 @@ fun BottomSheetPlayer(
                         .background(
                             Brush.verticalGradient(
                                 listOf(
-                                    SevenXTunePalette.Violet.copy(alpha = 0.10f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
                                     Color.Transparent,
-                                    SevenXTunePalette.ElectricBlue.copy(alpha = 0.04f),
+                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.06f),
                                 ),
                             ),
                         ),

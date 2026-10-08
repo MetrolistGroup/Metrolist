@@ -195,17 +195,6 @@ fun SearchScreen(
                         .statusBarsPadding()
                         .padding(horizontal = 20.dp, vertical = 12.dp),
             ) {
-                Text(
-                    text = "TUNE INTO SOMETHING",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = SevenXTunePalette.ElectricBlue,
-                )
-                Text(
-                    text = "Find your next repeat",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = SevenXTunePalette.TextPrimary,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
-                )
                 Row(
                     modifier =
                         Modifier
@@ -262,7 +251,7 @@ fun SearchScreen(
                                         stringResource(
                                             when (searchSource) {
                                                 SearchSource.LOCAL -> R.string.search_library
-                                                SearchSource.ONLINE -> R.string.search_yt_music
+                                                SearchSource.ONLINE -> R.string.search_7xtune
                                             },
                                         ),
                                     style =
