@@ -970,7 +970,6 @@ class MainActivity : FragmentActivity() {
                         currentRoute == Screens.ListenTogether.route ||
                             currentRoute == "listen_together_from_topbar"
                     shouldShowTopBar = currentRoute in topLevelScreens &&
-                        currentRoute != "settings" &&
                         !(isListenTogetherScreen && listenTogetherInTopBar)
                 }
 
@@ -1012,6 +1011,7 @@ class MainActivity : FragmentActivity() {
                             Screens.Search.route -> R.string.search
                             Screens.Library.route -> R.string.filter_library
                             Screens.ListenTogether.route -> R.string.together
+                            "settings" -> R.string.settings
                             else -> null
                         }
                     }
