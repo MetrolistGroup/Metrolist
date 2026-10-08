@@ -225,6 +225,7 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(14.dp))
 
+        val showChangelog = LocalChangelogState.current
         val systemEntries = buildList {
             if (isAndroid12OrLater) {
                 add(
@@ -259,7 +260,6 @@ fun SettingsScreen(
                 )
             }
 
-            val showChangelog = LocalChangelogState.current
             add(
                 SettingsEntry(
                     painterResource(R.drawable.newspaper),
