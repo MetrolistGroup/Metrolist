@@ -152,7 +152,7 @@
     <string name="updater">Aktualizacje</string>
     <string name="check_for_updates">Automatycznie sprawdzaj dostępność aktualizacji</string>
     <string name="update_notifications">Włącz powiadomienia o aktualizacjach</string>
-    <string name="update_available_title">Aktualizacja dostępna</string>
+    <string name="update_available_title">Dostępna nowa aktualizacja</string>
     <string name="update_channel_desc">Powiadomienia o nowych wersjach aplikacji</string>
     <string name="integrations">Integracje</string>
     <string name="username">Nazwa użytkownika</string>
@@ -289,7 +289,7 @@
     <string name="remember_shuffle_and_repeat_desc">Zapamiętaj tryb mieszania i powtarzania po ponownym uruchomieniu aplikacji</string>
     <string name="pause_music_when_media_is_muted">Wstrzymaj po wyciszeniu dźwięku</string>
     <string name="keep_screen_on_when_player_is_expanded">Nie wygaszaj ekranu w widoku odtwarzacza</string>
-    <string name="lyrics_offset">Synchronizacja tekstu</string>
+    <string name="lyrics_offset">Przesunięcie tesktu w czasie</string>
     <string name="error_title">Błąd</string>
     <string name="error_eq_apply_failed">Nie udało się zastosować profilu korektora: %1$s</string>
     <string name="error_playback_failed">Nie udało się odtworzyć utworu</string>
@@ -806,4 +806,9 @@
     <string name="auto_radio_queue">Automatyczna kolejka radia</string>
     <string name="playlist_created_locally">Synchronizacja z platformą YouTube nie udana. Playlista utworzona lokalnie.</string>
     <string name="auto_radio_queue_desc">Automatycznie utwórz kolejkę radia gdy gra muzyka z pola wyszukiwanie lub domu</string>
+    <string name="force_bottom_navbar">Wymuś dolny pasek nawigacji</string>
+    <string name="update_action">Aktualizuj</string>
+    <string name="kmp_upgrade_title">Wersja KMP %s Metrolist jest dostępna</string>
+    <string name="varispeed">Włącz varispeed</string>
+    <string name="audio_track_playback_params">Użyj sprzętowego przetwarzania dźwięku</string>
 </resources>
