@@ -101,6 +101,7 @@ import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.playback.CastConnectionHandler
 import com.metrolist.music.playback.PlayerConnection
 import com.metrolist.music.ui.screens.settings.DarkMode
+import com.metrolist.music.extensions.currentMetadata
 import com.metrolist.music.ui.utils.resize
 import com.metrolist.music.utils.joinToArtistString
 import com.metrolist.music.utils.rememberEnumPreference
@@ -198,7 +199,17 @@ private fun NewMiniPlayer(
 
     // Player states - only collect what's needed at this level
     val playbackState by playerConnection.playbackState.collectAsState()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val streamedMediaMetadata by playerConnection.mediaMetadata.collectAsState()
+
+    // Prefer Media3's current item immediately when it is already updated. The StateFlow
+    // callback can arrive a frame later during rapid track transitions, which made the
+    // compact player briefly show stale artwork/title.
+    val mediaMetadata =
+        remember(playbackState, streamedMediaMetadata) {
+            runCatching { playerConnection.player.currentMetadata }.getOrNull()
+                ?: streamedMediaMetadata
+        }
+
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
     val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
 
