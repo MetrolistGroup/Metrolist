@@ -210,7 +210,7 @@ fun AppNavigationBar(
                             ),
                         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 0.dp, bottomEnd = 0.dp),
                     )
-                    .padding(horizontal = 6.dp, vertical = 6.dp),
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -221,7 +221,7 @@ fun AppNavigationBar(
                     }
                 val currentIsSelected by rememberUpdatedState(isSelected)
                 val selectedScale by animateFloatAsState(
-                    targetValue = if (isSelected) 1.12f else 1f,
+                    targetValue = if (isSelected) 1.08f else 1f,
                     animationSpec = tween(durationMillis = 220),
                     label = "navIconScale",
                 )
@@ -293,7 +293,7 @@ fun AppNavigationBar(
                         modifier =
                             Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                .padding(horizontal = 6.dp)
                                 .clip(RoundedCornerShape(18.dp))
                                 .background(
                                     if (isSelected) {
@@ -312,14 +312,14 @@ fun AppNavigationBar(
                                         )
                                     },
                                 )
-                                .padding(horizontal = 8.dp, vertical = 5.dp),
+                                .padding(horizontal = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
                         Box(
                             modifier =
                                 Modifier
-                                    .size(if (slimNav) 30.dp else 34.dp)
+                                    .size(if (slimNav) 24.dp else 28.dp)
                                     .scale(selectedScale)
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(
@@ -350,7 +350,7 @@ fun AppNavigationBar(
                                     } else {
                                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
                                     },
-                                modifier = Modifier.size(if (isSelected) 21.dp else 20.dp),
+                                modifier = Modifier.size(if (isSelected) 19.dp else 18.dp),
                             )
                         }
 
@@ -358,6 +358,7 @@ fun AppNavigationBar(
                             text = stringResource(screen.titleId),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1,
                             color =
                                 if (isSelected) {
                                     Color.White
@@ -370,7 +371,7 @@ fun AppNavigationBar(
                             modifier =
                                 Modifier
                                     .padding(top = 2.dp)
-                                    .size(width = if (isSelected) 22.dp else 4.dp, height = 2.dp)
+                                    .size(width = if (isSelected) 18.dp else 3.dp, height = 2.dp)
                                     .clip(RoundedCornerShape(50))
                                     .background(
                                         if (isSelected) {
