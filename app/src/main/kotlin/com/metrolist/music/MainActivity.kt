@@ -1204,6 +1204,21 @@ class MainActivity : FragmentActivity() {
                                             coroutineScope.launch {
                                                 topAppBarScrollBehavior.state.resetHeightOffset()
                                             }
+                                        } else if (screen == Screens.Home) {
+                                            // Home is the top-level landing destination. When coming from
+                                            // a nested search result, pop the search stack first so the
+                                            // Home destination is restored instead of leaving search_input
+                                            // underneath the player/search state.
+                                            val returnedToHome = navController.popBackStack(Screens.Home.route, false)
+                                            if (!returnedToHome) {
+                                                navController.navigate(Screens.Home.route) {
+                                                    popUpTo(navController.graph.startDestinationId) {
+                                                        saveState = false
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = false
+                                                }
+                                            }
                                         } else {
                                             navController.navigate(screen.route) {
                                                 popUpTo(navController.graph.startDestinationId) {

@@ -48,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
+import com.metrolist.music.extensions.metadata
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.playback.queues.ListQueue
@@ -67,46 +68,120 @@ fun PulseScreen() {
     val currentSong = currentSongState?.value
     val effectivelyPlayingState = playerConnection?.isEffectivelyPlaying?.collectAsStateWithLifecycle()
     val isEffectivelyPlaying = effectivelyPlayingState?.value == true
+    val queueWindowsState =
+        playerConnection?.queueWindows?.collectAsStateWithLifecycle(initialValue = emptyList())
+    val queueWindows = queueWindowsState?.value.orEmpty()
+    val currentWindowIndexState =
+        playerConnection?.currentWindowIndex?.collectAsStateWithLifecycle(initialValue = -1)
+    val currentWindowIndex = currentWindowIndexState?.value ?: -1
+    val currentPlaybackId =
+        queueWindows.getOrNull(currentWindowIndex)?.mediaItem?.mediaId ?: currentSong?.id
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(currentSong?.id) {
         viewModel.loadInitial(currentSong?.id)
+
+        val shouldSeedRadio =
+            currentSong != null &&
+                runCatching {
+                    val player = playerConnection?.player ?: return@runCatching false
+                    player.currentMediaItemIndex < 0 ||
+                        player.currentMediaItemIndex + 1 >= player.mediaItemCount
+                }.getOrDefault(true)
+
+        if (shouldSeedRadio) {
+            playerConnection?.startRadioSeamlessly()
+        }
     }
 
     when {
-        isLoading && tracks.isEmpty() -> PulseLoading()
-        tracks.isEmpty() -> PulseEmpty(onRetry = { viewModel.refresh(currentSong?.id) })
+        isLoading && tracks.isEmpty() && queueWindows.isEmpty() -> PulseLoading()
+        tracks.isEmpty() && queueWindows.isEmpty() -> PulseEmpty(onRetry = {
+            viewModel.refresh(currentSong?.id)
+            playerConnection?.startRadioSeamlessly()
+        })
         else -> {
-            val pagerState = rememberPagerState(pageCount = { tracks.size })
-            var hasSwiped by rememberSaveable { mutableStateOf(false) }
-
-            LaunchedEffect(pagerState.currentPage) {
-                if (pagerState.currentPage > 0) {
-                    hasSwiped = true
+            val mixTracks =
+                remember(queueWindows, currentPlaybackId) {
+                    queueWindows
+                        .mapNotNull { window ->
+                            window.mediaItem.metadata?.let { metadata ->
+                                PulseTrack(
+                                    song = metadata.toYTItem(),
+                                    reason =
+                                        if (metadata.id == currentPlaybackId) {
+                                            "Now playing"
+                                        } else {
+                                            "From your current mix"
+                                        },
+                                )
+                            }
+                        }
+                        .distinctBy { it.song.id }
                 }
-            }
-            val latestTracks = rememberUpdatedState(tracks)
-            val latestCurrentSong = rememberUpdatedState(currentSong)
 
-            LaunchedEffect(pagerState, playerConnection) {
-                if (playerConnection == null) return@LaunchedEffect
-                snapshotFlow { pagerState.isScrollInProgress to pagerState.currentPage }
-                    .filter { !it.first }
-                    .collect { (_, page) ->
-                        val currentTracks = latestTracks.value
-                        val track = currentTracks.getOrNull(page) ?: return@collect
-                        if (track.song.id != latestCurrentSong.value?.id) {
-                            playerConnection.playQueue(
-                                ListQueue(
-                                    title = track.song.title,
-                                    items = listOf(track.song.toMediaMetadata().toMediaItem()),
-                                ),
-                            )
-                        }
-                        if (page >= currentTracks.size - 4) {
-                            viewModel.loadMore(track.song.id)
-                        }
+            val displayTracks =
+                if (mixTracks.isNotEmpty()) {
+                    mixTracks
+                } else {
+                    tracks
+                }
+
+            if (displayTracks.isEmpty()) {
+                PulseLoading()
+            } else {
+                val initialPage =
+                    remember(displayTracks, currentPlaybackId) {
+                        displayTracks.indexOfFirst { it.song.id == currentPlaybackId }.coerceAtLeast(0)
                     }
-            }
+                val pagerState =
+                    rememberPagerState(
+                        initialPage = initialPage,
+                        pageCount = { displayTracks.size },
+                    )
+                var hasSwiped by rememberSaveable { mutableStateOf(false) }
+
+                LaunchedEffect(pagerState.currentPage) {
+                    if (pagerState.currentPage > 0) {
+                        hasSwiped = true
+                    }
+                }
+
+                LaunchedEffect(pagerState, currentPlaybackId, displayTracks) {
+                    val currentId = currentPlaybackId ?: return@LaunchedEffect
+                    val targetPage = displayTracks.indexOfFirst { it.song.id == currentId }
+                    if (targetPage >= 0 && targetPage != pagerState.currentPage) {
+                        pagerState.animateScrollToPage(targetPage)
+                    }
+                }
+
+                val latestTracks = rememberUpdatedState(displayTracks)
+                val latestCurrentSong = rememberUpdatedState(currentSong)
+
+                LaunchedEffect(pagerState, playerConnection, mixTracks) {
+                    if (playerConnection == null) return@LaunchedEffect
+                    snapshotFlow { pagerState.isScrollInProgress to pagerState.currentPage }
+                        .filter { !it.first }
+                        .collect { (_, page) ->
+                            val currentTracks = latestTracks.value
+                            val track = currentTracks.getOrNull(page) ?: return@collect
+                            if (track.song.id != latestCurrentSong.value?.id) {
+                                if (mixTracks.size >= 2) {
+                                    playerConnection.playMediaItemById(track.song.id)
+                                } else {
+                                    playerConnection.playQueue(
+                                        ListQueue(
+                                            title = track.song.title,
+                                            items = listOf(track.song.toMediaMetadata().toMediaItem()),
+                                        ),
+                                    )
+                                }
+                            }
+
+                            if (mixTracks.size < 2 && page >= currentTracks.size - 4) {
+                                viewModel.loadMore(track.song.id)
+                            }
+                        }
+                }
 
             VerticalPager(
                 state = pagerState,
@@ -126,15 +201,15 @@ fun PulseScreen() {
                             scaleY = pageScale
                             alpha = pageAlpha
                         },
-                    track = tracks[page],
+                    track = displayTracks[page],
                     isCurrentPage = page == pagerState.currentPage,
-                    isPlaying = isEffectivelyPlaying && currentSong?.id == tracks[page].song.id,
-                    isLiked = currentSong?.id == tracks[page].song.id && currentSong?.song?.liked == true,
+                    isPlaying = isEffectivelyPlaying && currentPlaybackId == displayTracks[page].song.id,
+                    isLiked = currentSong?.id == displayTracks[page].song.id && currentSong?.song?.liked == true,
                     onLike = {
                         playerConnection?.toggleLike()
                     },
                     onAddToQueue = {
-                        val item = tracks[page].song.toMediaMetadata().toMediaItem()
+                        val item = displayTracks[page].song.toMediaMetadata().toMediaItem()
                         playerConnection?.addToQueue(item)
                     },
                     onTogglePlayPause = {
@@ -143,31 +218,32 @@ fun PulseScreen() {
                 )
             }
 
-            if (!hasSwiped) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.BottomCenter,
-                ) {
-                    Text(
-                        text = "↑  Swipe",
+                if (!hasSwiped) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.BottomCenter,
+                    ) {
+                        Text(
+                            text = "↑  Swipe",
+                            modifier =
+                                Modifier.padding(
+                                    bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 88.dp,
+                                ),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.72f),
+                        )
+                    }
+                }
+
+                if (isLoadingMore) {
+                    CircularProgressIndicator(
                         modifier =
-                            Modifier.padding(
-                                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 88.dp,
-                            ),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.72f),
+                            Modifier
+                                .padding(WindowInsets.statusBars.asPaddingValues())
+                                .size(18.dp),
+                        strokeWidth = 2.dp,
                     )
                 }
-            }
-
-            if (isLoadingMore) {
-                CircularProgressIndicator(
-                    modifier =
-                        Modifier
-                            .padding(WindowInsets.statusBars.asPaddingValues())
-                            .size(18.dp),
-                    strokeWidth = 2.dp,
-                )
             }
         }
     }
@@ -225,7 +301,10 @@ private fun PulsePage(
                         .align(Alignment.Center)
                         .size(72.dp)
                         .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.28f)),
+                        .background(Color.Black.copy(alpha = 0.28f))
+                        .graphicsLayer {
+                            alpha = if (isPlaying) 0f else 1f
+                        },
             ) {
                 Icon(
                     painter = painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),

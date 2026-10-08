@@ -285,6 +285,27 @@ class PlayerConnection(
         }
     }
 
+    fun playMediaItemById(mediaId: String) {
+        if (mediaId.isBlank()) return
+        try {
+            val castHandler = service.castConnectionHandler
+            if (castHandler?.isCasting?.value == true) {
+                castHandler.navigateToMediaIfInQueue(mediaId)
+                return
+            }
+
+            val index =
+                (0 until player.mediaItemCount)
+                    .firstOrNull { player.getMediaItemAt(it).mediaId == mediaId }
+            if (index != null) {
+                player.seekTo(index, 0L)
+                player.playWhenReady = true
+            }
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error playing media item by id")
+        }
+    }
+
     fun playNext(item: MediaItem) = playNext(listOf(item))
 
     fun playNext(items: List<MediaItem>) {

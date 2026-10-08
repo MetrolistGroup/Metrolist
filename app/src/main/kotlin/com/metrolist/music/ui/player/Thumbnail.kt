@@ -465,6 +465,10 @@ private fun ThumbnailHeader(
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            CastButton(
+                tintColor = textColor,
+            )
+
             IconButton(
                 onClick = {
                     mediaMetadata ?: return@IconButton
@@ -483,15 +487,11 @@ private fun ThumbnailHeader(
                 },
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.more_horiz),
+                    painter = painterResource(R.drawable.more_vert),
                     contentDescription = null,
                     tint = textColor,
                 )
             }
-
-            CastButton(
-                tintColor = textColor,
-            )
         }
     }
 }

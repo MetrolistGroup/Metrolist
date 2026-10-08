@@ -324,6 +324,7 @@ fun BottomSheetPlayer(
     val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
     val automix by playerConnection.service.automixItems.collectAsStateWithLifecycle()
     val repeatMode by playerConnection.repeatMode.collectAsStateWithLifecycle()
+    val shuffleModeEnabled by playerConnection.shuffleModeEnabled.collectAsStateWithLifecycle()
     val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
     val isMuted by playerConnection.isMuted.collectAsStateWithLifecycle()
@@ -1599,7 +1600,7 @@ fun BottomSheetPlayer(
                 Column {
                     if (useNewPlayerDesign) {
                         Row(
-                            horizontalArrangement = Arrangement.Center,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             modifier =
                                 Modifier
@@ -1664,6 +1665,31 @@ fun BottomSheetPlayer(
                                     ),
                                 label = "nextButtonWeight",
                             )
+
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .weight(0.48f)
+                                        .height(68.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                ResizableIconButton(
+                                    icon = R.drawable.shuffle,
+                                    enabled = !isListenTogetherGuest,
+                                    color = TextBackgroundColor,
+                                    modifier =
+                                        Modifier
+                                            .size(44.dp)
+                                            .alpha(
+                                                if (isListenTogetherGuest || !shuffleModeEnabled) 0.5f else 1f,
+                                            ),
+                                    onClick = {
+                                        if (!isListenTogetherGuest) {
+                                            playerConnection.player.shuffleModeEnabled = !shuffleModeEnabled
+                                        }
+                                    },
+                                )
+                            }
 
                             FilledIconButton(
                                 onClick = playerConnection::seekToPrevious,
@@ -1776,6 +1802,35 @@ fun BottomSheetPlayer(
                                     painter = painterResource(R.drawable.skip_next),
                                     contentDescription = null,
                                     modifier = Modifier.size(32.dp),
+                                )
+                            }
+
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .weight(0.48f)
+                                        .height(68.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                ResizableIconButton(
+                                    icon =
+                                        when (repeatMode) {
+                                            Player.REPEAT_MODE_ONE -> R.drawable.repeat_one
+                                            else -> R.drawable.repeat
+                                        },
+                                    enabled = !isListenTogetherGuest,
+                                    color = TextBackgroundColor,
+                                    modifier =
+                                        Modifier
+                                            .size(44.dp)
+                                            .alpha(
+                                                if (isListenTogetherGuest || repeatMode == Player.REPEAT_MODE_OFF) 0.5f else 1f,
+                                            ),
+                                    onClick = {
+                                        if (!isListenTogetherGuest) {
+                                            playerConnection.player.toggleRepeatMode()
+                                        }
+                                    },
                                 )
                             }
                         }
