@@ -367,6 +367,11 @@ class HomeViewModel @Inject constructor(
             .filterVideoSongs(hideVideoSongs)
             .take(30)
 
+        val seedSongs =
+            (familiarSongs.take(6) + recentSongs.take(6) + likedSongs.take(6))
+                .distinctBy { it.id }
+                .take(8)
+
         val relatedSongs =
             coroutineScope {
                 seedSongs.map { seed ->
@@ -379,16 +384,11 @@ class HomeViewModel @Inject constructor(
                 }.awaitAll().flatten().distinctBy { it.id }
             }
 
-val forgottenSongs = database
+        val forgottenSongs = database
             .forgottenFavorites()
             .first()
             .filterVideoSongs(hideVideoSongs)
             .take(20)
-
-        val seedSongs =
-            (familiarSongs.take(6) + recentSongs.take(6) + likedSongs.take(6))
-                .distinctBy { it.id }
-                .take(8)
 
         val youtubeRelated =
             coroutineScope {
