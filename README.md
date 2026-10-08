@@ -4,15 +4,10 @@
 
 # 7xTune
 
-### YouTube Music client for Android
+### Your music, your rhythm.
 
-<br/>
+An Android music player built around YouTube Music, with discovery, a personal library, synced lyrics, and a customizable listening experience.
 
-<a href="https://www.blacksmith.sh">
-  <img src="assets/blacksmith-powered.png" alt="CI powered by Blacksmith" width="280" />
-</a>
-
-<br/>
 <br/>
 
 [![Latest release](https://img.shields.io/github/v/release/RahulExe69/7xTune?style=for-the-badge&labelColor=0d1117)](https://github.com/RahulExe69/7xTune/releases)
@@ -21,22 +16,15 @@
 
 <br/>
 
-[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white&labelColor=0d1117)](https://dsc.gg/metrolist)
-[![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white&labelColor=0d1117)](https://t.me/metrolistapp)
-
-<br/>
-
-[**Download**](#download-now) · [**Features**](#features) · [**Translate**](#translations) · [**FAQ**](#faq) · [**Support**](#support-the-project)
+[**Download 7xTune**](#download) · [**Features**](#features) · [**Screenshots**](#screenshots) · [**FAQ**](#faq) · [**Get help**](#support)
 
 </div>
 
-> [!WARNING]
-> # MAINTENANCE MODE
-> 7xTune currently follows the upstream Metrolist maintenance baseline. This means we will only be fixing bugs and making minor improvements. Please do not submit PRs for new features or major changes, as they will not be accepted.  
-> 7xTune is a rebranded fork of Metrolist. Upstream community links are retained where they are still relevant.
+> [!NOTE]
+> 7xTune is an independently maintained project built on the open-source Metrolist codebase. It adds its own identity and user-facing experience while preserving required upstream notices and third-party attributions. See the project history and acknowledgements below for credit.
 
 > [!WARNING]
-> **Regional Restriction** - If YouTube Music is unavailable in your region, this app will not work without a **VPN or proxy** connecting to a supported region.
+> **Regional availability:** YouTube Music availability depends on your region. In unsupported regions, access may require a VPN or proxy connected to a supported region.
 
 ---
 
@@ -44,38 +32,35 @@
 
 <h1><a id="screenshots"></a>Screenshots</h1>
 
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_1.png" alt="Home screen" width="30%" />
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_2.png" alt="Artist screen" width="30%" />
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_3.png" alt="Recognize music screen" width="30%" />
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_4.png" alt="Listen together screen" width="30%" />
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_5.png" alt="Player screen" width="30%" />
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_6.png" alt="Player lyrics screen" width="30%" />
+<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_1.png" alt="7xTune home screen" width="30%" />
+<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_2.png" alt="7xTune artist screen" width="30%" />
+<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_3.png" alt="7xTune music recognition screen" width="30%" />
+<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_4.png" alt="7xTune Listen Together screen" width="30%" />
+<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_5.png" alt="7xTune player screen" width="30%" />
+<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_6.png" alt="7xTune lyrics screen" width="30%" />
 
 </div>
 
 ---
 
-<div align="center">
-
-<h1><a id="features"></a>Features</h1>
+## Features
 
 <table>
   <tr>
     <td width="50%" valign="top">
 
-#### Playback
-- Stream any song or video from YouTube Music
+### Playback
+- Stream music and videos from YouTube Music
 - Background playback
-- Download & cache for offline use
-- Skip silence
-- Sleep timer
+- Download and cache supported media for offline listening
+- Skip silence and use a sleep timer
 
 </td>
     <td width="50%" valign="top">
 
-#### Audio
+### Audio
 - Audio normalization
-- Tempo & pitch control
+- Tempo and pitch controls
 - Equalizer
 - Crossfade
 
@@ -84,105 +69,62 @@
   <tr>
     <td width="50%" valign="top">
 
-#### Lyrics & Discovery
+### Lyrics & discovery
 - Live synced lyrics
-- AI-powered lyrics translation
+- Lyrics translation
 - Personalized quick picks
+- Pulse, a swipe-based music discovery experience
 - Search songs, albums, artists, videos, and playlists
 
 </td>
     <td width="50%" valign="top">
 
-#### Library & Account
-- Full library management
-- Local playlists
-- Import playlists
-- Reorder songs in playlist or queue
-- YouTube Music account login
-- Sync songs, artists, albums, and playlists
+### Library
+- Manage your music library
+- Create local playlists and import playlists
+- Reorder songs in playlists and the queue
+- Sign in to YouTube Music to sync supported library content
 
 </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
 
-#### Social
-- Listen together with friends in real-time
-- Last.fm integration for scrobbling
-- Safe Discord Rich Presence
+### Social
+- Listen Together with friends in real time
+- Last.fm scrobbling
+- Discord Rich Presence
 
 </td>
     <td width="50%" valign="top">
 
-#### Interface
+### Personalization
 - Home screen widget
-- Light / Dark / Black / Dynamic theme modes
-- Dynamic color + 19 preset color palettes
-- Built with Material 3
+- Light, dark, black, and dynamic theme modes
+- Dynamic color and preset color palettes
+- Material 3 interface
 
 </td>
   </tr>
 </table>
-
-</div>
 
 ---
 
 <div align="center">
 
-<h1><a id="download-now"></a>Download Now</h1>
+<h1><a id="download"></a>Download 7xTune</h1>
 
-<h2>Stable Release</h2>
+Get official 7xTune builds from the project's GitHub Releases page.
 
-<table>
-  <tr>
-    <th align="center">Obtainium</th>
-    <th align="center">IzzyOnDroid</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/RahulExe69/7xTune/">
-        <img src="assets/badges/obtainium.svg" alt="Add 7xTune to Obtainium" height="100">
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/RahulExe69/7xTune/releases">
-        <img src="assets/badges/izzyondroid.svg" alt="See 7xTune releases on GitHub" height="100">
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <th align="center">OpenAPK</th>
-    <th align="center">GitHub</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/RahulExe69/7xTune/releases">
-        <img src="assets/badges/openapk.svg" alt="See 7xTune releases on GitHub" height="100">
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/RahulExe69/7xTune/releases">
-        <img src="assets/badges/github-stable.svg" alt="Get the stable 7xTune release on GitHub" height="100">
-      </a>
-    </td>
-  </tr>
-</table>
+<a href="https://github.com/RahulExe69/7xTune/releases">
+  <img src="assets/badges/github-stable.svg" alt="Download stable 7xTune release from GitHub" height="100" />
+</a>
 
-<h2>Nightly Build</h2>
+<a href="https://github.com/RahulExe69/7xTune/releases">
+  <img src="assets/badges/github-nightly.svg" alt="Find 7xTune nightly builds on GitHub" height="100" />
+</a>
 
-<table>
-  <tr>
-    <th align="center">GitHub</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/RahulExe69/7xTune/releases">
-        <img src="assets/badges/github-nightly.svg" alt="Get the 7xTune nightly build on GitHub" height="120">
-      </a>
-    </td>
-  </tr>
-</table>
+<p>Check each release's notes and artifacts before installing. Nightly builds may be less stable than tagged releases.</p>
 
 </div>
 
@@ -192,158 +134,75 @@
 
 <h1><a id="faq"></a>FAQ</h1>
 
-<h3>Got questions? Check out our <a href="https://metrolist.cc/#faq">FAQ page</a> for answers to the most common ones.</h3>
-
 </div>
+
+### Is 7xTune affiliated with YouTube or Google?
+
+No. 7xTune is an independent, community-built project and is not affiliated with or endorsed by YouTube, Google, or their affiliates.
+
+### Why might playback be unavailable in my region?
+
+YouTube Music is not available everywhere. Availability depends on the service and your region; a VPN or proxy may be needed where the service is unsupported.
+
+### Where can I report a bug or request an improvement?
+
+Please [open an issue](https://github.com/RahulExe69/7xTune/issues) and include useful reproduction steps, your app version, and relevant logs. Do not post passwords, tokens, or other private account information.
+
+### Where can I find releases and updates?
+
+Use the [GitHub Releases page](https://github.com/RahulExe69/7xTune/releases) for available builds and release notes.
 
 ---
 
 <div align="center">
 
-<h1><a id="translations"></a>Translations</h1>
+<h1><a id="support"></a>Support & community</h1>
 
-[![Translation status](https://img.shields.io/weblate/progress/metrolist?style=for-the-badge&labelColor=0d1117)](https://hosted.weblate.org/engage/metrolist/)
-
-<h3>Translations currently use the upstream Weblate project for Metrolist. <a href="https://hosted.weblate.org/projects/Metrolist/">Help us bring Metrolist to more people!</a></h3>
-
-<a href="https://hosted.weblate.org/projects/Metrolist/">
-  <img src="https://hosted.weblate.org/widget/Metrolist/horizontal-auto.svg" alt="Translation status" />
-</a>
-
-<h3>Thank you! Every translation helps make the 7xTune/Metrolist codebase more accessible.</h3>
+For help, bug reports, or feature discussions, visit the [7xTune repository](https://github.com/RahulExe69/7xTune) or [open an issue](https://github.com/RahulExe69/7xTune/issues).
 
 </div>
 
 ---
 
-<div align="center">
+## Acknowledgements
 
-<h1><a id="support-the-project"></a>Support the Project</h1>
+7xTune builds on the open-source **Metrolist** project and its upstream dependencies. We are grateful to the original authors, maintainers, and contributors whose work makes this project possible.
 
-<h3>7xTune is a free and open-source rebranded fork of Metrolist.</h3>
+- **Metrolist** — upstream project and codebase: [MetrolistGroup](https://github.com/MetrolistGroup)
+- **InnerTune** — [Zion Huang](https://github.com/z-huang) and [Malopieds](https://github.com/Malopieds)
+- **OuterTune** — [Davide Garberi](https://github.com/DD3Boh) and [Michael Zh](https://github.com/mikooomich)
+- **Better Lyrics** — synced lyrics integration: [better-lyrics.boidu.dev](https://better-lyrics.boidu.dev)
+- **metroserver** — real-time Listen Together backend: [GitHub repository](https://github.com/MetrolistGroup/metroserver)
+- **MusicRecognizer** — music recognition integration: [GitHub repository](https://github.com/aleksey-saenko/MusicRecognizer)
+- **zemer-cipher** — YouTube cipher and PoToken-related integration: [GitHub repository](https://github.com/ZemerTeam/zemer-cipher)
 
-#### Monero (XMR)
+We also thank all third-party library authors, translators, testers, and open-source contributors.
 
-<img src="assets/XMR.png" alt="Monero QR code" width="150" />
+### Translations
 
-```text
-44XjSELSWcgJTZiCKzjpCQWyXhokrH9RqH3rpp35FkSKi57T25hniHWHQNhLeXyFn3DDYqufmfRB1iEtENerZpJc7xJCcqt
-```
+Translations currently use the upstream Metrolist Weblate project. Contributions there may improve shared upstream strings, but the project is not a dedicated 7xTune translation space.
 
-#### Buy Me a Coffee
+- [Upstream translation project](https://hosted.weblate.org/projects/Metrolist/)
+- [Upstream translation status](https://hosted.weblate.org/engage/metrolist/)
 
-<a href="https://www.buymeacoffee.com/mostafaalagamy">
-  <img src="assets/buymeacoffee.png" alt="Buy Me a Coffee" width="150" />
-</a>
-
-</div>
-
----
-
-<div align="center">
-
-<h1>Special Thanks</h1>
-
-<h3>7xTune builds on the open-source Metrolist project and its upstream dependencies.</h3>
-
-<h3>Main Inspirations</h3>
-
-<table>
-  <thead>
-    <tr>
-      <th align="center">Project</th>
-      <th align="center">Authors</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="center"><strong>InnerTune</strong></td>
-      <td align="center"><a href="https://github.com/z-huang">Zion Huang</a> · <a href="https://github.com/Malopieds">Malopieds</a></td>
-    </tr>
-    <tr>
-      <td align="center"><strong>OuterTune</strong></td>
-      <td align="center"><a href="https://github.com/DD3Boh">Davide Garberi</a> · <a href="https://github.com/mikooomich">Michael Zh</a></td>
-    </tr>
-  </tbody>
-</table>
-
-<h3>Libraries & Integrations</h3>
-
-<table>
-  <thead>
-    <tr>
-      <th align="center">Project</th>
-      <th align="center">Contribution</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="center"><a href="https://better-lyrics.boidu.dev"><strong>Better Lyrics</strong></a></td>
-      <td>Time-synced lyrics with word-by-word highlighting & YouTube Music integration</td>
-    </tr>
-    <tr>
-      <td align="center"><a href="https://github.com/MetrolistGroup/metroserver"><strong>metroserver</strong></a></td>
-      <td>Listen-together real-time backend</td>
-    </tr>
-    <tr>
-      <td align="center"><a href="https://github.com/aleksey-saenko/MusicRecognizer"><strong>MusicRecognizer</strong></a></td>
-      <td>Music recognition feature & Shazam API integration</td>
-    </tr>
-    <tr>
-      <td align="center"><a href="https://github.com/ZemerTeam/zemer-cipher"><strong>zemer-cipher</strong></a></td>
-      <td>YouTube cipher deobfuscation and PoToken generation</td>
-    </tr>
-    <tr>
-      <td align="center"><a href="https://www.blacksmith.sh"><strong>Blacksmith</strong></a></td>
-      <td>High-performance GitHub Actions runners powering our CI</td>
-    </tr>
-  </tbody>
-</table>
-
-<br/>
-
-<a href="https://www.blacksmith.sh">
-  <img src="assets/blacksmith-powered.png" alt="CI powered by Blacksmith" width="280" />
-</a>
-
-<h3>We also thank the entire open-source community! For every library, tool, and API that powers this project.</h3>
-
-</div>
-
----
-
-<div align="center">
-
-<h1>Contributors</h1>
-
-<h3>This project wouldn't exist without these amazing people!</h3>
+### Contributors
 
 <a href="https://github.com/RahulExe69/7xTune/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=RahulExe69/7xTune" alt="7xTune contributors" />
+  <img src="https://contrib.rocks/image?repo=RahulExe69/7xTune" alt="7xTune GitHub contributors" />
 </a>
 
-</div>
+---
+
+## Licensing & disclaimer
+
+7xTune is an independent project and is **not affiliated with, funded by, authorized by, or endorsed by** YouTube, Google LLC, Metrolist Group, or their affiliates.
+
+YouTube, YouTube Music, Google, and other third-party names and marks belong to their respective owners. The project includes work from Metrolist and other open-source projects; their copyright notices, licenses, and attribution requirements remain applicable. See [LICENSE](LICENSE) and the relevant third-party notices in the repository.
 
 ---
 
 <div align="center">
 
-<h1>Disclaimer</h1>
-
-This project is **not affiliated with, funded, authorized, endorsed by, or in any way associated** with YouTube, Google LLC, Metrolist Group LLC, or any of their affiliates and subsidiaries.
-
-All trademarks, service marks, and intellectual property rights referenced in this project belong to their respective owners.
-
-</div>
-
----
-
-<div align="center">
-
-<br/>
-
-**Based on Metrolist by [Mo Agamy](https://github.com/mostafaalagamy) and its contributors**
-
-**This project stands with Palestine 🇵🇸**
+**Built independently as 7xTune, with respect for the open-source projects it builds upon.**
 
 </div>
