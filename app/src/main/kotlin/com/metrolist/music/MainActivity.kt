@@ -1094,18 +1094,16 @@ class MainActivity : FragmentActivity() {
                                             }
                                         },
                                         actions = {
-                                            if (showHistoryButton) {
-                                                IconButton(onClick = { navController.navigate("history") }) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.history),
-                                                        contentDescription = stringResource(R.string.history),
-                                                    )
-                                                }
-                                            }
-                                            IconButton(onClick = { navController.navigate("stats") }) {
+                                            IconButton(
+                                                onClick = {
+                                                    navController.navigate(Screens.Search.route) {
+                                                        launchSingleTop = true
+                                                    }
+                                                },
+                                            ) {
                                                 Icon(
-                                                    painter = painterResource(R.drawable.stats),
-                                                    contentDescription = stringResource(R.string.stats),
+                                                    painter = painterResource(R.drawable.search),
+                                                    contentDescription = stringResource(R.string.search),
                                                 )
                                             }
                                             if (listenTogetherInTopBar) {
