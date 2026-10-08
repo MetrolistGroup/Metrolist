@@ -71,34 +71,36 @@ fun LibraryScreen() {
                 .fillMaxSize()
                 .background(SevenXTunePalette.Midnight),
     ) {
-        // A distinct 7xTune collection header gives Library its own information
-        // hierarchy instead of dropping users straight into a filter strip.
-        Column(
+        // Compact, opaque collection header: the library content starts immediately
+        // below it, without the large dead zone or content bleeding behind the header.
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 10.dp),
+                .background(SevenXTunePalette.Midnight)
+                .padding(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = "YOUR SPACE",
-                style = MaterialTheme.typography.labelMedium,
-                color = SevenXTunePalette.ElectricBlue,
-            )
-            Text(
-                text = "Your library",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = SevenXTunePalette.TextPrimary,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-            Text(
-                text = "Everything you keep, all in one place.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = SevenXTunePalette.TextSecondary,
-                modifier = Modifier.padding(top = 3.dp),
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "YOUR SPACE",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = SevenXTunePalette.ElectricBlue,
+                )
+                Text(
+                    text = "Your library",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = SevenXTunePalette.TextPrimary,
+                )
+            }
         }
 
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .background(SevenXTunePalette.Midnight),
+        ) {
             when (filterType) {
                 LibraryFilter.LIBRARY ->
                     LibraryMixScreen(
