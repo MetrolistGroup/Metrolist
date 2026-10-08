@@ -1003,49 +1003,70 @@ object LyricsUtils {
             // Long vowel mark: ー
             // Example: レガート → regāto
             if (current == 'ー') {
-                val lastVowel = result.lastOrNull {
+                val lastVowelIndex = result.indexOfLast {
                     it in "aeiou"
                 }
-    
-                if (lastVowel != null) {
-                    result.append(
-                        when (lastVowel) {
-                            'a' -> 'ā'
-                            'i' -> 'ī'
-                            'u' -> 'ū'
-                            'e' -> 'ē'
-                            'o' -> 'ō'
-                            else -> lastVowel
-                        }
-                    )
+            
+                if (lastVowelIndex >= 0) {
+                    val macron = when (result[lastVowelIndex]) {
+                        'a' -> 'ā'
+                        'i' -> 'ī'
+                        'u' -> 'ū'
+                        'e' -> 'ē'
+                        'o' -> 'ō'
+                        else -> null
+                    }
+            
+                    if (macron != null) {
+                        result.setCharAt(lastVowelIndex, macron)
+                    }
                 }
-    
+            
                 i++
                 continue
             }
     
-            // Long vowel combinations:
-            // アア → ā
-            // イイ → ī
-            // ウウ → ū
-            // エエ → ē
-            // オオ / オウ → ō
+            // Long vowel combinations.
+            // Japanese commonly uses ウ to extend the preceding o/u vowel:
+            // ヨウ → yō, キュウ → kyū, コウ → kō, スウ → sū.
+            // Plain repeated vowels are also handled:
+            // アア → ā, イイ → ī, ウウ → ū, エエ → ē, オオ → ō.
             if (i + 1 < katakana.length) {
                 val pair = katakana.substring(i, i + 2)
-    
+            
                 val longVowel = when (pair) {
                     "アア" -> "ā"
                     "イイ" -> "ī"
                     "ウウ" -> "ū"
                     "エエ" -> "ē"
-                    "オオ", "オウ" -> "ō"
+                    "オオ" -> "ō"
                     else -> null
                 }
-    
+            
                 if (longVowel != null) {
                     result.append(longVowel)
                     i += 2
                     continue
+                }
+            }
+            
+            // ウ can mark a long o/u vowel after a kana or digraph.
+            // Examples: ヨウ → yō, キュウ → kyū, コウ → kō.
+            if (current == 'ウ' && result.isNotEmpty()) {
+                val lastIndex = result.length - 1
+            
+                when (result[lastIndex]) {
+                    'o' -> {
+                        result.setCharAt(lastIndex, 'ō')
+                        i++
+                        continue
+                    }
+            
+                    'u' -> {
+                        result.setCharAt(lastIndex, 'ū')
+                        i++
+                        continue
+                    }
                 }
             }
     
