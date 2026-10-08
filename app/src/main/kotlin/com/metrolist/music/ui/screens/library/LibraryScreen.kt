@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -64,52 +65,81 @@ fun LibraryScreen() {
         )
     }
 
-    Box(
+    Column(
         modifier =
             Modifier
                 .fillMaxSize()
                 .background(SevenXTunePalette.Midnight),
     ) {
-        when (filterType) {
-            LibraryFilter.LIBRARY ->
-                LibraryMixScreen(
-                    navController = navController,
-                    filterContent = filterContent,
-                    viewType = libraryViewType,
-                    onViewTypeChange = { libraryViewType = it },
-                )
+        // A distinct 7xTune collection header gives Library its own information
+        // hierarchy instead of dropping users straight into a filter strip.
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 10.dp),
+        ) {
+            Text(
+                text = "YOUR SPACE",
+                style = MaterialTheme.typography.labelMedium,
+                color = SevenXTunePalette.ElectricBlue,
+            )
+            Text(
+                text = "Your library",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = SevenXTunePalette.TextPrimary,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Text(
+                text = "Everything you keep, all in one place.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = SevenXTunePalette.TextSecondary,
+                modifier = Modifier.padding(top = 3.dp),
+            )
+        }
 
-            LibraryFilter.PLAYLISTS ->
-                LibraryPlaylistsScreen(
-                    navController = navController,
-                    filterContent = filterContent,
-                    viewType = playlistViewType,
-                    onViewTypeChange = { playlistViewType = it },
-                )
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            when (filterType) {
+                LibraryFilter.LIBRARY ->
+                    LibraryMixScreen(
+                        navController = navController,
+                        filterContent = filterContent,
+                        viewType = libraryViewType,
+                        onViewTypeChange = { libraryViewType = it },
+                    )
 
-            LibraryFilter.SONGS ->
-                LibrarySongsScreen(
-                    navController,
-                    { filterType = LibraryFilter.LIBRARY },
-                )
+                LibraryFilter.PLAYLISTS ->
+                    LibraryPlaylistsScreen(
+                        navController = navController,
+                        filterContent = filterContent,
+                        viewType = playlistViewType,
+                        onViewTypeChange = { playlistViewType = it },
+                    )
 
-            LibraryFilter.ALBUMS ->
-                LibraryAlbumsScreen(
-                    navController,
-                    { filterType = LibraryFilter.LIBRARY },
-                )
+                LibraryFilter.SONGS ->
+                    LibrarySongsScreen(
+                        navController,
+                        { filterType = LibraryFilter.LIBRARY },
+                    )
 
-            LibraryFilter.ARTISTS ->
-                LibraryArtistsScreen(
-                    navController,
-                    { filterType = LibraryFilter.LIBRARY },
-                )
+                LibraryFilter.ALBUMS ->
+                    LibraryAlbumsScreen(
+                        navController,
+                        { filterType = LibraryFilter.LIBRARY },
+                    )
 
-            LibraryFilter.PODCASTS ->
-                LibraryPodcastsScreen(
-                    navController,
-                    { filterType = LibraryFilter.LIBRARY },
-                )
+                LibraryFilter.ARTISTS ->
+                    LibraryArtistsScreen(
+                        navController,
+                        { filterType = LibraryFilter.LIBRARY },
+                    )
+
+                LibraryFilter.PODCASTS ->
+                    LibraryPodcastsScreen(
+                        navController,
+                        { filterType = LibraryFilter.LIBRARY },
+                    )
+            }
         }
     }
 }
