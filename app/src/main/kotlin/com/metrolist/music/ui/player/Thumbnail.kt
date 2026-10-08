@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -32,6 +33,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,7 +74,6 @@ import androidx.media3.common.Player
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
-import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.CropAlbumArtKey
@@ -83,9 +84,13 @@ import com.metrolist.music.constants.PlayerHorizontalPadding
 import com.metrolist.music.constants.SeekExtraSeconds
 import com.metrolist.music.constants.SwipeThumbnailKey
 import com.metrolist.music.constants.ThumbnailCornerRadius
-import com.metrolist.music.listentogether.RoomRole
+import com.metrolist.music.ui.component.BottomSheetState
 import com.metrolist.music.ui.component.CastButton
+import com.metrolist.music.ui.component.LocalBottomSheetPageState
+import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.ui.theme.SevenXTunePalette
+import com.metrolist.music.ui.menu.PlayerMenu
+import com.metrolist.music.ui.utils.ShowMediaInfo
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.delay
@@ -202,6 +207,7 @@ private fun getTextColor(playerBackground: PlayerBackgroundStyle): Color {
 fun Thumbnail(
     sliderPositionProvider: () -> Long?,
     modifier: Modifier = Modifier,
+    playerBottomSheetState: BottomSheetState,
     isPlayerExpanded: () -> Boolean = { true },
     isLandscape: Boolean = false,
     isListenTogetherGuest: Boolean = false,
@@ -213,7 +219,6 @@ fun Thumbnail(
     // Collect states
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     val error by playerConnection.error.collectAsState()
-    val queueTitle by playerConnection.queueTitle.collectAsStateWithLifecycle()
     val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
 
@@ -339,9 +344,9 @@ fun Thumbnail(
                 // Now Playing header - hide in landscape mode
                 if (!isLandscape) {
                     ThumbnailHeader(
-                        queueTitle = queueTitle,
-                        albumTitle = mediaMetadata?.album?.title,
-                        textColor = textBackgroundColor
+                        mediaMetadata = mediaMetadata,
+                        playerBottomSheetState = playerBottomSheetState,
+                        textColor = textBackgroundColor,
                     )
                 }
                 
@@ -434,54 +439,59 @@ fun Thumbnail(
 }
 
 /**
- * Header component showing "Now Playing" and queue/album title.
+ * Compact expanded-player action header.
  */
 @Composable
 private fun ThumbnailHeader(
-    queueTitle: String?,
-    albumTitle: String?,
+    mediaMetadata: com.metrolist.music.models.MediaMetadata?,
+    playerBottomSheetState: BottomSheetState,
     textColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-    val listenTogetherManager = LocalListenTogetherManager.current
-    val listenTogetherRoleState = listenTogetherManager?.role?.collectAsStateWithLifecycle(initialValue = RoomRole.NONE)
-    val isListenTogetherGuest = listenTogetherRoleState?.value == RoomRole.GUEST
+    val menuState = LocalMenuState.current
+    val bottomSheetPageState = LocalBottomSheetPageState.current
+
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 8.dp),
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(horizontal = 48.dp)
+        Row(
+            modifier =
+                Modifier
+                    .align(Alignment.CenterEnd),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Listen Together indicator
-            if (listenTogetherRoleState?.value != RoomRole.NONE) {
-                Text(
-                    text = if (listenTogetherRoleState?.value == RoomRole.HOST) "Hosting Listen Together" else "Listening Together",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = textColor
-                )
-            } else {
-                Text(
-                    text = stringResource(R.string.now_playing),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = textColor
-                )
-            }
-            val playingFrom = queueTitle ?: albumTitle
-            if (!playingFrom.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = playingFrom,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = textColor.copy(alpha = 0.8f),
-                    maxLines = 1,
-                    modifier = Modifier.basicMarquee()
+            IconButton(
+                onClick = {
+                    mediaMetadata ?: return@IconButton
+                    menuState.show {
+                        PlayerMenu(
+                            mediaMetadata = mediaMetadata,
+                            playerBottomSheetState = playerBottomSheetState,
+                            onShowDetailsDialog = {
+                                bottomSheetPageState.show {
+                                    ShowMediaInfo(mediaMetadata.id)
+                                }
+                            },
+                            onDismiss = menuState::dismiss,
+                        )
+                    }
+                },
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.more_horiz),
+                    contentDescription = null,
+                    tint = textColor,
                 )
             }
+
+            CastButton(
+                tintColor = textColor,
+            )
         }
     }
 }
@@ -591,13 +601,7 @@ private fun ThumbnailItem(
                 )
             }
             
-            // Cast button at top-right corner of thumbnail
-            CastButton(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp),
-                tintColor = textBackgroundColor
-            )
+
         }
     }
 }

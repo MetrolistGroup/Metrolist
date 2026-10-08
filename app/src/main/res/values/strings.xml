@@ -14,6 +14,8 @@
     <string name="pulse_empty_title">Nothing in your Pulse lane yet.</string>
     <string name="pulse_empty_description">Play a few songs, then come back for a personalized discovery feed.</string>
     <string name="pulse_reason_because_you_listened">Because you listened to %s</string>
+    <string name="pulse_reason_now_playing">Now playing</string>
+    <string name="pulse_reason_from_now_playing">Because this song is playing now</string>
     <string name="pulse_reason_current_lane">Picked from your current Pulse lane</string>
     <string name="pulse_reason_fresh">Fresh from YouTube Music</string>
     <string name="songs">Songs</string>

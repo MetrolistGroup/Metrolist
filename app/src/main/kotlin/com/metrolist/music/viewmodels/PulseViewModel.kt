@@ -10,6 +10,7 @@ import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.R
 import com.metrolist.music.db.MusicDatabase
+import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.get
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -50,13 +51,21 @@ class PulseViewModel
 
         private val seenIds = linkedSetOf<String>()
 
-        fun loadInitial() {
-            if (_isLoading.value || _tracks.value.isNotEmpty()) return
+        fun loadInitial(currentSongId: String? = null) {
+            if (_isLoading.value) return
+            if (_tracks.value.isNotEmpty()) {
+                syncCurrentSong(currentSongId)
+                return
+            }
             viewModelScope.launch(Dispatchers.IO) {
                 _isLoading.value = true
                 try {
                     val hideExplicit = context.dataStore.get(HideExplicitKey, false)
                     val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
+                    val currentSong =
+                        currentSongId
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { database.song(it).first() }
 
                     val now = LocalDateTime.now()
                     val familiarSongs = database
@@ -81,7 +90,7 @@ class PulseViewModel
                         .filterNot { hideVideoSongs && it.song.isVideo }
 
                     val seedSongs =
-                        (recentSongs + likedSongs + familiarSongs)
+                        (listOfNotNull(currentSong) + recentSongs + likedSongs + familiarSongs)
                             .filterNot { hideVideoSongs && it.song.isVideo }
                             .distinctBy { it.id }
                             .take(8)
@@ -110,7 +119,15 @@ class PulseViewModel
                                         .map {
                                             PulseTrack(
                                                 song = it,
-                                                reason = "Because you listened to ${seed.title}",
+                                                reason =
+                                                    if (seed.id == currentSongId) {
+                                                        context.getString(R.string.pulse_reason_from_now_playing)
+                                                    } else {
+                                                        context.getString(
+                                                            R.string.pulse_reason_because_you_listened,
+                                                            seed.title,
+                                                        )
+                                                    },
                                             )
                                         }.toList()
                                 }
@@ -137,7 +154,7 @@ class PulseViewModel
                             .map { it.first }
                             .take(24)
 
-                    val finalTracks =
+                    val discoveredTracks =
                         if (ranked.isNotEmpty()) {
                             diversify(ranked)
                         } else {
@@ -147,6 +164,26 @@ class PulseViewModel
                             )
                         }
 
+                    val currentTrack =
+                        currentSong
+                            ?.takeUnless { it.song.isEpisode }
+                            ?.let {
+                                PulseTrack(
+                                    song = it.toMediaMetadata().toYTItem(),
+                                    reason = context.getString(R.string.pulse_reason_now_playing),
+                                )
+                            }
+
+                    val finalTracks =
+                        buildList {
+                            currentTrack?.let { add(it) }
+                            addAll(
+                                discoveredTracks.filterNot { track ->
+                                    currentSongId != null && track.song.id == currentSongId
+                                },
+                            )
+                        }.take(24)
+
                     seenIds.clear()
                     seenIds.addAll(finalTracks.map { it.song.id })
                     _tracks.value = finalTracks
@@ -154,6 +191,35 @@ class PulseViewModel
                     Timber.tag("PulseViewModel").e(e, "Failed to build Pulse feed")
                 } finally {
                     _isLoading.value = false
+                }
+            }
+        }
+
+        private fun syncCurrentSong(currentSongId: String?) {
+            if (currentSongId.isNullOrBlank() ||
+                _tracks.value.firstOrNull()?.song?.id == currentSongId
+            ) {
+                return
+            }
+
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    val currentSong =
+                        database.song(currentSongId).first()
+                            ?.takeUnless { it.song.isEpisode }
+                            ?: return@launch
+                    val currentTrack =
+                        PulseTrack(
+                            song = currentSong.toMediaMetadata().toYTItem(),
+                            reason = context.getString(R.string.pulse_reason_now_playing),
+                        )
+
+                    _tracks.value =
+                        listOf(currentTrack) +
+                            _tracks.value.filterNot { it.song.id == currentSongId }
+                    seenIds.add(currentSongId)
+                } catch (e: Exception) {
+                    Timber.tag("PulseViewModel").w(e, "Failed to sync current playback into Pulse")
                 }
             }
         }
@@ -198,10 +264,10 @@ class PulseViewModel
             }
         }
 
-        fun refresh() {
+        fun refresh(currentSongId: String? = null) {
             seenIds.clear()
             _tracks.value = emptyList()
-            loadInitial()
+            loadInitial(currentSongId)
         }
 
         private fun diversify(

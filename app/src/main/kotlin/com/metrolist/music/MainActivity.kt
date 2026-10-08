@@ -827,12 +827,6 @@ class MainActivity : FragmentActivity() {
                         0.dp
                     }
 
-                val navigationBarHeight by animateDpAsState(
-                    targetValue = if (shouldShowNavigationBar && !showRail) NavigationBarHeight else 0.dp,
-                    animationSpec = NavigationBarAnimationSpec,
-                    label = "navBarHeight",
-                )
-
                 val playerBottomSheetState =
                     rememberBottomSheetState(
                         dismissedBound = 0.dp,
@@ -843,6 +837,17 @@ class MainActivity : FragmentActivity() {
                                 MiniPlayerHeight,
                         expandedBound = maxHeight,
                     )
+
+                val navigationBarHeight by animateDpAsState(
+                    targetValue =
+                        if (shouldShowNavigationBar && !showRail && !playerBottomSheetState.isExpanded) {
+                            NavigationBarHeight
+                        } else {
+                            0.dp
+                        },
+                    animationSpec = NavigationBarAnimationSpec,
+                    label = "navBarHeight",
+                )
 
                 val playerReadyState =
                     playerConnection?.service?.isPlayerReady?.collectAsStateWithLifecycle()

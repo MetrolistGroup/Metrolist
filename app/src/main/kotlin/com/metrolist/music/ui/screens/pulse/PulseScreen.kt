@@ -28,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -64,14 +65,16 @@ fun PulseScreen() {
     val playerConnection = LocalPlayerConnection.current
     val currentSongState = playerConnection?.currentSong?.collectAsStateWithLifecycle()
     val currentSong = currentSongState?.value
+    val effectivelyPlayingState = playerConnection?.isEffectivelyPlaying?.collectAsStateWithLifecycle()
+    val isEffectivelyPlaying = effectivelyPlayingState?.value == true
 
     LaunchedEffect(Unit) {
-        viewModel.loadInitial()
+        viewModel.loadInitial(currentSong?.id)
     }
 
     when {
         isLoading && tracks.isEmpty() -> PulseLoading()
-        tracks.isEmpty() -> PulseEmpty(onRetry = viewModel::refresh)
+        tracks.isEmpty() -> PulseEmpty(onRetry = { viewModel.refresh(currentSong?.id) })
         else -> {
             val pagerState = rememberPagerState(pageCount = { tracks.size })
             var hasSwiped by rememberSaveable { mutableStateOf(false) }
@@ -82,6 +85,7 @@ fun PulseScreen() {
                 }
             }
             val latestTracks = rememberUpdatedState(tracks)
+            val latestCurrentSong = rememberUpdatedState(currentSong)
 
             LaunchedEffect(pagerState, playerConnection) {
                 if (playerConnection == null) return@LaunchedEffect
@@ -90,12 +94,14 @@ fun PulseScreen() {
                     .collect { (_, page) ->
                         val currentTracks = latestTracks.value
                         val track = currentTracks.getOrNull(page) ?: return@collect
-                        playerConnection.playQueue(
-                            ListQueue(
-                                title = track.song.title,
-                                items = listOf(track.song.toMediaMetadata().toMediaItem()),
-                            ),
-                        )
+                        if (track.song.id != latestCurrentSong.value?.id) {
+                            playerConnection.playQueue(
+                                ListQueue(
+                                    title = track.song.title,
+                                    items = listOf(track.song.toMediaMetadata().toMediaItem()),
+                                ),
+                            )
+                        }
                         if (page >= currentTracks.size - 4) {
                             viewModel.loadMore(track.song.id)
                         }
@@ -121,6 +127,8 @@ fun PulseScreen() {
                             alpha = pageAlpha
                         },
                     track = tracks[page],
+                    isCurrentPage = page == pagerState.currentPage,
+                    isPlaying = isEffectivelyPlaying && currentSong?.id == tracks[page].song.id,
                     isLiked = currentSong?.id == tracks[page].song.id && currentSong?.song?.liked == true,
                     onLike = {
                         playerConnection?.toggleLike()
@@ -128,6 +136,9 @@ fun PulseScreen() {
                     onAddToQueue = {
                         val item = tracks[page].song.toMediaMetadata().toMediaItem()
                         playerConnection?.addToQueue(item)
+                    },
+                    onTogglePlayPause = {
+                        playerConnection?.togglePlayPause()
                     },
                 )
             }
@@ -166,9 +177,12 @@ fun PulseScreen() {
 private fun PulsePage(
     track: PulseTrack,
     modifier: Modifier = Modifier,
+    isCurrentPage: Boolean,
+    isPlaying: Boolean,
     isLiked: Boolean,
     onLike: () -> Unit,
     onAddToQueue: () -> Unit,
+    onTogglePlayPause: () -> Unit,
 ) {
     Box(
         modifier =
@@ -176,8 +190,14 @@ private fun PulsePage(
                 .fillMaxSize()
                 .background(Color.Black),
     ) {
+        val highQualityThumbnail =
+            remember(track.song.thumbnail) {
+                track.song.toMediaMetadata().thumbnailUrl?.takeIf { it.isNotBlank() }
+                    ?: track.song.thumbnail
+            }
+
         AsyncImage(
-            model = track.song.thumbnail,
+            model = highQualityThumbnail,
             contentDescription = track.song.title,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
@@ -196,6 +216,28 @@ private fun PulsePage(
                         ),
                     ),
         )
+
+        if (isCurrentPage) {
+            IconButton(
+                onClick = onTogglePlayPause,
+                modifier =
+                    Modifier
+                        .align(Alignment.Center)
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.28f)),
+            ) {
+                Icon(
+                    painter = painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
+                    contentDescription =
+                        stringResource(
+                            if (isPlaying) R.string.player_pause else R.string.play,
+                        ),
+                    tint = Color.White,
+                    modifier = Modifier.size(34.dp),
+                )
+            }
+        }
 
         Text(
             text = stringResource(R.string.pulse).uppercase(),
