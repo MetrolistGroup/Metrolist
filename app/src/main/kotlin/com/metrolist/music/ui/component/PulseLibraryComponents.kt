@@ -68,8 +68,8 @@ fun PulseLibraryControls(
                 .padding(top = 2.dp, bottom = 5.dp),
     ) {
         PulseSectionHeader(
-            eyebrow = "LIBRARY",
-            title = "Browse your collection",
+            eyebrow = stringResource(R.string.sevenx_library_browse_eyebrow),
+            title = stringResource(R.string.sevenx_library_browse_title),
         )
         filterContent()
         Spacer(modifier = Modifier.height(1.dp))
