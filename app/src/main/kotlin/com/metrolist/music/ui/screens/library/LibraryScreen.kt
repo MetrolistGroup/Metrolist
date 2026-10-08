@@ -158,7 +158,7 @@ private fun LibraryFilterBar(
                             MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
                         ),
                     ),
-                    RoundedCornerShape(22.dp),
+                    RoundedCornerShape(18.dp),
                 )
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 5.dp, vertical = 4.dp),
