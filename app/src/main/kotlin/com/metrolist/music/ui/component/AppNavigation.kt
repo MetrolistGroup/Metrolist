@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.component
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -186,9 +188,9 @@ fun AppNavigationBar(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 5.dp)
-                    .height(if (slimNav) 52.dp else 60.dp)
-                    .clip(RoundedCornerShape(24.dp))
+                    .padding(horizontal = 0.dp, vertical = 5.dp)
+                    .height(if (slimNav) 52.dp else 64.dp)
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 0.dp, bottomEnd = 0.dp))
                     .background(
                         if (pureBlack) {
                             Color.Black
@@ -206,7 +208,7 @@ fun AppNavigationBar(
                                     MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
                                 ),
                             ),
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 0.dp, bottomEnd = 0.dp),
                     )
                     .padding(horizontal = 6.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -218,6 +220,11 @@ fun AppNavigationBar(
                         isRouteSelected(currentRoute, screen.route, navigationItems)
                     }
                 val currentIsSelected by rememberUpdatedState(isSelected)
+                val selectedScale by animateFloatAsState(
+                    targetValue = if (isSelected) 1.12f else 1f,
+                    animationSpec = tween(durationMillis = 220),
+                    label = "navIconScale",
+                )
                 val iconRes = remember(isSelected, screen) {
                     if (isSelected) screen.iconIdActive else screen.iconIdInactive
                 }
@@ -313,6 +320,7 @@ fun AppNavigationBar(
                             modifier =
                                 Modifier
                                     .size(if (slimNav) 30.dp else 34.dp)
+                                    .scale(selectedScale)
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(
                                         if (isSelected) {

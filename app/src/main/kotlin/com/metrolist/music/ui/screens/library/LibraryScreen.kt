@@ -71,34 +71,58 @@ fun LibraryScreen() {
                 .fillMaxSize()
                 .background(SevenXTunePalette.Midnight),
     ) {
-        // A distinct 7xTune collection header gives Library its own information
-        // hierarchy instead of dropping users straight into a filter strip.
-        Column(
+        // Compact, opaque collection header: the library content starts immediately
+        // below it, without the large dead zone or content bleeding behind the header.
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 10.dp),
+                .background(SevenXTunePalette.Midnight)
+                .padding(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = "YOUR SPACE",
-                style = MaterialTheme.typography.labelMedium,
-                color = SevenXTunePalette.ElectricBlue,
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "YOUR SPACE",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = SevenXTunePalette.ElectricBlue,
+                )
+                Text(
+                    text = "Your library",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = SevenXTunePalette.TextPrimary,
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            LibraryUtilityCard(
+                title = stringResource(R.string.history),
+                subtitle = "Your listening history",
+                icon = R.drawable.history,
+                modifier = Modifier.weight(1f),
+                onClick = { navController.navigate("history") },
             )
-            Text(
-                text = "Your library",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = SevenXTunePalette.TextPrimary,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-            Text(
-                text = "Everything you keep, all in one place.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = SevenXTunePalette.TextSecondary,
-                modifier = Modifier.padding(top = 3.dp),
+            LibraryUtilityCard(
+                title = stringResource(R.string.stats),
+                subtitle = "Your listening stats",
+                icon = R.drawable.stats,
+                modifier = Modifier.weight(1f),
+                onClick = { navController.navigate("stats") },
             )
         }
 
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .background(SevenXTunePalette.Midnight),
+        ) {
             when (filterType) {
                 LibraryFilter.LIBRARY ->
                     LibraryMixScreen(
@@ -246,6 +270,74 @@ private fun LibraryFilterBar(
                     )
                 }
             }
+        }
+    }
+}
+
+
+@Composable
+private fun LibraryUtilityCard(
+    title: String,
+    subtitle: String,
+    @androidx.annotation.DrawableRes icon: Int,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(20.dp)
+    Row(
+        modifier = modifier
+            .clip(shape)
+            .clickable(onClick = onClick)
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.50f),
+                    ),
+                ),
+            )
+            .border(
+                1.dp,
+                Brush.horizontalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f),
+                    ),
+                ),
+                shape,
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(13.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+        Column(
+            modifier = Modifier.padding(start = 10.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
         }
     }
 }
