@@ -1,131 +1,102 @@
 name: Bug report
-description: Create a bug report to help us improve
+description: Report a problem with 7xTune
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        ## IMPORTANT WARNING
-
-        **Duplicate or incomplete issues will be closed immediately without any response from developers.**
-
-        - Check existing issues before opening a new one
-        - All required checkboxes below must be checked
-        - Duplicate issues will be closed instantly with no response
+        Thanks for helping improve 7xTune! Before submitting, please check for an existing report and include enough detail for us to reproduce the issue. Duplicate reports may be closed and linked to the original discussion.
 
   - type: checkboxes
     id: checklist
     attributes:
-      label: "Checklist - Required"
-      description: |
-        **READ CAREFULLY:** You must complete these checks before submitting. Failing to do so will result in your issue being closed immediately without any response from developers.
-
-        **Duplicate issues = Instant closure with no response**
+      label: Before submitting
+      description: Please confirm each item before opening your report.
       options:
-        - label: " I am able to reproduce the bug with the [latest debug version](https://github.com/MetrolistGroup/Metrolist/actions/workflows/build.yml?query=branch%3Amain)."
+        - label: I can reproduce the issue on the latest available [7xTune build](https://github.com/RahulExe69/7xTune/actions/workflows/build.yml).
           required: true
-        - label: " I've checked that there is NO open or closed issue about this bug. (Duplicate issues will be closed immediately without response)"
+        - label: I checked for existing open and closed issues about the same problem.
           required: true
-        - label: " This issue contains only ONE bug. PLEASE check pinned issues before opening a new one."
+        - label: This report describes one bug.
           required: true
-        - label: " The title of this issue accurately describes the bug."
+        - label: The title clearly describes the problem.
           required: true
-        - label: " The entire issue report is written/translated in English."
+        - label: I have written the report in English so maintainers can review it.
           required: true
 
   - type: markdown
     attributes:
       value: |
         ---
-        ## Bug Details
+        ## Bug details
 
   - type: textarea
     id: reproduce-steps
     attributes:
-      label: Steps to reproduce the bug
-      description: What did you do for the bug to show up?
+      label: Steps to reproduce
+      description: What did you do before the problem appeared?
       placeholder: |
-        Example:
-          1. Go to '...'
-          2. Click on '....'
-          3. Scroll down to '....'
-          4. See error
+        1. Open 7xTune
+        2. Go to '...'
+        3. Tap '...'
+        4. Observe the problem
     validations:
       required: true
 
   - type: textarea
     id: expected-behavior
     attributes:
-      label: Expected behavior
-      placeholder: |
-        Example:
-          "This should happen..."
+      label: Expected behaviour
+      placeholder: What did you expect to happen?
     validations:
       required: true
 
   - type: textarea
     id: actual-behavior
     attributes:
-      label: Actual behavior
-      placeholder: |
-        Example:
-          "This happened instead..."
+      label: Actual behaviour
+      placeholder: What happened instead?
     validations:
       required: true
 
   - type: textarea
     id: sreen-media
     attributes:
-      label: Screenshots/Screen recordings
-      description: |
-        A picture or video helps us understand the bug more.
-
-        You can upload them directly in the text box.
+      label: Screenshots or screen recordings
+      description: Images or a short recording can help us understand the issue. You can upload them directly here.
 
   - type: markdown
     attributes:
       value: |
-        ## How to create a logcat recording
+        ## Logs (especially for crashes)
 
-        ### Firstly, download and install these apps
-        - [F0x1d/LogFox](https://github.com/F0x1d/LogFox/releases/download/v2.1.9-78/LogFox-2.1.9-release.apk)
-        - [thedjchi/Shizuku](https://github.com/thedjchi/Shizuku/releases/download/v13.6.0.r1318-thedjchi/shizuku-v13.6.0.r1318-thedjchi.apk)
+        Logs can help maintainers diagnose problems that are difficult to reproduce. If possible, attach a Logcat recording.
 
-        ### Then follow these instructions
-        1. Open **Shizuku**, and click on the "View command" button
-        2. Copy the command and run it on your computer (see ADB setup below if needed)
-        3. Once Shizuku is running, open **LogFox** and start a recording
-        4. Open the app and reproduce the bug you're experiencing
-        5. When finished, press **Export** in LogFox and attach the file to your comment
-        6. Stop the process by pressing **Exit** in the LogFox notification
-        7. Stop Shizuku (unless you're using it for other apps)
+        ### One way to capture logs
+        1. Install [LogFox](https://github.com/F0x1d/LogFox/releases) and [Shizuku](https://github.com/thedjchi/Shizuku/releases) from their official release pages.
+        2. Follow Shizuku's setup instructions for your device.
+        3. Open LogFox and start a recording.
+        4. Reproduce the problem in 7xTune.
+        5. Stop and export the recording, then attach it to your report.
+        6. Stop the recording and Shizuku when finished if you do not need them for anything else.
 
-        ### Or the video guide
-        https://github.com/user-attachments/assets/30659a03-39d5-4400-b681-4238c608aebd
+        For an immediate crash, enable LogFox's notification permissions if requested and check whether it captures a crash report.
 
-        > [!IMPORTANT]
-        > **If you're reporting an immediate crash** issue, you should allow LogFox notification permissions on launch. Then open the app and look for a crash report notification from LogFox. 
-
-        > [!TIP]
-        > If you export the recording as a zip file, upload it to https://litterbox.catbox.moe (set expiration to 3 days).
+        > **Privacy reminder:** Review logs before uploading them. Remove account identifiers, tokens, personal information, or other sensitive data. Do not post passwords or session secrets.
 
   - type: textarea
     id: logs
     attributes:
       label: Logs
-      description: |
-        Please read the instructions above on how to create a logcat recording. Logs are crucial for us to understand and fix the bug. Issues without logs might be closed immediately.
-    validations:
-      required: true
+      description: Attach relevant logs if available. If you cannot capture logs, explain that here.
+      placeholder: Paste redacted logs or describe how you captured and attached them.
 
   - type: input
     id: app-version
     attributes:
-      label: Metrolist version
-      description: |
-        You can find your Metrolist version in **Settings**.
-      placeholder: |
-        Example: "13.1.1"
+      label: 7xTune version
+      description: You can find the app version in 7xTune's Settings/About section.
+      placeholder: "Example: 1.0.10"
     validations:
       required: true
 
@@ -133,10 +104,8 @@ body:
     id: android-version
     attributes:
       label: Android version
-      description: |
-        You can find this in Android Settings > About Phone.
-      placeholder: |
-        Example: "Android 12"
+      description: You can find this in Android Settings > About phone.
+      placeholder: "Example: Android 14"
     validations:
       required: true
 
@@ -144,5 +113,4 @@ body:
     id: additional-information
     attributes:
       label: Additional information
-      placeholder: |
-        Additional details and attachments.
+      placeholder: Add any other context that might help us investigate.
