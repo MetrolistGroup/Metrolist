@@ -32,6 +32,7 @@ import com.metrolist.music.ui.screens.artist.ArtistSongsScreen
 import com.metrolist.music.ui.screens.equalizer.EqScreen
 import com.metrolist.music.ui.screens.equalizer.wizard.WizardScreen
 import com.metrolist.music.ui.screens.library.LibraryScreen
+import com.metrolist.music.ui.screens.pulse.PulseScreen
 import com.metrolist.music.ui.screens.playlist.AutoPlaylistScreen
 import com.metrolist.music.ui.screens.playlist.CachePlaylistScreen
 import com.metrolist.music.ui.screens.playlist.LocalPlaylistScreen
@@ -93,6 +94,10 @@ fun NavGraphBuilder.navigationBuilder(
             pureBlack = pureBlack,
             savedStateHandle = backStackEntry.savedStateHandle
         )
+    }
+
+    composable(Screens.Pulse.route) {
+        PulseScreen()
     }
 
     composable(Screens.Library.route) {

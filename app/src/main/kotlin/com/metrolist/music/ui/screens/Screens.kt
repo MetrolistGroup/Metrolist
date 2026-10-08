@@ -38,6 +38,13 @@ sealed class Screens(
         route = "listen_together"
     )
 
+    object Pulse : Screens(
+        titleId = R.string.pulse,
+        iconIdInactive = R.drawable.pulse_outlined,
+        iconIdActive = R.drawable.pulse_filled,
+        route = "pulse",
+    )
+
     object Library : Screens(
         titleId = R.string.filter_library,
         iconIdInactive = R.drawable.library_music_outlined,
@@ -53,6 +60,6 @@ sealed class Screens(
     )
 
     companion object {
-        val MainScreens = listOf(Home, Library, Settings)
+        val MainScreens = listOf(Home, Pulse, Library, Settings)
     }
 }

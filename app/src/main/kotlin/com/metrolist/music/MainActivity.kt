@@ -769,6 +769,7 @@ class MainActivity : FragmentActivity() {
                     remember {
                         listOf(
                             Screens.Home.route,
+                            Screens.Pulse.route,
                             Screens.Library.route,
                             Screens.ListenTogether.route,
                             "settings",
@@ -970,6 +971,7 @@ class MainActivity : FragmentActivity() {
                         currentRoute == Screens.ListenTogether.route ||
                             currentRoute == "listen_together_from_topbar"
                     shouldShowTopBar = currentRoute in topLevelScreens &&
+                        currentRoute != Screens.Pulse.route &&
                         !(isListenTogetherScreen && listenTogetherInTopBar)
                 }
 
@@ -1008,6 +1010,7 @@ class MainActivity : FragmentActivity() {
                     remember(navBackStackEntry) {
                         when (navBackStackEntry?.destination?.route) {
                             Screens.Home.route -> R.string.home
+                            Screens.Pulse.route -> R.string.pulse
                             Screens.Search.route -> R.string.search
                             Screens.Library.route -> R.string.filter_library
                             Screens.ListenTogether.route -> R.string.together
@@ -1228,7 +1231,7 @@ class MainActivity : FragmentActivity() {
 
                             if (!showRail && currentRoute != "wrapped") {
                                 Box {
-                                    if (activePlayerConnection != null) {
+                                    if (activePlayerConnection != null && currentRoute != Screens.Pulse.route) {
                                         BottomSheetPlayer(
                                             state = playerBottomSheetState,
                                             navController = navController,
