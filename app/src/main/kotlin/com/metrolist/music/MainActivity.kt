@@ -22,6 +22,8 @@ import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -1373,43 +1375,64 @@ class MainActivity : FragmentActivity() {
                                             NavigationTab.LIBRARY -> Screens.Library
                                         }.route,
                                     enterTransition = {
-                                        val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
-                                        val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
-
-                                        if (currentRouteIndex == -1 || currentRouteIndex > previousRouteIndex) {
-                                            slideInHorizontally { it / 8 } + fadeIn(tween(200))
+                                        val fromRoute = initialState.destination.route
+                                        val toRoute = targetState.destination.route
+                                        // Top-level tab changes should feel immediate; keep motion for detail pages.
+                                        if (fromRoute in topLevelScreens && toRoute in topLevelScreens) {
+                                            EnterTransition.None
                                         } else {
-                                            slideInHorizontally { -it / 8 } + fadeIn(tween(200))
+                                            val currentRouteIndex = routeIndexMap[toRoute] ?: -1
+                                            val previousRouteIndex = routeIndexMap[fromRoute] ?: -1
+                                            if (currentRouteIndex == -1 || currentRouteIndex > previousRouteIndex) {
+                                                slideInHorizontally { it / 8 } + fadeIn(tween(160))
+                                            } else {
+                                                slideInHorizontally { -it / 8 } + fadeIn(tween(160))
+                                            }
                                         }
                                     },
                                     exitTransition = {
-                                        val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
-                                        val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
-
-                                        if (targetRouteIndex == -1 || targetRouteIndex > currentRouteIndex) {
-                                            slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
+                                        val fromRoute = initialState.destination.route
+                                        val toRoute = targetState.destination.route
+                                        if (fromRoute in topLevelScreens && toRoute in topLevelScreens) {
+                                            ExitTransition.None
                                         } else {
-                                            slideOutHorizontally { it / 8 } + fadeOut(tween(200))
+                                            val currentRouteIndex = routeIndexMap[fromRoute] ?: -1
+                                            val targetRouteIndex = routeIndexMap[toRoute] ?: -1
+                                            if (targetRouteIndex == -1 || targetRouteIndex > currentRouteIndex) {
+                                                slideOutHorizontally { -it / 8 } + fadeOut(tween(160))
+                                            } else {
+                                                slideOutHorizontally { it / 8 } + fadeOut(tween(160))
+                                            }
                                         }
                                     },
                                     popEnterTransition = {
-                                        val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
-                                        val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
-
-                                        if (previousRouteIndex != -1 && previousRouteIndex < currentRouteIndex) {
-                                            slideInHorizontally { it / 8 } + fadeIn(tween(200))
+                                        val fromRoute = initialState.destination.route
+                                        val toRoute = targetState.destination.route
+                                        if (fromRoute in topLevelScreens && toRoute in topLevelScreens) {
+                                            EnterTransition.None
                                         } else {
-                                            slideInHorizontally { -it / 8 } + fadeIn(tween(200))
+                                            val currentRouteIndex = routeIndexMap[toRoute] ?: -1
+                                            val previousRouteIndex = routeIndexMap[fromRoute] ?: -1
+                                            if (previousRouteIndex != -1 && previousRouteIndex < currentRouteIndex) {
+                                                slideInHorizontally { it / 8 } + fadeIn(tween(160))
+                                            } else {
+                                                slideInHorizontally { -it / 8 } + fadeIn(tween(160))
+                                            }
                                         }
                                     },
                                     popExitTransition = {
-                                        val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
-                                        val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
-
-                                        if (currentRouteIndex != -1 && currentRouteIndex < targetRouteIndex) {
-                                            slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
+                                        val fromRoute = initialState.destination.route
+                                        val toRoute = targetState.destination.route
+                                        if (fromRoute in topLevelScreens && toRoute in topLevelScreens) {
+                                            ExitTransition.None
                                         } else {
-                                            slideOutHorizontally { it / 8 } + fadeOut(tween(200))
+                                            val currentRouteIndex = routeIndexMap[fromRoute] ?: -1
+                                            val targetRouteIndex = routeIndexMap[toRoute] ?: -1
+                                            if (currentRouteIndex != -1 && currentRouteIndex < targetRouteIndex) {
+                                                slideOutHorizontally { -it / 8 } + fadeOut(tween(160))
+                                            } else {
+                                                slideOutHorizontally { it / 8 } + fadeOut(tween(160))
+                                            }
                                         }
                                     },
                                     modifier = Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
