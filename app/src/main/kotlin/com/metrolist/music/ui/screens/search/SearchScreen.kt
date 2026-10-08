@@ -6,6 +6,7 @@
 package com.metrolist.music.ui.screens.search
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -186,14 +187,25 @@ fun SearchScreen(
 
     Scaffold(
         topBar = {
-            Box(
+            Column(
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .background(SevenXTunePalette.Midnight)
                         .statusBarsPadding()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
             ) {
+                Text(
+                    text = "TUNE INTO SOMETHING",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = SevenXTunePalette.ElectricBlue,
+                )
+                Text(
+                    text = "Find your next repeat",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = SevenXTunePalette.TextPrimary,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
+                )
                 Row(
                     modifier =
                         Modifier
