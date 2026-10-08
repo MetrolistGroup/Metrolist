@@ -250,7 +250,7 @@ fun ListenTogetherScreen(
                 top = windowInsets.asPaddingValues().calculateTopPadding() + 16.dp,
                 bottom = windowInsets.asPaddingValues().calculateBottomPadding() + 16.dp + AppBarHeight,
             ),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Header
         item {
@@ -478,7 +478,7 @@ private fun HeaderSection(isInRoom: Boolean = false) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(28.dp))
+                .clip(RoundedCornerShape(22.dp))
                 .background(
                     Brush.linearGradient(
                         listOf(
@@ -491,9 +491,9 @@ private fun HeaderSection(isInRoom: Boolean = false) {
                 .border(
                     1.dp,
                     MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
-                    RoundedCornerShape(28.dp),
+                    RoundedCornerShape(22.dp),
                 )
-                .padding(22.dp),
+                .padding(16.dp),
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -502,8 +502,8 @@ private fun HeaderSection(isInRoom: Boolean = false) {
             Box(
                 modifier =
                     Modifier
-                        .size(62.dp)
-                        .clip(RoundedCornerShape(20.dp))
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(16.dp))
                         .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center,
             ) {
@@ -511,7 +511,7 @@ private fun HeaderSection(isInRoom: Boolean = false) {
                     painter = painterResource(R.drawable.group_outlined),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(38.dp),
+                    modifier = Modifier.size(28.dp),
                 )
             }
 
@@ -550,7 +550,7 @@ private fun ConnectionStatusCard(
                             stiffness = Spring.StiffnessLow,
                         ),
                 ),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors =
             CardDefaults.cardColors(
                 containerColor =
@@ -563,7 +563,7 @@ private fun ConnectionStatusCard(
             ),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Row(
@@ -676,7 +676,7 @@ private fun RoomStatusCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(20.dp),
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -686,7 +686,7 @@ private fun RoomStatusCard(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
+                    .padding(18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -698,10 +698,10 @@ private fun RoomStatusCard(
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = roomCode,
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 6.sp,
+                letterSpacing = 4.sp,
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(4.dp))
@@ -721,7 +721,7 @@ private fun RoomStatusCard(
                 Spacer(modifier = Modifier.height(16.dp))
                 val inviteLink =
                     remember(roomCode) {
-                        "https://metrolist.cc/listen?code=$roomCode"
+                        "https://7xtune.vercel.app/listen?code=$roomCode"
                     }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -1090,7 +1090,7 @@ private fun JoinCreateRoomSection(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(20.dp),
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -1100,8 +1100,8 @@ private fun JoinCreateRoomSection(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Username input
