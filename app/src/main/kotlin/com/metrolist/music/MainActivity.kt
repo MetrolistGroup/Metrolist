@@ -1219,10 +1219,10 @@ class MainActivity : FragmentActivity() {
                                             if (!returnedToHome) {
                                                 navController.navigate(Screens.Home.route) {
                                                     popUpTo(navController.graph.startDestinationId) {
-                                                        saveState = false
+                                                        saveState = true
                                                     }
                                                     launchSingleTop = true
-                                                    restoreState = false
+                                                    restoreState = true
                                                 }
                                             }
                                         } else {
