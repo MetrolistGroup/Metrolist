@@ -75,7 +75,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -802,13 +801,8 @@ class MainActivity : FragmentActivity() {
                         }
                     }
 
-                val currentRoute by remember {
-                    derivedStateOf { navBackStackEntry?.destination?.route }
-                }
-
-                val inSearchScreen by remember {
-                    derivedStateOf { currentRoute?.startsWith("search/") == true }
-                }
+                val currentRoute = navBackStackEntry?.destination?.route
+                val inSearchScreen = currentRoute?.startsWith("search/") == true
                 val navigationItemRoutes =
                     remember(navigationItems) {
                         navigationItems.map { it.route }.toSet()
@@ -1173,7 +1167,7 @@ class MainActivity : FragmentActivity() {
                                     coroutineScope,
                                     topAppBarScrollBehavior,
                                     playerBottomSheetState,
-                                    currentBackStackEntry,
+                                    currentRoute,
                                 ) {
                                     { screen: Screens, isSelected: Boolean ->
                                         if (playerBottomSheetState.isExpanded) {
@@ -1261,12 +1255,8 @@ class MainActivity : FragmentActivity() {
                                                         if (navBarHeightPx == 0f) {
                                                             totalHeightPx
                                                         } else {
-                                                            // Read progress only during draw phase
-                                                            val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
-                                                            val slideOffset = totalHeightPx * progress
-                                                            val hideOffset =
-                                                                totalHeightPx * (1 - navBarHeightPx / NavigationBarHeight.toPx())
-                                                            slideOffset + hideOffset
+                                                            // Keep the main navigation reachable even when the player sheet is expanded.
+                                                            totalHeightPx * (1 - navBarHeightPx / NavigationBarHeight.toPx())
                                                         }
                                                 },
                                     )

@@ -26,7 +26,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -132,17 +133,20 @@ fun PulseScreen() {
             }
 
             if (!hasSwiped) {
-                Text(
-                    text = "↑  Swipe",
-                    modifier =
-                        Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.BottomCenter,
+                ) {
+                    Text(
+                        text = "↑  Swipe",
+                        modifier =
+                            Modifier.padding(
                                 bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 88.dp,
                             ),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.72f),
-                )
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.72f),
+                    )
+                }
             }
 
             if (isLoadingMore) {
