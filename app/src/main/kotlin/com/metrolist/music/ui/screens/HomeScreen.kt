@@ -9,6 +9,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -1855,7 +1856,7 @@ fun HomeScreen(
                                                     playerConnection.playQueue(
                                                         ListQueue(
                                                             title = quickPicksTitle,
-                                                            items = quickPicks.distinctBy { it.id }.map { it.toMediaItem() },
+                                                            items = quickPicks.distinctBy { it.id }.mapNotNull { (it as? SongItem)?.toMediaItem() },
                                                         ),
                                                     )
                                                 }
