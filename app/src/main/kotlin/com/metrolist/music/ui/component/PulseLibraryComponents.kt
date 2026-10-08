@@ -37,27 +37,41 @@ fun PulseLibraryControls(
     headerContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val shape = RoundedCornerShape(22.dp)
+
     Column(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-                .clip(RoundedCornerShape(26.dp))
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+                .clip(shape)
                 .background(
                     Brush.linearGradient(
                         listOf(
-                            SevenXTunePalette.SurfaceRaised.copy(alpha = 0.92f),
-                            SevenXTunePalette.Surface.copy(alpha = 0.84f),
+                            SevenXTunePalette.SurfaceRaised.copy(alpha = 0.90f),
+                            SevenXTunePalette.Surface.copy(alpha = 0.80f),
                         ),
                     ),
                 )
-                .padding(top = 4.dp, bottom = 6.dp),
+                .border(
+                    1.dp,
+                    Brush.horizontalGradient(
+                        listOf(
+                            SevenXTunePalette.Violet.copy(alpha = 0.20f),
+                            SevenXTunePalette.ElectricBlue.copy(alpha = 0.08f),
+                            SevenXTunePalette.PulsePink.copy(alpha = 0.14f),
+                        ),
+                    ),
+                    shape,
+                )
+                .padding(top = 2.dp, bottom = 5.dp),
     ) {
         PulseSectionHeader(
-            eyebrow = stringResource(R.string.sevenx_library_browse_eyebrow),
-            title = stringResource(R.string.sevenx_library_browse_title),
+            eyebrow = "LIBRARY",
+            title = "Browse your collection",
         )
         filterContent()
+        Spacer(modifier = Modifier.height(1.dp))
         headerContent()
     }
 }
