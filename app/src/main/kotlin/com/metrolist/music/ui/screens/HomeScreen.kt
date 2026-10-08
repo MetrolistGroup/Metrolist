@@ -252,7 +252,7 @@ internal fun selectQuickPicksSection(
     )
 }
 
-/** Keeps our Quick Picks first and Speed Dial second, regardless of Home ordering mode. */
+/** Keep Speed Dial first; let Quick Picks follow the normal Home section ordering. */
 internal fun orderHomeSections(
     sections: List<HomeSection>,
     quickPicksSection: HomeSection?,
@@ -261,9 +261,6 @@ internal fun orderHomeSections(
 ): List<HomeSection> {
     val fixedTopSections =
         buildList {
-            if (quickPicksSection != null && sections.contains(quickPicksSection)) {
-                add(quickPicksSection)
-            }
             if (sections.contains(HomeSection.SpeedDial)) add(HomeSection.SpeedDial)
         }
 
