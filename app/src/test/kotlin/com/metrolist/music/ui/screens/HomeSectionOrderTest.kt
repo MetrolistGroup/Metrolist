@@ -52,29 +52,23 @@ class HomeSectionOrderTest {
         )
 
     @Test
-    fun `speed dial leads and quick picks follows in deterministic mode`() {
-        val ordered = buildSections(listOf(song("a")), homePageWithQuickPicks, randomize = false, seed = 0L)
-        assertEquals(HomeSection.SpeedDial, ordered.first())
-        assertEquals(HomeSection.QuickPicks, ordered[1])
-        assertEquals(HomeSection.HomePageSection(0), ordered[2])
-        assertEquals(HomeSection.HomePageSection(2), ordered[3])
-    }
-
-    @Test
-    fun `speed dial remains fixed at the top when home order is randomized`() {
-        for (seed in 0L until 50L) {
-            val ordered = buildSections(listOf(song("a")), homePageWithQuickPicks, randomize = true, seed = seed)
-            assertEquals(HomeSection.SpeedDial, ordered.first())
+    fun `dedicated quick picks sit directly above speed dial with and without randomization`() {
+        for (randomize in listOf(true, false)) {
+            for (seed in 0L until 50L) {
+                val ordered = buildSections(listOf(song("a")), homePageWithQuickPicks, randomize, seed)
+                assertEquals(listOf(HomeSection.QuickPicks, HomeSection.SpeedDial), ordered.take(2))
+            }
         }
     }
 
     @Test
-    fun `homepage quick picks fallback remains a normal API shelf`() {
-        val ordered = buildSections(null, homePageWithQuickPicks, randomize = false, seed = 0L)
-        assertEquals(HomeSection.SpeedDial, ordered.first())
-        assertEquals(HomeSection.HomePageSection(0), ordered[1])
-        assertEquals(HomeSection.HomePageSection(1), ordered[2])
-        assertEquals(HomeSection.HomePageSection(2), ordered[3])
+    fun `homepage quick picks fallback also sits directly above speed dial`() {
+        for (randomize in listOf(true, false)) {
+            for (seed in 0L until 50L) {
+                val ordered = buildSections(null, homePageWithQuickPicks, randomize, seed)
+                assertEquals(listOf(HomeSection.HomePageSection(1), HomeSection.SpeedDial), ordered.take(2))
+            }
+        }
     }
 
     @Test
@@ -96,7 +90,7 @@ class HomeSectionOrderTest {
     }
 
     @Test
-    fun `speed dial stays first while quick picks refreshes`() =
+    fun `quick picks section stays in place while a refresh is loading`() =
         runBlocking {
             val loader = QuickPicksLoader<Song> { it.id }
             loader.load(local = { listOf(song("a")) }, similar = { emptyList() })
@@ -114,14 +108,8 @@ class HomeSectionOrderTest {
                     2 -> similar.complete(emptyList())
                 }
                 repeat(10) { yield() }
-                val ordered =
-                    buildSections(
-                        loader.items.value,
-                        homePageWithQuickPicks,
-                        randomize = false,
-                        seed = stage.toLong(),
-                    )
-                assertEquals(HomeSection.SpeedDial, ordered.first())
+                val ordered = buildSections(loader.items.value, homePageWithQuickPicks, randomize = true, seed = stage.toLong())
+                assertEquals(listOf(HomeSection.QuickPicks, HomeSection.SpeedDial), ordered.take(2))
             }
             refresh.join()
         }
