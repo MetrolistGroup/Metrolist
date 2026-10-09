@@ -827,17 +827,24 @@ constructor(
                         return@future defaultResult
                     }
 
+                    val snapshot: List<Song> = synchronized(searchResults) { searchResults.toList() }
+                    val isArtistQuery = isVoiceSearch && looksLikeArtistQuery(searchQuery, snapshot)
+
                     val selectedSong =
-                        if (isVoiceSearch) {    //Check if the voiceQuery is about a specific song
-                            val snapshot: List<Song> =
-                                synchronized(searchResults) { searchResults.toList() }
+                        if (isArtistQuery) {        // If the results seem to be related to a specific artist, no specific song is selected
+                            null
+                        } else if (isVoiceSearch) {    //Check if the voiceQuery is about a specific song
                             VoiceSearchMatcher.findBest(searchQuery, snapshot)
                         } else {
                             searchResults.firstOrNull { it.id == songId }
                         }
 
-                    if(context.dataStore.get(AutoRadioQueueKey, true)) {
-                        val radioQueue = YouTubeQueue.radio(selectedSong?.toMediaMetadata() ?: return@future defaultResult)
+                    if (!isVoiceSearch && selectedSong == null) {
+                        return@future defaultResult
+                    }
+
+                    if(context.dataStore.get(AutoRadioQueueKey, true) && selectedSong != null) {
+                        val radioQueue = YouTubeQueue.radio(selectedSong.toMediaMetadata())
                         val radioStatus = runCatching {
                             withContext(Dispatchers.IO) {
                                 radioQueue
@@ -859,14 +866,33 @@ constructor(
                         }
                     }
 
-                    val items = listOf(selectedSong?.toMediaItem() ?: return@future defaultResult)
+                    //If no specific track is selected, filter the results to tracks by artist.
+                    val fallbackItems =
+                        if (isVoiceSearch && selectedSong == null) {
+                            if (isArtistQuery) {
+                                snapshot.filter { song ->
+                                    song.artists.any { artist ->
+                                        VoiceSearchMatcher.artistMatchesQuery(artist.name, searchQuery)
+                                    }
+                                }
+                            } else {
+                                snapshot
+                            }
+                        } else {
+                            snapshot
+                        }
+
+                    val items = selectedSong?.let { listOf(it.toMediaItem()) } ?: fallbackItems.map { it.toMediaItem() }
+                    if (items.isEmpty()) return@future defaultResult
+
+                    val queueTitle = selectedSong?.song?.title ?: searchQuery
                     withContext(Dispatchers.Main) {
                         service.adoptQueue(
                             ListQueue(
-                                title = selectedSong.song.title,
+                                title = queueTitle,
                                 items = items,
                             ),
-                            title = selectedSong.song.title,
+                            title = queueTitle,
                         )
                     }
                     MediaItemsWithStartPosition(
@@ -985,4 +1011,24 @@ internal fun androidAutoPageRequest(
         offset = (safePage.toLong() * effectivePageSize).coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
         limit = effectivePageSize,
     )
+}
+
+private const val ARTIST_QUERY_MIN_RATIO = 0.50
+
+private fun looksLikeArtistQuery(
+    query: String,
+    candidates: List<Song>,
+): Boolean {
+    if (query.isBlank()) return false
+
+    val uniqueCandidates = candidates.distinctBy { it.id }
+    if (uniqueCandidates.isEmpty()) return false
+
+    val artistMatches = uniqueCandidates.count { song ->
+        song.artists.any { artist ->
+            VoiceSearchMatcher.artistMatchesQuery(artist.name, query)
+        }
+    }
+
+    return artistMatches.toDouble() / uniqueCandidates.size >= ARTIST_QUERY_MIN_RATIO
 }
