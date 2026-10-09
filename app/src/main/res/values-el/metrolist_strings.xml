@@ -301,4 +301,9 @@
     <string name="monthly_most_playlist_name">Τα πιο δημοφιλή του μήνα</string>
     <string name="enable">Ενεργοποίηση</string>
     <string name="and">και</string>
+    <string name="mixes">Μίξεις</string>
+    <string name="player_background_solid">Συμπαγές</string>
+    <string name="restart">Επανεκκίνηση</string>
+    <string name="restart_required">Απαιτείται επανεκκίνηση!</string>
+    <string name="hide_status_bar_fullscreen">Απόκριψη μπάρας κατάστασης σε πλήρη οθόνη</string>
 </resources>

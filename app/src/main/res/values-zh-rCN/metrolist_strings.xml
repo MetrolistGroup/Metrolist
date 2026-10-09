@@ -144,7 +144,7 @@
     <string name="updater">更新器</string>
     <string name="check_for_updates">自动检查更新</string>
     <string name="update_notifications">启用更新通知</string>
-    <string name="update_available_title">有可用更新</string>
+    <string name="update_available_title">有新更新可用</string>
     <string name="update_channel_desc">关于新应用版本的通知</string>
     <string name="audio_offload_description">开启省电播放模式。关闭后可能会增加耗电量，如果您遇到音频播放或后处理相关的问题，关闭它可能会有所帮助</string>
     <string name="update_channel_name">应用更新</string>
@@ -172,7 +172,7 @@
     <string name="lyrics_glow_effect_desc">为当前歌词行添加发光动画和弹跳效果</string>
     <string name="enable_better_lyrics">启用 Better Lyrics 提供歌词</string>
     <string name="enable_better_lyrics_desc">支持任意歌曲的逐音节同步歌词，非常适合卡拉OK</string>
-    <string name="auto_scroll">对齐歌词</string>
+    <string name="auto_scroll">重新同步</string>
     <string name="shuffle_playlist_first">先对播放列表或专辑进行随机播放</string>
     <string name="shuffle_playlist_first_desc">随机播放时，先播放当前播放列表或专辑中的所有歌曲，然后再播放相似内容的歌曲</string>
     <string name="show_wrapped_card">显示年度总结卡片</string>
@@ -512,7 +512,7 @@
     <string name="enable_lrclib_desc">社区驱动的同步歌词数据库</string>
     <string name="enable_kugou_desc">从中国热门音乐平台酷狗获取歌词</string>
     <string name="youtube_music_lyrics_note">注意：当没有其他可用来源时，YouTube Music 的歌词将自动显示，这些歌词通常不同步</string>
-    <string name="enable_lyricsplus">启用 LyricsPlus 提供歌词</string>
+    <string name="enable_lyricsplus">启用 LyricsPlus</string>
     <string name="enable_lyricsplus_desc">多源同步歌词支持</string>
     <string name="lyrics_provider_selection">提供商选择</string>
     <string name="lyrics_provider_selection_desc">选择要启用的歌词提供商</string>
@@ -834,8 +834,8 @@
     <string name="enable_dynamic_icon">动态图标颜色</string>
     <string name="enable_dynamic_icon_desc">为应用图标使用动态主题颜色。禁用后，图标将使用纯色。</string>
     <string name="kmp_upgrade_title">Metrolist KMP %s 现已推出</string>
-    <string name="kmp_upgrade_warning">Metrolist KMP 目前处于抢先体验阶段。功能可能存在缺陷、不完整或变更，恕不另行通知。</string>
-    <string name="kmp_upgrade_action">升级到 KMP</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP 仍在开发中。您可能会遇到错误或功能不完善的情况。</string>
+    <string name="kmp_upgrade_action">试用 KMP</string>
     <string name="kmp_upgrade_later">暂不升级</string>
     <string name="android_auto_search_options">搜索选项</string>
     <string name="android_auto_search_local_songs_limit">歌曲搜索限制</string>
@@ -855,4 +855,16 @@
     <string name="error_no_internet_connection">没有互联网连接</string>
     <string name="error_offline_playback">您已离线。请连接到互联网，或播放已下载的离线曲目。</string>
     <string name="error_explicit_login_recommended">登录账号后，播放露骨内容的效果会更好。</string>
+    <string name="enable_zemer">启用 Zemer</string>
+    <string name="enable_zemer_desc">犹太音乐歌词</string>
+    <string name="force_bottom_navbar">强制显示底部导航栏</string>
+    <string name="playlist_created_locally">YouTube 同步失败。播放列表已在本地创建。</string>
+    <string name="update_available_message">Metrolist %s 已准备好下载。</string>
+    <string name="update_action">更新</string>
+    <string name="ai_provider_inception_help">访问 https://platform.inceptionlabs.ai 获取 API 密钥</string>
+    <string name="discord_integration">Discord 集成</string>
+    <string name="enable_discord_rpc">启用 Rich Presence</string>
+    <string name="player_pause">暂停</string>
+    <string name="top_result">最佳结果</string>
+    <string name="other">其他</string>
 </resources>
