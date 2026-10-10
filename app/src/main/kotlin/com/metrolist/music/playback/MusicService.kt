@@ -38,7 +38,6 @@ import androidx.core.app.NotificationCompat
 import androidx.datastore.preferences.core.Preferences
 import androidx.core.app.ServiceCompat
 import androidx.core.content.getSystemService
-import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Format
@@ -133,7 +132,6 @@ import com.metrolist.music.discord.DiscordActivity
 import com.metrolist.music.discord.DiscordDefaults
 import com.metrolist.music.discord.DiscordRpcManager
 import com.metrolist.music.discord.DiscordActivityBuilder
-import com.metrolist.music.discord.DiscordTemplateRenderer
 import com.metrolist.music.discord.PresenceStatus
 import com.metrolist.music.constants.EnableLastFMScrobblingKey
 import com.metrolist.music.constants.EnableSongCacheKey
@@ -170,7 +168,6 @@ import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.Event
 import com.metrolist.music.db.entities.FormatEntity
 import com.metrolist.music.db.entities.LyricsEntity
-import com.metrolist.music.db.entities.PlaylistEntity
 import com.metrolist.music.db.entities.RelatedSongMap
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.di.DownloadCache
@@ -245,7 +242,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.plus
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -717,6 +713,7 @@ class MusicService :
                 ).setBitmapLoader(CoilBitmapLoader(this, scope))
                 .build()
         player.repeatMode = startupPrefs!![RepeatModeKey] ?: REPEAT_MODE_OFF
+        updatePauseAtEndOfMediaItem()
 
         if (startupPrefs!![RememberShuffleAndRepeatKey] ?: true) {
             player.shuffleModeEnabled = startupPrefs!![ShuffleModeKey] ?: false
@@ -994,6 +991,7 @@ class MusicService :
                 newPlayer.playbackParameters = playbackParameters
                 newPlayer.volume = volume
                 newPlayer.playWhenReady = playWhenReady
+                newPlayer.pauseAtEndOfMediaItems = shouldPauseAtEndOfMediaItem(cachedAutoplay, repeatMode)
                 newPlayer.prepare()
 
                 player = newPlayer
@@ -1164,7 +1162,16 @@ class MusicService :
             dataStore.data.map { it[PersistentQueueKey] ?: true }.distinctUntilChanged().collect { cachedPersistentQueue = it }
         }
         scope.launch {
-            dataStore.data.map { it[AutoplayKey] ?: true }.distinctUntilChanged().collect { cachedAutoplay = it }
+            dataStore.data.map { it[AutoplayKey] ?: true }.distinctUntilChanged().collect {
+                cachedAutoplay = it
+                updatePauseAtEndOfMediaItem()
+                if (shouldPauseAtEndOfMediaItem(cachedAutoplay, player.repeatMode)) {
+                    crossfadeMessage?.cancel()
+                    crossfadeMessage = null
+                } else {
+                    scheduleCrossfade()
+                }
+            }
         }
         scope.launch {
             dataStore.data.map { it[DisableLoadMoreWhenRepeatAllKey] ?: false }.distinctUntilChanged().collect { cachedDisableLoadMoreWhenRepeatAll = it }
@@ -1347,9 +1354,13 @@ class MusicService :
         if (prefs != null) {
             val offload = prefs[AudioOffload] ?: false
             val crossfade = prefs[CrossfadeEnabledKey] ?: false
+            val autoplay = prefs[AutoplayKey] ?: true
+            val repeatMode = prefs[RepeatModeKey] ?: REPEAT_MODE_OFF
             player.setOffloadEnabled(if (crossfade) false else offload)
             player.skipSilenceEnabled = prefs[SkipSilenceKey] ?: false
+            player.pauseAtEndOfMediaItems = shouldPauseAtEndOfMediaItem(autoplay, repeatMode)
         } else {
+            val currentRepeatMode = if (::player.isInitialized) player.repeatMode else REPEAT_MODE_OFF
             player.apply {
                 runBlocking {
                     val offload = dataStore.get(AudioOffload, false)
@@ -1357,6 +1368,7 @@ class MusicService :
                     setOffloadEnabled(if (crossfade) false else offload)
                     skipSilenceEnabled = dataStore.get(SkipSilenceKey, false)
                 }
+                pauseAtEndOfMediaItems = shouldPauseAtEndOfMediaItem(cachedAutoplay, currentRepeatMode)
             }
         }
         player.addAnalyticsListener(PlaybackStatsListener(false, this@MusicService))
@@ -2830,6 +2842,13 @@ class MusicService :
     }
 
     override fun onRepeatModeChanged(repeatMode: Int) {
+        updatePauseAtEndOfMediaItem(repeatMode = repeatMode)
+        if (shouldPauseAtEndOfMediaItem(cachedAutoplay, repeatMode)) {
+            crossfadeMessage?.cancel()
+            crossfadeMessage = null
+        } else {
+            scheduleCrossfade()
+        }
         updateNotification()
         scope.launch {
             safeDataStoreEdit { settings ->
@@ -4814,6 +4833,7 @@ class MusicService :
         
         val mediaCrossfadeDuration = crossfadeDuration.toLong()
 
+        if (!shouldAllowCrossfade(cachedAutoplay, player.repeatMode)) return
         if (!crossfadeEnabled || crossfadeDuration <= 0f || player.duration == C.TIME_UNSET || player.duration <= mediaCrossfadeDuration) return
         if (crossfadeGapless && isNextItemGapless()) return
         if (!player.hasNextMediaItem() && player.repeatMode != REPEAT_MODE_ONE) return
@@ -4826,7 +4846,7 @@ class MusicService :
 
         crossfadeMessage = player.createMessage { _, _ ->
             val timer = sleepTimer
-            if (player.isPlaying && player.currentMediaItem?.mediaId == targetMediaId && (timer == null || !timer.pauseWhenSongEnd)) {
+            if (player.isPlaying && player.currentMediaItem?.mediaId == targetMediaId && (timer == null || !timer.pauseWhenSongEnd) && shouldAllowCrossfade(cachedAutoplay, player.repeatMode)) {
                 startCrossfade()
             }
         }.apply {
@@ -5021,6 +5041,25 @@ class MusicService :
         playerEqualizerProcessors.remove(player)?.let(equalizerService::removeAudioProcessor)
         player.release()
     }
+
+    private fun updatePauseAtEndOfMediaItem(
+        autoplay: Boolean = cachedAutoplay,
+        repeatMode: Int = if (::player.isInitialized) player.repeatMode else Player.REPEAT_MODE_OFF,
+    ) {
+        if (::player.isInitialized) {
+            player.pauseAtEndOfMediaItems = shouldPauseAtEndOfMediaItem(autoplay, repeatMode)
+        }
+    }
+
+    private fun shouldPauseAtEndOfMediaItem(
+        autoplay: Boolean,
+        @Player.RepeatMode repeatMode: Int,
+    ): Boolean = !autoplay && repeatMode == Player.REPEAT_MODE_OFF
+
+    private fun shouldAllowCrossfade(
+        autoplay: Boolean,
+        @Player.RepeatMode repeatMode: Int,
+    ): Boolean = repeatMode == Player.REPEAT_MODE_ONE || !shouldPauseAtEndOfMediaItem(autoplay, repeatMode)
 
     companion object {
         const val ACTION_ALARM_TRIGGER = "com.metrolist.music.action.ALARM_TRIGGER"
