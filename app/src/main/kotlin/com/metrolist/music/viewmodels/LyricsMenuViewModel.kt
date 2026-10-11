@@ -85,10 +85,12 @@ constructor(
     ) {
         // Fetch first, write only on success: deleting upfront would destroy good lyrics
         // when the fetch fails or finds nothing (failures surface as NOT_FOUND).
+        // Bypass the single-result cache: refetch means force-refresh from the
+        // network. Write-through stays so playback and prefetch benefit.
         viewModelScope.launch(Dispatchers.IO) {
             val fetched =
                 try {
-                    lyricsHelper.getLyrics(mediaMetadata)
+                    lyricsHelper.getLyrics(mediaMetadata, bypassCache = true)
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     return@launch

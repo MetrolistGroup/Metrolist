@@ -42,15 +42,24 @@ constructor(
                 resolveLyricsProviders(preferences)
             }.distinctUntilChanged()
 
-    private val cache = LruCache<String, List<LyricsResult>>(MAX_CACHE_SIZE)
+    // Split caches: single playback/refetch results and multi-result searches share
+    // neither key nor shape. One shared map let a refetch poison search results
+    // (single row served as the whole list) and vice versa (arrival-ordered search
+    // rows served as the ranked pick; repeat refetches never hit the network).
+    private val singleCache = LruCache<String, LyricsResult>(MAX_CACHE_SIZE)
+    private val searchCache = LruCache<String, List<LyricsResult>>(MAX_CACHE_SIZE)
     private var currentLyricsJob: Job? = null
 
-    suspend fun getLyrics(mediaMetadata: MediaMetadata): LyricsWithProvider {
+    suspend fun getLyrics(
+        mediaMetadata: MediaMetadata,
+        bypassCache: Boolean = false,
+    ): LyricsWithProvider {
         currentLyricsJob?.cancel()
 
-        val cached = cache.get(mediaMetadata.id)?.firstOrNull()
-        if (cached != null) {
-            return LyricsWithProvider(cached.lyrics, cached.providerName)
+        if (!bypassCache) {
+            singleCache.get(mediaMetadata.id)?.let { cached ->
+                return LyricsWithProvider(cached.lyrics, cached.providerName)
+            }
         }
 
         val orderedProviders = context.dataStore.data
@@ -97,7 +106,9 @@ constructor(
                 if (providerResult != null && providerResult.isSuccess) {
                     Timber.tag("LyricsHelper").i("Got lyrics from ${provider.name}")
                     val filtered = LyricsUtils.filterLyricsCreditLines(providerResult.getOrNull()!!)
-                    cache.put(mediaMetadata.id, listOf(LyricsResult(provider.name, filtered)))
+                    if (filtered.isNotBlank()) {
+                        singleCache.put(mediaMetadata.id, LyricsResult(provider.name, filtered))
+                    }
                     return@withTimeoutOrNull LyricsWithProvider(filtered, provider.name)
                 } else {
                     val errorMsg = providerResult?.exceptionOrNull()?.message ?: "timeout or exception"
@@ -123,7 +134,7 @@ constructor(
         currentLyricsJob?.cancel()
 
         val cacheKey = mediaId
-        cache.get(cacheKey)?.let { results ->
+        searchCache.get(cacheKey)?.let { results ->
             results.forEach { callback(it) }
             return
         }
@@ -190,7 +201,7 @@ constructor(
                 }.join()
             }
 
-            cache.put(cacheKey, allResult)
+            searchCache.put(cacheKey, allResult)
         }
 
         currentLyricsJob?.join()
