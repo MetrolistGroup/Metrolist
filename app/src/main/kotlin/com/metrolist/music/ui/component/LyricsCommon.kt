@@ -68,6 +68,8 @@ internal const val LYRICS_TRANS_FONT_SIZE_SP = 16f
 // Main lyric text size/spacing. Passed to LyricsLine and the height table alike.
 internal const val LYRICS_TEXT_SIZE_SP = 36f
 internal const val LYRICS_LINE_SPACING = 1.3f
+// Eager height measurement processes this many items per frame before yielding.
+internal const val HEIGHT_PRECOMPUTE_CHUNK_SIZE = 25
 
 /** Which text is drawn big. Mirrors the selection logic in LyricsLine. */
 internal fun effectiveLyricMainText(
@@ -127,73 +129,135 @@ internal fun lyricSubTextStyle(
 )
 
 /**
- * Eagerly measures every item's height with the real text engine (same styles, same width
+ * Eagerly measures lyric item heights with the real text engine (same styles, same width
  * as LyricsLine) so scroll positions are exact from the first frame instead of starting
- * from fallback estimates. Cheap: a few hundred short-text layouts, once per song/layout.
- * Later arrivals (translations, romanizations) still patch heights via onSizeChanged.
+ * from fallback estimates. Later arrivals (translations, romanizations) still patch
+ * heights via onSizeChanged.
+ *
+ * Construct once, then call [measure] per item. Callers chunk those calls with yields
+ * in between so long songs can't stall a frame; entries land progressively.
  */
-internal fun precomputeLyricHeights(
-    items: List<LyricsListItem>,
-    measurer: TextMeasurer,
+internal class LyricItemHeightMeasurer(
+    private val measurer: TextMeasurer,
     density: Density,
     contentWidthPx: Int,
     mainFontFamily: FontFamily?,
     textSizeSp: Float,
     lineSpacing: Float,
-    romanizeAsMain: Boolean,
-    showRomanizedSub: Boolean,
-    indicatorHeightPx: Float,
-    itemGapPx: Float,
-    visibleBgLineIndices: Set<Int> = emptySet(),
-    visibleIndicatorListIndex: Int? = null,
-): Map<Int, Int> {
-    if (items.isEmpty() || contentWidthPx <= 0) return emptyMap()
-    val constraints = Constraints(maxWidth = contentWidthPx)
-    val mainStyle = lyricMainTextStyle(false, textSizeSp, lineSpacing, mainFontFamily)
-    val bgStyle = lyricMainTextStyle(true, textSizeSp, lineSpacing, mainFontFamily)
-    val romanizedStyle = lyricSubTextStyle(LYRICS_SUB_FONT_SIZE_SP, mainFontFamily)
-    val translationStyle = lyricSubTextStyle(LYRICS_TRANS_FONT_SIZE_SP, mainFontFamily)
-    val result = HashMap<Int, Int>(items.size)
-    with(density) {
-        val topPad = LYRICS_LINE_TOP_PADDING.roundToPx()
-        val bottomPad = LYRICS_LINE_BOTTOM_PADDING.roundToPx()
-        val bgTopPad = LYRICS_BG_TOP_PADDING.roundToPx()
-        val bgBottomPad = LYRICS_BG_BOTTOM_PADDING.roundToPx()
-        val subTopPad = LYRICS_SUB_TOP_PADDING.roundToPx()
-        val transTopPad = LYRICS_TRANS_TOP_PADDING.roundToPx()
-        items.forEachIndexed { i, item ->
-            when (item) {
-                // Seed the collapsed height unless visible right now; the live report
-                // grows it when shown. Hidden is the common case and stays exact.
-                is LyricsListItem.Indicator ->
-                    result[i] = if (i == visibleIndicatorListIndex) indicatorHeightPx.roundToInt() else 0
-                is LyricsListItem.Line -> {
-                    val entry = item.entry
-                    if (entry.isBackground && item.index !in visibleBgLineIndices) {
-                        result[i] = bgTopPad + bgBottomPad
-                    } else {
-                        val romanized = entry.romanizedTextFlow.value
-                        val main = effectiveLyricMainText(entry, romanized, romanizeAsMain) ?: ""
-                        var h = measurer.measure(text = main, style = if (entry.isBackground) bgStyle else mainStyle, constraints = constraints).size.height
-                        h += if (entry.isBackground) bgTopPad else topPad
-                        h += if (entry.isBackground) bgBottomPad else bottomPad
-                        if (showRomanizedSub) {
-                            val sub = effectiveLyricSubText(entry, romanized, romanizeAsMain)
-                            if (sub != null) {
-                                h += measurer.measure(text = sub, style = romanizedStyle, constraints = constraints).size.height + subTopPad
-                            }
-                        }
-                        entry.translatedTextFlow.value?.let { trans ->
-                            h += measurer.measure(text = trans, style = translationStyle, constraints = constraints).size.height + transTopPad
-                        }
-                        result[i] = h
+    private val romanizeAsMain: Boolean,
+    private val showRomanizedSub: Boolean,
+    private val indicatorHeightPx: Float,
+) {
+    private val constraints = Constraints(maxWidth = contentWidthPx.coerceAtLeast(0))
+    private val mainStyle = lyricMainTextStyle(false, textSizeSp, lineSpacing, mainFontFamily)
+    private val bgStyle = lyricMainTextStyle(true, textSizeSp, lineSpacing, mainFontFamily)
+    private val romanizedStyle = lyricSubTextStyle(LYRICS_SUB_FONT_SIZE_SP, mainFontFamily)
+    private val translationStyle = lyricSubTextStyle(LYRICS_TRANS_FONT_SIZE_SP, mainFontFamily)
+    private val topPad: Int
+    private val bottomPad: Int
+    private val bgTopPad: Int
+    private val bgBottomPad: Int
+    private val subTopPad: Int
+    private val transTopPad: Int
+
+    init {
+        with(density) {
+            topPad = LYRICS_LINE_TOP_PADDING.roundToPx()
+            bottomPad = LYRICS_LINE_BOTTOM_PADDING.roundToPx()
+            bgTopPad = LYRICS_BG_TOP_PADDING.roundToPx()
+            bgBottomPad = LYRICS_BG_BOTTOM_PADDING.roundToPx()
+            subTopPad = LYRICS_SUB_TOP_PADDING.roundToPx()
+            transTopPad = LYRICS_TRANS_TOP_PADDING.roundToPx()
+        }
+    }
+
+    fun measure(
+        item: LyricsListItem,
+        index: Int,
+        visibleBgLineIndices: Set<Int> = emptySet(),
+        visibleIndicatorListIndex: Int? = null,
+    ): Int = when (item) {
+        // Seed the collapsed height unless visible right now; the live report
+        // grows it when shown. Hidden is the common case and stays exact.
+        is LyricsListItem.Indicator ->
+            if (index == visibleIndicatorListIndex) indicatorHeightPx.roundToInt() else 0
+        is LyricsListItem.Line -> {
+            val entry = item.entry
+            if (entry.isBackground && item.index !in visibleBgLineIndices) {
+                bgTopPad + bgBottomPad
+            } else {
+                val romanized = entry.romanizedTextFlow.value
+                val main = effectiveLyricMainText(entry, romanized, romanizeAsMain) ?: ""
+                var h = measurer.measure(
+                    text = main,
+                    style = if (entry.isBackground) bgStyle else mainStyle,
+                    constraints = constraints
+                ).size.height
+                h += if (entry.isBackground) bgTopPad else topPad
+                h += if (entry.isBackground) bgBottomPad else bottomPad
+                if (showRomanizedSub) {
+                    val sub = effectiveLyricSubText(entry, romanized, romanizeAsMain)
+                    if (sub != null) {
+                        h += measurer.measure(text = sub, style = romanizedStyle, constraints = constraints).size.height + subTopPad
                     }
                 }
+                entry.translatedTextFlow.value?.let { trans ->
+                    h += measurer.measure(text = trans, style = translationStyle, constraints = constraints).size.height + transTopPad
+                }
+                h
             }
         }
     }
-    return result
 }
+
+/** Fraction of a lyrics gap elapsed at a lyric-domain position. Pure for testing. */
+internal fun gapProgress(positionMs: Long, gapStartMs: Long, gapEndMs: Long): Float {
+    if (gapEndMs <= gapStartMs) return 0f
+    return ((positionMs - gapStartMs).toFloat() / (gapEndMs - gapStartMs).toFloat()).coerceIn(0f, 1f)
+}
+
+/**
+ * Content fingerprint pinning a height table to the exact merged list it was measured
+ * from. The table key carries the fingerprint (not just the lyrics hash) so the
+ * precompute effect can never measure a stale list under a fresh key: key and list
+ * always come from the same composition snapshot. Covers everything that affects
+ * measured height (item kind/order, text, background flag). Agent only affects
+ * alignment; translations/romanizations arrive via flows after measurement and are
+ * patched live via onSizeChanged. Pure for testing.
+ */
+internal fun contentFingerprintForHeightTable(items: List<LyricsListItem>): Int {
+    var h = 1
+    for (item in items) {
+        h = 31 * h + when (item) {
+            is LyricsListItem.Indicator -> 7
+            is LyricsListItem.Line -> {
+                var lh = 13
+                lh = 31 * lh + item.index
+                lh = 31 * lh + item.entry.text.hashCode()
+                lh = 31 * lh + if (item.entry.isBackground) 1 else 0
+                lh
+            }
+        }
+    }
+    return h
+}
+
+/** Cache key for the eager height table. Every layout input must participate, including
+ * the system font scale (lyric text is measured in sp). Pure for testing. */
+internal fun buildHeightTableKey(
+    lyricsHash: Int,
+    contentFingerprint: Int,
+    maxWidthPx: Int,
+    lyricsTextPosition: LyricsPosition,
+    showIntervalIndicator: Boolean,
+    romanizeAsMain: Boolean,
+    enabledLanguagesHash: Int,
+    romanizeSong: Boolean,
+    translateLanguage: String,
+    translateMode: String,
+    fontScale: Float,
+): String = "$lyricsHash|$contentFingerprint|$maxWidthPx|$lyricsTextPosition|$showIntervalIndicator|" +
+    "$romanizeAsMain|$enabledLanguagesHash|$romanizeSong|$translateLanguage|$translateMode|$fontScale"
 
 /** Horizontal content width after the side paddings LyricsLine applies. */
 internal fun lyricContentWidthPx(
@@ -233,11 +297,10 @@ internal fun IntervalIndicator(
     var currentProgress by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(visible, gapStartMs, gapEndMs) {
-        if (visible && gapEndMs > gapStartMs) {
+        if (visible) {
             while (isActive) {
                 withFrameMillis {
-                    val pos = currentPositionProvider()
-                    currentProgress = ((pos - gapStartMs).toFloat() / (gapEndMs - gapStartMs).toFloat()).coerceIn(0f, 1f)
+                    currentProgress = gapProgress(currentPositionProvider(), gapStartMs, gapEndMs)
                 }
             }
         } else {

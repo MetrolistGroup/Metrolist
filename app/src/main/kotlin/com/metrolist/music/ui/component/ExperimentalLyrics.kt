@@ -105,6 +105,7 @@ import com.metrolist.music.constants.ShowIntervalIndicatorKey
 import com.metrolist.music.constants.TranslateLanguageKey
 import com.metrolist.music.constants.TranslateModeKey
 import com.metrolist.music.db.entities.LyricsEntity.Companion.LYRICS_NOT_FOUND
+import com.metrolist.music.lyrics.LyricsEntry
 import com.metrolist.music.lyrics.LyricsTranslationHelper
 import com.metrolist.music.lyrics.LyricsUtils.findActiveLineIndices
 import com.metrolist.music.ui.component.shimmer.ShimmerHost
@@ -122,6 +123,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -210,6 +212,8 @@ fun ExperimentalLyrics(
         }
     }
     val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
+    // Per-song manual sync correction, in ms. Added to raw playback time to get lyric time.
+    val lyricsOffsetMs = (currentSong?.song?.lyricsOffset ?: 0)
     val lyrics = remember(lyricsEntity) { lyricsEntity?.lyrics?.trim() }
 
     val playerBackground by rememberEnumPreference(
@@ -335,6 +339,13 @@ fun ExperimentalLyrics(
         !isSelectionModeActive
 
     BackHandler(enabled = isSelectionModeActive) {
+        isSelectionModeActive = false
+        selectedIndices.clear()
+    }
+
+    // Selection belongs to one song: drop it when playback moves on, otherwise the
+    // old indices would highlight/share the new song's lines.
+    LaunchedEffect(currentSong?.id) {
         isSelectionModeActive = false
         selectedIndices.clear()
     }
@@ -556,13 +567,30 @@ fun ExperimentalLyrics(
         // very first frame. Later arrivals (translations) still patch entries live.
         val textMeasurer = rememberTextMeasurer()
         val mainFontFamily = MaterialTheme.typography.bodyLarge.fontFamily
+        // Pinned to the exact list instance: key and measured list always come from the
+        // same snapshot, so a song transition can never measure the stale list under the
+        // fresh key (which would poison the cached table permanently).
+        val contentFingerprint = remember(mergedLyricsList) {
+            contentFingerprintForHeightTable(mergedLyricsList)
+        }
         val tableKey = remember(
-            lyrics?.hashCode() ?: 0, constraints.maxWidth, lyricsTextPosition, showIntervalIndicator,
-            romanizeAsMain, enabledLanguages, romanizeSong, translateLanguage, translateMode,
+            lyrics?.hashCode() ?: 0, contentFingerprint, constraints.maxWidth, lyricsTextPosition,
+            showIntervalIndicator, romanizeAsMain, enabledLanguages, romanizeSong,
+            translateLanguage, translateMode, density.fontScale,
         ) {
-            "${lyrics?.hashCode() ?: 0}|${constraints.maxWidth}|$lyricsTextPosition|" +
-                "$showIntervalIndicator|$romanizeAsMain|${enabledLanguages.hashCode()}|" +
-                "$romanizeSong|$translateLanguage|$translateMode"
+            buildHeightTableKey(
+                lyricsHash = lyrics?.hashCode() ?: 0,
+                contentFingerprint = contentFingerprint,
+                maxWidthPx = constraints.maxWidth,
+                lyricsTextPosition = lyricsTextPosition,
+                showIntervalIndicator = showIntervalIndicator,
+                romanizeAsMain = romanizeAsMain,
+                enabledLanguagesHash = enabledLanguages.hashCode(),
+                romanizeSong = romanizeSong,
+                translateLanguage = translateLanguage,
+                translateMode = translateMode,
+                fontScale = density.fontScale,
+            )
         }
         val itemHeights = remember(tableKey) {
             mutableStateMapOf<Int, Int>().also { map ->
@@ -585,8 +613,11 @@ fun ExperimentalLyrics(
         }
         LaunchedEffect(tableKey, mergedLyricsList) {
             if (mergedLyricsList.isNotEmpty() && lyricsViewModel.heightTables[tableKey] == null) {
-                val table = precomputeLyricHeights(
-                    items = mergedLyricsList,
+                // Bounded work: measure in small chunks with yields so long songs can't
+                // stall a frame. Entries land progressively and the scroll offset follows
+                // them smoothly via the same-index follow. Restarting (key change)
+                // discards the partial table and starts over; live reports win anyway.
+                val heightMeasurer = LyricItemHeightMeasurer(
                     measurer = textMeasurer,
                     density = density,
                     contentWidthPx = lyricContentWidthPx(constraints.maxWidth, density, lyricsTextPosition),
@@ -596,20 +627,32 @@ fun ExperimentalLyrics(
                     romanizeAsMain = romanizeAsMain,
                     showRomanizedSub = romanizeSong && enabledLanguages.isNotEmpty(),
                     indicatorHeightPx = indicatorHeightPx,
-                    itemGapPx = itemGapPx,
-                    visibleBgLineIndices = visibleBackgroundLineIndices,
-                    visibleIndicatorListIndex = activeIndicatorListIndex,
                 )
+                val table = HashMap<Int, Int>(mergedLyricsList.size)
+                mergedLyricsList.forEachIndexed { i, item ->
+                    val height = heightMeasurer.measure(
+                        item = item,
+                        index = i,
+                        visibleBgLineIndices = visibleBackgroundLineIndices,
+                        visibleIndicatorListIndex = activeIndicatorListIndex,
+                    )
+                    table[i] = height
+                    // Live-measured entries (if any) win; the table only fills gaps.
+                    itemHeights.putIfAbsent(i, height)
+                    if (i % HEIGHT_PRECOMPUTE_CHUNK_SIZE == HEIGHT_PRECOMPUTE_CHUNK_SIZE - 1) {
+                        yield()
+                    }
+                }
                 if (lyricsViewModel.heightTables.size > 3) lyricsViewModel.heightTables.clear()
-                lyricsViewModel.heightTables[tableKey] = table.toMutableMap()
-                // Live-measured entries (if any) win; the table only fills gaps.
-                table.forEach { (index, height) -> itemHeights.putIfAbsent(index, height) }
+                lyricsViewModel.heightTables[tableKey] = table
             }
         }
 
         // Each item is positioned from the start of the song. The active line only changes
         // the viewport's offset, so playback never changes the layout of individual lines.
-        val positions by remember(mergedLyricsList) {
+        // tableKey participates: the heights map instance is recreated per key, and this
+        // must recompute against the new instance instead of reading the discarded one.
+        val positions by remember(mergedLyricsList, tableKey) {
             derivedStateOf {
                 val n = mergedLyricsList.size
                 val arr = FloatArray(n)
@@ -660,7 +703,11 @@ fun ExperimentalLyrics(
         val dragTargetOffsetRef = remember { object { var value: Float = 0f } }
         val latestAutoScrollEnabled = rememberUpdatedState(isAutoScrollEnabled)
 
-        val onItemHeightChanged = rememberUpdatedState { index: Int, newHeight: Int ->
+        // Reports carry the generation they were composed under; a late report from an
+        // unmounting song must not land in the new song's map/table (same indices,
+        // different items).
+        val onItemHeightChanged = rememberUpdatedState { index: Int, newHeight: Int, generation: String ->
+            if (generation != tableKey) return@rememberUpdatedState
             val prevHeight = itemHeights[index]
             if (prevHeight == newHeight) return@rememberUpdatedState
 
@@ -941,12 +988,12 @@ fun ExperimentalLyrics(
                                     IntervalIndicator(
                                         gapStartMs = listItem.gapStartMs,
                                         gapEndMs = listItem.gapEndMs - 650L,
-                                        currentPositionProvider = { currentPositionRef.position },
+                                        currentPositionProvider = { currentPositionRef.position + lyricsOffsetMs },
                                         visible = visible,
                                         color = expressiveAccent,
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .onSizeChanged { onItemHeightChanged.value(listIndex, it.height) }
+                                            .onSizeChanged { onItemHeightChanged.value(listIndex, it.height, tableKey) }
                                             .padding(horizontal = 24.dp)
                                             .wrapContentWidth(Alignment.CenterHorizontally)
                                     )
@@ -969,7 +1016,7 @@ fun ExperimentalLyrics(
                                         respectAgentPositioning = respectAgentPositioning, isAutoScrollEnabled = isAutoScrollEnabled,
                                         displayedCurrentLineIndex = if (isAutoScrollEnabled) anchoredLineIndex else index, romanizeAsMain = romanizeAsMain,
                                         enabledLanguages = enabledLanguages, romanizeLyrics = currentSong?.romanizeLyrics == true,
-                                        onSizeChanged = { onItemHeightChanged.value(listIndex, it) },
+                                        onSizeChanged = { onItemHeightChanged.value(listIndex, it, tableKey) },
                                         onClick = {
                                             if (isSelectionModeActive) {
                                                 if (selectedIndices.contains(index)) {
