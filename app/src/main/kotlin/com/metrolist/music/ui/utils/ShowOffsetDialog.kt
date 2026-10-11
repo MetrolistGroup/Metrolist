@@ -60,7 +60,7 @@ fun ShowOffsetDialog(songProvider: () -> SongEntity?) {
         // value must not land on the new song.
         val songId = songProvider()?.id
         songProvider()?.let { song ->
-            if (song.id == songId) {
+            if (song.id == songId && song.lyricsOffset != lyricsOffset) {
                 database.query {
                     upsert(
                         song.copy(

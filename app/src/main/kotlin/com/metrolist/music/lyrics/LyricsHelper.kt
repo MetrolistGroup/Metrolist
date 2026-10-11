@@ -97,6 +97,7 @@ constructor(
                 if (providerResult != null && providerResult.isSuccess) {
                     Timber.tag("LyricsHelper").i("Got lyrics from ${provider.name}")
                     val filtered = LyricsUtils.filterLyricsCreditLines(providerResult.getOrNull()!!)
+                    cache.put(mediaMetadata.id, listOf(LyricsResult(provider.name, filtered)))
                     return@withTimeoutOrNull LyricsWithProvider(filtered, provider.name)
                 } else {
                     val errorMsg = providerResult?.exceptionOrNull()?.message ?: "timeout or exception"
