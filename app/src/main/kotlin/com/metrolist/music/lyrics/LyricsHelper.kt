@@ -15,9 +15,6 @@ import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.reportException
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -48,14 +45,12 @@ constructor(
     // rows served as the ranked pick; repeat refetches never hit the network).
     private val singleCache = LruCache<String, LyricsResult>(MAX_CACHE_SIZE)
     private val searchCache = LruCache<String, List<LyricsResult>>(MAX_CACHE_SIZE)
-    private var currentLyricsJob: Job? = null
-
+    // Playback fetches never touch search state: each path owns its own job so a
+    // song change cannot kill an open lyrics search (and vice versa).
     suspend fun getLyrics(
         mediaMetadata: MediaMetadata,
         bypassCache: Boolean = false,
     ): LyricsWithProvider {
-        currentLyricsJob?.cancel()
-
         if (!bypassCache) {
             singleCache.get(mediaMetadata.id)?.let { cached ->
                 return LyricsWithProvider(cached.lyrics, cached.providerName)
@@ -134,11 +129,9 @@ constructor(
         album: String? = null,
         callback: (LyricsResult) -> Unit,
     ) {
-        currentLyricsJob?.cancel()
-
-        // Key carries the full query, not just the song: the search dialog lets the
-        // user edit title/artists under the same id, and a replayed stale list is
-        // worse than a refetch. mediaId namespaces away cross-song collisions.
+        // Structured in the caller's scope: cancelling the search also cancels
+        // in-flight provider fetches, and no shared job lets playback traffic
+        // kill an open search.
         val cacheKey = "$mediaId|$songTitle|$songArtists|$duration|$album"
         searchCache.get(cacheKey)?.let { results ->
             results.forEach { callback(it) }
@@ -154,7 +147,7 @@ constructor(
         if (!isNetworkAvailable) return
 
         val allResult = mutableListOf<LyricsResult>()
-        currentLyricsJob = CoroutineScope(SupervisorJob()).launch {
+        supervisorScope {
             val cleanedTitle = LyricsUtils.cleanTitleForSearch(songTitle)
             val allProviders = context.dataStore.data
                 .map { preferences -> resolveLyricsProviders(preferences) }
@@ -213,8 +206,6 @@ constructor(
                 searchCache.put(cacheKey, allResult)
             }
         }
-
-        currentLyricsJob?.join()
     }
 
     private fun resolveLyricsProviders(preferences: androidx.datastore.preferences.core.Preferences): List<LyricsProvider> {

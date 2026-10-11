@@ -179,7 +179,7 @@ fun LyricsMenu(
     if (showSearchDialog) {
         DefaultDialog(
             modifier = Modifier.verticalScroll(rememberScrollState()),
-            onDismiss = { showSearchDialog = false },
+            onDismiss = { viewModel.cancelSearch(); showSearchDialog = false },
             icon = {
                 Icon(
                     painter = painterResource(R.drawable.search),
@@ -268,7 +268,7 @@ fun LyricsMenu(
         }
 
         ListDialog(
-            onDismiss = { showSearchResultDialog = false },
+            onDismiss = { viewModel.cancelSearch(); showSearchResultDialog = false },
         ) {
             itemsIndexed(results) { index, result ->
                 Row(
