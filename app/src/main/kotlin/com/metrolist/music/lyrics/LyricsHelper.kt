@@ -133,7 +133,10 @@ constructor(
     ) {
         currentLyricsJob?.cancel()
 
-        val cacheKey = mediaId
+        // Key carries the full query, not just the song: the search dialog lets the
+        // user edit title/artists under the same id, and a replayed stale list is
+        // worse than a refetch. mediaId namespaces away cross-song collisions.
+        val cacheKey = "$mediaId|$songTitle|$songArtists|$duration|$album"
         searchCache.get(cacheKey)?.let { results ->
             results.forEach { callback(it) }
             return
