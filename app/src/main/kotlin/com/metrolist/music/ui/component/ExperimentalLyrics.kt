@@ -392,7 +392,11 @@ fun ExperimentalLyrics(
     // legitimately empty, e.g. mid-gap). Gates the very first snap so it goes
     // straight to the live spot instead of via the top.
     var loopWarmedUp by remember(lyrics) { mutableStateOf(false) }
-    LaunchedEffect(lyrics, lines, mergedLyricsList, backgroundToMainMap) {
+    // currentSong?.id participates: activeLineIndices/visibleBackgroundLineIndices reset
+    // on song change (remember(lines, songId)), so the writing loop must restart on the
+    // same signal. Otherwise lyrics data arriving before the song id leaves the loop
+    // writing detached state objects while the UI reads the reset (frozen-empty) ones.
+    LaunchedEffect(lyrics, lines, mergedLyricsList, backgroundToMainMap, currentSong?.id) {
         if (lyrics.isNullOrEmpty() || lines.isEmpty()) {
             activeLineIndices = emptySet()
             visibleBackgroundLineIndices = emptySet()
