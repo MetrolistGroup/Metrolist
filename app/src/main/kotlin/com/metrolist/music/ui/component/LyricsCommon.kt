@@ -254,11 +254,14 @@ internal fun buildHeightTableKey(
     romanizeAsMain: Boolean,
     enabledLanguagesHash: Int,
     romanizeSong: Boolean,
+    romanizeCyrillicByLine: Boolean,
     translateLanguage: String,
     translateMode: String,
     fontScale: Float,
+    density: Float,
 ): String = "$lyricsHash|$contentFingerprint|$maxWidthPx|$lyricsTextPosition|$showIntervalIndicator|" +
-    "$romanizeAsMain|$enabledLanguagesHash|$romanizeSong|$translateLanguage|$translateMode|$fontScale"
+    "$romanizeAsMain|$enabledLanguagesHash|$romanizeSong|$romanizeCyrillicByLine|" +
+    "$translateLanguage|$translateMode|$fontScale|$density"
 
 /** Horizontal content width after the side paddings LyricsLine applies. */
 internal fun lyricContentWidthPx(
@@ -301,7 +304,7 @@ internal fun IntervalIndicator(
     // latest one so gap progress follows offset edits made while visible.
     val latestPositionProvider by rememberUpdatedState(currentPositionProvider)
     LaunchedEffect(visible, gapStartMs, gapEndMs) {
-        if (visible) {
+        if (visible && gapEndMs > gapStartMs) {
             while (isActive) {
                 withFrameMillis {
                     currentProgress = gapProgress(latestPositionProvider(), gapStartMs, gapEndMs)

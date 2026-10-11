@@ -105,7 +105,6 @@ import com.metrolist.music.constants.ShowIntervalIndicatorKey
 import com.metrolist.music.constants.TranslateLanguageKey
 import com.metrolist.music.constants.TranslateModeKey
 import com.metrolist.music.db.entities.LyricsEntity.Companion.LYRICS_NOT_FOUND
-import com.metrolist.music.lyrics.LyricsEntry
 import com.metrolist.music.lyrics.LyricsTranslationHelper
 import com.metrolist.music.lyrics.LyricsUtils.findActiveLineIndices
 import com.metrolist.music.ui.component.shimmer.ShimmerHost
@@ -213,7 +212,7 @@ fun ExperimentalLyrics(
     }
     val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
     // Per-song manual sync correction, in ms. Added to raw playback time to get lyric time.
-    val lyricsOffsetMs = (currentSong?.song?.lyricsOffset ?: 0)
+    val lyricsOffsetMs = currentSong?.song?.lyricsOffset ?: 0
     val lyrics = remember(lyricsEntity) { lyricsEntity?.lyrics?.trim() }
 
     val playerBackground by rememberEnumPreference(
@@ -343,9 +342,10 @@ fun ExperimentalLyrics(
         selectedIndices.clear()
     }
 
-    // Selection belongs to one song: drop it when playback moves on, otherwise the
-    // old indices would highlight/share the new song's lines.
-    LaunchedEffect(currentSong?.id) {
+    // Selection belongs to one song's lyrics: drop it when playback moves on or the
+    // lyrics are replaced (refetch/edit under the same id), otherwise the old
+    // indices would highlight/share the new song's lines.
+    LaunchedEffect(currentSong?.id, lyrics) {
         isSelectionModeActive = false
         selectedIndices.clear()
     }
@@ -576,7 +576,8 @@ fun ExperimentalLyrics(
         val tableKey = remember(
             lyrics?.hashCode() ?: 0, contentFingerprint, constraints.maxWidth, lyricsTextPosition,
             showIntervalIndicator, romanizeAsMain, enabledLanguages, romanizeSong,
-            translateLanguage, translateMode, density.fontScale,
+            romanizeCyrillicByLine, translateLanguage, translateMode, density.fontScale,
+            density.density,
         ) {
             buildHeightTableKey(
                 lyricsHash = lyrics?.hashCode() ?: 0,
@@ -587,9 +588,11 @@ fun ExperimentalLyrics(
                 romanizeAsMain = romanizeAsMain,
                 enabledLanguagesHash = enabledLanguages.hashCode(),
                 romanizeSong = romanizeSong,
+                romanizeCyrillicByLine = romanizeCyrillicByLine,
                 translateLanguage = translateLanguage,
                 translateMode = translateMode,
                 fontScale = density.fontScale,
+                density = density.density,
             )
         }
         val itemHeights = remember(tableKey) {
@@ -612,7 +615,11 @@ fun ExperimentalLyrics(
             }
         }
         LaunchedEffect(tableKey, mergedLyricsList) {
-            if (mergedLyricsList.isNotEmpty() && lyricsViewModel.heightTables[tableKey] == null) {
+            // Zero-width viewports (first layout pass) measure nothing: wrapped text at
+            // width 0 would poison this key with huge heights. The key carries maxWidth,
+            // so the real width recomputes on its own.
+            val contentWidthPx = lyricContentWidthPx(constraints.maxWidth, density, lyricsTextPosition)
+            if (mergedLyricsList.isNotEmpty() && contentWidthPx > 0 && lyricsViewModel.heightTables[tableKey] == null) {
                 // Bounded work: measure in small chunks with yields so long songs can't
                 // stall a frame. Entries land progressively and the scroll offset follows
                 // them smoothly via the same-index follow. Restarting (key change)
@@ -620,7 +627,7 @@ fun ExperimentalLyrics(
                 val heightMeasurer = LyricItemHeightMeasurer(
                     measurer = textMeasurer,
                     density = density,
-                    contentWidthPx = lyricContentWidthPx(constraints.maxWidth, density, lyricsTextPosition),
+                    contentWidthPx = contentWidthPx,
                     mainFontFamily = mainFontFamily,
                     textSizeSp = LYRICS_TEXT_SIZE_SP,
                     lineSpacing = LYRICS_LINE_SPACING,

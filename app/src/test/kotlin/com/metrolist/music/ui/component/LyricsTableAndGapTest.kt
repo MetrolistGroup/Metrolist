@@ -24,6 +24,8 @@ class LyricsTableAndGapTest {
         fontScale: Float = 1f,
         maxWidthPx: Int = 1080,
         contentFingerprint: Int = 456,
+        romanizeCyrillicByLine: Boolean = false,
+        density: Float = 3f,
     ) = buildHeightTableKey(
         lyricsHash = 123,
         contentFingerprint = contentFingerprint,
@@ -33,9 +35,11 @@ class LyricsTableAndGapTest {
         romanizeAsMain = false,
         enabledLanguagesHash = 0,
         romanizeSong = false,
+        romanizeCyrillicByLine = romanizeCyrillicByLine,
         translateLanguage = "en",
         translateMode = "Literal",
         fontScale = fontScale,
+        density = density,
     )
 
     private fun sampleItems(): List<LyricsListItem> = listOf(
@@ -62,6 +66,16 @@ class LyricsTableAndGapTest {
     @Test
     fun `content change invalidates the key`() {
         assertNotEquals(key(contentFingerprint = 1), key(contentFingerprint = 2))
+    }
+
+    @Test
+    fun `romanize mode change invalidates the key`() {
+        assertNotEquals(key(romanizeCyrillicByLine = false), key(romanizeCyrillicByLine = true))
+    }
+
+    @Test
+    fun `density change invalidates the key`() {
+        assertNotEquals(key(density = 3f), key(density = 2f))
     }
 
     @Test
