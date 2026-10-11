@@ -201,7 +201,11 @@ constructor(
                 }.join()
             }
 
-            searchCache.put(cacheKey, allResult)
+            // Never cache empty searches: a retry (toggled providers, reordered
+            // list) must hit the network again instead of serving instant blank.
+            if (allResult.isNotEmpty()) {
+                searchCache.put(cacheKey, allResult)
+            }
         }
 
         currentLyricsJob?.join()
