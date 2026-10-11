@@ -1408,9 +1408,13 @@ object LyricsUtils {
         return lyrics.contains(TIME_REGEX) ||
                 lyrics.contains(PAXSENIX_AGENT_LINE_REGEX) ||
                 lyrics.contains(PAXSENIX_BG_LINE_REGEX) ||
-                // Same gate as parseLyrics' rich-sync branch: single-digit minutes
-                // (e.g. [1:23.45]) parse fine but match none of the above.
-                (lyrics.contains(RICH_SYNC_LINE_REGEX) &&
-                        lyrics.contains(RICH_SYNC_WORD_REGEX))
+                // Same gate as parseLyrics' rich-sync branch, evaluated per line just
+                // like the parser: single-digit minutes (e.g. [1:23.45]) parse fine
+                // but match none of the above. Blob-wide contains() would also match
+                // markers scattered across unrelated lines.
+                lyrics.lineSequence().any { line ->
+                    RICH_SYNC_LINE_REGEX.matches(line.trim()) &&
+                            RICH_SYNC_WORD_REGEX.containsMatchIn(line)
+                }
     }
 }

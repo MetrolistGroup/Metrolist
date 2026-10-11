@@ -49,4 +49,14 @@ class LyricsSyncDetectionTest {
         assertTrue(LyricsUtils.isLineSynced("[01:23.45] Just text"))
         assertEquals(83450L, LyricsUtils.parseLyrics("[01:23.45] Just text").first().time)
     }
+
+    @Test
+    fun `markers scattered across lines are not line-synced`() {
+        // No single line carries both a rich-sync timestamp and a word tag, so the
+        // parser takes the standard path and yields no timed entries; detection
+        // must agree instead of enabling auto-follow on plain lines.
+        val lyrics = "[1:00.00] hello\nworld <1:00.00>foo"
+        assertFalse(LyricsUtils.isLineSynced(lyrics))
+        assertTrue(LyricsUtils.parseLyrics(lyrics).none { it.time > 0 })
+    }
 }

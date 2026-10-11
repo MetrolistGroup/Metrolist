@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -296,11 +297,14 @@ internal fun IntervalIndicator(
 
     var currentProgress by remember { mutableFloatStateOf(0f) }
 
+    // The provider lambda is recreated when the lyrics offset changes; always call the
+    // latest one so gap progress follows offset edits made while visible.
+    val latestPositionProvider by rememberUpdatedState(currentPositionProvider)
     LaunchedEffect(visible, gapStartMs, gapEndMs) {
         if (visible) {
             while (isActive) {
                 withFrameMillis {
-                    currentProgress = gapProgress(currentPositionProvider(), gapStartMs, gapEndMs)
+                    currentProgress = gapProgress(latestPositionProvider(), gapStartMs, gapEndMs)
                 }
             }
         } else {
