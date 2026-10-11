@@ -12,8 +12,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-val LINE_REGEX = "((\\[\\d\\d:\\d\\d\\.\\d{2,3}\\] ?)+)(.*)".toRegex()
-val TIME_REGEX = "\\[(\\d\\d):(\\d\\d)\\.(\\d{2,3})\\]".toRegex()
+val LINE_REGEX = "((\\[\\d{1,2}:\\d\\d\\.\\d{2,3}\\] ?)+)(.*)".toRegex()
+val TIME_REGEX = "\\[(\\d{1,2}):(\\d\\d)\\.(\\d{2,3})\\]".toRegex()
 
 // Regex for rich sync format: [MM:SS.mm]<MM:SS.mm> word <MM:SS.mm> word ...
 private val RICH_SYNC_LINE_REGEX = "\\[(\\d{1,2}):(\\d{2})\\.(\\d{2,3})\\](.*)".toRegex()
@@ -46,7 +46,7 @@ object LyricsUtils {
             while (stripping) {
                 val prevLength = textContent.length
                 textContent = textContent
-                    .replaceFirst(Regex("^\\[\\d\\d:\\d\\d\\.\\d{2,3}\\]"), "")
+                    .replaceFirst(Regex("^\\[\\d{1,2}:\\d\\d\\.\\d{2,3}\\]"), "")
                     .replaceFirst(Regex("^\\{agent:[^}]+\\}"), "")
                     .replaceFirst(Regex("^\\{bg\\}"), "")
                     .replaceFirst(Regex("^\\[bg:.*\\]"), "")

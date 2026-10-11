@@ -51,11 +51,25 @@ class LyricsSyncDetectionTest {
     }
 
     @Test
-    fun `markers scattered across lines are not line-synced`() {
-        // No single line carries both a rich-sync timestamp and a word tag, so the
-        // parser takes the standard path and yields no timed entries; detection
-        // must agree instead of enabling auto-follow on plain lines.
-        val lyrics = "[1:00.00] hello\nworld <1:00.00>foo"
+    fun `standard single-digit line parses and counts as synced`() {
+        // Standard lines accept single-digit minutes, so detection and parse agree.
+        val lyrics = "[1:23.45] Just text"
+        assertEquals(83450L, LyricsUtils.parseLyrics(lyrics).first().time)
+        assertTrue(LyricsUtils.isLineSynced(lyrics))
+    }
+
+    @Test
+    fun `single-digit credit prefix is stripped`() {
+        val filtered = LyricsUtils.filterLyricsCreditLines("[1:23.45] Synced by Someone")
+        assertFalse(filtered.contains("[1:23.45]"))
+    }
+
+    @Test
+    fun `markers scattered across timestamp-less lines are not line-synced`() {
+        // Neither line carries a line timestamp of its own, so the parser takes the
+        // standard path and yields no timed entries; detection must agree instead
+        // of enabling auto-follow on plain lines.
+        val lyrics = "hello <1:00.00>foo\nbar <2:00.00>baz"
         assertFalse(LyricsUtils.isLineSynced(lyrics))
         assertTrue(LyricsUtils.parseLyrics(lyrics).none { it.time > 0 })
     }
