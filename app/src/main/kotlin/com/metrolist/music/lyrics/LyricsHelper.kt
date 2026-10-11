@@ -106,10 +106,13 @@ constructor(
                 if (providerResult != null && providerResult.isSuccess) {
                     Timber.tag("LyricsHelper").i("Got lyrics from ${provider.name}")
                     val filtered = LyricsUtils.filterLyricsCreditLines(providerResult.getOrNull()!!)
+                    // Blank is never valid playback lyrics: let the next provider try
+                    // instead of letting an empty result suppress good ones behind it.
                     if (filtered.isNotBlank()) {
                         singleCache.put(mediaMetadata.id, LyricsResult(provider.name, filtered))
+                        return@withTimeoutOrNull LyricsWithProvider(filtered, provider.name)
                     }
-                    return@withTimeoutOrNull LyricsWithProvider(filtered, provider.name)
+                    Timber.tag("LyricsHelper").w("${provider.name} returned blank lyrics, trying next")
                 } else {
                     val errorMsg = providerResult?.exceptionOrNull()?.message ?: "timeout or exception"
                     Timber.tag("LyricsHelper").w("${provider.name} failed: $errorMsg")
