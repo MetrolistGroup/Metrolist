@@ -131,6 +131,7 @@ fun LyricsMenu(
             title = { Text(text = mediaMetadataProvider().title) },
             initialTextFieldValue = TextFieldValue(lyricsProvider()?.lyrics.orEmpty()),
             singleLine = false,
+            isInputValid = { it.isNotBlank() },
             onDone = {
                 database.query {
                     upsert(
