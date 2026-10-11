@@ -139,4 +139,18 @@ class LyricsTableAndGapTest {
             gapProgress(11000L, 10000L, 14000L)
         )
     }
+
+    @Test
+    fun `tap landing matches at zero offset`() {
+        assertEquals(true, isTapLanding(83450L, 0L, 83450L, 3000L))
+        assertEquals(false, isTapLanding(80000L, 0L, 83450L, 3000L))
+    }
+
+    @Test
+    fun `tap landing compensates the lyrics offset`() {
+        // Tapped line at lyric time 83450; player lands at 83450 - 2000 with +2000 offset.
+        assertEquals(true, isTapLanding(81450L, 2000L, 83450L, 1500L))
+        // Raw comparison would misread this as a scrub landing elsewhere.
+        assertEquals(false, isTapLanding(81450L, 0L, 83450L, 1500L))
+    }
 }

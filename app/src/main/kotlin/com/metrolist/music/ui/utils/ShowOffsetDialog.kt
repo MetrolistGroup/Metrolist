@@ -56,13 +56,18 @@ fun ShowOffsetDialog(songProvider: () -> SongEntity?) {
     }
 
     LaunchedEffect(lyricsOffset) {
+        // Pin the song: if playback moves on while a write is pending, the stale
+        // value must not land on the new song.
+        val songId = songProvider()?.id
         songProvider()?.let { song ->
-            database.query {
-                upsert(
-                    song.copy(
-                        lyricsOffset = lyricsOffset
+            if (song.id == songId) {
+                database.query {
+                    upsert(
+                        song.copy(
+                            lyricsOffset = lyricsOffset
+                        )
                     )
-                )
+                }
             }
         }
     }

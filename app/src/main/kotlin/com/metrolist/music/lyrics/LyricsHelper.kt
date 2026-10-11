@@ -121,7 +121,7 @@ constructor(
     ) {
         currentLyricsJob?.cancel()
 
-        val cacheKey = "$songArtists-$songTitle".replace(" ", "")
+        val cacheKey = mediaId
         cache.get(cacheKey)?.let { results ->
             results.forEach { callback(it) }
             return
@@ -152,6 +152,7 @@ constructor(
                 launch {
                     try {
                         provider.getAllLyrics(context, mediaId, cleanedTitle, songArtists, duration, album) { lyrics ->
+                            if (lyrics.isBlank()) return@getAllLyrics
                             val filteredLyrics = LyricsUtils.filterLyricsCreditLines(lyrics)
                             val result = LyricsResult(provider.name, filteredLyrics)
                             synchronized(callbackMutex) {

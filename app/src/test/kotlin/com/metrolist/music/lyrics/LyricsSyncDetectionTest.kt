@@ -73,4 +73,28 @@ class LyricsSyncDetectionTest {
         assertFalse(LyricsUtils.isLineSynced(lyrics))
         assertTrue(LyricsUtils.parseLyrics(lyrics).none { it.time > 0 })
     }
+
+    @Test
+    fun `mid-line timestamp does not fake sync`() {
+        // The timestamp sits inside plain text; no line parses as timed.
+        val lyrics = "hello [01:23.45] world"
+        assertFalse(LyricsUtils.isLineSynced(lyrics))
+        assertTrue(LyricsUtils.parseLyrics(lyrics).none { it.time > 0 })
+    }
+
+    @Test
+    fun `fractionless lines parse at whole seconds`() {
+        val lyrics = "[01:23] Hello\n[01:25] World"
+        val parsed = LyricsUtils.parseLyrics(lyrics)
+        assertEquals(2, parsed.size)
+        assertEquals(83000L, parsed[0].time)
+        assertEquals(85000L, parsed[1].time)
+        assertTrue(LyricsUtils.isLineSynced(lyrics))
+    }
+
+    @Test
+    fun `fractionless credit prefix is stripped`() {
+        val filtered = LyricsUtils.filterLyricsCreditLines("[01:23] Synced by Someone")
+        assertFalse(filtered.contains("Synced by"))
+    }
 }

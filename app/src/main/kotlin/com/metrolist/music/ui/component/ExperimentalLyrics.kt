@@ -820,8 +820,11 @@ fun ExperimentalLyrics(
                     // a stale tap. The flag survives a match so post-landing convergence
                     // in the far branch below keeps gliding instead of snapping.
                     val tapTarget = pendingTapSeekMs
+                    // Tap targets live in the lyric domain; shift the raw player position
+                    // by the offset before comparing, otherwise a nonzero offset looks
+                    // like a scrub landing elsewhere.
                     val isTapLanding = tapTarget != null &&
-                        abs(currentPositionRef.position - tapTarget) < TAP_TARGET_TOLERANCE_MS
+                        isTapLanding(currentPositionRef.position, lyricsOffsetMs.toLong(), tapTarget, TAP_TARGET_TOLERANCE_MS)
                     lastAutoTargetIndex = activeListIndex
                     lastHandledEpoch = positionEpoch
                     if (isTapLanding) {

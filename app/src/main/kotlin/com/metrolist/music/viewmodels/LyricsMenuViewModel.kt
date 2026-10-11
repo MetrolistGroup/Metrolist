@@ -14,6 +14,7 @@ import com.metrolist.music.lyrics.LyricsResult
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.utils.NetworkConnectivityObserver
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +22,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 @HiltViewModel
@@ -83,13 +83,21 @@ constructor(
         mediaMetadata: MediaMetadata,
         lyricsEntity: LyricsEntity?,
     ) {
-        database.query {
-            lyricsEntity?.let(::delete)
-            val lyricsWithProvider =
-                runBlocking {
+        // Fetch first, write only on success: deleting upfront would destroy good lyrics
+        // when the fetch fails or finds nothing (failures surface as NOT_FOUND).
+        viewModelScope.launch(Dispatchers.IO) {
+            val fetched =
+                try {
                     lyricsHelper.getLyrics(mediaMetadata)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    return@launch
                 }
-            upsert(LyricsEntity(mediaMetadata.id, lyricsWithProvider.lyrics, lyricsWithProvider.provider))
+            if (fetched.lyrics == LyricsEntity.LYRICS_NOT_FOUND || fetched.lyrics.isBlank()) return@launch
+            database.query {
+                lyricsEntity?.let(::delete)
+                upsert(LyricsEntity(mediaMetadata.id, fetched.lyrics, fetched.provider))
+            }
         }
     }
 }

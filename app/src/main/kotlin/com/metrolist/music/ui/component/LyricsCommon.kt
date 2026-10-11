@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.metrolist.music.ui.screens.settings.LyricsPosition
 import kotlinx.coroutines.isActive
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 sealed class LyricsListItem {
@@ -210,6 +211,16 @@ internal class LyricItemHeightMeasurer(
         }
     }
 }
+
+/** Whether a position jump landed on a tap-to-seek target. The target is stored in the
+ * lyric domain (offset already applied), so the raw player position must be shifted by
+ * the lyrics offset before comparing. Pure for testing. */
+internal fun isTapLanding(
+    playerPositionMs: Long,
+    lyricsOffsetMs: Long,
+    tapTargetLyricMs: Long,
+    toleranceMs: Long,
+): Boolean = abs(playerPositionMs + lyricsOffsetMs - tapTargetLyricMs) < toleranceMs
 
 /** Fraction of a lyrics gap elapsed at a lyric-domain position. Pure for testing. */
 internal fun gapProgress(positionMs: Long, gapStartMs: Long, gapEndMs: Long): Float {
