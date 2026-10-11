@@ -34,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
@@ -346,7 +347,10 @@ private fun WordLevelLyrics(
     }
     
     var smoothPosition by remember { mutableLongStateOf(0L) }
-    
+
+    // The offset is edited live from the offset dialog; always read the latest value
+    // so word highlighting follows without restarting (and resetting) the smoother.
+    val latestLyricsOffset by rememberUpdatedState(lyricsOffset)
     LaunchedEffect(isActiveLine) {
         if (isActiveLine) {
             var lastPlayerPos = playerConnection.player.currentPosition
@@ -356,7 +360,7 @@ private fun WordLevelLyrics(
                     val now = System.currentTimeMillis()
                     val sliderPos = sliderPositionProvider()
                     if (sliderPos != null) {
-                        smoothPosition = sliderPos + lyricsOffset
+                        smoothPosition = sliderPos + latestLyricsOffset
                         lastPlayerPos = sliderPos
                         lastUpdateTime = now
                     } else {
@@ -366,7 +370,7 @@ private fun WordLevelLyrics(
                             lastUpdateTime = now
                         }
                         val elapsed = now - lastUpdateTime
-                        smoothPosition = lastPlayerPos + lyricsOffset + (if (playerConnection.player.isPlaying) elapsed else 0)
+                        smoothPosition = lastPlayerPos + latestLyricsOffset + (if (playerConnection.player.isPlaying) elapsed else 0)
                     }
                 }
             }
