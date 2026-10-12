@@ -350,6 +350,15 @@ fun ExperimentalLyrics(
         selectedIndices.clear()
     }
 
+    // Menu-driven writes may rewrite identical text (no state key observes that),
+    // so selection is cleared explicitly via signal instead of state keys.
+    LaunchedEffect(Unit) {
+        LyricsSelectionSignals.clearSelection.collect {
+            isSelectionModeActive = false
+            selectedIndices.clear()
+        }
+    }
+
     val maxSelectionLimit = 5
     LaunchedEffect(showMaxSelectionToast) {
         if (showMaxSelectionToast) {

@@ -70,6 +70,7 @@ import com.metrolist.music.lyrics.LyricsUtils
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.ListDialog
+import com.metrolist.music.ui.component.LyricsSelectionSignals
 import com.metrolist.music.ui.component.Material3MenuGroup
 import com.metrolist.music.ui.component.Material3MenuItemData
 import com.metrolist.music.ui.component.NewAction
@@ -141,6 +142,7 @@ fun LyricsMenu(
                             provider = lyricsProvider()?.provider ?: "Manual",
                         ),
                     )
+                    LyricsSelectionSignals.requestClearSelection()
                 }
             },
         )
@@ -286,6 +288,7 @@ fun LyricsMenu(
                                         provider = result.providerName,
                                     ),
                                 )
+                                LyricsSelectionSignals.requestClearSelection()
                             }
                         }
                         .padding(12.dp)

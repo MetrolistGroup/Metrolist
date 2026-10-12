@@ -12,6 +12,7 @@ import com.metrolist.music.db.entities.LyricsEntity
 import com.metrolist.music.lyrics.LyricsHelper
 import com.metrolist.music.lyrics.LyricsResult
 import com.metrolist.music.models.MediaMetadata
+import com.metrolist.music.ui.component.LyricsSelectionSignals
 import com.metrolist.music.utils.NetworkConnectivityObserver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -102,6 +103,9 @@ constructor(
             database.query {
                 lyricsEntity?.let(::delete)
                 upsert(LyricsEntity(mediaMetadata.id, fetched.lyrics, fetched.provider))
+                // Same-text rewrites change no observable state, so the reader's
+                // selection is cleared explicitly instead of via state keys.
+                LyricsSelectionSignals.requestClearSelection()
             }
         }
     }
