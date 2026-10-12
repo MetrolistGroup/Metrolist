@@ -186,6 +186,7 @@ constructor(
                 launch {
                     try {
                         lyricsPlusProvider.getAllLyrics(context, mediaId, cleanedTitle, songArtists, duration, album) { lyrics ->
+                            if (lyrics.isBlank()) return@getAllLyrics
                             val filteredLyrics = LyricsUtils.filterLyricsCreditLines(lyrics)
                             val result = LyricsResult(lyricsPlusProvider.name, filteredLyrics)
                             synchronized(callbackMutex) {

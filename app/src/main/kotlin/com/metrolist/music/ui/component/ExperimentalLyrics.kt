@@ -1057,9 +1057,12 @@ fun ExperimentalLyrics(
                                                     // Records the tap target; the jump landing on it
                                                     // glides, a jump anywhere else snaps (see auto-scroll).
                                                     pendingTapSeekMs = item.time
-                                                    playerConnection.seekTo((item.time - (currentSong?.song?.lyricsOffset ?: 0)).coerceAtLeast(0))
+                                                    val target = (item.time - (currentSong?.song?.lyricsOffset ?: 0)).coerceAtLeast(0L)
+                                                    // Never seek past the end: that would finish
+                                                    // the track instead of playing the outro line.
+                                                    playerConnection.seekTo(if (duration > 0) target.coerceAtMost(duration - 1) else target)
+                                                    isAutoScrollEnabled = true
                                                 }
-                                                isAutoScrollEnabled = true
                                             }
                                         },
                                         onLongClick = {

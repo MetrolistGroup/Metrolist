@@ -254,7 +254,10 @@ internal fun LyricsLine(
                     }
                 } else null
 
-                if (isSynced && effectiveWords != null && (isActiveLine || abs(index - displayedCurrentLineIndex) <= 3) && mainText != null) {
+                if (isSynced && effectiveWords != null && (isActiveLine || abs(index - displayedCurrentLineIndex) <= 3) && mainText != null &&
+                    // Romanized display text never matches the original-script word
+                    // timings; karaoke mapping would silently match nothing.
+                    !(romanizeAsMain && romanizedTextState != null)) {
                     WordLevelLyrics(
                         mainText = mainText,
                         words = effectiveWords,
