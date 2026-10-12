@@ -498,15 +498,12 @@ fun ExperimentalLyrics(
             }
 
             if (isSynced) {
-                val newBgVisible = mutableSetOf<Int>()
-                for ((bgIndex, pairedMain) in backgroundToMainMap) {
-                    val mainTime = lines[pairedMain].time
-                    val bgTime = lines[bgIndex].time
-                    val inGap = effectivePosition in mainTime..bgTime
-                    if (newActiveIndices.contains(bgIndex) || newActiveIndices.contains(pairedMain) || inGap) {
-                        newBgVisible.add(bgIndex)
-                    }
-                }
+                val newBgVisible = visibleBackgroundIndices(
+                    lines = lines,
+                    backgroundToMainMap = backgroundToMainMap,
+                    activeIndices = newActiveIndices,
+                    effectivePosition = effectivePosition,
+                )
                 if (visibleBackgroundLineIndices != newBgVisible) {
                     visibleBackgroundLineIndices = newBgVisible
                 }
@@ -1222,3 +1219,33 @@ internal fun pairBackgroundLine(
     bgIndex: Int,
 ): Int = (bgIndex - 1 downTo 0)
     .firstOrNull { !lines[it].isBackground && lines[it].text.isNotBlank() } ?: -1
+
+/**
+ * Which background lines are currently visible. Paired lines show around their
+ * gap window; unpaired ones (e.g. a leading ad-lib with no main line above) have
+ * no window and show exactly while active — otherwise they would stay collapsed
+ * and uncomposed forever. Pure for testing.
+ */
+internal fun visibleBackgroundIndices(
+    lines: List<com.metrolist.music.lyrics.LyricsEntry>,
+    backgroundToMainMap: Map<Int, Int>,
+    activeIndices: Set<Int>,
+    effectivePosition: Long,
+): Set<Int> {
+    val visible = mutableSetOf<Int>()
+    for ((bgIndex, pairedMain) in backgroundToMainMap) {
+        val mainTime = lines[pairedMain].time
+        val bgTime = lines[bgIndex].time
+        val inGap = effectivePosition in mainTime..bgTime
+        if (bgIndex in activeIndices || pairedMain in activeIndices || inGap) {
+            visible.add(bgIndex)
+        }
+    }
+    for (i in lines.indices) {
+        val entry = lines[i]
+        if (entry.isBackground && i !in backgroundToMainMap && i in activeIndices) {
+            visible.add(i)
+        }
+    }
+    return visible
+}

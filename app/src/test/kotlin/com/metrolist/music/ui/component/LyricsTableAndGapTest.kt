@@ -182,6 +182,33 @@ class LyricsTableAndGapTest {
     }
 
     @Test
+    fun `unpaired active background is visible`() {
+        val lines = listOf(
+            com.metrolist.music.lyrics.LyricsEntry(0L, ""),
+            com.metrolist.music.lyrics.LyricsEntry(5000L, "ooh", isBackground = true),
+            com.metrolist.music.lyrics.LyricsEntry(10000L, "hello"),
+        )
+        val map = mapOf<Int, Int>()
+        assertEquals(setOf(1), visibleBackgroundIndices(lines, map, setOf(1), 6000L))
+        assertEquals(emptySet<Int>(), visibleBackgroundIndices(lines, map, setOf(2), 12000L))
+    }
+
+    @Test
+    fun `paired background keeps its gap window`() {
+        val lines = listOf(
+            com.metrolist.music.lyrics.LyricsEntry(0L, ""),
+            com.metrolist.music.lyrics.LyricsEntry(5000L, "hello"),
+            com.metrolist.music.lyrics.LyricsEntry(9000L, "ooh", isBackground = true),
+            com.metrolist.music.lyrics.LyricsEntry(12000L, "later"),
+        )
+        val map = mapOf(2 to 1)
+        // Inside the 5s..9s window, visible without being active.
+        assertEquals(setOf(2), visibleBackgroundIndices(lines, map, emptySet(), 7000L))
+        // Outside the window and inactive, hidden.
+        assertEquals(emptySet<Int>(), visibleBackgroundIndices(lines, map, emptySet(), 11000L))
+    }
+
+    @Test
     fun `background line pairs to nearest visible main line`() {
         val lines = listOf(
             com.metrolist.music.lyrics.LyricsEntry(0L, ""),
