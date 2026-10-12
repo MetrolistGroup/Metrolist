@@ -459,10 +459,10 @@ fun LyricsMenu(
                             text = stringResource(R.string.copy),
                             onClick = {
                                 lyricsProvider()?.lyrics?.let { lyrics ->
+                                    val parsedCopy = LyricsUtils.parseLyrics(lyrics)
                                     val plainLyrics =
-                                        if (lyrics.startsWith("[")) {
-                                            LyricsUtils.parseLyrics(lyrics)
-                                                .joinToString("\n") { it.text }
+                                        if (parsedCopy.isNotEmpty()) {
+                                            parsedCopy.joinToString("\n") { it.text }
                                         } else {
                                             lyrics
                                         }
