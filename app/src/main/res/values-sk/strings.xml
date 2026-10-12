@@ -287,7 +287,7 @@
     <string name="backup_create_failed">Nepodarilo sa vytvoriť zálohu</string>
     <string name="restore_failed">Nepodarilo sa obnoviť zálohu</string>
     <string name="discord_integration">Integrácia Discordu</string>
-    <string name="discord_information">Metrolist používa knižnicu KizzyRPC na nastavenie stavu vášho účtu Discord. To zahŕňa použitie pripojenia Discord Gateway, čo môže byť považované za porušenie TOS Discordu. Zatiaľ však nie sú známe prípady pozastavenia účtov používateľov z tohto dôvodu. Používanie na vlastné riziko.\n\nMetrolist bude extrahovať iba váš token, všetko ostatné sa ukladá lokálne.</string>
+    <string name="discord_information">MusicPlayer používa knižnicu KizzyRPC na nastavenie stavu vášho účtu Discord. To zahŕňa použitie pripojenia Discord Gateway, čo môže byť považované za porušenie TOS Discordu. Zatiaľ však nie sú známe prípady pozastavenia účtov používateľov z tohto dôvodu. Používanie na vlastné riziko.\n\nMusicPlayer bude extrahovať iba váš token, všetko ostatné sa ukladá lokálne.</string>
     <string name="dismiss">Zatvoriť</string>
     <string name="options">Možnosťi</string>
     <string name="preview">Náhľad</string>

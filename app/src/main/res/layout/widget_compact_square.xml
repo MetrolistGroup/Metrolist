@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
     android:padding="12dp"
-    android:theme="@style/Theme.Widget.Metrolist">
+    android:theme="@style/Theme.Widget.MusicPlayer">
 
     <!-- Album Art Container -->
     <FrameLayout

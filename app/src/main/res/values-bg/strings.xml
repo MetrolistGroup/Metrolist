@@ -176,7 +176,7 @@
     <string name="repeat_mode_off">Режим на повторение е изключен</string>
     <string name="repeat_mode_one">Повтори текущата песен</string>
     <string name="repeat_mode_all">Повтори опашката</string>
-    <string name="discord_information">Metrolist използва библиотеката KizzyRPC, за да зададе състоянието на профила ви в Discord. Това включва използването на връзката Discord Gateway, което може да се счита за нарушение на TOS на Discord. Въпреки това няма известни случаи на спиране на потребителски профили поради тази причина. Използвайте на свой собствен риск. \n \nMetrolist ще извлече само вашия токен, а всичко останало се съхранява локално.</string>
+    <string name="discord_information">MusicPlayer използва библиотеката KizzyRPC, за да зададе състоянието на профила ви в Discord. Това включва използването на връзката Discord Gateway, което може да се счита за нарушение на TOS на Discord. Въпреки това няма известни случаи на спиране на потребителски профили поради тази причина. Използвайте на свой собствен риск. \n \nMusicPlayer ще извлече само вашия токен, а всичко останало се съхранява локално.</string>
     <string name="action_backup">Архивиране</string>
     <string name="translation_models">Модели за превод</string>
     <string name="clear_image_cache">Изчисти кеша на изображение</string>

@@ -123,8 +123,8 @@ jobs:
       - name: Build Release APK
         run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release --warning-mode summary
         env:
-          METROLIST_APPLICATION_ID: com.metrolist.music
-          METROLIST_APP_NAME: Metrolist
+          MUSICPLAYER_APPLICATION_ID: com.sydforum.musicplay
+          MUSICPLAYER_APP_NAME: MusicPlayer
           PULL_REQUEST: "false"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
@@ -154,11 +154,11 @@ jobs:
           fi
 
           if [ "${{ matrix.variant }}" = "gms" ]; then
-            TARGET_NAME="Metrolist-with-Google-Cast.apk"
+            TARGET_NAME="MusicPlayer-with-Google-Cast.apk"
           elif [ "${{ matrix.variant }}" = "izzy" ]; then
-            TARGET_NAME="Metrolist-izzy.apk"
+            TARGET_NAME="MusicPlayer-izzy.apk"
           else
-            TARGET_NAME="Metrolist.apk"
+            TARGET_NAME="MusicPlayer.apk"
           fi
 
           mv "$SIGNED_APK" "$OUTPUT_DIR/out/$TARGET_NAME"
@@ -169,7 +169,7 @@ jobs:
       - name: Upload Signed APKs
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.variant == 'gms' && 'Metrolist-with-Google-Cast' || matrix.variant == 'izzy' && 'Metrolist-izzy' || 'Metrolist' }}
+          name: ${{ matrix.variant == 'gms' && 'MusicPlayer-with-Google-Cast' || matrix.variant == 'izzy' && 'MusicPlayer-izzy' || 'MusicPlayer' }}
           path: app/build/outputs/apk/${{ matrix.variant }}/release/out/*.apk
 
   create-release:

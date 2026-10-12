@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest an idea for Metrolist
+description: Suggest an idea for MusicPlayer
 labels: [enhancement]
 body:
   - type: checkboxes

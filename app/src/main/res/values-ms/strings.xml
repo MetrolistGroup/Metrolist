@@ -243,7 +243,7 @@
     <string name="backup_create_failed">Tidak dapat membuat sandaran</string>
     <string name="restore_failed">Gagal memulihkan sandaran</string>
     <string name="discord_integration">Integrasi Discord</string>
-    <string name="discord_information">Metrolist menggunakan pustaka KizzyRPC untuk menetapkan status akaun Discord anda. Ini melibatkan penggunaan sambungan Discord Gateway, yang mungkin dianggap sebagai pelanggaran TOS Discord. Walau bagaimanapun, tiada kes akaun pengguna yang digantung atas sebab ini. Gunakan atas risiko anda sendiri.\n\nMetrolist hanya akan mengekstrak token anda, dan semua yang lain disimpan secara tempatan.</string>
+    <string name="discord_information">MusicPlayer menggunakan pustaka KizzyRPC untuk menetapkan status akaun Discord anda. Ini melibatkan penggunaan sambungan Discord Gateway, yang mungkin dianggap sebagai pelanggaran TOS Discord. Walau bagaimanapun, tiada kes akaun pengguna yang digantung atas sebab ini. Gunakan atas risiko anda sendiri.\n\nMusicPlayer hanya akan mengekstrak token anda, dan semua yang lain disimpan secara tempatan.</string>
     <string name="dismiss">Ketepikan</string>
     <string name="options">Pilihan</string>
     <string name="preview">Pratonton</string>

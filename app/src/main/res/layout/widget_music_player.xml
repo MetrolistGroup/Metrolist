@@ -7,7 +7,7 @@
     android:background="@drawable/widget_background"
     android:padding="16dp"
     android:gravity="center_vertical"
-    android:theme="@style/Theme.Widget.Metrolist">
+    android:theme="@style/Theme.Widget.MusicPlayer">
 
     <!-- Album Art Section (Left) -->
     <ImageView

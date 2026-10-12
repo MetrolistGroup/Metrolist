@@ -274,14 +274,14 @@
     <string name="action_backup">Rezervna kopija</string>
     <string name="action_restore">Povratak</string>
     <string name="imported_playlist">Spiska je uvezena</string>
-    <string name="discord_information">Metrolist koristi KizzyRPC biblioteku kako bi stavio tvoj Discord status. Ovo uključuje korištenje Discord Gateway spajanja, što bi se moglo smatrati prekršajem Discord-ovog TOS-a. Međutim nema poznatih slučajeva gdje su korisnički nalozi bili suspendovani zbog ovoga razloga. Korisite na svoju štetu.\n\nMetrolist će samo izvesti vaš žeton, i sve drugo je lokalno sklađeno.</string>
+    <string name="discord_information">MusicPlayer koristi KizzyRPC biblioteku kako bi stavio tvoj Discord status. Ovo uključuje korištenje Discord Gateway spajanja, što bi se moglo smatrati prekršajem Discord-ovog TOS-a. Međutim nema poznatih slučajeva gdje su korisnički nalozi bili suspendovani zbog ovoga razloga. Korisite na svoju štetu.\n\nMusicPlayer će samo izvesti vaš žeton, i sve drugo je lokalno sklađeno.</string>
     <string name="login_failed">Neuspješno upisivanje</string>
     <string name="options">Opcije</string>
     <string name="preview">Pregled</string>
     <string name="enable_discord_rpc">Omogući Bogatu Prisutnost</string>
     <string name="app_version">Verzija aplikacije</string>
     <string name="action_logout">Izpiši se</string>
-    <string name="about">O Metrolist-u</string>
+    <string name="about">O MusicPlayer-u</string>
     <string name="clear_translation_models">Rasčisti modele prevođenja</string>
     <string name="new_version_available">Dostupna je nova verzija</string>
     <string name="translation_models">Modeli prevođenja</string>

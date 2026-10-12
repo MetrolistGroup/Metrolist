@@ -273,7 +273,7 @@
     <string name="backup_create_success">Backup creat cu succes</string>
     <string name="backup_create_failed">Nu s-a putut creea backup-ul</string>
     <string name="restore_failed">Nu s-a putut restaura backup-ul</string>
-    <string name="discord_information">Metrolist folosește biblioteca KizzyRPC pentru a-ți seta statusul contului tău de Discord. Acest lucru presupune folosirea conexiunii Discord Gateway, ceea ce ar putea fi considerată o încălcare a Termenilor serviciului Discord. Însă, nu există cazuri cunoscute de conturi de utilizator care au fost suspendate din acest motiv. Folosește pe propriul tău risc.\n\nMetrolist îți va extrage doar token-ul. Orice altceva este stocat local.</string>
+    <string name="discord_information">MusicPlayer folosește biblioteca KizzyRPC pentru a-ți seta statusul contului tău de Discord. Acest lucru presupune folosirea conexiunii Discord Gateway, ceea ce ar putea fi considerată o încălcare a Termenilor serviciului Discord. Însă, nu există cazuri cunoscute de conturi de utilizator care au fost suspendate din acest motiv. Folosește pe propriul tău risc.\n\nMusicPlayer îți va extrage doar token-ul. Orice altceva este stocat local.</string>
     <string name="dismiss">Închide</string>
     <string name="options">Opțiuni</string>
     <string name="preview">Previzualizează</string>

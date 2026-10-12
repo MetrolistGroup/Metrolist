@@ -273,7 +273,7 @@
     <string name="action_restore">Gjenopprett</string>
     <string name="imported_playlist">Spilleliste importert</string>
     <string name="action_logout">Logg ut</string>
-    <string name="discord_information">Metrolist bruker KizzyRPC for å stille inn statusen på Discord-kontoen din. Dette innebærer bruk ave Discord Gateway-portneren, som kan anses som et brudd på Discords tjenestevilkår. Det finnes dog ingen kjente tilfelle av suspenderte brukerkonter på denne grunnen. Bruk på egen risiko. \n \nMetrolist henter bare inn symbolet ditt, og alt annet blir lagret lokalt.</string>
+    <string name="discord_information">MusicPlayer bruker KizzyRPC for å stille inn statusen på Discord-kontoen din. Dette innebærer bruk ave Discord Gateway-portneren, som kan anses som et brudd på Discords tjenestevilkår. Det finnes dog ingen kjente tilfelle av suspenderte brukerkonter på denne grunnen. Bruk på egen risiko. \n \nMusicPlayer henter bare inn symbolet ditt, og alt annet blir lagret lokalt.</string>
     <string name="preview">Forhåndsvisning</string>
     <string name="about">Om</string>
 </resources>

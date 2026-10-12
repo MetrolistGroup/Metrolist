@@ -187,7 +187,7 @@
     <string name="backup_create_failed">Non foi posíbel crear a copia de seguranza</string>
     <string name="restore_failed">Non foi posíbel restaurar a copia de seguranza</string>
     <string name="discord_integration">Integración con Discord</string>
-    <string name="discord_information">Metrolist usa a biblioteca KizzyRPC para estabelecer o estado da túa conta de Discord. Isto implica usar a conexión Discord Gateway, o que podería considerarse unha violación dos termos e condicións de Discord. Aínda así, non houbo casos coñecidos de contas que fosen suspendidas por isto. Depende de ti tomar o risco.\n\nMetrolist só vai extraer o teu token, o resto é almacenado localmente.</string>
+    <string name="discord_information">MusicPlayer usa a biblioteca KizzyRPC para estabelecer o estado da túa conta de Discord. Isto implica usar a conexión Discord Gateway, o que podería considerarse unha violación dos termos e condicións de Discord. Aínda así, non houbo casos coñecidos de contas que fosen suspendidas por isto. Depende de ti tomar o risco.\n\nMusicPlayer só vai extraer o teu token, o resto é almacenado localmente.</string>
     <string name="dismiss">Ignorar</string>
     <string name="options">Opcións</string>
     <string name="preview">Vista previa</string>

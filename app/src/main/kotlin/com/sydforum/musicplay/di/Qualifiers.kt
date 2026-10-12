@@ -1,0 +1,20 @@
+/**
+ * MusicPlayer Project (C) 2026
+ * Licensed under GPL-3.0 | See git history for contributors
+ */
+
+package com.sydforum.musicplay.di
+
+import javax.inject.Qualifier
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class PlayerCache
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class DownloadCache
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ApplicationScope

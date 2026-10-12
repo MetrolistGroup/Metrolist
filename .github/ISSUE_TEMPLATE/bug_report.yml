@@ -22,7 +22,7 @@ body:
 
         **Duplicate issues = Instant closure with no response**
       options:
-        - label: " I am able to reproduce the bug with the [latest debug version](https://github.com/MetrolistGroup/Metrolist/actions/workflows/build.yml?query=branch%3Amain)."
+        - label: " I am able to reproduce the bug with the [latest debug version](https://github.com/SydForum/MusicPlay/actions/workflows/build.yml?query=branch%3Amain)."
           required: true
         - label: " I've checked that there is NO open or closed issue about this bug. (Duplicate issues will be closed immediately without response)"
           required: true
@@ -121,9 +121,9 @@ body:
   - type: input
     id: app-version
     attributes:
-      label: Metrolist version
+      label: MusicPlayer version
       description: |
-        You can find your Metrolist version in **Settings**.
+        You can find your MusicPlayer version in **Settings**.
       placeholder: |
         Example: "13.1.1"
     validations:

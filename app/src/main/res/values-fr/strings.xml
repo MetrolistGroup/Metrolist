@@ -282,7 +282,7 @@
     <string name="queue">File d\'attente</string>
     <string name="auto_load_more">Charger automatiquement plus de titres</string>
     <string name="auto_skip_next_on_error">Passer au titre suivant en cas d\'erreur</string>
-    <string name="discord_information">Metrolist utilise la bibliothèque KizzyRPC pour définir le statut de votre compte Discord. Cela implique l\'utilisation de la connexion Discord Gateway, ce qui peut être considéré comme une violation des conditions d\'utilisation de Discord. Cependant, il n\'existe aucun cas connu de comptes d\'utilisateurs suspendus pour cette raison. Utilisez-le à vos propres risques. \n \nMetrolist va extraire uniquement votre jeton, tout le reste est stocké localement.</string>
+    <string name="discord_information">MusicPlayer utilise la bibliothèque KizzyRPC pour définir le statut de votre compte Discord. Cela implique l\'utilisation de la connexion Discord Gateway, ce qui peut être considéré comme une violation des conditions d\'utilisation de Discord. Cependant, il n\'existe aucun cas connu de comptes d\'utilisateurs suspendus pour cette raison. Utilisez-le à vos propres risques. \n \nMusicPlayer va extraire uniquement votre jeton, tout le reste est stocké localement.</string>
     <string name="use_login_for_browse">Utiliser le compte connecté pour parcourir le contenu</string>
     <string name="use_login_for_browse_desc">Ceci peut influencer le contenu que vous voyez et affiche par exemple les albums premiums si vous êtes connecté avec un compte Premium</string>
     <string name="action_login">Se connecter</string>

@@ -259,7 +259,7 @@
     <string name="your_youtube_playlists">Deine Youtube-Playlists</string>
     <string name="library_playlist_empty">Deine Playlists werden hier angezeigt</string>
     <string name="disable_screenshot_desc">Wenn diese Option aktiviert ist, sind Screenshots und die App-Ansicht in „Zuletzt gesehen“ deaktiviert.</string>
-    <string name="discord_information">Metrolist verwendet die KizzyRPC-Bibliothek, um den Status deines Discord-Kontos zu setzen. Dazu wird die Discord-Gateway-Verbindung verwendet, was als Verstoß gegen die AGB von Discord angesehen werden kann. Es sind jedoch keine Fälle bekannt, in denen Benutzerkonten aus diesem Grund gesperrt wurden. Die Verwendung erfolgt auf eigene Gefahr.\n\nMetrolist extrahiert nur dein Token, alles andere wird lokal gespeichert.</string>
+    <string name="discord_information">MusicPlayer verwendet die KizzyRPC-Bibliothek, um den Status deines Discord-Kontos zu setzen. Dazu wird die Discord-Gateway-Verbindung verwendet, was als Verstoß gegen die AGB von Discord angesehen werden kann. Es sind jedoch keine Fälle bekannt, in denen Benutzerkonten aus diesem Grund gesperrt wurden. Die Verwendung erfolgt auf eigene Gefahr.\n\nMusicPlayer extrahiert nur dein Token, alles andere wird lokal gespeichert.</string>
     <string name="squiggly">Schnörkelig</string>
     <string name="grid_cell_size">Größe der Rasterzellen</string>
     <string name="search_history">Suchverlauf</string>

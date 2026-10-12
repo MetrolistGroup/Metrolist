@@ -10,7 +10,7 @@
     android:paddingEnd="14dp"
     android:paddingTop="12dp"
     android:paddingBottom="12dp"
-    android:theme="@style/Theme.Widget.Metrolist">
+    android:theme="@style/Theme.Widget.MusicPlayer">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -121,36 +121,36 @@
         android:orientation="horizontal"
         android:gravity="start">
 
-        <LinearLayout style="@style/MetrolistPlaylistWidgetCard">
-            <FrameLayout style="@style/MetrolistPlaylistWidgetArtworkFrame">
-                <ImageView style="@style/MetrolistPlaylistWidgetArtwork" android:src="@drawable/playlist_play" />
-                <FrameLayout style="@style/MetrolistPlaylistWidgetCardPlayButton"><ImageView style="@style/MetrolistPlaylistWidgetCardPlayIcon" /></FrameLayout>
+        <LinearLayout style="@style/MusicPlayerPlaylistWidgetCard">
+            <FrameLayout style="@style/MusicPlayerPlaylistWidgetArtworkFrame">
+                <ImageView style="@style/MusicPlayerPlaylistWidgetArtwork" android:src="@drawable/playlist_play" />
+                <FrameLayout style="@style/MusicPlayerPlaylistWidgetCardPlayButton"><ImageView style="@style/MusicPlayerPlaylistWidgetCardPlayIcon" /></FrameLayout>
             </FrameLayout>
-            <TextView style="@style/MetrolistPlaylistWidgetCardTitle" android:text="@string/widget_playlists" />
+            <TextView style="@style/MusicPlayerPlaylistWidgetCardTitle" android:text="@string/widget_playlists" />
         </LinearLayout>
 
-        <LinearLayout style="@style/MetrolistPlaylistWidgetCard">
-            <FrameLayout style="@style/MetrolistPlaylistWidgetArtworkFrame">
-                <ImageView style="@style/MetrolistPlaylistWidgetArtwork" android:src="@drawable/ic_widget_heart_nav" />
-                <FrameLayout style="@style/MetrolistPlaylistWidgetCardPlayButton"><ImageView style="@style/MetrolistPlaylistWidgetCardPlayIcon" /></FrameLayout>
+        <LinearLayout style="@style/MusicPlayerPlaylistWidgetCard">
+            <FrameLayout style="@style/MusicPlayerPlaylistWidgetArtworkFrame">
+                <ImageView style="@style/MusicPlayerPlaylistWidgetArtwork" android:src="@drawable/ic_widget_heart_nav" />
+                <FrameLayout style="@style/MusicPlayerPlaylistWidgetCardPlayButton"><ImageView style="@style/MusicPlayerPlaylistWidgetCardPlayIcon" /></FrameLayout>
             </FrameLayout>
-            <TextView style="@style/MetrolistPlaylistWidgetCardTitle" android:text="@string/liked_songs" />
+            <TextView style="@style/MusicPlayerPlaylistWidgetCardTitle" android:text="@string/liked_songs" />
         </LinearLayout>
 
-        <LinearLayout style="@style/MetrolistPlaylistWidgetCard">
-            <FrameLayout style="@style/MetrolistPlaylistWidgetArtworkFrame">
-                <ImageView style="@style/MetrolistPlaylistWidgetArtwork" android:src="@drawable/cached" />
-                <FrameLayout style="@style/MetrolistPlaylistWidgetCardPlayButton"><ImageView style="@style/MetrolistPlaylistWidgetCardPlayIcon" /></FrameLayout>
+        <LinearLayout style="@style/MusicPlayerPlaylistWidgetCard">
+            <FrameLayout style="@style/MusicPlayerPlaylistWidgetArtworkFrame">
+                <ImageView style="@style/MusicPlayerPlaylistWidgetArtwork" android:src="@drawable/cached" />
+                <FrameLayout style="@style/MusicPlayerPlaylistWidgetCardPlayButton"><ImageView style="@style/MusicPlayerPlaylistWidgetCardPlayIcon" /></FrameLayout>
             </FrameLayout>
-            <TextView style="@style/MetrolistPlaylistWidgetCardTitle" android:text="@string/downloaded_songs" />
+            <TextView style="@style/MusicPlayerPlaylistWidgetCardTitle" android:text="@string/downloaded_songs" />
         </LinearLayout>
 
-        <LinearLayout style="@style/MetrolistPlaylistWidgetCard">
-            <FrameLayout style="@style/MetrolistPlaylistWidgetArtworkFrame">
-                <ImageView style="@style/MetrolistPlaylistWidgetArtwork" android:src="@drawable/trending_up" />
-                <FrameLayout style="@style/MetrolistPlaylistWidgetCardPlayButton"><ImageView style="@style/MetrolistPlaylistWidgetCardPlayIcon" /></FrameLayout>
+        <LinearLayout style="@style/MusicPlayerPlaylistWidgetCard">
+            <FrameLayout style="@style/MusicPlayerPlaylistWidgetArtworkFrame">
+                <ImageView style="@style/MusicPlayerPlaylistWidgetArtwork" android:src="@drawable/trending_up" />
+                <FrameLayout style="@style/MusicPlayerPlaylistWidgetCardPlayButton"><ImageView style="@style/MusicPlayerPlaylistWidgetCardPlayIcon" /></FrameLayout>
             </FrameLayout>
-            <TextView style="@style/MetrolistPlaylistWidgetCardTitle" android:text="@string/my_top" />
+            <TextView style="@style/MusicPlayerPlaylistWidgetCardTitle" android:text="@string/my_top" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

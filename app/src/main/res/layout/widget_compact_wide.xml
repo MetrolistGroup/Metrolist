@@ -11,7 +11,7 @@
     android:paddingTop="8dp"
     android:paddingBottom="8dp"
     android:gravity="center_vertical"
-    android:theme="@style/Theme.Widget.Metrolist">
+    android:theme="@style/Theme.Widget.MusicPlayer">
 
     <!-- Album Art - Square -->
     <ImageView

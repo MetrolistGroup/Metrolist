@@ -264,7 +264,7 @@
     <string name="auto_skip_next_on_error_desc">Đảm bảo trải nghiệm phát lại liên tục của bạn</string>
     <string name="search_history">Lịch sử tìm kiếm</string>
     <string name="disable_screenshot_desc">Khi tùy chọn này được bật, ảnh chụp màn hình và chế độ xem ứng dụng trong mục Gần đây sẽ bị vô hiệu hóa.</string>
-    <string name="discord_information">Metrolist sử dụng thư viện KizzyRPC để thiết lập trạng thái tài khoản Discord của bạn. Điều này liên quan đến việc sử dụng kết nối Discord Gateway, có thể được coi là vi phạm TOS của Discord. Tuy nhiên, không có trường hợp nào được biết đến về việc tài khoản người dùng bị đình chỉ vì lý do này. Sử dụng theo rủi ro của riêng bạn. \n \nMetrolist sẽ chỉ trích xuất mã thông báo của bạn và mọi thứ khác được lưu trữ cục bộ.</string>
+    <string name="discord_information">MusicPlayer sử dụng thư viện KizzyRPC để thiết lập trạng thái tài khoản Discord của bạn. Điều này liên quan đến việc sử dụng kết nối Discord Gateway, có thể được coi là vi phạm TOS của Discord. Tuy nhiên, không có trường hợp nào được biết đến về việc tài khoản người dùng bị đình chỉ vì lý do này. Sử dụng theo rủi ro của riêng bạn. \n \nMusicPlayer sẽ chỉ trích xuất mã thông báo của bạn và mọi thứ khác được lưu trữ cục bộ.</string>
     <string name="use_login_for_browse">Đăng nhập để xem nội dung</string>
     <string name="use_login_for_browse_desc">Điều này có thể ảnh hưởng đến nội dung bạn nhìn thấy, ví dụ như hiện những album dành riêng cho premium nếu bạn đăng nhập với tài khoản Premium</string>
     <string name="action_login">Đăng nhập</string>

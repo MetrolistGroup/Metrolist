@@ -14,7 +14,7 @@
   <title
      id="title">Get It On GitHub</title>
   <desc
-     id="desc">Uniform monochrome download badge for Metrolist.</desc>
+     id="desc">Uniform monochrome download badge for MusicPlayer.</desc>
   <style
      id="style4">
     .kicker { font-family: Arial, &quot;Liberation Sans&quot;, sans-serif; font-size: 30px; font-weight: 400; letter-spacing: 1.8px; fill: #FFFFFF; }

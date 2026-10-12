@@ -40,7 +40,7 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="false"
-        android:theme="@style/Theme.Metrolist"
+        android:theme="@style/Theme.MusicPlayer"
         tools:targetApi="tiramisu">
         <uses-library
             android:name="org.apache.http.legacy"
@@ -49,7 +49,7 @@
         <activity
             android:name=".ui.screens.CrashActivity"
             android:exported="false"
-            android:theme="@style/Theme.Metrolist"
+            android:theme="@style/Theme.MusicPlayer"
             android:excludeFromRecents="true"
             android:process=":crash" />
 
@@ -58,7 +58,7 @@
             android:exported="true"
             android:launchMode="singleTask"
             android:resizeableActivity="true"
-            android:theme="@style/Theme.Metrolist"
+            android:theme="@style/Theme.MusicPlayer"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -72,7 +72,7 @@
 
             <!-- Music Recognizer Widget: open recognition / recognition_history screen -->
             <intent-filter>
-                <action android:name="com.metrolist.music.action.RECOGNITION" />
+                <action android:name="com.sydforum.musicplay.action.RECOGNITION" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
@@ -84,7 +84,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data android:scheme="https" />
-                <data android:host="metrolist.cc" />
+                <data android:host="musicplayer.cc" />
                 <data android:pathPrefix="/listen" />
             </intent-filter>
 
@@ -201,7 +201,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="metrolistdiscord" />
+                <data android:scheme="musicplayerdiscord" />
                 <data android:host="oauth2" />
                 <data android:pathPrefix="/callback" />
             </intent-filter>
@@ -228,7 +228,7 @@
             android:exported="false"
             android:launchMode="singleTask"
             android:noHistory="true"
-            android:theme="@style/Theme.Metrolist.Transparent" />
+            android:theme="@style/Theme.MusicPlayer.Transparent" />
 
         <service
             android:name=".playback.MusicService"
@@ -294,9 +294,9 @@
             android:label="@string/widget_music_player">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.metrolist.music.widget.PLAY_PAUSE" />
-                <action android:name="com.metrolist.music.widget.LIKE" />
-                <action android:name="com.metrolist.music.widget.UPDATE_WIDGET" />
+                <action android:name="com.sydforum.musicplay.widget.PLAY_PAUSE" />
+                <action android:name="com.sydforum.musicplay.widget.LIKE" />
+                <action android:name="com.sydforum.musicplay.widget.UPDATE_WIDGET" />
             </intent-filter>
 
             <meta-data
@@ -326,9 +326,9 @@
             android:label="@string/widget_turntable">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.metrolist.music.widget.TURNTABLE_PLAY_PAUSE" />
-                <action android:name="com.metrolist.music.widget.TURNTABLE_LIKE" />
-                <action android:name="com.metrolist.music.widget.UPDATE_TURNTABLE_WIDGET" />
+                <action android:name="com.sydforum.musicplay.widget.TURNTABLE_PLAY_PAUSE" />
+                <action android:name="com.sydforum.musicplay.widget.TURNTABLE_LIKE" />
+                <action android:name="com.sydforum.musicplay.widget.UPDATE_TURNTABLE_WIDGET" />
             </intent-filter>
 
             <meta-data
@@ -339,7 +339,7 @@
         <!-- Google Cast Options Provider -->
         <meta-data
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
-            android:value="com.metrolist.music.cast.CastOptionsProvider" />
+            android:value="com.sydforum.musicplay.cast.CastOptionsProvider" />
 
         <!-- Music Recognizer Widget -->
         <receiver
@@ -348,9 +348,9 @@
             android:label="@string/widget_recognizer_name">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.metrolist.music.widget.recognizer.TAP_MIC" />
-                <action android:name="com.metrolist.music.widget.recognizer.UPDATE" />
-                <action android:name="com.metrolist.music.widget.recognizer.RESET" />
+                <action android:name="com.sydforum.musicplay.widget.recognizer.TAP_MIC" />
+                <action android:name="com.sydforum.musicplay.widget.recognizer.UPDATE" />
+                <action android:name="com.sydforum.musicplay.widget.recognizer.RESET" />
             </intent-filter>
 
             <meta-data

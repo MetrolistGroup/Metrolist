@@ -214,12 +214,12 @@
     <string name="enable_lrclib">Ota LrcLib-lyriikantarjoaja käyttöön</string>
     <string name="hide_explicit">Piilota sopimaton sisältö</string>
     <string name="dismiss">Hylkää</string>
-    <string name="discord_information">Metrolist käyttää KizzyRPC-kirjastoa asettaaksesi Discord-tilisi tilan. Tämä edellyttää Discord Gateway-yhteyttä, jota voidaan katsoa Discordin käyttöehtojen rikkomuksena. Ei kuitenkaan ole tiedossa tapauksia, joissa käyttäjätilit olisi jäädytetty tästä syystä. Käytä omalla vastuullasi. \n \nMetrolist poimii ainoastaan tunnuksesi, ja kaikki muu säilytetään paikallisesti.</string>
+    <string name="discord_information">MusicPlayer käyttää KizzyRPC-kirjastoa asettaaksesi Discord-tilisi tilan. Tämä edellyttää Discord Gateway-yhteyttä, jota voidaan katsoa Discordin käyttöehtojen rikkomuksena. Ei kuitenkaan ole tiedossa tapauksia, joissa käyttäjätilit olisi jäädytetty tästä syystä. Käytä omalla vastuullasi. \n \nMusicPlayer poimii ainoastaan tunnuksesi, ja kaikki muu säilytetään paikallisesti.</string>
     <string name="options">Asetukset</string>
     <string name="preview">Esikatselu</string>
     <string name="login_failed">Kirjautuminen epäonnistui</string>
     <string name="action_logout">Kirjaudu ulos</string>
-    <string name="enable_discord_rpc">Tämä on Discord-integraatio-ominaisuus, se tarkoittaa Metrolist-toiminnan näyttämistä Discord-tililläsi</string>
+    <string name="enable_discord_rpc">Tämä on Discord-integraatio-ominaisuus, se tarkoittaa MusicPlayer-toiminnan näyttämistä Discord-tililläsi</string>
     <string name="forgotten_favorites">Unohtuneet suosikit</string>
     <string name="sample_rate">Näytteenottonopeus</string>
     <string name="queue_searched_songs">Haetut laulut</string>

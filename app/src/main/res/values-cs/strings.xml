@@ -281,7 +281,7 @@
     <string name="default_">Výchozí</string>
     <string name="theme">Motiv</string>
     <string name="player_text_alignment">Zarovnání textu přehrávače</string>
-    <string name="discord_information">Metrolist používá knihovnu KizzyRPC, aby mohl nastavit váš stav na Discordu. Tato funkce zahrnuje připojení k bráně Discord, což může být považováno za porušení podmínek společnosti Discord. Neexistují nicméně žádné známé případy uzamčení účtu z tohoto důvodu. Používejte na vlastní nebezpečí. \n \nMetrolist pouze extrahuje váš token, vše ostatní je uloženo lokálně.</string>
+    <string name="discord_information">MusicPlayer používá knihovnu KizzyRPC, aby mohl nastavit váš stav na Discordu. Tato funkce zahrnuje připojení k bráně Discord, což může být považováno za porušení podmínek společnosti Discord. Neexistují nicméně žádné známé případy uzamčení účtu z tohoto důvodu. Používejte na vlastní nebezpečí. \n \nMusicPlayer pouze extrahuje váš token, vše ostatní je uloženo lokálně.</string>
     <string name="action_logout">Odhlásit se</string>
     <string name="use_login_for_browse">Použít účet pro procházení obsahu</string>
     <string name="use_login_for_browse_desc">Může ovlivnit obsah, který se vám zobrazí – při přihlášení například mohou být zobrazena například alba, která jsou dostupná pouze s Premium účtem</string>

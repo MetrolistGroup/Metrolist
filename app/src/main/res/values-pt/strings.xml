@@ -282,7 +282,7 @@
     <string name="auto_skip_next_on_error_desc">Garante um experiência contínua de reprodução</string>
     <string name="auto_skip_next_on_error">Avançar automaticamente para a música seguinte se ocorrer algum erro</string>
     <string name="stop_music_on_task_clear">Parar ao limpar a tarefa</string>
-    <string name="discord_information">Metrolist utiliza a biblioteca KizzyRPC para definir o estado da sua conta Discord. Isto envolve uma ligação ao Discord Gateway, que pode ser considerada uma violação dos termos do serviço Discord. Contudo ,não há casos conhecidos de contas suspensas por este motivo. Utilize por sua conta e risco.\n\nMetrolist apenas irá extrair o seu token e tudo o resto é armazenado localmente.</string>
+    <string name="discord_information">MusicPlayer utiliza a biblioteca KizzyRPC para definir o estado da sua conta Discord. Isto envolve uma ligação ao Discord Gateway, que pode ser considerada uma violação dos termos do serviço Discord. Contudo ,não há casos conhecidos de contas suspensas por este motivo. Utilize por sua conta e risco.\n\nMusicPlayer apenas irá extrair o seu token e tudo o resto é armazenado localmente.</string>
     <string name="use_login_for_browse">Inicie a sessão para ver o conteúdo de navegação</string>
     <string name="use_login_for_browse_desc">Isto influencia o conteúdo visível, e por exemplo, mostra apenas álbuns Premium, se estiver autenticado com uma conta Premium</string>
     <string name="action_login">Iniciar sessão</string>
