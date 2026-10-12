@@ -5,9 +5,12 @@
 
 package com.metrolist.music.ui.component
 
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import com.metrolist.music.ui.screens.settings.LyricsPosition
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
@@ -152,5 +155,17 @@ class LyricsTableAndGapTest {
         assertEquals(true, isTapLanding(81450L, 2000L, 83450L, 1500L))
         // Raw comparison would misread this as a scrub landing elsewhere.
         assertEquals(false, isTapLanding(81450L, 0L, 83450L, 1500L))
+    }
+
+    @Test
+    fun `sub style mirrors plain text defaults`() {
+        // The height table must measure what LyricsLine actually composes: plain
+        // Text() defaults (no custom family, padding, or line-height trim).
+        val style = lyricSubTextStyle(LYRICS_SUB_FONT_SIZE_SP, null)
+        assertEquals(LYRICS_SUB_FONT_SIZE_SP.sp, style.fontSize)
+        assertEquals(FontWeight.Normal, style.fontWeight)
+        assertNull(style.fontFamily)
+        assertNull(style.platformStyle)
+        assertNull(style.lineHeightStyle)
     }
 }

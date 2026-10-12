@@ -115,19 +115,19 @@ internal fun lyricMainTextStyle(
     )
 )
 
-/** Small sub-line style (romanized / translation). Height only depends on size. */
+/**
+ * Small sub-line style (romanized / translation), mirroring the plain Text()
+ * composables in LyricsLine exactly (fontSize + Normal weight, platform and
+ * line-height defaults). Keep in sync with those Texts: the height table is only
+ * as accurate as this mirror. Height-relevant fields are size and weight;
+ * color/alignment never affect measurement.
+ */
 internal fun lyricSubTextStyle(
     fontSizeSp: Float,
-    fontFamily: FontFamily?,
+    @Suppress("UNUSED_PARAMETER") fontFamily: FontFamily?,
 ): TextStyle = TextStyle(
     fontSize = fontSizeSp.sp,
     fontWeight = FontWeight.Normal,
-    fontFamily = fontFamily,
-    platformStyle = PlatformTextStyle(includeFontPadding = false),
-    lineHeightStyle = LineHeightStyle(
-        alignment = LineHeightStyle.Alignment.Center,
-        trim = LineHeightStyle.Trim.Both
-    )
 )
 
 /**
