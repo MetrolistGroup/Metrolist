@@ -97,4 +97,15 @@ class LyricsSyncDetectionTest {
         val filtered = LyricsUtils.filterLyricsCreditLines("[01:23] Synced by Someone")
         assertFalse(filtered.contains("Synced by"))
     }
+
+    @Test
+    fun `credit-only lyrics filter to blank`() {
+        assertEquals("", LyricsUtils.filterLyricsCreditLines("[00:12.34] Synced by Someone"))
+        assertEquals("", LyricsUtils.filterLyricsCreditLines("Synced by X"))
+        assertEquals("", LyricsUtils.filterLyricsCreditLines("[00:10.00]v1: Synced by Y"))
+        assertEquals(
+            "[01:23.45] Just text",
+            LyricsUtils.filterLyricsCreditLines("[01:23.45] Just text")
+        )
+    }
 }
