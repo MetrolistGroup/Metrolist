@@ -125,12 +125,17 @@ fun LyricsMenu(
         mutableStateOf(false)
     }
 
+    // Only real lyrics are copyable/editable as text: the not-found marker and
+    // blank rows must not leak into the clipboard or the editor.
+    val copyableLyrics = lyricsProvider()?.lyrics
+        ?.takeUnless { it == LyricsEntity.LYRICS_NOT_FOUND || it.isBlank() }
+
     if (showEditDialog) {
         TextFieldDialog(
             onDismiss = { showEditDialog = false },
             icon = { Icon(painter = painterResource(R.drawable.edit), contentDescription = null) },
             title = { Text(text = mediaMetadataProvider().title) },
-            initialTextFieldValue = TextFieldValue(lyricsProvider()?.lyrics.orEmpty()),
+            initialTextFieldValue = TextFieldValue(copyableLyrics.orEmpty()),
             singleLine = false,
             isInputValid = { it.isNotBlank() },
             onDone = {
@@ -457,8 +462,9 @@ fun LyricsMenu(
                                 )
                             },
                             text = stringResource(R.string.copy),
+                            enabled = copyableLyrics != null,
                             onClick = {
-                                lyricsProvider()?.lyrics?.let { lyrics ->
+                                copyableLyrics?.let { lyrics ->
                                     val parsedCopy = LyricsUtils.parseLyrics(lyrics)
                                     val plainLyrics =
                                         if (parsedCopy.isNotEmpty()) {
