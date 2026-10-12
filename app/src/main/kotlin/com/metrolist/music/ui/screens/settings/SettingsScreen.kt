@@ -39,6 +39,9 @@ import com.metrolist.music.ui.component.ReleaseNotesCard
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.Updater
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +51,8 @@ fun SettingsScreen(
 ) {
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
+    var showSpotifyImport by remember { mutableStateOf(false) }
+    if (showSpotifyImport) SpotifyImportDialog(onDismiss = { showSpotifyImport = false })
     val isAndroid12OrLater = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val hasAndroidAuto = remember {
         try {
@@ -143,6 +148,17 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Storage & Data Section
+        Material3SettingsGroup(
+            title = stringResource(R.string.spotify_import_title),
+            items = listOf(
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.restore),
+                    title = { Text(stringResource(R.string.spotify_import_action)) },
+                    onClick = { showSpotifyImport = true }
+                )
+            )
+        )
+        Spacer(modifier = Modifier.height(16.dp))
         Material3SettingsGroup(
             title = stringResource(R.string.settings_section_storage),
             items = listOf(
