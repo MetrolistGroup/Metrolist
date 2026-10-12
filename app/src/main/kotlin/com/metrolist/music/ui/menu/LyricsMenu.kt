@@ -134,15 +134,20 @@ fun LyricsMenu(
             singleLine = false,
             isInputValid = { it.isNotBlank() },
             onDone = {
+                // Pin everything at tap time: the write runs async, and a skip in
+                // between must not redirect this song's text (or its signal) to
+                // the next song.
+                val targetId = mediaMetadataProvider().id
+                val providerName = lyricsProvider()?.provider ?: "Manual"
                 database.query {
                     upsert(
                         LyricsEntity(
-                            id = mediaMetadataProvider().id,
+                            id = targetId,
                             lyrics = it,
-                            provider = lyricsProvider()?.provider ?: "Manual",
+                            provider = providerName,
                         ),
                     )
-                    LyricsSelectionSignals.requestClearSelection(mediaMetadataProvider().id)
+                    LyricsSelectionSignals.requestClearSelection(targetId)
                 }
             },
         )
