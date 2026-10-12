@@ -19,12 +19,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,18 +58,40 @@ fun ShowOffsetDialog(songProvider: () -> SongEntity?) {
         }
     }
 
+    // Debounced persistence: slider drags settle before hitting the database.
+    // The song is pinned at write time (inside the query block): if playback moved
+    // on while debouncing, the stale value must not land on the new song.
+    val latestOffset by rememberUpdatedState(lyricsOffset)
     LaunchedEffect(lyricsOffset) {
-        // Pin the song: if playback moves on while a write is pending, the stale
-        // value must not land on the new song.
+        delay(300)
+        val targetOffset = latestOffset
         val songId = songProvider()?.id
-        songProvider()?.let { song ->
-            if (song.id == songId && song.lyricsOffset != lyricsOffset) {
-                database.query {
+        database.query {
+            songProvider()?.let { song ->
+                if (song.id == songId && song.lyricsOffset != targetOffset) {
                     upsert(
                         song.copy(
-                            lyricsOffset = lyricsOffset
+                            lyricsOffset = targetOffset
                         )
                     )
+                }
+            }
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            // Flush a trailing value the debounce never got to write on dismiss.
+            val final = latestOffset
+            val songId = songProvider()?.id
+            songProvider()?.let { song ->
+                if (song.id == songId && song.lyricsOffset != final) {
+                    database.query {
+                        songProvider()?.let { latest ->
+                            if (latest.id == songId && latest.lyricsOffset != final) {
+                                upsert(latest.copy(lyricsOffset = final))
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -126,7 +151,7 @@ fun ShowOffsetDialog(songProvider: () -> SongEntity?) {
 
                         else -> {
                             limited.toIntOrNull()?.let { parsedValue ->
-                                val clampedValue = parsedValue.coerceIn(-9999, 9999)
+                                val clampedValue = parsedValue.coerceIn(-3000, 3000)
                                 lyricsOffset = clampedValue
 
                                 if (parsedValue != clampedValue) {
@@ -207,7 +232,7 @@ fun ShowOffsetDialog(songProvider: () -> SongEntity?) {
             }
 
             Slider(
-                value = lyricsOffset.toFloat(),
+                value = lyricsOffset.coerceIn(-3000, 3000).toFloat(),
                 onValueChange = { newValue ->
                     val rounded = (newValue / 100).toInt() * 100
                     lyricsOffset = rounded

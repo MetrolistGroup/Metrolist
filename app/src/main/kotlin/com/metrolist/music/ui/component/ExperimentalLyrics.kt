@@ -1052,7 +1052,8 @@ fun ExperimentalLyrics(
                                                 } else if (selectedIndices.size < maxSelectionLimit) selectedIndices.add(index)
                                                 else showMaxSelectionToast = true
                                             } else if (isSynced && changeLyrics && !isGuest) {
-                                                if (item.time < playerConnection.player.duration + 30000L) {
+                                                val duration = playerConnection.player.duration
+                                                if (duration <= 0 || item.time < duration + 30000L) {
                                                     // Records the tap target; the jump landing on it
                                                     // glides, a jump anywhere else snaps (see auto-scroll).
                                                     pendingTapSeekMs = item.time
