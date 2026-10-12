@@ -130,20 +130,30 @@ fun LyricsMenu(
     val copyableLyrics = lyricsProvider()?.lyrics
         ?.takeUnless { it == LyricsEntity.LYRICS_NOT_FOUND || it.isBlank() }
 
+    // Snapshot at dialog-open: a song change mid-edit must keep editing the
+    // song the dialog was opened for, never redirect its text to the new song.
+    // (The search dialog already snapshots the same way.)
+    val editTarget = remember(showEditDialog) {
+        Triple(
+            mediaMetadataProvider().id,
+            copyableLyrics.orEmpty(),
+            lyricsProvider()?.provider ?: "Manual"
+        )
+    }
+    val editTitle = remember(showEditDialog) { mediaMetadataProvider().title }
+
     if (showEditDialog) {
         TextFieldDialog(
             onDismiss = { showEditDialog = false },
             icon = { Icon(painter = painterResource(R.drawable.edit), contentDescription = null) },
-            title = { Text(text = mediaMetadataProvider().title) },
-            initialTextFieldValue = TextFieldValue(copyableLyrics.orEmpty()),
+            title = { Text(text = editTitle) },
+            initialTextFieldValue = TextFieldValue(editTarget.second),
             singleLine = false,
             isInputValid = { it.isNotBlank() },
             onDone = {
-                // Pin everything at tap time: the write runs async, and a skip in
-                // between must not redirect this song's text (or its signal) to
-                // the next song.
-                val targetId = mediaMetadataProvider().id
-                val providerName = lyricsProvider()?.provider ?: "Manual"
+                // All values pinned: the write runs async.
+                val targetId = editTarget.first
+                val providerName = editTarget.third
                 database.query {
                     upsert(
                         LyricsEntity(
@@ -508,6 +518,9 @@ fun LyricsMenu(
                                             database.query {
                                                 upsert(clearedLyrics)
                                             }
+                                            // Stop the in-flight job first so it cannot
+                                            // resurrect translations after the clear.
+                                            LyricsTranslationHelper.cancelTranslation()
                                             // Resets hasActiveTranslations and clears in-memory translations
                                             LyricsTranslationHelper.triggerClearTranslations()
                                         }
@@ -530,6 +543,7 @@ fun LyricsMenu(
                                                     database.query {
                                                         upsert(clearedLyrics)
                                                     }
+                                                    LyricsTranslationHelper.cancelTranslation()
                                                     LyricsTranslationHelper.triggerClearTranslations()
                                                 }
                                             }

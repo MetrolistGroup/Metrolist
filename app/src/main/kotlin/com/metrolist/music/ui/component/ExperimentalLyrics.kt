@@ -375,7 +375,7 @@ fun ExperimentalLyrics(
         val map = mutableMapOf<Int, Int>()
         for (i in lines.indices) {
             if (lines[i].isBackground) {
-                val pairedMain = (i - 1 downTo 0).firstOrNull { !lines[it].isBackground } ?: -1
+                val pairedMain = pairBackgroundLine(lines, i)
                 if (pairedMain != -1) {
                     map[i] = pairedMain
                 }
@@ -400,6 +400,19 @@ fun ExperimentalLyrics(
     // UNLIMITED (not CONFLATED) so a gesture Fling queued after drag Snaps can never be
     // overwritten in the buffer by a later auto/height Snap. Ordering drag -> fling is preserved.
     val scrollCommands = remember { Channel<ScrollCommand>(Channel.UNLIMITED) }
+    // Manual mode has no auto-follow: a new song would otherwise open at the
+    // previous song's viewport. Snap to the top instead. The Animatable instance
+    // itself is never recreated (the command collector closes over it).
+    LaunchedEffect(currentSong?.id, lyrics) {
+        if (!isAutoScrollEnabled) {
+            scrollCommands.trySend(ScrollCommand.Snap(0f))
+        }
+    }
+    // Translations belong to one song: stop the in-flight job on change so it
+    // cannot write into the next song's lines or pollute the global status.
+    LaunchedEffect(currentSong?.id) {
+        LyricsTranslationHelper.cancelTranslation()
+    }
     var hasAutoPositioned by remember(lyrics) { mutableStateOf(false) }
     // Set by the frame loop after its first computation (even if the active set is
     // legitimately empty, e.g. mid-gap). Gates the very first snap so it goes
@@ -1196,3 +1209,16 @@ private fun findEndIndex(positions: FloatArray, maxListY: Float): Int {
     }
     return (result + 3).coerceAtMost(positions.size - 1)
 }
+
+/**
+ * Pairs a background line with the main line it accompanies: the nearest previous
+ * non-background line with visible text. Blank entries (e.g. the HEAD entry at
+ * song start) are skipped — pairing a leading background line to a blank would
+ * anchor the scroll to an invisible line and stretch the gap window from zero.
+ * Returns -1 when there is no visible main line above. Pure for testing.
+ */
+internal fun pairBackgroundLine(
+    lines: List<com.metrolist.music.lyrics.LyricsEntry>,
+    bgIndex: Int,
+): Int = (bgIndex - 1 downTo 0)
+    .firstOrNull { !lines[it].isBackground && lines[it].text.isNotBlank() } ?: -1

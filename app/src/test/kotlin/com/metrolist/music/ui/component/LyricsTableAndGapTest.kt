@@ -168,4 +168,27 @@ class LyricsTableAndGapTest {
         assertNull(style.platformStyle)
         assertNull(style.lineHeightStyle)
     }
+
+    @Test
+    fun `leading background line pairs to nothing`() {
+        // Index 0 is the blank HEAD entry: a background intro must not anchor to
+        // an invisible line.
+        val lines = listOf(
+            com.metrolist.music.lyrics.LyricsEntry(0L, ""),
+            com.metrolist.music.lyrics.LyricsEntry(5000L, "ooh", isBackground = true),
+            com.metrolist.music.lyrics.LyricsEntry(10000L, "hello"),
+        )
+        assertEquals(-1, pairBackgroundLine(lines, 1))
+    }
+
+    @Test
+    fun `background line pairs to nearest visible main line`() {
+        val lines = listOf(
+            com.metrolist.music.lyrics.LyricsEntry(0L, ""),
+            com.metrolist.music.lyrics.LyricsEntry(5000L, "hello"),
+            com.metrolist.music.lyrics.LyricsEntry(6000L, "", isBackground = false),
+            com.metrolist.music.lyrics.LyricsEntry(7000L, "ooh", isBackground = true),
+        )
+        assertEquals(1, pairBackgroundLine(lines, 3))
+    }
 }

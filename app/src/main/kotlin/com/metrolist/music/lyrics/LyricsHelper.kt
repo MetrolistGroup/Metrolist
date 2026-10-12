@@ -52,15 +52,18 @@ constructor(
         mediaMetadata: MediaMetadata,
         bypassCache: Boolean = false,
     ): LyricsWithProvider {
-        if (!bypassCache) {
-            singleCache.get(mediaMetadata.id)?.let { cached ->
-                return LyricsWithProvider(cached.lyrics, cached.providerName)
-            }
-        }
-
         val orderedProviders = context.dataStore.data
             .map { preferences -> resolveLyricsProviders(preferences) }
             .first()
+        // The provider lineup is part of the cache identity: reordering or
+        // toggling providers must not serve the previous lineup's winner.
+        val enabledProviders = orderedProviders.filter { it.isEnabled(context) }
+        val cacheKey = "${mediaMetadata.id}|${enabledProviders.joinToString(",") { it.name }}"
+        if (!bypassCache) {
+            singleCache.get(cacheKey)?.let { cached ->
+                return LyricsWithProvider(cached.lyrics, cached.providerName)
+            }
+        }
 
         val isNetworkAvailable = try {
             networkConnectivity.isCurrentlyConnected()
@@ -74,7 +77,6 @@ constructor(
 
         val result = withTimeoutOrNull(MAX_LYRICS_FETCH_MS) {
             val cleanedTitle = LyricsUtils.cleanTitleForSearch(mediaMetadata.title)
-            val enabledProviders = orderedProviders.filter { it.isEnabled(context) }
 
             Timber.tag("LyricsHelper").d("Starting sequential fetch for: $cleanedTitle by ${mediaMetadata.artists.joinToString { it.name }}")
             Timber.tag("LyricsHelper").d("Enabled providers in order: ${enabledProviders.joinToString { it.name }}")
@@ -105,7 +107,7 @@ constructor(
                     // Blank is never valid playback lyrics: let the next provider try
                     // instead of letting an empty result suppress good ones behind it.
                     if (filtered.isNotBlank()) {
-                        singleCache.put(mediaMetadata.id, LyricsResult(provider.name, filtered))
+                        singleCache.put(cacheKey, LyricsResult(provider.name, filtered))
                         return@withTimeoutOrNull LyricsWithProvider(filtered, provider.name)
                     }
                     Timber.tag("LyricsHelper").w("${provider.name} returned blank lyrics, trying next")

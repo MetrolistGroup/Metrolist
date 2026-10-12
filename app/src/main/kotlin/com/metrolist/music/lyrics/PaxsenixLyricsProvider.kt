@@ -10,6 +10,7 @@ import com.metrolist.paxsenix.Paxsenix
 import com.metrolist.music.constants.EnablePaxsenixKey
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.get
+import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 
 object PaxsenixLyricsProvider : LyricsProvider {
@@ -42,6 +43,7 @@ object PaxsenixLyricsProvider : LyricsProvider {
             return result
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Exception in getLyrics")
+            if (e is CancellationException) throw e
             return Result.failure(e)
         }
     }
@@ -61,6 +63,7 @@ object PaxsenixLyricsProvider : LyricsProvider {
             Paxsenix.getAllLyrics(title, artist, duration, album, callback)
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Error fetching lyrics from Paxsenix")
+            if (e is CancellationException) throw e
         }
     }
 }

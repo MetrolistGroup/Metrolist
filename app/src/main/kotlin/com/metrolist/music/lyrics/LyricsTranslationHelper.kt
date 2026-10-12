@@ -162,6 +162,11 @@ object LyricsTranslationHelper {
             val cacheKey = getCacheKey(fullText, mode, targetLanguage)
             translationCache[cacheKey] = translatedLines
             _hasActiveTranslations.value = true
+        } else {
+            // Short/partial stored translations must not leave stale flows or a
+            // stale active flag behind.
+            lyrics.forEach { it.translatedTextFlow.value = null }
+            _hasActiveTranslations.value = false
         }
     }
 
