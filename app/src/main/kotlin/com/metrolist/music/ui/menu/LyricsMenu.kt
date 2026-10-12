@@ -142,7 +142,7 @@ fun LyricsMenu(
                             provider = lyricsProvider()?.provider ?: "Manual",
                         ),
                     )
-                    LyricsSelectionSignals.requestClearSelection()
+                    LyricsSelectionSignals.requestClearSelection(mediaMetadataProvider().id)
                 }
             },
         )
@@ -288,7 +288,7 @@ fun LyricsMenu(
                                         provider = result.providerName,
                                     ),
                                 )
-                                LyricsSelectionSignals.requestClearSelection()
+                                LyricsSelectionSignals.requestClearSelection(searchMediaMetadata.id)
                             }
                         }
                         .padding(12.dp)

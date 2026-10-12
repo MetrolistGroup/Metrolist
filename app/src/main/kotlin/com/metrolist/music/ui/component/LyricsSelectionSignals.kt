@@ -15,14 +15,15 @@ import kotlinx.coroutines.flow.asSharedFlow
  * Selection state lives in the lyrics reader, but the writes that invalidate it
  * (refetch, search-pick, manual edit) happen in the menu — and may rewrite
  * byte-identical text, which no state key can observe. Emitters call
- * [requestClearSelection] after a successful write; the reader clears.
- * Stale buffered clears are harmless (clearing is idempotent).
+ * [requestClearSelection] after a successful write; the reader clears only if
+ * it is still showing that song, so a late signal from a previous song cannot
+ * wipe a fresh selection. Clearing is otherwise idempotent.
  */
 object LyricsSelectionSignals {
-    private val _clearSelection = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val clearSelection: SharedFlow<Unit> = _clearSelection.asSharedFlow()
+    private val _clearSelection = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val clearSelection: SharedFlow<String> = _clearSelection.asSharedFlow()
 
-    fun requestClearSelection() {
-        _clearSelection.tryEmit(Unit)
+    fun requestClearSelection(songId: String) {
+        _clearSelection.tryEmit(songId)
     }
 }

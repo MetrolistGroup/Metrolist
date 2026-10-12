@@ -105,7 +105,7 @@ constructor(
                 upsert(LyricsEntity(mediaMetadata.id, fetched.lyrics, fetched.provider))
                 // Same-text rewrites change no observable state, so the reader's
                 // selection is cleared explicitly instead of via state keys.
-                LyricsSelectionSignals.requestClearSelection()
+                LyricsSelectionSignals.requestClearSelection(mediaMetadata.id)
             }
         }
     }

@@ -351,11 +351,15 @@ fun ExperimentalLyrics(
     }
 
     // Menu-driven writes may rewrite identical text (no state key observes that),
-    // so selection is cleared explicitly via signal instead of state keys.
+    // so selection is cleared explicitly via signal instead of state keys. The
+    // signal carries its song: a late arrival from a previous song must not wipe
+    // a fresh selection made after switching.
     LaunchedEffect(Unit) {
-        LyricsSelectionSignals.clearSelection.collect {
-            isSelectionModeActive = false
-            selectedIndices.clear()
+        LyricsSelectionSignals.clearSelection.collect { songId ->
+            if (songId == mediaMetadata?.id) {
+                isSelectionModeActive = false
+                selectedIndices.clear()
+            }
         }
     }
 
