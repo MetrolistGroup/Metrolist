@@ -87,7 +87,7 @@ object LyricsUtils {
             if (trimmed.startsWith("[offset:")) {
                 emptyList()
             } else {
-                val entries = if (isRichSync) {
+                val entries = if (isRichSync && line.contains('<') && line.contains('>')) {
                     parseRichSyncLyrics(listOf(line))
                 } else {
                     parseLine(line, null) ?: emptyList()

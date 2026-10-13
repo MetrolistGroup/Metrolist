@@ -163,4 +163,12 @@ class LyricsSyncDetectionTest {
             LyricsUtils.plainTextForCopy("[offset:+500]\n[00:10.00]Hi")
         )
     }
+
+    @Test
+    fun `plainTextForCopy expands multi-tag lines inside rich lyrics`() {
+        assertEquals(
+            "Hi\nrepeat\nrepeat",
+            LyricsUtils.plainTextForCopy("[00:10.00]<00:10.00>Hi\n[00:10.00][00:20.00] repeat")
+        )
+    }
 }
