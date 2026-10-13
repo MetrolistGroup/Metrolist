@@ -59,19 +59,19 @@ fun ShowOffsetDialog(songProvider: () -> SongEntity?) {
     }
 
     // Debounced persistence: slider drags settle before hitting the database.
-    // The song is pinned at write time (inside the query block): if playback moved
-    // on while debouncing, the stale value must not land on the new song.
+    // Song and offset are both frozen at trigger time: if playback moves on
+    // while debouncing, the stale pair can never match (and write to) the
+    // new song.
     val latestOffset by rememberUpdatedState(lyricsOffset)
     LaunchedEffect(lyricsOffset) {
+        val triggerSongId = songProvider()?.id
         delay(300)
-        val targetOffset = latestOffset
-        val songId = songProvider()?.id
         database.query {
             songProvider()?.let { song ->
-                if (song.id == songId && song.lyricsOffset != targetOffset) {
+                if (song.id == triggerSongId && song.lyricsOffset != lyricsOffset) {
                     upsert(
                         song.copy(
-                            lyricsOffset = targetOffset
+                            lyricsOffset = lyricsOffset
                         )
                     )
                 }
