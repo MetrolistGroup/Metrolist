@@ -105,8 +105,13 @@ constructor(
                 }
             if (fetched.lyrics == LyricsEntity.LYRICS_NOT_FOUND || fetched.lyrics.isBlank()) return@launch
             database.query {
-                lyricsEntity?.let(::delete)
-                upsert(LyricsEntity(mediaMetadata.id, fetched.lyrics, fetched.provider))
+                // Overwrite keeps AI translations: delete + upsert would replace
+                // the whole row. Fall back to insert when there is no row yet.
+                if (lyricsEntity != null) {
+                    updateLyricsText(mediaMetadata.id, fetched.lyrics, fetched.provider)
+                } else {
+                    upsert(LyricsEntity(mediaMetadata.id, fetched.lyrics, fetched.provider))
+                }
                 // Same-text rewrites change no observable state, so the reader's
                 // selection is cleared explicitly instead of via state keys.
                 LyricsSelectionSignals.requestClearSelection(mediaMetadata.id)

@@ -155,13 +155,17 @@ fun LyricsMenu(
                 val targetId = editTarget.first
                 val providerName = editTarget.third
                 database.query {
-                    upsert(
-                        LyricsEntity(
-                            id = targetId,
-                            lyrics = it,
-                            provider = providerName,
-                        ),
-                    )
+                    // Overwrite keeps AI translations: upsert() would replace the whole row.
+                    // Fall back to insert when the row vanished mid-flight (0 updated).
+                    if (updateLyricsText(targetId, it, providerName) == 0) {
+                        upsert(
+                            LyricsEntity(
+                                id = targetId,
+                                lyrics = it,
+                                provider = providerName,
+                            ),
+                        )
+                    }
                     LyricsSelectionSignals.requestClearSelection(targetId)
                 }
             },
@@ -301,13 +305,17 @@ fun LyricsMenu(
                             onDismiss()
                             viewModel.cancelSearch()
                             database.query {
-                                upsert(
-                                    LyricsEntity(
-                                        id = searchMediaMetadata.id,
-                                        lyrics = result.lyrics,
-                                        provider = result.providerName,
-                                    ),
-                                )
+                                // Overwrite keeps AI translations: upsert() would replace the whole row.
+                                // Fall back to insert when the row vanished mid-flight (0 updated).
+                                if (updateLyricsText(searchMediaMetadata.id, result.lyrics, result.providerName) == 0) {
+                                    upsert(
+                                        LyricsEntity(
+                                            id = searchMediaMetadata.id,
+                                            lyrics = result.lyrics,
+                                            provider = result.providerName,
+                                        ),
+                                    )
+                                }
                                 LyricsSelectionSignals.requestClearSelection(searchMediaMetadata.id)
                             }
                         }

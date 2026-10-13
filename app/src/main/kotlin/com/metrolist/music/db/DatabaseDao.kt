@@ -1940,6 +1940,18 @@ interface DatabaseDao {
     @Upsert
     fun upsert(lyrics: LyricsEntity)
 
+    /**
+     * Overwrites lyrics text/provider while keeping AI translations. Plain upsert()
+     * replaces the whole row (wiping translatedLyrics columns), so every overwrite of
+     * an existing row must go through here. Returns the affected row count (0 = absent).
+     */
+    @Query("UPDATE lyrics SET lyrics = :lyrics, provider = :provider WHERE id = :id")
+    fun updateLyricsText(
+        id: String,
+        lyrics: String,
+        provider: String,
+    ): Int
+
     @Upsert
     fun upsert(format: FormatEntity)
 
