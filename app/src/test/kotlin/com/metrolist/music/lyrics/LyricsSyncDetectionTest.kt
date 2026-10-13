@@ -171,4 +171,20 @@ class LyricsSyncDetectionTest {
             LyricsUtils.plainTextForCopy("[00:10.00]<00:10.00>Hi\n[00:10.00][00:20.00] repeat")
         )
     }
+
+    @Test
+    fun `plainTextForCopy resolves tagless bg line`() {
+        assertEquals(
+            "Hi\nooh",
+            LyricsUtils.plainTextForCopy("[00:10.00]<00:10.00>Hi\n[bg: ooh]")
+        )
+    }
+
+    @Test
+    fun `plainTextForCopy resolves tagless agent line`() {
+        assertEquals(
+            "Hi\nhello",
+            LyricsUtils.plainTextForCopy("[00:10.00]<00:10.00>Hi\n[00:11.00]v1: hello")
+        )
+    }
 }

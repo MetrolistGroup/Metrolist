@@ -87,7 +87,10 @@ object LyricsUtils {
             if (trimmed.startsWith("[offset:")) {
                 emptyList()
             } else {
-                val entries = if (isRichSync && line.contains('<') && line.contains('>')) {
+                val hasAngleTags = line.contains('<') && line.contains('>')
+                val isBgLine = trimmed.startsWith("[bg:")
+                val isAgentLine = PAXSENIX_AGENT_LINE_REGEX.containsMatchIn(trimmed)
+                val entries = if (isRichSync && (hasAngleTags || isBgLine || isAgentLine)) {
                     parseRichSyncLyrics(listOf(line))
                 } else {
                     parseLine(line, null) ?: emptyList()
