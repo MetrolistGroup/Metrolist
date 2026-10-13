@@ -147,4 +147,20 @@ class LyricsSyncDetectionTest {
             LyricsUtils.plainTextForCopy("[00:01.50]Hello\n<Hello:1.5:2.0>")
         )
     }
+
+    @Test
+    fun `plainTextForCopy resolves paxsenix bg line to text`() {
+        assertEquals(
+            "Hi\nooh",
+            LyricsUtils.plainTextForCopy("[00:10.00]<00:10.00>Hi\n[bg: <00:10.20>ooh]")
+        )
+    }
+
+    @Test
+    fun `plainTextForCopy drops offset metadata`() {
+        assertEquals(
+            "Hi",
+            LyricsUtils.plainTextForCopy("[offset:+500]\n[00:10.00]Hi")
+        )
+    }
 }

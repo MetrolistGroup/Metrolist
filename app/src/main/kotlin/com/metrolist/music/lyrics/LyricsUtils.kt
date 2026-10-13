@@ -29,6 +29,11 @@ private val PAXSENIX_BG_LINE_REGEX = "^\\[bg:\\s*(.*)\\]$".toRegex()
 private val AGENT_REGEX = "\\{agent:([^}]+)\\}".toRegex()
 private val BACKGROUND_REGEX = "^\\{bg\\}".toRegex()
 
+// Standalone word-timing block line: <word:startSec:endSec(|...)*> with decimal
+// seconds (TTML/LyricsPlus output). Evaluated per trimmed line.
+private val WORD_BLOCK_LINE_REGEX =
+    "^<[^<>]+:[0-9]+(\\.[0-9]+)?:[0-9]+(\\.[0-9]+)?(\\|[^<>]+:[0-9]+(\\.[0-9]+)?:[0-9]+(\\.[0-9]+)?)*>$".toRegex()
+
 @Suppress("RegExpRedundantEscape")
 object LyricsUtils {
     fun cleanTitleForSearch(title: String): String {
@@ -72,13 +77,28 @@ object LyricsUtils {
      * (tags stripped); anything else (headers like [Verse], blank lines) is kept
      * verbatim so no content is silently dropped. Pure for testing.
      */
-    internal fun plainTextForCopy(lyrics: String): String =
-        lyrics.lines().flatMap { line ->
-            val entries = parseLyrics(line)
-            if (entries.isNotEmpty()) entries.map { it.text }
-            else if (isTimingContinuationLine(line.trim())) emptyList()
-            else listOf(line)
+    private fun isRichSyncLyrics(lines: List<String>): Boolean = lines.any { line -> RICH_SYNC_LINE_REGEX.matches(line.trim()) && RICH_SYNC_WORD_REGEX.containsMatchIn(line) }
+
+    internal fun plainTextForCopy(lyrics: String): String {
+        val lines = lyrics.lines()
+        val isRichSync = isRichSyncLyrics(lines)
+        return lines.flatMap { line ->
+            val trimmed = line.trim()
+            if (trimmed.startsWith("[offset:")) {
+                emptyList()
+            } else {
+                val entries = if (isRichSync) {
+                    parseRichSyncLyrics(listOf(line))
+                } else {
+                    parseLine(line, null) ?: emptyList()
+                }
+                if (entries.isNotEmpty()) entries.map { it.text }
+                else if (WORD_BLOCK_LINE_REGEX.matches(trimmed)) emptyList()
+                else if (isRichSync && isTimingContinuationLine(trimmed)) emptyList()
+                else listOf(line)
+            }
         }.joinToString("\n")
+    }
 
     private val KANA_ROMAJI_MAP: Map<String, String> = mapOf(
         // Digraphs (Yōon - combinations like kya, sho)
@@ -460,10 +480,7 @@ object LyricsUtils {
             .filter { !it.trim().startsWith("[offset:") }
 
         // Check if this is rich sync format (contains <MM:SS.mm> patterns)
-        val isRichSync = lines.any { line ->
-            RICH_SYNC_LINE_REGEX.matches(line.trim()) &&
-            RICH_SYNC_WORD_REGEX.containsMatchIn(line)
-        }
+        val isRichSync = isRichSyncLyrics(lines)
 
         return if (isRichSync) {
             parseRichSyncLyrics(lines)
