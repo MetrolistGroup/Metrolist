@@ -107,4 +107,70 @@ class LyricsTranslationPreservationTest {
             }
             assertEquals(null, row)
         }
+
+    @Test
+    fun `replaceLyrics keeps translations for identical text`() =
+        runBlocking {
+            withContext(Dispatchers.IO) {
+                database.dao.upsert(
+                    LyricsEntity(
+                        id = "song",
+                        lyrics = "[00:01.00] old",
+                        provider = "LrcLib",
+                        translatedLyrics = "eski çeviri",
+                        translationLanguage = "tr",
+                        translationMode = "Literal",
+                    )
+                )
+                database.dao.replaceLyrics("song", "[00:01.00] old", "BetterLyrics")
+            }
+
+            val row = withContext(Dispatchers.IO) {
+                database.dao.lyrics("song").first()!!
+            }
+            assertEquals("[00:01.00] old", row.lyrics)
+            assertEquals("BetterLyrics", row.provider)
+            assertEquals("eski çeviri", row.translatedLyrics)
+        }
+
+    @Test
+    fun `replaceLyrics drops translations for changed text`() =
+        runBlocking {
+            withContext(Dispatchers.IO) {
+                database.dao.upsert(
+                    LyricsEntity(
+                        id = "song",
+                        lyrics = "[00:01.00] old",
+                        provider = "LrcLib",
+                        translatedLyrics = "eski çeviri",
+                        translationLanguage = "tr",
+                        translationMode = "Literal",
+                    )
+                )
+                database.dao.replaceLyrics("song", "[00:01.00] new words", "BetterLyrics")
+            }
+
+            val row = withContext(Dispatchers.IO) {
+                database.dao.lyrics("song").first()!!
+            }
+            assertEquals("[00:01.00] new words", row.lyrics)
+            assertEquals("BetterLyrics", row.provider)
+            assertEquals("", row.translatedLyrics)
+            assertEquals("", row.translationLanguage)
+            assertEquals("", row.translationMode)
+        }
+
+    @Test
+    fun `replaceLyrics inserts absent rows`() =
+        runBlocking {
+            withContext(Dispatchers.IO) {
+                database.dao.replaceLyrics("ghost", "[00:01.00] x", "LrcLib")
+            }
+
+            val row = withContext(Dispatchers.IO) {
+                database.dao.lyrics("ghost").first()!!
+            }
+            assertEquals("[00:01.00] x", row.lyrics)
+            assertEquals("LrcLib", row.provider)
+        }
 }

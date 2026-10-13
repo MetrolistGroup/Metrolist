@@ -1952,6 +1952,31 @@ interface DatabaseDao {
         provider: String,
     ): Int
 
+    @Query("SELECT lyrics FROM lyrics WHERE id = :id")
+    fun lyricsText(id: String): String?
+
+    /**
+     * Atomic lyrics replacement for refetch/edit/search-pick. Reads the current
+     * row inside the transaction (never a stale snapshot): absent rows are
+     * inserted, identical text keeps AI translations, changed text drops them
+     * (a translation of other words must not survive). No schema change.
+     */
+    @Transaction
+    fun replaceLyrics(
+        id: String,
+        lyrics: String,
+        provider: String,
+    ) {
+        val old = lyricsText(id)
+        if (old == null) {
+            upsert(LyricsEntity(id, lyrics, provider))
+        } else if (old == lyrics) {
+            updateLyricsText(id, lyrics, provider)
+        } else {
+            upsert(LyricsEntity(id, lyrics, provider))
+        }
+    }
+
     @Upsert
     fun upsert(format: FormatEntity)
 

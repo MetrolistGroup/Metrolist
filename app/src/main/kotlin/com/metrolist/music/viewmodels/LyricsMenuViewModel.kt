@@ -89,7 +89,6 @@ constructor(
 
     fun refetchLyrics(
         mediaMetadata: MediaMetadata,
-        lyricsEntity: LyricsEntity?,
     ) {
         // Fetch first, write only on success: deleting upfront would destroy good lyrics
         // when the fetch fails or finds nothing (failures surface as NOT_FOUND).
@@ -105,15 +104,11 @@ constructor(
                 }
             if (fetched.lyrics == LyricsEntity.LYRICS_NOT_FOUND || fetched.lyrics.isBlank()) return@launch
             database.query {
-                // Overwrite keeps AI translations: delete + upsert would replace
-                // the whole row. Fall back to insert when there is no row yet.
-                if (lyricsEntity != null) {
-                    updateLyricsText(mediaMetadata.id, fetched.lyrics, fetched.provider)
-                } else {
-                    upsert(LyricsEntity(mediaMetadata.id, fetched.lyrics, fetched.provider))
-                }
-                // Same-text rewrites change no observable state, so the reader's
-                // selection is cleared explicitly instead of via state keys.
+                // Atomic replace: fresh row state, translations kept only for
+                // identical text. Same-text rewrites change no observable state,
+                // so the reader's selection is cleared explicitly instead of
+                // via state keys.
+                replaceLyrics(mediaMetadata.id, fetched.lyrics, fetched.provider)
                 LyricsSelectionSignals.requestClearSelection(mediaMetadata.id)
             }
         }

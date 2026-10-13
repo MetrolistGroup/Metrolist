@@ -155,17 +155,8 @@ fun LyricsMenu(
                 val targetId = editTarget.first
                 val providerName = editTarget.third
                 database.query {
-                    // Overwrite keeps AI translations: upsert() would replace the whole row.
-                    // Fall back to insert when the row vanished mid-flight (0 updated).
-                    if (updateLyricsText(targetId, it, providerName) == 0) {
-                        upsert(
-                            LyricsEntity(
-                                id = targetId,
-                                lyrics = it,
-                                provider = providerName,
-                            ),
-                        )
-                    }
+                    // Atomic replace: translations survive only identical text.
+                    replaceLyrics(targetId, it, providerName)
                     LyricsSelectionSignals.requestClearSelection(targetId)
                 }
             },
@@ -305,17 +296,8 @@ fun LyricsMenu(
                             onDismiss()
                             viewModel.cancelSearch()
                             database.query {
-                                // Overwrite keeps AI translations: upsert() would replace the whole row.
-                                // Fall back to insert when the row vanished mid-flight (0 updated).
-                                if (updateLyricsText(searchMediaMetadata.id, result.lyrics, result.providerName) == 0) {
-                                    upsert(
-                                        LyricsEntity(
-                                            id = searchMediaMetadata.id,
-                                            lyrics = result.lyrics,
-                                            provider = result.providerName,
-                                        ),
-                                    )
-                                }
+                                // Atomic replace: translations survive only identical text.
+                                replaceLyrics(searchMediaMetadata.id, result.lyrics, result.providerName)
                                 LyricsSelectionSignals.requestClearSelection(searchMediaMetadata.id)
                             }
                         }
@@ -453,7 +435,7 @@ fun LyricsMenu(
                             text = stringResource(R.string.refetch),
                             onClick = {
                                 onDismiss()
-                                viewModel.refetchLyrics(mediaMetadataProvider(), lyricsProvider())
+                                viewModel.refetchLyrics(mediaMetadataProvider())
                             },
                         ),
                         NewAction(

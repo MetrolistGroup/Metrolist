@@ -196,6 +196,19 @@ object LyricsTranslationHelper {
         translationJob =
             scope.launch(Dispatchers.IO) {
                 try {
+                    // Snapshot the row text being translated: if a refetch/edit
+                    // replaces the lyrics mid-translation, the save paths below
+                    // must not attach this translation to the new text.
+                    val sourceText =
+                        if (songId.isNotBlank() && database != null) {
+                            try {
+                                database.lyrics(songId).first()?.lyrics
+                            } catch (e: Exception) {
+                                null
+                            }
+                        } else {
+                            null
+                        }
                     // Validate inputs
                     val effectiveApiKey = if (provider == "DeepL") deeplApiKey else apiKey
                     if (effectiveApiKey.isBlank()) {
@@ -240,7 +253,9 @@ object LyricsTranslationHelper {
                         if (songId.isNotBlank() && database != null) {
                             try {
                                 val currentLyrics = database.lyrics(songId).first()
-                                if (currentLyrics != null && currentLyrics.translatedLyrics.isNullOrBlank()) {
+                                if (currentLyrics != null && currentLyrics.translatedLyrics.isNullOrBlank() &&
+                                    (sourceText == null || currentLyrics.lyrics == sourceText)
+                                ) {
                                     database.query {
                                         upsert(
                                             currentLyrics.copy(
@@ -378,7 +393,9 @@ object LyricsTranslationHelper {
                             if (songId.isNotBlank() && database != null) {
                                 try {
                                     val currentLyrics = database.lyrics(songId).first()
-                                    if (currentLyrics != null) {
+                                    if (currentLyrics != null &&
+                                        (sourceText == null || currentLyrics.lyrics == sourceText)
+                                    ) {
                                         database.query {
                                             upsert(
                                                 currentLyrics.copy(
