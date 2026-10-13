@@ -499,12 +499,12 @@ fun LyricsMenu(
                                         // Remove translations
                                         lyricsProvider()?.let { lyrics ->
                                             val clearedLyrics = LyricsTranslationHelper.clearTranslations(lyrics)
-                                            database.query {
-                                                upsert(clearedLyrics)
-                                            }
                                             // Stop the in-flight job first so it cannot
                                             // resurrect translations after the clear.
                                             LyricsTranslationHelper.cancelTranslation()
+                                            database.query {
+                                                clearTranslationsIfTextMatches(lyrics.id, lyrics.lyrics)
+                                            }
                                             // Resets hasActiveTranslations and clears in-memory translations
                                             LyricsTranslationHelper.triggerClearTranslations()
                                         }
@@ -524,10 +524,10 @@ fun LyricsMenu(
                                                 // Disable translations – triggerClearTranslations resets hasActiveTranslations
                                                 lyricsProvider()?.let { lyrics ->
                                                     val clearedLyrics = LyricsTranslationHelper.clearTranslations(lyrics)
-                                                    database.query {
-                                                        upsert(clearedLyrics)
-                                                    }
                                                     LyricsTranslationHelper.cancelTranslation()
+                                                    database.query {
+                                                        clearTranslationsIfTextMatches(lyrics.id, lyrics.lyrics)
+                                                    }
                                                     LyricsTranslationHelper.triggerClearTranslations()
                                                 }
                                             }

@@ -1977,6 +1977,30 @@ interface DatabaseDao {
         }
     }
 
+    /**
+     * Attaches a translation only if the row still holds the translated text.
+     * Single statement: the WHERE clause re-validates at write time, so a queued
+     * write can never restore overwritten lyrics. Returns rows updated.
+     */
+    @Query("UPDATE lyrics SET translatedLyrics = :translated, translationLanguage = :language, translationMode = :mode WHERE id = :id AND lyrics = :expectedText")
+    fun attachTranslationIfTextMatches(
+        id: String,
+        expectedText: String,
+        translated: String,
+        language: String,
+        mode: String,
+    ): Int
+
+    /**
+     * Clears translations only if the row still holds the given text, so an
+     * untranslate toggle cannot wipe a just-replaced row. Returns rows updated.
+     */
+    @Query("UPDATE lyrics SET translatedLyrics = '', translationLanguage = '', translationMode = '' WHERE id = :id AND lyrics = :expectedText")
+    fun clearTranslationsIfTextMatches(
+        id: String,
+        expectedText: String,
+    ): Int
+
     @Upsert
     fun upsert(format: FormatEntity)
 

@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.Locale
@@ -170,8 +169,13 @@ object LyricsTranslationHelper {
         }
     }
 
+    /**
+     * @param sourceLyrics raw lyrics string the displayed lines were parsed from;
+     * DB translation writes are skipped unless the row still holds it.
+     */
     fun translateLyrics(
         lyrics: List<LyricsEntry>,
+        sourceLyrics: String,
         targetLanguage: String,
         apiKey: String,
         baseUrl: String,
@@ -196,19 +200,6 @@ object LyricsTranslationHelper {
         translationJob =
             scope.launch(Dispatchers.IO) {
                 try {
-                    // Snapshot the row text being translated: if a refetch/edit
-                    // replaces the lyrics mid-translation, the save paths below
-                    // must not attach this translation to the new text.
-                    val sourceText =
-                        if (songId.isNotBlank() && database != null) {
-                            try {
-                                database.lyrics(songId).first()?.lyrics
-                            } catch (e: Exception) {
-                                null
-                            }
-                        } else {
-                            null
-                        }
                     // Validate inputs
                     val effectiveApiKey = if (provider == "DeepL") deeplApiKey else apiKey
                     if (effectiveApiKey.isBlank()) {
@@ -252,18 +243,9 @@ object LyricsTranslationHelper {
                         // overwrite them with a stale empty entity (e.g. after an untranslate race).
                         if (songId.isNotBlank() && database != null) {
                             try {
-                                val currentLyrics = database.lyrics(songId).first()
-                                if (currentLyrics != null && currentLyrics.translatedLyrics.isNullOrBlank() &&
-                                    (sourceText == null || currentLyrics.lyrics == sourceText)
-                                ) {
+                                if (sourceLyrics.isNotBlank()) {
                                     database.query {
-                                        upsert(
-                                            currentLyrics.copy(
-                                                translatedLyrics = cachedTranslations.joinToString("\n"),
-                                                translationLanguage = targetLanguage,
-                                                translationMode = mode,
-                                            ),
-                                        )
+                                        attachTranslationIfTextMatches(songId, sourceLyrics, cachedTranslations.joinToString("\n"), targetLanguage, mode)
                                     }
                                 }
                             } catch (e: Exception) {
@@ -392,18 +374,9 @@ object LyricsTranslationHelper {
                             // Save to database if songId is provided
                             if (songId.isNotBlank() && database != null) {
                                 try {
-                                    val currentLyrics = database.lyrics(songId).first()
-                                    if (currentLyrics != null &&
-                                        (sourceText == null || currentLyrics.lyrics == sourceText)
-                                    ) {
+                                    if (sourceLyrics.isNotBlank()) {
                                         database.query {
-                                            upsert(
-                                                currentLyrics.copy(
-                                                    translatedLyrics = translatedLines.joinToString("\n"),
-                                                    translationLanguage = targetLanguage,
-                                                    translationMode = mode,
-                                                ),
-                                            )
+                                            attachTranslationIfTextMatches(songId, sourceLyrics, translatedLines.joinToString("\n"), targetLanguage, mode)
                                         }
                                     }
                                 } catch (e: Exception) {

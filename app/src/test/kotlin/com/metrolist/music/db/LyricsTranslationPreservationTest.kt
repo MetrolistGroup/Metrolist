@@ -173,4 +173,146 @@ class LyricsTranslationPreservationTest {
             assertEquals("[00:01.00] x", row.lyrics)
             assertEquals("LrcLib", row.provider)
         }
+
+    @Test
+    fun `attachTranslation attaches when text matches`() =
+        runBlocking {
+            withContext(Dispatchers.IO) {
+                database.dao.upsert(
+                    LyricsEntity(
+                        id = "song",
+                        lyrics = "[00:01.00] old",
+                        provider = "LrcLib",
+                    )
+                )
+            }
+
+            val updated = withContext(Dispatchers.IO) {
+                database.dao.attachTranslationIfTextMatches(
+                    "song",
+                    "[00:01.00] old",
+                    "eski çeviri",
+                    "tr",
+                    "Literal",
+                )
+            }
+            assertEquals(1, updated)
+
+            val row = withContext(Dispatchers.IO) {
+                database.dao.lyrics("song").first()!!
+            }
+            assertEquals("[00:01.00] old", row.lyrics)
+            assertEquals("LrcLib", row.provider)
+            assertEquals("eski çeviri", row.translatedLyrics)
+            assertEquals("tr", row.translationLanguage)
+            assertEquals("Literal", row.translationMode)
+        }
+
+    @Test
+    fun `attachTranslation skips when text changed`() =
+        runBlocking {
+            withContext(Dispatchers.IO) {
+                database.dao.upsert(
+                    LyricsEntity(
+                        id = "song",
+                        lyrics = "[00:01.00] old",
+                        provider = "LrcLib",
+                    )
+                )
+                database.dao.replaceLyrics("song", "[00:01.00] new words", "BetterLyrics")
+            }
+
+            val updated = withContext(Dispatchers.IO) {
+                database.dao.attachTranslationIfTextMatches(
+                    "song",
+                    "[00:01.00] old",
+                    "eski çeviri",
+                    "tr",
+                    "Literal",
+                )
+            }
+            assertEquals(0, updated)
+
+            val row = withContext(Dispatchers.IO) {
+                database.dao.lyrics("song").first()!!
+            }
+            assertEquals("[00:01.00] new words", row.lyrics)
+            assertEquals("", row.translatedLyrics)
+            assertEquals("", row.translationLanguage)
+            assertEquals("", row.translationMode)
+        }
+
+    @Test
+    fun `attachTranslation on absent row affects nothing`() =
+        runBlocking {
+            val updated = withContext(Dispatchers.IO) {
+                database.dao.attachTranslationIfTextMatches(
+                    "ghost",
+                    "[00:01.00] x",
+                    "çeviri",
+                    "tr",
+                    "Literal",
+                )
+            }
+            assertEquals(0, updated)
+            val row = withContext(Dispatchers.IO) {
+                database.dao.lyrics("ghost").first()
+            }
+            assertEquals(null, row)
+        }
+
+    @Test
+    fun `clearTranslationsIfTextMatches clears on match, skips on mismatch`() =
+        runBlocking {
+            withContext(Dispatchers.IO) {
+                database.dao.upsert(
+                    LyricsEntity(
+                        id = "song",
+                        lyrics = "[00:01.00] old",
+                        provider = "LrcLib",
+                        translatedLyrics = "eski çeviri",
+                        translationLanguage = "tr",
+                        translationMode = "Literal",
+                    )
+                )
+            }
+
+            val cleared = withContext(Dispatchers.IO) {
+                database.dao.clearTranslationsIfTextMatches("song", "[00:01.00] old")
+            }
+            assertEquals(1, cleared)
+
+            var row = withContext(Dispatchers.IO) {
+                database.dao.lyrics("song").first()!!
+            }
+            assertEquals("", row.translatedLyrics)
+            assertEquals("", row.translationLanguage)
+            assertEquals("", row.translationMode)
+            assertEquals("[00:01.00] old", row.lyrics)
+
+            withContext(Dispatchers.IO) {
+                database.dao.upsert(
+                    LyricsEntity(
+                        id = "song",
+                        lyrics = "[00:01.00] old",
+                        provider = "LrcLib",
+                        translatedLyrics = "eski çeviri",
+                        translationLanguage = "tr",
+                        translationMode = "Literal",
+                    )
+                )
+            }
+
+            val skipped = withContext(Dispatchers.IO) {
+                database.dao.clearTranslationsIfTextMatches("song", "[00:01.00] other words")
+            }
+            assertEquals(0, skipped)
+
+            row = withContext(Dispatchers.IO) {
+                database.dao.lyrics("song").first()!!
+            }
+            assertEquals("eski çeviri", row.translatedLyrics)
+            assertEquals("tr", row.translationLanguage)
+            assertEquals("Literal", row.translationMode)
+        }
 }

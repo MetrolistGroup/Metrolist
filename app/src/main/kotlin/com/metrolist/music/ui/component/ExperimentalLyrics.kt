@@ -278,6 +278,7 @@ fun ExperimentalLyrics(
             if (showLyrics && lines.isNotEmpty() && effectiveApiKey.isNotBlank()) {
                 LyricsTranslationHelper.translateLyrics(
                     lyrics = lines,
+                    sourceLyrics = lyricsEntity?.lyrics.orEmpty(),
                     targetLanguage = translateLanguage,
                     apiKey = openRouterApiKey,
                     baseUrl = openRouterBaseUrl,
