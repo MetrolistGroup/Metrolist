@@ -108,4 +108,43 @@ class LyricsSyncDetectionTest {
             LyricsUtils.filterLyricsCreditLines("[01:23.45] Just text")
         )
     }
+
+    @Test
+    fun `plainTextForCopy keeps headers and strips tags`() {
+        val lyrics = "Intro header\n[00:10.00] verse one\n[00:15.00] verse two"
+        assertEquals(
+            "Intro header\nverse one\nverse two",
+            LyricsUtils.plainTextForCopy(lyrics)
+        )
+    }
+
+    @Test
+    fun `plainTextForCopy keeps non-timed lines verbatim`() {
+        val lyrics = "[Chorus]\nplain words"
+        assertEquals(lyrics, LyricsUtils.plainTextForCopy(lyrics))
+    }
+
+    @Test
+    fun `plainTextForCopy preserves multi-tag expansion`() {
+        assertEquals(
+            "repeat\nrepeat",
+            LyricsUtils.plainTextForCopy("[00:10.00][00:20.00] repeat")
+        )
+    }
+
+    @Test
+    fun `plainTextForCopy strips single timestamp`() {
+        assertEquals(
+            "Just text",
+            LyricsUtils.plainTextForCopy("[01:23.45] Just text")
+        )
+    }
+
+    @Test
+    fun `plainTextForCopy drops standalone word-timing lines`() {
+        assertEquals(
+            "Hello",
+            LyricsUtils.plainTextForCopy("[00:01.50]Hello\n<Hello:1.5:2.0>")
+        )
+    }
 }

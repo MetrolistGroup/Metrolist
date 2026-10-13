@@ -67,6 +67,19 @@ object LyricsUtils {
         }.joinToString("\n")
     }
 
+    /**
+     * Plain text for copy/share: lines that parse as timed contribute their text
+     * (tags stripped); anything else (headers like [Verse], blank lines) is kept
+     * verbatim so no content is silently dropped. Pure for testing.
+     */
+    internal fun plainTextForCopy(lyrics: String): String =
+        lyrics.lines().flatMap { line ->
+            val entries = parseLyrics(line)
+            if (entries.isNotEmpty()) entries.map { it.text }
+            else if (isTimingContinuationLine(line.trim())) emptyList()
+            else listOf(line)
+        }.joinToString("\n")
+
     private val KANA_ROMAJI_MAP: Map<String, String> = mapOf(
         // Digraphs (Yōon - combinations like kya, sho)
         "キャ" to "kya", "キュ" to "kyu", "キョ" to "kyo",

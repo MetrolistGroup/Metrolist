@@ -475,13 +475,7 @@ fun LyricsMenu(
                             enabled = copyableLyrics != null,
                             onClick = {
                                 copyableLyrics?.let { lyrics ->
-                                    val parsedCopy = LyricsUtils.parseLyrics(lyrics)
-                                    val plainLyrics =
-                                        if (parsedCopy.isNotEmpty()) {
-                                            parsedCopy.joinToString("\n") { it.text }
-                                        } else {
-                                            lyrics
-                                        }
+                                    val plainLyrics = LyricsUtils.plainTextForCopy(lyrics)
 
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     val clip = ClipData.newPlainText("Lyrics", plainLyrics)
