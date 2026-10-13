@@ -34,6 +34,8 @@ constructor(
     private val networkConnectivity: NetworkConnectivityObserver,
 ) : ViewModel() {
     private var job: Job? = null
+    // search() is always called from the Main thread, so plain Int generation tracking is safe.
+    private var searchGeneration = 0
     val results = MutableStateFlow(emptyList<LyricsResult>())
     val isLoading = MutableStateFlow(false)
 
@@ -63,17 +65,19 @@ constructor(
     ) {
         isLoading.value = true
         results.value = emptyList()
+        val gen = ++searchGeneration
         job?.cancel()
         job =
             viewModelScope.launch(Dispatchers.IO) {
                 try {
                     lyricsHelper.getAllLyrics(mediaId, title, artist, duration, album) { result ->
+                        if (gen != searchGeneration) return@getAllLyrics
                         results.update {
                             it + result
                         }
                     }
                 } finally {
-                    isLoading.value = false
+                    if (gen == searchGeneration) isLoading.value = false
                 }
             }
     }
