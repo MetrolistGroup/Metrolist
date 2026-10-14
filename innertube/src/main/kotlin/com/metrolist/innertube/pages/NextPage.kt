@@ -1,12 +1,10 @@
 package com.metrolist.innertube.pages
 
 import com.metrolist.innertube.models.Album
-import com.metrolist.innertube.models.Artist
 import com.metrolist.innertube.models.BrowseEndpoint
 import com.metrolist.innertube.models.PlaylistPanelVideoRenderer
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
-import com.metrolist.innertube.models.oddElements
 import com.metrolist.innertube.models.splitBySeparator
 import com.metrolist.innertube.utils.parseTime
 
@@ -36,13 +34,7 @@ object NextPage {
                     ?.runs
                     ?.firstOrNull()
                     ?.text ?: return null,
-            artists =
-                longByLineRuns.firstOrNull()?.oddElements()?.map {
-                    Artist(
-                        name = it.text,
-                        id = it.navigationEndpoint?.browseEndpoint?.browseId,
-                    )
-                } ?: return null,
+            artists = PageHelper.extractArtists(renderer.longBylineText.runs),
             album =
                 longByLineRuns
                     .getOrNull(1)

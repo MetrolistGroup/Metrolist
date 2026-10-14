@@ -873,4 +873,7 @@
     <string name="enable_zemer_desc">Paroles de musique juive</string>
     <string name="update_available_message">Metrolist %s est prêt à être téléchargé.</string>
     <string name="update_action">Mettre à jour</string>
+    <string name="discord_integration">Intégration à Discord</string>
+    <string name="enable_discord_rpc">Activer la présence enrichie</string>
+    <string name="force_bottom_navbar">Forcer l\'affichage de la barre de navigation inférieure</string>
 </resources>

@@ -243,7 +243,6 @@
     <string name="add_anyway">Trotzdem hinzufügen</string>
     <string name="player_slider_style">Stil des Player-Schiebereglers</string>
     <string name="duplicates_description_multiple">%d Songs sind bereits in deiner Playlist</string>
-    <string name="enable_discord_rpc">Statusanzeige aktivieren</string>
     <string name="auto_skip_next_on_error_desc">Sorge für ein kontinuierliches Wiedergabeerlebnis</string>
     <string name="dismiss">Ablehnen</string>
     <string name="player_text_alignment">Ausrichtung des Player-textes</string>
@@ -266,7 +265,6 @@
     <string name="search_history">Suchverlauf</string>
     <string name="enable_lrclib">LrcLib-Songtext-Anbieter aktivieren</string>
     <string name="hide_explicit">Explizite Inhalte ausblenden</string>
-    <string name="discord_integration">Discord-Integration</string>
     <string name="library_song_empty">Songs aus der Bibliothek werden hier angezeigt</string>
     <string name="remove_download_playlist_confirm">Möchtest du wirklich alle Songs der Playlist „%s“ aus dem Speicher für heruntergeladene Songs entfernen?</string>
     <string name="delete_playlist_confirm">Möchtest du die Playlist „%s“ wirklich löschen?</string>

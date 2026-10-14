@@ -40,10 +40,12 @@ import java.util.concurrent.TimeUnit
  * Compatibility facade that keeps Metrolist's parsed response models while InnerTubeX owns
  * YouTube request construction, session handling, retries, and authenticated mutations.
  */
-class InnerTube {
+class InnerTube(
+    client: HttpClient? = null,
+) {
     private var configuredProxy: Proxy? = null
     private var configuredProxyAuth: String? = null
-    private var httpClient = createClient()
+    private var httpClient = client ?: createClient()
     private var innerTubeX = InnerTubeX(httpClient)
     private var transportGeneration = 0L
 
@@ -194,7 +196,8 @@ class InnerTube {
         query: String? = null,
         params: String? = null,
         continuation: String? = null,
-    ) = innerTubeX.search(client, query, params, continuation)
+        setLogin: Boolean = false,
+    ) = innerTubeX.search(client, query, params, continuation, setLogin = setLogin)
 
     suspend fun player(
         client: YouTubeClient,
@@ -237,7 +240,7 @@ class InnerTube {
     suspend fun getSearchSuggestions(
         client: YouTubeClient,
         input: String,
-    ) = innerTubeX.getSearchSuggestions(client, input)
+    ) = innerTubeX.getSearchSuggestions(client, input, setLogin = false)
 
     suspend fun getQueue(
         client: YouTubeClient,

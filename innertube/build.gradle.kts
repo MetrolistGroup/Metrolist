@@ -35,6 +35,7 @@ dependencies {
     implementation(libs.ktor.client.encoding)
     implementation(libs.timber)
     testImplementation(libs.junit)
+    testImplementation(libs.ktor.client.mock)
 
     coreLibraryDesugaring(libs.desugaring)
 }

@@ -97,9 +97,10 @@ fun PlaybackError(
                 }
         }
     val errorCodeName = remember(error) { error.errorCodeName.removePrefix("ERROR_CODE_") }
+    val reportedAt = remember(error) { Instant.now() }
     val errorReport =
         remember(error, mediaMetadata, streamClient) {
-            buildPlaybackErrorReport(error, mediaMetadata, streamClient)
+            buildPlaybackErrorReport(error, mediaMetadata, streamClient, reportedAt)
         }
 
     Column(
@@ -225,11 +226,12 @@ private fun buildPlaybackErrorReport(
     error: PlaybackException,
     mediaMetadata: MediaMetadata?,
     streamClient: String?,
+    reportedAt: Instant,
 ): String =
     buildString {
         appendLine("Metrolist Playback Error Report")
         appendLine("================================")
-        appendLine("Time: ${Instant.ofEpochMilli(error.timestampMs)}")
+        appendLine("Time: $reportedAt")
         appendLine("App version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
         appendLine("Architecture: ${BuildConfig.ARCHITECTURE}")
         appendLine("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")

@@ -41,14 +41,11 @@ suspend fun Result<LibraryPage>.completed(): Result<LibraryPage> = runCatching {
         check(requestCount++ < 50) { "Library pagination exceeded 50 requests" }
         check(seenContinuations.add(continuation)) { "Library pagination repeated a continuation" }
 
-        val continuationPage = YouTube.libraryContinuation(continuation).getOrThrow()
+        val continuationPage = YouTube.libraryContinuation(continuation, isUploaded = page.isUploaded).getOrThrow()
         items += continuationPage.items
         continuation = continuationPage.continuation
     }
-    LibraryPage(
-        items = items,
-        continuation = null
-    )
+    page.copy(items = items, continuation = null)
 }
 
 fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }

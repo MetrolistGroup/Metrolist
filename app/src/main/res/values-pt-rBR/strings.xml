@@ -238,13 +238,11 @@
     <string name="add_anyway">Adicionar mesmo assim</string>
     <string name="duplicates_description_single">Esta música já está na sua playlist</string>
     <string name="duplicates_description_multiple">%d músicas já estão na sua playlist</string>
-    <string name="discord_integration">Integração com o Discord</string>
     <string name="dismiss">Ignorar</string>
     <string name="options">Opções</string>
     <string name="preview">Prévia</string>
     <string name="login_failed">Ocorreu algum problema ao conectar-se</string>
     <string name="action_logout">Desconectar-se</string>
-    <string name="enable_discord_rpc">Ativar o Rich Presence</string>
     <string name="not_logged_in">Não está conectado à uma conta</string>
     <string name="discord_information">O Metrolist usa a biblioteca KizzyRPC para definir o estado da sua conta do Discord. Isto envolve o uso da conexão do Discord Gateway, que pode ser considerado uma violação dos termos de serviço do Discord. Porém, não houve nenhum relato de usuários sendo banidos por esta razão. Use por sua própria conta e risco.\n\nO Metrolist extrairá somente o seu token, e todo o resto é armazenado localmente.</string>
     <string name="sided">Ao lado</string>

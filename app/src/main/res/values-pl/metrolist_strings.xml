@@ -104,10 +104,10 @@
     <string name="lyrics_auto_scroll">Autoprzesuwanie tekstu</string>
     <string name="import_online">Importuj playlistę \"M3U\"</string>
     <string name="import_csv">Importuj playlistę CSV</string>
-    <string name="playlist_add_local_to_synced_note">Notatka: Dodawanie lokalnej muzyki do synchronizowanej/zewnętrznej listy odtworzeń nie jest wspierane. Wszelkie inne kombinacje są poprawne</string>
+    <string name="playlist_add_local_to_synced_note">Uwaga: Dodawanie lokalnej muzyki do synchronizowanej/zewnętrznej listy odtworzeń nie jest wspierane. Inne kombinacje są poprawne</string>
     <string name="yt_sync">Automatyczna synchronizacja z kontem</string>
     <string name="more_content">Więcej zawartości</string>
-    <string name="swipe_sensitivity">Czułość przesunięcia</string>
+    <string name="swipe_sensitivity">Czułość przesunięcia mini-odtwarzacza</string>
     <string name="clear_image_cache_dialog">Czy na pewno chcesz wyczyścić wszystkie obrazy z pamięci podręcznej?</string>
     <string name="new_player_design">Nowy wygląd odtwarzacza</string>
     <string name="sensitivity_percentage">%1$d%%</string>
@@ -684,7 +684,7 @@
     <string name="sort_descending">Sortuj malejąco</string>
     <string name="sleep_timer_stop_after_current_song_description">Zatrzymuje wyłącznik czasowy na końcu aktualnie grającej piosenki</string>
     <string name="sleep_timer_fade_out_title">Wyciszanie</string>
-    <string name="sleep_timer_fade_out_description">Wyciszaj dźwięk w ostatniej minucie</string>
+    <string name="sleep_timer_fade_out_description">Stopniowo wyciszaj dźwięk w ostatniej minucie</string>
     <string name="alarm">Alarm</string>
     <string name="alarm_enabled">Włącz alarm</string>
     <string name="alarm_time">Godzina alarmu</string>
@@ -799,4 +799,11 @@
     <string name="loudness_level_quiet">Cichy (-19 dB)</string>
     <string name="choose_youtube_channel">Wybierz kanał YouTube</string>
     <string name="kmp_upgrade_later">Nie teraz</string>
+    <string name="enable_zemer">Uruchom Zemer</string>
+    <string name="enable_zemer_desc">Słowa dla muzyki Żydowskiej</string>
+    <string name="playlist_position_beginning_desc">Nowo dodane piosenki pojawiają się przed istniejącymi piosenkami</string>
+    <string name="playlist_position_end_desc">Nowo dodane piosenki pojawiają się przed istniejącymi już piosenkami</string>
+    <string name="auto_radio_queue">Automatyczna kolejka radia</string>
+    <string name="playlist_created_locally">Synchronizacja z platformą YouTube nie udana. Playlista utworzona lokalnie.</string>
+    <string name="auto_radio_queue_desc">Automatycznie utwórz kolejkę radia gdy gra muzyka z pola wyszukiwanie lub domu</string>
 </resources>

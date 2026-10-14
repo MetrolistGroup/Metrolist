@@ -148,7 +148,7 @@
     <string name="updater">Güncelleyici</string>
     <string name="check_for_updates">Güncellemeleri otomatik kontrol et</string>
     <string name="update_notifications">Güncelleme bildirimlerini etkinleştir</string>
-    <string name="update_available_title">Güncelleme mevcut</string>
+    <string name="update_available_title">Yeni güncelleme kullanılabilir</string>
     <string name="update_channel_name">Uygulama güncellemeleri</string>
     <string name="update_channel_desc">Yeni uygulama sürümleri hakkında bildirimler</string>
     <string name="integrations">Entegrasyonlar</string>
@@ -840,8 +840,8 @@
     <string name="enable_dynamic_icon">Dinamik ikon renkleri</string>
     <string name="enable_dynamic_icon_desc">Uygulama ikonu için dinamik tema renklerini kullan. Eğer kapatılırsa, ikon sabit renkleri kullanır.</string>
     <string name="kmp_upgrade_title">Metrolist %s KMP sürümü kullanılabilir</string>
-    <string name="kmp_upgrade_warning">Metrolist KMP şu anda erken erişimdedir. Özellikler hatalı çalışabilir, eksik olabilir veya haber verilmeksizin değişebilir.</string>
-    <string name="kmp_upgrade_action">KMP\'ye yükselt</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP şu anda geliştirme aşamasındadır. Hatalara veya tamamlanmamış özelliklere denk gelebilirsiniz.</string>
+    <string name="kmp_upgrade_action">KMP\'yi dene</string>
     <string name="kmp_upgrade_later">Şimdi değil</string>
     <string name="android_auto_search_options">Arama seçenekleri</string>
     <string name="android_auto_search_local_songs_limit">Şarkı arama sınırı</string>
@@ -863,4 +863,10 @@
     <string name="error_explicit_login_recommended">Açık içerikli oynatma, oturum açılmış bir hesapla daha iyi çalışır.</string>
     <string name="playlist_created_locally">YouTube eşitlemesi başarısız. Oynatma listeleri yerelde oluşturuldu.</string>
     <string name="ai_provider_inception_help">API anahtarları için https://platform.inceptionlabs.ai sitesini ziyaret edin</string>
+    <string name="enable_zemer">Zemer\'i aktifleştir</string>
+    <string name="enable_zemer_desc">Yahudi müzikleri için şarkı sözleri</string>
+    <string name="update_available_message">Metrolist %s indirmeye hazır.</string>
+    <string name="update_action">Güncelle</string>
+    <string name="discord_integration">Discord entegrasyonu</string>
+    <string name="enable_discord_rpc">Rich Presence\'i etkinleştir</string>
 </resources>

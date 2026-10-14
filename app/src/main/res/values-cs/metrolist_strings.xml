@@ -879,4 +879,6 @@
     <string name="playlist_created_locally">Synchronizace s YouTube selhala. Playlist byl vytvořen lokálně.</string>
     <string name="update_available_message">Metrolist %s je připraven ke stažení.</string>
     <string name="update_action">Aktualizovat</string>
+    <string name="discord_integration">Integrace Discordu</string>
+    <string name="enable_discord_rpc">Povolit stav na Discordu</string>
 </resources>

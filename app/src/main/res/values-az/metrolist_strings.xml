@@ -317,12 +317,12 @@
     <string name="updater">Yeniləyici</string>
     <string name="check_for_updates">Yeniləmələri avtomatik yoxla</string>
     <string name="update_notifications">Yeniləmə bildirişlərini aktivləşdirin</string>
-    <string name="update_available_title">Yeniləmə mövcuddur</string>
+    <string name="update_available_title">Yeni yeniləmə mövcuddur</string>
     <string name="update_channel_name">Tətbiq yeniləmələri</string>
     <string name="update_channel_desc">Tətbiqin yeni versiyaları haqqında bildirişlər</string>
     <string name="kmp_upgrade_title">Metrolist KMP %s mövcuddur</string>
-    <string name="kmp_upgrade_warning">Metrolist KMP ilkin giriş mərhələsindədir. Funksiyalar nasaz və ya natamam ola bilər, yaxud xəbərdarlıq edilmədən dəyişdirilə bilər.</string>
-    <string name="kmp_upgrade_action">KMP keçin</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP hələ də inkişaf mərhələsindədir. Xətalarla və ya natamam funksiyalarla qarşılaşa bilərsiniz.</string>
+    <string name="kmp_upgrade_action">KMP sınayın</string>
     <string name="kmp_upgrade_later">İndi yox</string>
     <string name="audio_offload">Audio yüklənməsinin boşaldılmasını aktivləşdirin</string>
     <string name="audio_offload_description">Səsləndirmə üçün aparat səviyyəli audio emalı yolundan (hardware audio offload path) istifadə edir. Bunun deaktiv edilməsi batareya sərfiyyatını artıra bilər, lakin səsləndirmə və ya səsin sonrakı emalı ilə bağlı problemlər yarandıqda kömək edə bilər</string>
@@ -796,7 +796,7 @@
     <string name="deleting">Silinir…</string>
     <string name="android_auto">Android Auto</string>
     <string name="android_auto_visible_sections">Görünən bölmələr</string>
-    <string name="android_auto_reorder_hint">Hər hansı bölməni aktivləşdirmək və ya deaktiv etmək üçün ona toxunun. Sıralamanı dəyişdirmək üçün sürüşdürmə işarəsini uzun müddət basıb saxlayın. İlkin olaraq birinci bölmə göstəriləcək</string>
+    <string name="android_auto_reorder_hint">Bölməni aktivləşdirmək və ya deaktiv etmək üçün vurun.\nSırasını dəyişmək üçün sürükləmə sapına uzun basın. Birinci bölmə standart olaraq göstəriləcək.</string>
     <string name="android_auto_youtube_playlists">YouTube təklif etdiyi pleylistləri göstər</string>
     <string name="android_auto_youtube_playlists_desc">Android Auto istifadə edərkən pleylistlər bölməsində YouTube Music-in tövsiyə etdiyi pleylistləri göstərin</string>
     <string name="android_auto_target_playlist">Təyinat yerini tez əlavə et</string>
@@ -860,4 +860,13 @@
     <string name="playlist_position_beginning_desc">Yeni əlavə edilmiş mahnılar mövcud mahnılardan əvvəl görünür</string>
     <string name="playlist_position_end">Pleylist siyahısının sonu</string>
     <string name="playlist_position_end_desc">Yeni əlavə edilmiş mahnılar mövcud mahnılardan sonra görünür</string>
+    <string name="enable_zemer">Zemer aktivləşdirin</string>
+    <string name="enable_zemer_desc">Yəhudi musiqisi üçün sözlər</string>
+    <string name="playlist_created_locally">YouTube sinxronizasiyası uğursuz oldu. Pleylist yerli olaraq yaradıldı.</string>
+    <string name="update_available_message">Metrolist %s yükləməyə hazırdır.</string>
+    <string name="update_action">Yeniləmə</string>
+    <string name="error_no_internet_connection">İnternet bağlantısı yoxdur</string>
+    <string name="error_offline_playback">Oflaynsınız. İnternetə qoşulun və ya oflayn istifadə üçün yüklənmiş treki oxudun.</string>
+    <string name="error_explicit_login_recommended">Açıq-aydın oxutma daxil olmuş hesabla daha yaxşı işləyir.</string>
+    <string name="ai_provider_inception_help">API açarları üçün https://platform.inceptionlabs.ai saytına daxil olun</string>
 </resources>

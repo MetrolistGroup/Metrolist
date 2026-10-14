@@ -242,4 +242,7 @@
     <string name="parsed_from_link">verwerkt vanuit link</string>
     <string name="weekly_most_playlist_name">meest gespeeld deze week</string>
     <string name="monthly_most_playlist_name">meest gespeeld deze maand</string>
+    <string name="and">en</string>
+    <string name="hide_status_bar_fullscreen">Verberg de statusbalk in volledig scherm</string>
+    <string name="show_interval_indicator">Toon interval-indicator</string>
 </resources>

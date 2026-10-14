@@ -840,8 +840,8 @@
     <string name="enable_dynamic_icon_desc">Verwenden Sie dynamische Designfarben für das App-Symbol. Wenn diese Option deaktiviert ist, wird das Symbol in Volltonfarben angezeigt.</string>
     <string name="enable_landscape_scaling">Skalierung im Querformat</string>
     <string name="kmp_upgrade_title">Metrolist KMP %s ist verfügbar</string>
-    <string name="kmp_upgrade_warning">Metrolist KMP befindet sich in der Früh-Zugangs-Phase. Funktionen können fehlerhaft oder unvollständig sein oder sich ohne Vorankündigung ändern.</string>
-    <string name="kmp_upgrade_action">Auf KMP aktualisieren</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP befindet sich noch in der Entwicklung. Es kann zu Fehlern oder unvollständigen Funktionen kommen.</string>
+    <string name="kmp_upgrade_action">Probieren Sie KMP aus</string>
     <string name="kmp_upgrade_later">Nicht jetzt</string>
     <string name="android_auto_search_options">Suchoptionen</string>
     <string name="android_auto_search_local_songs_limit">Suchlimit für Songs</string>
@@ -866,4 +866,8 @@
     <string name="update_available_message">Metrolist %s steht zum Download bereit.</string>
     <string name="update_action">Update</string>
     <string name="ai_provider_inception_help">Für API-Schlüssel, besuche: https://platform.inceptionlabs.ai</string>
+    <string name="enable_zemer">Zemer aktivieren</string>
+    <string name="discord_integration">Discord-Integration</string>
+    <string name="enable_discord_rpc">„Rich Presence“ aktivieren</string>
+    <string name="force_bottom_navbar">Navigationsleiste unten erzwingen</string>
 </resources>

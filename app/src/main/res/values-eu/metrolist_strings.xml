@@ -30,7 +30,7 @@
     <string name="text_color">Testu kolorea</string>
     <string name="secondary_text_color">Bigarren testu kolorea</string>
     <string name="background_color">Atzealde kolorea</string>
-    <string name="remove_from_cache">\"Cache\"tik ezabatu</string>
+    <string name="remove_from_cache">Cachetik ezabatu</string>
     <string name="copy_link">Link-a kopiatu</string>
     <string name="select">Hautatu dena</string>
     <string name="like_all">Dena gustoko</string>
@@ -71,7 +71,7 @@
     <string name="show_liked_playlist">Gustokoak zerrenda ikusi</string>
     <string name="show_downloaded_playlist">\"Deskargatuak\" zerrenda ikusi</string>
     <string name="show_top_playlist">Onenak zerrenda ikusi</string>
-    <string name="show_cached_playlist">Cache-an zerrenda ikusi</string>
+    <string name="show_cached_playlist">Cacheko erreprodukzio zerrenda ikusi</string>
     <string name="advanced_login">Token-arekin saioa hasi</string>
     <string name="token_hidden">Sakatu \"token\"-a ikusteko</string>
     <string name="token_shown">Sakatu berriro kopiatu edo editatzeko</string>
@@ -103,8 +103,8 @@
     <string name="auto_download_on_like_desc">Gustoko sakatzean abestiak automatikoki deskargatu</string>
     <string name="swipe_sensitivity">Mini-erreproduzitzaile irrista-sentikortasuna</string>
     <string name="sensitivity_percentage">%%%1$d</string>
-    <string name="clear_song_cache_dialog">Ziur zaude \"cache\"-an dauden abesti guztiak ezabatzea?</string>
-    <string name="clear_image_cache_dialog">Ziur zaude \"cache\"-an dauden irudi guztiak ezabatzeaz?</string>
+    <string name="clear_song_cache_dialog">Ziur al zaude cachean dauden abesti guztiak ezabatu nahi dituzula?</string>
+    <string name="clear_image_cache_dialog">Ziur al zaude cachean dauden irudi guztiak ezabatu nahi dituzula?</string>
     <string name="clear_downloads_dialog">Ziur zaude deskarga guztiak ezabatu nahi dituzula?</string>
     <string name="disable">Desgaitu</string>
     <string name="not_logged_in_youtube">YouTube-n saioa ez hasita</string>
@@ -160,7 +160,7 @@
     <string name="crop_album_art">Album azala moztu</string>
     <string name="parsed_from_link">Estekatik erauzita</string>
     <string name="weekly_most_playlist_name">Nire Asteko Onenak</string>
-    <string name="monthly_most_playlist_name">Nire Hilabeteko Onenak</string>
+    <string name="monthly_most_playlist_name">Hilabeteko entzunenak</string>
     <string name="uploaded_playlist">Igotakoak</string>
     <string name="filter_uploaded">Igotakoak</string>
     <string name="primary_color_style">Kolore nagusia</string>
@@ -226,8 +226,8 @@
     <string name="enable_paxsenix_desc">Paxsenix API-ko kalitate handiko sinkronizatutako hitzak</string>
     <string name="lyrics_provider_selection">Hornitzaile aukeraketa</string>
     <string name="lyrics_provider_selection_desc">Aukeratu zein hitz-hornitzaile dauden gaituta</string>
-    <string name="enable_song_cache">Abestien cache-a gaitu</string>
-    <string name="enable_song_cache_desc">Abestiak automatikoki cache-an gorde etorkizunean azkarrago jo ahal izateko</string>
+    <string name="enable_song_cache">Abestien cachea gaitu</string>
+    <string name="enable_song_cache_desc">Abestiak automatikoki cachean gorde etorkizunean azkarrago erreproduzitu ahal izateko</string>
     <string name="show_uploaded_playlist">Igotakoak zerrenda ikusi</string>
     <string name="shuffle_playlist_first">Nahastu zerrenda edo albuma lehenago</string>
     <string name="shuffle_playlist_first_desc">Nahastean, jo zerrenda edo album honetako abesti guztiak antzeko edukira pasa baino lehen</string>
@@ -379,7 +379,7 @@
     <string name="transparent">Gardena</string>
     <string name="mini_player_background_not_available">Ez dago erabilgarri minierreproduzitzailearen diseinu berria ezgaituta dagoenean</string>
     <string name="cache_size_warning_title">Itxaron!</string>
-    <string name="cache_size_warning_message">Aukeratutako muga (%1$s) aplikazioa momentuan erabiltzen ari dena baino txikiagoa da. Jarraituz gero cache-an gordetako %2$s ezabatu daiteke. Jarraitu hala ere?</string>
+    <string name="cache_size_warning_message">Aukeratutako muga (%1$s) aplikazioa momentuan erabiltzen ari dena baino txikiagoa da. Jarraituz gero cachean gordetako %2$s ezabatu daitezke. Jarraitu nahi al duzu hala ere?</string>
     <string name="cache_size_warning_confirm">Jarraitu</string>
     <string name="lyrics_animation_style_title">Hitzez-hitzezko animazio-estiloa</string>
     <string name="none">Ezer ez</string>
@@ -489,4 +489,18 @@
     <string name="widget_recognizer_unknown_artist">Egile ezezaguna</string>
     <string name="widget_recognizer_mic_desc">Abesti bat ezagutu</string>
     <string name="widget_recognizer_channel_name">Musika-ezagutzea</string>
+    <string name="stream_source_web_remix">WEB_REMIX</string>
+    <string name="stream_source_web_clients">Web bezeroak</string>
+    <string name="stream_client">Streaming bezeroa</string>
+    <string name="stream_source_native_clients">Bertako bezeroak</string>
+    <string name="stream_source_creator_clients">Bezero sortzaileak</string>
+    <string name="stream_source_web_remix_desc">Bezero nagusia. Baimendua; pista gehienak estaltzen ditu.</string>
+    <string name="stream_source_tvhtml5_desc">TB bezeroa. Errekurtso fidagarria.</string>
+    <string name="stream_source_android_vr_desc">Android VR bezeroa (bertsio guztiak).</string>
+    <string name="stream_source_web_creator_desc">Web sortzaile bezeroa.</string>
+    <string name="mixes">Nahasketak</string>
+    <string name="and">eta</string>
+    <string name="enable_zemer">Zemer gaitu</string>
+    <string name="enable_zemer_desc">Musika judutarrarentzako hitzak</string>
+    <string name="show_most_stats_playlists">Erakutsi asteko eta hilabeteko erreprodukzio zerrenda entzunenak</string>
 </resources>

@@ -97,7 +97,7 @@
     <string name="background_color">Cor de fundo</string>
     <string name="auto_download_on_like">Baixar automaticamente ao curtir</string>
     <string name="auto_download_on_like_desc">Baixa músicas automaticamente quando você as curte</string>
-    <string name="please_wait">Por favor aguarde</string>
+    <string name="please_wait">Por favor, aguarde</string>
     <string name="generating_image">Gerando imagem…</string>
     <string name="lyrics_auto_scroll">Rolar letra automaticamente</string>
     <string name="import_online">Importar uma playlist M3U</string>
@@ -873,4 +873,6 @@
     <string name="enable_zemer">Ativar Zemer</string>
     <string name="enable_zemer_desc">Letras por Jewish music</string>
     <string name="update_available_message">Metrolist %s está pronto para download.</string>
+    <string name="discord_integration">Integração com o Discord</string>
+    <string name="enable_discord_rpc">Habilitar o Rich Presence</string>
 </resources>

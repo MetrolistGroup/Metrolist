@@ -121,6 +121,33 @@ class MetrolistWidgetManager @Inject constructor(
         )
     }
 
+    fun updateProgress(
+        duration: Long,
+        currentPosition: Long,
+    ) {
+        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val widgetIds = appWidgetManager
+            .getAppWidgetIds(ComponentName(context, MusicWidgetReceiver::class.java))
+            .filter { widgetId ->
+                appWidgetManager.getAppWidgetOptions(widgetId)
+                    .getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) >= 100
+            }
+            .toIntArray()
+
+        if (widgetIds.isNotEmpty()) {
+            val level = if (duration > 0) {
+                ((currentPosition.toDouble() / duration) * 10000).toInt().coerceIn(0, 10000)
+            } else {
+                0
+            }
+            val views = RemoteViews(context.packageName, R.layout.widget_music_player)
+            views.setInt(R.id.widget_progress_fill, "setImageLevel", level)
+            appWidgetManager.partiallyUpdateAppWidget(widgetIds, views)
+        }
+
+        playlistWidgetManager.updateProgress(duration, currentPosition)
+    }
+
     private fun createRemoteViewsForSize(
         options: Bundle,
         title: String,

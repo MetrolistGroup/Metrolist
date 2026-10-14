@@ -23,7 +23,7 @@ jobs:
     steps:
       # Only HEAD and HEAD^ are read below, and no submodule or Gradle work
       # happens in this job.
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -99,10 +99,10 @@ jobs:
             variantName: Izzy
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           java-version: "21"
           distribution: "temurin"
@@ -138,7 +138,7 @@ jobs:
           keyAlias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
-          buildToolsVersion: 35.0.0
+          buildToolsVersion: 36.0.0
 
       - name: Move and rename signed APKs
         run: |
@@ -167,7 +167,7 @@ jobs:
           ls -la "$OUTPUT_DIR/out/"
 
       - name: Upload Signed APKs
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.variant == 'gms' && 'Metrolist-with-Google-Cast' || matrix.variant == 'izzy' && 'Metrolist-izzy' || 'Metrolist' }}
           path: app/build/outputs/apk/${{ matrix.variant }}/release/out/*.apk
@@ -180,12 +180,12 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Download all APKs
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: downloaded_artifacts/
 

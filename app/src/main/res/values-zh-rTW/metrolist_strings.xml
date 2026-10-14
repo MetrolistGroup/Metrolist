@@ -137,7 +137,7 @@
     <string name="settings_section_storage">儲存和數據</string>
     <string name="settings_section_system">系統及關於</string>
     <string name="uploaded_playlist">已上傳</string>
-    <string name="update_available_title">可用更新</string>
+    <string name="update_available_title">有新的可用更新</string>
     <string name="swipe_song_to_remove">滑動以從播放列表中移除歌曲</string>
     <string name="show_uploaded_playlist">顯示「已上傳」播放清單</string>
     <string name="filter_uploaded">已上傳</string>
@@ -796,8 +796,8 @@
     <string name="discord_button_url">URL</string>
     <string name="playlist_unavailable">播放列表不可用</string>
     <string name="kmp_upgrade_title">Metrolist KMP %s 現已推出</string>
-    <string name="kmp_upgrade_warning">Metrolist KMP 目前處於搶先體驗階段。功能可能有缺陷、不完整或變更，恕不另行通知。</string>
-    <string name="kmp_upgrade_action">升級到 KMP</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP 還在開發中。你可能會遇到功能有缺陷、不完整或變更。</string>
+    <string name="kmp_upgrade_action">嘗試 KMP</string>
     <string name="kmp_upgrade_later">暫不升級</string>
     <string name="audio_track_playback_params">使用硬體音訊處理</string>
     <string name="audio_track_playback_params_description">使用 Android 的 AudioTrack 來處理速度/音調變化，而不是使用軟體處理。對於極端音調值，這種方式更可靠</string>
@@ -844,4 +844,15 @@
     <string name="stream_source_tvhtml5">TVHTML5</string>
     <string name="stream_source_visionos">visionOS</string>
     <string name="stream_source_web_creator">WEB_CREATOR</string>
+    <string name="playlist_created_locally">同步 YouTube 失敗。播放清單已本地建立。</string>
+    <string name="update_available_message">Metrolist%s 已經準備好下載了。</string>
+    <string name="update_action">更新</string>
+    <string name="error_no_internet_connection">沒有網路連結</string>
+    <string name="error_offline_playback">你已離線。請連線到網路，或播放已下載的離線曲目。</string>
+    <string name="ai_provider_inception_help">前往 https://platform.inceptionlabs.ai 以獲取 API 金鑰</string>
+    <string name="discord_integration">Discord 整合</string>
+    <string name="enable_discord_rpc">啟用 Rich Presence</string>
+    <string name="stream_source_web_clients">網頁用戶端</string>
+    <string name="stream_source_native_clients">原生用戶端</string>
+    <string name="stream_source_web_creator_desc">創作者網頁用戶端。</string>
 </resources>

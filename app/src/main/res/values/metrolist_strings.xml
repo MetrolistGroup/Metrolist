@@ -145,6 +145,7 @@
     <string name="lyrics_provider_selection_desc">Choose which lyrics providers are enabled</string>
     <string name="auto_scroll">Re-sync</string>
     <string name="slim">Slim</string>
+    <string name="force_bottom_navbar">Force bottom navigation bar</string>
     <string name="slim_navbar">Slim bottom navigation bar</string>
     <string name="auto_playlists">Auto playlists</string>
     <string name="show_liked_playlist">Show Liked playlist</string>
@@ -546,6 +547,7 @@
     <string name="tap_to_open">Tap to open Metrolist</string>
     <string name="previous">Previous</string>
     <string name="play_pause">Play/Pause</string>
+    <string name="player_pause">Pause</string>
     <string name="next">Next</string>
     <string name="like">Like</string>
     <string name="not_playing">No song playing</string>
@@ -990,4 +992,6 @@
     <string name="stream_source_android_vr_desc">Android VR clients (all versions).</string>
     <string name="stream_source_web_creator">WEB_CREATOR</string>
     <string name="stream_source_web_creator_desc">Creator web client.</string>
+    <string name="top_result">Top result</string>
+    <string name="other">Other</string>
 </resources>
