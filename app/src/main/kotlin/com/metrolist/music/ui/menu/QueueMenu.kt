@@ -375,10 +375,8 @@ fun QueueMenu(
                     ),
                     if (onRemoveFromQueue != null) {
                         Material3MenuItemData(
-                            // Note: Using raw strings here to prevent R.string errors.
-                            // You can move these to strings.xml later!
-                            title = { Text(text = stringResource(R.string.remove_from_queue)) },
-                            description = { Text(text = stringResource(R.string.remove_from_queue_desc)) },
+                            title = { Text(text = "Remove from queue") },
+                            description = { Text(text = "Remove this song from the active queue") },
                             icon = {
                                 Icon(
                                     painter = painterResource(R.drawable.delete), // Uses trashcan icon
@@ -386,8 +384,8 @@ fun QueueMenu(
                                 )
                             },
                             onClick = {
-                                onDismiss() // Hides the popup menu
-                                onRemoveFromQueue.invoke() // Triggers the delete logic!
+                                onDismiss()
+                                onRemoveFromQueue.invoke()
                             }
                         )
                     } else null
