@@ -376,7 +376,6 @@ fun QueueMenu(
                     if (onRemoveFromQueue != null) {
                         Material3MenuItemData(
                             title = { Text(text = stringResource(R.string.remove_from_queue)) },
-                            description = { Text(text = stringResource(R.string.remove_from_queue_desc)) },
                             icon = {
                                 Icon(
                                     painter = painterResource(R.drawable.delete), // Uses trashcan icon
