@@ -85,6 +85,8 @@ import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.playback.ExoDownloadService
 import com.metrolist.music.playback.queues.YouTubeQueue
 import com.metrolist.music.ui.component.DefaultDialog
+import com.metrolist.music.ui.component.ExportAudioDialog
+import com.metrolist.music.ui.component.rememberExportAudioMenuItem
 import com.metrolist.music.ui.component.ListDialog
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
 import com.metrolist.music.ui.component.Material3MenuGroup
@@ -129,6 +131,15 @@ fun SongMenu(
     var refetchIconDegree by remember { mutableFloatStateOf(0f) }
 
     val cacheViewModel = hiltViewModel<CachePlaylistViewModel>()
+
+    var showExportAudioDialog by remember { mutableStateOf(false) }
+    val exportAudioMenuItem = rememberExportAudioMenuItem(originalSong.id) { showExportAudioDialog = true }
+    if (showExportAudioDialog) {
+        ExportAudioDialog(
+            metadata = song.toMediaMetadata(),
+            onDismiss = { showExportAudioDialog = false },
+        )
+    }
 
     val rotationAnimation by animateFloatAsState(
         targetValue = refetchIconDegree,
@@ -959,6 +970,7 @@ fun SongMenu(
                                 )
                             }
                         },
+                        exportAudioMenuItem,
                     ),
             )
         }

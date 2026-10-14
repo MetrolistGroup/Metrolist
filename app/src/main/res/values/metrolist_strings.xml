@@ -230,6 +230,47 @@
     <string name="export_option_share">Share</string>
     <string name="export_option_save">Save to Documents</string>
 
+    <string name="export_audio">Export audio</string>
+    <string name="export_audio_desc">Save as an audio file in your music folder</string>
+    <string name="export_audio_title">Export audio</string>
+    <string name="export_audio_original">Original quality</string>
+    <string name="export_audio_original_desc">Saved without re-encoding as M4A or Opus, with title, artist, album and cover</string>
+    <string name="export_audio_mp3">MP3</string>
+    <string name="export_audio_mp3_desc">Converted to MP3 (192 kbps). Plays everywhere, but is re-encoded, so quality cannot be better than the source</string>
+    <string name="export_audio_save_to">Save to</string>
+    <string name="export_audio_default_folder">Music/Metrolist</string>
+    <string name="export_audio_choose_folder">Choose folder</string>
+    <string name="export_audio_reset_folder">Default</string>
+    <string name="export_audio_folder_required">Choose a folder to save to</string>
+    <string name="export_audio_button">Export</string>
+    <string name="export_audio_checking">Preparing…</string>
+    <string name="export_audio_exists">A file named “%1$s” already exists in %2$s.</string>
+    <string name="export_audio_replace">Replace</string>
+    <string name="export_audio_keep_both">Keep both</string>
+    <string name="export_audio_started">Exporting “%1$s”…</string>
+    <string name="export_channel_name">Audio export</string>
+    <string name="export_notification_title">Exporting audio</string>
+    <string name="export_notification_done">Exported: %1$s</string>
+    <string name="export_notification_failed">Export failed: %1$s</string>
+    <string name="export_phase_downloading">Getting audio</string>
+    <string name="export_phase_converting">Converting to MP3</string>
+    <string name="export_phase_writing">Saving file</string>
+    <string name="export_done">Saved “%1$s” to %2$s</string>
+    <string name="export_warning_no_cover">Cover art could not be loaded.</string>
+    <string name="export_warning_no_tags">This audio format cannot hold tags.</string>
+    <string name="export_warning_tags_failed">Tags could not be written.</string>
+    <string name="export_error_no_stream">No audio stream is available for this song.</string>
+    <string name="export_error_network">Network error. Check your connection and try again.</string>
+    <string name="export_error_stream_expired">The stream link expired. Try again.</string>
+    <string name="export_error_no_space">Not enough free storage space.</string>
+    <string name="export_error_access_denied">No access to the selected folder. Choose the folder again.</string>
+    <string name="export_error_write_failed">The file could not be written.</string>
+    <string name="export_error_incomplete">The download was interrupted, so nothing was saved.</string>
+    <string name="export_error_unsupported">This audio format is not supported.</string>
+    <string name="export_error_mp3_unavailable">MP3 conversion is not available on this device.</string>
+    <string name="export_error_transcode">Converting to MP3 failed.</string>
+    <string name="export_error_cannot_start">Export can’t start while the app is in the background. Open Metrolist and try again.</string>
+
     <string name="auto_download_on_like">Auto-download on like</string>
     <string name="auto_download_on_like_desc">Automatically download songs when you like them</string>
 

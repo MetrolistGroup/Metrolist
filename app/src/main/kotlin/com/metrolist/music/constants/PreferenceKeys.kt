@@ -108,6 +108,8 @@ val DismissedKmpUpdateKey = stringPreferencesKey("dismissedKmpUpdate")
 val UpdateNotificationsEnabledKey = booleanPreferencesKey("updateNotifications")
 
 val AudioQualityKey = stringPreferencesKey("audioQuality")
+val ExportFormatKey = stringPreferencesKey("exportAudioFormat")
+val ExportFolderUriKey = stringPreferencesKey("exportAudioFolderUri")
 
 enum class AudioQuality {
     AUTO,

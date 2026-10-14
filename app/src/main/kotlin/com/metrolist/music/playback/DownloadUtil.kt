@@ -10,6 +10,7 @@ import android.net.ConnectivityManager
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
 import androidx.media3.database.DatabaseProvider
+import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.cache.Cache
@@ -394,6 +395,23 @@ constructor(
                 download(song)
             }
         }
+    }
+
+    /**
+     * Data source for audio export: the downloaded copy first, then the player cache, then the network.
+     * Read-only, so exporting never changes what is stored for offline playback.
+     */
+    fun createExportDataSourceFactory(): DataSource.Factory =
+        CacheDataSource
+            .Factory()
+            .setCache(downloadCache)
+            .setCacheWriteDataSinkFactory(null)
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+            .setUpstreamDataSourceFactory(dataSourceFactory)
+
+    /** Forgets the resolved stream URL, e.g. after the server rejected it as expired. */
+    fun invalidateStreamUrl(songId: String) {
+        songUrlCache.invalidate(songId)
     }
 
     fun release() {

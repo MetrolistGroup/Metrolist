@@ -195,3 +195,6 @@
 -keepclasseswithmembers class com.metrolist.shazamkit.models.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
+
+## MP3 export: LAME JNI bindings are resolved by name
+-keep class com.naman14.androidlame.** { *; }

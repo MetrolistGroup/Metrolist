@@ -91,12 +91,14 @@ import com.metrolist.music.playback.ExoDownloadService
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.ui.component.BottomSheetState
+import com.metrolist.music.ui.component.ExportAudioDialog
 import com.metrolist.music.ui.component.ListDialog
 import com.metrolist.music.ui.component.Material3MenuGroup
 import com.metrolist.music.ui.component.Material3MenuItemData
 import com.metrolist.music.ui.component.NewAction
 import com.metrolist.music.ui.component.NewActionGrid
 import com.metrolist.music.ui.component.VolumeSlider
+import com.metrolist.music.ui.component.rememberExportAudioMenuItem
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -143,6 +145,15 @@ fun PlayerMenu(
         .collectAsStateWithLifecycle(initialValue = null)
 
     val isPinned by database.speedDialDao.isPinned(mediaMetadata.id).collectAsStateWithLifecycle(initialValue = false)
+
+    var showExportAudioDialog by remember { mutableStateOf(false) }
+    val exportAudioMenuItem = rememberExportAudioMenuItem(mediaMetadata.id) { showExportAudioDialog = true }
+    if (showExportAudioDialog) {
+        ExportAudioDialog(
+            metadata = mediaMetadata,
+            onDismiss = { showExportAudioDialog = false },
+        )
+    }
 
     val artists =
         remember(mediaMetadata.artists) {
@@ -584,6 +595,7 @@ fun PlayerMenu(
                                 )
                             }
                         },
+                        exportAudioMenuItem,
                     ),
             )
         }

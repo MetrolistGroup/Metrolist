@@ -34,6 +34,7 @@ kuromojiIpadic = "0.9.0"
 innertubex = "v0.8.4"
 tinypinyin = "2.0.3"
 protobuf = "4.36.2"
+androidLame = "a485052f28"
 
 [libraries]
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
@@ -104,6 +105,7 @@ innertubex = { module = "com.github.MetrolistGroup.innertubex:innertubex", versi
 
 kuromoji-ipadic = { module = "com.atilika.kuromoji:kuromoji-ipadic", version.ref = "kuromojiIpadic" }
 tinypinyin = { module = "com.github.promeG:tinypinyin", version.ref = "tinypinyin" }
+androidlame = { module = "com.github.naman14:TAndroidLame", version.ref = "androidLame" }
 
 protobuf-javalite = { module = "com.google.protobuf:protobuf-javalite", version.ref = "protobuf" }
 protobuf-kotlin-lite = { module = "com.google.protobuf:protobuf-kotlin-lite", version.ref = "protobuf" }

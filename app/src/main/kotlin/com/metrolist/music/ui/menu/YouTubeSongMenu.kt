@@ -77,7 +77,9 @@ import com.metrolist.music.playback.queues.YouTubeQueue
 import com.metrolist.music.ui.component.ListDialog
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
 import com.metrolist.music.ui.component.Material3MenuGroup
+import com.metrolist.music.ui.component.ExportAudioDialog
 import com.metrolist.music.ui.component.Material3MenuItemData
+import com.metrolist.music.ui.component.rememberExportAudioMenuItem
 import com.metrolist.music.ui.component.NewAction
 import com.metrolist.music.ui.component.NewActionGrid
 import com.metrolist.music.ui.utils.ShowMediaInfo
@@ -110,6 +112,15 @@ fun YouTubeSongMenu(
     val syncUtils = LocalSyncUtils.current
     val listenTogetherManager = LocalListenTogetherManager.current
     val isPinned by database.speedDialDao.isPinned(song.id).collectAsStateWithLifecycle(initialValue = false)
+
+    var showExportAudioDialog by remember { mutableStateOf(false) }
+    val exportAudioMenuItem = rememberExportAudioMenuItem(song.id) { showExportAudioDialog = true }
+    if (showExportAudioDialog) {
+        ExportAudioDialog(
+            metadata = song.toMediaMetadata(),
+            onDismiss = { showExportAudioDialog = false },
+        )
+    }
     val artistNameAliases = LocalArtistNameAliases.current
     val artists = remember(song.artists, artistNameAliases) {
         song.artists.mapNotNull {
@@ -630,7 +641,8 @@ fun YouTubeSongMenu(
                                 }
                             )
                         }
-                    }
+                    },
+                    exportAudioMenuItem,
                 )
             )
         }

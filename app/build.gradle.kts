@@ -294,6 +294,13 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.kuromoji.ipadic)
     implementation(libs.tinypinyin)
+
+    // MP3 export (LAME encoder, JNI)
+    implementation(libs.androidlame) {
+        // Only the JNI encoder is needed; skip the UI libraries declared by the wrapper.
+        isTransitive = false
+    }
+
     ksp(libs.room.compiler)
 
     implementation(libs.hilt)

@@ -41,6 +41,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="false"
         android:theme="@style/Theme.Metrolist"
+        tools:replace="android:supportsRtl"
         tools:targetApi="tiramisu">
         <uses-library
             android:name="org.apache.http.legacy"
@@ -251,6 +252,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>
+
+        <service
+            android:name=".export.AudioExportService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <!-- Receiver for Listen Together notification actions (Approve/Reject) -->
         <receiver
