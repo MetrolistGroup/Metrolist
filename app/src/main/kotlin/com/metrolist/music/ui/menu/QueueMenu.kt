@@ -85,6 +85,7 @@ fun QueueMenu(
     playerBottomSheetState: BottomSheetState,
     onShowDetailsDialog: () -> Unit,
     onDismiss: () -> Unit,
+    onRemoveFromQueue: (() -> Unit)? = null
 ) {
     mediaMetadata ?: return
     val navController = LocalNavController.current
@@ -335,7 +336,7 @@ fun QueueMenu(
         // Play next / Add to queue
         item {
             Material3MenuGroup(
-                items = listOf(
+                items = listOfNotNull(
                     Material3MenuItemData(
                         title = { Text(text = stringResource(R.string.play_next)) },
                         description = { Text(text = stringResource(R.string.play_next_desc)) },
@@ -371,7 +372,25 @@ fun QueueMenu(
                                 playerConnection.addToQueue(mediaMetadata.toMediaItem())
                             }
                         }
-                    )
+                    ),
+                    if (onRemoveFromQueue != null) {
+                        Material3MenuItemData(
+                            // Note: Using raw strings here to prevent R.string errors.
+                            // You can move these to strings.xml later!
+                            title = { Text(text = stringResource(R.string.remove_from_queue)) },
+                            description = { Text(text = stringResource(R.string.remove_from_queue_desc)) },
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.delete), // Uses trashcan icon
+                                    contentDescription = null,
+                                )
+                            },
+                            onClick = {
+                                onDismiss() // Hides the popup menu
+                                onRemoveFromQueue.invoke() // Triggers the delete logic!
+                            }
+                        )
+                    } else null
                 )
             )
         }
