@@ -343,4 +343,6 @@
     <string name="new_version_available">New version available</string>
     <string name="translation_models">Translation Models</string>
     <string name="clear_translation_models">Clear translation models</string>
+    <string name="remove_from_queue_desc">Remove this song from the active queue</string>
 </resources>
+
