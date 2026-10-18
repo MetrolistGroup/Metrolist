@@ -994,4 +994,19 @@
     <string name="stream_source_web_creator_desc">Creator web client.</string>
     <string name="top_result">Top result</string>
     <string name="other">Other</string>
+    <string name="calm_greeting_morning">Good morning</string>
+    <string name="calm_greeting_afternoon">Good afternoon</string>
+    <string name="calm_greeting_evening">Good evening</string>
+    <string name="calm_greeting_subtitle">Take a breath. What do you need right now?</string>
+    <string name="calm_mood_deep_focus">Deep Focus</string>
+    <string name="calm_mood_deep_focus_desc">Quiet instrumentals for work and study</string>
+    <string name="calm_mood_flow_state">Flow State</string>
+    <string name="calm_mood_flow_state_desc">Low cortisol flute and gentle rhythms</string>
+    <string name="calm_mood_bollywood">Bollywood Instrumental</string>
+    <string name="calm_mood_bollywood_desc">Familiar melodies, mostly without words</string>
+    <string name="calm_mood_devotional">Devotional</string>
+    <string name="calm_mood_devotional_desc">Bhajans, mantras and kirtan</string>
+    <string name="calm_mood_affirmations">Positive Affirmations</string>
+    <string name="calm_mood_affirmations_desc">Kind words over soft music</string>
+    <string name="calm_play_mood">Play %1$s</string>
 </resources>

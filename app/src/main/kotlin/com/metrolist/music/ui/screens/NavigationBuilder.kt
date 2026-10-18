@@ -74,7 +74,7 @@ fun NavGraphBuilder.navigationBuilder(
     snackbarHostState: SnackbarHostState,
 ) {
     composable(Screens.Home.route) {
-        HomeScreen(snackbarHostState = snackbarHostState)
+        CalmHomeScreen()
     }
 
     composable(Screens.Search.route) { backStackEntry ->

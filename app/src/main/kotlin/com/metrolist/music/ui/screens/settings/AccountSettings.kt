@@ -391,6 +391,26 @@ fun AccountSettings(
             items = buildList {
                 add(
                     Material3SettingsItem(
+                        title = { Text(stringResource(R.string.history)) },
+                        icon = painterResource(R.drawable.history),
+                        onClick = {
+                            onClose()
+                            navController.navigate("history")
+                        }
+                    )
+                )
+                add(
+                    Material3SettingsItem(
+                        title = { Text(stringResource(R.string.stats)) },
+                        icon = painterResource(R.drawable.stats),
+                        onClick = {
+                            onClose()
+                            navController.navigate("stats")
+                        }
+                    )
+                )
+                add(
+                    Material3SettingsItem(
                         title = { Text(stringResource(R.string.integrations)) },
                         icon = painterResource(R.drawable.integration),
                         onClick = {

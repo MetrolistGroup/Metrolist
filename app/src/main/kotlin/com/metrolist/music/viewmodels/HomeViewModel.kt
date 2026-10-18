@@ -730,7 +730,7 @@ class HomeViewModel @Inject constructor(
                     wasOffline = true
                 } else if (wasOffline) {
                     wasOffline = false
-                    refresh()
+                    if (isHomeDataLoaded) refresh()
                 }
             }
         }
