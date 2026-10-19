@@ -1,12 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Music Recognizer Widget – Wide (1×4 default) -->
 <!-- Left: album art + song title + artist  |  Right: animated mic button -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:theme="@style/Theme.Widget.Metrolist">
+    <ImageView
+        android:id="@+id/widget_theme_root_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_theme_root_mask"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:orientation="horizontal"
-    android:background="@drawable/widget_background"
+    android:background="@android:color/transparent"
     android:paddingStart="12dp"
     android:paddingEnd="12dp"
     android:paddingTop="8dp"
@@ -78,7 +92,18 @@
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:layout_gravity="center"
-            android:background="@drawable/widget_mic_button_bg">
+            android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_recognizer_mic_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_mic_button_bg"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
 
             <ImageView
                 android:layout_width="22dp"
@@ -92,3 +117,4 @@
     </FrameLayout>
 
 </LinearLayout>
+</FrameLayout>

@@ -1,12 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Music Recognizer Widget – Compact (1×3) -->
 <!-- Left: album art + song title + artist  |  Right: animated mic button (smaller padding) -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:theme="@style/Theme.Widget.Metrolist">
+    <ImageView
+        android:id="@+id/widget_theme_root_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_theme_root_mask"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:orientation="horizontal"
-    android:background="@drawable/widget_background"
+    android:background="@android:color/transparent"
     android:paddingStart="10dp"
     android:paddingEnd="10dp"
     android:paddingTop="8dp"
@@ -78,7 +92,18 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_gravity="center"
-            android:background="@drawable/widget_mic_button_bg">
+            android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_recognizer_mic_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_mic_button_bg"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
 
             <ImageView
                 android:layout_width="20dp"
@@ -92,3 +117,4 @@
     </FrameLayout>
 
 </LinearLayout>
+</FrameLayout>

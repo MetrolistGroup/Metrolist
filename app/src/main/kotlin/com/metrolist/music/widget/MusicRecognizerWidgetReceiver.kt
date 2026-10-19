@@ -35,6 +35,10 @@ import com.metrolist.music.recognition.RecognitionForegroundService.Companion.ST
 import com.metrolist.music.recognition.RecognitionForegroundService.Companion.STATE_PROCESSING
 import com.metrolist.music.recognition.RecognitionForegroundService.Companion.STATE_SUCCESS
 import java.io.File
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import timber.log.Timber
 
 /**
  * AppWidgetProvider for the Music Recognizer Widget.
@@ -56,7 +60,7 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        updateAllWidgets(context, appWidgetManager)
+        requestWidgetUpdate(context, appWidgetManager)
     }
 
     override fun onAppWidgetOptionsChanged(
@@ -66,14 +70,14 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
         newOptions: Bundle
     ) {
         super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
-        updateAllWidgets(context, appWidgetManager)
+        requestWidgetUpdate(context, appWidgetManager)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         when (intent.action) {
             ACTION_START_RECOGNITION -> handleStartRecognition(context)
-            ACTION_UPDATE_WIDGET -> updateAllWidgets(context, AppWidgetManager.getInstance(context))
+            ACTION_UPDATE_WIDGET -> requestWidgetUpdate(context, AppWidgetManager.getInstance(context))
             ACTION_RESET_STATE -> {
                 context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                     .edit()
@@ -85,7 +89,7 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
                     .putInt(PREF_PULSE_FRAME, 0)
                     .apply()
                 File(context.cacheDir, ALBUM_ART_CACHE_FILE).delete()
-                updateAllWidgets(context, AppWidgetManager.getInstance(context))
+                requestWidgetUpdate(context, AppWidgetManager.getInstance(context))
             }
         }
     }
@@ -135,7 +139,24 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
 
     // ─── Widget update ────────────────────────────────────────────────────────
 
-    private fun updateAllWidgets(context: Context, appWidgetManager: AppWidgetManager) {
+    private fun requestWidgetUpdate(context: Context, appWidgetManager: AppWidgetManager) {
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                updateAllWidgets(context, appWidgetManager, WidgetTheme.fromPreferences(context))
+            } catch (e: Exception) {
+                Timber.tag("MusicRecognizerWidget").e(e, "Failed to refresh widget theme")
+            } finally {
+                pendingResult.finish()
+            }
+        }
+    }
+
+    private fun updateAllWidgets(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        themeColors: WidgetThemeColors,
+    ) {
         val componentName = ComponentName(context, MusicRecognizerWidgetReceiver::class.java)
         val widgetIds = appWidgetManager.getAppWidgetIds(componentName)
 
@@ -157,9 +178,9 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
             val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
 
             val views = when {
-                minWidth < 110 -> createTinyViews(context, state, pulseFrame)
-                minWidth < 230 -> createCompactViews(context, state, songTitle, artistName, errorMessage, albumArtBitmap, pulseFrame)
-                else -> createWideViews(context, state, songTitle, artistName, errorMessage, albumArtBitmap, pulseFrame)
+                minWidth < 110 -> createTinyViews(context, state, pulseFrame, themeColors)
+                minWidth < 230 -> createCompactViews(context, state, songTitle, artistName, errorMessage, albumArtBitmap, pulseFrame, themeColors)
+                else -> createWideViews(context, state, songTitle, artistName, errorMessage, albumArtBitmap, pulseFrame, themeColors)
             }
 
             appWidgetManager.updateAppWidget(widgetId, views)
@@ -175,7 +196,8 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
         artistName: String,
         errorMessage: String,
         albumArt: android.graphics.Bitmap?,
-        pulseFrame: Int
+        pulseFrame: Int,
+        themeColors: WidgetThemeColors,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_recognizer_wide)
         applyAlbumArt(views, state, albumArt)
@@ -185,6 +207,7 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
         val infoIntent = getInfoAreaIntent(context)
         views.setOnClickPendingIntent(R.id.widget_recognizer_text_area, infoIntent)
         views.setOnClickPendingIntent(R.id.widget_recognizer_album_art, infoIntent)
+        WidgetTheme.apply(views, R.layout.widget_recognizer_wide, themeColors)
         return views
     }
 
@@ -195,7 +218,8 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
         artistName: String,
         errorMessage: String,
         albumArt: android.graphics.Bitmap?,
-        pulseFrame: Int
+        pulseFrame: Int,
+        themeColors: WidgetThemeColors,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_recognizer_compact)
         applyAlbumArt(views, state, albumArt)
@@ -205,17 +229,20 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
         val infoIntent = getInfoAreaIntent(context)
         views.setOnClickPendingIntent(R.id.widget_recognizer_text_area, infoIntent)
         views.setOnClickPendingIntent(R.id.widget_recognizer_album_art, infoIntent)
+        WidgetTheme.apply(views, R.layout.widget_recognizer_compact, themeColors)
         return views
     }
 
     private fun createTinyViews(
         context: Context,
         state: Int,
-        pulseFrame: Int
+        pulseFrame: Int,
+        themeColors: WidgetThemeColors,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_recognizer_tiny)
         applyMicState(views, state, pulseFrame, R.id.widget_recognizer_tiny_mic_container, R.id.widget_recognizer_tiny_pulse)
         views.setOnClickPendingIntent(R.id.widget_recognizer_tiny_root, getMicIntent(context))
+        WidgetTheme.apply(views, R.layout.widget_recognizer_tiny, themeColors)
         return views
     }
 

@@ -100,6 +100,7 @@ class PlaylistWidgetManager @Inject constructor(
         options: Bundle,
     ) {
         val appWidgetManager = AppWidgetManager.getInstance(context)
+        val themeColors = WidgetTheme.fromPreferences(context)
         val state = lastWidgetState
         val albumArt = getCachedAlbumArt(state.artworkUri)
         val quickPicks = buildQuickPicks()
@@ -113,6 +114,7 @@ class PlaylistWidgetManager @Inject constructor(
             duration = state.duration,
             currentPosition = state.currentPosition,
             quickPicks = quickPicks,
+            themeColors = themeColors,
         )
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
@@ -154,6 +156,7 @@ class PlaylistWidgetManager @Inject constructor(
         val widgetIds = appWidgetManager.getAppWidgetIds(componentName)
         if (widgetIds.isEmpty()) return
 
+        val themeColors = WidgetTheme.fromPreferences(context)
         val albumArt = getCachedAlbumArt(artworkUri)
         val quickPicks = buildQuickPicks()
 
@@ -169,6 +172,7 @@ class PlaylistWidgetManager @Inject constructor(
                 duration = duration,
                 currentPosition = currentPosition,
                 quickPicks = quickPicks,
+                themeColors = themeColors,
             )
             appWidgetManager.updateAppWidget(widgetId, views)
         }
@@ -267,6 +271,7 @@ class PlaylistWidgetManager @Inject constructor(
         duration: Long,
         currentPosition: Long,
         quickPicks: List<QuickPick>,
+        themeColors: WidgetThemeColors,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_playlist)
 
@@ -312,6 +317,7 @@ class PlaylistWidgetManager @Inject constructor(
         )
 
         bindQuickPicks(views, options, quickPicks)
+        WidgetTheme.apply(views, R.layout.widget_playlist, themeColors)
         return views
     }
 

@@ -136,6 +136,7 @@ import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.music.constants.AppBarHeight
 import com.metrolist.music.constants.AppLanguageKey
 import com.metrolist.music.constants.CheckForUpdatesKey
+import com.metrolist.music.constants.CurrentThemeColorKey
 import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.DefaultOpenTabKey
 import com.metrolist.music.constants.DismissedKmpUpdateKey
@@ -215,6 +216,7 @@ import com.metrolist.music.utils.reportException
 import com.metrolist.music.utils.setAppLocale
 import com.metrolist.music.viewmodels.HomeViewModel
 import com.metrolist.music.widget.PlaylistWidgetReceiver
+import com.metrolist.music.widget.WidgetTheme
 import com.valentinilk.shimmer.LocalShimmerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -677,6 +679,19 @@ class MainActivity : FragmentActivity() {
                         themeColor = selectedThemeColor
                     }
                 }
+        }
+
+        LaunchedEffect(themeColor, useDarkTheme, pureBlack) {
+            val effectiveThemeColor = themeColor.toArgb()
+            this@MainActivity.safeDataStoreEdit {
+                it[CurrentThemeColorKey] = effectiveThemeColor
+            }
+            WidgetTheme.refreshWidgets(
+                context = this@MainActivity,
+                themeColor = effectiveThemeColor,
+                darkMode = if (useDarkTheme) "ON" else "OFF",
+                pureBlack = pureBlack,
+            )
         }
 
         MetrolistTheme(

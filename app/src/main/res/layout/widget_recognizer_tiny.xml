@@ -5,8 +5,19 @@
     android:id="@+id/widget_recognizer_tiny_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_background"
+    android:background="@android:color/transparent"
     android:theme="@style/Theme.Widget.Metrolist">
+    <ImageView
+        android:id="@+id/widget_theme_root_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_theme_root_mask"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
 
     <!-- Pulse ring (behind the button) -->
     <ImageView

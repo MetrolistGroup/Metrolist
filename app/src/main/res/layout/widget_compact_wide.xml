@@ -1,11 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Compact 4x1 Widget - Single row with album art, song info, like and play buttons -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:theme="@style/Theme.Widget.Metrolist">
+    <ImageView
+        android:id="@+id/widget_theme_root_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_theme_root_mask"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:orientation="horizontal"
-    android:background="@drawable/widget_background"
+    android:background="@android:color/transparent"
     android:paddingStart="12dp"
     android:paddingEnd="12dp"
     android:paddingTop="8dp"
@@ -57,10 +71,22 @@
 
     <!-- Like Button -->
     <FrameLayout
+                android:id="@+id/widget_wide_like_button_container"
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:layout_marginEnd="8dp"
-        android:background="@drawable/widget_like_button_bg">
+        android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_wide_like_button_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_like_button_bg"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
 
         <ImageButton
             android:id="@+id/widget_wide_like_button"
@@ -78,7 +104,18 @@
         android:id="@+id/widget_wide_play_container"
         android:layout_width="44dp"
         android:layout_height="44dp"
-        android:background="@drawable/widget_play_button_circular">
+        android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_wide_play_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_play_button_circular"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
 
         <ImageView
             android:id="@+id/widget_wide_play_pause"
@@ -90,3 +127,4 @@
     </FrameLayout>
 
 </LinearLayout>
+</FrameLayout>

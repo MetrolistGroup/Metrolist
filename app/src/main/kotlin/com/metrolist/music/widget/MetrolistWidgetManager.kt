@@ -59,6 +59,7 @@ class MetrolistWidgetManager @Inject constructor(
         currentPosition: Long = 0
     ) {
         val appWidgetManager = AppWidgetManager.getInstance(context)
+        val themeColors = WidgetTheme.fromPreferences(context)
 
         // Use cached album art if URI hasn't changed, otherwise load new one
         val albumArt: Bitmap?
@@ -90,7 +91,8 @@ class MetrolistWidgetManager @Inject constructor(
                     isPlaying,
                     isLiked,
                     duration,
-                    currentPosition
+                    currentPosition,
+                    themeColors,
                 )
                 appWidgetManager.updateAppWidget(widgetId, views)
             }
@@ -103,7 +105,8 @@ class MetrolistWidgetManager @Inject constructor(
             val turntableViews = createTurntableRemoteViews(
                 circularAlbumArt,
                 isPlaying,
-                isLiked
+                isLiked,
+                themeColors,
             )
             turntableWidgetIds.forEach { widgetId ->
                 appWidgetManager.updateAppWidget(widgetId, turntableViews)
@@ -156,7 +159,8 @@ class MetrolistWidgetManager @Inject constructor(
         isPlaying: Boolean,
         isLiked: Boolean,
         duration: Long,
-        currentPosition: Long
+        currentPosition: Long,
+        themeColors: WidgetThemeColors,
     ): RemoteViews {
         val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
         val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
@@ -168,15 +172,15 @@ class MetrolistWidgetManager @Inject constructor(
         return when {
             minWidth < 180 && minHeight < 100 -> {
                 // 2x2 Compact - Only play button with album art
-                createCompactSquareRemoteViews(albumArt, isPlaying)
+                createCompactSquareRemoteViews(albumArt, isPlaying, themeColors)
             }
             minWidth >= 180 && minHeight < 100 -> {
                 // 4x1 Wide - Single row with album art, song info, like and play buttons
-                createCompactWideRemoteViews(title, artist, albumArt, isPlaying, isLiked)
+                createCompactWideRemoteViews(title, artist, albumArt, isPlaying, isLiked, themeColors)
             }
             else -> {
                 // Full layout
-                createRemoteViews(title, artist, albumArt, isPlaying, isLiked, duration, currentPosition)
+                createRemoteViews(title, artist, albumArt, isPlaying, isLiked, duration, currentPosition, themeColors)
             }
         }
     }
@@ -188,7 +192,8 @@ class MetrolistWidgetManager @Inject constructor(
         isPlaying: Boolean,
         isLiked: Boolean,
         duration: Long = 0,
-        currentPosition: Long = 0
+        currentPosition: Long = 0,
+        themeColors: WidgetThemeColors,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_music_player)
 
@@ -224,6 +229,7 @@ class MetrolistWidgetManager @Inject constructor(
         views.setOnClickPendingIntent(R.id.widget_album_art, getOpenAppIntent())
         views.setOnClickPendingIntent(R.id.widget_play_pause_container, getPlayPauseIntent())
         views.setOnClickPendingIntent(R.id.widget_like_button, getLikeIntent())
+        WidgetTheme.apply(views, R.layout.widget_music_player, themeColors)
 
         return views
     }
@@ -296,7 +302,8 @@ class MetrolistWidgetManager @Inject constructor(
 
     private fun createCompactSquareRemoteViews(
         albumArt: Bitmap?,
-        isPlaying: Boolean
+        isPlaying: Boolean,
+        themeColors: WidgetThemeColors,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_compact_square)
 
@@ -315,6 +322,7 @@ class MetrolistWidgetManager @Inject constructor(
         // Set click intents
         views.setOnClickPendingIntent(R.id.widget_compact_album_art, getOpenAppIntent())
         views.setOnClickPendingIntent(R.id.widget_compact_play_container, getPlayPauseIntent())
+        WidgetTheme.apply(views, R.layout.widget_compact_square, themeColors)
 
         return views
     }
@@ -324,7 +332,8 @@ class MetrolistWidgetManager @Inject constructor(
         artist: String,
         albumArt: Bitmap?,
         isPlaying: Boolean,
-        isLiked: Boolean
+        isLiked: Boolean,
+        themeColors: WidgetThemeColors,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_compact_wide)
 
@@ -353,6 +362,7 @@ class MetrolistWidgetManager @Inject constructor(
         views.setOnClickPendingIntent(R.id.widget_wide_album_art, getOpenAppIntent())
         views.setOnClickPendingIntent(R.id.widget_wide_play_container, getPlayPauseIntent())
         views.setOnClickPendingIntent(R.id.widget_wide_like_button, getLikeIntent())
+        WidgetTheme.apply(views, R.layout.widget_compact_wide, themeColors)
 
         return views
     }
@@ -360,7 +370,8 @@ class MetrolistWidgetManager @Inject constructor(
     private fun createTurntableRemoteViews(
         circularAlbumArt: Bitmap?,
         isPlaying: Boolean,
-        isLiked: Boolean
+        isLiked: Boolean,
+        themeColors: WidgetThemeColors,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_turntable)
 
@@ -381,6 +392,7 @@ class MetrolistWidgetManager @Inject constructor(
         views.setOnClickPendingIntent(R.id.widget_turntable_play_container, getTurntablePlayPauseIntent())
         views.setOnClickPendingIntent(R.id.widget_turntable_prev_button, getTurntablePreviousIntent())
         views.setOnClickPendingIntent(R.id.widget_turntable_next_button, getTurntableNextIntent())
+        WidgetTheme.apply(views, R.layout.widget_turntable, themeColors)
 
         return views
     }

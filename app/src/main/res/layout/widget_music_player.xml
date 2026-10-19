@@ -1,10 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:theme="@style/Theme.Widget.Metrolist">
+    <ImageView
+        android:id="@+id/widget_theme_root_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_theme_root_mask"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:background="@drawable/widget_background"
+    android:background="@android:color/transparent"
     android:padding="16dp"
     android:gravity="center_vertical"
     android:theme="@style/Theme.Widget.Metrolist">
@@ -65,9 +79,21 @@
 
             <!-- Like Button -->
             <FrameLayout
+                android:id="@+id/widget_like_button_container"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:background="@drawable/widget_like_button_bg">
+                android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_like_button_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_like_button_bg"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
 
                 <ImageButton
                     android:id="@+id/widget_like_button"
@@ -87,7 +113,18 @@
                 android:layout_height="48dp"
                 android:layout_weight="1"
                 android:layout_marginStart="12dp"
-                android:background="@drawable/widget_play_pill_bg">
+                android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_play_pause_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_play_pill_bg"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
 
                 <ImageView
                     android:id="@+id/widget_play_pause"
@@ -124,3 +161,4 @@
     </LinearLayout>
 
 </LinearLayout>
+</FrameLayout>
