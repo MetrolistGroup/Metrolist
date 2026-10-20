@@ -46,6 +46,9 @@ object InnerTubeXPlayer {
     private val bundleMutex = Mutex()
     private val streamClientFailures = java.util.concurrent.ConcurrentHashMap<String, FailedStreamClients>()
 
+    // A client that cannot deliver data on this network fails for the next track too.
+    private val failedClientsAcrossTracks = StreamClientFailureMemory(STREAM_CLIENT_FAILURE_TTL_MS)
+
     @Synchronized
     fun initialize(context: Context) {
         if (applicationContext == null) applicationContext = context.applicationContext
@@ -109,10 +112,12 @@ object InnerTubeXPlayer {
         streamClientFailures.compute(videoId) { _, failures ->
             FailedStreamClients(failures?.clientNames.orEmpty() + clientName, nowMs)
         }
+        failedClientsAcrossTracks.mark(clientName, nowMs)
     }
 
     fun clearStreamClientFailures() {
         streamClientFailures.clear()
+        failedClientsAcrossTracks.clear()
     }
 
     suspend fun refreshAfterStreamRejection(): Boolean = bundle().cipherService.refreshAfterStreamRejection()
@@ -121,12 +126,15 @@ object InnerTubeXPlayer {
         videoId: String,
         nowMs: Long = System.currentTimeMillis(),
     ): Set<String> {
-        val failures = streamClientFailures[videoId] ?: return emptySet()
-        if ((nowMs - failures.failedAtMs) !in 0 until STREAM_CLIENT_FAILURE_TTL_MS) {
-            streamClientFailures.remove(videoId, failures)
-            return emptySet()
-        }
-        return failures.clientNames
+        val failures = streamClientFailures[videoId]
+        val forThisVideo =
+            if (failures != null && (nowMs - failures.failedAtMs) in 0 until STREAM_CLIENT_FAILURE_TTL_MS) {
+                failures.clientNames
+            } else {
+                if (failures != null) streamClientFailures.remove(videoId, failures)
+                emptySet()
+            }
+        return forThisVideo + failedClientsAcrossTracks.recent(nowMs)
     }
 
     private suspend fun bundle(): ExtractionBundle {
