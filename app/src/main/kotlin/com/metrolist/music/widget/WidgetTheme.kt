@@ -1,20 +1,24 @@
 package com.metrolist.music.widget
 
-import android.appwidget.AppWidgetManager
-import android.content.ComponentName
+import android.content.Intent
 import android.content.Context
 import android.content.res.Configuration
-import android.graphics.Color
 import android.os.Build
 import android.widget.RemoteViews
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.graphics.toArgb
 import com.metrolist.music.R
 import com.metrolist.music.constants.CurrentThemeColorKey
 import com.metrolist.music.constants.DarkModeKey
+import com.metrolist.music.constants.DynamicThemeKey
 import com.metrolist.music.constants.PureBlackKey
 import com.metrolist.music.constants.SelectedThemeColorKey
 import com.metrolist.music.ui.theme.DefaultThemeColor
+import com.metrolist.music.ui.theme.pureBlack
 import com.metrolist.music.utils.dataStore
+import com.metrolist.music.utils.safeDataStoreEdit
 import kotlinx.coroutines.flow.first
 
 internal data class WidgetThemeColors(
@@ -28,70 +32,54 @@ internal data class WidgetThemeColors(
 )
 
 internal object WidgetTheme {
-    suspend fun fromPreferences(context: Context): WidgetThemeColors {
+    suspend fun fromPreferences(
+        context: Context,
+        artworkThemeColor: Int? = null,
+        hasArtwork: Boolean = false,
+    ): WidgetThemeColors {
         val preferences = context.dataStore.data.first()
+        val dynamicTheme = preferences[DynamicThemeKey] ?: true
+        val selectedThemeColor = preferences[SelectedThemeColorKey] ?: DefaultThemeColor.toArgb()
+        val effectiveThemeColor = if (dynamicTheme && hasArtwork) {
+            artworkThemeColor ?: selectedThemeColor
+        } else {
+            selectedThemeColor
+        }
+
+        // The service also runs while MainActivity is closed, so persist the playing artwork's
+        // effective seed here instead of relying solely on an activity-owned collector.
+        if (preferences[CurrentThemeColorKey] != effectiveThemeColor) {
+            context.safeDataStoreEdit { it[CurrentThemeColorKey] = effectiveThemeColor }
+        }
+
         return create(
             context = context,
-            themeColor = preferences[CurrentThemeColorKey]
-                ?: preferences[SelectedThemeColorKey]
-                ?: DefaultThemeColor.toArgb(),
+            themeColor = effectiveThemeColor,
             darkMode = preferences[DarkModeKey] ?: "AUTO",
             pureBlack = preferences[PureBlackKey] ?: false,
         )
     }
 
-    fun refreshWidgets(
+    suspend fun refreshWidgets(
         context: Context,
-        themeColor: Int,
-        darkMode: String,
-        pureBlack: Boolean,
+        widgetManager: MetrolistWidgetManager,
     ) {
-        val colors = create(context, themeColor, darkMode, pureBlack)
-        val manager = AppWidgetManager.getInstance(context)
-
-        manager.getAppWidgetIds(ComponentName(context, MusicWidgetReceiver::class.java)).forEach { id ->
-            val options = manager.getAppWidgetOptions(id)
-            val layoutId = when {
-                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) < 180 &&
-                    options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) < 100 ->
-                    R.layout.widget_compact_square
-                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) >= 180 &&
-                    options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) < 100 ->
-                    R.layout.widget_compact_wide
-                else -> R.layout.widget_music_player
-            }
-            val views = RemoteViews(context.packageName, layoutId)
-            apply(views, layoutId, colors)
-            runCatching { manager.partiallyUpdateAppWidget(id, views) }
-        }
-
-        manager.getAppWidgetIds(ComponentName(context, TurntableWidgetReceiver::class.java)).forEach { id ->
-            val views = RemoteViews(context.packageName, R.layout.widget_turntable)
-            apply(views, R.layout.widget_turntable, colors)
-            runCatching { manager.partiallyUpdateAppWidget(id, views) }
-        }
-
-        manager.getAppWidgetIds(ComponentName(context, PlaylistWidgetReceiver::class.java)).forEach { id ->
-            val views = RemoteViews(context.packageName, R.layout.widget_playlist)
-            apply(views, R.layout.widget_playlist, colors)
-            runCatching { manager.partiallyUpdateAppWidget(id, views) }
-        }
-
-        manager.getAppWidgetIds(ComponentName(context, MusicRecognizerWidgetReceiver::class.java)).forEach { id ->
-            val minWidth = manager.getAppWidgetOptions(id)
-                .getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
-            val layoutId = when {
-                minWidth < 110 -> R.layout.widget_recognizer_tiny
-                minWidth < 230 -> R.layout.widget_recognizer_compact
-                else -> R.layout.widget_recognizer_wide
-            }
-            val views = RemoteViews(context.packageName, layoutId)
-            apply(views, layoutId, colors)
-            runCatching { manager.partiallyUpdateAppWidget(id, views) }
-        }
+        // Re-render widgets through their normal renderers. Theme-only partial RemoteViews are
+        // not cached by Android and can lose their styling when the host restores a widget.
+        widgetManager.refreshWidgetsForTheme()
+        context.sendBroadcast(
+            Intent(context, MusicRecognizerWidgetReceiver::class.java).apply {
+                action = MusicRecognizerWidgetReceiver.ACTION_UPDATE_WIDGET
+            },
+        )
     }
 
-    fun apply(views: RemoteViews, layoutId: Int, colors: WidgetThemeColors) {
+    fun apply(
+        views: RemoteViews,
+        layoutId: Int,
+        colors: WidgetThemeColors,
+        recognizerActive: Boolean = false,
+    ) {
         when (layoutId) {
             R.layout.widget_music_player -> {
                 tintRoot(views, colors.surface)
@@ -160,13 +148,31 @@ internal object WidgetTheme {
                 tintRoot(views, colors.surface)
                 views.setTextColor(R.id.widget_recognizer_song_title, colors.textPrimary)
                 views.setTextColor(R.id.widget_recognizer_artist_name, colors.textSecondary)
-                tintBackground(views, R.id.widget_recognizer_mic_container, colors.primaryContainer)
+                tintImage(
+                    views,
+                    R.id.widget_recognizer_mic_background,
+                    if (recognizerActive) colors.primary else colors.primaryContainer,
+                )
+                tintImage(
+                    views,
+                    R.id.widget_recognizer_mic_icon,
+                    if (recognizerActive) colors.onPrimary else colors.onPrimaryContainer,
+                )
                 tintImage(views, R.id.widget_recognizer_pulse, colors.primary)
             }
 
             R.layout.widget_recognizer_tiny -> {
-                tintBackground(views, R.id.widget_recognizer_tiny_root, colors.surface)
-                tintBackground(views, R.id.widget_recognizer_tiny_mic_container, colors.primaryContainer)
+                tintRoot(views, colors.surface)
+                tintImage(
+                    views,
+                    R.id.widget_recognizer_tiny_mic_background,
+                    if (recognizerActive) colors.primary else colors.primaryContainer,
+                )
+                tintImage(
+                    views,
+                    R.id.widget_recognizer_tiny_mic_icon,
+                    if (recognizerActive) colors.onPrimary else colors.onPrimaryContainer,
+                )
                 tintImage(views, R.id.widget_recognizer_tiny_pulse, colors.primary)
             }
         }
@@ -186,68 +192,27 @@ internal object WidgetTheme {
         }
         val useSystemColors = themeColor == DefaultThemeColor.toArgb() &&
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-        val seed = if (useSystemColors) {
-            context.getColor(
-                if (isDark) android.R.color.system_accent1_200
-                else android.R.color.system_accent1_600,
-            )
+        val baseColorScheme = if (useSystemColors) {
+            if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         } else {
-            themeColor
-        }
-
-        val surface = when {
-            isDark && pureBlack -> Color.BLACK
-            useSystemColors -> context.getColor(
-                if (isDark) android.R.color.system_neutral1_900
-                else android.R.color.system_neutral1_10,
+            dynamicColorScheme(
+                seedColor = ComposeColor(themeColor),
+                isDark = isDark,
+                isAmoled = isDark && pureBlack,
+                style = PaletteStyle.TonalSpot,
+                specVersion = ColorSpec.SpecVersion.SPEC_2025,
             )
-            isDark -> blend(0xFF141218.toInt(), seed, 0.035f)
-            else -> blend(0xFFFFFBFE.toInt(), seed, 0.025f)
         }
-        val primaryContainer = if (useSystemColors) {
-            context.getColor(
-                if (isDark) android.R.color.system_accent1_700
-                else android.R.color.system_accent1_100,
-            )
-        } else {
-            blend(seed, if (isDark) Color.BLACK else Color.WHITE, if (isDark) 0.62f else 0.82f)
-        }
-        val onPrimaryContainer = if (useSystemColors) {
-            context.getColor(
-                if (isDark) android.R.color.system_accent1_100
-                else android.R.color.system_accent1_900,
-            )
-        } else if (luminance(primaryContainer) > 0.5f) {
-            0xFF211F26.toInt()
-        } else {
-            0xFFE6E1E5.toInt()
-        }
-        val primary = if (useSystemColors) seed else if (isDark) {
-            blend(seed, Color.WHITE, 0.20f)
-        } else {
-            seed
-        }
-        val textPrimary = if (useSystemColors) {
-            context.getColor(
-                if (isDark) android.R.color.system_neutral1_100
-                else android.R.color.system_neutral1_900,
-            )
-        } else if (isDark) 0xFFE6E1E5.toInt() else 0xFF1C1B1F.toInt()
-        val textSecondary = if (useSystemColors) {
-            context.getColor(
-                if (isDark) android.R.color.system_neutral2_200
-                else android.R.color.system_neutral2_700,
-            )
-        } else if (isDark) 0xFFCAC4D0.toInt() else 0xFF49454F.toInt()
-
+        val colorScheme = if (isDark && pureBlack) baseColorScheme.pureBlack(true) else baseColorScheme
         return WidgetThemeColors(
-            surface = surface,
-            primary = primary,
-            primaryContainer = primaryContainer,
-            onPrimaryContainer = onPrimaryContainer,
-            textPrimary = textPrimary,
-            textSecondary = textSecondary,
-            progressTrack = blend(surface, primary, 0.22f),
+            surface = colorScheme.surface.toArgb(),
+            primary = colorScheme.primary.toArgb(),
+            onPrimary = colorScheme.onPrimary.toArgb(),
+            primaryContainer = colorScheme.primaryContainer.toArgb(),
+            onPrimaryContainer = colorScheme.onPrimaryContainer.toArgb(),
+            textPrimary = colorScheme.onSurface.toArgb(),
+            textSecondary = colorScheme.onSurfaceVariant.toArgb(),
+            progressTrack = colorScheme.surfaceVariant.toArgb(),
         )
     }
 
