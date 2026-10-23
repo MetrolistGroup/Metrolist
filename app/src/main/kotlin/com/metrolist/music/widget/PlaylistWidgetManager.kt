@@ -140,6 +140,7 @@ class PlaylistWidgetManager @Inject constructor(
         isLiked: Boolean,
         duration: Long = 0,
         currentPosition: Long = 0,
+        widgetThemeColors: WidgetThemeColors? = null,
     ) {
         lastWidgetState = WidgetState(
             title = title,
@@ -156,7 +157,7 @@ class PlaylistWidgetManager @Inject constructor(
         val widgetIds = appWidgetManager.getAppWidgetIds(componentName)
         if (widgetIds.isEmpty()) return
 
-        val themeColors = WidgetTheme.fromPreferences(context)
+        val themeColors = widgetThemeColors ?: WidgetTheme.fromPreferences(context)
         val albumArt = getCachedAlbumArt(artworkUri)
         val quickPicks = buildQuickPicks()
 
