@@ -195,6 +195,7 @@ class MetrolistWidgetManager @Inject constructor(
             isLiked = isLiked,
             duration = duration,
             currentPosition = currentPosition,
+            widgetThemeColors = themeColors,
         )
     }
 
