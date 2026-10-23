@@ -197,7 +197,7 @@ class MetrolistWidgetManager @Inject constructor(
             currentPosition = currentPosition,
         )
     }
-    }
+
     fun updateProgress(
         duration: Long,
         currentPosition: Long,
