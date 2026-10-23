@@ -23,6 +23,8 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.toBitmap
+import androidx.compose.ui.graphics.toArgb
+import com.metrolist.music.ui.theme.extractThemeColor
 import com.metrolist.music.MainActivity
 import com.metrolist.music.R
 import com.metrolist.music.db.MusicDatabase
@@ -48,6 +50,32 @@ class MetrolistWidgetManager @Inject constructor(
     private var cachedArtworkUri: String? = null
     private var cachedAlbumArt: Bitmap? = null
     private var cachedCircularAlbumArt: Bitmap? = null
+    private var cachedArtworkThemeColor: Int? = null
+
+    private data class WidgetRenderState(
+        val title: String,
+        val artist: String,
+        val artworkUri: String?,
+        val isPlaying: Boolean,
+        val isLiked: Boolean,
+        val duration: Long,
+        val currentPosition: Long,
+    )
+
+    private var lastWidgetState: WidgetRenderState? = null
+
+    suspend fun refreshWidgetsForTheme() {
+        val state = lastWidgetState ?: return
+        updateWidgets(
+            title = state.title,
+            artist = state.artist,
+            artworkUri = state.artworkUri,
+            isPlaying = state.isPlaying,
+            isLiked = state.isLiked,
+            duration = state.duration,
+            currentPosition = state.currentPosition,
+        )
+    }
 
     suspend fun updateWidgets(
         title: String,
@@ -58,24 +86,41 @@ class MetrolistWidgetManager @Inject constructor(
         duration: Long = 0,
         currentPosition: Long = 0
     ) {
+        lastWidgetState = WidgetRenderState(
+            title = title,
+            artist = artist,
+            artworkUri = artworkUri,
+            isPlaying = isPlaying,
+            isLiked = isLiked,
+            duration = duration,
+            currentPosition = currentPosition,
+        )
         val appWidgetManager = AppWidgetManager.getInstance(context)
-        val themeColors = WidgetTheme.fromPreferences(context)
 
-        // Use cached album art if URI hasn't changed, otherwise load new one
+        // Use cached album art if URI hasn't changed, otherwise load new one.
+        // The bitmap's seed is retained with the same cache so the widget palette also
+        // follows playback when the app UI is not collecting artwork metadata.
         val albumArt: Bitmap?
         val circularAlbumArt: Bitmap?
-        
+
         if (artworkUri != null && artworkUri == cachedArtworkUri && cachedAlbumArt != null) {
             albumArt = cachedAlbumArt
             circularAlbumArt = cachedCircularAlbumArt
         } else {
             albumArt = artworkUri?.let { loadAlbumArt(it, 300) }
             circularAlbumArt = albumArt?.let { getCircularBitmap(it) }
-            // Update cache
             cachedArtworkUri = artworkUri
             cachedAlbumArt = albumArt
             cachedCircularAlbumArt = circularAlbumArt
+            cachedArtworkThemeColor = albumArt?.let {
+                runCatching { it.extractThemeColor().toArgb() }.getOrNull()
+            }
         }
+        val themeColors = WidgetTheme.fromPreferences(
+            context = context,
+            artworkThemeColor = cachedArtworkThemeColor,
+            hasArtwork = !artworkUri.isNullOrBlank(),
+        )
 
         // Update main music player widgets
         val componentName = ComponentName(context, MusicWidgetReceiver::class.java)
