@@ -215,6 +215,7 @@ import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.utils.reportException
 import com.metrolist.music.utils.setAppLocale
 import com.metrolist.music.viewmodels.HomeViewModel
+import com.metrolist.music.widget.MetrolistWidgetManager
 import com.metrolist.music.widget.PlaylistWidgetReceiver
 import com.metrolist.music.widget.WidgetTheme
 import com.valentinilk.shimmer.LocalShimmerTheme
@@ -253,6 +254,9 @@ class MainActivity : FragmentActivity() {
 
     @Inject
     lateinit var database: MusicDatabase
+
+    @Inject
+    lateinit var widgetManager: MetrolistWidgetManager
 
     @Inject
     lateinit var downloadUtil: DownloadUtil
@@ -686,12 +690,12 @@ class MainActivity : FragmentActivity() {
             this@MainActivity.safeDataStoreEdit {
                 it[CurrentThemeColorKey] = effectiveThemeColor
             }
-            WidgetTheme.refreshWidgets(
-                context = this@MainActivity,
-                themeColor = effectiveThemeColor,
-                darkMode = if (useDarkTheme) "ON" else "OFF",
-                pureBlack = pureBlack,
-            )
+            withContext(Dispatchers.IO) {
+                WidgetTheme.refreshWidgets(
+                    context = this@MainActivity,
+                    widgetManager = widgetManager,
+                )
+            }
         }
 
         MetrolistTheme(
