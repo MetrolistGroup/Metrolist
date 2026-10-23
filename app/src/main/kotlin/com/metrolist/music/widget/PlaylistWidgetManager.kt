@@ -132,7 +132,7 @@ class PlaylistWidgetManager @Inject constructor(
         )
     }
 
-    suspend fun updateWidgets(
+    internal suspend fun updateWidgets(
         title: String,
         artist: String,
         artworkUri: String?,
