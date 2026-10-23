@@ -18,9 +18,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -47,6 +51,43 @@ private fun isRouteSelected(currentRoute: String?, screenRoute: String, navigati
     return false
 }
 
+/**
+ * Keep the most recently selected top-level destination while Navigation updates the back stack.
+ * Some navigation operations briefly expose an intermediate route that is not represented by a
+ * navigation item. Feeding that transient route straight to NavigationBarItem clears its indicator,
+ * then selects it again when the destination settles.
+ */
+@Composable
+private fun rememberStableSelectedRoute(
+    currentRoute: String?,
+    navigationItems: List<Screens>,
+): String? {
+    var lastSelectedRoute by rememberSaveable { mutableStateOf<String?>(null) }
+
+    val selectedRoute = navigationItems
+        .firstOrNull { screen -> isRouteSelected(currentRoute, screen.route, navigationItems) }
+        ?.route
+
+    // Record a real selected destination synchronously after composition. Unlike LaunchedEffect,
+    // SideEffect cannot be cancelled by a rapid route change before it records the selection.
+    SideEffect {
+        if (selectedRoute != null && lastSelectedRoute != selectedRoute) {
+            lastSelectedRoute = selectedRoute
+        }
+    }
+
+    LaunchedEffect(currentRoute, navigationItems) {
+        if (selectedRoute == null) {
+            // Hold selection only through short transitional routes. If the app settles on a
+            // detail/settings screen, clear the tab selection like the original behavior.
+            delay(250)
+            lastSelectedRoute = null
+        }
+    }
+
+    return selectedRoute ?: lastSelectedRoute
+}
+
 @Composable
 fun AppNavigationRail(
     navigationItems: List<Screens>,
@@ -58,6 +99,7 @@ fun AppNavigationRail(
     onHomeLongHold: (() -> Unit)? = null,
 ) {
     val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+    val stableCurrentRoute = rememberStableSelectedRoute(currentRoute, navigationItems)
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
 
@@ -68,10 +110,11 @@ fun AppNavigationRail(
         Spacer(modifier = Modifier.weight(1f))
 
         navigationItems.forEach { screen ->
-            val isSelected = remember(currentRoute, screen.route) {
-                isRouteSelected(currentRoute, screen.route, navigationItems)
-            }
-            val currentIsSelected by rememberUpdatedState(isSelected)
+            val isSelected = isRouteSelected(stableCurrentRoute, screen.route, navigationItems)
+            // The visual selection may be held briefly across a transient route, but navigation
+            // semantics must still reflect the actual destination.
+            val isCurrentlySelected = isRouteSelected(currentRoute, screen.route, navigationItems)
+            val currentIsSelected by rememberUpdatedState(isCurrentlySelected)
             val iconRes = remember(isSelected, screen) {
                 if (isSelected) screen.iconIdActive else screen.iconIdInactive
             }
@@ -141,6 +184,7 @@ fun AppNavigationBar(
 ) {
     val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
     val contentColor = if (pureBlack) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+    val stableCurrentRoute = rememberStableSelectedRoute(currentRoute, navigationItems)
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
 
@@ -150,10 +194,11 @@ fun AppNavigationBar(
         contentColor = contentColor
     ) {
         navigationItems.forEach { screen ->
-            val isSelected = remember(currentRoute, screen.route) {
-                isRouteSelected(currentRoute, screen.route, navigationItems)
-            }
-            val currentIsSelected by rememberUpdatedState(isSelected)
+            val isSelected = isRouteSelected(stableCurrentRoute, screen.route, navigationItems)
+            // The visual selection may be held briefly across a transient route, but navigation
+            // semantics must still reflect the actual destination.
+            val isCurrentlySelected = isRouteSelected(currentRoute, screen.route, navigationItems)
+            val currentIsSelected by rememberUpdatedState(isCurrentlySelected)
             val iconRes = remember(isSelected, screen) {
                 if (isSelected) screen.iconIdActive else screen.iconIdInactive
             }

@@ -138,7 +138,7 @@ interface DatabaseDao {
     fun songsByRowIdAsc(): Flow<List<Song>>
 
     @Transaction
-    @Query("SELECT * FROM song WHERE inLibrary IS NOT NULL ORDER BY inLibrary")
+    @Query("SELECT * FROM song WHERE inLibrary IS NOT NULL ORDER BY inLibrary, rowId")
     fun songsByCreateDateAsc(): Flow<List<Song>>
 
     @Transaction
@@ -195,6 +195,30 @@ interface DatabaseDao {
     @Transaction
     @Query("SELECT * FROM song WHERE liked ORDER BY likedDate")
     fun likedSongsByCreateDateAsc(): Flow<List<Song>>
+
+    @Transaction
+    @Query("SELECT * FROM song WHERE liked ORDER BY likedDate LIMIT :limit")
+    fun likedSongsByCreateDateAsc(limit: Int): Flow<List<Song>>
+
+    @Query("SELECT id FROM song WHERE liked ORDER BY RANDOM() LIMIT :limit")
+    suspend fun randomLikedSongIds(limit: Int): List<String>
+
+    @Transaction
+    suspend fun randomLikedSongs(limit: Int): List<Song> {
+        if (limit <= 0) return emptyList()
+
+        val ids = randomLikedSongIds(limit)
+        if (ids.isEmpty()) return emptyList()
+
+        // Sample IDs first, then hydrate only those songs through the normal relation query.
+        // This keeps the random selection bounded without running the relation mapper directly
+        // over an ORDER BY RANDOM() parent query.
+        val songsById = ids.chunked(500)
+            .flatMap { songsByIds(it) }
+            .associateBy { it.id }
+
+        return ids.mapNotNull { songsById[it] }
+    }
 
     @Transaction
     @Query("SELECT * FROM song WHERE liked ORDER BY likedDate DESC, rowId DESC LIMIT :limit OFFSET :offset")
@@ -283,7 +307,7 @@ interface DatabaseDao {
 
     @Transaction
     @Query(
-        "SELECT song.* FROM song_artist_map JOIN song ON song_artist_map.songId = song.id WHERE artistId = :artistId AND inLibrary IS NOT NULL ORDER BY inLibrary",
+        "SELECT song.* FROM song_artist_map JOIN song ON song_artist_map.songId = song.id WHERE artistId = :artistId AND inLibrary IS NOT NULL ORDER BY inLibrary, song.rowId",
     )
     fun artistSongsByCreateDateAsc(artistId: String): Flow<List<Song>>
 
@@ -419,10 +443,10 @@ interface DatabaseDao {
               WHERE timestamp > :fromTimeStamp
                 AND timestamp <= :toTimeStamp
               GROUP BY songId
-              ORDER BY SUM(playTime) DESC
+              ORDER BY SUM(playTime) DESC, songId ASC
               LIMIT :limit OFFSET :offset) AS top_songs ON s.id = top_songs.songId
         GROUP BY s.id
-        ORDER BY timeListened DESC
+        ORDER BY timeListened DESC, s.id ASC
         """,
     )
     fun mostPlayedSongsStats(
@@ -431,6 +455,33 @@ interface DatabaseDao {
         offset: Int = 0,
         toTimeStamp: LocalDateTime? = LocalDateTime.now(),
     ): Flow<List<SongWithStats>>
+
+    /**
+     * Inserts a statistics-based playlist in bounded batches while keeping the whole insertion atomic.
+     * Only one page of SongWithStats rows and song IDs is materialized at a time.
+     */
+    @Transaction
+    suspend fun addMostPlayedSongsToPlaylist(
+        playlist: Playlist,
+        fromTimeStamp: LocalDateTime,
+        toTimeStamp: LocalDateTime,
+        pageSize: Int = 100,
+    ) {
+        require(pageSize > 0) { "pageSize must be positive" }
+        var offset = 0
+        while (true) {
+            val page = mostPlayedSongsStats(
+                fromTimeStamp = fromTimeStamp,
+                limit = pageSize,
+                offset = offset,
+                toTimeStamp = toTimeStamp,
+            ).first()
+            if (page.isEmpty()) break
+            addSongsToPlaylist(playlist, page.map { it.id to null })
+            offset += page.size
+            if (page.size < pageSize) break
+        }
+    }
 
     // Time Transfer
     @Query("UPDATE event SET songId = :toSongId WHERE songId = :fromSongId")
@@ -719,6 +770,14 @@ interface DatabaseDao {
     @Transaction
     @Query("SELECT * FROM song")
     fun allSongs(): Flow<List<Song>>
+
+    @Transaction
+    @Query("SELECT * FROM song ORDER BY rowId LIMIT :limit OFFSET :offset")
+    suspend fun allSongs(limit: Int, offset: Int): List<Song>
+
+    @Transaction
+    @Query("SELECT * FROM song WHERE id IN (:songIds)")
+    suspend fun songsByIds(songIds: List<String>): List<Song>
 
     @Transaction
     @SuppressWarnings(RoomWarnings.QUERY_MISMATCH)
@@ -1097,6 +1156,10 @@ interface DatabaseDao {
     fun playlistsByCreateDateAsc(): Flow<List<Playlist>>
 
     @Transaction
+    @Query("SELECT *, (SELECT COUNT(*) FROM playlist_song_map WHERE playlistId = playlist.id) AS songCount FROM playlist WHERE bookmarkedAt IS NOT NULL ORDER BY rowId LIMIT :limit")
+    fun playlistsByCreateDateAsc(limit: Int): Flow<List<Playlist>>
+
+    @Transaction
     @Query(
         "SELECT *, (SELECT COUNT(*) FROM playlist_song_map WHERE playlistId = playlist.id) AS songCount " +
             "FROM playlist WHERE bookmarkedAt IS NOT NULL ORDER BY rowId LIMIT :limit OFFSET :offset",
@@ -1248,6 +1311,10 @@ interface DatabaseDao {
     @Transaction
     @Query("SELECT * FROM song WHERE isDownloaded = 1 AND (isEpisode = 0 OR isEpisode IS NULL) ORDER BY dateDownload")
     fun downloadedSongsByCreateDateAsc(): Flow<List<Song>>
+
+    @Transaction
+    @Query("SELECT * FROM song WHERE isDownloaded = 1 AND (isEpisode = 0 OR isEpisode IS NULL) ORDER BY dateDownload LIMIT :limit")
+    fun downloadedSongsByCreateDateAsc(limit: Int): Flow<List<Song>>
 
     @Transaction
     @Query("SELECT * FROM song WHERE isDownloaded = 1 AND (isEpisode = 0 OR isEpisode IS NULL) ORDER BY title")

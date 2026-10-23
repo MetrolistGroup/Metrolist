@@ -25,6 +25,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.guava.future
 import timber.log.Timber
 
+internal fun calculateArtworkInSampleSize(
+    width: Int,
+    height: Int,
+    maxDimension: Int = 512,
+): Int {
+    if (width <= 0 || height <= 0 || maxDimension <= 0) return 1
+    var sampleSize = 1
+    while (width / sampleSize > maxDimension || height / sampleSize > maxDimension) {
+        sampleSize *= 2
+    }
+    return sampleSize
+}
+
 class CoilBitmapLoader(
     private val context: Context,
     private val scope: CoroutineScope,
@@ -49,8 +62,11 @@ class CoilBitmapLoader(
     override fun decodeBitmap(data: ByteArray): ListenableFuture<Bitmap> =
         scope.future(Dispatchers.IO) {
             try {
-                val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size)
-                bitmap?.createIndependentCopy() ?: createFallbackBitmap()
+                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeByteArray(data, 0, data.size, options)
+                options.inSampleSize = calculateArtworkInSampleSize(options.outWidth, options.outHeight)
+                options.inJustDecodeBounds = false
+                BitmapFactory.decodeByteArray(data, 0, data.size, options) ?: createFallbackBitmap()
             } catch (e: Exception) {
                 Timber.tag("CoilBitmapLoader").w(e, "Failed to decode bitmap data")
                 createFallbackBitmap()
@@ -64,6 +80,7 @@ class CoilBitmapLoader(
                     ImageRequest
                         .Builder(context)
                         .data(uri)
+                        .size(512, 512)
                         .allowHardware(false)
                         .build()
 

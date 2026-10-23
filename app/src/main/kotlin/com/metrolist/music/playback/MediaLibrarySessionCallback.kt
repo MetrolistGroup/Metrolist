@@ -38,7 +38,6 @@ import com.metrolist.music.constants.AndroidAutoSearchLocalLimitKey
 import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.MediaSessionConstants
-import com.metrolist.music.constants.SongSortType
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.PlaylistEntity
 import com.metrolist.music.db.entities.Song
@@ -57,7 +56,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.launch
@@ -72,6 +70,8 @@ import com.metrolist.music.ui.screens.settings.AndroidAutoSection
 import com.metrolist.music.ui.screens.settings.deserializeSections
 import com.metrolist.music.ui.screens.settings.serializeSections
 import kotlinx.coroutines.withContext
+
+private const val ANDROID_AUTO_QUEUE_PAGE_SIZE = 100
 
 class MediaLibrarySessionCallback
 @Inject
@@ -89,6 +89,32 @@ constructor(
 
     fun release() {
         scope.cancel()
+    }
+
+    private suspend fun <T> loadPagedMediaItems(
+        targetSongId: String,
+        loadPage: suspend (limit: Int, offset: Int) -> List<T>,
+        toMediaItem: (T) -> MediaItem,
+        songId: (T) -> String,
+    ): Pair<List<MediaItem>, Int> {
+        val mediaItems = ArrayList<MediaItem>()
+        var startIndex = 0
+        var startIndexFound = false
+        var offset = 0
+        while (true) {
+            val page = loadPage(ANDROID_AUTO_QUEUE_PAGE_SIZE, offset)
+            if (page.isEmpty()) break
+            page.forEach { entry ->
+                if (!startIndexFound && songId(entry) == targetSongId) {
+                    startIndex = mediaItems.size
+                    startIndexFound = true
+                }
+                mediaItems += toMediaItem(entry)
+            }
+            offset += page.size
+            if (page.size < ANDROID_AUTO_QUEUE_PAGE_SIZE) break
+        }
+        return mediaItems to startIndex
     }
 
     override fun onConnect(
@@ -657,75 +683,110 @@ constructor(
             when (path.firstOrNull()) {
                 MusicService.SONG -> {
                     val songId = path.getOrNull(1) ?: return@future defaultResult
-                    val allSongs = database.songsByCreateDateAsc().first()
-                    MediaItemsWithStartPosition(
-                        allSongs.map { it.toMediaItem() },
-                        allSongs.indexOfFirst { it.id == songId }.takeIf { it != -1 } ?: 0,
-                        startPositionMs
+                    val (items, startIndex) = loadPagedMediaItems(
+                        targetSongId = songId,
+                        loadPage = { limit, offset -> database.songsByCreateDateAsc(limit, offset) },
+                        toMediaItem = { it.toMediaItem() },
+                        songId = { it.id },
                     )
+                    MediaItemsWithStartPosition(items, startIndex, startPositionMs)
                 }
 
                 MusicService.ARTIST -> {
                     val songId = path.getOrNull(2) ?: return@future defaultResult
                     val artistId = path.getOrNull(1) ?: return@future defaultResult
-                    val songs = database.artistSongsByCreateDateAsc(artistId).first()
-                    MediaItemsWithStartPosition(
-                        songs.map { it.toMediaItem() },
-                        songs.indexOfFirst { it.id == songId }.takeIf { it != -1 } ?: 0,
-                        startPositionMs
+                    val (items, startIndex) = loadPagedMediaItems(
+                        targetSongId = songId,
+                        loadPage = { limit, offset -> database.artistSongsByCreateDateAsc(artistId, limit, offset) },
+                        toMediaItem = { it.toMediaItem() },
+                        songId = { it.id },
                     )
+                    MediaItemsWithStartPosition(items, startIndex, startPositionMs)
                 }
 
                 MusicService.ALBUM -> {
                     val songId = path.getOrNull(2) ?: return@future defaultResult
                     val albumId = path.getOrNull(1) ?: return@future defaultResult
-                    val albumWithSongs = database.albumWithSongs(albumId).first() ?: return@future defaultResult
-                    MediaItemsWithStartPosition(
-                        albumWithSongs.songs.map { it.toMediaItem() },
-                        albumWithSongs.songs.indexOfFirst { it.id == songId }.takeIf { it != -1 } ?: 0,
-                        startPositionMs
+                    val (items, startIndex) = loadPagedMediaItems(
+                        targetSongId = songId,
+                        loadPage = { limit, offset -> database.albumSongs(albumId, limit, offset) },
+                        toMediaItem = { it.toMediaItem() },
+                        songId = { it.id },
                     )
+                    MediaItemsWithStartPosition(items, startIndex, startPositionMs)
                 }
 
                 MusicService.PLAYLIST -> {
                     val songId = path.getOrNull(2) ?: return@future defaultResult
                     val playlistId = path.getOrNull(1) ?: return@future defaultResult
-                    val songs = when (playlistId) {
-                        PlaylistEntity.LIKED_PLAYLIST_ID -> database.likedSongs(SongSortType.CREATE_DATE, descending = true)
+                    when (playlistId) {
+                        PlaylistEntity.LIKED_PLAYLIST_ID -> {
+                            val (items, startIndex) = loadPagedMediaItems(
+                                targetSongId = songId,
+                                loadPage = { limit, offset -> database.likedSongsByCreateDateDesc(limit, offset) },
+                                toMediaItem = { it.toMediaItem() },
+                                songId = { it.id },
+                            )
+                            if (songId == MusicService.SHUFFLE_ACTION) {
+                                MediaItemsWithStartPosition(items.shuffled(), 0, C.TIME_UNSET)
+                            } else {
+                                MediaItemsWithStartPosition(items, startIndex, startPositionMs)
+                            }
+                        }
                         PlaylistEntity.DOWNLOADED_PLAYLIST_ID -> {
                             val downloads = downloadUtil.downloads.value
-                            database
-                                .allSongs()
-                                .flowOn(Dispatchers.IO)
-                                .map { songs ->
-                                    songs.filter {
-                                        downloads[it.id]?.state == Download.STATE_COMPLETED
+                            // Keep only small sort descriptors while scanning the database. Build
+                            // MediaItems later in bounded relation-hydration batches.
+                            val downloadedTracks = ArrayList<Triple<Long, Int, String>>()
+                            var sourceOrder = 0
+                            var offset = 0
+                            while (true) {
+                                val page = database.allSongs(ANDROID_AUTO_QUEUE_PAGE_SIZE, offset)
+                                if (page.isEmpty()) break
+                                page.forEach { song ->
+                                    val download = downloads[song.id]
+                                    if (download?.state == Download.STATE_COMPLETED) {
+                                        downloadedTracks += Triple(download.updateTimeMs, sourceOrder, song.id)
+                                        sourceOrder++
                                     }
-                                }.map { songs ->
-                                    songs
-                                        .map { it to downloads[it.id] }
-                                        .sortedBy { it.second?.updateTimeMs ?: 0L }
-                                        .map { it.first }
                                 }
-                        }
-                        else -> database.playlistSongs(playlistId).map { list ->
-                            list.map { it.song }
-                        }
-                    }.first()
+                                offset += page.size
+                                if (page.size < ANDROID_AUTO_QUEUE_PAGE_SIZE) break
+                            }
 
-                    // Check if this is a shuffle action
-                    if (songId == MusicService.SHUFFLE_ACTION) {
-                        MediaItemsWithStartPosition(
-                            songs.shuffled().map { it.toMediaItem() },
-                            0,
-                            C.TIME_UNSET
-                        )
-                    } else {
-                        MediaItemsWithStartPosition(
-                            songs.map { it.toMediaItem() },
-                            songs.indexOfFirst { it.id == songId }.takeIf { it != -1 } ?: 0,
-                            startPositionMs
-                        )
+                            downloadedTracks.sortWith(compareBy<Triple<Long, Int, String>> { it.first }.thenBy { it.second })
+                            val items = ArrayList<MediaItem>(downloadedTracks.size)
+                            var trackOffset = 0
+                            while (trackOffset < downloadedTracks.size) {
+                                val end = minOf(trackOffset + ANDROID_AUTO_QUEUE_PAGE_SIZE, downloadedTracks.size)
+                                val ids = ArrayList<String>(end - trackOffset)
+                                for (index in trackOffset until end) {
+                                    ids += downloadedTracks[index].third
+                                }
+                                val songsById = database.songsByIds(ids).associateBy { it.id }
+                                ids.forEach { id -> songsById[id]?.let { items += it.toMediaItem() } }
+                                trackOffset = end
+                            }
+                            val startIndex = items.indexOfFirst { it.mediaId == songId }.takeIf { it >= 0 } ?: 0
+                            if (songId == MusicService.SHUFFLE_ACTION) {
+                                MediaItemsWithStartPosition(items.shuffled(), 0, C.TIME_UNSET)
+                            } else {
+                                MediaItemsWithStartPosition(items, startIndex, startPositionMs)
+                            }
+                        }
+                        else -> {
+                            val (items, startIndex) = loadPagedMediaItems(
+                                targetSongId = songId,
+                                loadPage = { limit, offset -> database.playlistSongs(playlistId, limit, offset) },
+                                toMediaItem = { it.song.toMediaItem() },
+                                songId = { it.song.id },
+                            )
+                            if (songId == MusicService.SHUFFLE_ACTION) {
+                                MediaItemsWithStartPosition(items.shuffled(), 0, C.TIME_UNSET)
+                            } else {
+                                MediaItemsWithStartPosition(items, startIndex, startPositionMs)
+                            }
+                        }
                     }
                 }
 

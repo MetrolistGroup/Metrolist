@@ -66,7 +66,6 @@ import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.CONTENT_TYPE_HEADER
 import com.metrolist.music.constants.CONTENT_TYPE_SONG
-import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.SongFilter
 import com.metrolist.music.constants.SongFilterKey
 import com.metrolist.music.constants.SongSortDescendingKey
@@ -74,8 +73,6 @@ import com.metrolist.music.constants.SongSortType
 import com.metrolist.music.constants.SongSortTypeKey
 import com.metrolist.music.constants.YtmSyncKey
 import com.metrolist.music.extensions.fileNameAndSize
-import com.metrolist.music.extensions.matchesNormalizedQuery
-import com.metrolist.music.extensions.normalizeForSearch
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.ui.component.ChipsRow
@@ -125,13 +122,9 @@ fun LibrarySongsScreen(
     val (sortDescending, onSortDescendingChange) = rememberPreference(SongSortDescendingKey, true)
 
     val (ytmSync) = rememberPreference(YtmSyncKey, true)
-    val hideExplicit by rememberPreference(key = HideExplicitKey, defaultValue = false)
-
-    val songs by viewModel.allSongs.collectAsStateWithLifecycle()
+    val filteredSongs by viewModel.filteredSongs.collectAsStateWithLifecycle()
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
-    val debouncedSearchQuery by viewModel.debouncedSearchQuery.collectAsStateWithLifecycle()
-    val normalizedQuery = remember(debouncedSearchQuery) { debouncedSearchQuery.normalizeForSearch() }
 
     var filter by rememberEnumPreference(SongFilterKey, SongFilter.LIKED)
 
@@ -261,16 +254,6 @@ fun LibrarySongsScreen(
             backStackEntry?.savedStateHandle?.set("scrollToTop", false)
         }
     }
-
-    val filteredSongs =
-        (if (hideExplicit) {
-            songs.filter { !it.song.explicit }
-        } else {
-            songs
-        }).filter { song ->
-            val artistNames = song.artists.map { it.name }.toTypedArray()
-            matchesNormalizedQuery(normalizedQuery, song.song.title, song.album?.title, *artistNames)
-        }
 
     // Upload progress dialog
     if (showUploadDialog) {

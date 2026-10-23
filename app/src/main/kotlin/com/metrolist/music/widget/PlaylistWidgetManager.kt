@@ -38,6 +38,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -194,10 +196,35 @@ class PlaylistWidgetManager @Inject constructor(
         appWidgetManager.partiallyUpdateAppWidget(widgetIds, views)
     }
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private fun observePinnedPlaylistSnapshots(): kotlinx.coroutines.flow.Flow<List<PlaylistSnapshot>> =
+        database.speedDialDao.getPlaylistItems(8).flatMapLatest { items ->
+            val playlistItems = items.filter { it.type == "PLAYLIST" || it.type == "LOCAL_PLAYLIST" }
+            if (playlistItems.isEmpty()) {
+                flowOf(emptyList<PlaylistSnapshot>())
+            } else {
+                combine(playlistItems.map { item ->
+                    database.playlist(item.id).flatMapLatest { playlist ->
+                        if (playlist != null) flowOf(playlist) else database.playlistByBrowseId(item.id)
+                    }.map { playlist ->
+                        playlist?.let {
+                            PlaylistSnapshot(
+                                id = it.playlist.id,
+                                browseId = it.playlist.browseId,
+                                name = it.playlist.name,
+                                thumbnailUrl = it.thumbnails.firstOrNull(),
+                                isLocal = it.playlist.isLocal,
+                            )
+                        }
+                    }
+                }) { snapshots -> snapshots.filterNotNull() }
+            }
+        }
+
     @OptIn(FlowPreview::class)
     private fun observeQuickPickChanges() {
         combine(
-            database.speedDialDao.getAll().map { items ->
+            database.speedDialDao.getPlaylistItems(8).map { items ->
                 items.map { item ->
                     SpeedDialSnapshot(
                         type = item.type,
@@ -207,8 +234,9 @@ class PlaylistWidgetManager @Inject constructor(
                     )
                 }
             },
-            database.playlistsByCreateDateAsc().map { playlists ->
-                playlists.map { playlist ->
+            combine(
+                database.playlistsByCreateDateAsc(limit = 16).map { playlists ->
+                    playlists.map { playlist ->
                     PlaylistSnapshot(
                         id = playlist.playlist.id,
                         browseId = playlist.playlist.browseId,
@@ -217,8 +245,10 @@ class PlaylistWidgetManager @Inject constructor(
                         isLocal = playlist.playlist.isLocal,
                     )
                 }
-            },
-            database.likedSongsByCreateDateAsc().map { songs ->
+                },
+                observePinnedPlaylistSnapshots(),
+            ) { saved, pinned -> (saved + pinned).distinctBy { it.id } },
+            database.likedSongsByCreateDateAsc(limit = 1).map { songs ->
                 songs.map { song ->
                     SongSnapshot(
                         id = song.id,
@@ -226,7 +256,7 @@ class PlaylistWidgetManager @Inject constructor(
                     )
                 }
             },
-            database.downloadedSongsByCreateDateAsc().map { songs ->
+            database.downloadedSongsByCreateDateAsc(limit = 1).map { songs ->
                 songs.map { song ->
                     SongSnapshot(
                         id = song.id,
@@ -234,7 +264,7 @@ class PlaylistWidgetManager @Inject constructor(
                     )
                 }
             },
-            database.mostPlayedSongs(fromTimeStamp = LocalDateTime.of(1970, 1, 1, 0, 0), limit = 50, offset = 0, toTimeStamp = LocalDateTime.now()).map { songs ->
+            database.mostPlayedSongs(fromTimeStamp = LocalDateTime.of(1970, 1, 1, 0, 0), limit = 1, offset = 0, toTimeStamp = LocalDateTime.now()).map { songs ->
                 songs.map { song ->
                     SongSnapshot(
                         id = song.id,
@@ -391,16 +421,24 @@ class PlaylistWidgetManager @Inject constructor(
     }
 
     private suspend fun buildQuickPicks(): List<QuickPick> = withContext(Dispatchers.IO) {
-        val speedDialItemsDeferred = async { database.speedDialDao.getAll().first() }
-        val savedPlaylistsDeferred = async { database.playlistsByCreateDateAsc().first() }
-        val likedSongsDeferred = async { database.likedSongsByCreateDateAsc().first() }
-        val downloadedSongsDeferred = async { database.downloadedSongsByCreateDateAsc().first() }
+        // The widget renders at most eight cards. Resolve pinned playlist records by ID so pins
+        // outside the first saved-playlist page keep their metadata and local/online target type.
+        val speedDialItems = database.speedDialDao.getPlaylistItems(limit = 8).first()
+        val pinnedSavedPlaylistsDeferred = speedDialItems.associate { item ->
+            item.id to async {
+                database.playlist(item.id).first()
+                    ?: database.playlistByBrowseId(item.id).first()
+            }
+        }
+        val savedPlaylistsDeferred = async { database.playlistsByCreateDateAsc(limit = 16).first() }
+        val likedSongsDeferred = async { database.likedSongsByCreateDateAsc(limit = 1).first() }
+        val downloadedSongsDeferred = async { database.downloadedSongsByCreateDateAsc(limit = 1).first() }
         val topSongsDeferred = async { database.mostPlayedSongs(fromTimeStamp = LocalDateTime.of(1970, 1, 1, 0, 0), limit = 50, offset = 0, toTimeStamp = LocalDateTime.now()).first() }
 
         val result = mutableListOf<QuickPick>()
         val seen = mutableSetOf<String>()
-        val speedDialItems = speedDialItemsDeferred.await()
         val savedPlaylists = savedPlaylistsDeferred.await()
+        val pinnedSavedPlaylists = pinnedSavedPlaylistsDeferred.mapValues { it.value.await() }
         val likedSongs = likedSongsDeferred.await()
         val downloadedSongs = downloadedSongsDeferred.await()
         val topSongs = topSongsDeferred.await()
@@ -424,9 +462,7 @@ class PlaylistWidgetManager @Inject constructor(
                         ),
                     )
                 } else {
-                    val saved = savedPlaylists.firstOrNull {
-                        it.playlist.browseId == item.id || it.playlist.id == item.id
-                    }
+                    val saved = pinnedSavedPlaylists[item.id]
                     if (saved != null) {
                         add(saved.toQuickPick())
                     } else {

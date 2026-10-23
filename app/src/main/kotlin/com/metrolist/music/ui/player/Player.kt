@@ -10,6 +10,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.util.LruCache
 import android.content.res.Configuration
 import android.view.WindowManager
 import android.widget.Toast
@@ -400,7 +401,7 @@ fun BottomSheetPlayer(
     var gradientColors by remember {
         mutableStateOf<List<Color>>(emptyList())
     }
-    val gradientColorsCache = remember { mutableMapOf<String, List<Color>>() }
+    val gradientColorsCache = remember { LruCache<String, List<Color>>(32) }
 
     if (!canSkipNext && automix.isNotEmpty()) {
         playerConnection.service.addToQueueAutomix(automix[0], 0)
@@ -413,7 +414,7 @@ fun BottomSheetPlayer(
         if (playerBackground == PlayerBackgroundStyle.GRADIENT) {
             val currentMetadata = mediaMetadata
             if (currentMetadata != null && currentMetadata.thumbnailUrl != null) {
-                val cachedColors = gradientColorsCache[currentMetadata.id]
+                val cachedColors = gradientColorsCache.get(currentMetadata.id)
                 if (cachedColors != null) {
                     gradientColors = cachedColors
                     return@LaunchedEffect
@@ -445,7 +446,7 @@ fun BottomSheetPlayer(
                                     palette = palette,
                                     fallbackColor = fallbackColor,
                                 )
-                            gradientColorsCache[currentMetadata.id] = extractedColors
+                            gradientColorsCache.put(currentMetadata.id, extractedColors)
                             withContext(Dispatchers.Main) { gradientColors = extractedColors }
                         }
                     }

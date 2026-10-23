@@ -12,6 +12,9 @@ interface SpeedDialDao {
     @Query("SELECT * FROM speed_dial_item ORDER BY createDate ASC")
     fun getAll(): Flow<List<SpeedDialItem>>
 
+    @Query("SELECT * FROM speed_dial_item WHERE type IN ('PLAYLIST', 'LOCAL_PLAYLIST') ORDER BY createDate ASC LIMIT :limit")
+    fun getPlaylistItems(limit: Int): Flow<List<SpeedDialItem>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: SpeedDialItem)
 

@@ -6,6 +6,7 @@
 package com.metrolist.music.lyrics
 
 import android.content.Context
+import android.util.LruCache
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.LyricsEntity
 import com.metrolist.music.db.entities.SongEntity
@@ -25,7 +26,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.Locale
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A helper class that provides AI-powered translation for lyrics.
@@ -46,8 +46,14 @@ object LyricsTranslationHelper {
     private var translationJob: kotlinx.coroutines.Job? = null
     private var isCompositionActive = true
 
-    // Cache translations in memory to avoid redundant API calls during a session
-    private val translationCache = ConcurrentHashMap<String, List<String>>()
+    // Cache recent translations only. The weight cap limits retained text; the 64-unit
+    // capacity also caps entry count, and a single oversized translation is not retained.
+    private val translationCache = object : LruCache<String, List<String>>(64) {
+        override fun sizeOf(key: String, value: List<String>): Int {
+            val characterCount = value.sumOf { it.length }
+            return maxOf(1, (characterCount + 4_095) / 4_096)
+        }
+    }
 
     // Map of language codes to full names for better AI understanding
     private val LanguageCodeToName = mapOf(
@@ -160,7 +166,7 @@ object LyricsTranslationHelper {
             // Also cache them
             val fullText = nonEmptyEntries.joinToString("\n") { it.text }
             val cacheKey = getCacheKey(fullText, mode, targetLanguage)
-            translationCache[cacheKey] = translatedLines
+            translationCache.put(cacheKey, translatedLines)
             _hasActiveTranslations.value = true
         }
     }
@@ -219,7 +225,7 @@ object LyricsTranslationHelper {
 
                     // Check cache first
                     val cacheKey = getCacheKey(fullText, mode, targetLanguage)
-                    val cachedTranslations = translationCache[cacheKey]
+                    val cachedTranslations = translationCache.get(cacheKey)
                     if (cachedTranslations != null && cachedTranslations.size >= nonEmptyEntries.size) {
                         // Use cached translations
                         nonEmptyEntries.forEachIndexed { idx, (originalIndex, _) ->
@@ -367,7 +373,7 @@ object LyricsTranslationHelper {
 
                             // Cache the translations
                             val cacheKey = getCacheKey(fullText, mode, targetLanguage)
-                            translationCache[cacheKey] = translatedLines
+                            translationCache.put(cacheKey, translatedLines)
 
                             // Save to database if songId is provided
                             if (songId.isNotBlank() && database != null) {

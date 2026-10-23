@@ -183,6 +183,7 @@ import com.metrolist.music.extensions.collect
 import com.metrolist.music.extensions.collectLatest
 import com.metrolist.music.extensions.currentMetadata
 import com.metrolist.music.extensions.findNextMediaItemById
+import com.metrolist.music.extensions.isMemoryConstrainedDevice
 import com.metrolist.music.extensions.mediaItems
 import com.metrolist.music.extensions.metadata
 import com.metrolist.music.extensions.setOffloadEnabled
@@ -309,6 +310,7 @@ class MusicService :
 
     private var crossfadeEnabled = false
     private var crossfadeDuration = 5000f
+    private var crossfadeSyncListener: Player.Listener? = null
     private var crossfadeGapless = true
     private var crossfadeMessage: PlayerMessage? = null
 
@@ -975,6 +977,8 @@ class MusicService :
                     player.getMediaItemAt(index)
                 }
 
+                crossfadeSyncListener?.let { player.removeListener(it) }
+                crossfadeSyncListener = null
                 player.removeListener(this)
                 sleepTimer?.let { player.removeListener(it) }
                 releaseExoPlayer(player)
@@ -1290,7 +1294,7 @@ class MusicService :
         }
     }
 
-    private fun createExoPlayer(prefs: Preferences? = null): ExoPlayer {
+    private fun createExoPlayer(prefs: Preferences? = null, crossfadePlayer: Boolean = false): ExoPlayer {
         val normalizationProcessor = VolumeNormalizationAudioProcessor()
         val eqProcessor = CustomEqualizerAudioProcessor()
 
@@ -1326,6 +1330,12 @@ class MusicService :
                     DefaultLoadControl
                         .Builder()
                         .setBufferDurationsMs(50_000, 50_000, 750, 2_000)
+                        .apply {
+                            if (isMemoryConstrainedDevice()) {
+                                // Crossfade holds two players briefly; reduce the secondary player's target.
+                                setTargetBufferBytes(if (crossfadePlayer) 3 * 1024 * 1024 else 6 * 1024 * 1024)
+                            }
+                        }
                         .build(),
                 )
                 .setHandleAudioBecomingNoisy(true)
@@ -3857,8 +3867,9 @@ class MusicService :
                 Timber.tag(TAG).i("BYPASSING CACHE for $mediaId due to quality change")
             }
 
-            val cacheGeneration = songUrlCache.generation(mediaId)
-            Timber.tag(TAG).i("FETCHING STREAM: $mediaId | quality=$audioQuality")
+            val cacheGeneration = songUrlCache.beginFetch(mediaId)
+            try {
+                Timber.tag(TAG).i("FETCHING STREAM: $mediaId | quality=$audioQuality")
             val playbackData =
                 runBlocking(Dispatchers.IO) {
                     val song = database.songEntity(mediaId)
@@ -3980,6 +3991,9 @@ class MusicService :
                         useRangeChunks = nonNullPlayback.useRangeChunks,
                     ),
                 )
+            }
+            } finally {
+                songUrlCache.finishFetch(mediaId)
             }
         }
     }
@@ -4318,6 +4332,8 @@ class MusicService :
         player.removeListener(this)
         sleepTimer?.let { player.removeListener(it) }
         initialBufferRecoveryJob?.cancel()
+        crossfadeSyncListener?.let { player.removeListener(it) }
+        crossfadeSyncListener = null
         controllerFuture?.let { MediaController.releaseFuture(it) }
         controllerFuture = null
         releaseExoPlayer(player)
@@ -4866,15 +4882,12 @@ class MusicService :
             }
         if (targetIndex == C.INDEX_UNSET) return
 
-        secondaryPlayer = createExoPlayer()
+        secondaryPlayer = createExoPlayer(crossfadePlayer = true)
         val secPlayer = secondaryPlayer!!
         secPlayer.addListener(secondaryPlayerListener)
 
         val itemCount = player.mediaItemCount
-        val items = mutableListOf<MediaItem>()
-        for (i in 0 until itemCount) {
-            items.add(player.getMediaItemAt(i))
-        }
+        val items = List(itemCount) { index -> player.getMediaItemAt(index) }
 
         secPlayer.setMediaItems(items)
         secPlayer.seekTo(targetIndex, 0)
@@ -4922,7 +4935,9 @@ class MusicService :
             }
         }
 
-        player.addListener(
+        crossfadeSyncListener?.let { player.removeListener(it) }
+        val syncPlayer = player
+        val syncListener =
             object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     if (isCrossfading && fadingPlayer != null) {
@@ -4932,11 +4947,13 @@ class MusicService :
                             fadingPlayer?.pause()
                         }
                     } else {
-                        player.removeListener(this)
+                        syncPlayer.removeListener(this)
+                        if (crossfadeSyncListener === this) crossfadeSyncListener = null
                     }
                 }
-            },
-        )
+            }
+        crossfadeSyncListener = syncListener
+        syncPlayer.addListener(syncListener)
 
         nextPlayer.removeListener(secondaryPlayerListener)
         nextPlayer.addListener(this)
@@ -4962,48 +4979,54 @@ class MusicService :
 
         crossfadeJob =
             scope.launch {
-                val speed = fadingPlayer?.playbackParameters?.speed?.coerceAtLeast(0.01f) ?: 1f
-                val duration = (crossfadeDuration / speed).toLong()
-                val steps = 20
-                val stepTime = duration / steps
-                val startVolume =
-                    try {
-                        fadingPlayer?.volume ?: 1f
-                    } catch (e: Exception) {
-                        1f
-                    }
-
-                for (i in 0..steps) {
-                    if (!isActive) break
-                    while (!player.isPlaying && isActive) {
-                        delay(100)
-                    }
-
-                    val progress = i / steps.toFloat()
-                    val fadeIn = 1.0f - (1.0f - progress) * (1.0f - progress)
-                    val fadeOut = (1.0f - progress) * (1.0f - progress)
-
-                    try {
-                        player.volume = startVolume * fadeIn
-                        fadingPlayer?.volume = startVolume * fadeOut
-                    } catch (e: Exception) {
-                        break
-                    }
-
-                    delay(stepTime)
-                }
-
                 try {
-                    fadingPlayer?.volume = 0f
-                    player.volume = startVolume
-                } catch (e: Exception) {
-                }
+                    val speed = fadingPlayer?.playbackParameters?.speed?.coerceAtLeast(0.01f) ?: 1f
+                    val duration = (crossfadeDuration / speed).toLong()
+                    val steps = 20
+                    val stepTime = duration / steps
+                    val startVolume =
+                        try {
+                            fadingPlayer?.volume ?: 1f
+                        } catch (e: Exception) {
+                            1f
+                        }
 
-                cleanupCrossfade(fadingPlayerSessionId = previousAudioSessionId)
+                    for (i in 0..steps) {
+                        if (!isActive) break
+                        while (!player.isPlaying && isActive) {
+                            delay(100)
+                        }
+
+                        val progress = i / steps.toFloat()
+                        val fadeIn = 1.0f - (1.0f - progress) * (1.0f - progress)
+                        val fadeOut = (1.0f - progress) * (1.0f - progress)
+
+                        try {
+                            player.volume = startVolume * fadeIn
+                            fadingPlayer?.volume = startVolume * fadeOut
+                        } catch (e: Exception) {
+                            break
+                        }
+
+                        delay(stepTime)
+                    }
+
+                    try {
+                        fadingPlayer?.volume = 0f
+                        player.volume = startVolume
+                    } catch (e: Exception) {
+                    }
+
+
+                } finally {
+                    if (isCrossfading) cleanupCrossfade(fadingPlayerSessionId = previousAudioSessionId)
+                }
             }
     }
 
     private fun cleanupCrossfade(fadingPlayerSessionId: Int = C.AUDIO_SESSION_ID_UNSET) {
+        crossfadeSyncListener?.let { player.removeListener(it) }
+        crossfadeSyncListener = null
         fadingPlayer?.let { previousPlayer ->
             previousPlayer.stop()
             previousPlayer.clearMediaItems()

@@ -39,6 +39,8 @@ import com.metrolist.music.utils.get
 import com.metrolist.music.utils.reportException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -56,11 +58,14 @@ class PlayerConnection(
     context: Context,
     binder: MusicBinder,
     val database: MusicDatabase,
-    scope: CoroutineScope,
+    parentScope: CoroutineScope,
 ) : Player.Listener {
     private companion object {
         private const val TAG = "PlayerConnection"
     }
+
+    private val connectionJob = SupervisorJob(parentScope.coroutineContext[Job])
+    private val connectionScope = CoroutineScope(parentScope.coroutineContext + connectionJob)
 
     val service = binder.service
     private val playerReadinessFlow = service.isPlayerReady
@@ -128,13 +133,13 @@ class PlayerConnection(
             combine(playbackState, playWhenReady) { state, ready ->
                 ready && state != STATE_ENDED
             }.stateIn(
-                scope,
+                connectionScope,
                 SharingStarted.Lazily,
                 initialState.third,
             )
 
         // Track service readiness changes in background.
-        scope.launch {
+        connectionScope.launch {
             playerReadinessFlow.collect { ready ->
                 isPlayerInitialized.value = ready
                 if (ready) {
@@ -154,7 +159,7 @@ class PlayerConnection(
         ) { localPlaying, isCasting, castPlaying ->
             if (isCasting) castPlaying else localPlaying
         }.stateIn(
-            scope,
+            connectionScope,
             SharingStarted.Lazily,
             initialState.third,
         )
@@ -167,15 +172,15 @@ class PlayerConnection(
     val currentSong =
         mediaMetadata.flatMapLatest {
             database.song(it?.id)
-        }.stateIn(scope, SharingStarted.Lazily, null)
+        }.stateIn(connectionScope, SharingStarted.Lazily, null)
     val currentLyrics =
         mediaMetadata.flatMapLatest { mediaMetadata ->
             database.lyrics(mediaMetadata?.id)
-        }.stateIn(scope, SharingStarted.Lazily, null)
+        }.stateIn(connectionScope, SharingStarted.Lazily, null)
     val currentFormat =
         mediaMetadata.flatMapLatest { mediaMetadata ->
             database.format(mediaMetadata?.id)
-        }.stateIn(scope, SharingStarted.Lazily, null)
+        }.stateIn(connectionScope, SharingStarted.Lazily, null)
 
     val queueTitle = MutableStateFlow<String?>(null)
     val queueWindows = MutableStateFlow<List<Timeline.Window>>(emptyList())
@@ -207,7 +212,7 @@ class PlayerConnection(
     private var attachedPlayer: Player? = null
 
     init {
-        scope.launch {
+        connectionScope.launch {
             service.playerFlow.collect { newPlayer ->
                 if (newPlayer != null && newPlayer != attachedPlayer) {
                     updateAttachedPlayer(newPlayer)
@@ -668,12 +673,17 @@ class PlayerConnection(
     }
 
     fun dispose() {
+        connectionJob.cancel()
         try {
             attachedPlayer?.removeListener(this)
-            attachedPlayer = null
             Timber.tag(TAG).d("PlayerConnection disposed successfully")
         } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "Error during PlayerConnection disposal")
+            Timber.tag(TAG).e(e, "Error during PlayerConnection listener removal")
+        } finally {
+            attachedPlayer = null
+            shouldBlockPlaybackChanges = null
+            onSkipPrevious = null
+            onSkipNext = null
         }
     }
 }

@@ -30,6 +30,7 @@ import com.metrolist.lastfm.LastFM
 import com.metrolist.music.BuildConfig
 import com.metrolist.music.constants.*
 import com.metrolist.music.di.ApplicationScope
+import com.metrolist.music.extensions.isMemoryConstrainedDevice
 import com.metrolist.music.extensions.toEnum
 import com.metrolist.music.extensions.toInetSocketAddress
 import com.metrolist.music.utils.CrashHandler
@@ -101,15 +102,17 @@ class App :
             // Apply settings, including proxy configuration, before building extraction transport.
             initializeSettings()
 
-            // Warm player config, cipher, and optional PO-token state off the first-play path.
-            launch(Dispatchers.IO) {
-                delay(2500)
-                var waitedMs = 0
-                while (YouTube.visitorData == null && waitedMs < 12_000) {
-                    delay(500)
-                    waitedMs += 500
+            // Prewarming reduces first-play latency but adds startup work on constrained devices.
+            if (!memoryConstrainedDevice) {
+                launch(Dispatchers.IO) {
+                    delay(2500)
+                    var waitedMs = 0
+                    while (YouTube.visitorData == null && waitedMs < 12_000) {
+                        delay(500)
+                        waitedMs += 500
+                    }
+                    runCatching { InnerTubeXPlayer.prewarm() }
                 }
-                runCatching { InnerTubeXPlayer.prewarm() }
             }
 
             observeSettingsChanges()
@@ -292,6 +295,8 @@ class App :
         }
     }
 
+    private val memoryConstrainedDevice by lazy(LazyThreadSafetyMode.NONE) { isMemoryConstrainedDevice() }
+
     @Volatile
     private var cachedCoilCacheSize: Int? = null
 
@@ -302,13 +307,13 @@ class App :
         return ImageLoader
             .Builder(this)
             .apply {
-                crossfade(true)
+                crossfade(!memoryConstrainedDevice)
                 allowHardware(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-                // Memory cache for fast image loading (prevents network requests on recomposition)
+                // Avoid cache thrashing on low-memory phones while keeping the cache bounded.
                 memoryCache {
                     MemoryCache
                         .Builder()
-                        .maxSizePercent(context, 0.15)
+                        .maxSizePercent(context, if (memoryConstrainedDevice) 0.10 else 0.15)
                         .build()
                 }
                 if (cacheSize == 0) {

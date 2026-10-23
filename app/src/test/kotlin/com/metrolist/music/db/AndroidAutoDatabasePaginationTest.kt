@@ -10,6 +10,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.metrolist.music.db.entities.AlbumEntity
 import com.metrolist.music.db.entities.ArtistEntity
+import com.metrolist.music.db.entities.FormatEntity
 import com.metrolist.music.db.entities.PlaylistEntity
 import com.metrolist.music.db.entities.PlaylistSongMap
 import com.metrolist.music.db.entities.SongAlbumMap
@@ -42,6 +43,78 @@ class AndroidAutoDatabasePaginationTest {
     @After
     fun tearDown() {
         database.close()
+    }
+
+    @Test
+    fun `random liked song query returns only the requested number of unique songs`() = runBlocking {
+        database.runInTransaction {
+            database.dao.insert(ArtistEntity(id = "test-artist", name = "Test Artist"))
+            database.dao.insert(
+                AlbumEntity(
+                    id = "test-album",
+                    title = "Test Album",
+                    songCount = 11,
+                    duration = 0,
+                ),
+            )
+
+            repeat(10) { index ->
+                val songId = "liked-$index"
+                database.dao.insert(
+                    SongEntity(
+                        id = songId,
+                        title = "Liked $index",
+                        albumId = "test-album",
+                        liked = true,
+                    ),
+                )
+                database.dao.insert(SongArtistMap(songId = songId, artistId = "test-artist", position = 0))
+                database.dao.insert(SongAlbumMap(songId = songId, albumId = "test-album", index = index))
+                database.dao.upsert(
+                    FormatEntity(
+                        id = songId,
+                        itag = 140,
+                        mimeType = "audio/mp4",
+                        codecs = "mp4a.40.2",
+                        bitrate = 128_000,
+                        sampleRate = 44_100,
+                        contentLength = 1_000L,
+                        loudnessDb = null,
+                        playbackUrl = null,
+                    ),
+                )
+            }
+
+            database.dao.insert(
+                SongEntity(
+                    id = "not-liked",
+                    title = "Not liked",
+                    albumId = "test-album",
+                    liked = false,
+                ),
+            )
+            database.dao.insert(SongArtistMap(songId = "not-liked", artistId = "test-artist", position = 0))
+            database.dao.insert(SongAlbumMap(songId = "not-liked", albumId = "test-album", index = 10))
+            database.dao.upsert(
+                FormatEntity(
+                    id = "not-liked",
+                    itag = 140,
+                    mimeType = "audio/mp4",
+                    codecs = "mp4a.40.2",
+                    bitrate = 128_000,
+                    sampleRate = 44_100,
+                    contentLength = 1_000L,
+                    loudnessDb = null,
+                    playbackUrl = null,
+                ),
+            )
+        }
+
+        val selected = database.dao.randomLikedSongs(limit = 5)
+
+        assertEquals(5, selected.size)
+        assertTrue(selected.all { it.song.liked })
+        assertEquals(selected.size, selected.map { it.id }.toSet().size)
     }
 
     @Test

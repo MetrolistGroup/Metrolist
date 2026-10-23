@@ -126,20 +126,11 @@ fun LibraryPlaylistsScreen(
     )
     val gridItemSize by rememberEnumPreference(GridItemsSizeKey, GridItemSize.BIG)
 
-    val playlists by viewModel.allPlaylists.collectAsStateWithLifecycle()
+    val filteredPlaylists by viewModel.filteredPlaylists.collectAsStateWithLifecycle()
 
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val normalizedQuery = remember(searchQuery) { searchQuery.normalizeForSearch() }
-    val filteredPlaylists = remember(playlists, normalizedQuery) {
-        if (normalizedQuery.isBlank()) {
-            playlists
-        } else {
-            playlists.filter { playlist ->
-                matchesNormalizedQuery(normalizedQuery, playlist.playlist.name)
-            }
-        }
-    }
 
     val topSize by viewModel.topValue.collectAsStateWithLifecycle(initialValue = 50)
 

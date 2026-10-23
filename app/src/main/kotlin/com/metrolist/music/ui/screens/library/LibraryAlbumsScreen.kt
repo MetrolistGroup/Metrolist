@@ -63,11 +63,8 @@ import com.metrolist.music.constants.CONTENT_TYPE_HEADER
 import com.metrolist.music.constants.GridItemSize
 import com.metrolist.music.constants.GridItemsSizeKey
 import com.metrolist.music.constants.GridThumbnailHeight
-import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.LibraryViewType
 import com.metrolist.music.constants.YtmSyncKey
-import com.metrolist.music.extensions.matchesNormalizedQuery
-import com.metrolist.music.extensions.normalizeForSearch
 import com.metrolist.music.ui.component.ChipsRow
 import com.metrolist.music.ui.component.EmptyPlaceholder
 import com.metrolist.music.ui.component.LibrarySearchEmptyPlaceholder
@@ -108,8 +105,6 @@ fun LibraryAlbumsScreen(
     val gridItemSize by rememberEnumPreference(GridItemsSizeKey, GridItemSize.BIG)
 
     val (ytmSync) = rememberPreference(YtmSyncKey, true)
-    val hideExplicit by rememberPreference(key = HideExplicitKey, defaultValue = false)
-
     val filterContent = @Composable {
         Row {
             Spacer(Modifier.width(12.dp))
@@ -147,18 +142,9 @@ fun LibraryAlbumsScreen(
         }
     }
 
-    val albums by viewModel.allAlbums.collectAsStateWithLifecycle()
+    val filteredAlbums by viewModel.filteredAlbums.collectAsStateWithLifecycle()
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
-    val normalizedQuery = remember(searchQuery) { searchQuery.normalizeForSearch() }
-
-    val filteredAlbums = remember(albums, hideExplicit, normalizedQuery) {
-        val visibleAlbums = if (hideExplicit) albums.filter { !it.album.explicit } else albums
-        visibleAlbums.filter { album ->
-            val artistNames = album.artists.map { it.name }.toTypedArray()
-            matchesNormalizedQuery(normalizedQuery, album.album.title, *artistNames)
-        }.distinctBy { it.id }
-    }
 
     val lazyListState = rememberLazyListState()
     val lazyGridState = rememberLazyGridState()

@@ -18,7 +18,7 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.os.Bundle
 import android.widget.RemoteViews
-import coil3.ImageLoader
+import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.request.crossfade
@@ -39,7 +39,7 @@ class MetrolistWidgetManager @Inject constructor(
     private val playlistWidgetManager: PlaylistWidgetManager,
 ) {
     private val imageLoader by lazy {
-        ImageLoader.Builder(context)
+        context.imageLoader.newBuilder()
             .crossfade(false)
             .build()
     }

@@ -5,6 +5,7 @@
 
 package com.metrolist.music.extensions
 
+import android.app.ActivityManager
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -14,6 +15,14 @@ import com.metrolist.music.constants.YtmSyncKey
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.get
 import kotlinx.coroutines.runBlocking
+
+/**
+ * Conservative signal for reducing optional memory-heavy work on devices with a small app heap.
+ */
+fun Context.isMemoryConstrainedDevice(): Boolean {
+    val manager = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager ?: return false
+    return manager.isLowRamDevice || manager.memoryClass <= 256
+}
 
 fun Context.isSyncEnabled(): Boolean {
     return runBlocking {

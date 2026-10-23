@@ -43,12 +43,18 @@ internal class StreamUrlCache(
         val expiresAtMillis: Long,
     )
 
+    private data class GenerationState(
+        var generation: Long = 0L,
+        var activeFetches: Int = 0,
+    )
+
     private val entries =
         object : LinkedHashMap<String, Entry>(0, 0.75f, true) {
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Entry>): Boolean =
                 size > maxEntries
         }
-    private val generations = HashMap<String, Long>()
+    // Historical invalidations are not retained: only in-flight resolutions need this state.
+    private val generations = HashMap<String, GenerationState>()
 
     init {
         require(maxEntries > 0) { "maxEntries must be greater than zero" }
@@ -70,7 +76,22 @@ internal class StreamUrlCache(
         synchronized(entries) { entries[mediaId]?.stream?.clientName }
 
     fun generation(mediaId: String): Long =
-        synchronized(entries) { generations[mediaId] ?: 0L }
+        synchronized(entries) { generations[mediaId]?.generation ?: 0L }
+
+    fun beginFetch(mediaId: String): Long =
+        synchronized(entries) {
+            val state = generations.getOrPut(mediaId) { GenerationState() }
+            state.activeFetches++
+            state.generation
+        }
+
+    fun finishFetch(mediaId: String) {
+        synchronized(entries) {
+            val state = generations[mediaId] ?: return
+            state.activeFetches--
+            if (state.activeFetches <= 0) generations.remove(mediaId)
+        }
+    }
 
     fun put(
         mediaId: String,
@@ -90,7 +111,7 @@ internal class StreamUrlCache(
                 .getOrDefault(Long.MAX_VALUE)
 
         synchronized(entries) {
-            if ((generations[mediaId] ?: 0L) != expectedGeneration) return false
+            if ((generations[mediaId]?.generation ?: 0L) != expectedGeneration) return false
             entries[mediaId] =
                 Entry(
                     stream =
@@ -116,6 +137,9 @@ internal class StreamUrlCache(
     }
 
     private fun advanceGeneration(mediaId: String) {
-        generations[mediaId] = (generations[mediaId] ?: 0L) + 1L
+        // Without an active resolver there is no stale writer to reject.
+        generations[mediaId]?.let { state ->
+            if (state.activeFetches > 0) state.generation++
+        }
     }
 }

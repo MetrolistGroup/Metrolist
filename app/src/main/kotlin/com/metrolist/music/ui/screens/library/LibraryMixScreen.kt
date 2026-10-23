@@ -237,17 +237,28 @@ fun LibraryMixScreen(
     val songs = viewModel.songs.collectAsStateWithLifecycle()
     val playlist = viewModel.playlists.collectAsStateWithLifecycle()
 
-    var allItems = albums.value + artist.value + playlist.value
     val locale = LocalLocale.current.platformLocale
     val collator = remember(locale) {
         Collator.getInstance(locale).apply {
             strength = Collator.PRIMARY
         }
     }
-    allItems =
+
+    // The mixed library observes playback state and database flows, so it can recompose often
+    // while the underlying library data stays unchanged. Keep full-list sorting out of those
+    // unrelated recompositions (especially during scrolling on low-RAM devices).
+    val allItems = remember(
+        albums.value,
+        artist.value,
+        playlist.value,
+        sortType,
+        sortDescending,
+        collator,
+    ) {
+        val items = albums.value + artist.value + playlist.value
         when (sortType) {
             MixSortType.CREATE_DATE -> {
-                allItems.sortedBy { item ->
+                items.sortedBy { item ->
                     when (item) {
                         is Album -> item.album.bookmarkedAt
                         is Artist -> item.artist.bookmarkedAt
@@ -258,7 +269,7 @@ fun LibraryMixScreen(
             }
 
             MixSortType.NAME -> {
-                allItems.sortedWith(
+                items.sortedWith(
                     compareBy(collator) { item ->
                         when (item) {
                             is Album -> item.album.title
@@ -271,7 +282,7 @@ fun LibraryMixScreen(
             }
 
             MixSortType.LAST_UPDATED -> {
-                allItems.sortedBy { item ->
+                items.sortedBy { item ->
                     when (item) {
                         is Album -> item.album.lastUpdateTime
                         is Artist -> item.artist.lastUpdateTime
@@ -281,8 +292,13 @@ fun LibraryMixScreen(
                 }
             }
         }.reversed(sortDescending)
+    }
 
-    val searchableItems = if (normalizedQuery.isBlank()) allItems else allItems + songs.value
+    // Reuse the merged searchable list too; otherwise every recomposition would allocate a new
+    // list and invalidate filteredItems' remember cache even when nothing searchable changed.
+    val searchableItems = remember(allItems, songs.value, normalizedQuery.isBlank()) {
+        if (normalizedQuery.isBlank()) allItems else allItems + songs.value
+    }
 
     val filteredItems = remember(searchableItems, normalizedQuery, collator) {
         val matchedItems =

@@ -23,13 +23,24 @@ class StreamUrlCacheTest {
     fun `entry is evicted at expiry boundary`() {
         var now = 1_000L
         val cache = StreamUrlCache(currentTimeMillis = { now })
-        val generationBeforeExpiry = cache.generation("song")
+        val generationBeforeExpiry = cache.beginFetch("song")
 
-        cache.put("song", "https://example.com/stream", emptyMap(), "WEB_REMIX", expiresInSeconds = 10)
+        cache.put("song", "https://example.com/stream", emptyMap(), "WEB_REMIX", expiresInSeconds = 10,
+            expectedGeneration = generationBeforeExpiry)
         now += 10_000L
 
         assertNull(cache["song"])
-        assertEquals(generationBeforeExpiry + 1, cache.generation("song"))
+        val staleWriteAccepted = cache.put(
+            mediaId = "song",
+            url = "https://example.com/stale",
+            requestHeaders = emptyMap(),
+            clientName = "WEB_REMIX",
+            expiresInSeconds = 10,
+            expectedGeneration = generationBeforeExpiry,
+        )
+        assertEquals(false, staleWriteAccepted)
+        cache.finishFetch("song")
+        assertEquals(0L, cache.generation("song"))
         now = 1_000L
         assertNull(cache["song"])
     }
@@ -87,7 +98,7 @@ class StreamUrlCacheTest {
     @Test
     fun `invalidation rejects a stale in-flight write`() {
         val cache = StreamUrlCache(currentTimeMillis = { 1_000L })
-        val generationBeforeResolution = cache.generation("song")
+        val generationBeforeResolution = cache.beginFetch("song")
 
         cache.invalidate("song")
         val inserted = cache.put(
@@ -101,12 +112,14 @@ class StreamUrlCacheTest {
 
         assertEquals(false, inserted)
         assertNull(cache["song"])
+        cache.finishFetch("song")
+        assertEquals(0L, cache.generation("song"))
     }
 
     @Test
     fun `invalidation does not reject another media item write`() {
         val cache = StreamUrlCache(currentTimeMillis = { 1_000L })
-        val firstGeneration = cache.generation("first")
+        val firstGeneration = cache.beginFetch("first")
 
         cache.invalidate("second")
         val inserted = cache.put(
@@ -120,6 +133,20 @@ class StreamUrlCacheTest {
 
         assertEquals(true, inserted)
         assertEquals("https://example.com/first", cache["first"]?.url)
+        cache.finishFetch("first")
+        assertEquals(0L, cache.generation("first"))
+    }
+
+    @Test
+    fun `completed fetch generations are not retained as media history`() {
+        val cache = StreamUrlCache(currentTimeMillis = { 1_000L })
+        repeat(1_000) { index ->
+            val mediaId = "expired-song-$index"
+            cache.beginFetch(mediaId)
+            cache.invalidate(mediaId)
+            cache.finishFetch(mediaId)
+            assertEquals(0L, cache.generation(mediaId))
+        }
     }
 
     @Test
