@@ -5,7 +5,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/transparent"
-    android:padding="12dp"
     android:theme="@style/Theme.Widget.Metrolist">
     <ImageView
         android:id="@+id/widget_theme_root_background"
@@ -22,7 +21,8 @@
     <!-- Album Art Container -->
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:padding="12dp">
 
         <ImageView
             android:id="@+id/widget_compact_album_art"
