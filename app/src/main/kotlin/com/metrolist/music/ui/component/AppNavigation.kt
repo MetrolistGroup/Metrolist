@@ -20,6 +20,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -144,14 +145,38 @@ fun AppNavigationBar(
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
 
+    // Keep the selected item stable during NavController transitions. The destination's
+    // currentBackStackEntry can briefly report an intermediate route while the new page is
+    // being installed, which makes NavigationBarItem's indicator disappear and reappear.
+    val selectedRouteFromDestination =
+        remember(currentRoute, navigationItems) {
+            navigationItems.firstOrNull { screen ->
+                isRouteSelected(currentRoute, screen.route, navigationItems)
+            }?.route
+        }
+    val selectedRouteState = remember {
+        mutableStateOf(selectedRouteFromDestination)
+    }
+    val availableRoutes = remember(navigationItems) { navigationItems.map { it.route }.toSet() }
+
+    LaunchedEffect(selectedRouteFromDestination, availableRoutes) {
+        if (selectedRouteFromDestination != null) {
+            selectedRouteState.value = selectedRouteFromDestination
+        } else if (selectedRouteState.value?.let { it in availableRoutes } != true) {
+            selectedRouteState.value = availableRoutes.firstOrNull()
+        }
+    }
+
+    val selectedRouteForUi = selectedRouteState.value ?: selectedRouteFromDestination
+
     NavigationBar(
         modifier = modifier,
         containerColor = containerColor,
         contentColor = contentColor
     ) {
         navigationItems.forEach { screen ->
-            val isSelected = remember(currentRoute, screen.route) {
-                isRouteSelected(currentRoute, screen.route, navigationItems)
+            val isSelected = remember(selectedRouteForUi, screen.route) {
+                selectedRouteForUi == screen.route
             }
             val currentIsSelected by rememberUpdatedState(isSelected)
             val iconRes = remember(isSelected, screen) {
@@ -177,6 +202,7 @@ fun AppNavigationBar(
                             }
                             is PressInteraction.Release -> {
                                 if (!isLongClick) {
+                                    selectedRouteState.value = screen.route
                                     onItemClick(screen, currentIsSelected)
                                 }
                             }
@@ -192,6 +218,7 @@ fun AppNavigationBar(
                 selected = isSelected,
                 onClick = {
                     if (!isSearchItem && !isHomeHoldItem) {
+                        selectedRouteState.value = screen.route
                         onItemClick(screen, currentIsSelected)
                     }
                     // Long presses are handled via InteractionSource
