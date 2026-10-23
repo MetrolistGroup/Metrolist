@@ -299,16 +299,19 @@ class App :
         val cacheSize = cachedCoilCacheSize ?: runBlocking {
             dataStore.data.map { it[MaxImageCacheSizeKey] ?: 512 }.first()
         }
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val memoryCacheSizePercent = if (activityManager?.isLowRamDevice == true) 0.05 else 0.15
+
         return ImageLoader
             .Builder(this)
             .apply {
                 crossfade(true)
                 allowHardware(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-                // Memory cache for fast image loading (prevents network requests on recomposition)
+                // Keep artwork caching useful on regular devices while limiting retained bitmaps on low-RAM devices.
                 memoryCache {
                     MemoryCache
                         .Builder()
-                        .maxSizePercent(context, 0.15)
+                        .maxSizePercent(context, memoryCacheSizePercent)
                         .build()
                 }
                 if (cacheSize == 0) {
