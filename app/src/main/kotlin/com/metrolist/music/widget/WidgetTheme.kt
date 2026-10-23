@@ -203,7 +203,6 @@ internal object WidgetTheme {
             dynamicColorScheme(
                 seedColor = ComposeColor(themeColor),
                 isDark = isDark,
-                isAmoled = isDark && pureBlack,
                 style = PaletteStyle.TonalSpot,
                 specVersion = ColorSpec.SpecVersion.SPEC_2025,
             )
