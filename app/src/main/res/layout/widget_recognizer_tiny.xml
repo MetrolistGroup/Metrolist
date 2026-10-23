@@ -34,9 +34,21 @@
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:layout_gravity="center"
-        android:background="@drawable/widget_mic_button_bg">
+        android:background="@android:color/transparent">
 
         <ImageView
+            android:id="@+id/widget_recognizer_tiny_mic_background"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="@drawable/widget_mic_button_bg"
+            android:scaleType="fitXY"
+            android:contentDescription="@null"
+            android:clickable="false"
+            android:focusable="false"
+            android:importantForAccessibility="no" />
+
+        <ImageView
+            android:id="@+id/widget_recognizer_tiny_mic_icon"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_gravity="center"
