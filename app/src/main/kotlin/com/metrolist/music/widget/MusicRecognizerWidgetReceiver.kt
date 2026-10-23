@@ -231,7 +231,7 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
         val views = RemoteViews(context.packageName, R.layout.widget_recognizer_compact)
         applyAlbumArt(views, state, albumArt)
         applyTextState(context, views, state, songTitle, artistName, errorMessage)
-        applyMicState(views, state, pulseFrame, R.id.widget_recognizer_mic_container, R.id.widget_recognizer_pulse)
+        applyMicState(views, state, pulseFrame, R.id.widget_recognizer_mic_background, R.id.widget_recognizer_pulse)
         views.setOnClickPendingIntent(R.id.widget_recognizer_mic_container, getMicIntent(context))
         val infoIntent = getInfoAreaIntent(context)
         views.setOnClickPendingIntent(R.id.widget_recognizer_text_area, infoIntent)
