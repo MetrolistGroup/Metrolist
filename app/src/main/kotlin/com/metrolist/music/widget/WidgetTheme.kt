@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.first
 internal data class WidgetThemeColors(
     val surface: Int,
     val primary: Int,
+    val onPrimary: Int,
     val primaryContainer: Int,
     val onPrimaryContainer: Int,
     val textPrimary: Int,
@@ -294,16 +295,4 @@ internal object WidgetTheme {
         }
     }
 
-    private fun blend(from: Int, to: Int, amount: Float): Int {
-        val ratio = amount.coerceIn(0f, 1f)
-        val inverse = 1f - ratio
-        return Color.rgb(
-            (Color.red(from) * inverse + Color.red(to) * ratio).toInt(),
-            (Color.green(from) * inverse + Color.green(to) * ratio).toInt(),
-            (Color.blue(from) * inverse + Color.blue(to) * ratio).toInt(),
-        )
-    }
-
-    private fun luminance(color: Int): Float =
-        (0.2126f * Color.red(color) + 0.7152f * Color.green(color) + 0.0722f * Color.blue(color)) / 255f
 }
