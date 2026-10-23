@@ -109,7 +109,8 @@
                 android:layout_width="22dp"
                 android:layout_height="22dp"
                 android:layout_gravity="center"
-                android:src="@drawable/ic_widget_mic"
+                android:id="@+id/widget_recognizer_mic_icon"
+            android:src="@drawable/ic_widget_mic"
                 android:contentDescription="@string/widget_recognizer_mic_desc" />
 
         </FrameLayout>
