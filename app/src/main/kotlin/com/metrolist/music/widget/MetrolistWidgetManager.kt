@@ -31,6 +31,8 @@ import com.metrolist.music.db.MusicDatabase
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,6 +42,8 @@ class MetrolistWidgetManager @Inject constructor(
     private val database: MusicDatabase,
     private val playlistWidgetManager: PlaylistWidgetManager,
 ) {
+    private val updateMutex = Mutex()
+
     private val imageLoader by lazy {
         ImageLoader.Builder(context)
             .crossfade(false)
@@ -86,89 +90,112 @@ class MetrolistWidgetManager @Inject constructor(
         duration: Long = 0,
         currentPosition: Long = 0
     ) {
-        lastWidgetState = WidgetRenderState(
-            title = title,
-            artist = artist,
-            artworkUri = artworkUri,
-            isPlaying = isPlaying,
-            isLiked = isLiked,
-            duration = duration,
-            currentPosition = currentPosition,
-        )
-        val appWidgetManager = AppWidgetManager.getInstance(context)
-
-        // Use cached album art if URI hasn't changed, otherwise load new one.
-        // The bitmap's seed is retained with the same cache so the widget palette also
-        // follows playback when the app UI is not collecting artwork metadata.
-        val albumArt: Bitmap?
-        val circularAlbumArt: Bitmap?
-
-        if (artworkUri != null && artworkUri == cachedArtworkUri && cachedAlbumArt != null) {
-            albumArt = cachedAlbumArt
-            circularAlbumArt = cachedCircularAlbumArt
-        } else {
-            albumArt = artworkUri?.let { loadAlbumArt(it, 300) }
-            circularAlbumArt = albumArt?.let { getCircularBitmap(it) }
-            cachedArtworkUri = artworkUri
-            cachedAlbumArt = albumArt
-            cachedCircularAlbumArt = circularAlbumArt
-            cachedArtworkThemeColor = albumArt?.let {
-                runCatching { it.extractThemeColor().toArgb() }.getOrNull()
-            }
-        }
-        val themeColors = WidgetTheme.fromPreferences(
-            context = context,
-            artworkThemeColor = cachedArtworkThemeColor,
-            hasArtwork = !artworkUri.isNullOrBlank(),
-        )
-
-        // Update main music player widgets
-        val componentName = ComponentName(context, MusicWidgetReceiver::class.java)
-        val widgetIds = appWidgetManager.getAppWidgetIds(componentName)
-        if (widgetIds.isNotEmpty()) {
-            widgetIds.forEach { widgetId ->
-                val options = appWidgetManager.getAppWidgetOptions(widgetId)
-                val views = createRemoteViewsForSize(
-                    options,
-                    title,
-                    artist,
-                    albumArt,
-                    isPlaying,
-                    isLiked,
-                    duration,
-                    currentPosition,
-                    themeColors,
-                )
-                appWidgetManager.updateAppWidget(widgetId, views)
-            }
-        }
-
-        // Update turntable widgets
-        val turntableComponentName = ComponentName(context, TurntableWidgetReceiver::class.java)
-        val turntableWidgetIds = appWidgetManager.getAppWidgetIds(turntableComponentName)
-        if (turntableWidgetIds.isNotEmpty()) {
-            val turntableViews = createTurntableRemoteViews(
-                circularAlbumArt,
-                isPlaying,
-                isLiked,
-                themeColors,
+        updateMutex.withLock {
+            updateWidgetsLocked(
+                title = title,
+                artist = artist,
+                artworkUri = artworkUri,
+                isPlaying = isPlaying,
+                isLiked = isLiked,
+                duration = duration,
+                currentPosition = currentPosition,
             )
-            turntableWidgetIds.forEach { widgetId ->
-                appWidgetManager.updateAppWidget(widgetId, turntableViews)
-            }
         }
-
-        playlistWidgetManager.updateWidgets(
-            title = title,
-            artist = artist,
-            artworkUri = artworkUri,
-            isPlaying = isPlaying,
-            isLiked = isLiked,
-            duration = duration,
-            currentPosition = currentPosition,
-        )
     }
 
+    private suspend fun updateWidgetsLocked(
+        title: String,
+        artist: String,
+        artworkUri: String?,
+        isPlaying: Boolean,
+        isLiked: Boolean,
+        duration: Long,
+        currentPosition: Long,
+    ) {
+    
+            lastWidgetState = WidgetRenderState(
+                title = title,
+                artist = artist,
+                artworkUri = artworkUri,
+                isPlaying = isPlaying,
+                isLiked = isLiked,
+                duration = duration,
+                currentPosition = currentPosition,
+            )
+            val appWidgetManager = AppWidgetManager.getInstance(context)
+    
+            // Use cached album art if URI hasn't changed, otherwise load new one.
+            // The bitmap's seed is retained with the same cache so the widget palette also
+            // follows playback when the app UI is not collecting artwork metadata.
+            val albumArt: Bitmap?
+            val circularAlbumArt: Bitmap?
+    
+            if (artworkUri != null && artworkUri == cachedArtworkUri && cachedAlbumArt != null) {
+                albumArt = cachedAlbumArt
+                circularAlbumArt = cachedCircularAlbumArt
+            } else {
+                albumArt = artworkUri?.let { loadAlbumArt(it, 300) }
+                circularAlbumArt = albumArt?.let { getCircularBitmap(it) }
+                cachedArtworkUri = artworkUri
+                cachedAlbumArt = albumArt
+                cachedCircularAlbumArt = circularAlbumArt
+                cachedArtworkThemeColor = albumArt?.let {
+                    runCatching { it.extractThemeColor().toArgb() }.getOrNull()
+                }
+            }
+            val themeColors = WidgetTheme.fromPreferences(
+                context = context,
+                artworkThemeColor = cachedArtworkThemeColor,
+                hasArtwork = !artworkUri.isNullOrBlank(),
+            )
+    
+            // Update main music player widgets
+            val componentName = ComponentName(context, MusicWidgetReceiver::class.java)
+            val widgetIds = appWidgetManager.getAppWidgetIds(componentName)
+            if (widgetIds.isNotEmpty()) {
+                widgetIds.forEach { widgetId ->
+                    val options = appWidgetManager.getAppWidgetOptions(widgetId)
+                    val views = createRemoteViewsForSize(
+                        options,
+                        title,
+                        artist,
+                        albumArt,
+                        isPlaying,
+                        isLiked,
+                        duration,
+                        currentPosition,
+                        themeColors,
+                    )
+                    appWidgetManager.updateAppWidget(widgetId, views)
+                }
+            }
+    
+            // Update turntable widgets
+            val turntableComponentName = ComponentName(context, TurntableWidgetReceiver::class.java)
+            val turntableWidgetIds = appWidgetManager.getAppWidgetIds(turntableComponentName)
+            if (turntableWidgetIds.isNotEmpty()) {
+                val turntableViews = createTurntableRemoteViews(
+                    circularAlbumArt,
+                    isPlaying,
+                    isLiked,
+                    themeColors,
+                )
+                turntableWidgetIds.forEach { widgetId ->
+                    appWidgetManager.updateAppWidget(widgetId, turntableViews)
+                }
+            }
+    
+            playlistWidgetManager.updateWidgets(
+                title = title,
+                artist = artist,
+                artworkUri = artworkUri,
+                isPlaying = isPlaying,
+                isLiked = isLiked,
+                duration = duration,
+                currentPosition = currentPosition,
+            )
+        }
+    }
     fun updateProgress(
         duration: Long,
         currentPosition: Long,
