@@ -19,8 +19,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -144,14 +146,26 @@ fun AppNavigationBar(
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
 
+    // Keep the tapped destination selected while Navigation Compose swaps back-stack entries.
+    // Some transitions briefly expose the outgoing route first, which otherwise makes the
+    // selected indicator blink off and on during a single tap.
+    var pendingRoute by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(currentRoute, pendingRoute, navigationItems) {
+        val targetRoute = pendingRoute ?: return@LaunchedEffect
+        if (isRouteSelected(currentRoute, targetRoute, navigationItems)) {
+            pendingRoute = null
+        }
+    }
+    val displayedRoute = pendingRoute ?: currentRoute
+
     NavigationBar(
         modifier = modifier,
         containerColor = containerColor,
         contentColor = contentColor
     ) {
         navigationItems.forEach { screen ->
-            val isSelected = remember(currentRoute, screen.route) {
-                isRouteSelected(currentRoute, screen.route, navigationItems)
+            val isSelected = remember(displayedRoute, screen.route, navigationItems) {
+                isRouteSelected(displayedRoute, screen.route, navigationItems)
             }
             val currentIsSelected by rememberUpdatedState(isSelected)
             val iconRes = remember(isSelected, screen) {
@@ -177,6 +191,7 @@ fun AppNavigationBar(
                             }
                             is PressInteraction.Release -> {
                                 if (!isLongClick) {
+                                    if (!currentIsSelected) pendingRoute = screen.route
                                     onItemClick(screen, currentIsSelected)
                                 }
                             }
@@ -192,6 +207,7 @@ fun AppNavigationBar(
                 selected = isSelected,
                 onClick = {
                     if (!isSearchItem && !isHomeHoldItem) {
+                        if (!currentIsSelected) pendingRoute = screen.route
                         onItemClick(screen, currentIsSelected)
                     }
                     // Long presses are handled via InteractionSource
