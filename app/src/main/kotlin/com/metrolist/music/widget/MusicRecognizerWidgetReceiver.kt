@@ -38,6 +38,8 @@ import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 
 /**
@@ -143,7 +145,12 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                updateAllWidgets(context, appWidgetManager, WidgetTheme.fromPreferences(context))
+                // Broadcasts can arrive from pulse ticks and recognition-state changes at the same
+                // time. Serialize snapshot reads and RemoteViews writes so an older update cannot
+                // overwrite a newer recognition state.
+                widgetUpdateMutex.withLock {
+                    updateAllWidgets(context, appWidgetManager, WidgetTheme.fromPreferences(context))
+                }
             } catch (e: Exception) {
                 Timber.tag("MusicRecognizerWidget").e(e, "Failed to refresh widget theme")
             } finally {
@@ -202,12 +209,12 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
         val views = RemoteViews(context.packageName, R.layout.widget_recognizer_wide)
         applyAlbumArt(views, state, albumArt)
         applyTextState(context, views, state, songTitle, artistName, errorMessage)
-        applyMicState(views, state, pulseFrame, R.id.widget_recognizer_mic_container, R.id.widget_recognizer_pulse)
+        applyMicState(views, state, pulseFrame, R.id.widget_recognizer_mic_background, R.id.widget_recognizer_pulse)
         views.setOnClickPendingIntent(R.id.widget_recognizer_mic_container, getMicIntent(context))
         val infoIntent = getInfoAreaIntent(context)
         views.setOnClickPendingIntent(R.id.widget_recognizer_text_area, infoIntent)
         views.setOnClickPendingIntent(R.id.widget_recognizer_album_art, infoIntent)
-        WidgetTheme.apply(views, R.layout.widget_recognizer_wide, themeColors)
+        WidgetTheme.apply(views, R.layout.widget_recognizer_wide, themeColors, recognizerActive = state == STATE_LISTENING || state == STATE_PROCESSING)
         return views
     }
 
@@ -229,7 +236,7 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
         val infoIntent = getInfoAreaIntent(context)
         views.setOnClickPendingIntent(R.id.widget_recognizer_text_area, infoIntent)
         views.setOnClickPendingIntent(R.id.widget_recognizer_album_art, infoIntent)
-        WidgetTheme.apply(views, R.layout.widget_recognizer_compact, themeColors)
+        WidgetTheme.apply(views, R.layout.widget_recognizer_compact, themeColors, recognizerActive = state == STATE_LISTENING || state == STATE_PROCESSING)
         return views
     }
 
@@ -240,9 +247,9 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
         themeColors: WidgetThemeColors,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_recognizer_tiny)
-        applyMicState(views, state, pulseFrame, R.id.widget_recognizer_tiny_mic_container, R.id.widget_recognizer_tiny_pulse)
+        applyMicState(views, state, pulseFrame, R.id.widget_recognizer_tiny_mic_background, R.id.widget_recognizer_tiny_pulse)
         views.setOnClickPendingIntent(R.id.widget_recognizer_tiny_root, getMicIntent(context))
-        WidgetTheme.apply(views, R.layout.widget_recognizer_tiny, themeColors)
+        WidgetTheme.apply(views, R.layout.widget_recognizer_tiny, themeColors, recognizerActive = state == STATE_LISTENING || state == STATE_PROCESSING)
         return views
     }
 
@@ -311,14 +318,16 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
         views: RemoteViews,
         state: Int,
         pulseFrame: Int,
-        micContainerId: Int,
-        pulseViewId: Int
+        micBackgroundViewId: Int,
+        pulseViewId: Int,
     ) {
         val isActive = state == STATE_LISTENING || state == STATE_PROCESSING
 
-        views.setInt(
-            micContainerId, "setBackgroundResource",
-            if (isActive) R.drawable.widget_mic_button_bg_active else R.drawable.widget_mic_button_bg
+        // The tintable image sits above the container background, so set the state drawable on
+        // that image. WidgetTheme.apply applies the theme-aware active/idle tint afterward.
+        views.setImageViewResource(
+            micBackgroundViewId,
+            if (isActive) R.drawable.widget_mic_button_bg_active else R.drawable.widget_mic_button_bg,
         )
 
         val pulseDrawable = if (isActive) {
@@ -361,6 +370,8 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
         )
 
     companion object {
+        private val widgetUpdateMutex = Mutex()
+
         const val ACTION_START_RECOGNITION = "com.metrolist.music.widget.recognizer.TAP_MIC"
         const val ACTION_UPDATE_WIDGET = "com.metrolist.music.widget.recognizer.UPDATE"
         const val ACTION_RESET_STATE = "com.metrolist.music.widget.recognizer.RESET"
