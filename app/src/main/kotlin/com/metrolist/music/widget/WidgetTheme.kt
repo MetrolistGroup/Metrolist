@@ -36,15 +36,16 @@ internal object WidgetTheme {
     suspend fun fromPreferences(
         context: Context,
         artworkThemeColor: Int? = null,
-        hasArtwork: Boolean = false,
+        hasArtwork: Boolean? = null,
     ): WidgetThemeColors {
         val preferences = context.dataStore.data.first()
         val dynamicTheme = preferences[DynamicThemeKey] ?: true
         val selectedThemeColor = preferences[SelectedThemeColorKey] ?: DefaultThemeColor.toArgb()
-        val effectiveThemeColor = if (dynamicTheme && hasArtwork) {
-            artworkThemeColor ?: selectedThemeColor
-        } else {
-            selectedThemeColor
+        val effectiveThemeColor = when {
+            !dynamicTheme -> selectedThemeColor
+            hasArtwork == true -> artworkThemeColor ?: selectedThemeColor
+            hasArtwork == false -> selectedThemeColor
+            else -> preferences[CurrentThemeColorKey] ?: selectedThemeColor
         }
 
         // The service also runs while MainActivity is closed, so persist the playing artwork's
