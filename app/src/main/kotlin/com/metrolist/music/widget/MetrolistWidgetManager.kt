@@ -66,6 +66,7 @@ class MetrolistWidgetManager @Inject constructor(
         val currentPosition: Long,
     )
 
+    @Volatile
     private var lastWidgetState: WidgetRenderState? = null
 
     suspend fun refreshWidgetsForTheme() {
@@ -203,6 +204,10 @@ class MetrolistWidgetManager @Inject constructor(
         duration: Long,
         currentPosition: Long,
     ) {
+        lastWidgetState = lastWidgetState?.copy(
+            duration = duration,
+            currentPosition = currentPosition,
+        )
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val widgetIds = appWidgetManager
             .getAppWidgetIds(ComponentName(context, MusicWidgetReceiver::class.java))
