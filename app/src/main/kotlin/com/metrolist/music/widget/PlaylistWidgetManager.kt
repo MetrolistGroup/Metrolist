@@ -183,6 +183,10 @@ class PlaylistWidgetManager @Inject constructor(
         duration: Long,
         currentPosition: Long,
     ) {
+        lastWidgetState = lastWidgetState.copy(
+            duration = duration,
+            currentPosition = currentPosition,
+        )
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val widgetIds = appWidgetManager.getAppWidgetIds(
             ComponentName(context, PlaylistWidgetReceiver::class.java),
