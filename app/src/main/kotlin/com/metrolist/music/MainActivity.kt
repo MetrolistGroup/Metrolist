@@ -9,12 +9,15 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.ForegroundServiceStartNotAllowedException
 import android.app.PendingIntent
+import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.IBinder
 import android.view.View
 import android.view.WindowManager
@@ -136,6 +139,7 @@ import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.music.constants.AppBarHeight
 import com.metrolist.music.constants.AppLanguageKey
 import com.metrolist.music.constants.CheckForUpdatesKey
+import com.metrolist.music.constants.CurrentThemeColorKey
 import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.DefaultOpenTabKey
 import com.metrolist.music.constants.DismissedKmpUpdateKey
@@ -214,7 +218,9 @@ import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.utils.reportException
 import com.metrolist.music.utils.setAppLocale
 import com.metrolist.music.viewmodels.HomeViewModel
+import com.metrolist.music.widget.MetrolistWidgetManager
 import com.metrolist.music.widget.PlaylistWidgetReceiver
+import com.metrolist.music.widget.WidgetTheme
 import com.valentinilk.shimmer.LocalShimmerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -251,6 +257,9 @@ class MainActivity : FragmentActivity() {
 
     @Inject
     lateinit var database: MusicDatabase
+
+    @Inject
+    lateinit var widgetManager: MetrolistWidgetManager
 
     @Inject
     lateinit var downloadUtil: DownloadUtil
@@ -677,6 +686,50 @@ class MainActivity : FragmentActivity() {
                         themeColor = selectedThemeColor
                     }
                 }
+        }
+
+        LaunchedEffect(themeColor, useDarkTheme, pureBlack) {
+            val effectiveThemeColor = themeColor.toArgb()
+            this@MainActivity.safeDataStoreEdit {
+                it[CurrentThemeColorKey] = effectiveThemeColor
+            }
+            withContext(Dispatchers.IO) {
+                WidgetTheme.refreshWidgets(
+                    context = this@MainActivity,
+                    widgetManager = widgetManager,
+                )
+            }
+        }
+
+        // Android 12+ exposes Material dynamic colors derived from the current wallpaper.
+        // Refresh widgets when that system palette changes even if the selected app theme seed
+        // itself did not cause recomposition.
+        DisposableEffect(widgetManager) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                onDispose { }
+            } else {
+                val wallpaperManager = getSystemService(WallpaperManager::class.java)
+                if (wallpaperManager == null) {
+                    onDispose { }
+                } else {
+                    val listener = WallpaperManager.OnColorsChangedListener { _, _ ->
+                        lifecycleScope.launch {
+                            runCatching {
+                                withContext(Dispatchers.IO) {
+                                    WidgetTheme.refreshWidgets(
+                                        context = this@MainActivity,
+                                        widgetManager = widgetManager,
+                                    )
+                                }
+                            }.onFailure { Timber.w(it, "Failed to refresh widgets after wallpaper palette change") }
+                        }
+                    }
+                    wallpaperManager.addOnColorsChangedListener(listener, Handler(Looper.getMainLooper()))
+                    onDispose {
+                        wallpaperManager.removeOnColorsChangedListener(listener)
+                    }
+                }
+            }
         }
 
         MetrolistTheme(

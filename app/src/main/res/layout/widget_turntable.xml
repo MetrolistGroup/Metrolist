@@ -18,14 +18,29 @@
         android:contentDescription="@string/album_art" />
 
     <!-- Navigation Buttons Container - Top Right (Previous & Next) -->
-    <LinearLayout
+    <FrameLayout
+        android:id="@+id/widget_turntable_nav_container"
         android:layout_width="wrap_content"
         android:layout_height="36dp"
         android:layout_gravity="top|end"
         android:layout_marginTop="20dp"
         android:layout_marginEnd="6dp"
+        android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_turntable_nav_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_turntable_nav_bg"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+<LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
         android:orientation="horizontal"
-        android:background="@drawable/widget_turntable_nav_bg"
+        android:background="@android:color/transparent"
         android:gravity="center_vertical">
 
         <!-- Previous Button -->
@@ -51,6 +66,7 @@
             android:contentDescription="@string/next" />
 
     </LinearLayout>
+</FrameLayout>
 
     <!-- Play Button - Bottom Left -->
     <FrameLayout
@@ -60,7 +76,18 @@
         android:layout_gravity="bottom|start"
         android:layout_marginBottom="12dp"
         android:layout_marginStart="12dp"
-        android:background="@drawable/widget_turntable_play_bg">
+        android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_turntable_play_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_turntable_play_bg"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
 
         <ImageView
             android:id="@+id/widget_turntable_play_pause"

@@ -4,14 +4,25 @@
     android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_background"
-    android:padding="12dp"
+    android:background="@android:color/transparent"
     android:theme="@style/Theme.Widget.Metrolist">
+    <ImageView
+        android:id="@+id/widget_theme_root_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_theme_root_mask"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
 
     <!-- Album Art Container -->
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:padding="12dp">
 
         <ImageView
             android:id="@+id/widget_compact_album_art"
@@ -28,7 +39,18 @@
             android:layout_height="56dp"
             android:layout_gravity="bottom|center_horizontal"
             android:layout_marginBottom="8dp"
-            android:background="@drawable/widget_play_button_circular">
+            android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_compact_play_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_play_button_circular"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
 
             <ImageView
                 android:id="@+id/widget_compact_play_pause"

@@ -23,12 +23,20 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.toBitmap
+import androidx.compose.ui.graphics.toArgb
+import com.metrolist.music.ui.theme.extractThemeColor
 import com.metrolist.music.MainActivity
 import com.metrolist.music.R
+import com.metrolist.music.constants.DynamicThemeKey
 import com.metrolist.music.db.MusicDatabase
+import com.metrolist.music.utils.dataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -38,6 +46,8 @@ class MetrolistWidgetManager @Inject constructor(
     private val database: MusicDatabase,
     private val playlistWidgetManager: PlaylistWidgetManager,
 ) {
+    private val updateMutex = Mutex()
+
     private val imageLoader by lazy {
         ImageLoader.Builder(context)
             .crossfade(false)
@@ -48,6 +58,44 @@ class MetrolistWidgetManager @Inject constructor(
     private var cachedArtworkUri: String? = null
     private var cachedAlbumArt: Bitmap? = null
     private var cachedCircularAlbumArt: Bitmap? = null
+    private var cachedArtworkThemeColor: Int? = null
+    private var attemptedArtworkThemeColorUri: String? = null
+
+    private data class WidgetRenderState(
+        val title: String,
+        val artist: String,
+        val artworkUri: String?,
+        val isPlaying: Boolean,
+        val isLiked: Boolean,
+        val duration: Long,
+        val currentPosition: Long,
+    )
+
+    @Volatile
+    private var lastWidgetState: WidgetRenderState? = null
+
+    suspend fun refreshWidgetsForTheme() {
+        updateMutex.withLock {
+            val state = lastWidgetState
+            if (state == null) {
+                // Playback may not have emitted a state yet. Refresh the playlist widget from
+                // its own retained state so a theme change cannot leave it using stale colors.
+                playlistWidgetManager.refreshWidgetsForTheme(
+                    WidgetTheme.fromPreferences(context, notifyRecognizerOnColorChange = false),
+                )
+                return@withLock
+            }
+            updateWidgetsLocked(
+                title = state.title,
+                artist = state.artist,
+                artworkUri = state.artworkUri,
+                isPlaying = state.isPlaying,
+                isLiked = state.isLiked,
+                duration = state.duration,
+                currentPosition = state.currentPosition,
+            )
+        }
+    }
 
     suspend fun updateWidgets(
         title: String,
@@ -58,23 +106,88 @@ class MetrolistWidgetManager @Inject constructor(
         duration: Long = 0,
         currentPosition: Long = 0
     ) {
-        val appWidgetManager = AppWidgetManager.getInstance(context)
+        updateMutex.withLock {
+            updateWidgetsLocked(
+                title = title,
+                artist = artist,
+                artworkUri = artworkUri,
+                isPlaying = isPlaying,
+                isLiked = isLiked,
+                duration = duration,
+                currentPosition = currentPosition,
+            )
+        }
+    }
 
-        // Use cached album art if URI hasn't changed, otherwise load new one
+    private suspend fun updateWidgetsLocked(
+        title: String,
+        artist: String,
+        artworkUri: String?,
+        isPlaying: Boolean,
+        isLiked: Boolean,
+        duration: Long,
+        currentPosition: Long,
+    ) {
+
+        lastWidgetState = WidgetRenderState(
+            title = title,
+            artist = artist,
+            artworkUri = artworkUri,
+            isPlaying = isPlaying,
+            isLiked = isLiked,
+            duration = duration,
+            currentPosition = currentPosition,
+        )
+        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val dynamicThemeEnabled = context.dataStore.data
+            .map { it[DynamicThemeKey] ?: true }
+            .first()
+        val hasThemeAwareWidgets = listOf(
+            MusicWidgetReceiver::class.java,
+            TurntableWidgetReceiver::class.java,
+            PlaylistWidgetReceiver::class.java,
+            MusicRecognizerWidgetReceiver::class.java,
+        ).any { receiver ->
+            appWidgetManager.getAppWidgetIds(ComponentName(context, receiver)).isNotEmpty()
+        }
+
+        // Use cached album art if URI hasn't changed, otherwise load new one.
+        // Do not decode a palette when dynamic theming is disabled or no themed widget exists.
+        // Palette.generate() is synchronous, so run it away from the UI thread.
         val albumArt: Bitmap?
         val circularAlbumArt: Bitmap?
-        
-        if (artworkUri != null && artworkUri == cachedArtworkUri && cachedAlbumArt != null) {
+        val artworkChanged = artworkUri != cachedArtworkUri
+
+        if (!artworkChanged && artworkUri != null && cachedAlbumArt != null) {
             albumArt = cachedAlbumArt
             circularAlbumArt = cachedCircularAlbumArt
         } else {
             albumArt = artworkUri?.let { loadAlbumArt(it, 300) }
             circularAlbumArt = albumArt?.let { getCircularBitmap(it) }
-            // Update cache
             cachedArtworkUri = artworkUri
             cachedAlbumArt = albumArt
             cachedCircularAlbumArt = circularAlbumArt
+            cachedArtworkThemeColor = null
+            attemptedArtworkThemeColorUri = null
         }
+
+        if (
+            dynamicThemeEnabled &&
+            hasThemeAwareWidgets &&
+            !artworkUri.isNullOrBlank() &&
+            albumArt != null &&
+            attemptedArtworkThemeColorUri != artworkUri
+        ) {
+            cachedArtworkThemeColor = withContext(Dispatchers.Default) {
+                runCatching { albumArt.extractThemeColor().toArgb() }.getOrNull()
+            }
+            attemptedArtworkThemeColorUri = artworkUri
+        }
+        val themeColors = WidgetTheme.fromPreferences(
+            context = context,
+            artworkThemeColor = cachedArtworkThemeColor,
+            hasArtwork = !artworkUri.isNullOrBlank(),
+        )
 
         // Update main music player widgets
         val componentName = ComponentName(context, MusicWidgetReceiver::class.java)
@@ -90,7 +203,8 @@ class MetrolistWidgetManager @Inject constructor(
                     isPlaying,
                     isLiked,
                     duration,
-                    currentPosition
+                    currentPosition,
+                    themeColors,
                 )
                 appWidgetManager.updateAppWidget(widgetId, views)
             }
@@ -103,7 +217,8 @@ class MetrolistWidgetManager @Inject constructor(
             val turntableViews = createTurntableRemoteViews(
                 circularAlbumArt,
                 isPlaying,
-                isLiked
+                isLiked,
+                themeColors,
             )
             turntableWidgetIds.forEach { widgetId ->
                 appWidgetManager.updateAppWidget(widgetId, turntableViews)
@@ -118,6 +233,7 @@ class MetrolistWidgetManager @Inject constructor(
             isLiked = isLiked,
             duration = duration,
             currentPosition = currentPosition,
+            widgetThemeColors = themeColors,
         )
     }
 
@@ -125,6 +241,10 @@ class MetrolistWidgetManager @Inject constructor(
         duration: Long,
         currentPosition: Long,
     ) {
+        lastWidgetState = lastWidgetState?.copy(
+            duration = duration,
+            currentPosition = currentPosition,
+        )
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val widgetIds = appWidgetManager
             .getAppWidgetIds(ComponentName(context, MusicWidgetReceiver::class.java))
@@ -156,7 +276,8 @@ class MetrolistWidgetManager @Inject constructor(
         isPlaying: Boolean,
         isLiked: Boolean,
         duration: Long,
-        currentPosition: Long
+        currentPosition: Long,
+        themeColors: WidgetThemeColors,
     ): RemoteViews {
         val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
         val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
@@ -168,15 +289,15 @@ class MetrolistWidgetManager @Inject constructor(
         return when {
             minWidth < 180 && minHeight < 100 -> {
                 // 2x2 Compact - Only play button with album art
-                createCompactSquareRemoteViews(albumArt, isPlaying)
+                createCompactSquareRemoteViews(albumArt, isPlaying, themeColors)
             }
             minWidth >= 180 && minHeight < 100 -> {
                 // 4x1 Wide - Single row with album art, song info, like and play buttons
-                createCompactWideRemoteViews(title, artist, albumArt, isPlaying, isLiked)
+                createCompactWideRemoteViews(title, artist, albumArt, isPlaying, isLiked, themeColors)
             }
             else -> {
                 // Full layout
-                createRemoteViews(title, artist, albumArt, isPlaying, isLiked, duration, currentPosition)
+                createRemoteViews(title, artist, albumArt, isPlaying, isLiked, duration, currentPosition, themeColors)
             }
         }
     }
@@ -188,7 +309,8 @@ class MetrolistWidgetManager @Inject constructor(
         isPlaying: Boolean,
         isLiked: Boolean,
         duration: Long = 0,
-        currentPosition: Long = 0
+        currentPosition: Long = 0,
+        themeColors: WidgetThemeColors,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_music_player)
 
@@ -224,6 +346,7 @@ class MetrolistWidgetManager @Inject constructor(
         views.setOnClickPendingIntent(R.id.widget_album_art, getOpenAppIntent())
         views.setOnClickPendingIntent(R.id.widget_play_pause_container, getPlayPauseIntent())
         views.setOnClickPendingIntent(R.id.widget_like_button, getLikeIntent())
+        WidgetTheme.apply(views, R.layout.widget_music_player, themeColors)
 
         return views
     }
@@ -296,7 +419,8 @@ class MetrolistWidgetManager @Inject constructor(
 
     private fun createCompactSquareRemoteViews(
         albumArt: Bitmap?,
-        isPlaying: Boolean
+        isPlaying: Boolean,
+        themeColors: WidgetThemeColors,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_compact_square)
 
@@ -315,6 +439,7 @@ class MetrolistWidgetManager @Inject constructor(
         // Set click intents
         views.setOnClickPendingIntent(R.id.widget_compact_album_art, getOpenAppIntent())
         views.setOnClickPendingIntent(R.id.widget_compact_play_container, getPlayPauseIntent())
+        WidgetTheme.apply(views, R.layout.widget_compact_square, themeColors)
 
         return views
     }
@@ -324,7 +449,8 @@ class MetrolistWidgetManager @Inject constructor(
         artist: String,
         albumArt: Bitmap?,
         isPlaying: Boolean,
-        isLiked: Boolean
+        isLiked: Boolean,
+        themeColors: WidgetThemeColors,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_compact_wide)
 
@@ -353,6 +479,7 @@ class MetrolistWidgetManager @Inject constructor(
         views.setOnClickPendingIntent(R.id.widget_wide_album_art, getOpenAppIntent())
         views.setOnClickPendingIntent(R.id.widget_wide_play_container, getPlayPauseIntent())
         views.setOnClickPendingIntent(R.id.widget_wide_like_button, getLikeIntent())
+        WidgetTheme.apply(views, R.layout.widget_compact_wide, themeColors)
 
         return views
     }
@@ -360,7 +487,8 @@ class MetrolistWidgetManager @Inject constructor(
     private fun createTurntableRemoteViews(
         circularAlbumArt: Bitmap?,
         isPlaying: Boolean,
-        isLiked: Boolean
+        isLiked: Boolean,
+        themeColors: WidgetThemeColors,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_turntable)
 
@@ -381,6 +509,7 @@ class MetrolistWidgetManager @Inject constructor(
         views.setOnClickPendingIntent(R.id.widget_turntable_play_container, getTurntablePlayPauseIntent())
         views.setOnClickPendingIntent(R.id.widget_turntable_prev_button, getTurntablePreviousIntent())
         views.setOnClickPendingIntent(R.id.widget_turntable_next_button, getTurntableNextIntent())
+        WidgetTheme.apply(views, R.layout.widget_turntable, themeColors)
 
         return views
     }

@@ -1,11 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:theme="@style/Theme.Widget.Metrolist">
+    <ImageView
+        android:id="@+id/widget_theme_root_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_theme_root_mask"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+<LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:gravity="top"
-    android:background="@drawable/widget_background"
+    android:background="@android:color/transparent"
     android:paddingStart="14dp"
     android:paddingEnd="14dp"
     android:paddingTop="12dp"
@@ -70,6 +84,7 @@
                     <ImageView
                         android:layout_width="22dp"
                         android:layout_height="22dp"
+                        android:id="@+id/widget_playlist_prev_icon"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_widget_skip_previous"
                         android:contentDescription="@string/previous" />
@@ -81,7 +96,18 @@
                     android:layout_height="36dp"
                     android:layout_marginStart="4dp"
                     android:layout_marginEnd="4dp"
-                    android:background="@drawable/widget_play_pill_bg">
+                    android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_playlist_play_pause_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_play_pill_bg"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
                     <ImageView
                         android:id="@+id/widget_playlist_play_pause"
                         android:layout_width="24dp"
@@ -98,15 +124,29 @@
                     <ImageView
                         android:layout_width="22dp"
                         android:layout_height="22dp"
+                        android:id="@+id/widget_playlist_next_icon"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_widget_skip_next"
                         android:contentDescription="@string/next" />
                 </FrameLayout>
 
                 <FrameLayout
+                android:id="@+id/widget_playlist_like_container"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:layout_marginStart="6dp">
+                    android:layout_marginStart="6dp"
+    android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_playlist_like_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_like_button_bg"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
                     <ImageButton
                         android:id="@+id/widget_playlist_like_button"
                         android:layout_width="match_parent"
@@ -165,7 +205,19 @@
                         android:contentDescription="@null" />
                     <FrameLayout
                         android:id="@+id/widget_playlist_card_1_play_container"
-                        style="@style/MetrolistPlaylistWidgetCardPlayButton">
+                        style="@style/MetrolistPlaylistWidgetCardPlayButton"
+    android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_playlist_card_1_play_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_play_button_circular"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
                         <ImageView
                             android:id="@+id/widget_playlist_card_1_play"
                             style="@style/MetrolistPlaylistWidgetCardPlayIcon"
@@ -185,7 +237,19 @@
                         android:contentDescription="@null" />
                     <FrameLayout
                         android:id="@+id/widget_playlist_card_2_play_container"
-                        style="@style/MetrolistPlaylistWidgetCardPlayButton">
+                        style="@style/MetrolistPlaylistWidgetCardPlayButton"
+    android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_playlist_card_2_play_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_play_button_circular"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
                         <ImageView
                             android:id="@+id/widget_playlist_card_2_play"
                             style="@style/MetrolistPlaylistWidgetCardPlayIcon"
@@ -205,7 +269,19 @@
                         android:contentDescription="@null" />
                     <FrameLayout
                         android:id="@+id/widget_playlist_card_3_play_container"
-                        style="@style/MetrolistPlaylistWidgetCardPlayButton">
+                        style="@style/MetrolistPlaylistWidgetCardPlayButton"
+    android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_playlist_card_3_play_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_play_button_circular"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
                         <ImageView
                             android:id="@+id/widget_playlist_card_3_play"
                             style="@style/MetrolistPlaylistWidgetCardPlayIcon"
@@ -225,7 +301,19 @@
                         android:contentDescription="@null" />
                     <FrameLayout
                         android:id="@+id/widget_playlist_card_4_play_container"
-                        style="@style/MetrolistPlaylistWidgetCardPlayButton">
+                        style="@style/MetrolistPlaylistWidgetCardPlayButton"
+    android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_playlist_card_4_play_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_play_button_circular"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
                         <ImageView
                             android:id="@+id/widget_playlist_card_4_play"
                             style="@style/MetrolistPlaylistWidgetCardPlayIcon"
@@ -255,7 +343,19 @@
                         android:contentDescription="@null" />
                     <FrameLayout
                         android:id="@+id/widget_playlist_card_5_play_container"
-                        style="@style/MetrolistPlaylistWidgetCardPlayButton">
+                        style="@style/MetrolistPlaylistWidgetCardPlayButton"
+    android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_playlist_card_5_play_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_play_button_circular"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
                         <ImageView
                             android:id="@+id/widget_playlist_card_5_play"
                             style="@style/MetrolistPlaylistWidgetCardPlayIcon"
@@ -275,7 +375,19 @@
                         android:contentDescription="@null" />
                     <FrameLayout
                         android:id="@+id/widget_playlist_card_6_play_container"
-                        style="@style/MetrolistPlaylistWidgetCardPlayButton">
+                        style="@style/MetrolistPlaylistWidgetCardPlayButton"
+    android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_playlist_card_6_play_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_play_button_circular"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
                         <ImageView
                             android:id="@+id/widget_playlist_card_6_play"
                             style="@style/MetrolistPlaylistWidgetCardPlayIcon"
@@ -295,7 +407,19 @@
                         android:contentDescription="@null" />
                     <FrameLayout
                         android:id="@+id/widget_playlist_card_7_play_container"
-                        style="@style/MetrolistPlaylistWidgetCardPlayButton">
+                        style="@style/MetrolistPlaylistWidgetCardPlayButton"
+    android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_playlist_card_7_play_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_play_button_circular"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
                         <ImageView
                             android:id="@+id/widget_playlist_card_7_play"
                             style="@style/MetrolistPlaylistWidgetCardPlayIcon"
@@ -315,7 +439,19 @@
                         android:contentDescription="@null" />
                     <FrameLayout
                         android:id="@+id/widget_playlist_card_8_play_container"
-                        style="@style/MetrolistPlaylistWidgetCardPlayButton">
+                        style="@style/MetrolistPlaylistWidgetCardPlayButton"
+    android:background="@android:color/transparent">
+    <ImageView
+        android:id="@+id/widget_playlist_card_8_play_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_play_button_circular"
+        android:scaleType="fitXY"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
                         <ImageView
                             android:id="@+id/widget_playlist_card_8_play"
                             style="@style/MetrolistPlaylistWidgetCardPlayIcon"
@@ -327,3 +463,4 @@
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>
+</FrameLayout>

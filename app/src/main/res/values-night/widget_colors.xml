@@ -21,4 +21,5 @@
     <color name="widget_mic_pulse_ring_mid">#66EADDFF</color>
     <color name="widget_mic_pulse_ring_low">#33EADDFF</color>
     <color name="widget_mic_pulse_ring_fade">#1AEADDFF</color>
+    <color name="widget_surface_fallback">#141218</color>
 </resources>
