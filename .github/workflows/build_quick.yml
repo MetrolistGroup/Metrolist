@@ -15,8 +15,8 @@ concurrency:
 jobs:
   build_quick:
     name: Quick Universal Release Build
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v7
@@ -67,3 +67,4 @@ jobs:
         with:
           name: app-universal-test-release
           path: app/build/outputs/apk/foss/release/out/*
+
