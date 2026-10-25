@@ -15,7 +15,6 @@ import com.metrolist.music.constants.AddToPlaylistSortTypeKey
 import com.metrolist.music.constants.PlaylistSortType
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.extensions.toEnum
-import com.metrolist.music.utils.SyncUtils
 import com.metrolist.music.utils.dataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -33,7 +32,6 @@ class PlaylistsViewModel
 constructor(
     @ApplicationContext context: Context,
     database: MusicDatabase,
-    private val syncUtils: SyncUtils,
 ) : ViewModel() {
     val allPlaylists =
         context.dataStore.data
@@ -44,9 +42,4 @@ constructor(
             .flatMapLatest { (sortType, descending) ->
                 database.playlists(sortType, descending)
             }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    // Suspend function that waits for sync to complete
-    suspend fun sync() {
-        syncUtils.syncSavedPlaylists()
-    }
 }

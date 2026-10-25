@@ -48,7 +48,6 @@ import com.metrolist.innertube.YouTube
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.LocalSyncUtils
 import com.metrolist.music.R
 import com.metrolist.music.db.entities.PlaylistSongMap
 import com.metrolist.music.db.entities.Song
@@ -74,7 +73,6 @@ fun SelectionSongMenu(
     onDismiss: () -> Unit,
     clearAction: () -> Unit,
     songPosition: List<PlaylistSongMap>? = emptyList(),
-    isUploadedPlaylist: Boolean = false,
     onRemoveFromCache: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
@@ -82,8 +80,6 @@ fun SelectionSongMenu(
     val downloadUtil = LocalDownloadUtil.current
     val coroutineScope = rememberCoroutineScope()
     val playerConnection = LocalPlayerConnection.current ?: return
-    val syncUtils = LocalSyncUtils.current
-    val deletedNSongsTemplate = stringResource(R.string.deleted_n_songs)
     val listenTogetherManager = com.metrolist.music.LocalListenTogetherManager.current
     val isGuest = listenTogetherManager?.isInRoom == true && listenTogetherManager.isHost == false
 
@@ -148,13 +144,6 @@ fun SelectionSongMenu(
         mutableStateOf(false)
     }
 
-    var showDeleteUploadedDialog by remember {
-        mutableStateOf(false)
-    }
-    var isDeleting by remember { mutableStateOf(false) }
-    var deleteProgress by remember { mutableIntStateOf(0) }
-    var totalToDelete by remember { mutableIntStateOf(0) }
-
     if (showRemoveDownloadDialog) {
         DefaultDialog(
             onDismiss = { showRemoveDownloadDialog = false },
@@ -191,95 +180,6 @@ fun SelectionSongMenu(
                 }
             },
         )
-    }
-
-    if (showDeleteUploadedDialog) {
-        DefaultDialog(
-            onDismiss = {
-                if (!isDeleting) {
-                    showDeleteUploadedDialog = false
-                }
-            },
-            icon = {
-                Icon(
-                    painter = painterResource(R.drawable.delete),
-                    contentDescription = null,
-                )
-            },
-            title = {
-                Text(
-                    if (isDeleting) {
-                        stringResource(R.string.deleting)
-                    } else {
-                        stringResource(R.string.delete_uploaded_songs)
-                    },
-                )
-            },
-            buttons = {
-                if (!isDeleting) {
-                    TextButton(
-                        onClick = { showDeleteUploadedDialog = false },
-                    ) {
-                        Text(text = stringResource(android.R.string.cancel))
-                    }
-
-                    TextButton(
-                        onClick = {
-                            totalToDelete = songSelection.size
-                            deleteProgress = 0
-                            isDeleting = true
-                            val songsToDelete = songSelection.toList()
-                            coroutineScope.launch(Dispatchers.IO) {
-                                var successCount = 0
-                                songsToDelete.forEachIndexed { index, song ->
-                                    deleteProgress = index + 1
-                                    val entityId = song.song.uploadEntityId
-                                    if (entityId != null) {
-                                        YouTube.deleteUploadedSong(entityId).onSuccess {
-                                            database.query {
-                                                delete(song.song)
-                                            }
-                                            successCount++
-                                        }
-                                    }
-                                }
-                                withContext(Dispatchers.Main) {
-                                    Toast
-                                        .makeText(
-                                            context,
-                                            String.format(deletedNSongsTemplate, successCount),
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
-                                    isDeleting = false
-                                    showDeleteUploadedDialog = false
-                                    onDismiss()
-                                    clearAction()
-                                }
-                            }
-                        },
-                    ) {
-                        Text(text = stringResource(R.string.delete))
-                    }
-                }
-            },
-        ) {
-            if (isDeleting) {
-                Text(
-                    text = stringResource(R.string.upload_progress, deleteProgress, totalToDelete),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                LinearProgressIndicator(
-                    progress = { if (totalToDelete > 0) deleteProgress.toFloat() / totalToDelete else 0f },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            } else {
-                Text(
-                    text = stringResource(R.string.delete_uploaded_songs_confirm, songSelection.size),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            }
-        }
     }
 
     val configuration = LocalConfiguration.current
@@ -469,26 +369,12 @@ fun SelectionSongMenu(
                                                 inLibrary(song.id, null)
                                             }
                                         }
-                                        coroutineScope.launch {
-                                            // Use the new reliable method that fetches fresh tokens
-                                            songSelection.forEach { song ->
-                                                YouTube.toggleSongLibrary(song.id, false)
-                                            }
-                                        }
                                     } else {
                                         database.transaction {
                                             songSelection.forEach { song ->
                                                 insert(song.toMediaMetadata())
                                                 inLibrary(song.id, LocalDateTime.now())
                                             }
-                                        }
-                                        coroutineScope.launch {
-                                            // Use the new reliable method that fetches fresh tokens
-                                            songSelection
-                                                .filter { it.song.inLibrary == null }
-                                                .forEach { song ->
-                                                    YouTube.toggleSongLibrary(song.id, true)
-                                                }
                                         }
                                     }
                                 },
@@ -601,7 +487,6 @@ fun SelectionSongMenu(
                                             if ((!allLiked && !song.song.liked) || allLiked) {
                                                 val s = song.song.toggleLike()
                                                 update(s)
-                                                syncUtils.likeSong(s)
                                             }
                                         }
                                     }
@@ -629,22 +514,6 @@ fun SelectionSongMenu(
                                             }
                                         }
                                         clearAction()
-                                    },
-                                ),
-                            )
-                        }
-                        if (isUploadedPlaylist) {
-                            add(
-                                Material3MenuItemData(
-                                    title = { Text(text = stringResource(R.string.delete_uploaded_songs)) },
-                                    icon = {
-                                        Icon(
-                                            painter = painterResource(R.drawable.delete),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    onClick = {
-                                        showDeleteUploadedDialog = true
                                     },
                                 ),
                             )

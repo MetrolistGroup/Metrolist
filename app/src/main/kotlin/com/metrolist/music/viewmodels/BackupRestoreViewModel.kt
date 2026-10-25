@@ -13,7 +13,6 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
-import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.innertube.utils.sha1
 import com.metrolist.music.R
 import kotlinx.serialization.json.Json
@@ -24,9 +23,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import com.metrolist.music.constants.DataSyncIdKey
-import com.metrolist.music.constants.InnerTubeAuthUserKey
-import com.metrolist.music.constants.InnerTubeCookieKey
+import com.metrolist.music.constants.LegacyAccountKeyNames
 import com.metrolist.music.constants.VisitorDataKey
 import com.metrolist.music.db.InternalDatabase
 import com.metrolist.music.db.MusicDatabase
@@ -52,14 +49,6 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.zip.ZipEntry
 import javax.inject.Inject
-
-data class BackupPreviewInfo(
-    val hasAuthData: Boolean = false,
-    val accountName: String? = null,
-    val accountEmail: String? = null,
-    val accountImageUrl: String? = null,
-    val cookie: String? = null,
-)
 
 data class CsvImportState(
     val previewRows: List<List<String>> = emptyList(),
@@ -123,7 +112,7 @@ class BackupRestoreViewModel @Inject constructor(
         }
     }
 
-    fun restore(context: Context, uri: Uri, clearAuthData: Boolean = false) {
+    fun restore(context: Context, uri: Uri) {
         // Run in viewModelScope to allow suspending
         viewModelScope.launch(Dispatchers.IO) {
             val restoreDbName = "restored_${InternalDatabase.DB_NAME}"
@@ -131,7 +120,7 @@ class BackupRestoreViewModel @Inject constructor(
             val tempSettings = File(context.filesDir, "datastore/$SETTINGS_FILENAME.restore")
 
             runCatching {
-                Timber.tag("RESTORE").i("Starting restore from URI: $uri, clearAuthData: $clearAuthData")
+                Timber.tag("RESTORE").i("Starting restore from URI: $uri")
 
                 val currentDbPath = database.openHelper.writableDatabase.path
                 if (currentDbPath == null) {
@@ -266,53 +255,42 @@ class BackupRestoreViewModel @Inject constructor(
 
                 if (dbSwapSucceeded) {
                     if (foundSettings) {
-                        // If auth data needs clearing, strip auth keys from the temp file
-                        // before copying to actualSettings. This avoids issues with
+                        // Backups from earlier versions may contain account credentials; strip them
+                        // from the staged file before promoting it to the live path. This avoids
                         // DataStore's in-memory cache being stale after a raw file swap.
-                        if (clearAuthData) {
-                            runCatching {
-                                // Open a temporary DataStore for the staged settings file
-                                // to remove auth keys before promoting it to the live path.
-                                val settingsBaseName = SETTINGS_FILENAME.removeSuffix(".preferences_pb")
-                                val stageSettings = File(
-                                    context.filesDir,
-                                    "datastore/${settingsBaseName}.stage.preferences_pb",
-                                )
-                                stageSettings.delete()
-                                tempSettings.copyTo(stageSettings, overwrite = true)
+                        runCatching {
+                            val settingsBaseName = SETTINGS_FILENAME.removeSuffix(".preferences_pb")
+                            val stageSettings = File(
+                                context.filesDir,
+                                "datastore/${settingsBaseName}.stage.preferences_pb",
+                            )
+                            stageSettings.delete()
+                            tempSettings.copyTo(stageSettings, overwrite = true)
 
-                                val stageDataStore =
-                                    androidx.datastore.preferences.core.PreferenceDataStoreFactory.create {
-                                        stageSettings
-                                    }
-                                kotlinx.coroutines.runBlocking {
-                                    stageDataStore.edit { prefs ->
-                                        prefs.remove(InnerTubeCookieKey)
-                                        prefs.remove(VisitorDataKey)
-                                        prefs.remove(DataSyncIdKey)
-                                        prefs.remove(InnerTubeAuthUserKey)
-                                    }
+                            val stageDataStore =
+                                androidx.datastore.preferences.core.PreferenceDataStoreFactory.create {
+                                    stageSettings
                                 }
-
-                                val actualSettings = File(
-                                    context.filesDir,
-                                    "datastore/$SETTINGS_FILENAME",
-                                )
-                                stageSettings.copyTo(actualSettings, overwrite = true)
-                                stageSettings.delete()
-                            }.onFailure {
-                                Timber.tag("RESTORE").e(it, "Failed to clear auth from restored settings")
-                                kotlinx.coroutines.withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, R.string.restore_failed, Toast.LENGTH_SHORT).show()
+                            kotlinx.coroutines.runBlocking {
+                                stageDataStore.edit { prefs ->
+                                    prefs.asMap().keys
+                                        .filter { it.name in LegacyAccountKeyNames || it == VisitorDataKey }
+                                        .forEach { prefs.remove(it) }
                                 }
-                                return@launch
                             }
-                        } else {
+
                             val actualSettings = File(
                                 context.filesDir,
                                 "datastore/$SETTINGS_FILENAME",
                             )
-                            tempSettings.copyTo(actualSettings, overwrite = true)
+                            stageSettings.copyTo(actualSettings, overwrite = true)
+                            stageSettings.delete()
+                        }.onFailure {
+                            Timber.tag("RESTORE").e(it, "Failed to clear auth from restored settings")
+                            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                Toast.makeText(context, R.string.restore_failed, Toast.LENGTH_SHORT).show()
+                            }
+                            return@launch
                         }
                     }
 
@@ -344,168 +322,6 @@ class BackupRestoreViewModel @Inject constructor(
             File("$restoreDbPath-wal").delete()
             File("$restoreDbPath-shm").delete()
             tempSettings.delete()
-        }
-    }
-
-    fun previewBackup(context: Context, uri: Uri): BackupPreviewInfo {
-        return runCatching {
-            context.applicationContext.contentResolver.openInputStream(uri)?.use { raw ->
-                raw.zipInputStream().use { inputStream ->
-                    var entry = tryOrNull { inputStream.nextEntry }
-                    while (entry != null) {
-                        if (entry.name == SETTINGS_FILENAME) {
-                            val bytes = inputStream.readBytes()
-                            val content = bytes.decodeToString(throwOnInvalidSequence = false)
-
-                            // Check for auth data (SAPISID cookie indicates logged in)
-                            val hasAuthData = content.contains("SAPISID=")
-
-                            // Extract cookie string from backup
-                            val cookie = if (hasAuthData) {
-                                extractCookieFromPrefs(content)
-                            } else null
-
-                            val accountName = if (hasAuthData) {
-                                extractAccountNameFromPrefs(content) ?: "YouTube Account"
-                            } else null
-
-                            return BackupPreviewInfo(
-                                hasAuthData = hasAuthData,
-                                accountName = accountName,
-                                accountEmail = null,
-                                accountImageUrl = null,
-                                cookie = cookie,
-                            )
-                        }
-                        entry = tryOrNull { inputStream.nextEntry }
-                    }
-                }
-            }
-            BackupPreviewInfo()
-        }.getOrElse {
-            Timber.tag("BACKUP_PREVIEW").e(it, "Failed to preview backup")
-            BackupPreviewInfo()
-        }
-    }
-
-    private fun extractAccountNameFromPrefs(content: String): String? {
-        val sessionPattern = Regex("""(?:SESSION_INDEX|sessionIndex|session)_?\s*["':]*\s*(\d+)""")
-        val index = sessionPattern.find(content)?.groupValues?.getOrNull(1)
-        return if (index != null) "Account #$index" else null
-    }
-
-    private fun extractCookieFromPrefs(content: String): String? {
-        // Find innerTubeCookie key and extract the cookie value.
-        // The proto format has the key followed by type markers and then the string value.
-        val keyMarker = "innerTubeCookie"
-        val keyIndex = content.indexOf(keyMarker)
-        if (keyIndex == -1) return null
-
-        val afterKey = content.substring(keyIndex + keyMarker.length)
-
-        // Cookie starts after some proto markers and contains semicolon-separated values.
-        // Look for the first cookie key pattern like "__Secure-" or "HSID=" etc.
-        val cookiePatterns = listOf("__Secure-", "HSID=", "SSID=", "SID=", "SAPISID=")
-        var cookieStart = -1
-        for (pattern in cookiePatterns) {
-            val idx = afterKey.indexOf(pattern)
-            if (idx != -1 && (cookieStart == -1 || idx < cookieStart)) {
-                cookieStart = idx
-            }
-        }
-        if (cookieStart == -1) return null
-
-        // Find the end of the cookie (next control character or next key).
-        val cookieContent = afterKey.substring(cookieStart)
-        val cookieEnd = cookieContent.indexOfFirst {
-            it.code < 32 && it != '\t' && it != '\n' && it != '\r'
-        }
-
-        val rawCookie = if (cookieEnd > 0) {
-            cookieContent.substring(0, cookieEnd)
-        } else {
-            cookieContent.take(5000) // Reasonable max length
-        }
-        // Remove any control characters (newlines, etc.) that are invalid in HTTP headers.
-        return rawCookie.replace(Regex("[\\x00-\\x1F\\x7F]"), "").trim()
-    }
-
-    suspend fun fetchAccountInfoFromBackup(cookie: String): BackupPreviewInfo? {
-        return runCatching {
-            // Parse cookie to get SAPISID for auth header
-            val cookieMap = parseCookieString(cookie)
-            val sapisid = cookieMap["SAPISID"] ?: return@runCatching null
-
-            // Generate SAPISIDHASH auth header
-            val origin = "https://music.youtube.com"
-            val currentTime = System.currentTimeMillis() / 1000
-            val sapisidHash = sha1("$currentTime $sapisid $origin")
-            val authHeader = "SAPISIDHASH ${currentTime}_$sapisidHash"
-
-            val client = OkHttpClient()
-            val requestBody = """{"context":{"client":{"clientName":"WEB_REMIX","clientVersion":"1.20240101.01.00"}}}"""
-                .toRequestBody("application/json".toMediaType())
-
-            val request = Request.Builder()
-                .url("https://music.youtube.com/youtubei/v1/account/account_menu?prettyPrint=false")
-                .post(requestBody)
-                .header("Cookie", cookie)
-                .header("Authorization", authHeader)
-                .header("Origin", origin)
-                .header("Referer", "$origin/")
-                .header("X-Origin", origin)
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                .build()
-
-            val response = client.newCall(request).execute()
-            val responseBody = response.body?.string() ?: return@runCatching null
-
-            // Parse the JSON response
-            val json = Json { ignoreUnknownKeys = true }
-            val jsonResponse = json.parseToJsonElement(responseBody).jsonObject
-
-            // Navigate to activeAccountHeaderRenderer
-            val header = jsonResponse["actions"]
-                ?.jsonArray?.getOrNull(0)
-                ?.jsonObject?.get("openPopupAction")
-                ?.jsonObject?.get("popup")
-                ?.jsonObject?.get("multiPageMenuRenderer")
-                ?.jsonObject?.get("header")
-                ?.jsonObject?.get("activeAccountHeaderRenderer")
-                ?.jsonObject
-
-            if (header != null) {
-                val name = header["accountName"]
-                    ?.jsonObject?.get("runs")
-                    ?.jsonArray?.getOrNull(0)
-                    ?.jsonObject?.get("text")
-                    ?.jsonPrimitive?.content
-
-                val email = header["email"]
-                    ?.jsonObject?.get("runs")
-                    ?.jsonArray?.getOrNull(0)
-                    ?.jsonObject?.get("text")
-                    ?.jsonPrimitive?.content
-
-                val thumbnailUrl = header["accountPhoto"]
-                    ?.jsonObject?.get("thumbnails")
-                    ?.jsonArray?.getOrNull(0)
-                    ?.jsonObject?.get("url")
-                    ?.jsonPrimitive?.content
-
-                if (name != null) {
-                    BackupPreviewInfo(
-                        hasAuthData = true,
-                        accountName = name,
-                        accountEmail = email,
-                        accountImageUrl = thumbnailUrl,
-                        cookie = cookie,
-                    )
-                } else null
-            } else null
-        }.getOrElse {
-            Timber.tag("BACKUP_PREVIEW").e(it, "Failed to fetch account info from backup")
-            null
         }
     }
 

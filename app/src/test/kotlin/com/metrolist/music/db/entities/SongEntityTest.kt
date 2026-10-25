@@ -13,8 +13,8 @@ class SongEntityTest {
     fun localOnlyLikeUsesTheSameStateTransition() {
         val original = SongEntity(id = "video-id", title = "Title")
 
-        val liked = original.toggleLike(syncToYouTube = false)
-        val unliked = liked.toggleLike(syncToYouTube = false)
+        val liked = original.toggleLike()
+        val unliked = liked.toggleLike()
 
         assertTrue(liked.liked)
         assertNotNull(liked.likedDate)

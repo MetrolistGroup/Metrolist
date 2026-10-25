@@ -5,13 +5,11 @@
 
 package com.metrolist.music.ui.screens.wrapped
 
-import com.metrolist.innertube.models.AccountInfo
 import com.metrolist.music.db.entities.Album
 import com.metrolist.music.db.entities.Artist
 import com.metrolist.music.db.entities.SongWithStats
 
 data class WrappedState(
-    val accountInfo: AccountInfo? = null,
     val totalMinutes: Long = 0,
     val topSongs: List<SongWithStats> = emptyList(),
     val topArtists: List<Artist> = emptyList(),

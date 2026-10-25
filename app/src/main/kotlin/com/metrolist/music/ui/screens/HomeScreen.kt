@@ -104,7 +104,6 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.utils.completed
-import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalArtistNameAliases
 import com.metrolist.music.LocalListenTogetherManager
@@ -115,7 +114,6 @@ import com.metrolist.music.constants.AutoRadioQueueKey
 import com.metrolist.music.constants.GridItemSize
 import com.metrolist.music.constants.GridItemsSizeKey
 import com.metrolist.music.constants.GridThumbnailHeight
-import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.constants.ListItemHeight
 import com.metrolist.music.constants.ListThumbnailSize
 import com.metrolist.music.constants.RandomizeHomeOrderKey
@@ -186,7 +184,6 @@ sealed class HomeSection(
 
     data object KeepListening : HomeSection("keep_listening", 50)
 
-    data object AccountPlaylists : HomeSection("account_playlists", 40)
 
     data object ForgottenFavorites : HomeSection("forgotten_favorites", 30)
 
@@ -664,7 +661,6 @@ fun HomeScreen(
     val forgottenFavorites by viewModel.forgottenFavorites.collectAsStateWithLifecycle()
     val keepListening by viewModel.keepListening.collectAsStateWithLifecycle()
     val similarRecommendations by viewModel.similarRecommendations.collectAsStateWithLifecycle()
-    val accountPlaylists by viewModel.accountPlaylists.collectAsStateWithLifecycle()
     val homePage by viewModel.homePage.collectAsStateWithLifecycle()
     val explorePage by viewModel.explorePage.collectAsStateWithLifecycle()
     val dailyDiscover by viewModel.dailyDiscover.collectAsStateWithLifecycle()
@@ -676,10 +672,6 @@ fun HomeScreen(
     val pinnedSpeedDialItems by viewModel.pinnedSpeedDialItems.collectAsStateWithLifecycle()
     val selectedChip by viewModel.selectedChip.collectAsStateWithLifecycle()
 
-    // Official podcast API data
-    val savedPodcastShows by viewModel.savedPodcastShows.collectAsStateWithLifecycle()
-    val episodesForLater by viewModel.episodesForLater.collectAsStateWithLifecycle()
-
     val isLoading: Boolean by viewModel.isLoading.collectAsStateWithLifecycle()
     val isMoodAndGenresLoading = isLoading && explorePage?.moodAndGenres == null
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
@@ -689,9 +681,6 @@ fun HomeScreen(
     val quickPicksLazyGridState = rememberLazyGridState()
     val forgottenFavoritesLazyGridState = rememberLazyGridState()
 
-    val accountName by viewModel.accountName.collectAsStateWithLifecycle()
-    val accountImageUrl by viewModel.accountImageUrl.collectAsStateWithLifecycle()
-    val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
     val (randomizeHomeOrder) = rememberPreference(RandomizeHomeOrderKey, true)
     val autoRadioQueue by rememberPreference(AutoRadioQueueKey, defaultValue = true)
 
@@ -700,12 +689,6 @@ fun HomeScreen(
     val shouldShowWrappedCard by viewModel.showWrappedCard.collectAsStateWithLifecycle()
     val wrappedState by viewModel.wrappedManager.state.collectAsStateWithLifecycle()
     val isWrappedDataReady = wrappedState.isDataReady
-
-    val isLoggedIn =
-        remember(innerTubeCookie) {
-            "SAPISID" in parseCookieString(innerTubeCookie)
-        }
-    val url = if (isLoggedIn) accountImageUrl else null
 
     // Extract unique podcasts from episodes for "Podcast Channels" row
     // Cache the podcasts to prevent them from disappearing during refresh
@@ -1032,7 +1015,6 @@ fun HomeScreen(
             quickPicks,
             dailyDiscover,
             keepListening,
-            accountPlaylists,
             forgottenFavorites,
             communityPlaylists,
             similarRecommendations,
@@ -1047,7 +1029,6 @@ fun HomeScreen(
             if (!chipActive && communityPlaylists?.isNotEmpty() == true) list.add(HomeSection.FromTheCommunity)
             if (!chipActive && dailyDiscover?.isNotEmpty() == true) list.add(HomeSection.DailyDiscover)
             if (!chipActive && keepListening?.isNotEmpty() == true) list.add(HomeSection.KeepListening)
-            if (!chipActive && accountPlaylists?.isNotEmpty() == true) list.add(HomeSection.AccountPlaylists)
             if (!chipActive && forgottenFavorites?.isNotEmpty() == true) list.add(HomeSection.ForgottenFavorites)
 
             if (!chipActive) {
@@ -1081,7 +1062,6 @@ fun HomeScreen(
                             // Top tier starts equal
 
                             HomeSection.KeepListening,
-                            HomeSection.AccountPlaylists,
                             HomeSection.ForgottenFavorites,
                             HomeSection.FromTheCommunity,
                             -> 300
@@ -1104,7 +1084,6 @@ fun HomeScreen(
                             // Range: [300-100, 300+400] = [200, 700]
                             // This allows them to occasionally appear above a "bad roll" top tier item
                             HomeSection.KeepListening,
-                            HomeSection.AccountPlaylists,
                             HomeSection.ForgottenFavorites,
                             HomeSection.FromTheCommunity,
                             -> sectionRandom.nextInt(-100, 400)
@@ -1122,7 +1101,6 @@ fun HomeScreen(
                         HomeSection.FromTheCommunity to 80,
                         HomeSection.DailyDiscover to 70,
                         HomeSection.KeepListening to 60,
-                        HomeSection.AccountPlaylists to 50,
                         HomeSection.ForgottenFavorites to 40,
                         HomeSection.MoodAndGenres to 10,
                     )
@@ -1224,59 +1202,8 @@ fun HomeScreen(
 
                 // Show podcast sections FIRST when podcast chip is selected (fixed at top)
                 if (selectedChip?.title?.contains("Podcast", ignoreCase = true) == true) {
-                    // Show "Your Shows" section from official API
-                    if (savedPodcastShows.isNotEmpty()) {
-                        item(key = "00_your_shows_title") {
-                            NavigationTitle(
-                                title = stringResource(R.string.your_shows),
-                                onClick = {
-                                    navController.navigate("youtube_browse/FEmusic_library_non_music_audio_list")
-                                },
-                            )
-                        }
-
-                        item(key = "00_your_shows_list") {
-                            LazyRow(
-                                contentPadding =
-                                    WindowInsets.systemBars
-                                        .only(WindowInsetsSides.Horizontal)
-                                        .asPaddingValues(),
-                            ) {
-                                items(savedPodcastShows.distinctBy { it.id }, key = { "home_saved_podcast_${it.id}" }) { podcast ->
-                                    ytGridItem(podcast)
-                                }
-                            }
-                        }
-                    }
-
-                    // Show "Episodes for Later" section from official API
-                    if (episodesForLater.isNotEmpty()) {
-                        item(key = "00_episodes_for_later_title") {
-                            NavigationTitle(
-                                title = stringResource(R.string.episodes_for_later),
-                                onClick = {
-                                    navController.navigate("online_playlist/SE")
-                                },
-                            )
-                        }
-
-                        item(key = "00_episodes_for_later_list") {
-                            LazyRow(
-                                contentPadding =
-                                    WindowInsets.systemBars
-                                        .only(WindowInsetsSides.Horizontal)
-                                        .asPaddingValues(),
-                            ) {
-                                items(episodesForLater.distinctBy { it.id }, key = { "home_episode_later_${it.id}" }) { episode ->
-                                    ytGridItem(episode)
-                                }
-                            }
-                        }
-                    }
-
                     // Show Podcast Channels row if we have any (extracted from episodes)
-                    // Only show if "Your Shows" from official API is empty (to avoid duplicates)
-                    if (featuredPodcasts.isNotEmpty() && savedPodcastShows.isEmpty()) {
+                    if (featuredPodcasts.isNotEmpty()) {
                         item(key = "0_podcast_channels_title") {
                             NavigationTitle(
                                 title = stringResource(R.string.podcast_channels),
@@ -1299,14 +1226,8 @@ fun HomeScreen(
 
                     // Render the regular sections from the chip (episodes grouped by category)
                     // Use key prefix "1_" to ensure episodes sort after channels "0_"
-                    // Skip sections that duplicate official API sections (Your Shows, Episodes for Later)
                     homeSections.filterIsInstance<HomeSection.HomePageSection>().forEach { section ->
                         val sectionData = homePage?.sections?.getOrNull(section.index)
-                        // Skip if this section duplicates an official API section
-                        val skipTitles = listOf("your shows", "episodes for later", "podcast channels", "new episodes")
-                        if (sectionData?.title?.lowercase()?.let { title -> skipTitles.any { title.contains(it) } } == true) {
-                            return@forEach
-                        }
                         sectionData?.let {
                             item(key = "1_chip_section_title_${section.index}") {
                                 NavigationTitle(
@@ -2015,64 +1936,6 @@ fun HomeScreen(
                                     ) {
                                         items(keepListening.distinctBy { it.id }, key = { "home_keep_listening_${it.id}" }) {
                                             localGridItem(it)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        HomeSection.AccountPlaylists -> {
-                            accountPlaylists?.takeIf { it.isNotEmpty() }?.let { accountPlaylists ->
-                                item(key = "account_playlists_title") {
-                                    NavigationTitle(
-                                        label = stringResource(R.string.mixes),
-                                        title = accountName,
-                                        thumbnail = {
-                                            if (url != null) {
-                                                AsyncImage(
-                                                    model =
-                                                        ImageRequest
-                                                            .Builder(LocalContext.current)
-                                                            .data(url)
-                                                            .diskCachePolicy(CachePolicy.ENABLED)
-                                                            .diskCacheKey(url)
-                                                            .crossfade(false)
-                                                            .build(),
-                                                    placeholder = painterResource(id = R.drawable.person),
-                                                    error = painterResource(id = R.drawable.person),
-                                                    contentDescription = null,
-                                                    contentScale = ContentScale.Crop,
-                                                    modifier =
-                                                        Modifier
-                                                            .size(ListThumbnailSize)
-                                                            .clip(CircleShape),
-                                                )
-                                            } else {
-                                                Icon(
-                                                    painter = painterResource(id = R.drawable.person),
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(ListThumbnailSize),
-                                                )
-                                            }
-                                        },
-                                        onClick = {
-                                            navController.navigate("account")
-                                        },
-                                    )
-                                }
-
-                                item(key = "account_playlists_list") {
-                                    LazyRow(
-                                        contentPadding =
-                                            WindowInsets.systemBars
-                                                .only(WindowInsetsSides.Horizontal)
-                                                .asPaddingValues(),
-                                    ) {
-                                        items(
-                                            items = accountPlaylists.distinctBy { it.id },
-                                            key = { "home_account_playlist_${it.id}" },
-                                        ) { item ->
-                                            ytGridItem(item)
                                         }
                                     }
                                 }

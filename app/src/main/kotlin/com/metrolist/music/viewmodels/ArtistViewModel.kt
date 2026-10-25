@@ -32,7 +32,6 @@ import com.metrolist.music.db.entities.serializeArtistPage
 import com.metrolist.music.db.entities.toArtistPage
 import com.metrolist.music.extensions.filterExplicit
 import com.metrolist.music.extensions.filterExplicitAlbums
-import com.metrolist.music.utils.SyncUtils
 import com.metrolist.music.utils.ArtistNameAliases
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.get
@@ -60,7 +59,6 @@ import com.metrolist.music.extensions.filterVideoSongs as filterVideoSongsLocal
 class ArtistViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val database: MusicDatabase,
-    private val syncUtils: SyncUtils,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     val artistId = savedStateHandle.get<String>("artistId")!!
@@ -308,10 +306,6 @@ class ArtistViewModel @Inject constructor(
             } else {
                 Timber.d("[CHANNEL_TOGGLE] No artist and shouldBeSubscribed=false, nothing to do")
             }
-
-            Timber.d("[CHANNEL_TOGGLE] Calling syncUtils.subscribeChannel($channelId, $shouldBeSubscribed)")
-            // Sync with YouTube (handles login check internally)
-            syncUtils.subscribeChannel(channelId, shouldBeSubscribed)
         }
     }
 }

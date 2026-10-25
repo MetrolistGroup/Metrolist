@@ -70,7 +70,6 @@ import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.LocalSyncUtils
 import com.metrolist.music.R
 import com.metrolist.music.constants.ListItemHeight
 import com.metrolist.music.constants.ListThumbnailSize
@@ -108,7 +107,6 @@ fun SongMenu(
     originalSong: Song,
     event: Event? = null,
     playlistSong: PlaylistSong? = null,
-    playlistBrowseId: String? = null,
     onDismiss: () -> Unit,
     isFromCache: Boolean = false,
 ) {
@@ -123,7 +121,6 @@ fun SongMenu(
         .getDownload(originalSong.id)
         .collectAsStateWithLifecycle(initialValue = null)
     val coroutineScope = rememberCoroutineScope()
-    val syncUtils = LocalSyncUtils.current
     val listenTogetherManager = LocalListenTogetherManager.current
     val scope = rememberCoroutineScope()
     var refetchIconDegree by remember { mutableFloatStateOf(0f) }
@@ -472,7 +469,6 @@ fun SongMenu(
                         database.query {
                             update(s)
                         }
-                        syncUtils.likeSong(s)
                     }
                 },
             ) {
@@ -742,10 +738,6 @@ fun SongMenu(
                                                     ),
                                                 )
                                             }
-
-                                            // Sync with YouTube (handles login check internally)
-                                            val setVideoId = if (isEpisodeSaved) database.getSetVideoId(song.id)?.setVideoId else null
-                                            syncUtils.saveEpisode(song.id, shouldBeSaved, setVideoId)
                                         }
                                         onDismiss()
                                     },
@@ -781,17 +773,6 @@ fun SongMenu(
                                         )
                                     },
                                     onClick = {
-                                        val currentSong = song.song
-                                        val isInLibrary = currentSong.inLibrary != null
-                                        val token =
-                                            if (isInLibrary) currentSong.libraryRemoveToken else currentSong.libraryAddToken
-
-                                        token?.let {
-                                            coroutineScope.launch {
-                                                YouTube.feedback(listOf(it))
-                                            }
-                                        }
-
                                         database.query {
                                             update(song.song.toggleLibrary())
                                         }
@@ -830,7 +811,6 @@ fun SongMenu(
                                     },
                                     onClick = {
                                         playlistSong.let { ps ->
-                                            val capturedSetVideoId = ps.map.setVideoId
                                             database.transaction {
                                                 move(
                                                     ps.map.playlistId,
@@ -838,15 +818,6 @@ fun SongMenu(
                                                     Int.MAX_VALUE
                                                 )
                                                 delete(ps.map.copy(position = Int.MAX_VALUE))
-                                            }
-                                            playlistBrowseId?.let { browseId ->
-                                                syncUtils.scheduleRemoveFromPlaylist(
-                                                    browseId,
-                                                    ps.map.songId,
-                                                    ps.map.playlistId
-                                                ) {
-                                                    capturedSetVideoId
-                                                }
                                             }
                                             onDismiss()
                                         }

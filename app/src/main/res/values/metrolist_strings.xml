@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="local_history">Local</string>
-    <string name="remote_history">Remote</string>
 
     <string name="charts">Charts</string>
     <string name="mixes">Mixes</string>
@@ -23,10 +22,6 @@
     <string name="monthly_most_playlist_name">Monthly Most</string>
     <string name="cached_playlist">Cached</string>
     <string name="uploaded_playlist">Uploaded</string>
-    <string name="filter_uploaded">Uploaded</string>
-    <string name="sync_playlist">Sync playlist</string>
-    <string name="sync_disabled">Sync disabled</string>
-    <string name="allows_for_sync_witch_youtube">NOTE: This option enables syncing with YouTube Music and CANNOT be changed later</string>
 
     <string name="and">and</string>
     <string name="generating_image">Generating image…</string>
@@ -60,7 +55,6 @@
     <string name="download_in_progress_desc">A download is in progress</string>
     <string name="share_playlist_desc">Share this playlist with others</string>
     <string name="delete_playlist_desc">Remove this playlist permanently</string>
-    <string name="sync_playlist_desc">Sync this playlist with YouTube Music</string>
     <string name="copy_link">Copy link</string>
     <string name="select">Select all</string>
     <string name="like_all">Like all</string>
@@ -154,7 +148,6 @@
     <string name="show_cached_playlist">Show Cached playlist</string>
     <string name="enable_song_cache">Enable song cache</string>
     <string name="enable_song_cache_desc">Automatically cache songs for faster future playback</string>
-    <string name="show_uploaded_playlist">Show Uploaded playlist</string>
     <string name="show_most_stats_playlists">Show Weekly and Monthly Most playlists</string>
     <string name="show_most_stats_playlists_desc">Create and show stats-based Most playlists in Stats and Library</string>
     <string name="shuffle_playlist_first">Shuffle playlist or album first</string>
@@ -171,19 +164,12 @@
     <string name="skip_silence_instant">Instantly skip silence</string>
     <string name="skip_silence_instant_desc">Jump ahead during silent moments instead of speeding up playback</string>
 
-    <string name="advanced_login">Log in with token</string>
-    <string name="token_hidden">Tap to show token</string>
-    <string name="token_shown">Tap again to copy or edit</string>
-    <string name="token_adv_login_description">This is an ADVANCED login method. Instead of using the web portal, you can enter or update your login token directly. This can be useful for signing in across multiple devices quickly. Tokens in an unrecognized format will be rejected</string>
-    <string name="yt_sync">Auto-sync with account</string>
-    <string name="more_content">More content</string>
 
     <string name="sort_ascending">Sort ascending</string>
     <string name="sort_descending">Sort descending</string>
 
     <!-- Playlist cover edit -->
     <string name="edit_playlist_cover">Edit playlist cover</string>
-    <string name="edit_playlist_cover_note">NOTE: Your account must be linked to a phone number and verified on YouTube Music to change the playlist cover</string>
     <string name="edit_playlist_cover_note_wait">After selecting an image, please wait a moment for the new cover to appear in your playlist</string>
     <string name="choose_from_library">Choose from library</string>
     <string name="remove_custom_image">Remove custom image</string>
@@ -220,8 +206,6 @@
     <string name="import_online">Import an M3U playlist</string>
     <string name="import_csv">Import a CSV playlist</string>
     <string name="playlist_unavailable">Playlist unavailable</string>
-    <string name="playlist_created_locally">YouTube sync failed. Playlist created locally.</string>
-    <string name="playlist_add_local_to_synced_note">NOTE: Adding local songs to synced or remote playlists is not supported. Any other combination is valid</string>
     <string name="export_playlist">Export playlist</string>
     <string name="export_as_csv">Export as CSV</string>
     <string name="export_as_m3u">Export as M3U</string>
@@ -242,7 +226,6 @@
 
     <string name="disable">Disable</string>
 
-    <string name="not_logged_in_youtube">Not logged in to YouTube</string>
 
     <string name="default_links">Open supported links</string>
     <string name="open_app_settings_error">Couldn\'t open the app settings</string>
@@ -533,7 +516,6 @@
     <string name="error_playback_failed">Playback failed</string>
     <string name="error_no_internet_connection">No internet connection</string>
     <string name="error_offline_playback">You’re offline. Connect to the internet, or play a track downloaded for offline use.</string>
-    <string name="error_explicit_login_recommended">Explicit playback works better with a logged-in account.</string>
     <string name="error_job_cancelled">The video is not available for playback. Try again or skip to the next song.</string>
     <string name="error_episode_save">Failed to save episode</string>
     <string name="error_episode_remove">Failed to remove episode</string>
@@ -843,10 +825,6 @@
     <string name="from_the_community">From the community</string>
 
     <!-- Logout dialog -->
-    <string name="logout_dialog_title">Keep library data?</string>
-    <string name="logout_dialog_message">Do you want to keep your playlists and library data? Downloaded songs will always be kept</string>
-    <string name="logout_keep">Keep</string>
-    <string name="logout_clear">Clear</string>
 
     <!-- Credits / About Screen -->
     <string name="credits_lead_developer">Lead developer</string>
@@ -869,8 +847,6 @@
     <string name="view_podcast">View podcast</string>
     <string name="podcast_channels">Podcast channels</string>
     <string name="latest_episodes">Latest episodes</string>
-    <string name="your_shows">Your shows</string>
-    <string name="new_episodes">New episodes</string>
     <string name="episodes_for_later">Episodes for later</string>
     <string name="save_episode_for_later">Save for later</string>
     <string name="save_episode_for_later_desc">Add to your Episodes for later playlist</string>
@@ -895,29 +871,16 @@
     <!-- Restore confirmation dialog -->
     <string name="restore_confirm_title">Restore backup?</string>
     <string name="restore_confirm_message">This will restore your app data from the selected backup</string>
-    <string name="restore_account_warning">The following account information will be restored and preserved:</string>
     <string name="restore">Restore</string>
     <string name="restore_database_incompatible">Cannot restore backup: database version incompatible. Your current data has been preserved.</string>
-    <string name="checking_previous_account">Checking for previous account…</string>
-    <string name="no_account_found">No account found</string>
 
     <!-- Cache settings -->
 
     <!-- Upload songs -->
-    <string name="upload_songs">Upload songs</string>
-    <string name="uploading">Uploading…</string>
-    <string name="upload_progress">%1$d of %2$d</string>
-    <string name="upload_complete">Upload complete</string>
-    <string name="upload_failed">Upload failed</string>
-    <string name="upload_file_too_large">File too large (maximum 300MB)</string>
-    <string name="upload_unsupported_format">Unsupported format. Supported formats: MP3, M4A, WMA, FLAC, OGG</string>
     <string name="delete_uploaded_song">Delete uploaded song</string>
     <string name="delete_uploaded_song_confirm">Are you sure you want to delete this uploaded song? This action cannot be undone</string>
     <string name="delete_uploaded_song_success">Uploaded song deleted</string>
     <string name="delete_uploaded_song_failed">Failed to delete uploaded song</string>
-    <string name="delete_uploaded_songs">Delete uploaded songs</string>
-    <string name="delete_uploaded_songs_confirm">Are you sure you want to delete %1$d uploaded songs? This action cannot be undone</string>
-    <string name="deleted_n_songs">Deleted %1$d songs</string>
     <string name="deleting">Deleting…</string>
 
     <!-- Android Auto settings -->
@@ -959,12 +922,6 @@
     <string name="widget_playlists">Playlists</string>
     <string name="widget_playlists_description">Playlist shortcuts with mini-player controls</string>
     <string name="choose_something_below">Choose something below</string>
-    <string name="choose_youtube_channel">Choose a YouTube channel</string>
-    <string name="choose_youtube_channel_description">This Google account has multiple channels. Pick the one you want to use.</string>
-    <string name="switch_youtube_channel">Switch YouTube channel</string>
-    <string name="youtube_channels_failed">Couldn\'t retrieve the YouTube channels for this account. Please try again.</string>
-    <string name="authentication_data_extraction_failed">Couldn\'t read the YouTube Music session. Please try again.</string>
-    <string name="login_failed_with_error">Login failed: %1$s</string>
     <string name="stream_client">Stream client</string>
     <string name="format_player_hash">Player hash</string>
     <string name="format_cipher_support_added">Cipher support added</string>

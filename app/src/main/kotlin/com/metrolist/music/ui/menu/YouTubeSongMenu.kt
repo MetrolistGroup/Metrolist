@@ -62,7 +62,6 @@ import com.metrolist.music.LocalArtistNameAliases
 import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.LocalSyncUtils
 import com.metrolist.music.R
 import com.metrolist.music.constants.ListItemHeight
 import com.metrolist.music.constants.ListThumbnailSize
@@ -97,7 +96,6 @@ import java.time.LocalDateTime
 fun YouTubeSongMenu(
     song: SongItem,
     onDismiss: () -> Unit,
-    onHistoryRemoved: () -> Unit = {}
 ) {
     val navController = LocalNavController.current
     val context = LocalContext.current
@@ -107,7 +105,6 @@ fun YouTubeSongMenu(
     val librarySong by database.song(song.id).collectAsStateWithLifecycle(initialValue = null)
     val download by downloadUtil.getDownload(song.id).collectAsStateWithLifecycle(initialValue = null)
     val coroutineScope = rememberCoroutineScope()
-    val syncUtils = LocalSyncUtils.current
     val listenTogetherManager = LocalListenTogetherManager.current
     val isPinned by database.speedDialDao.isPinned(song.id).collectAsStateWithLifecycle(initialValue = false)
     val artistNameAliases = LocalArtistNameAliases.current
@@ -240,12 +237,6 @@ fun YouTubeSongMenu(
                                 insert(song.toMediaMetadata().toSongEntity().copy(inLibrary = LocalDateTime.now(), isEpisode = true))
                             }
                         }
-
-                        // Sync with YouTube (handles login check internally)
-                        coroutineScope.launch(Dispatchers.IO) {
-                            val setVideoId = if (isCurrentlySaved) song.setVideoId ?: database.getSetVideoId(song.id)?.setVideoId else null
-                            syncUtils.saveEpisode(song.id, shouldBeSaved, setVideoId)
-                        }
                     } else {
                         // Regular song: toggle like
                         database.transaction {
@@ -258,7 +249,6 @@ fun YouTubeSongMenu(
                                     s = librarySong.song.toggleLike()
                                     update(s)
                                 }
-                                syncUtils.likeSong(s)
                             }
                         }
                     }
@@ -437,8 +427,6 @@ fun YouTubeSongMenu(
                                         database.query {
                                             librarySong?.song?.let { update(it.copy(inLibrary = null)) }
                                         }
-                                        // Sync with YouTube (handles login check internally)
-                                        syncUtils.saveEpisode(song.id, false, song.setVideoId)
                                         onDismiss()
                                     }
                                 )
@@ -464,41 +452,11 @@ fun YouTubeSongMenu(
                                                 insert(song.toMediaMetadata().toSongEntity().copy(inLibrary = java.time.LocalDateTime.now(), isEpisode = true))
                                             }
                                         }
-                                        // Sync with YouTube (handles login check internally)
-                                        syncUtils.saveEpisode(song.id, true, null)
                                         onDismiss()
                                     }
                                 )
                             )
                         }
-                    }
-                    if (song.historyRemoveToken != null) {
-                        add(
-                            Material3MenuItemData(
-                                title = { Text(text = stringResource(R.string.remove_from_history)) },
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.delete),
-                                        contentDescription = null,
-                                    )
-                                },
-                                onClick = {
-                                    coroutineScope.launch {
-                                        Timber.d("[HISTORY_REMOVE] Removing song ${song.id} from YTM history")
-                                        YouTube.feedback(listOf(song.historyRemoveToken!!))
-                                            .onSuccess {
-                                                Timber.d("[HISTORY_REMOVE] Successfully removed from YTM history")
-                                            }
-                                            .onFailure { e ->
-                                                Timber.e(e, "[HISTORY_REMOVE] Failed to remove from YTM history")
-                                            }
-                                        delay(500)
-                                        onHistoryRemoved()
-                                        onDismiss()
-                                    }
-                                }
-                            )
-                        )
                     }
                     add(
                         Material3MenuItemData(
@@ -539,11 +497,6 @@ fun YouTubeSongMenu(
                             },
                             onClick = {
                                 val isInLibrary = librarySong?.song?.inLibrary != null
-
-                                // Use the new reliable method that fetches fresh tokens
-                                coroutineScope.launch {
-                                    YouTube.toggleSongLibrary(song.id, !isInLibrary)
-                                }
 
                                 if (isInLibrary) {
                                     database.query {

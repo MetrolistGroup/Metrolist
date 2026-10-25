@@ -30,14 +30,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.R
 import com.metrolist.music.constants.AddToPlaylistPosition
 import com.metrolist.music.constants.AddToPlaylistPositionKey
 import com.metrolist.music.constants.AddToPlaylistSortDescendingKey
 import com.metrolist.music.constants.AddToPlaylistSortTypeKey
-import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.constants.ListThumbnailSize
 import com.metrolist.music.constants.PlaylistSortType
 import com.metrolist.music.db.DatabaseDao
@@ -76,12 +74,10 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material3.FilterChip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material3.FilterChipDefaults
-import com.metrolist.music.LocalSyncUtils
 
 @Composable
 fun AddToPlaylistDialog(
     isVisible: Boolean,
-    allowSyncing: Boolean = true,
     initialTextFieldValue: String? = null,
     onGetSong: suspend () -> List<String>, // list of song ids. Songs should be inserted to database in this function.
     onGetSongIds: (suspend () -> List<String>)? = null,
@@ -89,7 +85,6 @@ fun AddToPlaylistDialog(
     viewModel: PlaylistsViewModel = hiltViewModel()
 ) {
     val database = LocalDatabase.current
-    val syncUtils = LocalSyncUtils.current
     val coroutineScope = rememberCoroutineScope()
     val (addToPlaylistPosition) = rememberEnumPreference(
         AddToPlaylistPositionKey,
@@ -104,10 +99,6 @@ fun AddToPlaylistDialog(
         false
     )
     val playlists by viewModel.allPlaylists.collectAsStateWithLifecycle()
-    val (innerTubeCookie) = rememberPreference(InnerTubeCookieKey, "")
-    val isLoggedIn = remember(innerTubeCookie) {
-        "SAPISID" in parseCookieString(innerTubeCookie)
-    }
     var showCreatePlaylistDialog by rememberSaveable {
         mutableStateOf(false)
     }
@@ -128,15 +119,12 @@ fun AddToPlaylistDialog(
         mutableStateOf<Set<String>>(emptySet())
     }
 
-    suspend fun addSongsAndSync(targetPlaylist: Playlist, ids: List<String>) {
+    suspend fun addSongs(targetPlaylist: Playlist, ids: List<String>) {
         database.addSongsToPlaylist(
             targetPlaylist,
             ids.map { it to null },
             prepend = addToPlaylistPosition.prepend,
         )
-        targetPlaylist.playlist.browseId?.let { browseId ->
-            syncUtils.scheduleAddToPlaylist(browseId, targetPlaylist.id, ids)
-        }
     }
 
     LaunchedEffect(isVisible, playlists.isEmpty()) {
@@ -309,7 +297,7 @@ fun AddToPlaylistDialog(
                             if (duplicates.isNotEmpty()) {
                                 showDuplicateDialog = true
                             } else {
-                                addSongsAndSync(playlist, songIds!!)
+                                addSongs(playlist, songIds!!)
                                 withContext(Dispatchers.Main) { onDismiss() }
                             }
                         }
@@ -323,7 +311,6 @@ fun AddToPlaylistDialog(
         CreatePlaylistDialog(
             onDismiss = { showCreatePlaylistDialog = false },
             initialTextFieldValue = initialTextFieldValue,
-            allowSyncing = allowSyncing
         )
     }
 
@@ -336,7 +323,7 @@ fun AddToPlaylistDialog(
                         onClick = {
                             showDuplicateDialog = false
                             coroutineScope.launch(Dispatchers.IO) {
-                                addSongsAndSync(
+                                addSongs(
                                     selectedPlaylist!!,
                                     songIds!!.filter { !duplicates.contains(it) }
                                 )
@@ -351,7 +338,7 @@ fun AddToPlaylistDialog(
                         onClick = {
                             showDuplicateDialog = false
                             coroutineScope.launch(Dispatchers.IO) {
-                                addSongsAndSync(selectedPlaylist!!, songIds!!)
+                                addSongs(selectedPlaylist!!, songIds!!)
                                 withContext(Dispatchers.Main) { onDismiss() }
                             }
                         }

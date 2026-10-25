@@ -61,13 +61,6 @@ fun PlaybackError(
         remember(causes) {
             causes.mapNotNull { it.message?.takeIf(String::isNotBlank) }.distinct()
         }
-    val isExplicitRestricted =
-        rawErrorMessages.any {
-            it.contains("confirm your age", ignoreCase = true) ||
-                it.contains("age-restricted", ignoreCase = true) ||
-                it.contains("LOGIN_REQUIRED", ignoreCase = true) ||
-                it.contains("403", ignoreCase = true)
-        }
     val isJobCancelled =
         rawErrorMessages.any {
             it.contains("job", ignoreCase = true) &&
@@ -77,7 +70,6 @@ fun PlaybackError(
         }
     val guidance =
         when {
-            isExplicitRestricted -> stringResource(R.string.error_explicit_login_recommended)
             isJobCancelled -> stringResource(R.string.error_job_cancelled)
             else -> null
         }

@@ -8,24 +8,17 @@ package com.metrolist.music.viewmodels
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.pages.HistoryPage
 import com.metrolist.music.constants.HideVideoSongsKey
-import com.metrolist.music.constants.HistorySource
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.utils.dataStore
-import com.metrolist.music.utils.reportException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -39,13 +32,9 @@ constructor(
     @ApplicationContext private val context: Context,
     val database: MusicDatabase,
 ) : ViewModel() {
-    var historySource = MutableStateFlow(HistorySource.LOCAL)
-
     private val today = LocalDate.now()
     private val thisMonday = today.with(DayOfWeek.MONDAY)
     private val lastMonday = thisMonday.minusDays(7)
-
-    val historyPage = MutableStateFlow<HistoryPage?>(null)
 
     val events =
         context.dataStore.data
@@ -88,20 +77,6 @@ constructor(
                             }
                     }
             }.stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
-
-    init {
-        fetchRemoteHistory()
-    }
-
-    fun fetchRemoteHistory() {
-        viewModelScope.launch(Dispatchers.IO) {
-            YouTube.musicHistory().onSuccess {
-                historyPage.value = it
-            }.onFailure {
-                reportException(it)
-            }
-        }
-    }
 }
 
 sealed class DateAgo {

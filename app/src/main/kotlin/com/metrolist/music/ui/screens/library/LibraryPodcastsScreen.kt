@@ -64,7 +64,6 @@ import coil3.compose.AsyncImage
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.LocalSyncUtils
 import com.metrolist.music.R
 import com.metrolist.music.constants.CONTENT_TYPE_HEADER
 import com.metrolist.music.constants.CONTENT_TYPE_SONG
@@ -103,6 +102,7 @@ fun LibraryPodcastsScreen(
     viewModel: LibraryPodcastsViewModel = hiltViewModel(),
 ) {
     val downloadedEpisodesStr = stringResource(R.string.downloaded_episodes)
+    val episodesForLaterStr = stringResource(R.string.episodes_for_later)
     val database = LocalDatabase.current
     val menuState = LocalMenuState.current
     val playerConnection = LocalPlayerConnection.current ?: return
@@ -121,24 +121,7 @@ fun LibraryPodcastsScreen(
     val subscribedChannels by viewModel.subscribedChannels.collectAsStateWithLifecycle()
     val downloadedEpisodes by viewModel.downloadedEpisodes.collectAsStateWithLifecycle()
     val savedEpisodes by viewModel.savedEpisodes.collectAsStateWithLifecycle()
-    val sePlaylist by viewModel.sePlaylist.collectAsStateWithLifecycle()
     val podcastChannels by viewModel.podcastChannels.collectAsStateWithLifecycle()
-    val rdpnPlaylist by viewModel.rdpnPlaylist.collectAsStateWithLifecycle()
-
-    // Refresh channels when screen becomes visible (ON_RESUME)
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    viewModel.refreshChannels()
-                }
-            }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
 
     val lazyListState = rememberLazyListState()
 
@@ -153,27 +136,8 @@ fun LibraryPodcastsScreen(
         }
     }
 
-    var isRefreshing by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
-    val pullToRefreshState = rememberPullToRefreshState()
-
     Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .pullToRefresh(
-                    state = pullToRefreshState,
-                    isRefreshing = isRefreshing,
-                    onRefresh = {
-                        if (!isRefreshing) {
-                            isRefreshing = true
-                            coroutineScope.launch {
-                                viewModel.refreshAll()
-                                isRefreshing = false
-                            }
-                        }
-                    },
-                ),
+        modifier = Modifier.fillMaxSize(),
     ) {
         // Chip row header — same pattern as LibrarySongsScreen
         val chipsHeader = @Composable {
@@ -221,28 +185,60 @@ fun LibraryPodcastsScreen(
                         chipsHeader()
                     }
 
-                    // RDPN "New Episodes" auto-playlist card
-                    item(key = "rdpn_playlist", contentType = CONTENT_TYPE_HEADER) {
-                        AutoPlaylistCard(
-                            title = stringResource(R.string.new_episodes),
-                            thumbnailUrl = rdpnPlaylist?.thumbnail,
-                            episodeCount = rdpnPlaylist?.songCountText,
-                            onClick = { navController.navigate("online_playlist/RDPN") },
-                        )
-                    }
-
-                    // Episodes for Later - card/folder (works both logged in and out)
-                    item(key = "episodes_for_later", contentType = CONTENT_TYPE_HEADER) {
-                        AutoPlaylistCard(
-                            title = stringResource(R.string.episodes_for_later),
-                            thumbnailUrl = sePlaylist?.thumbnail ?: savedEpisodes.firstOrNull()?.song?.thumbnailUrl,
-                            episodeCount =
-                                sePlaylist?.songCountText ?: if (savedEpisodes.isNotEmpty()) {
-                                    pluralStringResource(R.plurals.n_episode, savedEpisodes.size, savedEpisodes.size)
-                                } else {
-                                    null
-                                },
-                            onClick = { navController.navigate("online_playlist/SE") },
+                    itemsIndexed(
+                        items = savedEpisodes,
+                        key = { index, item -> "saved_${item.song.id}_$index" },
+                        contentType = { _, _ -> CONTENT_TYPE_SONG },
+                    ) { index, episode ->
+                        val channelName =
+                            episode.artists
+                                .joinToString { it.name }
+                                .ifEmpty { episode.song.albumName ?: "" }
+                        val subtitle =
+                            joinByBullet(
+                                channelName,
+                                makeTimeString(episode.song.duration.toLong() * 1000L),
+                            )
+                        SongListItem(
+                            song = episode,
+                            showInLibraryIcon = false,
+                            isActive = episode.id == mediaMetadata?.id,
+                            isPlaying = isPlaying,
+                            showLikedIcon = false,
+                            subtitleOverride = subtitle.ifEmpty { null },
+                            trailingContent = {
+                                IconButton(
+                                    onClick = {
+                                        menuState.show {
+                                            SongMenu(
+                                                originalSong = episode,
+                                                onDismiss = menuState::dismiss,
+                                            )
+                                        }
+                                    },
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.more_vert),
+                                        contentDescription = stringResource(R.string.more_options),
+                                    )
+                                }
+                            },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        if (episode.id == mediaMetadata?.id) {
+                                            playerConnection.togglePlayPause()
+                                        } else {
+                                            playerConnection.playQueue(
+                                                ListQueue(
+                                                    title = episodesForLaterStr,
+                                                    items = savedEpisodes.map { it.toMediaItem() },
+                                                    startIndex = index,
+                                                ),
+                                            )
+                                        }
+                                    }.animateItem(),
                         )
                     }
 
@@ -478,15 +474,6 @@ fun LibraryPodcastsScreen(
                 )
             }
         }
-
-        Indicator(
-            isRefreshing = isRefreshing,
-            state = pullToRefreshState,
-            modifier =
-                Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues()),
-        )
     }
 }
 
@@ -643,7 +630,6 @@ private fun PodcastEpisodePlaylistMenu(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val syncUtils = LocalSyncUtils.current
     val isPinned by database.speedDialDao.isPinned(podcast.id).collectAsStateWithLifecycle(initialValue = false)
 
     val playlistId = podcast.id.removePrefix("MPSP")
@@ -667,8 +653,6 @@ private fun PodcastEpisodePlaylistMenu(
                             database.query {
                                 update(podcast.copy(bookmarkedAt = null))
                             }
-                            // Sync with YouTube (unsave podcast only, don't unsubscribe channel)
-                            syncUtils.savePodcast(podcast.id, false)
                         }
                         onDismiss()
                     },

@@ -48,8 +48,6 @@ import com.metrolist.music.extensions.matchesNormalizedQuery
 import com.metrolist.music.extensions.normalizeForSearch
 import com.metrolist.music.extensions.toEnum
 import com.metrolist.music.playback.DownloadUtil
-import com.metrolist.music.utils.PodcastRefreshTrigger
-import com.metrolist.music.utils.SyncUtils
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.reportException
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -78,7 +76,6 @@ constructor(
     @ApplicationContext context: Context,
     database: MusicDatabase,
     downloadUtil: DownloadUtil,
-    private val syncUtils: SyncUtils,
 ) : ViewModel() {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
@@ -113,17 +110,6 @@ constructor(
                 }
             }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    fun syncLikedSongs() {
-        viewModelScope.launch(Dispatchers.IO) { syncUtils.syncLikedSongs() }
-    }
-
-    fun syncLibrarySongs() {
-        viewModelScope.launch(Dispatchers.IO) { syncUtils.syncLibrarySongs() }
-    }
-
-    fun syncUploadedSongs() {
-        viewModelScope.launch(Dispatchers.IO) { syncUtils.syncUploadedSongs() }
-    }
 }
 
 @HiltViewModel
@@ -132,7 +118,6 @@ class LibraryArtistsViewModel
 constructor(
     @ApplicationContext context: Context,
     database: MusicDatabase,
-    private val syncUtils: SyncUtils,
 ) : ViewModel() {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
@@ -170,10 +155,6 @@ constructor(
                 .distinctBy { it.id }
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    fun sync() {
-        viewModelScope.launch(Dispatchers.IO) { syncUtils.syncArtistsSubscriptions() }
-    }
-
     init {
         viewModelScope.launch(Dispatchers.IO) {
             allArtists.collect { artists ->
@@ -203,7 +184,6 @@ class LibraryAlbumsViewModel
 constructor(
     @ApplicationContext context: Context,
     database: MusicDatabase,
-    private val syncUtils: SyncUtils,
 ) : ViewModel() {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
@@ -236,10 +216,6 @@ constructor(
                 }
             }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    fun sync() {
-        viewModelScope.launch(Dispatchers.IO) { syncUtils.syncLikedAlbums() }
-    }
-
     init {
         viewModelScope.launch(Dispatchers.IO) {
             allAlbums.collect { albums ->
@@ -269,7 +245,6 @@ class LibraryPlaylistsViewModel
 constructor(
     @ApplicationContext context: Context,
     database: MusicDatabase,
-    private val syncUtils: SyncUtils,
 ) : ViewModel() {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
@@ -293,10 +268,6 @@ constructor(
             .flatMapLatest { (sortType, descending, hideYoutubeShorts) ->
                 database.playlists(sortType, descending).map { it.filterYoutubeShorts(hideYoutubeShorts) }
             }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    fun sync() {
-        viewModelScope.launch(Dispatchers.IO) { syncUtils.syncSavedPlaylists() }
-    }
 
     val topValue =
         context.dataStore.data
@@ -340,11 +311,7 @@ class LibraryMixViewModel
 constructor(
     @ApplicationContext context: Context,
     database: MusicDatabase,
-    private val syncUtils: SyncUtils,
 ) : ViewModel() {
-    private val _isRefreshing = MutableStateFlow(false)
-    val isRefreshing = _isRefreshing.asStateFlow()
-
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
     val debouncedSearchQuery = _searchQuery
@@ -353,20 +320,6 @@ constructor(
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
-    }
-
-    val syncAllLibrary = {
-         viewModelScope.launch(Dispatchers.IO) {
-             syncUtils.tryAutoSync()
-         }
-    }
-
-    fun refresh() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _isRefreshing.value = true
-            syncUtils.performFullSyncSuspend()
-            _isRefreshing.value = false
-        }
     }
 
     val topValue =
@@ -455,31 +408,14 @@ class LibraryPodcastsViewModel
 constructor(
     @ApplicationContext context: Context,
     private val database: MusicDatabase,
-    private val syncUtils: SyncUtils,
 ) : ViewModel() {
-    // Subscribed podcast channels synced from YT Music
+    // Locally bookmarked podcasts
     val subscribedChannels = database.subscribedPodcasts()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    // SE "Episodes for Later" playlist fetched from YT Music (like AccountScreen)
-    private val _sePlaylist = MutableStateFlow<com.metrolist.innertube.models.PlaylistItem?>(null)
-    val sePlaylist = _sePlaylist.asStateFlow()
-
-    // RDPN "New Episodes" playlist fetched from YouTube Music (real thumbnail + episode count)
-    private val _rdpnPlaylist = MutableStateFlow<com.metrolist.innertube.models.PlaylistItem?>(null)
-    val rdpnPlaylist = _rdpnPlaylist.asStateFlow()
-
-    // Podcast host channels fetched from YT Music library/podcast_channels
-    private val _apiPodcastChannels = MutableStateFlow<List<ArtistItem>>(emptyList())
-
-    // Podcast channels: API subscriptions + locally bookmarked artists that have podcasts
-    // Only shows channels explicitly subscribed to (not derived from saved podcasts)
-    val podcastChannels = kotlinx.coroutines.flow.combine(
-        _apiPodcastChannels,
-        database.bookmarkedPodcastChannels()
-    ) { apiChannels, localPodcastChannels ->
-        // Convert locally bookmarked podcast channels to ArtistItem format
-        val localAsArtistItems = localPodcastChannels.map { artist ->
+    // Podcast channels: locally bookmarked artists that have podcasts
+    val podcastChannels = database.bookmarkedPodcastChannels().map { localPodcastChannels ->
+        localPodcastChannels.map { artist ->
             ArtistItem(
                 id = artist.id,
                 title = artist.artist.name,
@@ -488,11 +424,6 @@ constructor(
                 radioEndpoint = null,
             )
         }
-
-        // Combine and deduplicate by ID (prefer API version if exists)
-        val apiIds = apiChannels.map { it.id }.toSet()
-        val uniqueLocalChannels = localAsArtistItems.filter { it.id !in apiIds }
-        apiChannels + uniqueLocalChannels
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     // Downloaded podcast episodes
@@ -522,79 +453,4 @@ constructor(
                 val (sortType, descending) = sortDesc
                 database.savedPodcastEpisodes(sortType, descending).map { it.filterExplicit(hideExplicit) }
             }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-
-    private suspend fun fetchSePlaylist() {
-        YouTube.library("FEmusic_liked_playlists").completed().onSuccess {
-            _sePlaylist.value = it.items
-                .filterIsInstance<com.metrolist.innertube.models.PlaylistItem>()
-                .find { it.id == "SE" }
-        }.onFailure {
-            timber.log.Timber.e(it, "[PODCAST] Failed to fetch SE playlist")
-        }
-    }
-
-    private suspend fun fetchPodcastChannels() {
-        YouTube.libraryPodcastChannels().onSuccess { page ->
-            val channels = page.items.filterIsInstance<ArtistItem>()
-            _apiPodcastChannels.value = channels
-            timber.log.Timber.d("[PODCAST] Fetched ${channels.size} podcast channels from YT Music")
-        }.onFailure {
-            timber.log.Timber.e(it, "[PODCAST] Failed to fetch podcast channels")
-        }
-    }
-
-    private suspend fun fetchRdpnPlaylist() {
-        YouTube.newEpisodesPlaylistInfo().onSuccess { item ->
-            _rdpnPlaylist.value = item
-            timber.log.Timber.d("[PODCAST] RDPN playlist: ${item.title}, thumbnail: ${item.thumbnail}")
-        }.onFailure {
-            timber.log.Timber.e(it, "[PODCAST] Failed to fetch RDPN playlist info")
-        }
-    }
-
-    init {
-        viewModelScope.launch(Dispatchers.IO) {
-            fetchSePlaylist()
-        }
-        viewModelScope.launch(Dispatchers.IO) {
-            fetchPodcastChannels()
-        }
-        viewModelScope.launch(Dispatchers.IO) {
-            fetchRdpnPlaylist()
-        }
-        viewModelScope.launch(Dispatchers.IO) {
-            syncUtils.syncPodcastSubscriptionsSuspend()
-        }
-        // Observe refresh trigger for auto-refresh after subscribe/unsubscribe
-        viewModelScope.launch(Dispatchers.IO) {
-            PodcastRefreshTrigger.refreshFlow.collect {
-                // Small delay to allow YouTube's backend to update
-                kotlinx.coroutines.delay(1500)
-                fetchPodcastChannels()
-            }
-        }
-    }
-
-    fun clearPodcastData() {
-        viewModelScope.launch(Dispatchers.IO) {
-            syncUtils.clearPodcastData()
-        }
-    }
-
-    suspend fun refreshAll() {
-        fetchSePlaylist()
-        fetchPodcastChannels()
-        fetchRdpnPlaylist()
-        syncUtils.syncPodcastSubscriptionsSuspend()
-        syncUtils.syncEpisodesForLaterSuspend()
-    }
-
-    /**
-     * Force refresh podcast channels. Called when screen becomes visible.
-     */
-    fun refreshChannels() {
-        viewModelScope.launch(Dispatchers.IO) {
-            fetchPodcastChannels()
-        }
-    }
 }

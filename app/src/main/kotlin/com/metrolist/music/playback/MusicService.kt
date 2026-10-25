@@ -212,7 +212,6 @@ import com.metrolist.music.constants.LoudnessLevelKey
 import com.metrolist.music.utils.CoilBitmapLoader
 import com.metrolist.music.utils.NetworkConnectivityObserver
 import com.metrolist.music.utils.ScrobbleManager
-import com.metrolist.music.utils.SyncUtils
 import com.metrolist.music.utils.getArtistSeparator
 import com.metrolist.music.utils.joinToArtistString
 import com.metrolist.music.utils.InnerTubeXPlayer
@@ -292,9 +291,6 @@ class MusicService :
 
     @Inject
     lateinit var lyricsHelper: LyricsHelper
-
-    @Inject
-    lateinit var syncUtils: SyncUtils
 
     @Inject
     lateinit var downloadUtil: DownloadUtil
@@ -454,7 +450,6 @@ class MusicService :
 
     private var isAudioEffectSessionOpened = false
     private var openedAudioEffectSessionId: Int = C.AUDIO_SESSION_ID_UNSET
-    private val historyReporters = HashMap<Player, YouTubeHistoryReporter>()
     private val playerNormalizationProcessors = HashMap<Player, VolumeNormalizationAudioProcessor>()
     private val playerEqualizerProcessors = HashMap<Player, CustomEqualizerAudioProcessor>()
 
@@ -989,7 +984,6 @@ class MusicService :
             .collectLatest(scope) { (paused, durationMs) ->
                 historyPaused = paused
                 historyDurationMs = durationMs
-                historyReporters.values.forEach { it.refresh() }
             }
 
         var isFirstAudioTrackParamsEmit = true
@@ -1404,30 +1398,7 @@ class MusicService :
                 }
             }
         }
-        val historyReporter = YouTubeHistoryReporter(
-            player = player,
-            // Media3 posts final stats after release, including after the service scope is cancelled.
-            scope = CoroutineScope(applicationScope.coroutineContext + Dispatchers.Main),
-            thresholdMs = { historyDurationMs },
-            isEnabled = { !historyPaused && !YouTube.cookie.isNullOrBlank() },
-            createReport = { videoId ->
-                val account = Triple(YouTube.cookie, YouTube.dataSyncId, YouTube.authUser)
-                val nonce = com.metrolist.innertubex.extraction.generateClientPlaybackNonce()
-                suspend {
-                    withContext(Dispatchers.IO) {
-                        YouTube.registerPlayback(videoId, nonce) {
-                            !dataStore.get(PauseListenHistoryKey, false) &&
-                                account == Triple(YouTube.cookie, YouTube.dataSyncId, YouTube.authUser)
-                        }.onFailure { reportException(it) }
-                            .getOrDefault(false)
-                    }
-                }
-            },
-            onStatsReady = this@MusicService,
-        )
-        historyReporters[player] = historyReporter
-        player.addAnalyticsListener(historyReporter.statsListener)
-        player.addAnalyticsListener(historyReporter.listener)
+        player.addAnalyticsListener(PlaybackStatsListener(false, this@MusicService))
 
         // Cleanup handled manually in onDestroy/release
         _playerFlow.value = player
@@ -2251,13 +2222,6 @@ class MusicService :
         scope.launch {
             val songToToggle = currentSong.first()
             songToToggle?.let {
-                val isInLibrary = it.song.inLibrary != null
-                val token = if (isInLibrary) it.song.libraryRemoveToken else it.song.libraryAddToken
-
-                token?.let { feedbackToken ->
-                    YouTube.feedback(listOf(feedbackToken))
-                }
-
                 database.query {
                     update(it.song.toggleLibrary())
                 }
@@ -2278,14 +2242,13 @@ class MusicService :
                     return@let
                 }
 
-                val song = songEntity.toggleLike(syncToYouTube = false)
+                val song = songEntity.toggleLike()
 
                 updateNotification(isLiked = song.liked)
                 updateWidgetUI(player.isPlaying, isLiked = song.liked)
 
                 database.query {
                     update(song)
-                    syncUtils.likeSong(song)
 
                     if (dataStore.get(AutoDownloadOnLikeKey, false) && song.liked) {
                         downloadUtil.download(song.id)
@@ -2346,10 +2309,6 @@ class MusicService :
             )
         }
         currentMediaMetadata.value = player.currentMetadata
-
-        // Sync with YouTube (handles login check internally)
-        val setVideoId = if (isCurrentlySaved) database.getSetVideoId(songEntity.id)?.setVideoId else null
-        syncUtils.saveEpisode(songEntity.id, shouldBeSaved, setVideoId)
     }
 
     fun toggleStartRadio() {
@@ -5204,7 +5163,6 @@ class MusicService :
     }
 
     private fun releaseExoPlayer(player: ExoPlayer) {
-        historyReporters.remove(player)?.close()
         playerNormalizationProcessors.remove(player)
         playerSilenceProcessors.remove(player)
         playerEqualizerProcessors.remove(player)?.let(equalizerService::removeAudioProcessor)
