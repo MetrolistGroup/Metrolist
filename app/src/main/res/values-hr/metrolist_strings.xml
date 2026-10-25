@@ -57,8 +57,6 @@
     <string name="swipe_song_to_add">Povuci u lijevo da bi dodao pjesmu na listu za reprodukciju ili u desno da bi ju pustio slijedeću</string>
     <string name="lyrics_click_change">Promijeni stihove na dodir</string>
     <string name="lyrics_auto_scroll">Automatsko pračenje teksta pjesme</string>
-    <string name="lyrics_romanize_japanese">Romanizacija japanskog teksta</string>
-    <string name="lyrics_romanize_korean">Romanizacija korejskog teksta</string>
     <string name="slim">Tanak/a</string>
     <string name="slim_navbar">Tanka traka navigacije</string>
     <string name="auto_playlists">Automatski odabrane liste</string>

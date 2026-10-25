@@ -58,7 +58,7 @@ class MessageCodecTest {
         val (type, pongBytes) = codec.decode(envelope.toByteArray())
         val decoded = codec.decodePayload(type, pongBytes) as PongPayload
 
-        assertEquals(PongPayload(1_000L, 10_000L, 10_001L, 3L), decoded)
+        assertEquals(pong, decoded)
         assertTrue(decoded.serverSendTime >= decoded.serverReceiveTime)
     }
 }

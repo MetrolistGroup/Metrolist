@@ -1,18 +1,8 @@
-/**
- * Metrolist Project (C) 2026
- * Licensed under GPL-3.0 | See git history for contributors
- */
-
 package com.metrolist.music.listentogether
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.metrolist.music.listentogether.proto.Listentogether
 
-/**
- * Message types for Listen Together protocol
- */
 object MessageTypes {
-    // Client -> Server
     const val CREATE_ROOM = "create_room"
     const val JOIN_ROOM = "join_room"
     const val LEAVE_ROOM = "leave_room"
@@ -29,8 +19,6 @@ object MessageTypes {
     const val SUGGEST_TRACK = "suggest_track"
     const val APPROVE_SUGGESTION = "approve_suggestion"
     const val REJECT_SUGGESTION = "reject_suggestion"
-
-    // Server -> Client
     const val ROOM_CREATED = "room_created"
     const val JOIN_REQUEST = "join_request"
     const val JOIN_APPROVED = "join_approved"
@@ -53,9 +41,6 @@ object MessageTypes {
     const val SUGGESTION_REJECTED = "suggestion_rejected"
 }
 
-/**
- * Playback action types
- */
 object PlaybackActions {
     const val PLAY = "play"
     const val PAUSE = "pause"
@@ -70,273 +55,261 @@ object PlaybackActions {
     const val SET_VOLUME = "set_volume"
 }
 
-/**
- * Track information
- */
-@Serializable
-data class TrackInfo(
-    val id: String,
-    val title: String,
-    val artist: String,
-    val album: String? = null,
-    val duration: Long, // milliseconds
-    val thumbnail: String? = null,
-    @SerialName("suggested_by") val suggestedBy: String? = null
-)
+typealias TrackInfo = Listentogether.TrackInfo
+typealias UserInfo = Listentogether.UserInfo
+typealias RoomState = Listentogether.RoomState
+typealias CreateRoomPayload = Listentogether.CreateRoomPayload
+typealias JoinRoomPayload = Listentogether.JoinRoomPayload
+typealias ApproveJoinPayload = Listentogether.ApproveJoinPayload
+typealias RejectJoinPayload = Listentogether.RejectJoinPayload
+typealias PlaybackActionPayload = Listentogether.PlaybackActionPayload
+typealias PingPayload = Listentogether.PingPayload
+typealias BufferReadyPayload = Listentogether.BufferReadyPayload
+typealias KickUserPayload = Listentogether.KickUserPayload
+typealias TransferHostPayload = Listentogether.TransferHostPayload
+typealias SuggestTrackPayload = Listentogether.SuggestTrackPayload
+typealias ApproveSuggestionPayload = Listentogether.ApproveSuggestionPayload
+typealias RejectSuggestionPayload = Listentogether.RejectSuggestionPayload
+typealias RoomCreatedPayload = Listentogether.RoomCreatedPayload
+typealias JoinRequestPayload = Listentogether.JoinRequestPayload
+typealias JoinApprovedPayload = Listentogether.JoinApprovedPayload
+typealias JoinRejectedPayload = Listentogether.JoinRejectedPayload
+typealias UserJoinedPayload = Listentogether.UserJoinedPayload
+typealias UserLeftPayload = Listentogether.UserLeftPayload
+typealias BufferWaitPayload = Listentogether.BufferWaitPayload
+typealias BufferCompletePayload = Listentogether.BufferCompletePayload
+typealias ErrorPayload = Listentogether.ErrorPayload
+typealias HostChangedPayload = Listentogether.HostChangedPayload
+typealias KickedPayload = Listentogether.KickedPayload
+typealias SyncStatePayload = Listentogether.SyncStatePayload
+typealias PongPayload = Listentogether.PongPayload
+typealias ReconnectPayload = Listentogether.ReconnectPayload
+typealias ReconnectedPayload = Listentogether.ReconnectedPayload
+typealias UserReconnectedPayload = Listentogether.UserReconnectedPayload
+typealias UserDisconnectedPayload = Listentogether.UserDisconnectedPayload
+typealias SuggestionReceivedPayload = Listentogether.SuggestionReceivedPayload
+typealias SuggestionApprovedPayload = Listentogether.SuggestionApprovedPayload
+typealias SuggestionRejectedPayload = Listentogether.SuggestionRejectedPayload
 
-/**
- * User information
- */
-@Serializable
-data class UserInfo(
-    @SerialName("user_id") val userId: String,
-    val username: String,
-    @SerialName("is_host") val isHost: Boolean,
-    @SerialName("is_connected") val isConnected: Boolean = true
-)
+fun TrackInfo(
+    id: String,
+    title: String,
+    artist: String,
+    album: String? = null,
+    duration: Long,
+    thumbnail: String? = null,
+    suggestedBy: String? = null,
+): TrackInfo =
+    TrackInfo
+        .newBuilder()
+        .setId(id)
+        .setTitle(title)
+        .setArtist(artist)
+        .setAlbum(album.orEmpty())
+        .setDuration(duration)
+        .setThumbnail(thumbnail.orEmpty())
+        .setSuggestedBy(suggestedBy.orEmpty())
+        .build()
 
-/**
- * Room state
- */
-@Serializable
-data class RoomState(
-    @SerialName("room_code") val roomCode: String,
-    @SerialName("host_id") val hostId: String,
-    val users: List<UserInfo>,
-    @SerialName("current_track") val currentTrack: TrackInfo? = null,
-    @SerialName("is_playing") val isPlaying: Boolean,
-    val position: Long, // milliseconds
-    @SerialName("last_update") val lastUpdate: Long, // unix timestamp ms
-    val volume: Float = 1f,
-    val queue: List<TrackInfo> = emptyList(),
-    val revision: Long = 0L,
-)
+fun UserInfo(
+    userId: String,
+    username: String,
+    isHost: Boolean,
+    isConnected: Boolean = true,
+): UserInfo =
+    UserInfo
+        .newBuilder()
+        .setUserId(userId)
+        .setUsername(username)
+        .setIsHost(isHost)
+        .setIsConnected(isConnected)
+        .build()
 
-// Request payloads
+fun RoomState(
+    roomCode: String,
+    hostId: String,
+    users: List<UserInfo>,
+    currentTrack: TrackInfo? = null,
+    isPlaying: Boolean,
+    position: Long,
+    lastUpdate: Long,
+    volume: Float = 1f,
+    queue: List<TrackInfo> = emptyList(),
+    revision: Long = 0L,
+): RoomState =
+    RoomState
+        .newBuilder()
+        .setRoomCode(roomCode)
+        .setHostId(hostId)
+        .addAllUsers(users)
+        .setIsPlaying(isPlaying)
+        .setPosition(position)
+        .setLastUpdate(lastUpdate)
+        .setVolume(volume)
+        .addAllQueue(queue)
+        .setRevision(revision)
+        .apply { currentTrack?.let(::setCurrentTrack) }
+        .build()
 
-@Serializable
-data class CreateRoomPayload(
-    val username: String
-)
+fun CreateRoomPayload(username: String): CreateRoomPayload = CreateRoomPayload.newBuilder().setUsername(username).build()
 
-@Serializable
-data class JoinRoomPayload(
-    @SerialName("room_code") val roomCode: String,
-    val username: String
-)
+fun JoinRoomPayload(
+    roomCode: String,
+    username: String,
+): JoinRoomPayload =
+    JoinRoomPayload
+        .newBuilder()
+        .setRoomCode(roomCode)
+        .setUsername(username)
+        .build()
 
-@Serializable
-data class ApproveJoinPayload(
-    @SerialName("user_id") val userId: String
-)
+fun ApproveJoinPayload(userId: String): ApproveJoinPayload = ApproveJoinPayload.newBuilder().setUserId(userId).build()
 
-@Serializable
-data class RejectJoinPayload(
-    @SerialName("user_id") val userId: String,
-    val reason: String? = null
-)
+fun RejectJoinPayload(
+    userId: String,
+    reason: String? = null,
+): RejectJoinPayload =
+    RejectJoinPayload
+        .newBuilder()
+        .setUserId(userId)
+        .setReason(reason.orEmpty())
+        .build()
 
-@Serializable
-data class PlaybackActionPayload(
-    val action: String,
-    @SerialName("track_id") val trackId: String? = null,
-    val position: Long? = null, // milliseconds
-    @SerialName("track_info") val trackInfo: TrackInfo? = null,
-    @SerialName("insert_next") val insertNext: Boolean? = null,
-    val queue: List<TrackInfo>? = null,
-    @SerialName("queue_title") val queueTitle: String? = null,
-    val volume: Float? = null,
-    @SerialName("server_time") val serverTime: Long? = null,
-    val revision: Long = 0L,
-    @SerialName("captured_at_server_time") val capturedAtServerTime: Long? = null,
-)
+fun PlaybackActionPayload(
+    action: String,
+    trackId: String? = null,
+    position: Long? = null,
+    trackInfo: TrackInfo? = null,
+    insertNext: Boolean? = null,
+    queue: List<TrackInfo>? = null,
+    queueTitle: String? = null,
+    volume: Float? = null,
+    serverTime: Long? = null,
+    revision: Long = 0L,
+    capturedAtServerTime: Long? = null,
+): PlaybackActionPayload =
+    PlaybackActionPayload
+        .newBuilder()
+        .setAction(action)
+        .setPosition(position ?: 0L)
+        .setInsertNext(insertNext ?: false)
+        .setVolume(volume ?: 1f)
+        .setServerTime(serverTime ?: 0L)
+        .setRevision(revision)
+        .setCapturedAtServerTime(capturedAtServerTime ?: 0L)
+        .apply {
+            trackId?.let(::setTrackId)
+            trackInfo?.let(::setTrackInfo)
+            queue?.let(::addAllQueue)
+            queueTitle?.let(::setQueueTitle)
+        }.build()
 
-@Serializable
-data class PingPayload(
-    @SerialName("client_time") val clientTime: Long,
-    val sequence: Long,
-)
+fun PingPayload(
+    clientTime: Long,
+    sequence: Long,
+): PingPayload =
+    PingPayload
+        .newBuilder()
+        .setClientTime(clientTime)
+        .setSequence(sequence)
+        .build()
 
-@Serializable
-data class BufferReadyPayload(
-    @SerialName("track_id") val trackId: String
-)
+fun BufferReadyPayload(trackId: String): BufferReadyPayload = BufferReadyPayload.newBuilder().setTrackId(trackId).build()
 
-@Serializable
-data class KickUserPayload(
-    @SerialName("user_id") val userId: String,
-    val reason: String? = null
-)
+fun KickUserPayload(
+    userId: String,
+    reason: String? = null,
+): KickUserPayload =
+    KickUserPayload
+        .newBuilder()
+        .setUserId(userId)
+        .setReason(reason.orEmpty())
+        .build()
 
-@Serializable
-data class TransferHostPayload(
-    @SerialName("new_host_id") val newHostId: String
-)
+fun TransferHostPayload(newHostId: String): TransferHostPayload = TransferHostPayload.newBuilder().setNewHostId(newHostId).build()
 
-@Serializable
-data class ChatPayload(
-    val message: String
-)
+fun SuggestTrackPayload(trackInfo: TrackInfo): SuggestTrackPayload = SuggestTrackPayload.newBuilder().setTrackInfo(trackInfo).build()
 
-// Suggestions payloads
+fun ApproveSuggestionPayload(suggestionId: String): ApproveSuggestionPayload =
+    ApproveSuggestionPayload.newBuilder().setSuggestionId(suggestionId).build()
 
-@Serializable
-data class SuggestTrackPayload(
-    @SerialName("track_info") val trackInfo: TrackInfo
-)
+fun RejectSuggestionPayload(
+    suggestionId: String,
+    reason: String? = null,
+): RejectSuggestionPayload =
+    RejectSuggestionPayload
+        .newBuilder()
+        .setSuggestionId(suggestionId)
+        .setReason(reason.orEmpty())
+        .build()
 
-@Serializable
-data class SuggestionReceivedPayload(
-    @SerialName("suggestion_id") val suggestionId: String,
-    @SerialName("from_user_id") val fromUserId: String,
-    @SerialName("from_username") val fromUsername: String,
-    @SerialName("track_info") val trackInfo: TrackInfo
-)
+fun ReconnectPayload(sessionToken: String): ReconnectPayload = ReconnectPayload.newBuilder().setSessionToken(sessionToken).build()
 
-@Serializable
-data class ApproveSuggestionPayload(
-    @SerialName("suggestion_id") val suggestionId: String
-)
+fun SyncStatePayload(
+    currentTrack: TrackInfo?,
+    isPlaying: Boolean,
+    position: Long,
+    lastUpdate: Long,
+    queue: List<TrackInfo>? = null,
+    volume: Float? = null,
+    revision: Long = 0L,
+): SyncStatePayload =
+    SyncStatePayload
+        .newBuilder()
+        .setIsPlaying(isPlaying)
+        .setPosition(position)
+        .setLastUpdate(lastUpdate)
+        .setVolume(volume ?: 0f)
+        .setRevision(revision)
+        .apply {
+            currentTrack?.let(::setCurrentTrack)
+            queue?.let(::addAllQueue)
+        }.build()
 
-@Serializable
-data class RejectSuggestionPayload(
-    @SerialName("suggestion_id") val suggestionId: String,
-    val reason: String? = null
-)
+val RoomState.users: List<UserInfo> get() = usersList
+val RoomState.queue: List<TrackInfo> get() = queueList
+val RoomState.currentTrackOrNull: TrackInfo? get() = takeIf { hasCurrentTrack() }?.currentTrack
+val SyncStatePayload.currentTrackOrNull: TrackInfo? get() = takeIf { hasCurrentTrack() }?.currentTrack
+val SyncStatePayload.queue: List<TrackInfo>? get() = queueList
+val PlaybackActionPayload.trackIdOrNull: String? get() = trackId.takeIf(String::isNotEmpty)
+val PlaybackActionPayload.positionOrNull: Long?
+    get() = position.takeIf { it != 0L || action in listOf(PlaybackActions.PLAY, PlaybackActions.PAUSE, PlaybackActions.SEEK) }
+val PlaybackActionPayload.trackInfoOrNull: TrackInfo? get() = takeIf { hasTrackInfo() }?.trackInfo
+val PlaybackActionPayload.queue: List<TrackInfo>? get() = queueList
+val PlaybackActionPayload.queueTitleOrNull: String? get() = queueTitle.takeIf(String::isNotEmpty)
+val PlaybackActionPayload.volumeOrNull: Float? get() = volume.takeIf { action == PlaybackActions.SET_VOLUME }
+val PlaybackActionPayload.serverTimeOrNull: Long? get() = serverTime.takeIf { it > 0L }
+val PlaybackActionPayload.capturedAtServerTimeOrNull: Long? get() = capturedAtServerTime.takeIf { it > 0L }
+val PlaybackActionPayload.insertNextOrNull: Boolean? get() = insertNext.takeIf { it }
+val SuggestionRejectedPayload.reasonOrNull: String? get() = reason.takeIf(String::isNotEmpty)
+val BufferWaitPayload.waitingFor: List<String> get() = waitingForList
 
-@Serializable
-data class SuggestionApprovedPayload(
-    @SerialName("suggestion_id") val suggestionId: String,
-    @SerialName("track_info") val trackInfo: TrackInfo
-)
+fun UserInfo.copy(
+    userId: String = this.userId,
+    username: String = this.username,
+    isHost: Boolean = this.isHost,
+    isConnected: Boolean = this.isConnected,
+): UserInfo = UserInfo(userId, username, isHost, isConnected)
 
-@Serializable
-data class SuggestionRejectedPayload(
-    @SerialName("suggestion_id") val suggestionId: String,
-    val reason: String? = null
-)
+fun RoomState.copy(
+    roomCode: String = this.roomCode,
+    hostId: String = this.hostId,
+    users: List<UserInfo> = this.users,
+    currentTrack: TrackInfo? = currentTrackOrNull,
+    isPlaying: Boolean = this.isPlaying,
+    position: Long = this.position,
+    lastUpdate: Long = this.lastUpdate,
+    volume: Float = this.volume,
+    queue: List<TrackInfo> = this.queue,
+    revision: Long = this.revision,
+): RoomState = RoomState(roomCode, hostId, users, currentTrack, isPlaying, position, lastUpdate, volume, queue, revision)
 
-// Response payloads
-
-@Serializable
-data class RoomCreatedPayload(
-    @SerialName("room_code") val roomCode: String,
-    @SerialName("user_id") val userId: String,
-    @SerialName("session_token") val sessionToken: String
-)
-
-@Serializable
-data class JoinRequestPayload(
-    @SerialName("user_id") val userId: String,
-    val username: String
-)
-
-@Serializable
-data class JoinApprovedPayload(
-    @SerialName("room_code") val roomCode: String,
-    @SerialName("user_id") val userId: String,
-    @SerialName("session_token") val sessionToken: String,
-    val state: RoomState
-)
-
-@Serializable
-data class JoinRejectedPayload(
-    val reason: String
-)
-
-@Serializable
-data class UserJoinedPayload(
-    @SerialName("user_id") val userId: String,
-    val username: String
-)
-
-@Serializable
-data class UserLeftPayload(
-    @SerialName("user_id") val userId: String,
-    val username: String
-)
-
-@Serializable
-data class BufferWaitPayload(
-    @SerialName("track_id") val trackId: String,
-    @SerialName("waiting_for") val waitingFor: List<String>
-)
-
-@Serializable
-data class BufferCompletePayload(
-    @SerialName("track_id") val trackId: String
-)
-
-@Serializable
-data class ErrorPayload(
-    val code: String,
-    val message: String
-)
-
-@Serializable
-data class ChatMessagePayload(
-    @SerialName("user_id") val userId: String,
-    val username: String,
-    val message: String,
-    val timestamp: Long
-)
-
-@Serializable
-data class HostChangedPayload(
-    @SerialName("new_host_id") val newHostId: String,
-    @SerialName("new_host_name") val newHostName: String
-)
-
-@Serializable
-data class KickedPayload(
-    val reason: String
-)
-
-/**
- * Sync state payload - sent to guest when they request current state
- */
-@Serializable
-data class SyncStatePayload(
-    @SerialName("current_track") val currentTrack: TrackInfo?,
-    @SerialName("is_playing") val isPlaying: Boolean,
-    val position: Long,
-    @SerialName("last_update") val lastUpdate: Long,
-    val queue: List<TrackInfo>? = null,
-    val volume: Float? = null,
-    val revision: Long = 0L,
-)
-
-@Serializable
-data class PongPayload(
-    @SerialName("client_time") val clientTime: Long,
-    @SerialName("server_receive_time") val serverReceiveTime: Long,
-    @SerialName("server_send_time") val serverSendTime: Long,
-    val sequence: Long,
-)
-
-// Reconnection payloads
-
-@Serializable
-data class ReconnectPayload(
-    @SerialName("session_token") val sessionToken: String
-)
-
-@Serializable
-data class ReconnectedPayload(
-    @SerialName("room_code") val roomCode: String,
-    @SerialName("user_id") val userId: String,
-    val state: RoomState,
-    @SerialName("is_host") val isHost: Boolean
-)
-
-@Serializable
-data class UserReconnectedPayload(
-    @SerialName("user_id") val userId: String,
-    val username: String
-)
-
-@Serializable
-data class UserDisconnectedPayload(
-    @SerialName("user_id") val userId: String,
-    val username: String
-)
+fun SyncStatePayload.copy(
+    currentTrack: TrackInfo? = currentTrackOrNull,
+    isPlaying: Boolean = this.isPlaying,
+    position: Long = this.position,
+    lastUpdate: Long = this.lastUpdate,
+    queue: List<TrackInfo>? = this.queue,
+    volume: Float? = this.volume,
+    revision: Long = this.revision,
+): SyncStatePayload = SyncStatePayload(currentTrack, isPlaying, position, lastUpdate, queue, volume, revision)

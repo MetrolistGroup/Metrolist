@@ -6,7 +6,6 @@
 package com.metrolist.music.ui.screens.library
 
 import android.net.Uri
-import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -74,6 +73,7 @@ import com.metrolist.music.constants.SongSortDescendingKey
 import com.metrolist.music.constants.SongSortType
 import com.metrolist.music.constants.SongSortTypeKey
 import com.metrolist.music.constants.YtmSyncKey
+import com.metrolist.music.extensions.fileNameAndSize
 import com.metrolist.music.extensions.matchesNormalizedQuery
 import com.metrolist.music.extensions.normalizeForSearch
 import com.metrolist.music.extensions.toMediaItem
@@ -92,6 +92,7 @@ import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.viewmodels.LibrarySongsViewModel
 import timber.log.Timber
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -168,73 +169,43 @@ fun LibrarySongsScreen(
                             uploadProgress = 0f
 
                             try {
-                                // Get actual display name from content resolver
-                                var fileName = uri.lastPathSegment?.substringAfterLast('/') ?: "unknown"
-                                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                                    if (cursor.moveToFirst()) {
-                                        val displayNameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                                        if (displayNameIndex >= 0) {
-                                            val name = cursor.getString(displayNameIndex)
-                                            if (!name.isNullOrBlank()) {
-                                                fileName = name
-                                            }
-                                        }
+                                val (fileName, contentLength) =
+                                    withContext(Dispatchers.IO) {
+                                        context.contentResolver.fileNameAndSize(uri)
                                     }
-                                }
                                 currentFileName = fileName
-                                val extension = fileName.substringAfterLast('.', "").lowercase()
 
-                                if (extension !in YouTube.SUPPORTED_UPLOAD_TYPES) {
-                                    withContext(Dispatchers.Main) {
-                                        Toast
-                                            .makeText(
-                                                context,
-                                                uploadUnsupportedFormatStr,
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
-                                    }
+                                if (fileName.substringAfterLast('.', "").lowercase() !in YouTube.SUPPORTED_UPLOAD_TYPES) {
+                                    Toast.makeText(context, uploadUnsupportedFormatStr, Toast.LENGTH_SHORT).show()
                                     return@forEachIndexed
                                 }
-
-                                val inputStream = context.contentResolver.openInputStream(uri)
-                                val data = inputStream?.readBytes()
-                                inputStream?.close()
-
-                                if (data == null) return@forEachIndexed
-
-                                if (data.size > YouTube.MAX_UPLOAD_SIZE) {
-                                    withContext(Dispatchers.Main) {
-                                        Toast
-                                            .makeText(
-                                                context,
-                                                uploadFileTooLargeStr,
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
-                                    }
+                                if (contentLength >= YouTube.MAX_UPLOAD_SIZE) {
+                                    Toast.makeText(context, uploadFileTooLargeStr, Toast.LENGTH_SHORT).show()
+                                    return@forEachIndexed
+                                }
+                                if (contentLength <= 0) {
+                                    Toast.makeText(context, uploadFailedStr, Toast.LENGTH_SHORT).show()
                                     return@forEachIndexed
                                 }
 
                                 val result =
                                     YouTube.uploadSong(
                                         filename = fileName,
-                                        data = data,
-                                        onProgress = { progress ->
-                                            uploadProgress = progress
-                                        },
+                                        contentLength = contentLength,
+                                        content = { checkNotNull(context.contentResolver.openInputStream(uri)) },
+                                        onProgress = { progress -> uploadProgress = progress },
                                     )
 
-                                if (result.isSuccess && result.getOrDefault(false)) {
-                                    successCount++
-                                }
+                                if (result.getOrThrow()) successCount++
+                            } catch (e: CancellationException) {
+                                throw e
                             } catch (e: Exception) {
-                                withContext(Dispatchers.Main) {
-                                    Toast
-                                        .makeText(
-                                            context,
-                                            uploadFailedStr + ": ${e.message}",
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
-                                }
+                                Toast
+                                    .makeText(
+                                        context,
+                                        uploadFailedStr + ": ${e.message}",
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
                             }
                         }
 

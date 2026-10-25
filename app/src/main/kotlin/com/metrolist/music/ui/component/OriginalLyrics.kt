@@ -143,7 +143,6 @@ import com.metrolist.music.constants.TranslateLanguageKey
 import com.metrolist.music.constants.TranslateModeKey
 import com.metrolist.music.db.entities.LyricsEntity.Companion.LYRICS_NOT_FOUND
 import com.metrolist.music.lyrics.LyricsEntry
-import com.metrolist.music.lyrics.LyricsResyncHelper
 import com.metrolist.music.lyrics.LyricsTranslationHelper
 import com.metrolist.music.lyrics.LyricsUtils.findCurrentLineIndex
 import com.metrolist.music.lyrics.LyricsUtils.isBelarusian
@@ -294,31 +293,31 @@ fun OriginalLyrics(
                                 }
 
                                 "Ukrainian" in enabledLanguages && isUkrainian(text) -> {
-                                    value = romanizeCyrillic(entry.text)
+                                    value = romanizeCyrillic(entry.text, "Ukrainian")
                                 }
 
                                 "Russian" in enabledLanguages && isRussian(text) -> {
-                                    value = romanizeCyrillic(entry.text)
+                                    value = romanizeCyrillic(entry.text, "Russian")
                                 }
 
                                 "Serbian" in enabledLanguages && isSerbian(text) -> {
-                                    value = romanizeCyrillic(entry.text)
+                                    value = romanizeCyrillic(entry.text, "Serbian")
                                 }
 
                                 "Bulgarian" in enabledLanguages && isBulgarian(text) -> {
-                                    value = romanizeCyrillic(entry.text)
+                                    value = romanizeCyrillic(entry.text, "Bulgarian")
                                 }
 
                                 "Belarusian" in enabledLanguages && isBelarusian(text) -> {
-                                    value = romanizeCyrillic(entry.text)
+                                    value = romanizeCyrillic(entry.text, "Belarusian")
                                 }
 
                                 "Kyrgyz" in enabledLanguages && isKyrgyz(text) -> {
-                                    value = romanizeCyrillic(entry.text)
+                                    value = romanizeCyrillic(entry.text, "Kyrgyz")
                                 }
 
                                 "Macedonian" in enabledLanguages && isMacedonian(text) -> {
-                                    value = romanizeCyrillic(entry.text)
+                                    value = romanizeCyrillic(entry.text, "Macedonian")
                                 }
                             }
 
@@ -342,13 +341,13 @@ fun OriginalLyrics(
                             "Korean" in enabledLanguages && isKorean(text) -> value = romanizeKorean(line)
                             "Chinese" in enabledLanguages && isChinese(text) -> value = romanizeChinese(line)
                             "Hindi" in enabledLanguages && isHindi(text) -> value = romanizeHindi(line)
-                            "Ukrainian" in enabledLanguages && isUkrainian(text) -> value = romanizeCyrillic(line)
-                            "Russian" in enabledLanguages && isRussian(text) -> value = romanizeCyrillic(line)
-                            "Serbian" in enabledLanguages && isSerbian(text) -> value = romanizeCyrillic(line)
-                            "Bulgarian" in enabledLanguages && isBulgarian(text) -> value = romanizeCyrillic(line)
-                            "Belarusian" in enabledLanguages && isBelarusian(text) -> value = romanizeCyrillic(line)
-                            "Kyrgyz" in enabledLanguages && isKyrgyz(text) -> value = romanizeCyrillic(line)
-                            "Macedonian" in enabledLanguages && isMacedonian(text) -> value = romanizeCyrillic(line)
+                            "Ukrainian" in enabledLanguages && isUkrainian(text) -> value = romanizeCyrillic(line, "Ukrainian")
+                            "Russian" in enabledLanguages && isRussian(text) -> value = romanizeCyrillic(line, "Russian")
+                            "Serbian" in enabledLanguages && isSerbian(text) -> value = romanizeCyrillic(line, "Serbian")
+                            "Bulgarian" in enabledLanguages && isBulgarian(text) -> value = romanizeCyrillic(line, "Bulgarian")
+                            "Belarusian" in enabledLanguages && isBelarusian(text) -> value = romanizeCyrillic(line, "Belarusian")
+                            "Kyrgyz" in enabledLanguages && isKyrgyz(text) -> value = romanizeCyrillic(line, "Kyrgyz")
+                            "Macedonian" in enabledLanguages && isMacedonian(text) -> value = romanizeCyrillic(line, "Macedonian")
                         }
 
                         newEntry.romanizedTextFlow.value = value
@@ -630,7 +629,6 @@ fun OriginalLyrics(
         }
     }
 
-    val latestShowLyrics by rememberUpdatedState(showLyrics)
     val latestResyncLyrics by rememberUpdatedState(
         newValue = {
             scope.launch {
@@ -639,14 +637,6 @@ fun OriginalLyrics(
             isAutoScrollEnabled = true
         },
     )
-
-    LaunchedEffect(Unit) {
-        LyricsResyncHelper.resyncTrigger.collect {
-            if (latestShowLyrics) {
-                latestResyncLyrics()
-            }
-        }
-    }
 
     LaunchedEffect(currentLineIndex, lastPreviewTime, initialScrollDone, isAutoScrollEnabled) {
         if (!isSynced) return@LaunchedEffect

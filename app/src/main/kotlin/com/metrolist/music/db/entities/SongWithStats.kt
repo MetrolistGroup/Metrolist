@@ -18,6 +18,18 @@ data class SongWithStats(
         entity = ArtistEntity::class,
         parentColumn = "id",               // Song's primary key column
         entityColumn = "id",               // Artist's primary key column
+        // Every column but cachedPageJson: Room builds one ArtistEntity per pairing here, and the
+        // cached page would be copied into every one of them.
+        projection = [
+            "id",
+            "name",
+            "thumbnailUrl",
+            "channelId",
+            "lastUpdateTime",
+            "bookmarkedAt",
+            "isLocal",
+            "isPodcastChannel",
+        ],
         associateBy = Junction(
             value = SortedSongArtistMap::class,  // Junction table for the many-to-many relationship
             parentColumn = "songId",            // Foreign key to the Song table

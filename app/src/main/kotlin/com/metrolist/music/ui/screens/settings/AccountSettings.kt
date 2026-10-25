@@ -16,10 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,6 +58,7 @@ import com.metrolist.music.constants.AccountChannelHandleKey
 import com.metrolist.music.constants.AccountEmailKey
 import com.metrolist.music.constants.AccountNameKey
 import com.metrolist.music.constants.DataSyncIdKey
+import com.metrolist.music.constants.InnerTubeAuthUserKey
 import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.constants.UseLoginForBrowse
 import com.metrolist.music.constants.VisitorDataKey
@@ -69,7 +67,6 @@ import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.InfoLabel
 import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
-import com.metrolist.music.ui.component.PreferenceEntry
 import com.metrolist.music.ui.component.TextFieldDialog
 import com.metrolist.music.utils.Updater
 import com.metrolist.music.utils.rememberPreference
@@ -91,6 +88,7 @@ fun AccountSettings(
     val (innerTubeCookie, onInnerTubeCookieChange) = rememberPreference(InnerTubeCookieKey, "")
     val (visitorData, onVisitorDataChange) = rememberPreference(VisitorDataKey, "")
     val (dataSyncId, onDataSyncIdChange) = rememberPreference(DataSyncIdKey, "")
+    val (authUser, onAuthUserChange) = rememberPreference(InnerTubeAuthUserKey, "0")
 
     val isLoggedIn = remember(innerTubeCookie) {
         "SAPISID" in parseCookieString(innerTubeCookie)
@@ -192,6 +190,7 @@ fun AccountSettings(
                 ***INNERTUBE COOKIE*** =$innerTubeCookie
                 ***VISITOR DATA*** =$visitorData
                 ***DATASYNC ID*** =$dataSyncId
+                ***AUTH USER*** =$authUser
                 ***ACCOUNT NAME*** =$accountNamePref
                 ***ACCOUNT EMAIL*** =$accountEmail
                 ***ACCOUNT CHANNEL HANDLE*** =$accountChannelHandle
@@ -203,6 +202,7 @@ fun AccountSettings(
                     var cookie = ""
                     var visitorDataValue = ""
                     var dataSyncIdValue = ""
+                    var authUserValue = "0"
                     var accountNameValue = ""
                     var accountEmailValue = ""
                     var accountChannelHandleValue = ""
@@ -212,6 +212,7 @@ fun AccountSettings(
                             it.startsWith("***INNERTUBE COOKIE*** =") -> cookie = it.substringAfter("=")
                             it.startsWith("***VISITOR DATA*** =") -> visitorDataValue = it.substringAfter("=")
                             it.startsWith("***DATASYNC ID*** =") -> dataSyncIdValue = it.substringAfter("=")
+                            it.startsWith("***AUTH USER*** =") -> authUserValue = it.substringAfter("=")
                             it.startsWith("***ACCOUNT NAME*** =") -> accountNameValue = it.substringAfter("=")
                             it.startsWith("***ACCOUNT EMAIL*** =") -> accountEmailValue = it.substringAfter("=")
                             it.startsWith("***ACCOUNT CHANNEL HANDLE*** =") -> accountChannelHandleValue = it.substringAfter("=")
@@ -225,6 +226,7 @@ fun AccountSettings(
                         cookie = cookie,
                         visitorData = visitorDataValue,
                         dataSyncId = dataSyncIdValue,
+                        authUser = authUserValue,
                         accountName = accountNameValue,
                         accountEmail = accountEmailValue,
                         accountChannelHandle = accountChannelHandleValue,
@@ -251,7 +253,7 @@ fun AccountSettings(
         }
 
         Material3SettingsGroup(
-            items = listOf(
+            items = listOfNotNull(
                 Material3SettingsItem(
                     title = {
                         Row(
@@ -298,7 +300,17 @@ fun AccountSettings(
                             navController.navigate("login")
                         }
                     }
-                )
+                ),
+                if (isLoggedIn) {
+                    Material3SettingsItem(
+                        title = { Text(stringResource(R.string.switch_youtube_channel)) },
+                        icon = painterResource(R.drawable.account),
+                        onClick = {
+                            onClose()
+                            navController.navigate("switch_channel")
+                        },
+                    )
+                } else null,
             ),
             useLowContrast = true
         )
@@ -375,70 +387,48 @@ fun AccountSettings(
 
         Spacer(Modifier.height(12.dp))
 
-        Column(
-            modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainer)
-        ) {
-            PreferenceEntry(
-                title = { Text(stringResource(R.string.integrations)) },
-                icon = { Icon(painterResource(R.drawable.integration), null) },
-                onClick = {
-                    onClose()
-                    navController.navigate("settings/integrations")
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceContainer)
-            )
-
-            Spacer(Modifier.height(4.dp))
-
-            PreferenceEntry(
-                title = { Text(stringResource(R.string.settings)) },
-                icon = {
-                    BadgedBox(
-                        badge = {
-                            if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.VERSION_NAME) {
-                                Badge()
-                            }
-                        }
-                    ) {
-                        Icon(painterResource(R.drawable.settings), contentDescription = null)
-                    }
-                },
-                onClick = {
-                    onClose()
-                    navController.navigate("settings")
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceContainer)
-            )
-
-            Spacer(Modifier.height(4.dp))
-
-            if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.VERSION_NAME) {
-                val releaseInfo = Updater.getCachedLatestRelease()
-                val downloadUrl = releaseInfo?.let { Updater.getDownloadUrlForCurrentVariant(it) }
-                
-                if (downloadUrl != null) {
-                    PreferenceEntry(
-                        title = {
-                            Text(text = stringResource(R.string.new_version_available))
-                        },
-                        description = latestVersionName,
-                        icon = {
-                            BadgedBox(badge = { Badge() }) {
-                                Icon(painterResource(R.drawable.update), null)
-                            }
-                        },
+        Material3SettingsGroup(
+            items = buildList {
+                add(
+                    Material3SettingsItem(
+                        title = { Text(stringResource(R.string.integrations)) },
+                        icon = painterResource(R.drawable.integration),
                         onClick = {
-                            uriHandler.openUri(downloadUrl)
+                            onClose()
+                            navController.navigate("settings/integrations")
                         }
                     )
+                )
+                add(
+                    Material3SettingsItem(
+                        title = { Text(stringResource(R.string.settings)) },
+                        icon = painterResource(R.drawable.settings),
+                        showBadge = BuildConfig.UPDATER_AVAILABLE &&
+                            latestVersionName != BuildConfig.BASE_VERSION_NAME,
+                        onClick = {
+                            onClose()
+                            navController.navigate("settings")
+                        }
+                    )
+                )
+
+                if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.BASE_VERSION_NAME) {
+                    val releaseInfo = Updater.getCachedLatestRelease()
+                    val downloadUrl = releaseInfo?.let { Updater.getDownloadUrlForCurrentVariant(it) }
+                    if (downloadUrl != null) {
+                        add(
+                            Material3SettingsItem(
+                                title = { Text(stringResource(R.string.new_version_available)) },
+                                description = { Text(latestVersionName) },
+                                icon = painterResource(R.drawable.update),
+                                showBadge = true,
+                                onClick = { uriHandler.openUri(downloadUrl) }
+                            )
+                        )
+                    }
                 }
-            }
-        }
+            },
+            useLowContrast = true
+        )
     }
 }

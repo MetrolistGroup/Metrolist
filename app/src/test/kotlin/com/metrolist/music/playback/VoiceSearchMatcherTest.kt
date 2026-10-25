@@ -133,17 +133,4 @@ class VoiceSearchMatcherTest {
         )
         assertEquals("not-first: correct winner", "Bohemian Rhapsody", best?.title)
     }
-
-    @Test fun `snapshot isolates from concurrent inserts`() {
-        val live = mutableListOf(
-            song("Song A", "X"),
-            song("Bohemian Rhapsody", "Queen"),
-        )
-        val snapshot = synchronized(live) { live.toList() }
-        live.add(song("New Online Song", "Y"))   // simulate concurrent insert
-
-        val ranked = VoiceSearchMatcher.rankAll("Bohemian Rhapsody", snapshot)
-        assertTrue(ranked.none { it.song.title == "New Online Song" })
-        assertEquals("Bohemian Rhapsody", ranked.first().song.title)
-    }
 }

@@ -1,10 +1,8 @@
 package com.metrolist.innertube.utils
 
-import com.metrolist.innertube.models.WatchEndpoint
-
 /**
  * Utility class for parsing YouTube and YouTube Music URLs.
- * Extracts video IDs, playlist IDs, and creates WatchEndpoints from URLs.
+ * Extracts video, playlist, album, and artist IDs from URLs.
  */
 object YouTubeUrlParser {
     /**
@@ -81,11 +79,6 @@ object YouTubeUrlParser {
         )
 
     /**
-     * Checks if the given text is a YouTube URL.
-     */
-    fun isYouTubeUrl(text: String): Boolean = parse(text) != null
-
-    /**
      * Parses a YouTube URL and returns the parsed result.
      *
      * @param url The URL to parse
@@ -134,38 +127,4 @@ object YouTubeUrlParser {
 
         return null
     }
-
-    /**
-     * Extracts video ID from a YouTube URL.
-     *
-     * @param url The URL to parse
-     * @return Video ID if found, null otherwise
-     */
-    fun extractVideoId(url: String): String? = (parse(url) as? ParsedUrl.Video)?.id
-
-    /**
-     * Extracts playlist ID from a YouTube URL.
-     *
-     * @param url The URL to parse
-     * @return Playlist ID if found, null otherwise
-     */
-    fun extractPlaylistId(url: String): String? {
-        val parsed = parse(url)
-        return when (parsed) {
-            is ParsedUrl.Playlist -> parsed.id
-            is ParsedUrl.Album -> parsed.id
-            else -> null
-        }
-    }
-
-    /**
-     * Creates a WatchEndpoint from a YouTube video URL.
-     *
-     * @param url The URL to parse
-     * @return WatchEndpoint if valid video URL, null otherwise
-     */
-    fun createWatchEndpoint(url: String): WatchEndpoint? =
-        extractVideoId(url)?.let { videoId ->
-            WatchEndpoint(videoId = videoId)
-        }
 }

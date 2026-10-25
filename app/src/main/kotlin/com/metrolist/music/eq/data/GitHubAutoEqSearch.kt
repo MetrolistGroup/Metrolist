@@ -299,11 +299,6 @@ class GitHubAutoEqSearch(private val context: Context) {
         }
     }
 
-    /**
-     * Get all indexed entries
-     */
-    fun getAllEntries(): List<Entry> = entries.toList()
-
     // PRIVATE HELPERS
 
     private fun normalizeModelName(modelName: String): String {

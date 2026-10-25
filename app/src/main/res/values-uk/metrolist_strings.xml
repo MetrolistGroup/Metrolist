@@ -106,8 +106,6 @@
     <string name="import_csv">Імпортувати список відтворення у форматі CSV</string>
     <string name="playlist_add_local_to_synced_note">ПРИМІТКА: Додавання локальних пісень до синхронізованих або віддалених списків відтворення не підтримується. Усі інші комбінації можливі</string>
     <string name="new_player_design">Новий дизайн програвача</string>
-    <string name="lyrics_romanize_japanese">Романізувати японські тексти</string>
-    <string name="lyrics_romanize_korean">Романізувати корейські тексти</string>
     <string name="yt_sync">Автосинхронізація з акаунтом</string>
     <string name="more_content">Більше контенту</string>
     <string name="swipe_sensitivity">Чутливість проведення по мініпрогравачу</string>
@@ -137,19 +135,9 @@
     <string name="proxy_username">Ім\'я користувача проксі-сервера</string>
     <string name="proxy_password">Пароль проксі-сервера</string>
     <string name="enable_authentication">Увімкнути автентифікацію</string>
-    <string name="lyrics_romanization_cyrillic">Кирилица</string>
     <string name="lyrics_romanize_title">Романізація</string>
     <string name="lyrics_romanization">Романізація текстів пісень</string>
-    <string name="lyrics_romanize_russian">Романізувати російські тексти</string>
-    <string name="lyrics_romanize_ukrainian">Романізувати українські тексти</string>
-    <string name="lyrics_romanize_belarusian">Романізувати білоруські тексти</string>
-    <string name="lyrics_romanize_kyrgyz">Романізувати киргизькі тексти</string>
-    <string name="lyrics_romanize_serbian">Романізувати сербські тексти</string>
-    <string name="lyrics_romanize_bulgarian">Романізувати болгарські тексти</string>
     <string name="line_by_line_option_title">Визначення мови рядок за рядком</string>
-    <string name="line_by_line_option_desc">Кирилиця розпізнаватиметься по рядках, а не по всій пісні</string>
-    <string name="line_by_line_dialog_title">Ви впевнені?</string>
-    <string name="line_by_line_dialog_desc">Це експериментальна функція, яка може працювати як з успіхом, так і з невдачею. \n\nЗа замовчуванням мова визначається на основі всієї пісні, але якщо ввімкнути цю опцію, вона буде визначатися по рядках. Це дозволить працювати з багатомовними піснями, АЛЕ мова може бути не завжди правильною (наприклад, якщо в українському тексті немає літер, характерних для української мови, він може бути транслітерований як російський). \n\nЯкщо у вас немає проблем, рекомендується залишити цю опцію вимкненою</string>
     <string name="romanize_current_track">Романізувати поточну пісню</string>
     <string name="edit_playlist_cover">Редагувати обкладинку списку відтворення</string>
     <string name="edit_playlist_cover_note">Примітка: Щоб змінити обкладинку списку відтворення, ваш обліковий запис має бути пов’язаний з номером телефону та підтверджений у YouTube Music</string>
@@ -163,7 +151,6 @@
     <string name="show_uploaded_playlist">Показати список відтворення \"Завантажено\"</string>
     <string name="updater">Оновлення</string>
     <string name="check_for_updates">Автоматично перевіряти наявність оновлень</string>
-    <string name="lyrics_romanize_macedonian">Романізувати македонські тексти</string>
     <string name="update_notifications">Увімкнути сповіщення про оновлення</string>
     <string name="update_available_title">Доступне оновлення</string>
     <string name="update_channel_name">Оновлення програм</string>
@@ -181,7 +168,6 @@
     <string name="swipe_song_to_remove">Проведіть пальцем по пісні, щоб вилучити її зі списку відтворення</string>
     <string name="last_fm_send_likes">Надіслати вподобання/не вподобання</string>
     <string name="last_fm_send_likes_description">Пісні, які подобається/не подобається, на Last.fm, коли вони вподобані/зняті з Metrolist</string>
-    <string name="lyrics_romanize_chinese">Романізувати китайські тексти</string>
     <string name="google_cast">Google Cast</string>
     <string name="google_cast_description">Увімкнути трансляцію аудіо на Chromecast та інші пристрої з підтримкою Cast</string>
     <string name="hide_video_songs">Приховати відеопісні</string>
@@ -201,7 +187,6 @@
     <string name="advanced_desc">Змінити темп і висоту тону пісні</string>
     <string name="equalizer_desc">Налаштування аудіоеквалайзера</string>
     <string name="mini_player">Міні-плеєр</string>
-    <string name="pure_black_mini_player">Чисто чорний міні-плеєр</string>
     <string name="cache_size_warning_title">Тримайся!</string>
     <string name="cache_size_warning_message">Ви вибрали обмеження розміру кешу, менше за те, що зараз використовує програма (%1$s). Якщо ви продовжите, програма може видалити деякі кешовані %2$s, щоб вони відповідали новому ліміту. Продовжити все одно?</string>
     <string name="cache_size_warning_confirm">Продовжити</string>
@@ -217,11 +202,6 @@
     <string name="enable_better_lyrics_desc">Тексти пісень, синхронізовані за складами — ідеально для караоке</string>
     <string name="lyrics_animation_style">Стиль анімації тексту пісні</string>
     <string name="none">Жоден</string>
-    <string name="fade">Згасання</string>
-    <string name="glow">Сяйво</string>
-    <string name="slide">Слайд</string>
-    <string name="karaoke">Караоке</string>
-    <string name="apple_music_style">Apple Music</string>
     <string name="lyrics_text_size">Розмір тексту пісні</string>
     <string name="lyrics_line_spacing">Міжрядковий інтервал тексту пісень</string>
     <string name="shuffle_playlist_first">Спочатку перемішати список відтворення або альбом</string>
@@ -266,19 +246,12 @@
     <string name="wrapped_playlist_saved">Список відтворення збережено</string>
     <string name="casting_to">Трансляція на %s</string>
     <string name="progress_percent">Прогрес %s%%</string>
-    <string name="listening_to_metrolist">Слухаючи Metrolist</string>
     <string name="open">Відкрити</string>
     <string name="failed_to_create_image">Не вдалося створити зображення: %s</string>
     <string name="copied_title">Скопійована назва</string>
     <string name="copied_artist">Скопійований виконавець</string>
     <string name="error_playing">Помилка відтворення</string>
     <string name="failed_to_parse_proxy">Не вдалося проаналізувати URL-адресу проксі-сервера</string>
-    <plurals name="profiles_count">
-        <item quantity="one">%d профіль</item>
-        <item quantity="few">%d профіли</item>
-        <item quantity="many">%d профілів</item>
-        <item quantity="other">%d профілів</item>
-    </plurals>
     <string name="equalizer_header">Еквалайзер</string>
     <string name="no_profiles">Немає профілів еквалайзера</string>
     <string name="import_profile">Імпортувати профіль</string>
@@ -409,7 +382,6 @@
         <item quantity="other">%d пісень</item>
     </plurals>
     <string name="alarm_selected">Вибрано</string>
-    <string name="alarm_playlist_helper">Оберіть список відтворення, який відтворюватиметься під час сигналу будильника</string>
     <string name="alarm_add">Додати будильник</string>
     <string name="alarm_disabled">Вимкнено</string>
     <string name="alarm_random_enabled">Випадково</string>
@@ -433,7 +405,6 @@
     <string name="crossfade_duration">Тривалість переходу</string>
     <string name="crossfade_gapless">Вимкнути для альбомів без пауз</string>
     <string name="crossfade_gapless_desc">Не застосовувати перехід між треками для альбомів, що мають відтворюватися безперервно</string>
-    <string name="crossfade_beta_title">Бета-функція!</string>
     <string name="audio_offload_disabled_by_crossfade">Вимкнено, оскільки активна функція перехресного згасання</string>
     <string name="speed">Швидкість відтворення</string>
     <string name="hide_youtube_shorts">Приховати YouTube Shorts</string>
@@ -456,12 +427,9 @@
     <string name="sleep_timer_stop_after_current_song_title">Зупинити в кінці поточної пісні</string>
     <string name="sleep_timer_stop_after_current_song_description">Очікування завершення поточної пісні перед зупинкою</string>
     <string name="alarm_empty">Будильників немає. Створіть новий, щоб запускати відтворення за розкладом</string>
-    <string name="alarm_next_trigger">Наступне спрацьовування</string>
-    <string name="crossfade_beta_message">Функція «Перехресне згасання» є новою і може містити помилки. Якщо у вас виникнуть проблеми, будь ласка, повідомте про них.\n\nПРИМІТКА: Ця функція вимикає апаратне декодування аудіо через технічні обмеження</string>
     <string name="lyrics_romanize_as_main">Показувати романізований текст як основний</string>
     <string name="eq_downloading">Завантаження…</string>
     <string name="import_from_file">Імпортувати з файлу</string>
-    <string name="add_profile">Додати профіль</string>
     <string name="your_daily_discover">Ваші відкриття дня</string>
     <string name="view_channel">Переглянути канал</string>
     <string name="not_playing">Нічого не відтворюється</string>
@@ -532,8 +500,6 @@
     <string name="creating_room">Створення кімнати…</string>
     <string name="create">Створити</string>
     <string name="join">Приєднатися</string>
-    <string name="lyrics_romanize_hindi">Романізувати тексти на хінді</string>
-    <string name="lyrics_romanize_punjabi">Романізувати тексти на панджабі</string>
     <string name="show_interval_indicator">Показувати індикатор інтервалів</string>
     <string name="palette_purple">Фіолетовий</string>
     <string name="palette_indigo">Індиго</string>
@@ -568,7 +534,6 @@
     <string name="re_listen">Переслухати</string>
     <string name="play_on_app">Відтворити в Metrolist</string>
     <string name="importing_playlist">Імпорт списку відтворення…</string>
-    <string name="added_to_playlist">Додано до списку відтворення</string>
     <string name="android_auto_target_playlist_not_set">Список відтворення не вибрано. Виберіть його в налаштуваннях Android Auto</string>
     <string name="widget_playlists">Списки відтворення</string>
     <string name="show_interval_indicator_desc">Показувати індикатор прогресу під час тривалих інструментальних пауз</string>
@@ -591,7 +556,6 @@
     <string name="disconnect">Відключитись</string>
     <string name="clear">Очистити</string>
     <string name="copy">Копіювати</string>
-    <string name="copy_all_lyrics">Копіювати весь текст</string>
     <string name="change">Змінити</string>
     <string name="copied_to_clipboard">Копіювати в буфер обміну</string>
     <string name="in_room">В кімнаті</string>

@@ -1,0 +1,240 @@
+syntax = "proto3";
+
+package listentogether;
+
+option go_package = "github.com/MetrolistGroup/metroserver/proto";
+option java_package = "com.metrolist.music.listentogether.proto";
+option java_outer_classname = "Listentogether";
+option java_multiple_files = false;
+
+// Message envelope with type and payload
+message Envelope {
+  string type = 1;
+  bytes payload = 2;
+  bool compressed = 3;  // Indicates if payload is gzip compressed
+}
+
+// Track information
+message TrackInfo {
+  string id = 1;
+  string title = 2;
+  string artist = 3;
+  string album = 4;
+  int64 duration = 5;
+  string thumbnail = 6;
+  string suggested_by = 7;
+}
+
+// User information
+message UserInfo {
+  string user_id = 1;
+  string username = 2;
+  bool is_host = 3;
+  bool is_connected = 4;
+}
+
+// Room state
+message RoomState {
+  string room_code = 1;
+  string host_id = 2;
+  repeated UserInfo users = 3;
+  TrackInfo current_track = 4;
+  bool is_playing = 5;
+  int64 position = 6;
+  int64 last_update = 7;
+  float volume = 8;
+  repeated TrackInfo queue = 9;
+  uint64 revision = 10;
+}
+
+// Client -> Server messages
+
+message CreateRoomPayload {
+  string username = 1;
+}
+
+message JoinRoomPayload {
+  string room_code = 1;
+  string username = 2;
+}
+
+message LeaveRoomPayload {}
+
+message ApproveJoinPayload {
+  string user_id = 1;
+}
+
+message RejectJoinPayload {
+  string user_id = 1;
+  string reason = 2;
+}
+
+message PlaybackActionPayload {
+  string action = 1;
+  string track_id = 2;
+  int64 position = 3;
+  TrackInfo track_info = 4;
+  bool insert_next = 5;
+  repeated TrackInfo queue = 6;
+  string queue_title = 7;
+  float volume = 8;
+  int64 server_time = 9;
+  uint64 revision = 10;
+  int64 captured_at_server_time = 11;
+}
+
+message PingPayload {
+  int64 client_time = 1;
+  uint64 sequence = 2;
+}
+
+message BufferReadyPayload {
+  string track_id = 1;
+}
+
+message KickUserPayload {
+  string user_id = 1;
+  string reason = 2;
+}
+
+message TransferHostPayload {
+  string new_host_id = 1;
+}
+
+message SuggestTrackPayload {
+  TrackInfo track_info = 1;
+}
+
+message ApproveSuggestionPayload {
+  string suggestion_id = 1;
+}
+
+message RejectSuggestionPayload {
+  string suggestion_id = 1;
+  string reason = 2;
+}
+
+message ReconnectPayload {
+  string session_token = 1;
+}
+
+// Server -> Client messages
+
+message RoomCreatedPayload {
+  string room_code = 1;
+  string user_id = 2;
+  string session_token = 3;
+}
+
+message JoinRequestPayload {
+  string user_id = 1;
+  string username = 2;
+}
+
+message JoinApprovedPayload {
+  string room_code = 1;
+  string user_id = 2;
+  string session_token = 3;
+  RoomState state = 4;
+}
+
+message JoinRejectedPayload {
+  string reason = 1;
+}
+
+message UserJoinedPayload {
+  string user_id = 1;
+  string username = 2;
+}
+
+message UserLeftPayload {
+  string user_id = 1;
+  string username = 2;
+}
+
+message BufferWaitPayload {
+  string track_id = 1;
+  repeated string waiting_for = 2;
+}
+
+message BufferCompletePayload {
+  string track_id = 1;
+}
+
+message ErrorPayload {
+  string code = 1;
+  string message = 2;
+}
+
+message HostChangedPayload {
+  string new_host_id = 1;
+  string new_host_name = 2;
+}
+
+message KickedPayload {
+  string reason = 1;
+}
+
+message SyncStatePayload {
+  TrackInfo current_track = 1;
+  bool is_playing = 2;
+  int64 position = 3;
+  int64 last_update = 4;
+  repeated TrackInfo queue = 5;
+  float volume = 6;
+  uint64 revision = 7;
+}
+
+message PongPayload {
+  int64 client_time = 1;
+  int64 server_receive_time = 2;
+  int64 server_send_time = 3;
+  uint64 sequence = 4;
+}
+
+message ReconnectedPayload {
+  string room_code = 1;
+  string user_id = 2;
+  RoomState state = 3;
+  bool is_host = 4;
+}
+
+message UserReconnectedPayload {
+  string user_id = 1;
+  string username = 2;
+}
+
+message UserDisconnectedPayload {
+  string user_id = 1;
+  string username = 2;
+}
+
+message SuggestionReceivedPayload {
+  string suggestion_id = 1;
+  string from_user_id = 2;
+  string from_username = 3;
+  TrackInfo track_info = 4;
+}
+
+message SuggestionApprovedPayload {
+  string suggestion_id = 1;
+  TrackInfo track_info = 2;
+}
+
+message SuggestionRejectedPayload {
+  string suggestion_id = 1;
+  string reason = 2;
+}
+
+// Capability negotiation (first message from client)
+message ClientCapabilities {
+  bool supports_protobuf = 1;
+  bool supports_compression = 2;
+  string client_version = 3;
+}
+
+message ServerCapabilities {
+  bool supports_protobuf = 1;
+  bool supports_compression = 2;
+  string server_version = 3;
+}

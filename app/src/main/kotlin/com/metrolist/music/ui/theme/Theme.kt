@@ -17,7 +17,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.palette.graphics.Palette
@@ -65,36 +64,27 @@ fun MetrolistTheme(
     // Use standard MaterialTheme instead of MaterialExpressiveTheme
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = AppTypography, // Use the defined AppTypography
-        content = content
+        content = content,
     )
 }
 
-fun Bitmap.extractThemeColor(): Color {
-    val colorsToPopulation = Palette.from(this)
+fun Bitmap.extractThemeColor(): Color = Color(
+    Palette.from(this)
         .maximumColorCount(8)
         .generate()
-        .swatches
-        .associate { it.rgb to it.population }
-    val rankedColors = Score.score(colorsToPopulation)
-    return Color(rankedColors.first())
-}
+        .rankedColors(1, DefaultThemeColor.toArgb())
+        .first()
+)
 
-fun Bitmap.extractGradientColors(): List<Color> {
-    val extractedColors = Palette.from(this)
-        .maximumColorCount(64)
-        .generate()
-        .swatches
-        .associate { it.rgb to it.population }
-
-    val orderedColors = Score.score(extractedColors, 2, 0xff4285f4.toInt(), true)
-        .sortedByDescending { Color(it).luminance() }
-
-    return if (orderedColors.size >= 2)
-        listOf(Color(orderedColors[0]), Color(orderedColors[1]))
-    else
-        listOf(Color(0xFF595959), Color(0xFF0D0D0D))
-}
+internal fun Palette.rankedColors(
+    desiredColorCount: Int,
+    fallbackColor: Int,
+): List<Int> = Score.score(
+    swatches.associate { it.rgb to it.population },
+    desiredColorCount,
+    fallbackColor,
+    true,
+)
 
 fun ColorScheme.pureBlack(apply: Boolean) =
     if (apply) copy(

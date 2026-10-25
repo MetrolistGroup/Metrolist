@@ -59,8 +59,6 @@
     <string name="default_style">Vaikimisi</string>
     <string name="lyrics_click_change">Vaheta laulusõnu klõpsimisega</string>
     <string name="lyrics_auto_scroll">Keri laulusõnu automaatselt</string>
-    <string name="lyrics_romanize_japanese">Latiniseeri jaapanikeelseid laulusõnu</string>
-    <string name="lyrics_romanize_korean">Latiniseeri koreakeelseid laulusõnu</string>
     <string name="show_liked_playlist">Näita esitusloendit „Meeldib“</string>
     <string name="show_downloaded_playlist">Näita esitusloendit „Allalaaditud“</string>
     <string name="show_top_playlist">Näita esitusloendit „Populaarne“</string>

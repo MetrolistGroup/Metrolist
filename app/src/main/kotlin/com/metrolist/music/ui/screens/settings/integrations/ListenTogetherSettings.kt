@@ -73,7 +73,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
@@ -82,6 +81,7 @@ import com.metrolist.music.constants.ListenTogetherAutoApproveSuggestionsKey
 import com.metrolist.music.constants.ListenTogetherServerUrlKey
 import com.metrolist.music.constants.ListenTogetherSyncVolumeKey
 import com.metrolist.music.constants.ListenTogetherUsernameKey
+import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.listentogether.ConnectionState
 import com.metrolist.music.listentogether.ListenTogetherEvent
 import com.metrolist.music.listentogether.ListenTogetherServer
@@ -95,25 +95,22 @@ import com.metrolist.music.ui.component.IntegrationCard
 import com.metrolist.music.ui.component.IntegrationCardItem
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.rememberPreference
-import com.metrolist.music.viewmodels.ListenTogetherViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListenTogetherSettings(
-    navController: NavController,
-    viewModel: ListenTogetherViewModel = hiltViewModel(),
-) {
+fun ListenTogetherSettings(navController: NavController) {
+    val manager = LocalListenTogetherManager.current ?: return
     val context = LocalContext.current
     val cannotEditUsernameInRoomStr = stringResource(R.string.listen_together_cannot_edit_username_in_room)
     val coroutineScope = rememberCoroutineScope()
 
-    val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
-    val roomState by viewModel.roomState.collectAsStateWithLifecycle()
-    val role by viewModel.role.collectAsStateWithLifecycle()
-    val pendingJoinRequests by viewModel.pendingJoinRequests.collectAsStateWithLifecycle()
-    val logs by viewModel.logs.collectAsStateWithLifecycle()
-    val blockedUsernames by viewModel.blockedUsernames.collectAsStateWithLifecycle()
+    val connectionState by manager.connectionState.collectAsStateWithLifecycle()
+    val roomState by manager.roomState.collectAsStateWithLifecycle()
+    val role by manager.role.collectAsStateWithLifecycle()
+    val pendingJoinRequests by manager.pendingJoinRequests.collectAsStateWithLifecycle()
+    val logs by manager.logs.collectAsStateWithLifecycle()
+    val blockedUsernames by manager.blockedUsernames.collectAsStateWithLifecycle()
 
     val servers = remember { ListenTogetherServers.servers }
     var serverUrl by rememberPreference(ListenTogetherServerUrlKey, ListenTogetherServers.defaultServerUrl)
@@ -132,7 +129,7 @@ fun ListenTogetherSettings(
 
     // Handle events
     LaunchedEffect(Unit) {
-        viewModel.events.collectLatest { event ->
+        manager.events.collectLatest { event ->
             when (event) {
                 is ListenTogetherEvent.RoomCreated -> {
                     // Room created toast is shown globally by the client
@@ -244,7 +241,7 @@ fun ListenTogetherSettings(
                         val finalUsername = createUsername.trim()
                         if (finalUsername.isNotBlank()) {
                             username = finalUsername
-                            viewModel.createRoom(finalUsername)
+                            manager.createRoom(finalUsername)
                             showCreateRoomDialog = false
                         } else {
                             Toast.makeText(context, R.string.error_username_empty, Toast.LENGTH_SHORT).show()
@@ -295,7 +292,7 @@ fun ListenTogetherSettings(
                         val finalUsername = joinUsername.trim()
                         if (finalUsername.isNotBlank() && roomCodeInput.length == 8) {
                             username = finalUsername
-                            viewModel.joinRoom(roomCodeInput, finalUsername)
+                            manager.joinRoom(roomCodeInput, finalUsername)
                             showJoinRoomDialog = false
                             roomCodeInput = ""
                         } else {
@@ -338,7 +335,7 @@ fun ListenTogetherSettings(
     if (showLogsDialog) {
         LogsDialog(
             logs = logs,
-            onClear = { viewModel.clearLogs() },
+            onClear = { manager.clearLogs() },
             onDismiss = { showLogsDialog = false },
         )
     }
@@ -346,7 +343,7 @@ fun ListenTogetherSettings(
     if (showBlockedUsersDialog) {
         BlockedUsersDialog(
             blockedUsernames = blockedUsernames,
-            onUnblock = { viewModel.unblockUser(it) },
+            onUnblock = { manager.unblockUser(it) },
             onDismiss = { showBlockedUsersDialog = false },
         )
     }

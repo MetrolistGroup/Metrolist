@@ -157,38 +157,6 @@ object ParametricEQParser {
     }
 
     /**
-     * Convert ParametricEQ to a human-readable string
-     */
-    fun toString(eq: ParametricEQ): String {
-        val sb = StringBuilder()
-        sb.appendLine("Preamp: ${eq.preamp} dB")
-        eq.bands.forEachIndexed { index, band ->
-            sb.appendLine(
-                "Filter ${index + 1}: ${band.filterType} Fc ${band.frequency} Hz " +
-                        "Gain ${band.gain} dB Q ${band.q}"
-            )
-        }
-        return sb.toString()
-    }
-
-    /**
-     * Format ParametricEQ for export to file
-     */
-    fun toFileFormat(eq: ParametricEQ): String {
-        val sb = StringBuilder()
-        sb.appendLine("Preamp: ${eq.preamp} dB")
-        eq.bands.forEachIndexed { index, band ->
-            sb.appendLine(
-                "Filter ${index + 1}: ON ${band.filterType} " +
-                        "Fc ${band.frequency.toInt()} Hz " +
-                        "Gain ${band.gain} dB " +
-                        "Q ${String.format("%.2f", band.q)}"
-            )
-        }
-        return sb.toString()
-    }
-
-    /**
      * Validate a ParametricEQ profile
      * Returns a list of validation error messages (empty list if valid)
      */

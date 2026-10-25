@@ -43,6 +43,7 @@ import com.metrolist.music.ui.component.Material3MenuItemData
 import com.metrolist.music.ui.component.NewAction
 import com.metrolist.music.ui.component.NewActionGrid
 import com.metrolist.music.ui.component.YouTubeListItem
+import com.metrolist.music.utils.ArtistNameAliases
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
@@ -188,7 +189,7 @@ fun YouTubeArtistMenu(
                                     insert(
                                         ArtistEntity(
                                             id = artist.id,
-                                            name = artist.title,
+                                            name = ArtistNameAliases.resolve(artist.id, artist.title),
                                             channelId = artist.channelId,
                                             thumbnailUrl = artist.thumbnail,
                                         ).toggleLike()

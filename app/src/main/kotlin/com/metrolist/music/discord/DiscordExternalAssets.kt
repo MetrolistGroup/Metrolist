@@ -1,6 +1,7 @@
 package com.metrolist.music.discord
 
 import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -20,7 +21,7 @@ object DiscordExternalAssets {
     private const val CACHE_MAX_SIZE = 128
 
     private val client: HttpClient by lazy {
-        HttpClient(io.ktor.client.engine.cio.CIO) {
+        HttpClient(OkHttp) {
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 10_000L
                 connectTimeoutMillis = 5_000L

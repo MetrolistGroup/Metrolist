@@ -83,6 +83,7 @@ fun AiSettings(navController: NavController) {
             "Gemini" to "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
             "XAi" to "https://api.x.ai/v1/chat/completions",
             "Mistral" to "https://api.mistral.ai/v1/chat/completions",
+            "Inception" to "https://api.inceptionlabs.ai/v1/chat/completions",
             "DeepL" to "https://api.deepl.com/v2/translate",
             "Custom" to "",
         )
@@ -96,6 +97,7 @@ fun AiSettings(navController: NavController) {
             "Gemini" to stringResource(R.string.ai_provider_gemini_help),
             "XAi" to stringResource(R.string.ai_provider_xai_help),
             "Mistral" to stringResource(R.string.ai_provider_mistral_help),
+            "Inception" to stringResource(R.string.ai_provider_inception_help),
             "DeepL" to stringResource(R.string.ai_provider_deepl_help),
             "Custom" to "",
         )
@@ -104,46 +106,48 @@ fun AiSettings(navController: NavController) {
         mapOf(
             "OpenRouter" to
                 listOf(
-                    "google/gemini-2.5-flash-lite",
-                    "google/gemini-2.5-flash",
-                    "x-ai/grok-4.1-fast",
-                    "deepseek/deepseek-v3.1-terminus:exacto",
-                    "openai/gpt-4o-mini",
-                    "meta-llama/llama-4-scout",
-                    "openai/gpt-5-nano",
+                    "inception/mercury-2.5-preview", // really fucking fast
+                    "meta/muse-spark-1.3", // cheap
+                    "z-ai/glm-5.3-flash", // pretty fast and cheap
+                    "qwen/qwen3.8-flash", // good for chinese
+                    "~deepseek/deepseek-v4-flash-latest",
+                    "~openai/gpt-mini-latest",
                     "openai/gpt-oss-120b",
-                    "google/gemini-3-flash-preview",
+                    "~google/gemini-flash-latest",
                 ),
             "OpenAI" to
                 listOf(
-                    "gpt-4o-mini",
-                    "gpt-4o",
-                    "gpt-4-turbo",
+                    "gpt-5.6-sol",
+                    "gpt-5.6-terra",
+                    "gpt-5.6-luna",
+                    "gpt-5.5-2026-04-23",
+                    "gpt-5.4-2026-03-05",
                 ),
             "Claude" to
                 listOf(
-                    "claude-opus-4-6",
-                    "claude-sonnet-4-6",
+                    "claude-opus-5",
+                    "claude-sonnet-5",
                     "claude-haiku-4-5-20251001",
+                    "claude-fable-5-1",
                 ),
             "Gemini" to
                 listOf(
                     "gemini-flash-lite-latest",
-                    "gemini-2.5-flash-lite",
+                    "gemini-pro-latest",
                     "gemini-flash-latest",
-                    "gemini-2.5-flash",
-                    "gemini-3-flash-preview",
+                    "gemini-3.8-flash",
                 ),
             "Perplexity" to
                 listOf(
                     "sonar",
                     "sonar-pro",
-                    "sonar-reasoning",
+                    "sonar-reasoning-pro",
                 ),
             "XAi" to
                 listOf(
-                    "grok-4-1-fast",
-                    "grok-vision-beta",
+                    "grok-4.3",
+                    "grok-4.6",
+                    "grok-4.1-fast",
                 ),
             "Mistral" to
                 listOf(
@@ -151,6 +155,10 @@ fun AiSettings(navController: NavController) {
                     "mistral-medium-latest",
                     "mistral-small-latest",
                     "mistral-tiny-latest",
+                ),
+            "Inception" to
+                listOf(
+                    "mercury-2", // insanely fast diffusion LLM, supports structured outputs
                 ),
             "DeepL" to listOf(),
             "Custom" to listOf(),

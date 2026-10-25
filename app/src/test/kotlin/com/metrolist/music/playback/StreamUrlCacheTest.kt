@@ -121,4 +121,23 @@ class StreamUrlCacheTest {
         assertEquals(true, inserted)
         assertEquals("https://example.com/first", cache["first"]?.url)
     }
+
+    @Test
+    fun `cache preserves bounded range policy`() {
+        val cache = StreamUrlCache(currentTimeMillis = { 1_000L })
+        cache.put(
+            mediaId = "song",
+            url = "https://example.com/resolved",
+            requestHeaders = mapOf("User-Agent" to "test-client"),
+            clientName = "IOS",
+            expiresInSeconds = 10,
+            requireBoundedRange = true,
+            rangeChunkSizeBytes = 1_024,
+        )
+
+        val stream = requireNotNull(cache["song"])
+        assertEquals(true, stream.requireBoundedRange)
+        assertEquals(1_024, stream.rangeChunkSizeBytes)
+        assertEquals("test-client", stream.requestHeaders["User-Agent"])
+    }
 }

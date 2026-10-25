@@ -316,7 +316,7 @@ private fun NoEqualizationItem(
     onSelected: () -> Unit
 ) {
     ListItem(
-        headlineContent = {
+        content = {
             Text(
                 stringResource(R.string.eq_disabled),
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
@@ -344,7 +344,7 @@ private fun EQProfileItem(
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     ListItem(
-        headlineContent = {
+        content = {
             Text(
                 text = profile.deviceModel,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal

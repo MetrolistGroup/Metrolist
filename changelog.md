@@ -1,3 +1,35 @@
+---v13.7.0
+# KMP status update
+Metrolist-KMP remains in alpha, but tester feedback has been very positive. To try it, join our Discord and donate at least $1 to support development.
+
+## Highlights
+- Migrated networking to InnerTubeX with automatic client fallback (@nyxiereal)
+- Reduced memory use and background work in large libraries, History, Cache, Android Auto, and audio processing (@makro17 @nyxiereal)
+- Repaired older-version upgrades, Android Auto browsing, artist metadata, and YouTube channel switching (@nyxiereal)
+- Improved login, account loading, uploads, downloads, caching, metadata editing, and playlist sync (@nyxiereal)
+- Restored the classic app icon (@nyxiereal)
+
+## New features
+- Choose whether songs are added to the start or end of playlists (@nyxiereal)
+- Added Zemer lyrics for Jewish music (@alltechdev)
+- Added detailed, copyable playback error reports (@nyxiereal)
+- Added a unified update prompt for standalone and KMP releases (@nyxiereal)
+- Added Inception AI models and improved lyric translation output (@nyxiereal)
+- Restored universal x86 and x86_64 support (@nyxiereal)
+
+## Fixes and improvements
+- Fixed missing or cropped artwork and improved timed and Cyrillic lyrics (@RizkLee @GameOn223 @Cocoa2219 @nyxiereal)
+- Preserved manual metadata edits during refreshes and corrected Cache Playlist contents (@nyxiereal)
+- Fixed repeat and shuffle with crossfade, Listen Together stutter, and paused queues restarting at the end (@nyxiereal)
+- Fixed per-song volume normalization and improved playback recovery (@nyxiereal)
+- Fixed dismissed media controls reappearing and several startup crashes (@nyxiereal)
+- Protected local likes from incomplete sync responses and improved uploaded-song handling (@nyxiereal)
+- Updated dependencies and CI (@nyxiereal)
+
+New contributors: @RizkLee (#4277), @GameOn223 (#4269), and @makro17 (#4270)
+
+**Full changelog**: https://github.com/MetrolistGroup/Metrolist/compare/v13.6.3...v13.7.0
+
 ---v13.6.3
 
 This is a hotfix release to fix borked lyrics and media controller. We apologize for the inconvenience.  

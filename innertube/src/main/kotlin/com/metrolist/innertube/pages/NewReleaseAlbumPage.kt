@@ -1,10 +1,7 @@
 package com.metrolist.innertube.pages
 
 import com.metrolist.innertube.models.AlbumItem
-import com.metrolist.innertube.models.Artist
 import com.metrolist.innertube.models.MusicTwoRowItemRenderer
-import com.metrolist.innertube.models.oddElements
-import com.metrolist.innertube.models.splitBySeparator
 
 object NewReleaseAlbumPage {
     fun fromMusicTwoRowItemRenderer(renderer: MusicTwoRowItemRenderer): AlbumItem? {
@@ -23,15 +20,11 @@ object NewReleaseAlbumPage {
                     ?.firstOrNull()
                     ?.text ?: return null,
             artists =
-                renderer.subtitle?.runs?.splitBySeparator()?.getOrNull(1)?.oddElements()?.map {
-                    Artist(
-                        name = it.text,
-                        id = it.navigationEndpoint?.browseEndpoint?.browseId,
-                    )
-                } ?: return null,
+                PageHelper.extractArtists(renderer.subtitle?.runs),
             year =
-                renderer.subtitle.runs
-                    .lastOrNull()
+                renderer.subtitle
+                    ?.runs
+                    ?.lastOrNull()
                     ?.text
                     ?.toIntOrNull(),
             thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,

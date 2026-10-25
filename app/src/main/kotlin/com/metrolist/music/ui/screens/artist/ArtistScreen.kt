@@ -87,6 +87,7 @@ import com.metrolist.innertube.models.PodcastItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.music.LocalDatabase
+import com.metrolist.music.LocalArtistNameAliases
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
@@ -124,6 +125,7 @@ import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.ui.utils.fadingEdge
 import com.metrolist.music.ui.utils.isScrollingUp
 import com.metrolist.music.ui.utils.resize
+import com.metrolist.music.utils.ArtistNameAliases
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.viewmodels.ArtistViewModel
 import com.valentinilk.shimmer.shimmer
@@ -148,6 +150,13 @@ fun ArtistScreen(
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     val artistPage = viewModel.artistPage
     val libraryArtist by viewModel.libraryArtist.collectAsStateWithLifecycle()
+    val artistNameAliases = LocalArtistNameAliases.current
+    val displayArtistName =
+        ArtistNameAliases.resolve(
+            artistNameAliases,
+            viewModel.artistId,
+            artistPage?.artist?.title ?: libraryArtist?.artist?.name.orEmpty(),
+        ).ifEmpty { null }
     val librarySongs by viewModel.librarySongs.collectAsStateWithLifecycle()
     val libraryAlbums by viewModel.libraryAlbums.collectAsStateWithLifecycle()
     val isChannelSubscribed by viewModel.isChannelSubscribed.collectAsStateWithLifecycle()
@@ -287,7 +296,6 @@ fun ArtistScreen(
             } else {
                 item(key = "header") {
                     val thumbnail = artistPage?.artist?.thumbnail ?: libraryArtist?.artist?.thumbnailUrl
-                    val artistName = artistPage?.artist?.title ?: libraryArtist?.artist?.name
 
                     Box {
                         // Artist Image with offset
@@ -344,7 +352,7 @@ fun ArtistScreen(
                             ) {
                                 // Artist Name
                                 Text(
-                                    text = artistName ?: "Unknown",
+                                    text = displayArtistName ?: "Unknown",
                                     style = MaterialTheme.typography.headlineLarge,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
@@ -583,7 +591,7 @@ fun ArtistScreen(
                                                     } else {
                                                         playerConnection.playQueue(
                                                             ListQueue(
-                                                                title = libraryArtist?.artist?.name ?: "Unknown Artist",
+                                                                title = displayArtistName ?: "Unknown Artist",
                                                                 items = librarySongs.map { it.toMediaItem() },
                                                                 startIndex = index,
                                                             ),
@@ -677,7 +685,7 @@ fun ArtistScreen(
 
                         if ((section.items.firstOrNull() as? SongItem)?.album != null) {
                             items(
-                                items = distinctItemsBySection[index] ?: section.items,
+                                items = distinctItemsBySection.getOrNull(index) ?: section.items,
                                 key = { "youtube_song_${it.id}" },
                             ) { song ->
                                 YouTubeListItem(
@@ -736,7 +744,7 @@ fun ArtistScreen(
                                     contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).asPaddingValues(),
                                 ) {
                                     items(
-                                        items = distinctItemsBySection[index] ?: section.items,
+                                        items = distinctItemsBySection.getOrNull(index) ?: section.items,
                                         key = { "youtube_album_${it.id}" },
                                     ) { item ->
                                         YouTubeGridItem(
@@ -902,7 +910,7 @@ fun ArtistScreen(
                             if (librarySongs.isNotEmpty()) {
                                 playerConnection.playQueue(
                                     ListQueue(
-                                        title = libraryArtist?.artist?.name ?: "Unknown Artist",
+                                        title = displayArtistName ?: "Unknown Artist",
                                         items = librarySongs.map { it.toMediaItem() },
                                     ),
                                 )
@@ -922,7 +930,7 @@ fun ArtistScreen(
                                             val songs = result.items.filterIsInstance<SongItem>().map { it.toMediaItem() }
                                             playerConnection.playQueue(
                                                 ListQueue(
-                                                    title = artistPage.artist.title,
+                                                    title = displayArtistName ?: artistPage.artist.title,
                                                     items = songs,
                                                 ),
                                             )
@@ -932,7 +940,7 @@ fun ArtistScreen(
                                             if (songs.isNotEmpty()) {
                                                 playerConnection.playQueue(
                                                     ListQueue(
-                                                        title = artistPage.artist.title,
+                                                        title = displayArtistName ?: artistPage.artist.title,
                                                         items = songs,
                                                     ),
                                                 )
@@ -945,7 +953,7 @@ fun ArtistScreen(
                                 val songs = songSection.items.filterIsInstance<SongItem>().map { it.toMediaItem() }
                                 playerConnection.playQueue(
                                     ListQueue(
-                                        title = artistPage.artist.title,
+                                        title = displayArtistName ?: artistPage.artist.title,
                                         items = songs,
                                     ),
                                 )
@@ -1005,7 +1013,7 @@ fun ArtistScreen(
     }
 
     TopAppBar(
-        title = { if (!transparentAppBar) Text(artistPage?.artist?.title.orEmpty()) },
+        title = { if (!transparentAppBar) Text(displayArtistName.orEmpty()) },
         navigationIcon = {
             IconButton(
                 onClick = navController::navigateUp,

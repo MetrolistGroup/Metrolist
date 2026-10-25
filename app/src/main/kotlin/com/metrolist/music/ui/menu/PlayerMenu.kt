@@ -72,13 +72,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.offline.Download
-import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
-import com.metrolist.innertube.YouTube
 import com.metrolist.music.LocalNavController
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalDownloadUtil
@@ -139,8 +136,9 @@ fun PlayerMenu(
 
     val librarySong by database.song(mediaMetadata.id).collectAsStateWithLifecycle(initialValue = null)
     val coroutineScope = rememberCoroutineScope()
+    val downloadUtil = LocalDownloadUtil.current
 
-    val download by LocalDownloadUtil.current
+    val download by downloadUtil
         .getDownload(mediaMetadata.id)
         .collectAsStateWithLifecycle(initialValue = null)
 
@@ -171,12 +169,9 @@ fun PlayerMenu(
 
     AddToPlaylistDialog(
         isVisible = showChoosePlaylistDialog,
-        onGetSong = { playlist ->
+        onGetSong = {
             database.withTransaction {
                 insert(mediaMetadata)
-            }
-            coroutineScope.launch(Dispatchers.IO) {
-                playlist.playlist.browseId?.let { YouTube.addToPlaylist(it, mediaMetadata.id) }
             }
             listOf(mediaMetadata.id)
         },
@@ -584,21 +579,7 @@ fun PlayerMenu(
                                         )
                                     },
                                     onClick = {
-                                        database.transaction {
-                                            insert(mediaMetadata)
-                                        }
-                                        val downloadRequest =
-                                            DownloadRequest
-                                                .Builder(mediaMetadata.id, mediaMetadata.id.toUri())
-                                                .setCustomCacheKey(mediaMetadata.id)
-                                                .setData(mediaMetadata.title.toByteArray())
-                                                .build()
-                                        DownloadService.sendAddDownload(
-                                            context,
-                                            ExoDownloadService::class.java,
-                                            downloadRequest,
-                                            false,
-                                        )
+                                        downloadUtil.download(mediaMetadata)
                                     },
                                 )
                             }
@@ -1504,7 +1485,7 @@ fun ListenTogetherDialog(
                 item { Spacer(modifier = Modifier.height(16.dp)) }
 
                 // Connected users - horizontal layout
-                val connectedUsers = room.users.filter { it.isConnected }
+                val connectedUsers = room.usersList.filter { it.isConnected }
 
                 item {
                     Column(

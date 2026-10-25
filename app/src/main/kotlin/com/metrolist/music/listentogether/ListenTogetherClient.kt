@@ -23,6 +23,7 @@ import androidx.core.content.getSystemService
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
+import com.google.protobuf.MessageLite
 import com.metrolist.music.R
 import com.metrolist.music.constants.ListenTogetherAutoApprovalKey
 import com.metrolist.music.constants.ListenTogetherAutoApproveSuggestionsKey
@@ -1278,8 +1279,8 @@ class ListenTogetherClient
                                 _roomState.value =
                                     _roomState.value?.copy(
                                         isPlaying = true,
-                                     position = payload.position ?: _roomState.value!!.position,
-                                        lastUpdate = payload.serverTime ?: _roomState.value!!.lastUpdate,
+                                        position = payload.positionOrNull ?: _roomState.value!!.position,
+                                        lastUpdate = payload.serverTimeOrNull ?: _roomState.value!!.lastUpdate,
                                         revision = maxOf(_roomState.value!!.revision, payload.revision),
                                     )
                             }
@@ -1288,8 +1289,8 @@ class ListenTogetherClient
                                 _roomState.value =
                                     _roomState.value?.copy(
                                         isPlaying = false,
-                                        position = payload.position ?: _roomState.value!!.position,
-                                        lastUpdate = payload.serverTime ?: _roomState.value!!.lastUpdate,
+                                        position = payload.positionOrNull ?: _roomState.value!!.position,
+                                        lastUpdate = payload.serverTimeOrNull ?: _roomState.value!!.lastUpdate,
                                         revision = maxOf(_roomState.value!!.revision, payload.revision),
                                     )
                             }
@@ -1297,8 +1298,8 @@ class ListenTogetherClient
                             PlaybackActions.SEEK -> {
                                 _roomState.value =
                                     _roomState.value?.copy(
-                                        position = payload.position ?: _roomState.value!!.position,
-                                        lastUpdate = payload.serverTime ?: _roomState.value!!.lastUpdate,
+                                        position = payload.positionOrNull ?: _roomState.value!!.position,
+                                        lastUpdate = payload.serverTimeOrNull ?: _roomState.value!!.lastUpdate,
                                         revision = maxOf(_roomState.value!!.revision, payload.revision),
                                     )
                             }
@@ -1306,17 +1307,17 @@ class ListenTogetherClient
                             PlaybackActions.CHANGE_TRACK -> {
                                 _roomState.value =
                                     _roomState.value?.copy(
-                                        currentTrack = payload.trackInfo,
+                                        currentTrack = payload.trackInfoOrNull,
                                         isPlaying = false,
                                         position = 0,
-                                        lastUpdate = payload.serverTime ?: _roomState.value!!.lastUpdate,
+                                        lastUpdate = payload.serverTimeOrNull ?: _roomState.value!!.lastUpdate,
                                         queue = if (payload.revision > 0L) payload.queue.orEmpty() else _roomState.value!!.queue,
                                         revision = maxOf(_roomState.value!!.revision, payload.revision),
                                     )
                             }
 
                             PlaybackActions.QUEUE_ADD -> {
-                                val ti = payload.trackInfo
+                                val ti = payload.trackInfoOrNull
                                 if (ti != null) {
                                     val currentQueue = _roomState.value?.queue ?: emptyList()
                                     _roomState.value =
@@ -1334,7 +1335,7 @@ class ListenTogetherClient
                             }
 
                             PlaybackActions.QUEUE_REMOVE -> {
-                                val id = payload.trackId
+                                val id = payload.trackIdOrNull
                                 if (!id.isNullOrEmpty()) {
                                     val currentQueue = _roomState.value?.queue ?: emptyList()
                                     _roomState.value =
@@ -1356,7 +1357,7 @@ class ListenTogetherClient
                             }
 
                             PlaybackActions.SET_VOLUME -> {
-                                val vol = payload.volume
+                                val vol = payload.volumeOrNull
                                 if (vol != null) {
                                     _roomState.value = _roomState.value?.copy(volume = vol.coerceIn(0f, 1f))
                                 }
@@ -1393,11 +1394,11 @@ class ListenTogetherClient
                         }
                         _roomState.value =
                             _roomState.value?.copy(
-                                currentTrack = payload.currentTrack,
+                                currentTrack = payload.currentTrackOrNull,
                                 isPlaying = payload.isPlaying,
                                 position = payload.position,
                                 lastUpdate = payload.lastUpdate,
-                                volume = payload.volume ?: _roomState.value!!.volume,
+                                volume = payload.volume,
                                 queue = payload.queue ?: _roomState.value!!.queue,
                                 revision = maxOf(_roomState.value!!.revision, payload.revision),
                             )
@@ -1451,7 +1452,7 @@ class ListenTogetherClient
 
                     MessageTypes.SUGGESTION_REJECTED -> {
                         val payload = codec.decodePayload(msgType, payloadBytes) as? SuggestionRejectedPayload ?: return
-                        log(LogLevel.WARNING, "Suggestion rejected", payload.reason ?: "")
+                        log(LogLevel.WARNING, "Suggestion rejected", payload.reasonOrNull.orEmpty())
 
                         // Dismiss notification if it exists
                         suggestionNotifications.remove(payload.suggestionId)?.let { notifId ->
@@ -1583,9 +1584,9 @@ class ListenTogetherClient
             }
         }
 
-        private inline fun <reified T> sendMessage(
+        private fun sendMessage(
             type: String,
-            payload: T?,
+            payload: MessageLite?,
         ) {
             try {
                 val data = codec.encode(type, payload)
@@ -1601,7 +1602,7 @@ class ListenTogetherClient
         }
 
         private fun sendMessageNoPayload(type: String) {
-            sendMessage<Unit>(type, null)
+            sendMessage(type, null)
         }
 
         // Public API methods

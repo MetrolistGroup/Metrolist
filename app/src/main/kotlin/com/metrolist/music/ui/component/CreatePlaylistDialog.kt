@@ -6,10 +6,8 @@
 package com.metrolist.music.ui.component
 
 import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -21,14 +19,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import com.metrolist.innertube.YouTube
-import com.metrolist.music.LocalDatabase
+import com.metrolist.music.LocalSyncUtils
 import com.metrolist.music.R
 import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.db.entities.PlaylistEntity
@@ -38,7 +36,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
-import java.util.logging.Logger
 
 @Composable
 fun CreatePlaylistDialog(
@@ -47,7 +44,7 @@ fun CreatePlaylistDialog(
     allowSyncing: Boolean = true,
     onPlaylistCreated: ((String) -> Unit)? = null,
 ) {
-    val database = LocalDatabase.current
+    val syncUtils = LocalSyncUtils.current
     val coroutineScope = rememberCoroutineScope()
     var syncedPlaylist by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -57,6 +54,7 @@ fun CreatePlaylistDialog(
 
     val notLoggedInYoutubeStr = stringResource(R.string.not_logged_in_youtube)
     val syncDisabledStr = stringResource(R.string.sync_disabled)
+    val playlistCreatedLocallyStr = stringResource(R.string.playlist_created_locally)
 
     TextFieldDialog(
         icon = { Icon(painter = painterResource(R.drawable.add), contentDescription = null) },
@@ -64,80 +62,63 @@ fun CreatePlaylistDialog(
         initialTextFieldValue = TextFieldValue(initialTextFieldValue ?: ""),
         onDismiss = onDismiss,
         onDone = { playlistName ->
-            coroutineScope.launch(Dispatchers.IO) {
-                val browseId =
-                    if (syncedPlaylist && isSignedIn) {
-                        YouTube.createPlaylist(playlistName)
-                    } else if (syncedPlaylist) {
-                        Logger.getLogger("CreatePlaylistDialog").warning("Not signed in")
-                        return@launch
-                    } else {
-                        null
-                    }
-
-                val playlistEntity =
-                    PlaylistEntity(
-                        name = playlistName,
-                        browseId = browseId,
-                        bookmarkedAt = LocalDateTime.now(),
-                        isEditable = true,
-                    )
-
-                database.query {
-                    insert(playlistEntity)
+            syncUtils.createPlaylist(
+                playlist = PlaylistEntity(
+                    name = playlistName,
+                    bookmarkedAt = LocalDateTime.now(),
+                    isEditable = true,
+                ),
+                syncWithYouTube = syncedPlaylist,
+            ) { playlistId, remoteCreated ->
+                if (syncedPlaylist && !remoteCreated) {
+                    Toast.makeText(context, playlistCreatedLocallyStr, Toast.LENGTH_LONG).show()
                 }
-
-                withContext(Dispatchers.Main) {
-                    onPlaylistCreated?.invoke(playlistEntity.id)
-                }
+                onPlaylistCreated?.invoke(playlistId)
             }
         },
         extraContent = {
             if (allowSyncing) {
                 Row(
-                    modifier = Modifier.padding(vertical = 16.dp, horizontal = 40.dp),
+                    modifier = Modifier.padding(top = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.sync_playlist),
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
                             text = stringResource(R.string.allows_for_sync_witch_youtube),
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.fillMaxWidth(0.7f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.End,
-                    ) {
-                        Switch(
-                            checked = syncedPlaylist,
-                            onCheckedChange = {
-                                coroutineScope.launch {
-                                    val isYtmSyncEnabled = withContext(Dispatchers.IO) { context.isSyncEnabled() }
-                                    if (!isSignedIn && !syncedPlaylist) {
-                                        Toast
-                                            .makeText(
-                                                context,
-                                                notLoggedInYoutubeStr,
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
-                                    } else if (!isYtmSyncEnabled) {
-                                        Toast
-                                            .makeText(
-                                                context,
-                                                syncDisabledStr,
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
-                                    } else {
-                                        syncedPlaylist = !syncedPlaylist
-                                    }
+                    Switch(
+                        modifier = Modifier.padding(start = 12.dp),
+                        checked = syncedPlaylist,
+                        onCheckedChange = {
+                            coroutineScope.launch {
+                                val isYtmSyncEnabled = withContext(Dispatchers.IO) { context.isSyncEnabled() }
+                                if (!isSignedIn && !syncedPlaylist) {
+                                    Toast
+                                        .makeText(
+                                            context,
+                                            notLoggedInYoutubeStr,
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                } else if (!isYtmSyncEnabled) {
+                                    Toast
+                                        .makeText(
+                                            context,
+                                            syncDisabledStr,
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                } else {
+                                    syncedPlaylist = !syncedPlaylist
                                 }
-                            },
-                        )
-                    }
+                            }
+                        },
+                    )
                 }
             }
         },

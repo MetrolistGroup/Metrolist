@@ -122,8 +122,6 @@ import coil3.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.metrolist.music.ui.theme.PlayerColorExtractor
-import com.metrolist.music.ui.component.LocalMenuState
-import com.metrolist.music.ui.menu.AddToPlaylistDialog
 
 /**
  * Stable wrapper for progress state - reads values only during draw phase
@@ -181,7 +179,6 @@ private fun NewMiniPlayer(
     onClick: () -> Unit = {},
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
-    val menuState = LocalMenuState.current
 
     // Theme settings - these rarely change
     val miniPlayerBackground by rememberEnumPreference(
@@ -474,25 +471,6 @@ private fun NewMiniPlayer(
                         artistId = artistId,
                         metadata = mediaMetadata!!,
                         primaryColor = primaryColor,
-                        outlineColor = outlineColor,
-                        onSurfaceColor = onSurfaceColor,
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-// Add to playlist button - isolated composable
-                mediaMetadata?.let { metadata ->
-                    AddToPlaylistButton(
-                        onClick = {
-                            menuState.show {
-                                AddToPlaylistDialog(
-                                    isVisible = true,
-                                    onGetSong = { listOf(metadata.id) },
-                                    onDismiss = menuState::dismiss,
-                                )
-                            }
-                        },
                         outlineColor = outlineColor,
                         onSurfaceColor = onSurfaceColor,
                     )
@@ -1100,41 +1078,6 @@ private fun SubscribeButton(
             painter = painterResource(if (isSubscribed) R.drawable.subscribed else R.drawable.subscribe),
             contentDescription = null,
             tint = if (isSubscribed) primaryColor else onSurfaceColor.copy(alpha = 0.7f),
-            modifier = Modifier.size(20.dp),
-        )
-    }
-}
-
-@Composable
-private fun AddToPlaylistButton(
-    onClick: () -> Unit,
-    outlineColor: Color,
-    onSurfaceColor: Color,
-)
-
-{
-    val contentDescription = stringResource(R.string.add_to_playlist_desc)
-
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .border(
-                width = 1.dp,
-                color = outlineColor.copy(alpha = 0.3f),
-                shape = CircleShape,
-            )
-            .background(
-                color = Color.Transparent,
-                shape = CircleShape,
-            )
-            .clickable { onClick() },
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.add),
-            contentDescription = contentDescription,
-            tint = onSurfaceColor.copy(alpha = 0.7f),
             modifier = Modifier.size(20.dp),
         )
     }
