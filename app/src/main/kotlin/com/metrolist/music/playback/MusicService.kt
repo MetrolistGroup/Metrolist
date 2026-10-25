@@ -1641,15 +1641,73 @@ class MusicService :
         player.pause()
     }
 
-    private fun updateNotification(isLiked: Boolean? = currentSong.value?.song?.let { if (it.isEpisode) it.inLibrary != null else it.liked }) {
-        mediaSession?.setCustomLayout(
+    private fun shuffleButton() =
+        CommandButton
+            .Builder()
+            .setDisplayName(getString(if (player.shuffleModeEnabled) R.string.action_shuffle_off else R.string.action_shuffle_on))
+            .setIconResId(if (player.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle)
+            .setSessionCommand(CommandToggleShuffle)
+            .build()
+
+    private fun repeatButton() =
+        CommandButton
+            .Builder()
+            .setDisplayName(
+                getString(
+                    when (player.repeatMode) {
+                        REPEAT_MODE_OFF -> R.string.repeat_mode_off
+                        REPEAT_MODE_ONE -> R.string.repeat_mode_one
+                        REPEAT_MODE_ALL -> R.string.repeat_mode_all
+                        else -> throw IllegalStateException()
+                    },
+                ),
+            ).setIconResId(
+                when (player.repeatMode) {
+                    REPEAT_MODE_OFF -> R.drawable.repeat
+                    REPEAT_MODE_ONE -> R.drawable.repeat_one_on
+                    REPEAT_MODE_ALL -> R.drawable.repeat_on
+                    else -> throw IllegalStateException()
+                },
+            ).setSessionCommand(CommandToggleRepeatMode)
+            .build()
+
+    private fun startRadioButton() =
+        CommandButton
+            .Builder()
+            .setDisplayName(getString(R.string.start_radio))
+            .setIconResId(R.drawable.radio)
+            .setSessionCommand(CommandToggleStartRadio)
+            .setEnabled(currentSong.value != null)
+            .build()
+
+    /** Android Auto gets shuffle, repeat and radio only: no likes, library or playlist actions. */
+    fun autoCustomLayout(): List<CommandButton> = listOf(shuffleButton(), repeatButton(), startRadioButton())
+
+    /** Re-applies the layout; [excludedController] is a controller that is disconnecting. */
+    fun refreshLayoutForAutoChange(excludedController: MediaSession.ControllerInfo? = null) {
+        updateNotification(excludedController = excludedController)
+    }
+
+    private fun updateNotification(
+        isLiked: Boolean? = currentSong.value?.song?.let { if (it.isEpisode) it.inLibrary != null else it.liked },
+        excludedController: MediaSession.ControllerInfo? = null,
+    ) {
+        val session = mediaSession ?: return
+        // The platform MediaSessionCompat is shared: Android Auto and the phone's system media
+        // controls read the same PlaybackState, so while Auto is connected the reduced layout
+        // applies to both.
+        val autoConnected =
+            session.connectedControllers.any {
+                it != excludedController &&
+                    (session.isAutoCompanionController(it) || session.isAutomotiveController(it))
+            }
+        if (autoConnected) {
+            session.setCustomLayout(autoCustomLayout())
+            return
+        }
+        session.setCustomLayout(
             listOf(
-                CommandButton
-                    .Builder()
-                    .setDisplayName(getString(if (player.shuffleModeEnabled) R.string.action_shuffle_off else R.string.action_shuffle_on))
-                    .setIconResId(if (player.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle)
-                    .setSessionCommand(CommandToggleShuffle)
-                    .build(),
+                shuffleButton(),
                 CommandButton
                     .Builder()
                     .setDisplayName(
@@ -1664,33 +1722,8 @@ class MusicService :
                     .setSessionCommand(CommandToggleLike)
                     .setEnabled(currentSong.value != null)
                     .build(),
-                CommandButton
-                    .Builder()
-                    .setDisplayName(
-                        getString(
-                            when (player.repeatMode) {
-                                REPEAT_MODE_OFF -> R.string.repeat_mode_off
-                                REPEAT_MODE_ONE -> R.string.repeat_mode_one
-                                REPEAT_MODE_ALL -> R.string.repeat_mode_all
-                                else -> throw IllegalStateException()
-                            },
-                        ),
-                    ).setIconResId(
-                        when (player.repeatMode) {
-                            REPEAT_MODE_OFF -> R.drawable.repeat
-                            REPEAT_MODE_ONE -> R.drawable.repeat_one_on
-                            REPEAT_MODE_ALL -> R.drawable.repeat_on
-                            else -> throw IllegalStateException()
-                        },
-                    ).setSessionCommand(CommandToggleRepeatMode)
-                    .build(),
-                CommandButton
-                    .Builder()
-                    .setDisplayName(getString(R.string.start_radio))
-                    .setIconResId(R.drawable.radio)
-                    .setSessionCommand(CommandToggleStartRadio)
-                    .setEnabled(currentSong.value != null)
-                    .build(),
+                repeatButton(),
+                startRadioButton(),
                 CommandButton
                     .Builder()
                     .setDisplayName(getString(R.string.android_auto_target_playlist))
@@ -5185,13 +5218,7 @@ class MusicService :
         const val EXTRA_ALARM_RANDOM_SONG = "extra_alarm_random_song"
 
         const val ROOT = "root"
-        const val SONG = "song"
-        const val ARTIST = "artist"
-        const val ALBUM = "album"
-        const val PLAYLIST = "playlist"
-        const val YOUTUBE_PLAYLIST = "youtube_playlist"
         const val SEARCH = "search"
-        const val SHUFFLE_ACTION = "__shuffle__"
 
         const val CHANNEL_ID = "music_channel_01"
         const val NOTIFICATION_ID = 888

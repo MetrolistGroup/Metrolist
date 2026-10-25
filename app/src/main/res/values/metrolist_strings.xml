@@ -922,10 +922,6 @@
 
     <!-- Android Auto settings -->
     <string name="android_auto">Android Auto</string>
-    <string name="android_auto_visible_sections">Visible sections</string>
-    <string name="android_auto_reorder_hint">Tap a section to enable or disable it.\nLong-press the drag handle to reorder. The first section will be shown by default</string>
-    <string name="android_auto_youtube_playlists">Show YouTube suggested playlists</string>
-    <string name="android_auto_youtube_playlists_desc">Show YouTube Music recommended playlists in the playlists section while browsing with Android Auto</string>
     <string name="android_auto_target_playlist">Quick-add destination</string>
     <string name="android_auto_target_playlist_auto">Not set</string>
     <string name="android_auto_target_playlist_not_set">No playlist selected. Choose one in Android Auto settings</string>
