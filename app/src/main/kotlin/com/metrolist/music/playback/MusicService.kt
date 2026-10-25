@@ -643,9 +643,11 @@ class MusicService :
         // On some OEMs (e.g. MIUI), even a DataStore read can be slow
         // enough to miss the window, so we promote before any I/O.
         ensureForegroundChannelExists()
-        if (!ensureStartedAsForegroundOrStop()) {
-            return
-        }
+        // Android Auto binds (rather than starts) the service, often while the app is in the
+        // background where startForeground() is denied. That must never skip initialising the
+        // player and session, or the bound client would be left with no session.
+        // onStartCommand re-promotes services that were actually started via startForegroundService().
+        tryEnsureStartedAsForeground()
 
         // Read ALL startup preferences in one shot so that subsequent code
         // never calls dataStore.get() (which does runBlocking internally).
@@ -753,7 +755,6 @@ class MusicService :
             } catch (e: Exception) {
                 Timber.tag(TAG).e(e, "Failed to initialize MediaController")
                 controllerFuture = null
-                stopSelf()
             }
         }, MoreExecutors.directExecutor())
 
@@ -4309,14 +4310,16 @@ class MusicService :
     }
 
     /**
-     * [Context.startForegroundService] requires [startForeground] to succeed quickly. If we cannot
-     * enter the foreground state, stop immediately so the system does not ANR the app process.
+     * [Context.startForegroundService] requires [startForeground] to succeed quickly, so this is
+     * attempted before any other initialisation. Failure is tolerated because the service may only
+     * be bound; [onStartCommand] stops started services that still cannot enter the foreground.
      */
-    private fun ensureStartedAsForegroundOrStop(): Boolean =
+    private fun tryEnsureStartedAsForeground(): Boolean =
         startForegroundSafely(
             notification = createFallbackForegroundNotification(),
-            deniedMessage = "Foreground service start not allowed; stopping service to avoid ANR",
-            failureMessage = "Failed to enter foreground; stopping service to avoid ANR",
+            deniedMessage = "Foreground service start not allowed during creation",
+            failureMessage = "Failed to enter foreground during creation",
+            stopOnFailure = false,
         )
 
     private fun ensureForegroundWithLatestNotificationOrStop(): Boolean =
