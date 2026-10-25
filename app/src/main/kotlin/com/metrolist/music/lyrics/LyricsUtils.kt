@@ -12,8 +12,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-val LINE_REGEX = "((\\[\\d\\d:\\d\\d\\.\\d{2,3}\\] ?)+)(.*)".toRegex()
-val TIME_REGEX = "\\[(\\d\\d):(\\d\\d)\\.(\\d{2,3})\\]".toRegex()
+val LINE_REGEX = "((\\[\\d{1,2}:\\d\\d(?:\\.\\d{2,3})?\\] ?)+)(.*)".toRegex()
+val TIME_REGEX = "\\[(\\d{1,2}):(\\d\\d)(?:\\.(\\d{2,3}))?\\]".toRegex()
 
 // Regex for rich sync format: [MM:SS.mm]<MM:SS.mm> word <MM:SS.mm> word ...
 private val RICH_SYNC_LINE_REGEX = "\\[(\\d{1,2}):(\\d{2})\\.(\\d{2,3})\\](.*)".toRegex()
@@ -28,6 +28,11 @@ private val PAXSENIX_BG_LINE_REGEX = "^\\[bg:\\s*(.*)\\]$".toRegex()
 // Regex for agent and background markers (existing format)
 private val AGENT_REGEX = "\\{agent:([^}]+)\\}".toRegex()
 private val BACKGROUND_REGEX = "^\\{bg\\}".toRegex()
+
+// Standalone word-timing block line: <word:startSec:endSec(|...)*> with decimal
+// seconds (TTML/LyricsPlus output). Evaluated per trimmed line.
+private val WORD_BLOCK_LINE_REGEX =
+    "^<[^<>]+:[0-9]+(\\.[0-9]+)?:[0-9]+(\\.[0-9]+)?(\\|[^<>]+:[0-9]+(\\.[0-9]+)?:[0-9]+(\\.[0-9]+)?)*>$".toRegex()
 
 @Suppress("RegExpRedundantEscape")
 object LyricsUtils {
@@ -46,7 +51,7 @@ object LyricsUtils {
             while (stripping) {
                 val prevLength = textContent.length
                 textContent = textContent
-                    .replaceFirst(Regex("^\\[\\d\\d:\\d\\d\\.\\d{2,3}\\]"), "")
+                    .replaceFirst(Regex("^\\[\\d{1,2}:\\d\\d(?:\\.\\d{2,3})?\\]"), "")
                     .replaceFirst(Regex("^\\{agent:[^}]+\\}"), "")
                     .replaceFirst(Regex("^\\{bg\\}"), "")
                     .replaceFirst(Regex("^\\[bg:.*\\]"), "")
@@ -64,6 +69,37 @@ object LyricsUtils {
                     (lowerText.startsWith("[") && lowerText.endsWith("]") && lowerText.length < 40 && lowerText.contains("synced by"))
             
             !isCredit
+        }.joinToString("\n")
+    }
+
+    /**
+     * Plain text for copy/share: lines that parse as timed contribute their text
+     * (tags stripped); anything else (headers like [Verse], blank lines) is kept
+     * verbatim so no content is silently dropped. Pure for testing.
+     */
+    private fun isRichSyncLyrics(lines: List<String>): Boolean = lines.any { line -> RICH_SYNC_LINE_REGEX.matches(line.trim()) && RICH_SYNC_WORD_REGEX.containsMatchIn(line) }
+
+    internal fun plainTextForCopy(lyrics: String): String {
+        val lines = lyrics.lines()
+        val isRichSync = isRichSyncLyrics(lines)
+        return lines.flatMap { line ->
+            val trimmed = line.trim()
+            if (trimmed.startsWith("[offset:")) {
+                emptyList()
+            } else {
+                val hasAngleTags = line.contains('<') && line.contains('>')
+                val isBgLine = trimmed.startsWith("[bg:")
+                val isAgentLine = PAXSENIX_AGENT_LINE_REGEX.containsMatchIn(trimmed)
+                val entries = if (isRichSync && (hasAngleTags || isBgLine || isAgentLine)) {
+                    parseRichSyncLyrics(listOf(line))
+                } else {
+                    parseLine(line, null) ?: emptyList()
+                }
+                if (entries.isNotEmpty()) entries.map { it.text }
+                else if (WORD_BLOCK_LINE_REGEX.matches(trimmed)) emptyList()
+                else if (isRichSync && isTimingContinuationLine(trimmed)) emptyList()
+                else listOf(line)
+            }
         }.joinToString("\n")
     }
 
@@ -447,10 +483,7 @@ object LyricsUtils {
             .filter { !it.trim().startsWith("[offset:") }
 
         // Check if this is rich sync format (contains <MM:SS.mm> patterns)
-        val isRichSync = lines.any { line ->
-            RICH_SYNC_LINE_REGEX.matches(line.trim()) &&
-            RICH_SYNC_WORD_REGEX.containsMatchIn(line)
-        }
+        val isRichSync = isRichSyncLyrics(lines)
 
         return if (isRichSync) {
             parseRichSyncLyrics(lines)
@@ -792,7 +825,7 @@ object LyricsUtils {
                 val min = timeMatchResult.groupValues[1].toLong()
                 val sec = timeMatchResult.groupValues[2].toLong()
                 val milString = timeMatchResult.groupValues[3]
-                var mil = milString.toLong()
+                var mil = milString.toLongOrNull() ?: 0L
                 if (milString.length == 2) {
                     mil *= 10
                 }
@@ -1405,8 +1438,15 @@ object LyricsUtils {
     }
 
     fun isLineSynced(lyrics: String): Boolean {
-        return lyrics.contains(TIME_REGEX) ||
-                lyrics.contains(PAXSENIX_AGENT_LINE_REGEX) ||
-                lyrics.contains(PAXSENIX_BG_LINE_REGEX)
+        // Evaluated per line, mirroring what the parser accepts: blob-wide contains()
+        // would also match timestamps sitting in the middle of plain text.
+        return lyrics.lineSequence().any { line ->
+            val trimmed = line.trim()
+            LINE_REGEX.matchEntire(trimmed) != null ||
+                    PAXSENIX_AGENT_LINE_REGEX.containsMatchIn(trimmed) ||
+                    PAXSENIX_BG_LINE_REGEX.matches(trimmed) ||
+                    (RICH_SYNC_LINE_REGEX.matches(trimmed) &&
+                            RICH_SYNC_WORD_REGEX.containsMatchIn(trimmed))
+        }
     }
 }

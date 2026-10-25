@@ -1940,6 +1940,67 @@ interface DatabaseDao {
     @Upsert
     fun upsert(lyrics: LyricsEntity)
 
+    /**
+     * Overwrites lyrics text/provider while keeping AI translations. Plain upsert()
+     * replaces the whole row (wiping translatedLyrics columns), so every overwrite of
+     * an existing row must go through here. Returns the affected row count (0 = absent).
+     */
+    @Query("UPDATE lyrics SET lyrics = :lyrics, provider = :provider WHERE id = :id")
+    fun updateLyricsText(
+        id: String,
+        lyrics: String,
+        provider: String,
+    ): Int
+
+    @Query("SELECT lyrics FROM lyrics WHERE id = :id")
+    fun lyricsText(id: String): String?
+
+    /**
+     * Atomic lyrics replacement for refetch/edit/search-pick. Reads the current
+     * row inside the transaction (never a stale snapshot): absent rows are
+     * inserted, identical text keeps AI translations, changed text drops them
+     * (a translation of other words must not survive). No schema change.
+     */
+    @Transaction
+    fun replaceLyrics(
+        id: String,
+        lyrics: String,
+        provider: String,
+    ) {
+        val old = lyricsText(id)
+        if (old == null) {
+            upsert(LyricsEntity(id, lyrics, provider))
+        } else if (old == lyrics) {
+            updateLyricsText(id, lyrics, provider)
+        } else {
+            upsert(LyricsEntity(id, lyrics, provider))
+        }
+    }
+
+    /**
+     * Attaches a translation only if the row still holds the translated text.
+     * Single statement: the WHERE clause re-validates at write time, so a queued
+     * write can never restore overwritten lyrics. Returns rows updated.
+     */
+    @Query("UPDATE lyrics SET translatedLyrics = :translated, translationLanguage = :language, translationMode = :mode WHERE id = :id AND lyrics = :expectedText")
+    fun attachTranslationIfTextMatches(
+        id: String,
+        expectedText: String,
+        translated: String,
+        language: String,
+        mode: String,
+    ): Int
+
+    /**
+     * Clears translations only if the row still holds the given text, so an
+     * untranslate toggle cannot wipe a just-replaced row. Returns rows updated.
+     */
+    @Query("UPDATE lyrics SET translatedLyrics = '', translationLanguage = '', translationMode = '' WHERE id = :id AND lyrics = :expectedText")
+    fun clearTranslationsIfTextMatches(
+        id: String,
+        expectedText: String,
+    ): Int
+
     @Upsert
     fun upsert(format: FormatEntity)
 

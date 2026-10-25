@@ -12,8 +12,10 @@ import com.metrolist.music.db.entities.LyricsEntity
 import com.metrolist.music.lyrics.LyricsHelper
 import com.metrolist.music.lyrics.LyricsResult
 import com.metrolist.music.models.MediaMetadata
+import com.metrolist.music.ui.component.LyricsSelectionSignals
 import com.metrolist.music.utils.NetworkConnectivityObserver
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +23,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 @HiltViewModel
@@ -33,6 +34,8 @@ constructor(
     private val networkConnectivity: NetworkConnectivityObserver,
 ) : ViewModel() {
     private var job: Job? = null
+    // search() is always called from the Main thread, so plain Int generation tracking is safe.
+    private var searchGeneration = 0
     val results = MutableStateFlow(emptyList<LyricsResult>())
     val isLoading = MutableStateFlow(false)
 
@@ -62,15 +65,20 @@ constructor(
     ) {
         isLoading.value = true
         results.value = emptyList()
+        val gen = ++searchGeneration
         job?.cancel()
         job =
             viewModelScope.launch(Dispatchers.IO) {
-                lyricsHelper.getAllLyrics(mediaId, title, artist, duration, album) { result ->
-                    results.update {
-                        it + result
+                try {
+                    lyricsHelper.getAllLyrics(mediaId, title, artist, duration, album) { result ->
+                        if (gen != searchGeneration) return@getAllLyrics
+                        results.update {
+                            it + result
+                        }
                     }
+                } finally {
+                    if (gen == searchGeneration) isLoading.value = false
                 }
-                isLoading.value = false
             }
     }
 
@@ -81,15 +89,28 @@ constructor(
 
     fun refetchLyrics(
         mediaMetadata: MediaMetadata,
-        lyricsEntity: LyricsEntity?,
     ) {
-        database.query {
-            lyricsEntity?.let(::delete)
-            val lyricsWithProvider =
-                runBlocking {
-                    lyricsHelper.getLyrics(mediaMetadata)
+        // Fetch first, write only on success: deleting upfront would destroy good lyrics
+        // when the fetch fails or finds nothing (failures surface as NOT_FOUND).
+        // Bypass the single-result cache: refetch means force-refresh from the
+        // network. Write-through stays so playback and prefetch benefit.
+        viewModelScope.launch(Dispatchers.IO) {
+            val fetched =
+                try {
+                    lyricsHelper.getLyrics(mediaMetadata, bypassCache = true)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    return@launch
                 }
-            upsert(LyricsEntity(mediaMetadata.id, lyricsWithProvider.lyrics, lyricsWithProvider.provider))
+            if (fetched.lyrics == LyricsEntity.LYRICS_NOT_FOUND || fetched.lyrics.isBlank()) return@launch
+            database.query {
+                // Atomic replace: fresh row state, translations kept only for
+                // identical text. Same-text rewrites change no observable state,
+                // so the reader's selection is cleared explicitly instead of
+                // via state keys.
+                replaceLyrics(mediaMetadata.id, fetched.lyrics, fetched.provider)
+                LyricsSelectionSignals.requestClearSelection(mediaMetadata.id)
+            }
         }
     }
 }
