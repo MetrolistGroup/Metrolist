@@ -47,6 +47,7 @@ import coil3.annotation.DelicateCoilApi
 import coil3.annotation.ExperimentalCoilApi
 import coil3.imageLoader
 import com.metrolist.music.LocalDatabase
+import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
@@ -67,6 +68,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import okio.ByteString.Companion.encodeUtf8
+import timber.log.Timber
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -77,6 +79,7 @@ fun StorageSettings(
 ) {
     val context = LocalContext.current
     val database = LocalDatabase.current
+    val downloadUtil = LocalDownloadUtil.current
     val imageDiskCache = context.imageLoader.diskCache ?: return
     val playerCache = LocalPlayerConnection.current?.service?.playerCache ?: return
     val downloadCache = LocalPlayerConnection.current?.service?.downloadCache ?: return
@@ -176,9 +179,53 @@ fun StorageSettings(
             onDismiss = { clearDownloads = false },
             onConfirm = {
                 coroutineScope.launch(Dispatchers.IO) {
-                    downloadCache.keys.forEach { key ->
-                        downloadCache.removeResource(key)
+                    // Invalidate in-flight completion callbacks before removing resources.
+                    downloadUtil.beginClearAllDownloads()
+                    val pendingIds = downloadUtil.downloads.value.keys.toList()
+                    // removeDownload only enqueues work on Media3's handler — do not treat
+                    // a successful enqueue as a completed removal (wait for onDownloadRemoved).
+                    pendingIds.forEach { id ->
+                        runCatching {
+                            downloadUtil.downloadManager.removeDownload(id)
+                        }.onFailure { error ->
+                            Timber.e(error, "Failed to enqueue removeDownload for %s", id)
+                        }
                     }
+                    // Wait until Listener.onDownloadRemoved has drained the in-memory map
+                    // for the ids we asked to remove (or timeout).
+                    val deadline = System.currentTimeMillis() + 15_000
+                    while (
+                        System.currentTimeMillis() < deadline &&
+                        downloadUtil.downloads.value.keys.any { it in pendingIds }
+                    ) {
+                        delay(50)
+                    }
+                    val stillPresent = downloadUtil.downloads.value.keys.intersect(pendingIds.toSet())
+                    if (stillPresent.isNotEmpty()) {
+                        Timber.w(
+                            "Clear downloads timed out with %d entries still in DownloadManager: %s",
+                            stillPresent.size,
+                            stillPresent.take(8),
+                        )
+                    }
+                    // Single post-wait snapshot of DownloadManager ids for BOTH cache wipe and
+                    // Room keep-set. Using two snapshots raced: a download started after the
+                    // first snapshot could lose its cache file then keep isDownloaded.
+                    val liveDmIds = downloadUtil.downloads.value.keys.toSet()
+                    // Wipe SimpleCache only for keys not in the live DM (removed or orphan).
+                    // Timed-out and in-flight/new downloads keep their files.
+                    downloadCache.keys.toList().forEach { key ->
+                        if (key !in liveDmIds) {
+                            runCatching {
+                                downloadCache.removeResource(key)
+                            }.onFailure { error ->
+                                Timber.e(error, "Failed to remove download cache key %s", key)
+                            }
+                        }
+                    }
+                    // Room: clear isDownloaded=1 except live DM ids (same snapshot as cache).
+                    // Cache Playlist rows (isDownloaded=0) are never touched.
+                    downloadUtil.clearDownloadedInfoExceptLocked(liveDmIds)
                 }
                 clearDownloads = false
             },
