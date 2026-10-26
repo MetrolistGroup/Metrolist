@@ -863,4 +863,8 @@
     <string name="login_failed_with_error">ログインに失敗 : %1$s</string>
     <string name="enable_zemer">歌詞の提供元にZemerを使用</string>
     <string name="error_explicit_login_recommended">­露骨なコンテンツの再生はアカウントにログインした状態でより上手く動作します。</string>
+    <string name="force_bottom_navbar">下部ナビゲーションバーを強制的に表示</string>
+    <string name="player_pause">一時停止</string>
+    <string name="top_result">上位の結果</string>
+    <string name="other">その他</string>
 </resources>

@@ -9,6 +9,22 @@ import org.junit.Test
 
 class PlaylistSyncTest {
     @Test
+    fun `incomplete liked songs skip remote removals`() {
+        assertEquals(false, hasCompleteLikedSongsResponse(fetchedCount = 296, advertisedCount = 321))
+        assertEquals(true, hasCompleteLikedSongsResponse(fetchedCount = 296, advertisedCount = null))
+    }
+
+    @Test
+    fun `only items previously seen remotely are removed`() {
+        val local = listOf("removedOnYouTube", "localOnly", "stillRemote")
+        assertEquals(
+            setOf("removedOnYouTube"),
+            idsRemovedRemotely(local, previousRemoteIds = setOf("removedOnYouTube", "stillRemote"), remoteIds = setOf("stillRemote")),
+        )
+        assertEquals(emptySet<String>(), idsRemovedRemotely(local, previousRemoteIds = null, remoteIds = setOf("stillRemote")))
+    }
+
+    @Test
     fun `local-only songs are preserved`() {
         assertEquals(
             listOf(2),

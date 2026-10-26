@@ -82,6 +82,9 @@ interface DatabaseDao {
     @Query("SELECT * FROM song WHERE id = :songId LIMIT 1")
     suspend fun songEntity(songId: String): SongEntity?
 
+    @Query("SELECT id FROM song WHERE liked")
+    suspend fun likedSongIds(): List<String>
+
     @Query("SELECT * FROM song WHERE inLibrary IS NOT NULL ORDER BY title")
     suspend fun librarySongEntitiesByNameAsc(): List<SongEntity>
 

@@ -126,7 +126,7 @@ data class PodcastPage(
                         ?.runs
                         ?.firstOrNull()
                         ?.text ?: return null,
-                author = podcast?.author ?: PageHelper.extractArtists(secondaryLineRuns?.firstOrNull()).firstOrNull(),
+                author = podcast?.author ?: extractPodcastByline(secondaryLineRuns?.firstOrNull()).firstOrNull(),
                 podcast =
                     podcast?.let {
                         Album(name = it.title, id = it.id)

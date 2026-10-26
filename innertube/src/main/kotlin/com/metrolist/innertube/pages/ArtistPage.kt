@@ -240,7 +240,7 @@ data class ArtistPage(
                             renderer.title.runs
                                 ?.firstOrNull()
                                 ?.text ?: return null,
-                        author = PageHelper.extractArtists(renderer.subtitle?.runs).firstOrNull(),
+                        author = PodcastPage.extractPodcastByline(renderer.subtitle?.runs).firstOrNull(),
                         thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         endpoint = WatchEndpoint(videoId = videoId),
                         publishDateText = renderer.subtitle?.runs?.lastOrNull()?.text,

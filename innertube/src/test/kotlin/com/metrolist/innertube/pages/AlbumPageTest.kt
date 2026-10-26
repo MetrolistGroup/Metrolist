@@ -13,6 +13,22 @@ import org.junit.Test
 
 class AlbumPageTest {
     @Test
+    fun `uploaded compilation track keeps its tagged performer instead of album artist`() {
+        val album = AlbumItem(
+            browseId = "FEmusic_library_privately_owned_release_detail_upload",
+            playlistId = "uploaded-playlist",
+            title = "Compilation",
+            artists = listOf(Artist("Various Artists", null)),
+            thumbnail = "cover",
+        )
+        val song = AlbumPage.getSong(row(listOf(Run("Tagged Performer", null))), album)!!
+
+        assertEquals(listOf(Artist("Tagged Performer", null)), song.artists)
+        assertEquals(album.browseId, song.album?.id)
+        assertEquals("cover", song.thumbnail)
+    }
+
+    @Test
     fun `art track performer takes precedence over label in known album context`() {
         val label = Artist("Distributor", "UClabel")
         val album =

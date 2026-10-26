@@ -2,6 +2,7 @@ package com.metrolist.innertube.pages
 
 import com.metrolist.innertube.models.Album
 import com.metrolist.innertube.models.AlbumItem
+import com.metrolist.innertube.models.Artist
 import com.metrolist.innertube.models.ArtistItem
 import com.metrolist.innertube.models.MusicResponsiveListItemRenderer
 import com.metrolist.innertube.models.MusicTwoRowItemRenderer
@@ -81,7 +82,15 @@ data class RelatedPage(
                             renderer.title.runs
                                 ?.firstOrNull()
                                 ?.text ?: return null,
-                        artists = PageHelper.extractArtists(renderer.subtitle?.runs),
+                        artists = PageHelper.extractArtists(renderer.subtitle?.runs).ifEmpty {
+                            listOfNotNull(
+                                renderer.menu?.menuRenderer?.items
+                                    ?.find { it.menuNavigationItemRenderer?.icon?.iconType == "ARTIST" }
+                                    ?.menuNavigationItemRenderer?.navigationEndpoint?.browseEndpoint
+                                    ?.takeIf { it.isArtistEndpoint || it.browseId.startsWith("UC") }
+                                    ?.let { Artist("", it.browseId) },
+                            )
+                        },
                         year =
                             renderer.subtitle
                                 ?.runs
@@ -104,7 +113,8 @@ data class RelatedPage(
                             renderer.title.runs
                                 ?.firstOrNull()
                                 ?.text ?: return null,
-                        author = PageHelper.extractArtists(renderer.subtitle?.runs).firstOrNull(),
+                        author = PageHelper.extractArtists(renderer.subtitle?.runs).firstOrNull()
+                            ?: PlaylistPage.ownerFromByline(renderer.subtitle?.runs?.splitBySeparator()?.lastOrNull()),
                         songCountText =
                             renderer.subtitle
                                 ?.runs

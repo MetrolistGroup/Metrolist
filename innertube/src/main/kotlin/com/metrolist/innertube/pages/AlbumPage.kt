@@ -21,9 +21,11 @@ data class AlbumPage(
 
             val subtitle = renderer.flexColumns.getOrNull(1)?.musicResponsiveListItemFlexColumnRenderer?.text?.runs
             val artists = PageHelper.extractArtists(subtitle).ifEmpty {
-                // OLAK art-track rows put the performer in the first artist column, while
-                // the album header may credit only the distributor channel.
-                if (album?.playlistId?.startsWith("OLAK") == true) {
+                // Art tracks and uploads have a dedicated performer column that can
+                // differ from the album's distributor or compilation artist.
+                if (album?.playlistId?.startsWith("OLAK") == true ||
+                    album?.browseId?.startsWith("FEmusic_library_privately_owned_release_detail") == true
+                ) {
                     subtitle?.splitBySeparator()?.firstOrNull()?.oddElements()
                         ?.mapNotNull { run ->
                             run.text.trim().takeIf { it.isNotEmpty() && run.navigationEndpoint == null }

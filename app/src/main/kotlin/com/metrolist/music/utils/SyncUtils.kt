@@ -76,6 +76,22 @@ sealed class SyncOperation {
     data object ClearPodcastData : SyncOperation()
 }
 
+internal fun hasCompleteLikedSongsResponse(
+    fetchedCount: Int,
+    advertisedCount: Int?,
+) = advertisedCount == null || fetchedCount >= advertisedCount
+
+/**
+ * Local items to drop because they were removed on YouTube: present in the previous complete
+ * remote snapshot but absent now. Items never seen remotely (local-only additions) are kept.
+ */
+internal fun idsRemovedRemotely(
+    localIds: Collection<String>,
+    previousRemoteIds: Set<String>?,
+    remoteIds: Set<String>,
+): Set<String> =
+    if (previousRemoteIds == null) emptySet() else localIds.filterTo(mutableSetOf()) { it in previousRemoteIds && it !in remoteIds }
+
 internal fun localSongIndexesAbsentFromRemote(
     localSongIds: List<String>,
     remoteSongIds: List<String>,
@@ -230,6 +246,21 @@ class SyncUtils @Inject constructor(
         private const val DB_OPERATION_DELAY_MS = 50L
         private const val DB_QUERY_BATCH_SIZE = 500
         private const val PLAYLIST_EDIT_THROTTLE_MS = 500L
+        private const val SNAPSHOT_LIKED_SONGS = "sync_snapshot_liked_songs"
+        private const val SNAPSHOT_LIBRARY_SONGS = "sync_snapshot_library_songs"
+        private const val SNAPSHOT_LIKED_ALBUMS = "sync_snapshot_liked_albums"
+        private val SYNC_SNAPSHOTS = listOf(SNAPSHOT_LIKED_SONGS, SNAPSHOT_LIBRARY_SONGS, SNAPSHOT_LIKED_ALBUMS)
+    }
+
+    // Remote IDs seen by the last complete sync, used to tell remote removals from local-only additions.
+    private fun readSyncSnapshot(name: String): Set<String>? =
+        runCatching {
+            context.filesDir.resolve(name).takeIf { it.exists() }?.readLines()?.filterTo(mutableSetOf()) { it.isNotBlank() }
+        }.getOrNull()
+
+    private fun writeSyncSnapshot(name: String, ids: Set<String>) {
+        runCatching { context.filesDir.resolve(name).writeText(ids.joinToString("\n")) }
+            .onFailure { Timber.w(it, "Failed to write sync snapshot $name") }
     }
     private fun markPlaylistModifying(playlistId: String) {
         playlistsBeingModified.getOrPut(playlistId) { AtomicInteger(0) }.incrementAndGet()
@@ -534,6 +565,7 @@ class SyncUtils @Inject constructor(
     private suspend fun executeClearAllLibraryData() = withContext(Dispatchers.IO) {
         Timber.d("[LOGOUT_CLEAR] Starting complete library data cleanup")
         try {
+            SYNC_SNAPSHOTS.forEach { context.filesDir.resolve(it).delete() }
 
             // Clear podcast data first (subscribed podcasts + saved episodes)
             Timber.d("[LOGOUT_CLEAR] Clearing podcast data")
@@ -777,10 +809,20 @@ class SyncUtils @Inject constructor(
                 try {
                     val remoteSongs = page.songs
                     val remoteIds = remoteSongs.map { it.id }.toSet()
+                    val advertisedCount = page.playlist.songCountText?.filter { it.isDigit() }?.toIntOrNull()
+                    val isComplete = hasCompleteLikedSongsResponse(remoteSongs.size, advertisedCount)
+                    val removed =
+                        if (isComplete) {
+                            idsRemovedRemotely(database.likedSongIds(), readSyncSnapshot(SNAPSHOT_LIKED_SONGS), remoteIds)
+                        } else {
+                            Timber.w("Liked-song response was incomplete (${remoteSongs.size}/$advertisedCount); skipping remote removals")
+                            emptySet()
+                        }
                     val songIdsWithoutArtists = findSongIdsWithoutArtists(remoteIds)
                     val now = LocalDateTime.now()
 
                     database.withTransaction {
+                        removed.forEach { id -> songEntity(id)?.let { update(it.copy(liked = false, likedDate = null)) } }
                         remoteSongs.forEachIndexed { index, song ->
                             val dbSong = songEntity(song.id)
                             val timestamp = dbSong?.likedDate ?: now.minusSeconds(index.toLong())
@@ -800,7 +842,8 @@ class SyncUtils @Inject constructor(
                         }
                     }
 
-                    Timber.d("Synced ${remoteSongs.size} liked songs")
+                    if (isComplete) writeSyncSnapshot(SNAPSHOT_LIKED_SONGS, remoteIds)
+                    Timber.d("Synced ${remoteSongs.size} liked songs, removed ${removed.size}")
                 } catch (e: Exception) {
                     Timber.e(e, "Error processing liked songs")
                 }
@@ -826,10 +869,18 @@ class SyncUtils @Inject constructor(
                 try {
                     val remoteSongs = page.items.filterIsInstance<SongItem>().reversed()
                     val remoteIds = remoteSongs.map { it.id }.toSet()
+                    // An empty page is more likely a failed fetch than an emptied library.
+                    val removed =
+                        if (remoteIds.isEmpty()) {
+                            emptySet()
+                        } else {
+                            idsRemovedRemotely(database.librarySongEntitiesByNameAsc().map { it.id }, readSyncSnapshot(SNAPSHOT_LIBRARY_SONGS), remoteIds)
+                        }
                     val songIdsWithoutArtists = findSongIdsWithoutArtists(remoteIds)
                     val now = LocalDateTime.now()
 
                     database.withTransaction {
+                        removed.forEach { id -> songEntity(id)?.let { update(it.withLibraryMembership(isInLibrary = false)) } }
                         remoteSongs.forEachIndexed { index, song ->
                             val dbSong = songEntity(song.id)
                             val timestamp = now.minusSeconds((remoteSongs.lastIndex - index).toLong())
@@ -848,7 +899,8 @@ class SyncUtils @Inject constructor(
                         }
                     }
 
-                    Timber.d("Synced ${remoteSongs.size} library songs")
+                    if (remoteIds.isNotEmpty()) writeSyncSnapshot(SNAPSHOT_LIBRARY_SONGS, remoteIds)
+                    Timber.d("Synced ${remoteSongs.size} library songs, removed ${removed.size}")
                 } catch (e: Exception) {
                     Timber.e(e, "Error processing library songs")
                 }
@@ -938,6 +990,20 @@ class SyncUtils @Inject constructor(
             result.onSuccess { page ->
                 try {
                     val remoteAlbums = page.items.filterIsInstance<AlbumItem>().reversed()
+                    val remoteIds = remoteAlbums.map { it.id }.toSet()
+                    if (remoteIds.isNotEmpty()) {
+                        val localAlbums = database.likedAlbumEntitiesByNameAsc()
+                        val removed = idsRemovedRemotely(localAlbums.map { it.id }, readSyncSnapshot(SNAPSHOT_LIKED_ALBUMS), remoteIds)
+                        localAlbums.filter { it.id in removed }.forEach { album ->
+                            try {
+                                database.update(album.localToggleLike())
+                                delay(DB_OPERATION_DELAY_MS)
+                            } catch (e: Exception) {
+                                Timber.e(e, "Failed to update album: ${album.id}")
+                            }
+                        }
+                        writeSyncSnapshot(SNAPSHOT_LIKED_ALBUMS, remoteIds)
+                    }
 
                     remoteAlbums.forEach { album ->
                         try {
