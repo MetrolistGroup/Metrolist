@@ -828,78 +828,62 @@ constructor(
                     }
 
                     val snapshot: List<Song> = synchronized(searchResults) { searchResults.toList() }
-                    val isArtistQuery = isVoiceSearch && looksLikeArtistQuery(searchQuery, snapshot)
+                    val decision =
+                        resolvePlaybackSelection(isVoiceSearch, songId, searchQuery, snapshot)
+                            ?: return@future defaultResult
 
-                    val selectedSong =
-                        if (isArtistQuery) {        // If the results seem to be related to a specific artist, no specific song is selected
-                            null
-                        } else if (isVoiceSearch) {    //Check if the voiceQuery is about a specific song
-                            VoiceSearchMatcher.findBest(searchQuery, snapshot)
-                        } else {
-                            searchResults.firstOrNull { it.id == songId }
-                        }
-
-                    if (!isVoiceSearch && selectedSong == null) {
-                        return@future defaultResult
-                    }
-
-                    if(context.dataStore.get(AutoRadioQueueKey, true) && selectedSong != null) {
-                        val radioQueue = YouTubeQueue.radio(selectedSong.toMediaMetadata())
-                        val radioStatus = runCatching {
-                            withContext(Dispatchers.IO) {
-                                radioQueue
-                                    .getInitialStatus()
-                                    .filterExplicit(context.dataStore.get(HideExplicitKey, false))
-                                    .filterVideoSongs(context.dataStore.get(HideVideoSongsKey, false))
-                            }
-                        }.getOrNull()
-
-                        if (radioStatus != null && radioStatus.items.isNotEmpty()) {
-                            withContext(Dispatchers.Main) {
-                                service.adoptQueue(radioQueue, radioStatus.title, radioStatus.items.size) //Used to make the radio queue load more songs when near the end
-                            }
-                            return@future MediaItemsWithStartPosition(
-                                radioStatus.items,
-                                radioStatus.items.indexOfFirst { it.mediaId == selectedSong.id }.coerceAtLeast(0),
-                                C.TIME_UNSET,
-                            )
-                        }
-                    }
-
-                    //If no specific track is selected, filter the results to tracks by artist.
-                    val fallbackItems =
-                        if (isVoiceSearch && selectedSong == null) {
-                            if (isArtistQuery) {
-                                snapshot.filter { song ->
-                                    song.artists.any { artist ->
-                                        VoiceSearchMatcher.artistMatchesQuery(artist.name, searchQuery)
+                    when (decision) {
+                        is PlaybackSelection.SingleSong -> {
+                            val selectedSong = decision.song
+                            if (context.dataStore.get(AutoRadioQueueKey, true)) {
+                                val radioQueue = YouTubeQueue.radio(selectedSong.toMediaMetadata())
+                                val radioStatus = runCatching {
+                                    withContext(Dispatchers.IO) {
+                                        radioQueue
+                                            .getInitialStatus()
+                                            .filterExplicit(context.dataStore.get(HideExplicitKey, false))
+                                            .filterVideoSongs(context.dataStore.get(HideVideoSongsKey, false))
                                     }
+                                }.getOrNull()
+
+                                if (radioStatus != null && radioStatus.items.isNotEmpty()) {
+                                    withContext(Dispatchers.Main) {
+                                        service.adoptQueue(radioQueue, radioStatus.title, radioStatus.items.size) //Used to make the radio queue load more songs when near the end
+                                    }
+                                    return@future MediaItemsWithStartPosition(
+                                        radioStatus.items,
+                                        radioStatus.items.indexOfFirst { it.mediaId == selectedSong.id }.coerceAtLeast(0),
+                                        C.TIME_UNSET,
+                                    )
                                 }
-                            } else {
-                                snapshot
                             }
-                        } else {
-                            snapshot
+
+                            val items = listOf(selectedSong.toMediaItem())
+                            withContext(Dispatchers.Main) {
+                                service.adoptQueue(
+                                    ListQueue(
+                                        title = selectedSong.song.title,
+                                        items = items,
+                                    ),
+                                    title = selectedSong.song.title,
+                                )
+                            }
+                            MediaItemsWithStartPosition(items, 0, C.TIME_UNSET)
                         }
-
-                    val items = selectedSong?.let { listOf(it.toMediaItem()) } ?: fallbackItems.map { it.toMediaItem() }
-                    if (items.isEmpty()) return@future defaultResult
-
-                    val queueTitle = selectedSong?.song?.title ?: searchQuery
-                    withContext(Dispatchers.Main) {
-                        service.adoptQueue(
-                            ListQueue(
-                                title = queueTitle,
-                                items = items,
-                            ),
-                            title = queueTitle,
-                        )
+                        is PlaybackSelection.MultipleSongs -> {
+                            val items = decision.songs.map { it.toMediaItem() }
+                            withContext(Dispatchers.Main) {
+                                service.adoptQueue(
+                                    ListQueue(
+                                        title = decision.title,
+                                        items = items,
+                                    ),
+                                    title = decision.title,
+                                )
+                            }
+                            MediaItemsWithStartPosition(items, 0, C.TIME_UNSET)
+                        }
                     }
-                    MediaItemsWithStartPosition(
-                        items,
-                        0,
-                        C.TIME_UNSET
-                    )
                 }
 
                 else -> defaultResult
@@ -1031,4 +1015,48 @@ private fun looksLikeArtistQuery(
     }
 
     return artistMatches.toDouble() / uniqueCandidates.size >= ARTIST_QUERY_MIN_RATIO
+}
+
+internal sealed class PlaybackSelection {
+    data class SingleSong(val song: Song) : PlaybackSelection()
+    data class MultipleSongs(val songs: List<Song>, val title: String) : PlaybackSelection()
+}
+
+internal fun resolvePlaybackSelection(
+    isVoiceSearch: Boolean,
+    songId: String,
+    searchQuery: String,
+    searchResults: List<Song>
+): PlaybackSelection? {
+    if (searchResults.isEmpty()) return null
+
+    val isArtistQuery = isVoiceSearch && looksLikeArtistQuery(searchQuery, searchResults)
+
+    val selectedSong = when {
+        isArtistQuery -> null   // If the results seem to be related to a specific artist, no specific song is selected
+        isVoiceSearch -> VoiceSearchMatcher.findBest(searchQuery, searchResults)    //Check if the voiceQuery is about a specific song
+        else -> searchResults.firstOrNull { it.id == songId }
+    }
+
+    if (!isVoiceSearch && selectedSong == null) {
+        return null
+    }
+
+    return if (selectedSong != null) {
+        PlaybackSelection.SingleSong(selectedSong)
+    } else {
+        val fallbackItems = if (isArtistQuery) {
+            searchResults.filter { song ->
+                song.artists.any { artist ->
+                    VoiceSearchMatcher.artistMatchesQuery(artist.name, searchQuery)
+                }
+            }
+        } else {
+            searchResults
+        }
+
+        if (fallbackItems.isEmpty()) return null
+
+        PlaybackSelection.MultipleSongs(fallbackItems, searchQuery)
+    }
 }
