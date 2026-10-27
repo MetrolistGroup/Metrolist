@@ -1858,12 +1858,50 @@ interface DatabaseDao {
         )
     }
 
+    @Query("SELECT COALESCE((SELECT songCount FROM album WHERE id = :albumId), 0)")
+    fun cachedAlbumSongCount(albumId: String): Int
+
+    @Query("DELETE FROM song_album_map WHERE albumId = :albumId")
+    fun deleteSongAlbumMaps(albumId: String)
+
+    @Query(
+        """
+        UPDATE song
+        SET albumId = (
+                SELECT song_album_map.albumId
+                FROM song_album_map
+                WHERE song_album_map.songId = song.id
+                ORDER BY song_album_map.`index`
+                LIMIT 1
+            ),
+            albumName = (
+                SELECT album.title
+                FROM song_album_map
+                JOIN album ON album.id = song_album_map.albumId
+                WHERE song_album_map.songId = song.id
+                ORDER BY song_album_map.`index`
+                LIMIT 1
+            )
+        WHERE albumId = :albumId
+          AND id IN (:songIds)
+        """,
+    )
+    fun clearStaleSongAlbumIds(albumId: String, songIds: List<String>)
+
+    @Query("SELECT songId FROM song_album_map WHERE albumId = :albumId")
+    fun mappedSongIds(albumId: String): List<String>
+
     @Transaction
     fun update(
         album: AlbumEntity,
         albumPage: AlbumPage,
         artists: List<ArtistEntity>? = emptyList(),
     ) {
+        // Read inside this transaction: the caller's album may predate a newer refresh.
+        // A shorter snapshot may be an unfinished release, even after pagination ends.
+        val incomingCount = albumPage.songs.map { it.id }.distinct().size
+        if (incomingCount == 0 || incomingCount < cachedAlbumSongCount(album.id)) return
+
         update(
             album.copy(
                 id = albumPage.album.browseId,
@@ -1876,6 +1914,10 @@ interface DatabaseDao {
                 explicit = albumPage.album.explicit || albumPage.songs.any { it.explicit },
             ),
         )
+        // Complete snapshot accepted: make this album's mappings match it exactly.
+        // Scoped to this album; song rows and other albums' mappings are untouched.
+        val previousSongIds = mappedSongIds(albumPage.album.browseId)
+        deleteSongAlbumMaps(albumPage.album.browseId)
         albumPage.songs
             .map(SongItem::toMediaMetadata)
             .onEach(::insert)
@@ -1896,6 +1938,14 @@ interface DatabaseDao {
                     index = index,
                 )
             }.forEach(::upsert)
+
+        // Songs whose mapping was removed may retain this albumId in SongEntity. Songs that
+        // were never mapped to this album are left alone.
+        val keptSongIds = albumPage.songs.map { it.id }.toSet()
+        previousSongIds
+            .filterNot(keptSongIds::contains)
+            .chunked(500)
+            .forEach { clearStaleSongAlbumIds(albumPage.album.browseId, it) }
 
         albumPage.album.artists?.let { artists ->
             // Recreate album artists

@@ -5,6 +5,7 @@ import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.Artist
 import com.metrolist.innertube.models.ArtistItem
 import com.metrolist.innertube.models.BrowseEndpoint
+import com.metrolist.innertube.models.Continuation
 import com.metrolist.innertube.models.EpisodeItem
 import com.metrolist.innertube.models.GridRenderer
 import com.metrolist.innertube.models.MediaInfo
@@ -425,25 +426,18 @@ object YouTube {
                                 .url,
                         explicit = false, // TODO: Extract explicit badge for albums from YouTube response
                     )
+                val uploadedSongs = if (withSongs) {
+                    val page = albumSongsPage(response, albumItem, initial = true)
+                    check(page.continuation == null) {
+                        "Incomplete album tracklist: uploaded album has unresolved pagination"
+                    }
+                    page.songs
+                } else {
+                    emptyList()
+                }
                 return@runCatching AlbumPage(
                     album = albumItem,
-                    songs =
-                        response.contents
-                            ?.singleColumnBrowseResultsRenderer
-                            ?.tabs
-                            ?.firstOrNull()
-                            ?.tabRenderer
-                            ?.content
-                            ?.sectionListRenderer
-                            ?.contents
-                            ?.firstOrNull()
-                            ?.musicShelfRenderer
-                            ?.contents
-                            ?.getItems()
-                            ?.mapNotNull {
-                                AlbumPage.getSong(it, albumItem)
-                            }!!
-                            .toMutableList(),
+                    songs = uploadedSongs,
                     otherVersions = emptyList(),
                 )
             } else {
@@ -556,68 +550,135 @@ object YouTube {
             }
         }
 
+    // Exhausting the observed pages is not evidence that a release has finished publishing.
+    private data class AlbumSongsPage(
+        val songs: List<SongItem>,
+        val continuation: String?,
+    )
+
+    private fun albumSongsPage(
+        response: BrowseResponse,
+        album: AlbumItem?,
+        initial: Boolean,
+    ): AlbumSongsPage {
+        val chunks = mutableListOf<List<MusicShelfRenderer.Content>>()
+        val tokens = linkedSetOf<String>()
+        var sectionContinuations: List<Continuation>? = null
+
+        fun addToken(token: String?) {
+            val value = checkNotNull(token) { "Incomplete album tracklist: malformed continuation" }
+            check(value.isNotBlank()) { "Incomplete album tracklist: malformed continuation" }
+            tokens.add(value)
+        }
+
+        fun addContinuations(continuations: List<Continuation>?) {
+            continuations.orEmpty().forEach { addToken(it.nextContinuationData?.continuation) }
+        }
+
+        fun addShelf(
+            contents: List<MusicShelfRenderer.Content>?,
+            continuations: List<Continuation>?,
+        ) {
+            chunks.add(checkNotNull(contents) { "Incomplete album tracklist: missing shelf contents" })
+            addContinuations(continuations)
+        }
+
+        fun addSections(sections: List<SectionListRenderer.Content>?) {
+            sections.orEmpty().forEach { section ->
+                section.musicPlaylistShelfRenderer?.let { addShelf(it.contents, it.continuations) }
+                section.musicShelfRenderer?.let { addShelf(it.contents, it.continuations) }
+            }
+        }
+
+        if (initial) {
+            val sections = response.contents?.twoColumnBrowseResultsRenderer
+                ?.secondaryContents?.sectionListRenderer
+                ?: response.contents?.singleColumnBrowseResultsRenderer
+                    ?.tabs?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer
+            addSections(sections?.contents)
+            sectionContinuations = sections?.continuations
+        } else {
+            response.continuationContents?.sectionListContinuation?.let {
+                addSections(it.contents)
+                sectionContinuations = it.continuations
+            }
+            response.continuationContents?.musicPlaylistShelfContinuation?.let {
+                addShelf(it.contents, it.continuations)
+            }
+            response.continuationContents?.musicShelfContinuation?.let {
+                addShelf(it.contents, it.continuations)
+            }
+            response.onResponseReceivedActions.orEmpty().forEach { action ->
+                action.appendContinuationItemsAction?.let { addShelf(it.continuationItems, null) }
+            }
+        }
+
+        check(chunks.isNotEmpty()) { "Incomplete album tracklist: missing track shelf" }
+
+        // Do not use getItems()/mapNotNull here: both can silently discard source rows.
+        val songs = mutableListOf<SongItem>()
+        chunks.forEach { contents ->
+            contents.forEach { content ->
+                val renderer = content.musicResponsiveListItemRenderer
+                val marker = content.continuationItemRenderer
+                check(content.musicMultiRowListItemRenderer == null && (renderer == null || marker == null)) {
+                    "Incomplete album tracklist: unsupported or ambiguous row"
+                }
+                when {
+                    renderer != null -> songs.add(checkNotNull(AlbumPage.getSong(renderer, album)) {
+                        "Incomplete album tracklist: unparseable track"
+                    })
+                    marker != null -> addToken(marker.continuationEndpoint?.continuationCommand?.token)
+                    else -> error("Incomplete album tracklist: unsupported row")
+                }
+            }
+        }
+        // Prefer track-shelf or inline row continuations when present. Some section-list
+        // pages expose the only continuation at section level, which is needed to finish
+        // the tracklist. Never merge both streams: they can point to different pages.
+        if (tokens.isEmpty()) addContinuations(sectionContinuations)
+        check(tokens.size <= 1) { "Incomplete album tracklist: conflicting continuations" }
+        check(songs.map { it.id }.distinct().size == songs.size) {
+            "Incomplete album tracklist: duplicate track"
+        }
+        return AlbumSongsPage(songs, tokens.firstOrNull())
+    }
+
     suspend fun albumSongs(
         playlistId: String,
         album: AlbumItem? = null,
     ): Result<List<SongItem>> =
         runCatching {
-            var response = innerTube.browse(WEB_REMIX, "VL$playlistId").body<BrowseResponse>()
-            val shelf =
-                response.contents
-                    ?.twoColumnBrowseResultsRenderer
-                    ?.secondaryContents
-                    ?.sectionListRenderer
-                    ?.contents
-                    ?.firstOrNull()
-            val shelfContents =
-                shelf?.musicPlaylistShelfRenderer?.contents
-                    ?: shelf?.musicShelfRenderer?.contents
-                    ?: emptyList()
-            val songs =
-                shelfContents
-                    .getItems()
-                    .mapNotNull {
-                        AlbumPage.getSong(it, album)
-                    }
-                    .toMutableList()
-            var continuation =
-                shelfContents
-                    .getContinuation()
+            var page = albumSongsPage(
+                innerTube.browse(WEB_REMIX, "VL$playlistId").body<BrowseResponse>(),
+                album,
+                initial = true,
+            )
+            val songs = mutableListOf<SongItem>()
+            val seenSongs = mutableSetOf<String>()
             val seenContinuations = mutableSetOf<String>()
             var requestCount = 0
-            val maxRequests = 50 // Prevent excessive API calls
+            val maxRequests = 50
 
-            while (continuation != null && requestCount < maxRequests) {
-                // Prevent infinite loops by tracking seen continuations
-                if (continuation in seenContinuations) {
-                    break
+            while (true) {
+                page.songs.forEach { song ->
+                    // Ambiguous overlapping payloads cannot safely define album positions.
+                    check(seenSongs.add(song.id)) { "Incomplete album tracklist: duplicate track" }
+                    songs.add(song)
                 }
-                seenContinuations.add(continuation)
+                val continuation = page.continuation ?: break
+                check(seenContinuations.add(continuation)) { "Incomplete album tracklist: repeated continuation" }
+                check(requestCount < maxRequests) { "Incomplete album tracklist: continuation limit reached" }
                 requestCount++
-
-                response =
-                    innerTube
-                        .browse(
-                            client = WEB_REMIX,
-                            continuation = continuation,
-                        ).body<BrowseResponse>()
-                songs +=
-                    response.onResponseReceivedActions
-                        ?.firstOrNull()
-                        ?.appendContinuationItemsAction
-                        ?.continuationItems
-                        ?.getItems()
-                        ?.mapNotNull {
-                            AlbumPage.getSong(it, album)
-                        }.orEmpty()
-                continuation =
-                    response.continuationContents
-                        ?.musicPlaylistShelfContinuation
-                        ?.continuations
-                        ?.getContinuation()
+                page = albumSongsPage(
+                    innerTube.browse(client = WEB_REMIX, continuation = continuation).body<BrowseResponse>(),
+                    album,
+                    initial = false,
+                )
             }
             songs
         }
+
 
     suspend fun artist(browseId: String): Result<ArtistPage> =
         runCatching {
