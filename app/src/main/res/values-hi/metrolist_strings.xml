@@ -101,4 +101,17 @@
     <string name="widget_recognizer_no_match">कोई मेल नहीं मिला. दोबारा कोशिश करें</string>
     <string name="widget_recognizer_error_generic">कुछ गड़बड़ हो गई. दोबारा कोशिश करें</string>
     <string name="sleep_timer_weekends">शनिवार से रविवार</string>
+    <string name="show_liked_playlist">लाइक्ड प्लेलिस्ट दिखाएँ</string>
+    <string name="show_uploaded_playlist">अपलोड की गई प्लेलिस्ट दिखाएँ</string>
+    <string name="choose_something_below">नीचे से चुनें</string>
+    <string name="choose_youtube_channel">यूट्यूब चैनल चुनें</string>
+    <string name="upload_file_too_large">फाइल बहुत बड़ी है (ज़्यादा से ज़्यादा 300MB)</string>
+    <string name="google_cast">गूगल कास्ट</string>
+    <string name="ai_provider_gemini_help">देखें https://aistudio.google.com/apikey</string>
+    <string name="lyrics_animation_karaoke">कैरियोकी</string>
+    <string name="lyrics_animation_apple">एप्पल म्यूज़िक जैसा स्टाइल</string>
+    <string name="playlist_position_beginning">प्लेलिस्ट की शुरुआत</string>
+    <string name="playlist_position_end">प्लेलिस्ट का अंत</string>
+    <string name="choose_from_library">लाइब्रेरी से चुनें</string>
+    <string name="general">जनरल</string>
 </resources>
