@@ -690,7 +690,7 @@
     <string name="parsed_from_link">Extraído del enlace</string>
     <string name="lyrics_from_provider">Letras desde: %s</string>
     <string name="hide_status_bar_fullscreen">Ocultar barra de notificaciones en pantalla completa</string>
-    <string name="hide_status_bar_fullscreen_desc">Ocultar la barra de estado cuando el modo de pantalla completa de letras esté activo</string>
+    <string name="hide_status_bar_fullscreen_desc">Hidhttps://hosted.weblate.org/translate/metrolist/metrolist-strings/es/?checksum=ff38dbbaf1c0307fe the status bar when lyrics fullscreen mode is active</string>
     <string name="show_interval_indicator">Mostrar indicador de intervalo</string>
     <string name="show_interval_indicator_desc">Muestra la barra de progreso en pausas instrumentales largas</string>
     <string name="respect_agent_positioning">Respetar la ubicación del agente</string>
