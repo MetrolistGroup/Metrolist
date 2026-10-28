@@ -1,3 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="months">ເດ໊ອນ</string>
+    <string name="local_history">ໃນເຄື່ອງ</string>
+    <string name="remote_history">ອອນລາຍ</string>
+    <string name="weeks">ອາທິດ</string>
+    <string name="years">ປີ</string>
+    <string name="continuous">ຕໍ່ເນື່ອງ</string>
+    <string name="liked">ມັກ</string>
+    <string name="offline">ດາວໂຫຼດແລ້ວ</string>
+    <string name="my_top">ອັນດັບຂອງຂ້ອຍ</string>
+    <string name="cancel">ຍົກເລີກ</string>
+    <string name="enable">ຢືນຢັນ</string>
 </resources>
