@@ -1474,16 +1474,20 @@ class SyncUtils @Inject constructor(
                     executeCleanupDuplicatePlaylists()
 
                     val localPlaylists = database.playlistEntitiesByNameAsc().toMutableList()
-                    localPlaylists.filterNot { it.browseId in remoteIds }
-                        .filterNot { it.browseId == null }
-                        .forEach { playlist ->
-                            try {
-                                database.update(playlist.localToggleLike())
-                                delay(DB_OPERATION_DELAY_MS)
-                            } catch (e: Exception) {
-                                Timber.e(e, "Failed to update playlist: ${playlist.id}")
+                    // An empty remote list is far more likely a parse failure than an emptied library.
+                    if (remotePlaylists.isEmpty()) {
+                        Timber.w("syncSavedPlaylists: Remote list is empty, skipping removal of local playlists")
+                    } else {
+                        localPlaylists.filter { it.browseId != null && it.browseId !in remoteIds && it.bookmarkedAt != null }
+                            .forEach { playlist ->
+                                try {
+                                    database.update(playlist.copy(bookmarkedAt = null))
+                                    delay(DB_OPERATION_DELAY_MS)
+                                } catch (e: Exception) {
+                                    Timber.e(e, "Failed to update playlist: ${playlist.id}")
+                                }
                             }
-                        }
+                    }
 
                     for (playlist in remotePlaylists) {
                         try {
@@ -1507,6 +1511,9 @@ class SyncUtils @Inject constructor(
                                 localPlaylists.add(playlistEntity)
                                 Timber.d("syncSavedPlaylists: Created new playlist ${playlist.title} (${playlist.id})")
                             } else {
+                                if (playlistEntity.bookmarkedAt == null) {
+                                    playlistEntity = playlistEntity.copy(bookmarkedAt = LocalDateTime.now())
+                                }
                                 database.update(playlistEntity, playlist)
                                 Timber.d("syncSavedPlaylists: Updated existing playlist ${playlist.title} (${playlist.id})")
                             }
