@@ -2,13 +2,13 @@
 <resources>
     <string name="local_history">स्थानीय</string>
     <string name="back_button_desc">पीछे</string>
-    <string name="album_cover_desc">एल्बम चित्र</string>
+    <string name="album_cover_desc">एल्बम फ़ोटो</string>
     <string name="top_music_videos">शीर्ष संगीत वीडियो</string>
     <string name="trending">ट्रेंडिंग</string>
     <string name="weeks">सप्ताह</string>
     <string name="months">महीने</string>
     <string name="years">साल</string>
-    <string name="continuous">निरंतर</string>
+    <string name="continuous">लगातार</string>
     <string name="liked">पसंदीदा</string>
     <string name="offline">डाउनलोड</string>
     <string name="my_top">मेरा सर्वोच्च</string>
@@ -114,4 +114,26 @@
     <string name="playlist_position_end">प्लेलिस्ट का अंत</string>
     <string name="choose_from_library">लाइब्रेरी से चुनें</string>
     <string name="general">जनरल</string>
+    <string name="listen_together_in_top_bar">टॉप बार में साथ सुनें</string>
+    <string name="listen_together_suggestion_received">%1$s सुझाए गए %2$s</string>
+    <string name="wizard_select_profiles">प्रोफ़ाइल चुनें</string>
+    <string name="wizard_search_model_hint">अपने हेडफ़ोन या ईयरफ़ोन मॉडल को ढूँढ़ें</string>
+    <string name="wizard_model_name">मॉडल का नाम</string>
+    <string name="wizard_no_models">कोई मॉडल नहीं मिला</string>
+    <string name="wizard_multiple_variants">कई प्रकार उपलब्ध हैं</string>
+    <string name="wizard_select_eq_profiles">%s के लिए EQ प्रोफ़ाइल चुनें</string>
+    <string name="open">खोलें</string>
+    <string name="error_title">एरर</string>
+    <string name="error_playing">प्लेबैक एरर</string>
+    <string name="error_playback_failed">प्लेबैक एरर</string>
+    <string name="error_no_internet_connection">कोई इंटरनेट कनेक्शन नहीं है</string>
+    <string name="link_copied">लिंक क्लिपबोर्ड पर कॉपी किया</string>
+    <string name="now_playing">अभी बज रहा है</string>
+    <string name="close">बंद</string>
+    <string name="wizard_model_placeholder">उदाहरण, Sony WH-1000XM4, Bose QuietComfort 45</string>
+    <string name="reject">अस्वीकार करें</string>
+    <string name="clear">हटाएँ</string>
+    <string name="copy">कॉपी</string>
+    <string name="re_listen">फिर से सुनें</string>
+    <string name="logout_keep">रखें</string>
 </resources>
