@@ -698,6 +698,7 @@ class MusicService :
             toggleStartRadio = ::toggleStartRadio
             toggleLibrary = ::toggleLibrary
             addToTargetPlaylist = ::addToTargetPlaylist
+            download = ::download
         }
         mediaSession =
             MediaLibrarySession
@@ -2220,6 +2221,66 @@ class MusicService :
                 currentMediaMetadata.value = player.currentMetadata
             }
         }
+    }
+
+    /**
+     * Queue a download without changing the current player item or queue.
+     *
+     * External MediaSession controllers can request a download for any song
+     * they can already see in Metrolist's library/search results. The song
+     * must carry at least an id and a title; the remaining metadata is used
+     * when the song is not in the local database yet.
+     */
+    fun download(args: Bundle): Boolean {
+        val songId = args.getString(MediaSessionConstants.KEY_SONG_ID)?.trim().orEmpty()
+        val title = args.getString(MediaSessionConstants.KEY_TITLE)?.trim().orEmpty()
+        if (!isValidDownloadRequest(songId, title)) return false
+
+        val artist = args.getString(MediaSessionConstants.KEY_ARTIST)?.trim().orEmpty()
+        val durationMs = args.getLong(MediaSessionConstants.KEY_DURATION_MS, 0L)
+        val thumbnailUrl = args.getString(MediaSessionConstants.KEY_THUMBNAIL_URL)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+        val albumId = args.getString(MediaSessionConstants.KEY_ALBUM_ID)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+        val albumTitle = args.getString(MediaSessionConstants.KEY_ALBUM_TITLE)
+            ?.trim()
+            .orEmpty()
+        val explicit = args.getBoolean(MediaSessionConstants.KEY_EXPLICIT, false)
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                val existing = database.getSongByIdBlocking(songId)
+                if (existing != null) {
+                    downloadUtil.download(existing)
+                    return@launch
+                }
+
+                val metadata = com.metrolist.music.models.MediaMetadata(
+                    id = songId,
+                    title = title,
+                    artists = listOf(
+                        com.metrolist.music.models.MediaMetadata.Artist(
+                            id = null,
+                            name = artist.ifEmpty { "Unknown" },
+                        ),
+                    ),
+                    duration = (durationMs / 1000L).toInt().coerceAtLeast(0),
+                    thumbnailUrl = thumbnailUrl,
+                    album = albumId?.let {
+                        com.metrolist.music.models.MediaMetadata.Album(it, albumTitle)
+                    },
+                    explicit = explicit,
+                )
+                downloadUtil.download(metadata)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.tag(TAG).w(e, "Failed to queue download for $songId")
+            }
+        }
+        return true
     }
 
     fun addToTargetPlaylist() {

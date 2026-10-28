@@ -86,6 +86,7 @@ constructor(
     var toggleStartRadio: () -> Unit = {}
     var toggleLibrary: () -> Unit = {}
     var addToTargetPlaylist: () -> Unit = {}
+    var download: (Bundle) -> Boolean = { false }
 
     fun release() {
         scope.cancel()
@@ -105,6 +106,7 @@ constructor(
                 .add(MediaSessionConstants.CommandToggleShuffle)
                 .add(MediaSessionConstants.CommandToggleRepeatMode)
                 .add(MediaSessionConstants.CommandAddToTargetPlaylist)
+                .add(MediaSessionConstants.CommandDownload)
                 .build(),
             connectionResult.availablePlayerCommands,
         )
@@ -125,6 +127,13 @@ constructor(
 
             MediaSessionConstants.ACTION_TOGGLE_REPEAT_MODE -> session.player.toggleRepeatMode()
             MediaSessionConstants.ACTION_ADD_TO_TARGET_PLAYLIST -> addToTargetPlaylist()
+            MediaSessionConstants.ACTION_DOWNLOAD -> {
+                if (!download(args)) {
+                    return Futures.immediateFuture(
+                        SessionResult(SessionResult.RESULT_ERROR_BAD_VALUE),
+                    )
+                }
+            }
         }
         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
     }

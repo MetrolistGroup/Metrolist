@@ -78,4 +78,16 @@ class MediaLibrarySessionCallbackTest {
             androidAutoPageRequest(page = 2, pageSize = 1).afterLeadingItems(2),
         )
     }
+
+    @Test
+    fun `download command requires a safe media id and a title`() {
+        assertTrue(isValidDownloadRequest("dQw4w9WgXcQ", "Never Gonna Give You Up"))
+        assertTrue(isValidDownloadRequest("  dQw4w9WgXcQ  ", "  Title  "))
+        assertFalse(isValidDownloadRequest(null, "Title"))
+        assertFalse(isValidDownloadRequest("", "Title"))
+        assertFalse(isValidDownloadRequest("a/b", "Title"))
+        assertFalse(isValidDownloadRequest("a b", "Title"))
+        assertFalse(isValidDownloadRequest("dQw4w9WgXcQ", null))
+        assertFalse(isValidDownloadRequest("dQw4w9WgXcQ", "   "))
+    }
 }
