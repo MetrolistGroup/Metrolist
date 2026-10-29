@@ -869,4 +869,8 @@
     <string name="update_action">Güncelle</string>
     <string name="discord_integration">Discord entegrasyonu</string>
     <string name="enable_discord_rpc">Rich Presence\'i etkinleştir</string>
+    <string name="force_bottom_navbar">Alt gezinme çubuğuna zorla</string>
+    <string name="player_pause">Duraklat</string>
+    <string name="top_result">En iyi sonuç</string>
+    <string name="other">Diğer</string>
 </resources>

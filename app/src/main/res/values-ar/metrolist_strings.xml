@@ -51,7 +51,7 @@
     <string name="slim_navbar">شريط تنقل سفلي رفيع</string>
     <string name="auto_playlists">قوائم التشغيل التلقائيه</string>
     <string name="show_liked_playlist">إظهار قائمة \"الاعجابات\"</string>
-    <string name="show_downloaded_playlist">إظهار قائمة \"التحميلات\"</string>
+    <string name="show_downloaded_playlist">إظهار قائمة \"التنزيلات\"</string>
     <string name="show_top_playlist">إظهار قائمة \"الأكثر استماعاً\"</string>
     <string name="show_cached_playlist">إظهار قائمة \"الأغاني المخزنة مؤقتًا\"</string>
     <string name="generating_image">جارٍ إنشاء الصورة…</string>
@@ -156,9 +156,9 @@
     <string name="updater">التحديثات</string>
     <string name="check_for_updates">التحقق تلقائيًا من التحديثات</string>
     <string name="update_notifications">تمكين إشعارات التحديث</string>
-    <string name="update_available_title">التحديث متاح</string>
+    <string name="update_available_title">تحديث جديد موجود</string>
     <string name="update_channel_name">تحديثات التطبيق</string>
-    <string name="update_channel_desc">إشعارات حول الإصدارات الجديدة</string>
+    <string name="update_channel_desc">إشعارات حول الإصدارات الجديدة للتطبيق</string>
     <string name="integrations">التكاملات</string>
     <string name="username">اسم المستخدم</string>
     <string name="password">كلمة المرور</string>
@@ -287,7 +287,7 @@
     <string name="skip_silence_instant_desc">قم بتخطي اللحظات الصامتة بدلاً من تسريع التشغيل</string>
     <string name="remember_shuffle_and_repeat">تذكر خلط الاغاني و تكرار الأغنية</string>
     <string name="remember_shuffle_and_repeat_desc">تذكر وضع خلط الأغاني و تكرار الأغنية بعد إعادة تشغيل التطبيق</string>
-    <string name="lyrics_offset">ازاحة كلمات الأغنية</string>
+    <string name="lyrics_offset">التعديل من وقت عرض كلمات الأغنية</string>
     <string name="system_equalizer">معادل النظام</string>
     <string name="album_art">صورة الالبوم</string>
     <string name="no_song_playing">لا اغنية حاليا</string>
@@ -477,7 +477,7 @@
     <string name="crossfade_desc">يتلاشى صوت الأغنية الحالية تدريجيًا مع بدء الأغنية التالية</string>
     <string name="crossfade_duration">مدة التلاشي التدريجي</string>
     <string name="crossfade_gapless">تعطيل للألبومات بدون فواصل</string>
-    <string name="crossfade_gapless_desc">لا تقم بالتلاشي التدريجي إذا كان الألبوم بدون فواصل</string>
+    <string name="crossfade_gapless_desc">تخطي التلاشي التدريجي للألبومات المصممة للتشغيل بدون فواصل</string>
     <string name="audio_offload_disabled_by_crossfade">تم تعطيله لأن خاصية التلاشي التدريجي نشطة</string>
     <string name="hide_youtube_shorts">إخفاء مقاطع يوتيوب القصيرة</string>
     <string name="listen_together_in_top_bar">استمع معًا من شريط الأعلى</string>
@@ -715,7 +715,7 @@
     <string name="experimental_lyrics_beta_message">مكوّن كلمات الأغاني الجديد قيد التطوير حاليًا وقد يحتوي على أخطاء. هل أنت متأكد من رغبتك في تفعيله؟</string>
     <string name="and">و</string>
     <string name="auto_radio_queue">قائمة الأغاني المشابهة</string>
-    <string name="auto_radio_queue_desc">إنشاء قائمة أغاني مشابهة بشكل تلقائي عند تشغيل أغنية من قائمة البحث أو من القائمة الرئيسية</string>
+    <string name="auto_radio_queue_desc">الإنشاء التلقائي لقائمة من الأغاني مشابهة عند تشغيل أغنية من البحث أو من الصفحة الرئيسية</string>
     <string name="sleep_timer_stop_after_current_song_title">توقف عند نهاية الأغنية الحالية</string>
     <string name="sleep_timer_stop_after_current_song_description">يننظر انتهاء الأغنية الحالية قبل ايقاف الأغاني</string>
     <string name="sleep_timer_fade_out_title">تخفيض صوت الأغنية عند نهايتها بشكل تدريجي</string>
@@ -756,4 +756,19 @@
     <string name="mini_player_background_style">نمط خلفية المشغل المصغر</string>
     <string name="transparent">شفاف</string>
     <string name="mini_player_background_not_available">غير متاح عند تعطيل تصميم المشغل المصغر الجديد</string>
+    <string name="enable_zemer">تفعيل زيمر</string>
+    <string name="enable_zemer_desc">كلمات الأغاني للموسيقى اليهودية</string>
+    <string name="add_to_playlist_position">اضف الى موضع قائمة التشغيل</string>
+    <string name="playlist_position_beginning">بداية قائمة التشغيل</string>
+    <string name="playlist_position_beginning_desc">اظهر الأغاني المضافة حديثًا قبل الأغاني الموجودة مسبقًا</string>
+    <string name="playlist_position_end">نهاية قائمة التشغيل</string>
+    <string name="playlist_position_end_desc">الأغاني المضافة حديثًا تظهر بعد الأغاني الموجودة مسبقًا</string>
+    <string name="playlist_unavailable">قائمة التشغيل غير موجودة</string>
+    <string name="playlist_created_locally">فشل مزامنة قائمة التشغيل مع تطبيق YouTube. تم إنشاء قائمة تشغيل محليًا على الجهاز.</string>
+    <string name="update_available_message">تطبيق Metrolist %s جاهز للتنزيل</string>
+    <string name="update_action">تحديث</string>
+    <string name="kmp_upgrade_warning">ميزة Metrolist KMP لا تزال في فترة التطوير. قد تواجه بعض الاخطاء او الميزات الغير مكتملة</string>
+    <string name="kmp_upgrade_action">جرّب KMP</string>
+    <string name="kmp_upgrade_later">ليس الآن</string>
+    <string name="varispeed_description">ربط تردد الصوت بسرعة التشغيل، مما ينتج بتأثيرات تسريع وإبطاء شبيهة بتأثيرات أشرطة الكاسيت</string>
 </resources>
