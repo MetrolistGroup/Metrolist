@@ -687,7 +687,7 @@
     <string name="time_transfer_listen_time_label">Tiempo de reproducción:</string>
     <string name="time_transfer_convert">Convertir</string>
     <string name="song_dropdown_more_results">Sigue escribiendo para filtrar los resultados (%d más)</string>
-    <string name="parsed_from_link">Extraído del enlace</string>
+    <string name="parsed_from_link">Parslinkhttps://hosted.weblate.org/translate/metrolist/metrolist-strings/es/?checksum=b7a484e02ec0ee3a</string>
     <string name="lyrics_from_provider">Letras desde: %s</string>
     <string name="hide_status_bar_fullscreen">Ocultar barra de notificaciones en pantalla completa</string>
     <string name="hide_status_bar_fullscreen_desc">app/src/main/kotlin/com/metrolist/music/db/entities/Song.ktapp/src/main/kotlin/com/metrolist/music/utils/SyncUtils.kapp/src/main/kotlin/com/metrolist/music/utils/SyncUtils.k\napp/src/main/kotlin/com/metrolist/music/utils/SyncUtils.kt</string>
