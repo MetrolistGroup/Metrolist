@@ -612,7 +612,7 @@
     <string name="widget_recognizer_unknown_song">Música desconhecida</string>
     <string name="widget_recognizer_unknown_artist">Artista desconhecido</string>
     <string name="widget_recognizer_mic_desc">Identificar uma música</string>
-    <string name="widget_recognizer_channel_name">Reconhecimento de música</string>
+    <string name="widget_recognizer_channel_name">Identificador de música</string>
     <string name="widget_recognizer_channel_desc">Mostra uma notificação enquanto identifica uma música do widget</string>
     <string name="widget_recognizer_notification_text">Gravando áudio para identificar a música…</string>
     <string name="filter_episodes">Episódios</string>

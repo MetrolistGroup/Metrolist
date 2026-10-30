@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="local_history">로컬</string>
+    <string name="local_history">한국어</string>
     <string name="remote_history">원격</string>
     <string name="charts">차트</string>
     <string name="back_button_desc">뒤로</string>

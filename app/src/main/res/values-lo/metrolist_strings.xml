@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="months">ເດ໊ອນ</string>
+    <string name="local_history">ໃນເຄື່ອງ</string>
+    <string name="remote_history">ອອນລາຍ</string>
+    <string name="weeks">ອາທິດ</string>
+    <string name="years">ປີ</string>
+    <string name="continuous">ຕໍ່ເນື່ອງ</string>
+    <string name="liked">ມັກ</string>
+    <string name="offline">ດາວໂຫຼດແລ້ວ</string>
+    <string name="my_top">ອັນດັບຂອງຂ້ອຍ</string>
+    <string name="cancel">ຍົກເລີກ</string>
+    <string name="enable">ຢືນຢັນ</string>
+    <string name="and">ເເລະ</string>
+    <string name="generating_image">ກຳລັງສ້າງຮູບພາບ…</string>
+    <string name="please_wait">ກະລຸນາລໍຖ້າ</string>
+    <string name="share_lyrics">ສົ່ງຕໍ່ເນື້ອເພງ</string>
+    <string name="share_as_text">ແບ່ງປັນເປັນຂໍ້ຄວາມ</string>
+    <string name="share_as_image">ແບ່ງປັນເປັນຮູບພາບ</string>
+    <string name="max_selection_limit">ເລືອກໄດ້ເຖິງຈຳນວນສູງສຸດແລ້ວ</string>
+    <string name="share_selected">Share ສິ່ງທີ່ເລ໊ອກ</string>
+</resources>

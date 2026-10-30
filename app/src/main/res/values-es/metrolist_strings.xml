@@ -687,13 +687,13 @@
     <string name="time_transfer_listen_time_label">Tiempo de reproducción:</string>
     <string name="time_transfer_convert">Convertir</string>
     <string name="song_dropdown_more_results">Sigue escribiendo para filtrar los resultados (%d más)</string>
-    <string name="parsed_from_link">Extraído del enlace</string>
+    <string name="parsed_from_link">Parslinkhttps://hosted.weblate.org/translate/metrolist/metrolist-strings/es/?checksum=b7a484e02ec0ee3a</string>
     <string name="lyrics_from_provider">Letras desde: %s</string>
     <string name="hide_status_bar_fullscreen">Ocultar barra de notificaciones en pantalla completa</string>
-    <string name="hide_status_bar_fullscreen_desc">Ocultar la barra de estado cuando el modo de pantalla completa de letras esté activo</string>
-    <string name="show_interval_indicator">Mostrar indicador de intervalo</string>
-    <string name="show_interval_indicator_desc">Muestra la barra de progreso en pausas instrumentales largas</string>
-    <string name="respect_agent_positioning">Respetar la ubicación del agente</string>
+    <string name="hide_status_bar_fullscreen_desc">app/src/main/kotlin/com/metrolist/music/db/entities/Song.ktapp/src/main/kotlin/com/metrolist/music/utils/SyncUtils.kapp/src/main/kotlin/com/metrolist/music/utils/SyncUtils.k\napp/src/main/kotlin/com/metrolist/music/utils/SyncUtils.kt</string>
+    <string name="show_interval_indicator">–https://hosted.weblate.org/translate/metrolist/metrolist-strings/es/?checksum=ff38dbbaf1c0307fHide the status bar when lyrics fullscreen mode is activeapp/src/main/kotlin/com/metrolist/music/utils/SyncUtils.ktsequenceDiagram\nparticipant Sync as TareaDeSincronización\nparticipant Remote as API_Remota\nÑparticipant DB as BaseDeDatos\nSync-&gt;&gt;DB: leer canciones de la playlist -&gt; capturar downloadedSongIds\nSync-&gt;&gt;Remote: obtener canciones de la playlis tremota\nSync-&gt;&gt;DB: iniciar transacción\nSync-&gt;&gt;DB: eliminar mapeos de playlist para playlistId\nSync-&gt;&gt;DB: insertar filas en PlaylistSongMap remoto (con posiciones remotas)\nSync-&gt;&gt;DB: por cada downloadedId que no esté en remoteIds -&gt; verificar que la canción exista\nSync-&gt;&gt;DB: insertar PlaylistSongMap en la posición (maxPos + 1) para las canciones preservadas\n DB--&gt;&gt;Sync: confirmar transacción (commit)\napp/src/main/kotlin/com/metrolist/music/utils/SyncUtils.ktapp/src/main/kotlin/com/metrolist/music/db/entities/Song.ktMostrar indicador de intervalo</string>
+    <string name="show_interval_indicator_desc">Muestrahttps://hosted.weblate.org/translate/metrolist/metrolist-strings/es/?checksum=ff38dbbaf1c0307f la barra de progreso en pausas instrumentales largas</string>
+    <string name="respect_agent_positioning">Posicionamiento de agente del respeto</string>
     <string name="respect_agent_positioning_desc">Alinear letras por rol del agente (p. ej. coros de fondo)</string>
     <string name="lyrics_animation_none">Ninguna</string>
     <string name="lyrics_animation_fade">Desvanecimiento</string>
