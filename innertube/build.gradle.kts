@@ -39,3 +39,5 @@ dependencies {
 
     coreLibraryDesugaring(libs.desugaring)
 }
+
+apply(from = "../ultra/ultra.innertube.gradle.kts") // ULTRA-SEAM:S3

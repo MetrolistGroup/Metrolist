@@ -1,0 +1,2 @@
+# The root .gitignore has a bare "core" rule that would otherwise hide ultra/core/.
+!/core/

@@ -320,3 +320,5 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.ktor.client.mock)
 }
+
+apply(from = "../ultra/ultra.app.gradle.kts") // ULTRA-SEAM:S2

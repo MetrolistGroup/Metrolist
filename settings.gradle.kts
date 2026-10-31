@@ -40,3 +40,5 @@ dependencyResolutionManagement {
 rootProject.name = "Metrolist"
 include(":app")
 include(":innertube")
+
+apply(from = "ultra/ultra.settings.gradle.kts") // ULTRA-SEAM:S1
