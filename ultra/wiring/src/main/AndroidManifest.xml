@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <!--
+            Registers UltraWiringInitializer with androidx.startup's InitializationProvider. The
+            provider itself is declared by the startup-runtime library and by upstream's merged
+            manifest; this only contributes a <meta-data> child, so nothing in :app's own
+            AndroidManifest.xml is touched.
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="ultra.wiring.UltraWiringInitializer"
+                android:value="androidx.startup" />
+        </provider>
+    </application>
+</manifest>

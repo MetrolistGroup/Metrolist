@@ -1,0 +1,23 @@
+# Registry of every one-line edit ("seam") this fork makes inside upstream files.
+#
+# Format:  <seam id> <file path relative to the repository root>
+#
+# Each listed file must contain the tag "ULTRA-SEAM:<id>" on the seam line, otherwise
+# `./gradlew verifyUltraSeams` (wired into preBuild) fails. That is the safety net for upstream
+# merges: a dropped seam breaks the build loudly instead of silently killing a feature.
+#
+# Rules for adding a seam:
+#   1. One physical line, ending in a `// ULTRA-SEAM:Sx` comment (`#` in non-Kotlin files).
+#   2. Fully-qualified call, so the seam adds no import line to the upstream file.
+#   3. The call goes into an ultra-owned object/glue function with a no-op default.
+#   4. Register it here in the same commit.
+
+S1 settings.gradle.kts
+S2 app/build.gradle.kts
+S3 innertube/build.gradle.kts
+S4 innertube/src/main/kotlin/com/metrolist/innertube/InnerTube.kt
+S5 app/src/main/kotlin/com/metrolist/music/playback/MusicService.kt
+S6 app/src/main/kotlin/com/metrolist/music/playback/MusicService.kt
+S7 app/src/main/kotlin/com/metrolist/music/utils/InnerTubeXPlayer.kt
+S8 app/src/main/kotlin/com/metrolist/music/ui/screens/NavigationBuilder.kt
+S9 app/src/main/kotlin/com/metrolist/music/ui/screens/settings/SettingsScreen.kt

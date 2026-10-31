@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ultra_title">Ultra</string>
+    <string name="ultra_hub_summary">Extension points of the Ultra layer and how many extensions are registered on each.</string>
+    <string name="ultra_hub_status_active">Extension layer active</string>
+    <string name="ultra_hub_status_inactive">Extension layer not installed</string>
+    <string name="ultra_hook_api_client">API client</string>
+    <string name="ultra_hook_stream_client">Stream client</string>
+    <string name="ultra_hook_audio_processors">Audio processors</string>
+    <string name="ultra_hook_stream_resolvers">Stream resolvers</string>
+    <string name="ultra_hook_destinations">Screens</string>
+    <string name="ultra_hook_settings_entries">Settings entries</string>
+</resources>

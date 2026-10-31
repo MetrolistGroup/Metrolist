@@ -1,0 +1,15 @@
+# Version catalog for the ultra layer only (accessor: ultraLibs). Upstream's gradle/libs.versions.toml
+# stays untouched. Anything upstream already declares (compose, hilt, media3, ktor, junit, ...) is
+# read from `libs`, never duplicated here, so ultra modules can't drift from the app's versions.
+#
+# The two entries below are androidx artifacts upstream only receives transitively. Each version
+# is what :app resolves today (checked with `:app:dependencies`); Gradle takes the highest requested
+# version, so declaring them can never downgrade what upstream resolves.
+
+[versions]
+startup = "1.2.0"
+annotation = "1.10.0"
+
+[libraries]
+startup-runtime = { module = "androidx.startup:startup-runtime", version.ref = "startup" }
+androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }

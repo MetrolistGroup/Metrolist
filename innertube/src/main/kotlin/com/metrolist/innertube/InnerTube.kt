@@ -177,6 +177,7 @@ class InnerTube(
                                 .build()
                         }
                     }
+                    ultra.hooks.UltraHooks.configureApiClient(this) // ULTRA-SEAM:S4
                 }
             }
 

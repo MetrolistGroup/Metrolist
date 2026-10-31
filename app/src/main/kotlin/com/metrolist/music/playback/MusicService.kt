@@ -3520,7 +3520,9 @@ class MusicService :
                                                 .header("Proxy-Authorization", auth)
                                                 .build()
                                         } ?: response.request
-                                    }.build(),
+                                    }
+                                    .also(ultra.hooks.UltraHooks::configureStreamClient) // ULTRA-SEAM:S5
+                                    .build(),
                             ),
                         ),
                     ),
@@ -4059,6 +4061,7 @@ class MusicService :
                         normalizationProcessor,
                         eqProcessor,
                         silenceProcessor,
+                        *ultra.hooks.UltraHooks.audioProcessors(), // ULTRA-SEAM:S6
                     ),
                     SilenceSkippingAudioProcessor(2_000_000, 20_000, 256),
                     SonicAudioProcessor(),

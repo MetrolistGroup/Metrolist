@@ -62,6 +62,7 @@ object InnerTubeXPlayer {
         allowBoundedRange: Boolean = true,
     ): Result<PlaybackData> =
         try {
+            com.metrolist.music.ultra.ultraPrePlayback(videoId, playlistId)?.let { return it } // ULTRA-SEAM:S7
             val hints =
                 contentHints.copy(
                     isUploaded =

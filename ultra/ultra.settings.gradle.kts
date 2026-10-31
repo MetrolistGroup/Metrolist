@@ -11,8 +11,10 @@
  * command-line builds until the cache happened to be invalidated.
  */
 
-val ultraModules = listOf<String>(
-    // e.g. "hooks", "wiring", "core/model", "feature/oled"
+val ultraModules = listOf(
+    "hooks",   // seam contracts + UltraHooks registry (no-op defaults); depends on nothing ultra
+    "wiring",  // Hilt multibindings + androidx.startup initializer that fill UltraHooks
+    // later: "core/model", "feature/oled", ...
 )
 
 ultraModules.forEach { path ->
@@ -23,4 +25,14 @@ ultraModules.forEach { path ->
     val projectName = "ultra-" + path.replace('/', '-')
     include(":$projectName")
     project(":$projectName").projectDir = moduleDir
+}
+
+// Ultra-only version catalog (accessor `ultraLibs`), kept apart from upstream's `libs`.
+dependencyResolutionManagement {
+    versionCatalogs {
+        create("ultraLibs") {
+            // files() in an applied script resolves against the script's directory, so anchor explicitly.
+            from(files(settingsDir.resolve("ultra/gradle/ultra.versions.toml")))
+        }
+    }
 }

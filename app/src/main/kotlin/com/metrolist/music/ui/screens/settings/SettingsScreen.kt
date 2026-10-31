@@ -226,6 +226,7 @@ fun SettingsScreen(
                         onClick = { showChangelog.value = true }
                     )
                 )
+                addAll(com.metrolist.music.ultra.ultraSettingsItems(navController)) // ULTRA-SEAM:S9
                 add(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.info),

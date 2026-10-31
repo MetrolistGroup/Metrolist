@@ -452,4 +452,5 @@ fun NavGraphBuilder.navigationBuilder(
     composable("settings/android_auto") {
         AndroidAutoSettings(navController)
     }
+    com.metrolist.music.ultra.ultraDestinations(this, navController) // ULTRA-SEAM:S8
 }
