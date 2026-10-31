@@ -14,7 +14,8 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.withContext
 
 class YouTubePlaylistQueue(
-    private val playlistId: String,
+    val playlistId: String,
+    val isEditable: Boolean = false,
     private val playlistTitle: String? = null,
     private val initialSongs: List<SongItem> = emptyList(),
     private val initialContinuation: String? = null,
@@ -30,7 +31,7 @@ class YouTubePlaylistQueue(
             if (initialSongs.isNotEmpty()) {
                 Queue.Status(
                     title = playlistTitle,
-                    items = initialSongs.map { it.toMediaItem() },
+                    items = initialSongs.map { it.toMediaItem(playlistId) },
                     mediaItemIndex = startIndex,
                 )
             } else {
@@ -38,7 +39,7 @@ class YouTubePlaylistQueue(
                 continuation = playlistPage.songsContinuation
                 Queue.Status(
                     title = playlistPage.playlist.title,
-                    items = playlistPage.songs.map { it.toMediaItem() },
+                    items = playlistPage.songs.map { it.toMediaItem(playlistId) },
                     mediaItemIndex = startIndex,
                 )
             }
@@ -57,7 +58,7 @@ class YouTubePlaylistQueue(
                     val continuationPage = YouTube.playlistContinuation(currentContinuation).getOrThrow()
                     continuation = continuationPage.continuation
                     retryCount = 0
-                    return@withContext continuationPage.songs.map { it.toMediaItem() }
+                    return@withContext continuationPage.songs.map { it.toMediaItem(playlistId) }
                 } catch (e: Exception) {
                     lastException = e
                     retryCount++

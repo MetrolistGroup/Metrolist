@@ -36,6 +36,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
@@ -44,6 +46,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -216,6 +220,46 @@ internal fun setVideoIdUpdatesForAddedSongs(
     return updates
 }
 
+internal suspend fun executePlaylistRemoval(
+    resolveSetVideoId: suspend () -> String?,
+    remove: suspend (String) -> Unit,
+    confirmAbsent: suspend (String) -> Boolean = { false },
+    alreadyAbsent: (String) -> Boolean = { false },
+): Result<Boolean> {
+    return try {
+        val setVideoId = resolveSetVideoId()
+            ?: return Result.failure(IllegalStateException("Playlist occurrence could not be resolved"))
+        if (alreadyAbsent(setVideoId)) return Result.success(false)
+        try {
+            remove(setVideoId)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            val absent = try {
+                confirmAbsent(setVideoId)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                false
+            }
+            if (!absent) throw e
+            return Result.success(false)
+        }
+        Result.success(true)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+}
+
+data class PlaylistRemovalUpdate(
+    val browseId: String,
+    val songId: String,
+    val setVideoId: String?,
+    val removed: Boolean,
+)
+
 @Singleton
 class SyncUtils @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -238,6 +282,10 @@ class SyncUtils @Inject constructor(
     @Volatile private var cachedLastSyncEpoch: Long = 0L
     private val playlistsBeingModified = ConcurrentHashMap<String, AtomicInteger>()
     private val playlistEditMutex = Mutex()
+    private val playlistAdditions = ConcurrentHashMap<Job, String>()
+    private val completedPlaylistRemovals = android.util.LruCache<Triple<String, String, String>, Boolean>(128)
+    private val _playlistRemovalUpdates = MutableSharedFlow<PlaylistRemovalUpdate>(extraBufferCapacity = 16)
+    val playlistRemovalUpdates = _playlistRemovalUpdates.asSharedFlow()
     private var lastPlaylistEditAtMs = 0L
 
     companion object {
@@ -281,7 +329,7 @@ class SyncUtils @Inject constructor(
             .flatMap(database::songIdsWithoutArtists)
             .toSet()
 
-    private suspend fun runQueuedPlaylistEdit(block: suspend () -> Unit) {
+    private suspend fun <T> runQueuedPlaylistEdit(block: suspend () -> T): T =
         playlistEditMutex.withLock {
             val remainingDelay = PLAYLIST_EDIT_THROTTLE_MS -
                 (System.currentTimeMillis() - lastPlaylistEditAtMs)
@@ -292,7 +340,6 @@ class SyncUtils @Inject constructor(
                 lastPlaylistEditAtMs = System.currentTimeMillis()
             }
         }
-    }
 
     init {
         context.dataStore.data
@@ -1582,6 +1629,7 @@ class SyncUtils @Inject constructor(
                     }
 
                     val remoteIds = songs.map { it.id }
+                    clearConfirmedPlaylistRemovals(browseId, page.songs)
                     val localSongs = database.playlistSongMaps(playlistId, from = 0)
                     val localIds = localSongs.map { it.songId }
                     val songIdsWithoutArtists = database.playlistSongIdsWithoutArtists(playlistId).toSet()
@@ -1728,6 +1776,10 @@ class SyncUtils @Inject constructor(
         }
     }
 
+    suspend fun awaitPlaylistAdditions(playlistId: String) {
+        playlistAdditions.entries.filter { it.value == playlistId }.forEach { it.key.join() }
+    }
+
     fun scheduleAddToPlaylist(
         browseId: String,
         playlistId: String,
@@ -1735,7 +1787,7 @@ class SyncUtils @Inject constructor(
     ) {
         if (songIds.isEmpty()) return
         markPlaylistModifying(playlistId)
-        syncScope.launch {
+        val job = syncScope.launch(start = CoroutineStart.LAZY) {
             try {
                 val confirmed = mutableListOf<String>()
                 songIds.forEach { songId ->
@@ -1755,6 +1807,9 @@ class SyncUtils @Inject constructor(
                 unmarkPlaylistModifying(playlistId)
             }
         }
+        playlistAdditions[job] = playlistId
+        job.invokeOnCompletion { playlistAdditions.remove(job) }
+        job.start()
     }
 
     private suspend fun backfillAddedSetVideoIds(
@@ -1787,42 +1842,144 @@ class SyncUtils @Inject constructor(
         }
     }
 
+    internal fun clearConfirmedPlaylistRemovals(browseId: String, songs: List<SongItem>) {
+        val normalizedId = browseId.removePrefix("VL")
+        completedPlaylistRemovals.snapshot().keys.forEach { key ->
+            if (key.first == normalizedId && songs.filter { it.id == key.second }.all {
+                    !it.setVideoId.isNullOrBlank() && it.setVideoId != key.third
+                }
+            ) {
+                completedPlaylistRemovals.remove(key)
+            }
+        }
+    }
+
     fun scheduleRemoveFromPlaylist(
         browseId: String,
         songId: String,
         playlistId: String,
+        localRowId: Int? = null,
+        onSuccess: suspend (Boolean) -> Unit = {},
+        onFailure: suspend (Throwable) -> Unit = {},
         getSetVideoId: suspend () -> String?
     ) {
         markPlaylistModifying(playlistId)
         syncScope.launch {
+            var resolvedSetVideoId: String? = null
+            var localPlaylistId: String? = null
+            var localOnly = false
             try {
-                runQueuedPlaylistEdit {
-                    var setVideoId = getSetVideoId()
+                localPlaylistId = database.playlistBlocking(playlistId)?.playlist
+                    ?.takeIf { it.browseId?.removePrefix("VL") == browseId.removePrefix("VL") }?.id
+                    ?: database.playlistByBrowseId(browseId).firstOrNull()?.id
+                localPlaylistId?.takeIf { it != playlistId }?.let(::markPlaylistModifying)
+                localPlaylistId?.let { awaitPlaylistAdditions(it) }
+                val result = runQueuedPlaylistEdit {
+                    try {
+                        var remoteSongs: List<SongItem>? = null
+                        localPlaylistId?.let { targetPlaylistId ->
+                            val localSongs = database.playlistSongMaps(targetPlaylistId, from = 0)
+                            val pendingSongIds = localSongs.filter {
+                                it.songId == songId && it.setVideoId == null
+                            }.map { it.songId }
+                            if (pendingSongIds.isNotEmpty()) {
+                                val page = YouTube.playlist(browseId).completed().getOrThrow()
+                                check(page.playlist.isEditable) { "Playlist is not editable" }
+                                check(page.songs.isNotEmpty() || isGenuineEmptyPlaylist(page)) { "Playlist response is incomplete" }
+                                remoteSongs = page.songs
+                                database.withTransaction {
+                                    val currentRows = database.playlistSongMaps(songId)
+                                    setVideoIdUpdatesForAddedSongs(pendingSongIds, page.songs, localSongs).forEach { update ->
+                                        currentRows.firstOrNull { it.id == update.id && it.setVideoId == null }?.let { row ->
+                                            database.update(row.copy(setVideoId = update.setVideoId))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        val localRows = database.playlistSongMaps(songId).filter { it.playlistId == localPlaylistId }
+                        val targetRow = localRows.firstOrNull { it.id == localRowId }
+                        val capturedSetVideoId = getSetVideoId()?.takeIf { it.isNotBlank() }
+                        if (localRowId != null && targetRow?.setVideoId.isNullOrBlank() && capturedSetVideoId == null) {
+                            if (targetRow != null) {
+                                val songs = checkNotNull(remoteSongs) { "Playlist has not been checked" }
+                                val claimedIds = localRows.filter { it.id != localRowId }.mapNotNull { it.setVideoId }.toSet()
+                                check(songs.filter { it.id == songId }.all {
+                                    !it.setVideoId.isNullOrBlank() && it.setVideoId in claimedIds
+                                }) { "Playlist occurrence is ambiguous" }
+                            }
+                            localOnly = true
+                            Result.success(targetRow != null)
+                        } else {
+                            executePlaylistRemoval(
+                                resolveSetVideoId = {
+                                    resolveSetVideoIdForRemoval(
+                                        songId = songId,
+                                        fromDb = { capturedSetVideoId ?: targetRow?.setVideoId },
+                                        fromRemote = {
+                                            val claimedIds = localRows.mapNotNull { it.setVideoId }.toSet()
+                                            (remoteSongs ?: YouTube.playlist(browseId).completed().getOrThrow().songs)
+                                                .filter { it.id == songId && it.setVideoId !in claimedIds }.singleOrNull()?.setVideoId
+                                        },
+                                    ).also { resolvedSetVideoId = it }
+                                },
+                                remove = { setVideoId ->
+                                    YouTube.removeFromPlaylist(browseId, songId, setVideoId).getOrThrow()
+                                },
+                                confirmAbsent = { setVideoId ->
+                                    val page = YouTube.playlist(browseId).completed().getOrThrow()
+                                    (page.songs.isNotEmpty() || isGenuineEmptyPlaylist(page)) &&
+                                        page.songs.filter { it.id == songId }.all {
+                                            !it.setVideoId.isNullOrBlank() && it.setVideoId != setVideoId
+                                        }
+                                },
+                                alreadyAbsent = { setVideoId ->
+                                    completedPlaylistRemovals.get(Triple(browseId.removePrefix("VL"), songId, setVideoId)) == true
+                                },
+                            ).onSuccess {
+                                resolvedSetVideoId?.let { occurrence ->
+                                    completedPlaylistRemovals.put(Triple(browseId.removePrefix("VL"), songId, occurrence), true)
+                                }
+                            }
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Result.failure(e)
+                    }
+                }
 
-                    if (setVideoId == null) {
-                        Timber.w("scheduleRemoveFromPlaylist: setVideoId not in DB, fetching from YouTube")
-                        for (attempt in 0 until 3) {
-                            setVideoId = runCatching {
-                                YouTube.playlist(browseId).completed().getOrThrow()
-                                    .songs.lastOrNull { it.id == songId }?.setVideoId
-                            }.getOrNull()
-                            if (setVideoId != null) break
-                            if (attempt < 2) delay(2_000L)
+                val failure = result.exceptionOrNull()
+                if (failure == null) {
+                    localPlaylistId?.let { targetPlaylistId ->
+                        database.withTransaction {
+                            val rows = database.playlistSongMaps(songId).filter { it.playlistId == targetPlaylistId }
+                            val row = if (localOnly) {
+                                rows.firstOrNull { it.id == localRowId && it.setVideoId == null }
+                            } else {
+                                rows.firstOrNull { resolvedSetVideoId != null && it.setVideoId == resolvedSetVideoId }
+                                    ?: rows.firstOrNull { it.id == localRowId && it.setVideoId == null }
+                            }
+                            row?.let { map ->
+                                database.move(map.playlistId, map.position, Int.MAX_VALUE)
+                                database.delete(map.copy(position = Int.MAX_VALUE))
+                            }
                         }
                     }
-
-                    if (setVideoId == null) {
-                        Timber.w("scheduleRemoveFromPlaylist: setVideoId not found on YouTube, skipping remove for songId=$songId")
-                        return@runQueuedPlaylistEdit
-                    }
-
-                    YouTube.removeFromPlaylist(browseId, songId, setVideoId).getOrThrow()
+                    onSuccess(result.getOrThrow())
+                    _playlistRemovalUpdates.emit(PlaylistRemovalUpdate(browseId, songId, resolvedSetVideoId, true))
+                    if (!localOnly) delay(3_000L)
+                } else {
+                    Timber.e(failure, "Failed to remove song $songId from playlist $browseId")
+                    onFailure(failure)
+                    _playlistRemovalUpdates.emit(PlaylistRemovalUpdate(browseId, songId, resolvedSetVideoId, false))
                 }
-                delay(3_000L)
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to remove song $songId from playlist $browseId")
             } finally {
                 unmarkPlaylistModifying(playlistId)
+                localPlaylistId?.takeIf { it != playlistId }?.let(::unmarkPlaylistModifying)
+            }
+            localPlaylistId?.let { targetPlaylistId ->
+                syncPlaylistSuspend(browseId, targetPlaylistId)
             }
         }
     }

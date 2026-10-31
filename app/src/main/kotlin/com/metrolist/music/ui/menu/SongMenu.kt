@@ -137,6 +137,8 @@ fun SongMenu(
     )
 
     val isPinned by database.speedDialDao.isPinned(song.id).collectAsStateWithLifecycle(initialValue = false)
+    val inEditablePlaylist by remember(database, song.id) { database.songInEditablePlaylist(song.id) }
+        .collectAsStateWithLifecycle(initialValue = false)
 
     // Podcast subscription state for episodes
     val podcastEntity by produceState<PodcastEntity?>(initialValue = null, song) {
@@ -231,6 +233,15 @@ fun SongMenu(
     var showChoosePlaylistDialog by rememberSaveable {
         mutableStateOf(false)
     }
+    var showRemoveFromPlaylistDialog by rememberSaveable { mutableStateOf(false) }
+    RemoveFromPlaylistDialog(
+        isVisible = showRemoveFromPlaylistDialog,
+        songId = song.id,
+        onDismiss = {
+            showRemoveFromPlaylistDialog = false
+            onDismiss()
+        },
+    )
 
     var showErrorPlaylistAddDialog by rememberSaveable {
         mutableStateOf(false)
@@ -831,26 +842,60 @@ fun SongMenu(
                                     onClick = {
                                         playlistSong.let { ps ->
                                             val capturedSetVideoId = ps.map.setVideoId
-                                            database.transaction {
-                                                move(
-                                                    ps.map.playlistId,
-                                                    ps.map.position,
-                                                    Int.MAX_VALUE
-                                                )
-                                                delete(ps.map.copy(position = Int.MAX_VALUE))
+                                            fun deleteLocalRow() {
+                                                database.transaction {
+                                                    val currentMap = playlistSongMaps(ps.map.songId)
+                                                        .firstOrNull { it.id == ps.map.id } ?: return@transaction
+                                                    move(
+                                                        currentMap.playlistId,
+                                                        currentMap.position,
+                                                        Int.MAX_VALUE,
+                                                    )
+                                                    delete(currentMap.copy(position = Int.MAX_VALUE))
+                                                    playerConnection.service.clearLocalPlaylistSource(
+                                                        ps.map.songId, currentMap.playlistId, currentMap.id,
+                                                    )
+                                                }
                                             }
-                                            playlistBrowseId?.let { browseId ->
+
+                                            if (playlistBrowseId != null) {
                                                 syncUtils.scheduleRemoveFromPlaylist(
-                                                    browseId,
+                                                    playlistBrowseId,
                                                     ps.map.songId,
-                                                    ps.map.playlistId
+                                                    ps.map.playlistId,
+                                                    localRowId = ps.map.id,
+                                                    onSuccess = {
+                                                        if (capturedSetVideoId == null) {
+                                                            playerConnection.service.clearLocalPlaylistSource(ps.map.songId, ps.map.playlistId, ps.map.id)
+                                                        }
+                                                    },
+                                                    onFailure = {
+                                                        withContext(Dispatchers.Main) {
+                                                            Toast.makeText(
+                                                                context,
+                                                                R.string.error_remove_from_playlist,
+                                                                Toast.LENGTH_SHORT,
+                                                            ).show()
+                                                        }
+                                                    },
                                                 ) {
                                                     capturedSetVideoId
                                                 }
+                                            } else {
+                                                deleteLocalRow()
                                             }
                                             onDismiss()
                                         }
                                     },
+                                ),
+                            )
+                        }
+                        if (playlistSong == null && inEditablePlaylist) {
+                            add(
+                                Material3MenuItemData(
+                                    title = { Text(stringResource(R.string.choose_removal_playlist)) },
+                                    icon = { Icon(painterResource(R.drawable.delete), contentDescription = null) },
+                                    onClick = { showRemoveFromPlaylistDialog = true },
                                 ),
                             )
                         }

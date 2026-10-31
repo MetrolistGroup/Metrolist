@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -555,35 +556,59 @@ fun LocalPlaylistScreen(
                     key = song.map.id,
                 ) {
                     val currentItem by rememberUpdatedState(song)
+                    val dismissBoxState =
+                        rememberSwipeToDismissBoxState(
+                            positionalThreshold = { totalDistance -> totalDistance },
+                        )
+                    val dismissScope = rememberCoroutineScope()
 
                     fun deleteFromPlaylist() {
-                        // Capture values before deletion — DB entry will be gone afterwards
+                        val map = currentItem.map
                         val browseId = playlist?.playlist?.browseId
-                        val setVideoId = currentItem.map.setVideoId
-                        val songId = currentItem.map.songId
-                        val playlistId = currentItem.map.playlistId
+                        val setVideoId = map.setVideoId
+                        val songId = map.songId
+                        val playlistId = map.playlistId
 
-                        database.transaction {
-                            move(playlistId, currentItem.map.position, Int.MAX_VALUE)
-                            delete(currentItem.map.copy(position = Int.MAX_VALUE))
+                        fun deleteLocalRow() {
+                            database.transaction {
+                                val currentMap = playlistSongMaps(songId)
+                                    .firstOrNull { it.id == map.id } ?: return@transaction
+                                move(playlistId, currentMap.position, Int.MAX_VALUE)
+                                delete(currentMap.copy(position = Int.MAX_VALUE))
+                                playerConnection.service.clearLocalPlaylistSource(songId, playlistId, currentMap.id)
+                            }
                         }
 
                         if (browseId != null) {
                             syncUtils.scheduleRemoveFromPlaylist(
                                 browseId,
                                 songId,
-                                playlistId
+                                playlistId,
+                                localRowId = map.id,
+                                onSuccess = {
+                                    if (setVideoId == null) {
+                                        playerConnection.service.clearLocalPlaylistSource(songId, playlistId, map.id)
+                                    }
+                                },
+                                onFailure = {
+                                    withContext(Dispatchers.Main) {
+                                        dismissScope.launch { dismissBoxState.reset() }
+                                        Toast.makeText(
+                                            context,
+                                            R.string.error_remove_from_playlist,
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                    }
+                                },
                             ) {
                                 setVideoId
                             }
+                        } else {
+                            deleteLocalRow()
                         }
                     }
 
                     val swipeRemoveEnabled by rememberPreference(SwipeToRemoveSongKey, defaultValue = false)
-                    val dismissBoxState =
-                        rememberSwipeToDismissBoxState(
-                            positionalThreshold = { totalDistance -> totalDistance },
-                        )
                     var processedDismiss by remember { mutableStateOf(false) }
                     LaunchedEffect(dismissBoxState.currentValue) {
                         val dv = dismissBoxState.currentValue
@@ -663,9 +688,8 @@ fun LocalPlaylistScreen(
                                                 playerConnection.togglePlayPause()
                                             } else {
                                                 playerConnection.playQueue(
-                                                    ListQueue(
-                                                        title = playlist!!.playlist.name,
-                                                        items = songs.map { it.song.toMediaItem() },
+                                                    playlist!!.toListQueue(
+                                                        songs,
                                                         startIndex = songs.indexOfFirst { it.map.id == song.map.id },
                                                     ),
                                                 )
@@ -1324,10 +1348,7 @@ fun LocalPlaylistHeader(
             Surface(
                 onClick = {
                     playerConnection.playQueue(
-                        ListQueue(
-                            title = playlist.playlist.name,
-                            items = songs.shuffled().map { it.song.toMediaItem() },
-                        ),
+                        playlist.toListQueue(songs.shuffled()),
                     )
                 },
                 shape = CircleShape,
@@ -1350,10 +1371,7 @@ fun LocalPlaylistHeader(
             Surface(
                 onClick = {
                     playerConnection.playQueue(
-                        ListQueue(
-                            title = playlist.playlist.name,
-                            items = songs.map { it.song.toMediaItem() },
-                        ),
+                        playlist.toListQueue(songs),
                     )
                 },
                 color = MaterialTheme.colorScheme.primary,
@@ -1446,6 +1464,24 @@ fun LocalPlaylistHeader(
         }
     }
 }
+
+/**
+ * Builds a queue that carries the playlist context needed by "remove from playlist": the browse id
+ * to edit remotely, the local playlist id to edit in the database, and each row's setVideoId so a
+ * song added to the playlist more than once stays distinguishable while playing.
+ */
+fun Playlist.toListQueue(
+    songs: List<PlaylistSong>,
+    startIndex: Int = 0,
+): ListQueue =
+    ListQueue(
+        title = playlist.name,
+        items = songs.map { it.toMediaItem(playlist.browseId) },
+        startIndex = startIndex,
+        playlistBrowseId = playlist.browseId,
+        playlistId = playlist.id,
+        playlistIsEditable = playlist.isEditable,
+    )
 
 fun uriToByteArray(
     context: Context,
