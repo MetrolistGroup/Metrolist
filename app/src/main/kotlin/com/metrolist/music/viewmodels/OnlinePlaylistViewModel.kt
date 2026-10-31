@@ -18,10 +18,14 @@ import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.get
 import com.metrolist.music.utils.reportException
+import com.metrolist.music.utils.isGenuineEmptyPlaylist
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,6 +37,26 @@ import com.metrolist.music.constants.SongSortType
 import com.metrolist.innertube.models.Artist
 import com.metrolist.innertube.models.Album
 import javax.inject.Inject
+
+internal class PendingPlaylistRemovals {
+    private val removed = mutableSetOf<Pair<String, String?>>()
+    private val observed = mutableSetOf<Pair<String, String?>>()
+
+    @Synchronized
+    fun record(songId: String, setVideoId: String) {
+        removed.add(songId to setVideoId)
+    }
+
+    @Synchronized
+    fun observePage(songs: List<SongItem>, complete: Boolean, reset: Boolean = false) {
+        if (reset) observed.clear()
+        observed.addAll(songs.map { it.id to it.setVideoId })
+        if (complete) removed.retainAll(observed)
+    }
+
+    @Synchronized
+    fun filter(songs: List<SongItem>): List<SongItem> = songs.filter { (it.id to it.setVideoId) !in removed }
+}
 
 @HiltViewModel
 class OnlinePlaylistViewModel @Inject constructor(
@@ -64,18 +88,26 @@ class OnlinePlaylistViewModel @Inject constructor(
     var continuation: String? = null
         private set
 
+    private var initialLoadJob: Job? = null
     private var proactiveLoadJob: Job? = null
+    private var loadMoreJob: Job? = null
+    private val pendingRemovals = PendingPlaylistRemovals()
 
     init {
         fetchInitialPlaylistData()
     }
 
     private fun fetchInitialPlaylistData() {
-        viewModelScope.launch(Dispatchers.IO) {
+        val previousLoad = initialLoadJob
+        previousLoad?.cancel()
+        initialLoadJob = viewModelScope.launch(Dispatchers.IO) {
+            previousLoad?.join()
+            proactiveLoadJob?.cancelAndJoin()
+            loadMoreJob?.cancelAndJoin()
+            _isLoadingMore.value = false
             _isLoading.value = true
             _error.value = null
             continuation = null
-            proactiveLoadJob?.cancel() // Cancel any ongoing proactive load
 
             if (isPodcastPlaylist) {
                 // Use special podcast playlist APIs
@@ -92,6 +124,7 @@ class OnlinePlaylistViewModel @Inject constructor(
             "RDPN" -> {
                 YouTube.newEpisodes()
                     .onSuccess { episodes ->
+                        currentCoroutineContext().ensureActive()
                         playlist.value = PlaylistItem(
                             id = playlistId,
                             title = "New Episodes",
@@ -105,6 +138,7 @@ class OnlinePlaylistViewModel @Inject constructor(
                         playlistSongs.value = applySongFilters(episodes)
                         _isLoading.value = false
                     }.onFailure { throwable ->
+                        currentCoroutineContext().ensureActive()
                         _error.value = throwable.message ?: "Failed to load new episodes"
                         _isLoading.value = false
                         reportException(throwable)
@@ -113,6 +147,7 @@ class OnlinePlaylistViewModel @Inject constructor(
             "SE" -> {
                 timber.log.Timber.d("[SE_LOCAL] Fetching SE playlist...")
                 val result = YouTube.episodesForLater()
+                currentCoroutineContext().ensureActive()
                 val episodes = result.getOrNull() ?: emptyList()
                 timber.log.Timber.d("[SE_LOCAL] YouTube API result: ${if (result.isSuccess) "success" else "failed"}, ${episodes.size} episodes")
 
@@ -146,6 +181,13 @@ class OnlinePlaylistViewModel @Inject constructor(
     private suspend fun fetchRegularPlaylist() {
         YouTube.playlist(playlistId)
             .onSuccess { playlistPage ->
+                currentCoroutineContext().ensureActive()
+                pendingRemovals.observePage(
+                    playlistPage.songs,
+                    complete = playlistPage.songsContinuation == null &&
+                        (playlistPage.songs.isNotEmpty() || isGenuineEmptyPlaylist(playlistPage)),
+                    reset = true,
+                )
                 playlist.value = playlistPage.playlist
                 playlistSongs.value = applySongFilters(playlistPage.songs)
                 continuation = playlistPage.songsContinuation
@@ -154,6 +196,7 @@ class OnlinePlaylistViewModel @Inject constructor(
                     startProactiveBackgroundLoading()
                 }
             }.onFailure { throwable ->
+                currentCoroutineContext().ensureActive()
                 _error.value = throwable.message ?: "Failed to load playlist"
                 _isLoading.value = false
                 reportException(throwable)
@@ -163,6 +206,7 @@ class OnlinePlaylistViewModel @Inject constructor(
     private suspend fun loadLocalSavedEpisodes() {
         timber.log.Timber.d("[SE_LOCAL] loadLocalSavedEpisodes called")
         val savedEpisodes = database.savedPodcastEpisodes(SongSortType.CREATE_DATE, true).firstOrNull() ?: emptyList()
+        currentCoroutineContext().ensureActive()
         timber.log.Timber.d("[SE_LOCAL] Found ${savedEpisodes.size} saved episodes")
         savedEpisodes.forEachIndexed { index, ep ->
             timber.log.Timber.d("[SE_LOCAL] Episode $index: id=${ep.song.id}, title=${ep.song.title}, isEpisode=${ep.song.isEpisode}, inLibrary=${ep.song.inLibrary}")
@@ -218,6 +262,11 @@ class OnlinePlaylistViewModel @Inject constructor(
 
                 YouTube.playlistContinuation(currentProactiveToken)
                     .onSuccess { playlistContinuationPage ->
+                        currentCoroutineContext().ensureActive()
+                        pendingRemovals.observePage(
+                            playlistContinuationPage.songs,
+                            complete = playlistContinuationPage.continuation == null,
+                        )
                         val currentSongs = playlistSongs.value.toMutableList()
                         currentSongs.addAll(playlistContinuationPage.songs)
                         playlistSongs.value = applySongFilters(currentSongs)
@@ -225,6 +274,7 @@ class OnlinePlaylistViewModel @Inject constructor(
                         // Update the class-level continuation for manual loadMore if needed
                         this@OnlinePlaylistViewModel.continuation = currentProactiveToken
                     }.onFailure { throwable ->
+                        currentCoroutineContext().ensureActive()
                         reportException(throwable)
                         currentProactiveToken = null // Stop proactive loading on error
                     }
@@ -234,21 +284,27 @@ class OnlinePlaylistViewModel @Inject constructor(
     }
 
     fun loadMoreSongs() {
-        if (_isLoadingMore.value) return // Already loading more (manually)
+        if (_isLoading.value || _isLoadingMore.value) return
         
         val tokenForManualLoad = continuation ?: return // No more songs to load
 
         proactiveLoadJob?.cancel() // Cancel proactive loading to prioritize manual scroll
         _isLoadingMore.value = true
 
-        viewModelScope.launch(Dispatchers.IO) {
+        loadMoreJob = viewModelScope.launch(Dispatchers.IO) {
             YouTube.playlistContinuation(tokenForManualLoad)
                 .onSuccess { playlistContinuationPage ->
+                    currentCoroutineContext().ensureActive()
+                    pendingRemovals.observePage(
+                        playlistContinuationPage.songs,
+                        complete = playlistContinuationPage.continuation == null,
+                    )
                     val currentSongs = playlistSongs.value.toMutableList()
                     currentSongs.addAll(playlistContinuationPage.songs)
                     playlistSongs.value = applySongFilters(currentSongs)
                     continuation = playlistContinuationPage.continuation
                 }.onFailure { throwable ->
+                    currentCoroutineContext().ensureActive()
                     reportException(throwable)
                 }.also {
                     _isLoadingMore.value = false
@@ -261,30 +317,19 @@ class OnlinePlaylistViewModel @Inject constructor(
     }
 
     fun retry() {
-        proactiveLoadJob?.cancel()
         fetchInitialPlaylistData() // This will also restart proactive loading if applicable
     }
 
     fun removeSongFromLocalList(songId: String, setVideoId: String) {
+        pendingRemovals.record(songId, setVideoId)
         playlistSongs.value = playlistSongs.value.filter {
             it.id != songId || it.setVideoId != setVideoId
-        }
-        playlist.value = playlist.value?.let { 
-            it.copy(songCountText = it.songCountText?.let { countText ->
-                val match = Regex("""\d+""").find(countText)
-                if (match != null) {
-                    val count = match.value.toIntOrNull() ?: return@let countText
-                    countText.replace(match.value, (count - 1).coerceAtLeast(0).toString())
-                } else {
-                    countText
-                }
-            })
         }
     }
 
     private fun applySongFilters(songs: List<SongItem>): List<SongItem> {
         val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
-        return songs
+        return pendingRemovals.filter(songs)
             .filterVideoSongs(hideVideoSongs)
     }
 

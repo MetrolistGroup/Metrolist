@@ -994,4 +994,15 @@
     <string name="stream_source_web_creator_desc">Creator web client.</string>
     <string name="top_result">Top result</string>
     <string name="other">Other</string>
+    <string name="error_remove_from_playlist">Couldn\'t remove from playlist. Try again.</string>
+    <string name="removed_from_playlist">Removed from playlist</string>
+    <string name="choose_playlist_to_remove">Choose a playlist to remove this song from</string>
+    <string name="choose_removal_playlist">Choose playlist to remove from</string>
+    <string name="choose_playlist_occurrence">Choose which copy to remove</string>
+    <string name="playlist_occurrence_position">Song at position %1$d</string>
+    <string name="local_playlist_occurrence_position">Local copy at position %1$d</string>
+    <string name="song_not_in_playlist">This song is no longer in this playlist.</string>
+    <string name="no_editable_playlists">No editable playlists available</string>
+    <string name="no_playlists_containing_song">This song is not in any editable playlist.</string>
+    <string name="error_check_removal_playlists">Some playlists could not be checked. Tap to retry.</string>
 </resources>

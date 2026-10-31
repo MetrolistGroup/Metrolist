@@ -31,7 +31,7 @@ class PlaylistRemovalTargetTest {
 
     @Test
     fun `list queue resolves target from browse id and set video id`() {
-        val target = resolvePlaylistRemovalTarget(listQueue(), "setVideoId-A")
+        val target = resolvePlaylistRemovalTarget(listQueue(), "setVideoId-A", "VLPL_browse")
 
         assertEquals("VLPL_browse", target?.playlistId)
         assertEquals("setVideoId-A", target?.setVideoId)
@@ -44,6 +44,7 @@ class PlaylistRemovalTargetTest {
         val target = resolvePlaylistRemovalTarget(
             YouTubePlaylistQueue(playlistId = "PL123", isEditable = true),
             "setVideoId-A",
+            "PL123",
         )
 
         assertEquals("PL123", target?.playlistId)
@@ -60,40 +61,54 @@ class PlaylistRemovalTargetTest {
             resolvePlaylistRemovalTarget(
                 YouTubePlaylistQueue(playlistId = "PL123", isEditable = false),
                 "setVideoId-A",
+                "PL123",
             ),
         )
     }
 
     @Test
     fun `non editable list queue yields no target`() {
-        assertNull(resolvePlaylistRemovalTarget(listQueue(editable = false), "setVideoId-A"))
+        assertNull(resolvePlaylistRemovalTarget(listQueue(editable = false), "setVideoId-A", "VLPL_browse"))
     }
 
     @Test
     fun `list queue without browse id yields no target`() {
-        assertNull(resolvePlaylistRemovalTarget(listQueue(browseId = null), "setVideoId-A"))
-        assertNull(resolvePlaylistRemovalTarget(listQueue(browseId = "   "), "setVideoId-A"))
+        assertNull(resolvePlaylistRemovalTarget(listQueue(browseId = null), "setVideoId-A", "VLPL_browse"))
+        assertNull(resolvePlaylistRemovalTarget(listQueue(browseId = "   "), "setVideoId-A", "VLPL_browse"))
     }
 
     // --- setVideoId identity ---
 
     @Test
     fun `missing or blank set video id yields no target`() {
-        assertNull(resolvePlaylistRemovalTarget(listQueue(), null))
-        assertNull(resolvePlaylistRemovalTarget(listQueue(), ""))
-        assertNull(resolvePlaylistRemovalTarget(listQueue(), "   "))
+        assertNull(resolvePlaylistRemovalTarget(listQueue(), null, "VLPL_browse"))
+        assertNull(resolvePlaylistRemovalTarget(listQueue(), "", "VLPL_browse"))
+        assertNull(resolvePlaylistRemovalTarget(listQueue(), "   ", "VLPL_browse"))
         assertNull(
             resolvePlaylistRemovalTarget(
                 YouTubePlaylistQueue(playlistId = "PL123", isEditable = true),
                 null,
+                "PL123",
             ),
         )
     }
 
     @Test
     fun `queue types without playlist context yield no target`() {
-        assertNull(resolvePlaylistRemovalTarget(EmptyQueue, "setVideoId-A"))
-        assertNull(resolvePlaylistRemovalTarget(null, "setVideoId-A"))
+        assertNull(resolvePlaylistRemovalTarget(EmptyQueue, "setVideoId-A", "VLPL_browse"))
+        assertNull(resolvePlaylistRemovalTarget(null, "setVideoId-A", "VLPL_browse"))
+    }
+
+    @Test
+    fun `occurrence from another playlist yields no target`() {
+        assertNull(resolvePlaylistRemovalTarget(listQueue(), "setVideoId-B", "VLPL_other"))
+        assertNull(
+            resolvePlaylistRemovalTarget(
+                YouTubePlaylistQueue(playlistId = "PL123", isEditable = true),
+                "setVideoId-B",
+                "PL456",
+            ),
+        )
     }
 
     // --- duplicate occurrences ---
@@ -102,8 +117,8 @@ class PlaylistRemovalTargetTest {
     fun `duplicate occurrences of one song resolve to different targets`() {
         val queue = listQueue()
 
-        val first = resolvePlaylistRemovalTarget(queue, "setVideoId-A")
-        val second = resolvePlaylistRemovalTarget(queue, "setVideoId-B")
+        val first = resolvePlaylistRemovalTarget(queue, "setVideoId-A", "VLPL_browse")
+        val second = resolvePlaylistRemovalTarget(queue, "setVideoId-B", "VLPL_browse")
 
         assertEquals("setVideoId-A", first?.setVideoId)
         assertEquals("setVideoId-B", second?.setVideoId)

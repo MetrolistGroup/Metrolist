@@ -5,6 +5,7 @@
 
 package com.metrolist.music.utils
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import timber.log.Timber
 
@@ -26,11 +27,17 @@ suspend fun resolveSetVideoIdForRemoval(
     retryDelayMs: Long = SET_VIDEO_ID_RETRY_DELAY_MS,
     onDelay: suspend (Long) -> Unit = { delay(it) },
 ): String? {
-    fromDb()?.let { return it }
+    fromDb()?.takeIf { it.isNotBlank() }?.let { return it }
 
     Timber.w("scheduleRemoveFromPlaylist: setVideoId not in DB, fetching from YouTube")
     for (attempt in 0 until attempts) {
-        runCatching { fromRemote() }.getOrNull()?.let { return it }
+        try {
+            fromRemote()?.takeIf { it.isNotBlank() }?.let { return it }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "Could not resolve playlist occurrence for songId=$songId")
+        }
         if (attempt < attempts - 1) onDelay(retryDelayMs)
     }
 

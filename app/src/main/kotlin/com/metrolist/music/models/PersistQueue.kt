@@ -17,7 +17,12 @@ data class PersistQueue(
     val playlistBrowseId: String? = null,
     val playlistId: String? = null,
     val playlistIsEditable: Boolean = false,
-) : Serializable
+) : Serializable {
+    companion object {
+        // Preserve the UID of the model before playlist context was added.
+        private const val serialVersionUID = -8948321821791932325L
+    }
+}
 
 sealed class QueueType : Serializable {
     object LIST : QueueType()

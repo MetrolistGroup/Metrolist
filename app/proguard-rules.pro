@@ -132,8 +132,13 @@
 # Keep queue-related classes to prevent serialization issues in release builds
 -keep class com.metrolist.music.models.PersistQueue { *; }
 -keep class com.metrolist.music.models.PersistPlayerState { *; }
+-keep class com.metrolist.music.models.MediaMetadata { *; }
+-keep class com.metrolist.music.models.MediaMetadata$* { *; }
+-keep class com.metrolist.music.utils.LegacyPlaylistMediaMetadata { *; }
 -keep class com.metrolist.music.models.QueueData { *; }
+-keep class com.metrolist.music.models.QueueData$* { *; }
 -keep class com.metrolist.music.models.QueueType { *; }
+-keep class com.metrolist.music.models.QueueType$* { *; }
 -keep class com.metrolist.music.playback.queues.** { *; }
 
 # Keep serialization methods for queue persistence

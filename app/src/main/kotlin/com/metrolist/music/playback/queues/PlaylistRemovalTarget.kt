@@ -6,6 +6,18 @@
 package com.metrolist.music.playback.queues
 
 import com.metrolist.music.db.entities.PlaylistSongMap
+import androidx.media3.common.MediaItem
+import com.metrolist.music.extensions.metadata
+import com.metrolist.music.models.MediaMetadata
+
+internal fun resolvePlaylistMenuMetadata(original: MediaMetadata, items: List<MediaItem>): MediaMetadata {
+    if (original.playlistBrowseId == null && original.localPlaylistId == null) return original
+    return items.firstOrNull {
+        val live = it.metadata
+        live != null && live.id == original.id && live.setVideoId == original.setVideoId &&
+            live.playlistSongMapId == original.playlistSongMapId
+    }?.metadata ?: original.copy(playlistBrowseId = null, localPlaylistId = null)
+}
 
 /**
  * Identifies the single playlist row that a "remove from playlist" action should delete.
@@ -27,11 +39,13 @@ data class PlaylistRemovalTarget(
 fun resolvePlaylistRemovalTarget(
     queue: Queue?,
     setVideoId: String?,
+    playlistBrowseId: String?,
 ): PlaylistRemovalTarget? {
     val occurrenceId = setVideoId?.takeIf { it.isNotBlank() } ?: return null
+    val sourcePlaylistId = playlistBrowseId?.takeIf { it.isNotBlank() } ?: return null
     return when (queue) {
         is YouTubePlaylistQueue ->
-            if (queue.isEditable) {
+            if (queue.isEditable && queue.playlistId == sourcePlaylistId) {
                 PlaylistRemovalTarget(
                     playlistId = queue.playlistId,
                     setVideoId = occurrenceId,
@@ -44,7 +58,7 @@ fun resolvePlaylistRemovalTarget(
 
         is ListQueue -> {
             val browseId = queue.playlistBrowseId?.takeIf { it.isNotBlank() }
-            if (queue.playlistIsEditable && browseId != null) {
+            if (queue.playlistIsEditable && browseId != null && browseId == sourcePlaylistId) {
                 PlaylistRemovalTarget(
                     playlistId = browseId,
                     setVideoId = occurrenceId,

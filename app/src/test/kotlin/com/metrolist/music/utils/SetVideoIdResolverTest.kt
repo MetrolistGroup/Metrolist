@@ -5,6 +5,7 @@
 
 package com.metrolist.music.utils
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -93,5 +94,16 @@ class SetVideoIdResolverTest {
 
         assertNull(result)
         assertEquals(SET_VIDEO_ID_REMOTE_ATTEMPTS, remoteCalls)
+    }
+
+    @Test
+    fun `blank local id falls back to remote lookup`() {
+        assertEquals("remote", resolve(fromDb = { " " }, fromRemote = { "remote" }))
+        assertEquals(1, remoteCalls)
+    }
+
+    @Test(expected = CancellationException::class)
+    fun `cancellation stops remote lookup`() {
+        resolve(fromDb = { null }, fromRemote = { throw CancellationException("cancelled") })
     }
 }

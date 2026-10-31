@@ -5,6 +5,10 @@
 
 package com.metrolist.music.extensions
 
+import com.metrolist.music.db.entities.PlaylistSong
+import com.metrolist.music.db.entities.PlaylistSongMap
+import com.metrolist.music.db.entities.Song
+import com.metrolist.music.db.entities.SongEntity
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.models.PersistQueue
 import com.metrolist.music.playback.queues.ListQueue
@@ -28,12 +32,17 @@ import java.io.ObjectOutputStream
 @RunWith(RobolectricTestRunner::class)
 class QueuePlaylistContextTest {
 
-    private fun metadata(id: String, setVideoId: String?) = MediaMetadata(
+    private fun metadata(
+        id: String,
+        setVideoId: String?,
+        playlistBrowseId: String? = "VLPL_browse",
+    ) = MediaMetadata(
         id = id,
         title = "title-$id",
         artists = listOf(MediaMetadata.Artist(id = "artist", name = "Artist")),
         duration = 100,
         setVideoId = setVideoId,
+        playlistBrowseId = playlistBrowseId,
     )
 
     /** The same song added twice to one playlist: two rows, two distinct setVideoIds. */
@@ -76,10 +85,77 @@ class QueuePlaylistContextTest {
         val occurrenceIds = restoredItems.map { it.metadata?.setVideoId }
         assertEquals(listOf("setVideoId-A", "setVideoId-B"), occurrenceIds)
 
-        val target = resolvePlaylistRemovalTarget(restored, occurrenceIds[1])
+        val target = resolvePlaylistRemovalTarget(
+            restored,
+            occurrenceIds[1],
+            restoredItems[1].metadata?.playlistBrowseId,
+        )
         assertEquals("VLPL_browse", target?.playlistId)
         assertEquals("setVideoId-B", target?.setVideoId)
         assertEquals("local-1", target?.localPlaylistId)
+    }
+
+    @Test
+    fun `playlist song conversion preserves duplicate occurrence ids`() {
+        val song = Song(SongEntity(id = "song-1", title = "title"), artists = emptyList())
+        val items = listOf("setVideoId-A", "setVideoId-B").mapIndexed { index, setVideoId ->
+            PlaylistSong(
+                map = PlaylistSongMap(
+                    playlistId = "local-1",
+                    songId = song.id,
+                    position = index,
+                    setVideoId = setVideoId,
+                ),
+                song = song,
+            ).toMediaItem("VLPL_browse")
+        }
+
+        assertEquals(listOf("setVideoId-A", "setVideoId-B"), items.map { it.metadata?.setVideoId })
+        assertEquals(listOf("VLPL_browse", "VLPL_browse"), items.map { it.metadata?.playlistBrowseId })
+        assertEquals(listOf("local-1", "local-1"), items.map { it.metadata?.localPlaylistId })
+    }
+
+    @Test
+    fun `occurrence from another playlist cannot inherit the current playlist target`() {
+        val appended = metadata("song-from-another-playlist", "setVideoId-B", "VLPL_other").toMediaItem()
+
+        assertEquals("setVideoId-B", appended.metadata?.setVideoId)
+        assertNull(
+            resolvePlaylistRemovalTarget(
+                listQueue(),
+                appended.metadata?.setVideoId,
+                appended.metadata?.playlistBrowseId,
+            ),
+        )
+    }
+
+    @Test
+    fun `clearing playlist source hides removal without losing occurrence identity`() {
+        val item = metadata("song-1", "setVideoId-A").toMediaItem().withoutPlaylistSource()
+
+        assertEquals("setVideoId-A", item.metadata?.setVideoId)
+        assertNull(item.metadata?.playlistBrowseId)
+        assertNull(
+            resolvePlaylistRemovalTarget(
+                listQueue(),
+                item.metadata?.setVideoId,
+                item.metadata?.playlistBrowseId,
+            ),
+        )
+    }
+
+    @Test
+    fun `local playlist occurrence keeps its original playlist and row`() {
+        val song = Song(SongEntity(id = "song", title = "title"), artists = emptyList())
+        val item = PlaylistSong(
+            map = PlaylistSongMap(id = 42, playlistId = "local", songId = "song", position = 3),
+            song = song,
+        ).toMediaItem()
+        assertEquals("local", item.metadata?.localPlaylistId)
+        assertEquals(42, item.metadata?.playlistSongMapId)
+        val cleared = item.withoutPlaylistSource()
+        assertNull(cleared.metadata?.localPlaylistId)
+        assertEquals(42, cleared.metadata?.playlistSongMapId)
     }
 
     @Test
@@ -92,13 +168,13 @@ class QueuePlaylistContextTest {
             playlistIsEditable = false,
         ).toPersistQueue(title = "title", items = listOf(metadata("song-1", "setVideoId-A")), mediaItemIndex = 0, position = 0L).toQueue()
 
-        assertNull(resolvePlaylistRemovalTarget(restored, "setVideoId-A"))
+        assertNull(resolvePlaylistRemovalTarget(restored, "setVideoId-A", "VLPL_browse"))
     }
 
     @Test
     fun `youtube playlist queue persists its editability and browse id`() {
         val persisted = YouTubePlaylistQueue(playlistId = "PL123", isEditable = true)
-            .toPersistQueue(title = "title", items = listOf(metadata("song-1", "setVideoId-A")), mediaItemIndex = 0, position = 0L)
+            .toPersistQueue(title = "title", items = listOf(metadata("song-1", "setVideoId-A", "PL123")), mediaItemIndex = 0, position = 0L)
 
         assertEquals("PL123", persisted.playlistBrowseId)
         assertEquals(true, persisted.playlistIsEditable)
@@ -108,7 +184,7 @@ class QueuePlaylistContextTest {
         assertEquals(true, restored.playlistIsEditable)
         assertNull(restored.playlistId)
 
-        val target = resolvePlaylistRemovalTarget(restored, "setVideoId-A")
+        val target = resolvePlaylistRemovalTarget(restored, "setVideoId-A", "PL123")
         assertEquals("PL123", target?.playlistId)
         assertNull(target?.localPlaylistId)
     }
@@ -123,7 +199,7 @@ class QueuePlaylistContextTest {
         assertNull(persisted.playlistBrowseId)
         assertNull(persisted.playlistId)
         assertEquals(false, persisted.playlistIsEditable)
-        assertNull(resolvePlaylistRemovalTarget(persisted.toQueue(), "setVideoId-A"))
+        assertNull(resolvePlaylistRemovalTarget(persisted.toQueue(), "setVideoId-A", "VLPL_browse"))
     }
 
     @Test
@@ -141,6 +217,7 @@ class QueuePlaylistContextTest {
         assertEquals("local-1", roundTripped.playlistId)
         assertEquals(true, roundTripped.playlistIsEditable)
         assertEquals(listOf("setVideoId-A", "setVideoId-B"), roundTripped.items.map { it.setVideoId })
+        assertEquals(listOf("VLPL_browse", "VLPL_browse"), roundTripped.items.map { it.playlistBrowseId })
         assertNotNull(roundTripped.toQueue())
     }
 }
