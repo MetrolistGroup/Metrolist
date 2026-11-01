@@ -482,7 +482,7 @@
     <string name="clear_recognition_history_confirm">¿Estás seguro de que deseas borrar todo el historial de reconocimiento?</string>
     <string name="delete_from_history">Eliminar del historial</string>
     <string name="re_listen">Volver a escuchar</string>
-    <string name="play_on_app">Escuchar en Metrolist</string>
+    <string name="play_on_app">Reproducir en Metrolist</string>
     <string name="map_csv_columns">Asignar columnas del CSV</string>
     <string name="first_row_is_header">La primera fila es el encabezado</string>
     <string name="artist_name_column">Columna del nombre del artista</string>
