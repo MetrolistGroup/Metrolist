@@ -2,4 +2,16 @@
 <resources>
     <string name="forgotten_favorites">Forgotten favourites</string>
     <string name="center">Centre</string>
+    <string name="home">Home</string>
+    <string name="songs">Songs</string>
+    <string name="artists">Artists</string>
+    <string name="albums">Albums</string>
+    <string name="playlists">Playlists</string>
+    <string name="history">History</string>
+    <string name="stats">Statistics</string>
+    <string name="mood_and_genres">Moods and Genres</string>
+    <string name="quick_picks_empty">Listen to songs to generate your quick picks</string>
+    <string name="keep_listening">Keep listening</string>
+    <string name="your_youtube_playlists">Your YouTube playlists</string>
+    <string name="similar_to">Similar to</string>
 </resources>
