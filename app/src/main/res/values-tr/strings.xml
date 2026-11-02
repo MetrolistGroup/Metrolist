@@ -272,10 +272,8 @@
     <string name="stop_music_on_task_clear">Arka plandan temizlendiğinde çalmayı durdur</string>
     <string name="search_history">Arama geçmişi</string>
     <string name="hide_explicit">Uygunsuz içeriği gizle</string>
-    <string name="discord_integration">Discord Entegrasyonu</string>
     <string name="discord_information">Metrolist, Discord hesabınızın durumunu ayarlamak için KizzyRPC kütüphanesini kullanır. Bu, Discord\'un Hizmet Şartları\'nın ihlali olarak kabul edilebilecek Discord Geçit bağlantısının kullanılmasını gerektirir. Fakat kullanıcı hesaplarının bu nedenle askıya alındığı bilinen bir örnek yoktur. Riski size ait olmak üzere kullanın. \n \nMetrolist yalnızca belirtecinizi çıkarır ve diğer her şey yerel olarak saklanır.</string>
     <string name="action_logout">Oturumu kapat</string>
-    <string name="enable_discord_rpc">Rich Presence\'ı etkinleştir</string>
     <string name="use_login_for_browse">İçerikleri görmek için Giriş yap\'ı kullanın</string>
     <string name="use_login_for_browse_desc">Bu gördüğünüz içerikleri etkileyebilir ve örnek olarak Premium\'a özel içerikleri Premium\'a sahip bir hesapla giriş yaptıysanız size sunabilir</string>
     <string name="action_login">Giriş Yap</string>
