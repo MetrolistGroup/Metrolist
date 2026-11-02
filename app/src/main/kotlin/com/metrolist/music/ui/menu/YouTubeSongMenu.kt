@@ -8,6 +8,7 @@ package com.metrolist.music.ui.menu
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
+import android.util.Log
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -92,12 +93,17 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.time.LocalDateTime
 
+private const val YOUTUBE_SONG_MENU_TAG = "YouTubeSongMenu"
+
 @SuppressLint("MutableCollectionMutableState")
 @Composable
 fun YouTubeSongMenu(
     song: SongItem,
     onDismiss: () -> Unit,
-    onHistoryRemoved: () -> Unit = {}
+    onHistoryRemoved: () -> Unit = {},
+    playlistId: String? = null,
+    isEditable: Boolean = false,
+    onSongRemovedFromPlaylist: () -> Unit = {}
 ) {
     val navController = LocalNavController.current
     val context = LocalContext.current
@@ -105,9 +111,21 @@ fun YouTubeSongMenu(
     val playerConnection = LocalPlayerConnection.current ?: return
     val downloadUtil = LocalDownloadUtil.current
     val librarySong by database.song(song.id).collectAsStateWithLifecycle(initialValue = null)
+    val inEditablePlaylist by remember(database, song.id) { database.songInEditablePlaylist(song.id) }
+        .collectAsStateWithLifecycle(initialValue = false)
     val download by downloadUtil.getDownload(song.id).collectAsStateWithLifecycle(initialValue = null)
     val coroutineScope = rememberCoroutineScope()
     val syncUtils = LocalSyncUtils.current
+    var showRemoveFromPlaylistDialog by rememberSaveable { mutableStateOf(false) }
+    RemoveFromPlaylistDialog(
+        isVisible = showRemoveFromPlaylistDialog,
+        songId = song.id,
+        initialBrowseId = playlistId.takeIf { isEditable },
+        onDismiss = {
+            showRemoveFromPlaylistDialog = false
+            onDismiss()
+        },
+    )
     val listenTogetherManager = LocalListenTogetherManager.current
     val isPinned by database.speedDialDao.isPinned(song.id).collectAsStateWithLifecycle(initialValue = false)
     val artistNameAliases = LocalArtistNameAliases.current
@@ -560,9 +578,62 @@ fun YouTubeSongMenu(
                                         )
                                     }
                                 }
+                                onDismiss()
                             }
                         )
                     )
+                    val setVideoId = song.setVideoId
+                    if (isEditable && playlistId != null && setVideoId != null) {
+                        add(
+                            Material3MenuItemData(
+                                title = { Text(text = stringResource(R.string.remove_from_playlist)) },
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.delete),
+                                        contentDescription = null,
+                                    )
+                                },
+                                onClick = {
+                                    coroutineScope.launch {
+                                        Log.d(
+                                            YOUTUBE_SONG_MENU_TAG,
+                                            "removeFromPlaylist: playlistId=$playlistId, videoId=${song.id}, setVideoId=$setVideoId",
+                                        )
+                                        syncUtils.scheduleRemoveFromPlaylist(
+                                            playlistId,
+                                            song.id,
+                                            playlistId,
+                                            onSuccess = {
+                                                withContext(Dispatchers.Main) {
+                                                    onSongRemovedFromPlaylist()
+                                                }
+                                            },
+                                            onFailure = {
+                                                withContext(Dispatchers.Main) {
+                                                    android.widget.Toast.makeText(
+                                                        context,
+                                                        R.string.error_remove_from_playlist,
+                                                        android.widget.Toast.LENGTH_SHORT,
+                                                    ).show()
+                                                }
+                                            },
+                                        ) {
+                                            setVideoId
+                                        }
+                                    }
+                                    onDismiss()
+                                }
+                            )
+                        )
+                    } else if (inEditablePlaylist) {
+                        add(
+                            Material3MenuItemData(
+                                title = { Text(stringResource(R.string.choose_removal_playlist)) },
+                                icon = { Icon(painterResource(R.drawable.delete), contentDescription = null) },
+                                onClick = { showRemoveFromPlaylistDialog = true },
+                            ),
+                        )
+                    }
                 }
             )
         }

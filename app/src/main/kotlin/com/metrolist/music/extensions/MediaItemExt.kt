@@ -8,10 +8,12 @@ package com.metrolist.music.extensions
 import android.os.Bundle
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.common.MediaMetadata.MEDIA_TYPE_MUSIC
 import androidx.media3.session.MediaConstants.EXTRAS_KEY_IS_EXPLICIT
 import androidx.media3.session.MediaConstants.EXTRAS_VALUE_ATTRIBUTE_PRESENT
 import com.metrolist.innertube.models.SongItem
+import com.metrolist.music.db.entities.PlaylistSong
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.models.toMediaMetadata
@@ -22,7 +24,30 @@ val MediaItem.metadata: MediaMetadata?
 
 fun Song.toMediaItem() = toMediaMetadata().toMediaItem()
 
-fun SongItem.toMediaItem() = toMediaMetadata().toMediaItem()
+fun PlaylistSong.toMediaItem(playlistBrowseId: String? = null) =
+    song.toMediaMetadata().copy(
+        setVideoId = map.setVideoId,
+        playlistBrowseId = playlistBrowseId,
+        localPlaylistId = map.playlistId,
+        playlistSongMapId = map.id,
+    ).toMediaItem()
+
+fun SongItem.toMediaItem(playlistBrowseId: String? = null) =
+    toMediaMetadata().copy(playlistBrowseId = playlistBrowseId).toMediaItem()
+
+fun MediaItem.withoutPlaylistSource(): MediaItem {
+    val metadata = metadata ?: return this
+    return if (metadata.playlistBrowseId == null && metadata.localPlaylistId == null) this else buildUpon()
+        .setTag(metadata.copy(playlistBrowseId = null, localPlaylistId = null)).build()
+}
+
+fun Player.clearPlaylistSource(matches: (MediaMetadata) -> Boolean) {
+    repeat(mediaItemCount) { index ->
+        val item = getMediaItemAt(index)
+        val metadata = item.metadata ?: return@repeat
+        if (matches(metadata)) replaceMediaItem(index, item.withoutPlaylistSource())
+    }
+}
 
 fun MediaMetadata.toMediaItem(): MediaItem {
     val resolvedMetadata = withResolvedArtistNameAliases()

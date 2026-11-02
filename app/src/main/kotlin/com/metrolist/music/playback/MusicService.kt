@@ -188,6 +188,8 @@ import com.metrolist.music.extensions.metadata
 import com.metrolist.music.extensions.setOffloadEnabled
 import com.metrolist.music.extensions.toEnum
 import com.metrolist.music.extensions.toMediaItem
+import com.metrolist.music.extensions.withoutPlaylistSource
+import com.metrolist.music.extensions.clearPlaylistSource
 import com.metrolist.music.extensions.toPersistQueue
 import com.metrolist.music.extensions.toQueue
 import com.metrolist.music.lyrics.LyricsHelper
@@ -251,6 +253,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import timber.log.Timber
 import java.io.ObjectInputStream
+import com.metrolist.music.utils.QueueObjectInputStream
 import java.io.ObjectOutputStream
 import java.time.LocalDateTime
 import javax.inject.Inject
@@ -343,7 +346,8 @@ class MusicService :
 
     private lateinit var audioQuality: com.metrolist.music.constants.AudioQuality
 
-    private var currentQueue: Queue = EmptyQueue
+    private val _currentQueue = MutableStateFlow<Queue>(EmptyQueue)
+    val currentQueue = _currentQueue.asStateFlow()
     var queueTitle: String? = null
 
     val currentMediaMetadata = MutableStateFlow<com.metrolist.music.models.MediaMetadata?>(null)
@@ -610,6 +614,14 @@ class MusicService :
         )
 
         playerInitialized.value = false
+
+        scope.launch {
+            syncUtils.playlistRemovalUpdates.collect { update ->
+                if (update.removed) {
+                    update.setVideoId?.let { clearPlaylistSource(update.songId, it, update.browseId) }
+                }
+            }
+        }
 
         // Call startForeground() as early as possible to satisfy the
         // 5-second timeout imposed by Context.startForegroundService().
@@ -1190,7 +1202,7 @@ class MusicService :
             if (queueFile.exists()) {
                 runCatching {
                     queueFile.inputStream().use { fis ->
-                        ObjectInputStream(fis).use { oos ->
+                        QueueObjectInputStream(fis).use { oos ->
                             oos.readObject() as PersistQueue
                         }
                     }
@@ -1221,7 +1233,7 @@ class MusicService :
             if (automixFile.exists()) {
                 runCatching {
                     automixFile.inputStream().use { fis ->
-                        ObjectInputStream(fis).use { oos ->
+                        QueueObjectInputStream(fis).use { oos ->
                             oos.readObject() as PersistQueue
                         }
                     }
@@ -1800,7 +1812,7 @@ class MusicService :
             return
         }
 
-        currentQueue = queue
+        _currentQueue.value = queue
         queueTitle = null
         val persistShuffleAcrossQueues = dataStore.get(PersistentShuffleAcrossQueuesKey, false)
         if (!persistShuffleAcrossQueues && !restoringQueue) {
@@ -1862,7 +1874,7 @@ class MusicService :
     }
 
     fun adoptQueue(queue: Queue, title: String? = null, initialQueueSize: Int = 0) {
-        currentQueue = queue
+        _currentQueue.value = queue
         queueTitle = title
         originalQueueSize = initialQueueSize
     }
@@ -1920,7 +1932,7 @@ class MusicService :
                     }
                 }
 
-                currentQueue = radioQueue
+                _currentQueue.value = radioQueue
             } catch (e: Exception) {
                 try {
                     val nextResult =
@@ -2171,6 +2183,32 @@ class MusicService :
             applyShuffleOrder(player.currentMediaItemIndex, player.mediaItemCount, shufflePlaylistFirst)
         }
         player.prepare()
+    }
+
+    fun clearLocalPlaylistSource(songId: String, playlistId: String, playlistSongMapId: Int) {
+        scope.launch(Dispatchers.Main.immediate) {
+            if (!playerInitialized.value) return@launch
+            player.clearPlaylistSource { metadata ->
+                metadata.id == songId && metadata.localPlaylistId == playlistId &&
+                    metadata.playlistSongMapId == playlistSongMapId
+            }
+            currentMediaMetadata.value = player.currentMetadata
+        }
+    }
+
+    fun clearPlaylistSource(
+        songId: String,
+        setVideoId: String,
+        playlistBrowseId: String,
+    ) {
+        scope.launch(Dispatchers.Main.immediate) {
+            if (!playerInitialized.value) return@launch
+            player.clearPlaylistSource { metadata ->
+                metadata.id == songId && metadata.setVideoId == setVideoId &&
+                    metadata.playlistBrowseId?.removePrefix("VL") == playlistBrowseId.removePrefix("VL")
+            }
+            currentMediaMetadata.value = player.currentMetadata
+        }
     }
 
     fun toggleLibrary() {
@@ -2605,13 +2643,13 @@ class MusicService :
         if (cachedAutoLoadMore &&
             reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT &&
             player.mediaItemCount - player.currentMediaItemIndex <= 5 &&
-            currentQueue.hasNextPage() &&
+            _currentQueue.value.hasNextPage() &&
             !(cachedDisableLoadMoreWhenRepeatAll && player.repeatMode == REPEAT_MODE_ALL)
         ) {
             scope.launch(SilentHandler) {
                 val mediaItems =
                     withContext(Dispatchers.IO) {
-                        currentQueue
+                        _currentQueue.value
                             .nextPage()
                             .filterExplicit(cachedHideExplicit)
                             .filterVideoSongs(cachedHideVideoSongs)
@@ -4100,7 +4138,7 @@ class MusicService :
 
         try {
             val persistQueue =
-                currentQueue.toPersistQueue(
+                _currentQueue.value.toPersistQueue(
                     title = queueTitle,
                     items = player.mediaItems.mapNotNull { it.metadata },
                     mediaItemIndex = player.currentMediaItemIndex,
@@ -4515,10 +4553,13 @@ class MusicService :
                 if (targetId.isBlank()) return null
                 val songs = database.playlistSongs(targetId).first()
                 if (songs.isEmpty()) return null
-                val playlistName = database.playlist(targetId).first()?.playlist?.name ?: targetTitle
+                val playlist = database.playlist(targetId).first()?.playlist
                 ListQueue(
-                    title = playlistName,
-                    items = songs.map { it.song.toMediaItem() },
+                    title = playlist?.name ?: targetTitle,
+                    items = songs.map { it.toMediaItem(playlist?.browseId) },
+                    playlistBrowseId = playlist?.browseId,
+                    playlistId = playlist?.id,
+                    playlistIsEditable = playlist?.isEditable == true,
                 )
             }
 
@@ -4529,11 +4570,15 @@ class MusicService :
                 if (cachedSongs.isNotEmpty()) {
                     ListQueue(
                         title = cachedPlaylist?.playlist?.name ?: targetTitle,
-                        items = cachedSongs.map { it.song.toMediaItem() },
+                        items = cachedSongs.map { it.toMediaItem(cachedPlaylist?.playlist?.browseId) },
+                        playlistBrowseId = cachedPlaylist?.playlist?.browseId,
+                        playlistId = cachedPlaylist?.playlist?.id,
+                        playlistIsEditable = cachedPlaylist?.playlist?.isEditable == true,
                     )
                 } else {
                     YouTubePlaylistQueue(
                         playlistId = targetId,
+                        isEditable = cachedPlaylist?.playlist?.isEditable ?: false,
                         playlistTitle = targetTitle,
                     )
                 }
@@ -4618,15 +4663,11 @@ class MusicService :
                     }
                     return@launch
                 }
-                val items = playlistSongs.map { it.song.toMediaItem() }
-                val playlistName =
+                val playlist =
                     withContext(Dispatchers.IO) {
-                        database
-                            .playlist(playlistId)
-                            .first()
-                            ?.playlist
-                            ?.name
+                        database.playlist(playlistId).first()?.playlist
                     }
+                val items = playlistSongs.map { it.toMediaItem(playlist?.browseId) }
                 withContext(Dispatchers.IO) {
                     MusicAlarmScheduler.scheduleFromPreferences(this@MusicService)
                 }
@@ -4648,10 +4689,13 @@ class MusicService :
                 player.clearMediaItems()
                 playQueue(
                     ListQueue(
-                        title = playlistName,
+                        title = playlist?.name,
                         items = alarmItems,
                         startIndex = 0,
                         position = 0L,
+                        playlistBrowseId = playlist?.browseId,
+                        playlistId = playlist?.id,
+                        playlistIsEditable = playlist?.isEditable == true,
                     ),
                     playWhenReady = true,
                 )

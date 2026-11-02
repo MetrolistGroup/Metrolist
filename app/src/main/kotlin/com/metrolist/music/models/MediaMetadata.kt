@@ -35,7 +35,15 @@ data class MediaMetadata(
     val suggestedBy: String? = null,
     val isEpisode: Boolean = false,
     val uploadEntityId: String? = null,
+    val playlistBrowseId: String? = null,
+    val localPlaylistId: String? = null,
+    val playlistSongMapId: Int? = null,
 ) : Serializable {
+    companion object {
+        // Preserve saved songs from builds without playlist source fields.
+        private const val serialVersionUID = -3488332219501634879L
+    }
+
     val isVideoSong: Boolean
         get() = musicVideoType != null && musicVideoType != MUSIC_VIDEO_TYPE_ATV
 

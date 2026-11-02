@@ -8,6 +8,7 @@ package com.metrolist.music.ui.menu
 import android.content.Context
 import android.content.Intent
 import android.media.audiofx.AudioEffect
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.content.res.Configuration
@@ -81,6 +82,7 @@ import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
+import com.metrolist.music.LocalSyncUtils
 import com.metrolist.music.R
 import com.metrolist.music.constants.ListItemHeight
 import com.metrolist.music.constants.VarispeedKey
@@ -88,6 +90,9 @@ import com.metrolist.music.listentogether.ConnectionState
 import com.metrolist.music.listentogether.ListenTogetherEvent
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.playback.ExoDownloadService
+import com.metrolist.music.playback.queues.resolvePlaylistRemovalTarget
+import com.metrolist.music.playback.queues.resolvePlaylistMenuMetadata
+import com.metrolist.music.playback.queues.selectLocalPlaylistRowToRemove
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.ui.component.BottomSheetState
@@ -100,9 +105,12 @@ import com.metrolist.music.ui.component.VolumeSlider
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.log2
 import kotlin.math.pow
 import kotlin.math.round
+
+private const val PLAYER_MENU_TAG = "PlayerMenu"
 
 @Composable
 fun PlayerMenu(
@@ -116,6 +124,7 @@ fun PlayerMenu(
     val navController = LocalNavController.current
     val context = LocalContext.current
     val database = LocalDatabase.current
+    val syncUtils = LocalSyncUtils.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val playerVolume = playerConnection.service.playerVolume.collectAsStateWithLifecycle()
 
@@ -135,8 +144,20 @@ fun PlayerMenu(
     val varispeedMode by rememberPreference(VarispeedKey, defaultValue = false)
 
     val librarySong by database.song(mediaMetadata.id).collectAsStateWithLifecycle(initialValue = null)
+    val inEditablePlaylist by remember(database, mediaMetadata.id) { database.songInEditablePlaylist(mediaMetadata.id) }
+        .collectAsStateWithLifecycle(initialValue = false)
     val coroutineScope = rememberCoroutineScope()
     val downloadUtil = LocalDownloadUtil.current
+    val currentQueue by playerConnection.service.currentQueue.collectAsStateWithLifecycle()
+    val queueWindows by playerConnection.queueWindows.collectAsStateWithLifecycle()
+    val menuMetadata = resolvePlaylistMenuMetadata(mediaMetadata, queueWindows.map { it.mediaItem })
+    val playlistRemovalTarget = remember(currentQueue, menuMetadata.setVideoId, menuMetadata.playlistBrowseId) {
+        resolvePlaylistRemovalTarget(
+            currentQueue,
+            menuMetadata.setVideoId,
+            menuMetadata.playlistBrowseId,
+        )
+    }
 
     val download by downloadUtil
         .getDownload(mediaMetadata.id)
@@ -152,6 +173,18 @@ fun PlayerMenu(
     var showChoosePlaylistDialog by rememberSaveable {
         mutableStateOf(false)
     }
+    var showRemoveFromPlaylistDialog by rememberSaveable { mutableStateOf(false) }
+    RemoveFromPlaylistDialog(
+        isVisible = showRemoveFromPlaylistDialog,
+        songId = mediaMetadata.id,
+        initialBrowseId = menuMetadata.playlistBrowseId,
+        initialLocalPlaylistId = menuMetadata.localPlaylistId,
+        initialLocalRowId = menuMetadata.playlistSongMapId,
+        onDismiss = {
+            showRemoveFromPlaylistDialog = false
+            onDismiss()
+        },
+    )
 
     var showListenTogetherDialog by rememberSaveable {
         mutableStateOf(false)
@@ -486,6 +519,90 @@ fun PlayerMenu(
                                 },
                             ),
                         )
+                        playlistRemovalTarget?.let { removalTarget ->
+                            add(
+                                Material3MenuItemData(
+                                    title = { Text(text = stringResource(R.string.remove_from_playlist)) },
+                                    icon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.delete),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(24.dp),
+                                        )
+                                    },
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            Log.d(
+                                                PLAYER_MENU_TAG,
+                                                "removeFromPlaylist: playlistId=${removalTarget.playlistId}, " +
+                                                    "videoId=${mediaMetadata.id}, setVideoId=${removalTarget.setVideoId}, " +
+                                                    "source=${removalTarget.source}",
+                                            )
+                                            syncUtils.scheduleRemoveFromPlaylist(
+                                                removalTarget.playlistId,
+                                                mediaMetadata.id,
+                                                removalTarget.localPlaylistId ?: removalTarget.playlistId,
+                                                onSuccess = { removedNow ->
+                                                    removalTarget.localPlaylistId?.let { localPlaylistId ->
+                                                        withContext(Dispatchers.IO) {
+                                                            selectLocalPlaylistRowToRemove(
+                                                                database.playlistSongMaps(mediaMetadata.id),
+                                                                localPlaylistId,
+                                                                removalTarget.setVideoId,
+                                                            )
+                                                                ?.let { playlistSongMap ->
+                                                                    database.transaction {
+                                                                        move(
+                                                                            playlistSongMap.playlistId,
+                                                                            playlistSongMap.position,
+                                                                            Int.MAX_VALUE,
+                                                                        )
+                                                                        delete(playlistSongMap.copy(position = Int.MAX_VALUE))
+                                                                    }
+                                                                }
+                                                        }
+                                                    }
+                                                    withContext(Dispatchers.Main) {
+                                                        playerConnection.service.clearPlaylistSource(
+                                                            mediaMetadata.id,
+                                                            removalTarget.setVideoId,
+                                                            removalTarget.playlistId,
+                                                        )
+                                                        Toast.makeText(
+                                                            context,
+                                                            if (removedNow) R.string.removed_from_playlist else R.string.song_not_in_playlist,
+                                                            Toast.LENGTH_SHORT,
+                                                        ).show()
+                                                    }
+                                                },
+                                                onFailure = {
+                                                    withContext(Dispatchers.Main) {
+                                                        Toast.makeText(
+                                                            context,
+                                                            R.string.error_remove_from_playlist,
+                                                            Toast.LENGTH_SHORT,
+                                                        ).show()
+                                                    }
+                                                },
+                                            ) {
+                                                removalTarget.setVideoId
+                                            }
+                                            onDismiss()
+                                        }
+                                    },
+                                )
+                            )
+                        } ?: run {
+                            if (inEditablePlaylist) {
+                                add(
+                                    Material3MenuItemData(
+                                        title = { Text(stringResource(R.string.choose_removal_playlist)) },
+                                        icon = { Icon(painterResource(R.drawable.delete), contentDescription = null) },
+                                        onClick = { showRemoveFromPlaylistDialog = true },
+                                    ),
+                                )
+                            }
+                        }
                         add(
                             Material3MenuItemData(
                                 title = {

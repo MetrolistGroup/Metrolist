@@ -31,6 +31,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -336,7 +339,15 @@ class InnerTube(
         playlistId: String,
         videoId: String,
         setVideoId: String,
-    ) = innerTubeX.removePlaylistSong(client, playlistId, setVideoId, videoId).requireSuccess("removeFromPlaylist")
+    ): HttpResponse {
+        val response = innerTubeX.removePlaylistSong(client, playlistId, setVideoId, videoId)
+            .requireSuccess("removeFromPlaylist")
+        val result = response.body<JsonObject>()
+        check(result["status"]?.jsonPrimitive?.contentOrNull == "STATUS_SUCCEEDED") {
+            "YouTube did not confirm playlist removal"
+        }
+        return response
+    }
 
     suspend fun moveSongPlaylist(
         client: YouTubeClient,

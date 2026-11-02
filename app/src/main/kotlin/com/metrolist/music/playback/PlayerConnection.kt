@@ -624,6 +624,7 @@ class PlayerConnection(
         timeline: Timeline,
         reason: Int,
     ) {
+        mediaMetadata.value = player.currentMetadata
         queueWindows.value = player.getQueueWindows()
         queueTitle.value = service.queueTitle
         currentMediaItemIndex.value = player.currentMediaItemIndex

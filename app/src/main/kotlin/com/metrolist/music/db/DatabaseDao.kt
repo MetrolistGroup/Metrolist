@@ -1999,6 +1999,9 @@ interface DatabaseDao {
     @Query("SELECT * FROM playlist_song_map WHERE songId = :songId")
     fun playlistSongMaps(songId: String): List<PlaylistSongMap>
 
+    @Query("SELECT EXISTS(SELECT 1 FROM playlist_song_map JOIN playlist ON playlist.id = playlist_song_map.playlistId WHERE songId = :songId AND playlist.isEditable = 1 AND playlist.bookmarkedAt IS NOT NULL)")
+    fun songInEditablePlaylist(songId: String): Flow<Boolean>
+
     @Transaction
     @Query("SELECT * FROM playlist_song_map WHERE playlistId = :playlistId AND position >= :from ORDER BY position")
     fun playlistSongMaps(
