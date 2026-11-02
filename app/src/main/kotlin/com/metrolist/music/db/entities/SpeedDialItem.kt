@@ -14,6 +14,7 @@ import com.metrolist.innertube.models.YTItem
 @Entity(tableName = "speed_dial_item")
 data class SpeedDialItem(
     @PrimaryKey val id: String,
+    // Song pins store their video type here so filtering survives without a schema change.
     val secondaryId: String? = null,
     val title: String,
     val subtitle: String? = null,
@@ -29,6 +30,7 @@ data class SpeedDialItem(
         return when (type) {
             "SONG" -> SongItem(
                 id = id,
+                musicVideoType = secondaryId,
                 title = title,
                 artists = subtitle?.split(", ")?.mapIndexed { index, name ->
                     Artist(name = name, id = subtitleIds?.split(", ")?.getOrNull(index))
@@ -75,6 +77,7 @@ data class SpeedDialItem(
             return when (item) {
                 is SongItem -> SpeedDialItem(
                     id = item.id,
+                    secondaryId = item.musicVideoType,
                     title = item.title,
                     subtitle = item.artists.joinToString(", ") { it.name },
                     subtitleIds = item.artists.joinToString(", ") { it.id ?: "" },

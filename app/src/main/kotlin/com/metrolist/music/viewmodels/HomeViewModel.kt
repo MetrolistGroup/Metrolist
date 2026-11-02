@@ -12,11 +12,12 @@ import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.Artist
 import com.metrolist.innertube.models.ArtistItem
+import com.metrolist.innertube.models.BrowseEndpoint
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
-import kotlinx.coroutines.flow.combine
 import com.metrolist.innertube.models.WatchEndpoint
-import com.metrolist.innertube.models.BrowseEndpoint
+import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_ATV
+import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_OMV
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.models.filterExplicit
 import com.metrolist.innertube.models.filterVideoSongs
@@ -41,24 +42,30 @@ import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.extensions.filterVideoSongs
 import com.metrolist.music.extensions.toEnum
 import com.metrolist.music.models.SimilarRecommendation
+import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.ui.screens.wrapped.WrappedAudioService
 import com.metrolist.music.ui.screens.wrapped.WrappedManager
 import com.metrolist.music.utils.NetworkConnectivityObserver
 import com.metrolist.music.utils.SyncUtils
 import com.metrolist.music.utils.dataStore
-import com.metrolist.music.utils.safeDataStoreEdit
 import com.metrolist.music.utils.get
 import com.metrolist.music.utils.reportException
+import com.metrolist.music.utils.safeDataStoreEdit
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -78,15 +85,35 @@ data class CommunityPlaylistItem(
     val songs: List<SongItem>
 )
 
+internal fun filterDailyDiscoverItems(
+    items: List<DailyDiscoverItem>,
+    hideVideos: Boolean,
+): List<DailyDiscoverItem> =
+    items.filterNot {
+        hideVideos && (it.seed.song.isVideo || (it.recommendation as? SongItem)?.isVideoSong == true)
+    }.distinctBy { it.seed.id }
+
 internal fun buildSpeedDialItems(
     pinned: List<YTItem>,
     keepListening: List<YTItem>,
     quickPicks: List<YTItem>,
     home: List<YTItem>,
-): List<YTItem> =
-    (pinned + keepListening + quickPicks + home)
+    hideVideoSongs: Boolean = false,
+): List<YTItem> {
+    // Keep unresolved pins hidden until their metadata has been loaded.
+    val visiblePinned = if (hideVideoSongs) {
+        pinned.filterNot { it is SongItem && it.musicVideoType == null }
+    } else pinned
+    val items = visiblePinned + keepListening + quickPicks + home
+    val videoIds =
+        if (hideVideoSongs) {
+            items.filterIsInstance<SongItem>().filter { it.isVideoSong }.map { it.id }.toSet()
+        } else emptySet()
+
+    return items.filterNot { it.id in videoIds }
         .distinctBy { it.id }
         .take(27)
+}
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -105,15 +132,15 @@ class HomeViewModel @Inject constructor(
         it[QuickPicksKey].toEnum(QuickPicks.QUICK_PICKS)
     }.distinctUntilChanged()
 
-    val quickPicks = MutableStateFlow<List<Song>?>(null)
-    val dailyDiscover = MutableStateFlow<List<DailyDiscoverItem>?>(null)
-    val forgottenFavorites = MutableStateFlow<List<Song>?>(null)
-    val keepListening = MutableStateFlow<List<LocalItem>?>(null)
-    val similarRecommendations = MutableStateFlow<List<SimilarRecommendation>?>(null)
+    private val _quickPicks = MutableStateFlow<List<Song>?>(null)
+    private val _dailyDiscover = MutableStateFlow<List<DailyDiscoverItem>?>(null)
+    private val _forgottenFavorites = MutableStateFlow<List<Song>?>(null)
+    private val _keepListening = MutableStateFlow<List<LocalItem>?>(null)
+    private val _similarRecommendations = MutableStateFlow<List<SimilarRecommendation>?>(null)
     val accountPlaylists = MutableStateFlow<List<PlaylistItem>?>(null)
-    val homePage = MutableStateFlow<HomePage?>(null)
+    private val _homePage = MutableStateFlow<HomePage?>(null)
     val explorePage = MutableStateFlow<ExplorePage?>(null)
-    val communityPlaylists = MutableStateFlow<List<CommunityPlaylistItem>?>(null)
+    private val _communityPlaylists = MutableStateFlow<List<CommunityPlaylistItem>?>(null)
     val selectedChip = MutableStateFlow<HomePage.Chip?>(null)
     private val previousHomePage = MutableStateFlow<HomePage?>(null)
 
@@ -121,32 +148,79 @@ class HomeViewModel @Inject constructor(
     val savedPodcastShows = MutableStateFlow<List<com.metrolist.innertube.models.PodcastItem>>(emptyList())
     val episodesForLater = MutableStateFlow<List<SongItem>>(emptyList())
 
-    val allLocalItems = MutableStateFlow<List<LocalItem>>(emptyList())
-    val allYtItems = MutableStateFlow<List<YTItem>>(emptyList())
+    private val _allLocalItems = MutableStateFlow<List<LocalItem>>(emptyList())
+    private val _allYtItems = MutableStateFlow<List<YTItem>>(emptyList())
+
+    private val hideVideoSongs = context.dataStore.data
+        .map { it[HideVideoSongsKey] ?: false }
+        .distinctUntilChanged()
+
+    val quickPicks = _quickPicks.withVideoFilter { songs, hide ->
+        songs?.filterVideoSongs(hide)?.take(20)
+    }
+    val forgottenFavorites = _forgottenFavorites.withVideoFilter { songs, hide ->
+        songs?.filterVideoSongs(hide)?.take(20)
+    }
+    val keepListening = _keepListening.withVideoFilter { items, hide ->
+        items?.filterNot { hide && it is Song && it.song.isVideo }
+    }
+    val homePage = _homePage.withVideoFilter { page, hide -> page?.filterVideoSongs(hide) }
+    val dailyDiscover = _dailyDiscover.withVideoFilter { items, hide ->
+        items?.let { filterDailyDiscoverItems(it, hide) }
+    }
+    val similarRecommendations = _similarRecommendations.withVideoFilter { sections, hide ->
+        if (hide) {
+            sections?.mapNotNull { section ->
+                if ((section.title as? Song)?.song?.isVideo == true) {
+                    null
+                } else {
+                    section.copy(items = section.items.filterVideoSongs(true))
+                        .takeIf { it.items.isNotEmpty() }
+                }
+            }
+        } else sections
+    }
+    val communityPlaylists = _communityPlaylists.withVideoFilter { playlists, hide ->
+        if (hide) {
+            playlists?.mapNotNull { playlist ->
+                playlist.copy(songs = playlist.songs.filterVideoSongs(true))
+                    .takeIf { it.songs.isNotEmpty() }
+            }
+        } else playlists
+    }
+    val allLocalItems = _allLocalItems.withVideoFilter { items, hide ->
+        items.filterNot { hide && it is Song && it.song.isVideo }
+    }
+    val allYtItems = _allYtItems.withVideoFilter { items, hide -> items.filterVideoSongs(hide) }
+
+    private fun <T> StateFlow<T>.withVideoFilter(filter: (T, Boolean) -> T): StateFlow<T> =
+        combine(this, hideVideoSongs) { items, hide -> filter(items, hide) }
+            .stateIn(viewModelScope, SharingStarted.Lazily, value)
 
     val pinnedSpeedDialItems: StateFlow<List<SpeedDialItem>> =
         database.speedDialDao.getAll()
             .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val resolvedPinnedItems =
+        combine(database.speedDialDao.getAll(), hideVideoSongs) { pinned, hide -> pinned to hide }
+            .mapLatest { (pinned, hide) -> resolvePinnedItems(pinned, hide) }
+            .flowOn(Dispatchers.IO)
+
     val speedDialItems: StateFlow<List<YTItem>> =
         combine(
-            database.speedDialDao.getAll(),
-            keepListening,
-            quickPicks,
-            homePage,
-        ) { pinned, keepListening, quick, home ->
+            resolvedPinnedItems,
+            _keepListening,
+            _quickPicks,
+            _homePage,
+            hideVideoSongs,
+        ) { pinned, keepListening, quick, home, hideVideoSongs ->
             buildSpeedDialItems(
-                pinned = pinned.map { it.toYTItem() },
+                pinned = pinned,
                 keepListening =
                     keepListening.orEmpty().mapNotNull { item ->
                         when (item) {
-                            is Song ->
-                                SongItem(
-                                    id = item.id,
-                                    title = item.title,
-                                    artists = item.artists.map { Artist(name = it.name, id = it.id) },
-                                    thumbnail = item.thumbnailUrl ?: "",
-                                )
+                            is Song -> item.toMediaMetadata().toYTItem()
 
                             is Album ->
                                 AlbumItem(
@@ -171,17 +245,48 @@ class HomeViewModel @Inject constructor(
                         }
                     },
                 quickPicks =
-                    quick.orEmpty().map { song ->
-                        SongItem(
-                            id = song.id,
-                            title = song.title,
-                            artists = song.artists.map { Artist(name = it.name, id = it.id) },
-                            thumbnail = song.thumbnailUrl ?: "",
-                        )
-                    },
+                    quick.orEmpty().map { it.toMediaMetadata().toYTItem() },
                 home = home?.sections.orEmpty().flatMap { it.items },
+                hideVideoSongs = hideVideoSongs,
             )
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    private suspend fun resolvePinnedItems(
+        pinned: List<SpeedDialItem>,
+        hideVideos: Boolean,
+    ): List<YTItem> {
+        if (!hideVideos) return pinned.map { it.toYTItem() }
+
+        val unresolvedPins = pinned.filter { it.type == "SONG" && it.secondaryId == null }
+        // Keep each query within SQLite's bind limit on older Android versions.
+        val localSongs = unresolvedPins.map { it.id }.chunked(999)
+            .flatMap { database.getSongsByIds(it) }
+            .associateBy { it.id }
+        val unresolvedIds = unresolvedPins.filter {
+            val song = localSongs[it.id]?.song
+            song?.isVideo != true && song?.isLocal != true
+        }.map { it.id }
+        val remoteSongs =
+            unresolvedIds.chunked(YouTube.MAX_GET_QUEUE_SIZE).flatMap { ids ->
+                YouTube.queue(videoIds = ids)
+                    .onFailure {
+                        if (it is CancellationException) throw it
+                        reportException(it)
+                    }
+                    .getOrDefault(emptyList())
+            }.associateBy { it.id }
+
+        return pinned.map { pin ->
+            val item = pin.toYTItem()
+            if (item is SongItem) {
+                val type = item.musicVideoType ?: remoteSongs[pin.id]?.musicVideoType
+                    ?: localSongs[pin.id]?.let {
+                        if (it.song.isVideo) MUSIC_VIDEO_TYPE_OMV else MUSIC_VIDEO_TYPE_ATV
+                    }
+                item.copy(musicVideoType = type)
+            } else item
+        }
+    }
 
     suspend fun getRandomItem(): YTItem? {
         try {
@@ -192,28 +297,14 @@ class HomeViewModel @Inject constructor(
             val userSongs = mutableListOf<YTItem>()
             val otherSources = mutableListOf<YTItem>()
 
-            quickPicks.value?.let { songs ->
-                userSongs.addAll(songs.map { song ->
-                    SongItem(
-                        id = song.id,
-                        title = song.title,
-                        artists = song.artists.map { Artist(name = it.name, id = it.id) },
-                        thumbnail = song.thumbnailUrl ?: "",
-                        explicit = false
-                    )
-                })
+            _quickPicks.value?.let { songs ->
+                userSongs.addAll(songs.map { it.toMediaMetadata().toYTItem() })
             }
 
-            keepListening.value?.let { items ->
+            _keepListening.value?.let { items ->
                 items.forEach { item ->
                     when (item) {
-                        is Song -> userSongs.add(SongItem(
-                            id = item.id,
-                            title = item.title,
-                            artists = item.artists.map { Artist(name = it.name, id = it.id) },
-                            thumbnail = item.thumbnailUrl ?: "",
-                            explicit = false
-                        ))
+                        is Song -> userSongs.add(item.toMediaMetadata().toYTItem())
                         is Album -> otherSources.add(AlbumItem(
                             browseId = item.id,
                             playlistId = item.album.playlistId ?: "",
@@ -234,7 +325,11 @@ class HomeViewModel @Inject constructor(
                 }
             }
 
-            otherSources.addAll(allYtItems.value)
+            otherSources.addAll(_allYtItems.value)
+            if (context.dataStore.get(HideVideoSongsKey, false)) {
+                userSongs.removeAll { (it as? SongItem)?.isVideoSong == true }
+                otherSources.removeAll { (it as? SongItem)?.isVideoSong == true }
+            }
 
             // Probability: 80% User Songs, 20% Other Sources
             val item = if (userSongs.isNotEmpty() && (otherSources.isEmpty() || Random.nextFloat() < 0.8f)) {
@@ -272,7 +367,6 @@ class HomeViewModel @Inject constructor(
         }
     }
     private suspend fun getDailyDiscover() {
-        val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
         val likedSongs = database.likedSongsByCreateDateAsc().first()
         if (likedSongs.isEmpty()) return
 
@@ -288,19 +382,11 @@ class HomeViewModel @Inject constructor(
                     if (endpoint != null) {
                         YouTube.related(endpoint).onSuccess { page ->
                             val recommendations = page.songs
-                                .filter { item ->
-                                    if (hideVideoSongs && item.isVideoSong) return@filter false
-                                    if (item.explicit) return@filter false
-                                    true
-                                }
+                                .filterExplicit()
                                 .shuffled()
 
                             // Simple check to avoid immediate duplicate of seed
-                            val recommendation = recommendations.firstOrNull { rec ->
-                                rec.id != seed.id
-                            }
-
-                            if (recommendation != null) {
+                            recommendations.filter { it.id != seed.id }.forEach { recommendation ->
                                 items.add(
                                     DailyDiscoverItem(
                                         seed = seed,
@@ -316,15 +402,14 @@ class HomeViewModel @Inject constructor(
         }
         
         // Final deduplication just in case multiple seeds recommended the same song
-        dailyDiscover.value = items.toList().distinctBy { it.recommendation.id }.shuffled()
+        _dailyDiscover.value = items.toList().distinctBy { it.recommendation.id }.shuffled()
     }
 
     private suspend fun getQuickPicks() {
-        val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
         when (quickPicksEnum.first()) {
             QuickPicks.QUICK_PICKS -> {
-                val relatedSongs = database.quickPicks().first().filterVideoSongs(hideVideoSongs)
-                val forgotten = database.forgottenFavorites().first().filterVideoSongs(hideVideoSongs).take(8)
+                val relatedSongs = database.quickPicks().first()
+                val forgotten = database.forgottenFavorites().first().take(8)
 
                 // Get similar songs from YouTube based on recent listening
                 val recentSong = database.latestEvent().first()?.song
@@ -337,9 +422,7 @@ class HomeViewModel @Inject constructor(
                             // Convert YouTube songs to local Song format if they exist in database
                             page.songs.take(10).forEach { ytSong ->
                                 database.song(ytSong.id).first()?.let { localSong ->
-                                    if (!hideVideoSongs || !localSong.song.isVideo) {
-                                        ytSimilarSongs.add(localSong)
-                                    }
+                                    ytSimilarSongs.add(localSong)
                                 }
                             }
                         }
@@ -350,14 +433,13 @@ class HomeViewModel @Inject constructor(
                 val combined = (relatedSongs + forgotten + ytSimilarSongs)
                     .distinctBy { it.id }
                     .shuffled()
-                    .take(20)
 
-                quickPicks.value = combined.ifEmpty { relatedSongs.shuffled().take(20) }
+                _quickPicks.value = combined
             }
             QuickPicks.LAST_LISTEN -> {
                 val song = database.latestEvent().first()?.song
                 if (song != null && database.hasRelatedSongs(song.id)) {
-                    quickPicks.value = database.getRelatedSongs(song.id).first().filterVideoSongs(hideVideoSongs).shuffled().take(20)
+                    _quickPicks.value = database.getRelatedSongs(song.id).first().shuffled()
                 }
             }
         }
@@ -435,13 +517,12 @@ class HomeViewModel @Inject constructor(
             }.forEach { it.join() }
         }
 
-        communityPlaylists.value = playlists.shuffled()
+        _communityPlaylists.value = playlists.shuffled()
     }
 
     private suspend fun load() {
         isLoading.value = true
         val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-        val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
         val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
         val fromTimeStamp = LocalDateTime.now().minusWeeks(2)
 
@@ -451,28 +532,27 @@ class HomeViewModel @Inject constructor(
             launch(Dispatchers.IO) { getQuickPicks() }
 
             launch(Dispatchers.IO) {
-                forgottenFavorites.value = database.forgottenFavorites().first()
-                    .filterVideoSongs(hideVideoSongs).shuffled().take(20)
+                _forgottenFavorites.value = database.forgottenFavorites().first()
+                    .shuffled()
             }
 
             launch(Dispatchers.IO) {
                 val songs = database.mostPlayedSongs(fromTimeStamp = fromTimeStamp, limit = 15, offset = 5, toTimeStamp = LocalDateTime.now()).first()
-                    .filterVideoSongs(hideVideoSongs).shuffled().take(10)
+                    .shuffled().take(10)
                 val albums = database.mostPlayedAlbums(fromTimeStamp, limit = 8, offset = 2).first()
                     .filter { it.album.thumbnailUrl != null }.shuffled().take(5)
                 val artists = database.mostPlayedArtists(fromTimeStamp).first()
                     .filter { it.artist.isYouTubeArtist && it.artist.thumbnailUrl != null }.shuffled().take(5)
-                keepListening.value = (songs + albums + artists).shuffled()
+                _keepListening.value = (songs + albums + artists).shuffled()
             }
 
             launch(Dispatchers.IO) {
                 YouTube.home().onSuccess { page ->
-                    homePage.value = page.copy(
+                    _homePage.value = page.copy(
                         sections = page.sections.mapNotNull { section ->
                             val filtered = section.items
                                 .filterOutNulls()
                                 .filterExplicit(hideExplicit)
-                                .filterVideoSongs(hideVideoSongs)
                                 .filterYoutubeShorts(hideYoutubeShorts)
                             if (filtered.isEmpty()) null else section.copy(items = filtered)
                         }
@@ -486,7 +566,7 @@ class HomeViewModel @Inject constructor(
             }
         }
 
-        allLocalItems.value = (quickPicks.value.orEmpty() + forgottenFavorites.value.orEmpty() + keepListening.value.orEmpty())
+        _allLocalItems.value = (_quickPicks.value.orEmpty() + _forgottenFavorites.value.orEmpty() + _keepListening.value.orEmpty())
             .filter { it is Song || it is Album }
         isLoading.value = false
 
@@ -518,7 +598,6 @@ class HomeViewModel @Inject constructor(
                         items = items
                             .distinctBy { item -> item.id }
                             .filterExplicit(hideExplicit)
-                            .filterVideoSongs(hideVideoSongs)
                             .shuffled().take(12)
                             .ifEmpty { return@mapNotNull null }
                     )
@@ -539,7 +618,6 @@ class HomeViewModel @Inject constructor(
                                 page.playlists.shuffled().take(3))
                             .distinctBy { it.id }
                             .filterExplicit(hideExplicit)
-                            .filterVideoSongs(hideVideoSongs)
                             .shuffled()
                             .ifEmpty { return@mapNotNull null }
                     )
@@ -563,15 +641,14 @@ class HomeViewModel @Inject constructor(
                         items = items
                             .distinctBy { it.id }
                             .filterExplicit(hideExplicit)
-                            .filterVideoSongs(hideVideoSongs)
                             .shuffled().take(10)
                             .ifEmpty { return@mapNotNull null }
                     )
                 }
 
-            similarRecommendations.value = (artistRecommendations + songRecommendations + albumRecommendations).shuffled()
-            allYtItems.value = similarRecommendations.value?.flatMap { it.items }.orEmpty() +
-                    homePage.value?.sections?.flatMap { it.items }.orEmpty()
+            _similarRecommendations.value = (artistRecommendations + songRecommendations + albumRecommendations).shuffled()
+            _allYtItems.value = _similarRecommendations.value?.flatMap { it.items }.orEmpty() +
+                    _homePage.value?.sections?.flatMap { it.items }.orEmpty()
         }
     }
 
@@ -579,7 +656,6 @@ class HomeViewModel @Inject constructor(
     fun loadMoreYouTubeItems(continuation: String?) {
         if (continuation == null || _isLoadingMore.value) return
         val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-        val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
         val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -589,13 +665,12 @@ class HomeViewModel @Inject constructor(
                 return@launch
             }
 
-            homePage.value = nextSections.copy(
-                chips = homePage.value?.chips,
-                sections = (homePage.value?.sections.orEmpty() + nextSections.sections).mapNotNull { section ->
+            _homePage.value = nextSections.copy(
+                chips = _homePage.value?.chips,
+                sections = (_homePage.value?.sections.orEmpty() + nextSections.sections).mapNotNull { section ->
                     val filteredItems = section.items
                         .filterOutNulls()
                         .filterExplicit(hideExplicit)
-                        .filterVideoSongs(hideVideoSongs)
                         .filterYoutubeShorts(hideYoutubeShorts)
                     if (filteredItems.isEmpty()) null else section.copy(items = filteredItems)
                 }
@@ -606,26 +681,25 @@ class HomeViewModel @Inject constructor(
 
     fun toggleChip(chip: HomePage.Chip?) {
         if (chip == null || chip == selectedChip.value && previousHomePage.value != null) {
-            homePage.value = previousHomePage.value
+            _homePage.value = previousHomePage.value
             previousHomePage.value = null
             selectedChip.value = null
             return
         }
 
         if (selectedChip.value == null) {
-            previousHomePage.value = homePage.value
+            previousHomePage.value = _homePage.value
         }
 
         viewModelScope.launch(Dispatchers.IO) {
             val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-            val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
             val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
             val nextSections = YouTube.home(params = chip.endpoint?.params).getOrNull() ?: return@launch
 
-            homePage.value = nextSections.copy(
-                chips = homePage.value?.chips,
+            _homePage.value = nextSections.copy(
+                chips = _homePage.value?.chips,
                 sections = nextSections.sections.mapNotNull { section ->
-                    section.copy(items = section.items.filterOutNulls().filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
+                    section.copy(items = section.items.filterOutNulls().filterExplicit(hideExplicit).filterYoutubeShorts(hideYoutubeShorts))
                 }
             )
             selectedChip.value = chip
@@ -690,14 +764,13 @@ class HomeViewModel @Inject constructor(
             val currentChip = selectedChip.value
             if (currentChip != null) {
                 val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-                val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
                 val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
                 val nextSections = YouTube.home(params = currentChip.endpoint?.params).getOrNull()
                 if (nextSections != null) {
-                    homePage.value = nextSections.copy(
-                        chips = homePage.value?.chips,
+                    _homePage.value = nextSections.copy(
+                        chips = _homePage.value?.chips,
                         sections = nextSections.sections.mapNotNull { section ->
-                            section.copy(items = section.items.filterOutNulls().filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
+                            section.copy(items = section.items.filterOutNulls().filterExplicit(hideExplicit).filterYoutubeShorts(hideYoutubeShorts))
                         }
                     )
                 }

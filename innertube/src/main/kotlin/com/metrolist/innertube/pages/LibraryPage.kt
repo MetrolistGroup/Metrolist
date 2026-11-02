@@ -131,6 +131,7 @@ data class LibraryPage(
                             )
                         },
                         duration = subtitleRuns?.lastOrNull()?.firstOrNull()?.text?.parseTime(),
+                        musicVideoType = renderer.musicVideoType,
                         thumbnail = renderer.thumbnailRenderer.getThumbnailUrl() ?: return null,
                         explicit = renderer.subtitleBadges?.any {
                             it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"

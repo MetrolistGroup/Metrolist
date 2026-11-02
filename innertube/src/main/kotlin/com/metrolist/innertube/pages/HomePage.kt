@@ -158,6 +158,7 @@ data class HomePage(
                             ?.firstOrNull()
                             ?.text
                             ?.parseTime(),
+                    musicVideoType = renderer.musicVideoType,
                     thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: return null,
                     explicit = renderer.badges?.find {
                         it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
@@ -212,6 +213,7 @@ data class HomePage(
                                 )
                             },
                             duration = null,
+                            musicVideoType = renderer.musicVideoType,
                             thumbnail = renderer.thumbnailRenderer.getThumbnailUrl()
                                 ?: return null,
                             explicit = renderer.subtitleBadges?.any {
@@ -371,8 +373,9 @@ data class HomePage(
 
     fun filterVideoSongs(disableVideos: Boolean = false) =
         if (disableVideos) {
-            copy(sections = sections.map { section ->
+            copy(sections = sections.mapNotNull { section ->
                 section.copy(items = section.items.filterVideoSongs(true))
+                    .takeIf { it.items.isNotEmpty() }
             })
         } else this
 }
