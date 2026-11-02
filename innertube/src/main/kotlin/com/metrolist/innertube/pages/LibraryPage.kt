@@ -20,6 +20,7 @@ data class LibraryPage(
     val isUploaded: Boolean = false,
 ) {
     companion object {
+        /** Decodes supported library tiles with their content type; returns null when required item metadata is absent. */
         fun fromMusicTwoRowItemRenderer(renderer: MusicTwoRowItemRenderer): YTItem? {
             return when {
                 renderer.isAlbum -> AlbumItem(

@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class MediaMetadataVideoTypeTest {
+    /** Checks that playback classification and persisted video flags agree for each supported content-type category. */
     @Test
     fun `podcasts and audio tracks are not persisted as video songs`() {
         val types = listOf(

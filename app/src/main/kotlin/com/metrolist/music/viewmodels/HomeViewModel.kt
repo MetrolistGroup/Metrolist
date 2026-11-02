@@ -85,6 +85,10 @@ data class CommunityPlaylistItem(
     val songs: List<SongItem>
 )
 
+/**
+ * Selects one visible card per seed and keeps the selected tracks unique across seeds.
+ * Per-seed alternatives remain available until selection, so shared candidates do not consume cards.
+ */
 internal fun filterDailyDiscoverItems(
     items: List<DailyDiscoverItem>,
     hideVideos: Boolean,
@@ -98,12 +102,17 @@ internal fun filterDailyDiscoverItems(
     }
 }
 
+/** Applies the ten-song quota after video filtering, preserving non-song entries and input order. */
 internal fun filterKeepListeningItems(items: List<LocalItem>, hideVideos: Boolean): List<LocalItem> {
     val songIds = items.filterIsInstance<Song>().filterVideoSongs(hideVideos)
         .take(10).map { it.id }.toSet()
     return items.filter { it !is Song || it.id in songIds }
 }
 
+/**
+ * Combines home candidates in pin-first order, then deduplicates and limits the visible result.
+ * Video IDs exclude metadata-poor duplicates; unresolved pins stay hidden while filtering is enabled.
+ */
 internal fun buildSpeedDialItems(
     pinned: List<YTItem>,
     keepListening: List<YTItem>,
@@ -204,6 +213,7 @@ class HomeViewModel @Inject constructor(
     }
     val allYtItems = _allYtItems.withVideoFilter { items, hide -> items.filterVideoSongs(hide) }
 
+    /** Derives a preference-aware view while retaining the source cache for reversible filtering. */
     private fun <T> StateFlow<T>.withVideoFilter(filter: (T, Boolean) -> T): StateFlow<T> =
         combine(this, hideVideoSongs) { items, hide -> filter(items, hide) }
             .stateIn(viewModelScope, SharingStarted.Lazily, value)
@@ -267,6 +277,12 @@ class HomeViewModel @Inject constructor(
             )
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    /**
+     * Classifies legacy song pins using local records and batched remote metadata.
+     * Unresolved types remain null so the caller can keep those pins hidden until classification.
+     *
+     * @throws CancellationException when a newer pin list or preference cancels the lookup.
+     */
     private suspend fun resolvePinnedItems(
         pinned: List<SpeedDialItem>,
         hideVideos: Boolean,
@@ -304,6 +320,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /** Selects a random home candidate, favoring local listening sources and checking the current video preference. */
     suspend fun getRandomItem(): YTItem? {
         try {
             isRandomizing.value = true
@@ -382,6 +399,10 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
+    /**
+     * Caches recommendation alternatives for sampled liked-song seeds.
+     * The exposed flow applies video filtering before choosing a unique card for each seed.
+     */
     private suspend fun getDailyDiscover() {
         val likedSongs = database.likedSongsByCreateDateAsc().first()
         if (likedSongs.isEmpty()) return
@@ -420,6 +441,7 @@ class HomeViewModel @Inject constructor(
         _dailyDiscover.value = items.toList().shuffled()
     }
 
+    /** Caches candidates for the selected Quick Picks mode; the exposed flow filters before its twenty-song quota. */
     private suspend fun getQuickPicks() {
         when (quickPicksEnum.first()) {
             QuickPicks.QUICK_PICKS -> {
@@ -460,6 +482,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /** Samples community playlists from recent listening and caches song previews before video filtering. */
     private suspend fun getCommunityPlaylists() {
         val fromTimeStamp = LocalDateTime.now().minusWeeks(4)
         val artistSeeds = database.mostPlayedArtists(fromTimeStamp, limit = 10).first()
@@ -535,6 +558,10 @@ class HomeViewModel @Inject constructor(
         _communityPlaylists.value = playlists.shuffled()
     }
 
+    /**
+     * Loads local and remote home caches, then starts secondary recommendation requests.
+     * Video candidates remain cached so preference changes can update visible results without refetching.
+     */
     private suspend fun load() {
         isLoading.value = true
         val hideExplicit = context.dataStore.get(HideExplicitKey, false)
@@ -668,6 +695,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private val _isLoadingMore = MutableStateFlow(false)
+    /** Appends a home continuation to the backing cache, retaining videos for the preference-aware page view. */
     fun loadMoreYouTubeItems(continuation: String?) {
         if (continuation == null || _isLoadingMore.value) return
         val hideExplicit = context.dataStore.get(HideExplicitKey, false)
@@ -694,6 +722,10 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Loads a chip's page or restores the cached unselected page when the chip is cleared.
+     * Both caches retain video candidates so the current preference applies to either view.
+     */
     fun toggleChip(chip: HomePage.Chip?) {
         if (chip == null || chip == selectedChip.value && previousHomePage.value != null) {
             _homePage.value = previousHomePage.value
@@ -771,6 +803,7 @@ class HomeViewModel @Inject constructor(
     private fun <T : Any> List<T>.filterOutNulls(): List<T> =
         (this as List<T?>).filterNotNull()
 
+    /** Refreshes the active chip or default home page and requests library sync, leaving video filtering to the views. */
     fun refresh() {
         if (isRefreshing.value) return
         isRefreshing.value = true

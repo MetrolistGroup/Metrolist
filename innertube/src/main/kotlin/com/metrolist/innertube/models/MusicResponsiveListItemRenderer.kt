@@ -84,6 +84,7 @@ data class MusicResponsiveListItemRenderer(
             return hasPodcastLink && hasVideoId
         }
 
+    /** Resolves content type from the play overlay, row endpoint, then title link for rows lacking either endpoint. */
     val musicVideoType: String?
         get() =
             overlay

@@ -37,6 +37,7 @@ data class MediaMetadata(
     val isEpisode: Boolean = false,
     val uploadEntityId: String? = null,
 ) : Serializable {
+    /** Keeps playback and persisted video flags false for audio tracks, podcast episodes, and unknown content types. */
     val isVideoSong: Boolean
         get() = musicVideoType != null &&
             musicVideoType != MUSIC_VIDEO_TYPE_ATV &&

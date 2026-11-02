@@ -7,6 +7,7 @@ import org.junit.Test
 import com.metrolist.innertube.models.Artist as YouTubeArtist
 
 class SpeedDialItemTest {
+    /** Covers persisted content types without relying on a separate song row, including unknown and podcast types. */
     @Test
     fun `song pin round trip retains video type without a song database entry`() {
         val types = listOf(

@@ -53,9 +53,11 @@ constructor(
     private var _summaryPage by mutableStateOf<SearchSummaryPage?>(null)
     private val _viewStateMap = mutableStateMapOf<String, ItemsPage?>()
 
+    /** Current video-filtered summaries, backed by retained results so preference changes are reversible. */
     val summaryPage by derivedStateOf {
         hideVideoSongs?.let { _summaryPage?.filterVideoSongs(it) }
     }
+    /** Per-filter result views that preserve each cached page's continuation while applying the video preference. */
     val viewStateMap by derivedStateOf {
         hideVideoSongs?.let { hide ->
             _viewStateMap.mapValues { (_, page) ->
@@ -64,6 +66,10 @@ constructor(
         }.orEmpty()
     }
 
+    /**
+     * Resolves artist IDs and fills missing durations using batched queue requests.
+     * Video types from those responses are retained, while metadata already present on an item takes precedence.
+     */
     private suspend fun resolveSearchMetadata(items: List<YTItem>): List<YTItem> =
         coroutineScope {
             val knownDurations =
@@ -102,6 +108,7 @@ constructor(
             }
         }
 
+    /** Caches enriched summaries before video filtering so toggling the preference does not require another search. */
     private suspend fun loadSummaryPage() {
         if (_summaryPage == null) {
             YouTube
@@ -182,6 +189,7 @@ constructor(
         }
     }
 
+    /** Appends enriched continuation results to the selected filter's backing cache, retaining videos for later toggles. */
     fun loadMore() {
         val currentFilter = filter.value
         val filterValue = currentFilter?.value ?: return

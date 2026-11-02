@@ -24,6 +24,7 @@ class VideoSongFilteringTest {
     )
     private val cover = """{"musicThumbnailRenderer":{"thumbnail":{"thumbnails":[{"url":"cover","width":100,"height":100}]}}}"""
 
+    /** Exercises both carousel renderer shapes with audio, video, podcast, and missing-type responses. */
     @Test
     fun `home rows and tiles preserve video types so filtering keeps only audio and unknown songs`() {
         for (type in types) {
@@ -45,6 +46,7 @@ class VideoSongFilteringTest {
         }
     }
 
+    /** Covers library tiles where renderer metadata is the filter's only evidence of a song's content type. */
     @Test
     fun `library tiles preserve video types for filtering`() {
         for (type in types) {
@@ -57,6 +59,7 @@ class VideoSongFilteringTest {
         }
     }
 
+    /** Uses rows without overlay or row endpoints to isolate the title-link metadata fallback. */
     @Test
     fun `title watch endpoint provides video type when overlay and row endpoint are missing`() {
         for (type in types) {
@@ -90,9 +93,11 @@ class VideoSongFilteringTest {
         assertEquals(listOf(videoSection, audioSection), cached.filterVideoSongs(false).sections)
     }
 
+    /** Defines expected video cases independently of the production classifier. */
     private fun isVideo(type: String?) =
         type == MUSIC_VIDEO_TYPE_OMV || type == MUSIC_VIDEO_TYPE_UGC
 
+    /** Builds optional music configs so fixtures can exercise legacy endpoints with no content type. */
     private fun endpoint(type: String?): String {
         val config = type?.let {
             """, "watchEndpointMusicSupportedConfigs":{"watchEndpointMusicConfig":{"musicVideoType":"$it"}}"""

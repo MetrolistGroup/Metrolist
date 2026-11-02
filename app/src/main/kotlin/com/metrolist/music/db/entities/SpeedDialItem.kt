@@ -26,6 +26,12 @@ data class SpeedDialItem(
     val albumId: String? = null,
     val albumName: String? = null
 ) {
+    /**
+     * Restores a pin's item metadata, including the saved song content type.
+     * Legacy song pins retain a null type until metadata resolution can classify them.
+     *
+     * @throws IllegalArgumentException if the stored pin type is unsupported.
+     */
     fun toYTItem(): YTItem {
         return when (type) {
             "SONG" -> SongItem(
@@ -73,6 +79,7 @@ data class SpeedDialItem(
     }
 
     companion object {
+        /** Preserves song content types and album playlist IDs in the pin's existing secondary metadata field. */
         fun fromYTItem(item: YTItem): SpeedDialItem {
             return when (item) {
                 is SongItem -> SpeedDialItem(

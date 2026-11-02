@@ -40,6 +40,7 @@ data class SongItem(
     val isEpisode: Boolean = false,
     val uploadEntityId: String? = null
 ) : YTItem() {
+    /** Identifies video tracks while treating missing types, audio tracks, and podcast episodes as non-video entries. */
     val isVideoSong: Boolean
         get() = musicVideoType != null &&
             musicVideoType != MUSIC_VIDEO_TYPE_ATV &&

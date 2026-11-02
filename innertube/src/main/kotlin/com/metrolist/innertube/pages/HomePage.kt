@@ -118,6 +118,7 @@ data class HomePage(
                 )
             }
 
+            /** Parses quick-pick rows with their content type; returns null when required identity or artwork is absent. */
             private fun fromMusicResponsiveListItemRenderer(renderer: MusicResponsiveListItemRenderer): SongItem? {
                 // Quick picks uses musicResponsiveListItemRenderer for songs
                 if (!renderer.isSong) return null
@@ -167,6 +168,7 @@ data class HomePage(
                 )
             }
 
+            /** Decodes mixed carousel tiles, retaining song content types and rejecting unsupported or incomplete items. */
             private fun fromMusicTwoRowItemRenderer(renderer: MusicTwoRowItemRenderer): YTItem? {
                 // Debug logging for type detection
                 val title = renderer.title.runs?.firstOrNull()?.text ?: "unknown"
@@ -371,6 +373,7 @@ data class HomePage(
             })
         } else this
 
+    /** Returns a video-filtered view without empty sections, preserving chips, pagination, and the original page. */
     fun filterVideoSongs(disableVideos: Boolean = false) =
         if (disableVideos) {
             copy(sections = sections.mapNotNull { section ->
