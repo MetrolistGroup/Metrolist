@@ -14,6 +14,7 @@ import com.metrolist.innertube.models.YTItem
 @Entity(tableName = "speed_dial_item")
 data class SpeedDialItem(
     @PrimaryKey val id: String,
+    // Song pins store their video type here so filtering survives without a schema change.
     val secondaryId: String? = null,
     val title: String,
     val subtitle: String? = null,
@@ -25,10 +26,17 @@ data class SpeedDialItem(
     val albumId: String? = null,
     val albumName: String? = null
 ) {
+    /**
+     * Restores a pin's item metadata, including the saved song content type.
+     * Legacy song pins retain a null type until metadata resolution can classify them.
+     *
+     * @throws IllegalArgumentException if the stored pin type is unsupported.
+     */
     fun toYTItem(): YTItem {
         return when (type) {
             "SONG" -> SongItem(
                 id = id,
+                musicVideoType = secondaryId,
                 title = title,
                 artists = subtitle?.split(", ")?.mapIndexed { index, name ->
                     Artist(name = name, id = subtitleIds?.split(", ")?.getOrNull(index))
@@ -71,10 +79,12 @@ data class SpeedDialItem(
     }
 
     companion object {
+        /** Preserves song content types and album playlist IDs in the pin's existing secondary metadata field. */
         fun fromYTItem(item: YTItem): SpeedDialItem {
             return when (item) {
                 is SongItem -> SpeedDialItem(
                     id = item.id,
+                    secondaryId = item.musicVideoType,
                     title = item.title,
                     subtitle = item.artists.joinToString(", ") { it.name },
                     subtitleIds = item.artists.joinToString(", ") { it.id ?: "" },

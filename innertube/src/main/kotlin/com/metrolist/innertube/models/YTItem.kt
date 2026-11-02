@@ -1,6 +1,7 @@
 package com.metrolist.innertube.models
 
 import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_ATV
+import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_PODCAST_EPISODE
 
 sealed class YTItem {
     abstract val id: String
@@ -39,8 +40,11 @@ data class SongItem(
     val isEpisode: Boolean = false,
     val uploadEntityId: String? = null
 ) : YTItem() {
+    /** Identifies video tracks while treating missing types, audio tracks, and podcast episodes as non-video entries. */
     val isVideoSong: Boolean
-        get() = musicVideoType != null && musicVideoType != MUSIC_VIDEO_TYPE_ATV
+        get() = musicVideoType != null &&
+            musicVideoType != MUSIC_VIDEO_TYPE_ATV &&
+            musicVideoType != MUSIC_VIDEO_TYPE_PODCAST_EPISODE
 
     override val shareLink: String
         get() = "https://music.youtube.com/watch?v=$id"

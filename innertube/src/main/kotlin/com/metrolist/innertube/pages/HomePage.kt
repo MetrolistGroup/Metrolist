@@ -118,6 +118,7 @@ data class HomePage(
                 )
             }
 
+            /** Parses quick-pick rows with their content type; returns null when required identity or artwork is absent. */
             private fun fromMusicResponsiveListItemRenderer(renderer: MusicResponsiveListItemRenderer): SongItem? {
                 // Quick picks uses musicResponsiveListItemRenderer for songs
                 if (!renderer.isSong) return null
@@ -158,6 +159,7 @@ data class HomePage(
                             ?.firstOrNull()
                             ?.text
                             ?.parseTime(),
+                    musicVideoType = renderer.musicVideoType,
                     thumbnail = renderer.thumbnail?.getThumbnailUrl() ?: return null,
                     explicit = renderer.badges?.find {
                         it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"
@@ -166,6 +168,7 @@ data class HomePage(
                 )
             }
 
+            /** Decodes mixed carousel tiles, retaining song content types and rejecting unsupported or incomplete items. */
             private fun fromMusicTwoRowItemRenderer(renderer: MusicTwoRowItemRenderer): YTItem? {
                 // Debug logging for type detection
                 val title = renderer.title.runs?.firstOrNull()?.text ?: "unknown"
@@ -212,6 +215,7 @@ data class HomePage(
                                 )
                             },
                             duration = null,
+                            musicVideoType = renderer.musicVideoType,
                             thumbnail = renderer.thumbnailRenderer.getThumbnailUrl()
                                 ?: return null,
                             explicit = renderer.subtitleBadges?.any {
@@ -369,10 +373,12 @@ data class HomePage(
             })
         } else this
 
+    /** Returns a video-filtered view without empty sections, preserving chips, pagination, and the original page. */
     fun filterVideoSongs(disableVideos: Boolean = false) =
         if (disableVideos) {
-            copy(sections = sections.map { section ->
+            copy(sections = sections.mapNotNull { section ->
                 section.copy(items = section.items.filterVideoSongs(true))
+                    .takeIf { it.items.isNotEmpty() }
             })
         } else this
 }

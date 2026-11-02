@@ -6,6 +6,7 @@
 package com.metrolist.music.viewmodels
 
 import android.content.Context
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +35,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -46,9 +49,27 @@ constructor(
 ) : ViewModel() {
     val query = SearchRoutes.decodeQuery(savedStateHandle.get<String>("query").orEmpty())
     val filter = MutableStateFlow<YouTube.SearchFilter?>(null)
-    var summaryPage by mutableStateOf<SearchSummaryPage?>(null)
-    val viewStateMap = mutableStateMapOf<String, ItemsPage?>()
+    private var hideVideoSongs by mutableStateOf<Boolean?>(null)
+    private var _summaryPage by mutableStateOf<SearchSummaryPage?>(null)
+    private val _viewStateMap = mutableStateMapOf<String, ItemsPage?>()
 
+    /** Current video-filtered summaries, backed by retained results so preference changes are reversible. */
+    val summaryPage by derivedStateOf {
+        hideVideoSongs?.let { _summaryPage?.filterVideoSongs(it) }
+    }
+    /** Per-filter result views that preserve each cached page's continuation while applying the video preference. */
+    val viewStateMap by derivedStateOf {
+        hideVideoSongs?.let { hide ->
+            _viewStateMap.mapValues { (_, page) ->
+                page?.copy(items = page.items.filterVideoSongs(hide))
+            }
+        }.orEmpty()
+    }
+
+    /**
+     * Resolves artist IDs and fills missing durations using batched queue requests.
+     * Video types from those responses are retained, while metadata already present on an item takes precedence.
+     */
     private suspend fun resolveSearchMetadata(items: List<YTItem>): List<YTItem> =
         coroutineScope {
             val knownDurations =
@@ -63,31 +84,33 @@ constructor(
                     .map { it.id }
                     .distinct()
             val resolvedArtists = async { YouTube.resolveArtistIds(items) }
-            val fetchedDurations =
+            val fetchedMetadata =
                 async {
                     if (missingDurationIds.isEmpty()) {
                         emptyMap()
                     } else {
-                        YouTube
-                            .queue(videoIds = missingDurationIds)
-                            .getOrDefault(emptyList())
-                            .mapNotNull { song -> song.duration?.let { song.id to it } }
-                            .toMap()
+                        missingDurationIds.chunked(YouTube.MAX_GET_QUEUE_SIZE)
+                            .flatMap { ids -> YouTube.queue(videoIds = ids).getOrDefault(emptyList()) }
+                            .associateBy { it.id }
                     }
                 }
-            val durations = knownDurations + fetchedDurations.await()
+            val metadata = fetchedMetadata.await()
 
             resolvedArtists.await().map { item ->
-                if (item is SongItem && item.duration == null) {
-                    item.copy(duration = durations[item.id])
+                if (item is SongItem) {
+                    item.copy(
+                        duration = item.duration ?: knownDurations[item.id] ?: metadata[item.id]?.duration,
+                        musicVideoType = item.musicVideoType ?: metadata[item.id]?.musicVideoType,
+                    )
                 } else {
                     item
                 }
             }
         }
 
+    /** Caches enriched summaries before video filtering so toggling the preference does not require another search. */
     private suspend fun loadSummaryPage() {
-        if (summaryPage == null) {
+        if (_summaryPage == null) {
             YouTube
                 .searchSummary(query, recordSearchHistory = !context.dataStore.get(PauseSearchHistoryKey, false))
                 .onSuccess { page ->
@@ -102,12 +125,10 @@ constructor(
                         }
                     val resolvedPage = page.copy(summaries = resolvedSummaries)
                     val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-                    val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
                     val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
-                    summaryPage =
+                    _summaryPage =
                         resolvedPage
                             .filterExplicit(hideExplicit)
-                            .filterVideoSongs(hideVideoSongs)
                             .filterYoutubeShorts(hideYoutubeShorts)
                 }.onFailure {
                     reportException(it)
@@ -116,6 +137,12 @@ constructor(
     }
 
     init {
+        viewModelScope.launch {
+            context.dataStore.data
+                .map { it[HideVideoSongsKey] ?: false }
+                .distinctUntilChanged()
+                .collect { hideVideoSongs = it }
+        }
         viewModelScope.launch {
             filter.collect { filter ->
                 if (filter == null) {
@@ -127,31 +154,29 @@ constructor(
                     // Reuse the "Episodes" section from the summary page instead — it is already
                     // parsed correctly by fromMusicResponsiveListItemRenderer and guaranteed to
                     // show the same results as the episodes section in the "All" filter.
-                    if (viewStateMap[filter.value] == null) {
+                    if (_viewStateMap[filter.value] == null) {
                         loadSummaryPage()
-                        summaryPage?.let { page ->
+                        _summaryPage?.let { page ->
                             val episodes = page.summaries
                                 .firstOrNull { it.title == "Episodes" }
                                 ?.items
                                 .orEmpty()
-                            viewStateMap[filter.value] = ItemsPage(episodes, null)
+                            _viewStateMap[filter.value] = ItemsPage(episodes, null)
                         }
                     }
                 } else {
-                    if (viewStateMap[filter.value] == null) {
+                    if (_viewStateMap[filter.value] == null) {
                         YouTube
                             .search(query, filter, recordSearchHistory = !context.dataStore.get(PauseSearchHistoryKey, false))
                             .onSuccess { result ->
                                 val resolvedItems = resolveSearchMetadata(result.items)
                                 val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-                                val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
                                 val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
-                                viewStateMap[filter.value] =
+                                _viewStateMap[filter.value] =
                                     ItemsPage(
                                         resolvedItems
                                             .distinctBy { it.id }
                                             .filterExplicit(hideExplicit)
-                                            .filterVideoSongs(hideVideoSongs)
                                             .filterYoutubeShorts(hideYoutubeShorts),
                                         result.continuation,
                                     )
@@ -164,11 +189,12 @@ constructor(
         }
     }
 
+    /** Appends enriched continuation results to the selected filter's backing cache, retaining videos for later toggles. */
     fun loadMore() {
         val currentFilter = filter.value
         val filterValue = currentFilter?.value ?: return
         viewModelScope.launch {
-            val viewState = viewStateMap[filterValue] ?: return@launch
+            val viewState = _viewStateMap[filterValue] ?: return@launch
             val continuation = viewState.continuation ?: return@launch
             val searchResult =
                 YouTube.searchContinuation(
@@ -177,13 +203,11 @@ constructor(
                 ).getOrNull() ?: return@launch
             val resolvedItems = resolveSearchMetadata(searchResult.items)
             val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-            val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
             val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
             val newItems = resolvedItems
                 .filterExplicit(hideExplicit)
-                .filterVideoSongs(hideVideoSongs)
                 .filterYoutubeShorts(hideYoutubeShorts)
-            viewStateMap[filterValue] = ItemsPage(
+            _viewStateMap[filterValue] = ItemsPage(
                 (viewState.items + newItems).distinctBy { it.id },
                 searchResult.continuation
             )

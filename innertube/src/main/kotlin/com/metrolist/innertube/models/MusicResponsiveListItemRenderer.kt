@@ -84,6 +84,7 @@ data class MusicResponsiveListItemRenderer(
             return hasPodcastLink && hasVideoId
         }
 
+    /** Resolves content type from the play overlay, row endpoint, then title link for rows lacking either endpoint. */
     val musicVideoType: String?
         get() =
             overlay
@@ -93,6 +94,10 @@ data class MusicResponsiveListItemRenderer(
                 ?.playNavigationEndpoint
                 ?.musicVideoType
                 ?: navigationEndpoint?.musicVideoType
+                ?: flexColumns.firstOrNull()
+                    ?.musicResponsiveListItemFlexColumnRenderer
+                    ?.text?.runs?.firstOrNull()
+                    ?.navigationEndpoint?.musicVideoType
 
     val videoId: String?
         get() = playlistItemData?.videoId
