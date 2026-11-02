@@ -1,5 +1,6 @@
 package com.metrolist.music.viewmodels
 
+import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.SongItem
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -87,6 +88,30 @@ class HomeSpeedDialTest {
                 keepListening = emptyList(),
                 quickPicks = emptyList(),
                 home = listOf(video.copy(musicVideoType = null), audio),
+                hideVideoSongs = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `unresolved song pins do not suppress known album pins and local recommendations`() {
+        val unresolvedPin = song("unresolved")
+        val albumPin = AlbumItem(
+            browseId = "album",
+            playlistId = "playlist",
+            title = "Album",
+            artists = emptyList(),
+            thumbnail = "cover",
+        )
+        val recommendation = song("audio").copy(musicVideoType = "MUSIC_VIDEO_TYPE_ATV")
+
+        assertEquals(
+            listOf(albumPin, recommendation),
+            buildSpeedDialItems(
+                pinned = listOf(unresolvedPin, albumPin),
+                keepListening = listOf(recommendation),
+                quickPicks = emptyList(),
+                home = emptyList(),
                 hideVideoSongs = true,
             ),
         )

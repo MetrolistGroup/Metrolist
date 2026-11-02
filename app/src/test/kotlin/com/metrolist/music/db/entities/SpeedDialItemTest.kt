@@ -9,7 +9,14 @@ import com.metrolist.innertube.models.Artist as YouTubeArtist
 class SpeedDialItemTest {
     @Test
     fun `song pin round trip retains video type without a song database entry`() {
-        for (type in listOf(null, "MUSIC_VIDEO_TYPE_ATV", "MUSIC_VIDEO_TYPE_OMV", "MUSIC_VIDEO_TYPE_UGC")) {
+        val types = listOf(
+            null,
+            "MUSIC_VIDEO_TYPE_ATV",
+            "MUSIC_VIDEO_TYPE_OMV",
+            "MUSIC_VIDEO_TYPE_UGC",
+            "MUSIC_VIDEO_TYPE_PODCAST_EPISODE",
+        )
+        for (type in types) {
             val song = SongItem(
                 id = "song",
                 title = "Song",

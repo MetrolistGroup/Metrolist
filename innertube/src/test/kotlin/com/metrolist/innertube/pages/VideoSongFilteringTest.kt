@@ -6,6 +6,7 @@ import com.metrolist.innertube.models.MusicTwoRowItemRenderer
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_ATV
 import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_OMV
+import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_PODCAST_EPISODE
 import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_UGC
 import com.metrolist.innertube.models.filterVideoSongs
 import kotlinx.serialization.json.Json
@@ -14,7 +15,13 @@ import org.junit.Test
 
 class VideoSongFilteringTest {
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
-    private val types = listOf(null, MUSIC_VIDEO_TYPE_ATV, MUSIC_VIDEO_TYPE_OMV, MUSIC_VIDEO_TYPE_UGC)
+    private val types = listOf(
+        null,
+        MUSIC_VIDEO_TYPE_ATV,
+        MUSIC_VIDEO_TYPE_OMV,
+        MUSIC_VIDEO_TYPE_UGC,
+        MUSIC_VIDEO_TYPE_PODCAST_EPISODE,
+    )
     private val cover = """{"musicThumbnailRenderer":{"thumbnail":{"thumbnails":[{"url":"cover","width":100,"height":100}]}}}"""
 
     @Test
@@ -83,7 +90,8 @@ class VideoSongFilteringTest {
         assertEquals(listOf(videoSection, audioSection), cached.filterVideoSongs(false).sections)
     }
 
-    private fun isVideo(type: String?) = type != null && type != MUSIC_VIDEO_TYPE_ATV
+    private fun isVideo(type: String?) =
+        type == MUSIC_VIDEO_TYPE_OMV || type == MUSIC_VIDEO_TYPE_UGC
 
     private fun endpoint(type: String?): String {
         val config = type?.let {

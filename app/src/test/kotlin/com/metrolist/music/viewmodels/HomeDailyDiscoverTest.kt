@@ -26,4 +26,29 @@ class HomeDailyDiscoverTest {
         assertEquals(listOf(audioItem), filterDailyDiscoverItems(cached, true))
         assertEquals(listOf(videoItem), filterDailyDiscoverItems(cached, false))
     }
+
+    @Test
+    fun `shared candidates produce distinct cards for both seeds`() {
+        val firstSeed = Song(SongEntity(id = "first", title = "First"), artists = emptyList())
+        val secondSeed = Song(SongEntity(id = "second", title = "Second"), artists = emptyList())
+        val firstTrack = SongItem(
+            id = "x",
+            title = "X",
+            artists = emptyList(),
+            musicVideoType = "MUSIC_VIDEO_TYPE_ATV",
+            thumbnail = "cover",
+        )
+        val secondTrack = firstTrack.copy(id = "y", title = "Y")
+        val firstCard = DailyDiscoverItem(firstSeed, firstTrack, null)
+        val secondCard = DailyDiscoverItem(secondSeed, secondTrack, null)
+        val cached = listOf(
+            firstCard,
+            firstCard.copy(recommendation = secondTrack),
+            secondCard.copy(recommendation = firstTrack),
+            secondCard,
+        )
+
+        assertEquals(listOf(firstCard, secondCard), filterDailyDiscoverItems(cached, true))
+        assertEquals(listOf(firstCard, secondCard), filterDailyDiscoverItems(cached, false))
+    }
 }

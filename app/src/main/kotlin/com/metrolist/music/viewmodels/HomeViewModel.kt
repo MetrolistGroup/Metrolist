@@ -65,8 +65,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.time.LocalDate
@@ -88,10 +88,21 @@ data class CommunityPlaylistItem(
 internal fun filterDailyDiscoverItems(
     items: List<DailyDiscoverItem>,
     hideVideos: Boolean,
-): List<DailyDiscoverItem> =
-    items.filterNot {
+): List<DailyDiscoverItem> {
+    val selectedIds = mutableSetOf<String>()
+    return items.filterNot {
         hideVideos && (it.seed.song.isVideo || (it.recommendation as? SongItem)?.isVideoSong == true)
-    }.distinctBy { it.seed.id }
+    }.groupBy { it.seed.id }.values.mapNotNull { candidates ->
+        candidates.firstOrNull { it.recommendation.id !in selectedIds }
+            ?.also { selectedIds.add(it.recommendation.id) }
+    }
+}
+
+internal fun filterKeepListeningItems(items: List<LocalItem>, hideVideos: Boolean): List<LocalItem> {
+    val songIds = items.filterIsInstance<Song>().filterVideoSongs(hideVideos)
+        .take(10).map { it.id }.toSet()
+    return items.filter { it !is Song || it.id in songIds }
+}
 
 internal fun buildSpeedDialItems(
     pinned: List<YTItem>,
@@ -162,7 +173,7 @@ class HomeViewModel @Inject constructor(
         songs?.filterVideoSongs(hide)?.take(20)
     }
     val keepListening = _keepListening.withVideoFilter { items, hide ->
-        items?.filterNot { hide && it is Song && it.song.isVideo }
+        items?.let { filterKeepListeningItems(it, hide) }
     }
     val homePage = _homePage.withVideoFilter { page, hide -> page?.filterVideoSongs(hide) }
     val dailyDiscover = _dailyDiscover.withVideoFilter { items, hide ->
@@ -204,7 +215,12 @@ class HomeViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val resolvedPinnedItems =
         combine(database.speedDialDao.getAll(), hideVideoSongs) { pinned, hide -> pinned to hide }
-            .mapLatest { (pinned, hide) -> resolvePinnedItems(pinned, hide) }
+            .transformLatest { (pinned, hide) ->
+                emit(pinned.map { it.toYTItem() })
+                if (hide && pinned.any { it.type == "SONG" && it.secondaryId == null }) {
+                    emit(resolvePinnedItems(pinned, hide))
+                }
+            }
             .flowOn(Dispatchers.IO)
 
     val speedDialItems: StateFlow<List<YTItem>> =
@@ -401,8 +417,7 @@ class HomeViewModel @Inject constructor(
             }.forEach { it.join() }
         }
         
-        // Final deduplication just in case multiple seeds recommended the same song
-        _dailyDiscover.value = items.toList().distinctBy { it.recommendation.id }.shuffled()
+        _dailyDiscover.value = items.toList().shuffled()
     }
 
     private suspend fun getQuickPicks() {
@@ -538,7 +553,7 @@ class HomeViewModel @Inject constructor(
 
             launch(Dispatchers.IO) {
                 val songs = database.mostPlayedSongs(fromTimeStamp = fromTimeStamp, limit = 15, offset = 5, toTimeStamp = LocalDateTime.now()).first()
-                    .shuffled().take(10)
+                    .shuffled()
                 val albums = database.mostPlayedAlbums(fromTimeStamp, limit = 8, offset = 2).first()
                     .filter { it.album.thumbnailUrl != null }.shuffled().take(5)
                 val artists = database.mostPlayedArtists(fromTimeStamp).first()
