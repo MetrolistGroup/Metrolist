@@ -62,7 +62,7 @@ class YouTubeQueue(
                     retryCount = 0
                     return@withContext Queue.Status(
                         title = nextResult.title,
-                        items = items.map { it.toMediaItem() },
+                        items = items.map { it.toMediaItem() }.distinctBy { it.mediaId },
                         mediaItemIndex = nextResult.currentIndex ?: 0,
                     )
                 } catch (e: Exception) {
@@ -93,7 +93,7 @@ class YouTubeQueue(
                     endpoint = nextResult.endpoint
                     continuation = nextResult.continuation
                     retryCount = 0
-                    return@withContext nextResult.items.map { it.toMediaItem() }
+                    return@withContext nextResult.items.map { it.toMediaItem() }.distinctBy { it.mediaId }
                 } catch (e: Exception) {
                     lastException = e
                     retryCount++
