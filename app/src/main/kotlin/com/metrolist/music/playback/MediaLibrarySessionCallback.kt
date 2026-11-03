@@ -134,9 +134,12 @@ constructor(
         mediaSession: MediaSession,
         controller: MediaSession.ControllerInfo
     ): ListenableFuture<MediaItemsWithStartPosition> =
-        Futures.immediateFuture(
-            MediaItemsWithStartPosition(emptyList(), 0, C.TIME_UNSET),
-        )
+        scope.future {
+            // Failing (rather than returning an empty list) makes Media3 just call play() on
+            // the current player instead of replacing its queue with nothing.
+            service.awaitPlaybackResumptionItems()
+                ?: throw UnsupportedOperationException("No queue to resume")
+        }
 
     override fun onGetLibraryRoot(
         session: MediaLibrarySession,
