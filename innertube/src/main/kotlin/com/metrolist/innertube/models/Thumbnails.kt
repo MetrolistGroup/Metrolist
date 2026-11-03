@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Thumbnails(
-    val thumbnails: List<Thumbnail>,
+    val thumbnails: List<Thumbnail> = emptyList(),
 )
 
 @Serializable
