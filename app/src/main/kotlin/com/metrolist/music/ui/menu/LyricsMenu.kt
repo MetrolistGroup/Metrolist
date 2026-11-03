@@ -70,6 +70,7 @@ import com.metrolist.music.lyrics.LyricsUtils
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.ListDialog
+import com.metrolist.music.ui.component.LyricsSelectionSignals
 import com.metrolist.music.ui.component.Material3MenuGroup
 import com.metrolist.music.ui.component.Material3MenuItemData
 import com.metrolist.music.ui.component.NewAction
@@ -124,22 +125,39 @@ fun LyricsMenu(
         mutableStateOf(false)
     }
 
+    // Only real lyrics are copyable/editable as text: the not-found marker and
+    // blank rows must not leak into the clipboard or the editor.
+    val copyableLyrics = lyricsProvider()?.lyrics
+        ?.takeUnless { it == LyricsEntity.LYRICS_NOT_FOUND || it.isBlank() }
+
+    // Snapshot at dialog-open: a song change mid-edit must keep editing the
+    // song the dialog was opened for, never redirect its text to the new song.
+    // (The search dialog already snapshots the same way.)
+    val editTarget = remember(showEditDialog) {
+        Triple(
+            mediaMetadataProvider().id,
+            copyableLyrics.orEmpty(),
+            lyricsProvider()?.provider ?: "Manual"
+        )
+    }
+    val editTitle = remember(showEditDialog) { mediaMetadataProvider().title }
+
     if (showEditDialog) {
         TextFieldDialog(
             onDismiss = { showEditDialog = false },
             icon = { Icon(painter = painterResource(R.drawable.edit), contentDescription = null) },
-            title = { Text(text = mediaMetadataProvider().title) },
-            initialTextFieldValue = TextFieldValue(lyricsProvider()?.lyrics.orEmpty()),
+            title = { Text(text = editTitle) },
+            initialTextFieldValue = TextFieldValue(editTarget.second),
             singleLine = false,
+            isInputValid = { it.isNotBlank() },
             onDone = {
+                // All values pinned: the write runs async.
+                val targetId = editTarget.first
+                val providerName = editTarget.third
                 database.query {
-                    upsert(
-                        LyricsEntity(
-                            id = mediaMetadataProvider().id,
-                            lyrics = it,
-                            provider = lyricsProvider()?.provider ?: "Manual",
-                        ),
-                    )
+                    // Atomic replace: translations survive only identical text.
+                    replaceLyrics(targetId, it, providerName)
+                    LyricsSelectionSignals.requestClearSelection(targetId)
                 }
             },
         )
@@ -178,7 +196,7 @@ fun LyricsMenu(
     if (showSearchDialog) {
         DefaultDialog(
             modifier = Modifier.verticalScroll(rememberScrollState()),
-            onDismiss = { showSearchDialog = false },
+            onDismiss = { viewModel.cancelSearch(); showSearchDialog = false },
             icon = {
                 Icon(
                     painter = painterResource(R.drawable.search),
@@ -267,7 +285,7 @@ fun LyricsMenu(
         }
 
         ListDialog(
-            onDismiss = { showSearchResultDialog = false },
+            onDismiss = { viewModel.cancelSearch(); showSearchResultDialog = false },
         ) {
             itemsIndexed(results) { index, result ->
                 Row(
@@ -278,13 +296,9 @@ fun LyricsMenu(
                             onDismiss()
                             viewModel.cancelSearch()
                             database.query {
-                                upsert(
-                                    LyricsEntity(
-                                        id = searchMediaMetadata.id,
-                                        lyrics = result.lyrics,
-                                        provider = result.providerName,
-                                    ),
-                                )
+                                // Atomic replace: translations survive only identical text.
+                                replaceLyrics(searchMediaMetadata.id, result.lyrics, result.providerName)
+                                LyricsSelectionSignals.requestClearSelection(searchMediaMetadata.id)
                             }
                         }
                         .padding(12.dp)
@@ -310,7 +324,7 @@ fun LyricsMenu(
                                 color = MaterialTheme.colorScheme.secondary,
                                 maxLines = 1,
                             )
-                            if (result.lyrics.startsWith("[")) {
+                            if (LyricsUtils.isLineSynced(result.lyrics)) {
                                 Icon(
                                     painter = painterResource(R.drawable.sync),
                                     contentDescription = null,
@@ -421,7 +435,7 @@ fun LyricsMenu(
                             text = stringResource(R.string.refetch),
                             onClick = {
                                 onDismiss()
-                                viewModel.refetchLyrics(mediaMetadataProvider(), lyricsProvider())
+                                viewModel.refetchLyrics(mediaMetadataProvider())
                             },
                         ),
                         NewAction(
@@ -448,15 +462,10 @@ fun LyricsMenu(
                                 )
                             },
                             text = stringResource(R.string.copy),
+                            enabled = copyableLyrics != null,
                             onClick = {
-                                lyricsProvider()?.lyrics?.let { lyrics ->
-                                    val plainLyrics =
-                                        if (lyrics.startsWith("[")) {
-                                            LyricsUtils.parseLyrics(lyrics)
-                                                .joinToString("\n") { it.text }
-                                        } else {
-                                            lyrics
-                                        }
+                                copyableLyrics?.let { lyrics ->
+                                    val plainLyrics = LyricsUtils.plainTextForCopy(lyrics)
 
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     val clip = ClipData.newPlainText("Lyrics", plainLyrics)
@@ -490,8 +499,11 @@ fun LyricsMenu(
                                         // Remove translations
                                         lyricsProvider()?.let { lyrics ->
                                             val clearedLyrics = LyricsTranslationHelper.clearTranslations(lyrics)
+                                            // Stop the in-flight job first so it cannot
+                                            // resurrect translations after the clear.
+                                            LyricsTranslationHelper.cancelTranslation()
                                             database.query {
-                                                upsert(clearedLyrics)
+                                                clearTranslationsIfTextMatches(lyrics.id, lyrics.lyrics)
                                             }
                                             // Resets hasActiveTranslations and clears in-memory translations
                                             LyricsTranslationHelper.triggerClearTranslations()
@@ -512,8 +524,9 @@ fun LyricsMenu(
                                                 // Disable translations – triggerClearTranslations resets hasActiveTranslations
                                                 lyricsProvider()?.let { lyrics ->
                                                     val clearedLyrics = LyricsTranslationHelper.clearTranslations(lyrics)
+                                                    LyricsTranslationHelper.cancelTranslation()
                                                     database.query {
-                                                        upsert(clearedLyrics)
+                                                        clearTranslationsIfTextMatches(lyrics.id, lyrics.lyrics)
                                                     }
                                                     LyricsTranslationHelper.triggerClearTranslations()
                                                 }

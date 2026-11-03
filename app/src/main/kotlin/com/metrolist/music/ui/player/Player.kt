@@ -2113,7 +2113,7 @@ fun InlineLyricsView(
                     val lyricsHelper = entryPoint.lyricsHelper()
                     val fetchedLyricsWithProvider = lyricsHelper.getLyrics(mediaMetadata)
                     database.query {
-                        upsert(LyricsEntity(mediaMetadata.id, fetchedLyricsWithProvider.lyrics, fetchedLyricsWithProvider.provider))
+                        replaceLyrics(mediaMetadata.id, fetchedLyricsWithProvider.lyrics, fetchedLyricsWithProvider.provider)
                     }
                 } catch (e: Exception) {
                     // Handle error
@@ -2153,7 +2153,7 @@ fun InlineLyricsView(
                 val lyricsHelper = entryPoint.lyricsHelper()
                 val fetched = lyricsHelper.getLyrics(nextMetadata)
                 database.query {
-                    upsert(LyricsEntity(nextId, fetched.lyrics, fetched.provider))
+                    replaceLyrics(nextId, fetched.lyrics, fetched.provider)
                 }
             } catch (_: Exception) {
             }

@@ -169,7 +169,6 @@ import com.metrolist.music.constants.StopMusicOnTaskClearKey
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.Event
 import com.metrolist.music.db.entities.FormatEntity
-import com.metrolist.music.db.entities.LyricsEntity
 import com.metrolist.music.db.entities.PlaylistEntity
 import com.metrolist.music.db.entities.RelatedSongMap
 import com.metrolist.music.db.entities.Song
@@ -881,12 +880,10 @@ class MusicService :
             ) {
                 val lyricsWithProvider = lyricsHelper.getLyrics(mediaMetadata)
                 database.query {
-                    upsert(
-                        LyricsEntity(
-                            id = mediaMetadata.id,
-                            lyrics = lyricsWithProvider.lyrics,
-                            provider = lyricsWithProvider.provider,
-                        ),
+                    replaceLyrics(
+                        mediaMetadata.id,
+                        lyricsWithProvider.lyrics,
+                        lyricsWithProvider.provider,
                     )
                 }
             }

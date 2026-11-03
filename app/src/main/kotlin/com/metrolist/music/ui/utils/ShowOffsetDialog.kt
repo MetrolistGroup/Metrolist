@@ -19,12 +19,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,9 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.R
 import com.metrolist.music.db.entities.SongEntity
-import kotlinx.coroutines.FlowPreview
 
-@OptIn(FlowPreview::class)
 @Composable
 fun ShowOffsetDialog(songProvider: () -> SongEntity?) {
     val database = LocalDatabase.current
@@ -48,22 +49,45 @@ fun ShowOffsetDialog(songProvider: () -> SongEntity?) {
     var lyricsOffset by rememberSaveable { mutableIntStateOf(song?.lyricsOffset ?: 0) }
     var textFieldValue by rememberSaveable { mutableStateOf(lyricsOffset.toString()) }
 
+    val tracker = remember { OffsetEditTracker(song?.id) }
+
+    fun persist(edit: PendingOffsetEdit) {
+        // Room queues transactions first-come-first-served and runs one at a time
+        // (see setTransactionExecutor docs), so flushes apply in submission order
+        // and the read-modify-write is atomic. The underlying pool size is capped
+        // by that serialization.
+        database.transaction { persistOffsetEdit(this, edit) }
+    }
+
+    // Record the pair at the mutation site: the switch effect can run in the same
+    // frame as a drag, so recording later (inside LaunchedEffect) could flush a
+    // stale value.
+    fun updateOffset(value: Int) {
+        lyricsOffset = value
+        tracker.record(value)
+    }
+
     LaunchedEffect(song?.id) {
+        // Flush the old pair to its own song before switching the editor.
+        tracker.switchSong(song?.id)?.let { persist(it) }
         song?.let {
             lyricsOffset = it.lyricsOffset
             textFieldValue = lyricsOffset.toString()
         }
     }
 
+    // Debounced persistence: slider drags settle before hitting the database.
+    // The tracker keeps the edited song and offset together, so a playback
+    // change cannot redirect the pending write to the new song.
     LaunchedEffect(lyricsOffset) {
-        songProvider()?.let { song ->
-            database.query {
-                upsert(
-                    song.copy(
-                        lyricsOffset = lyricsOffset
-                    )
-                )
-            }
+        val edit = tracker.pending ?: return@LaunchedEffect
+        delay(300)
+        tracker.takeIfCurrent(edit)?.let { persist(it) }
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            // Flush a trailing value the debounce never got to write on dismiss.
+            tracker.takePending()?.let { persist(it) }
         }
     }
 
@@ -112,7 +136,7 @@ fun ShowOffsetDialog(songProvider: () -> SongEntity?) {
 
                     when {
                         limited.isEmpty() -> {
-                            lyricsOffset = 0
+                            updateOffset(0)
                             textFieldValue = "0"
                         }
 
@@ -121,8 +145,8 @@ fun ShowOffsetDialog(songProvider: () -> SongEntity?) {
 
                         else -> {
                             limited.toIntOrNull()?.let { parsedValue ->
-                                val clampedValue = parsedValue.coerceIn(-9999, 9999)
-                                lyricsOffset = clampedValue
+                                val clampedValue = parsedValue.coerceIn(-3000, 3000)
+                                updateOffset(clampedValue)
 
                                 if (parsedValue != clampedValue) {
                                     textFieldValue = clampedValue.toString()
@@ -170,7 +194,7 @@ fun ShowOffsetDialog(songProvider: () -> SongEntity?) {
 
                 IconButton(
                     onClick = {
-                        lyricsOffset = 0
+                        updateOffset(0)
                         textFieldValue = "0"
                     }
                 ) {
@@ -191,7 +215,7 @@ fun ShowOffsetDialog(songProvider: () -> SongEntity?) {
         ) {
             IconButton(
                 onClick = {
-                    lyricsOffset = (lyricsOffset - 50).coerceIn(-3000, 3000)
+                    updateOffset((lyricsOffset - 50).coerceIn(-3000, 3000))
                     textFieldValue = lyricsOffset.toString()
                 }
             ) {
@@ -202,10 +226,10 @@ fun ShowOffsetDialog(songProvider: () -> SongEntity?) {
             }
 
             Slider(
-                value = lyricsOffset.toFloat(),
+                value = lyricsOffset.coerceIn(-3000, 3000).toFloat(),
                 onValueChange = { newValue ->
                     val rounded = (newValue / 100).toInt() * 100
-                    lyricsOffset = rounded
+                    updateOffset(rounded)
                     textFieldValue = rounded.toString()
                 },
                 valueRange = -3000f..3000f,
@@ -215,7 +239,7 @@ fun ShowOffsetDialog(songProvider: () -> SongEntity?) {
 
             IconButton(
                 onClick = {
-                    lyricsOffset = (lyricsOffset + 50).coerceIn(-3000, 3000)
+                    updateOffset((lyricsOffset + 50).coerceIn(-3000, 3000))
                     textFieldValue = lyricsOffset.toString()
                 }
             ) {

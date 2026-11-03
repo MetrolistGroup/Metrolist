@@ -44,6 +44,7 @@ object LyricsTranslationHelper {
     val clearTranslationsTrigger: SharedFlow<Unit> = _clearTranslationsTrigger.asSharedFlow()
 
     private var translationJob: kotlinx.coroutines.Job? = null
+    @Volatile private var translationGeneration = 0
     private var isCompositionActive = true
 
     // Cache translations in memory to avoid redundant API calls during a session
@@ -84,6 +85,9 @@ object LyricsTranslationHelper {
     }
 
     fun triggerClearTranslations() {
+        // Invalidate queued/in-flight writes; the generation check inside
+        // database.query drops them at execution time.
+        translationGeneration++
         _clearTranslationsTrigger.tryEmit(Unit)
         _hasActiveTranslations.value = false
     }
@@ -97,6 +101,9 @@ object LyricsTranslationHelper {
     }
 
     fun cancelTranslation() {
+        // cancel() cannot recall already-queued executor Runnables; bump the
+        // generation so their DB writes are dropped at execution time.
+        translationGeneration++
         translationJob?.cancel()
         if (_status.value is TranslationStatus.Translating) {
             _status.value = TranslationStatus.Idle
@@ -162,11 +169,21 @@ object LyricsTranslationHelper {
             val cacheKey = getCacheKey(fullText, mode, targetLanguage)
             translationCache[cacheKey] = translatedLines
             _hasActiveTranslations.value = true
+        } else {
+            // Short/partial stored translations must not leave stale flows or a
+            // stale active flag behind.
+            lyrics.forEach { it.translatedTextFlow.value = null }
+            _hasActiveTranslations.value = false
         }
     }
 
+    /**
+     * @param sourceLyrics raw lyrics string the displayed lines were parsed from;
+     * DB translation writes are skipped unless the row still holds it.
+     */
     fun translateLyrics(
         lyrics: List<LyricsEntry>,
+        sourceLyrics: String,
         targetLanguage: String,
         apiKey: String,
         baseUrl: String,
@@ -182,6 +199,9 @@ object LyricsTranslationHelper {
         database: MusicDatabase? = null,
         systemPrompt: String = "",
     ) {
+        // A new trigger supersedes any queued/in-flight write; the generation
+        // check inside database.query drops stale generations at execution time.
+        translationGeneration++
         translationJob?.cancel()
         _status.value = TranslationStatus.Translating
 
@@ -191,6 +211,9 @@ object LyricsTranslationHelper {
         translationJob =
             scope.launch(Dispatchers.IO) {
                 try {
+                    // Capture the generation first thing; both DB writes below only
+                    // run if it is still current.
+                    val gen = translationGeneration
                     // Validate inputs
                     val effectiveApiKey = if (provider == "DeepL") deeplApiKey else apiKey
                     if (effectiveApiKey.isBlank()) {
@@ -221,6 +244,20 @@ object LyricsTranslationHelper {
                     val cacheKey = getCacheKey(fullText, mode, targetLanguage)
                     val cachedTranslations = translationCache[cacheKey]
                     if (cachedTranslations != null && cachedTranslations.size >= nonEmptyEntries.size) {
+                        // Superseded by a newer trigger/clear: that job owns UI state now.
+                        // Silent return — never touch status/flag here.
+                        if (gen != translationGeneration) return@launch
+                        // The row may have changed while this job was queued. Re-read the
+                        // text and bail instead of showing translations for stale lyrics.
+                        // Row absent (null) proceeds as before (fail-open).
+                        if (songId.isNotBlank() && database != null && sourceLyrics.isNotBlank()) {
+                            val rowText = database.lyrics(songId).first()?.lyrics
+                            if (rowText != null && rowText != sourceLyrics) {
+                                _status.value = TranslationStatus.Idle
+                                _hasActiveTranslations.value = false
+                                return@launch
+                            }
+                        }
                         // Use cached translations
                         nonEmptyEntries.forEachIndexed { idx, (originalIndex, _) ->
                             if (idx < cachedTranslations.size) {
@@ -234,16 +271,12 @@ object LyricsTranslationHelper {
                         // overwrite them with a stale empty entity (e.g. after an untranslate race).
                         if (songId.isNotBlank() && database != null) {
                             try {
-                                val currentLyrics = database.lyrics(songId).first()
-                                if (currentLyrics != null && currentLyrics.translatedLyrics.isNullOrBlank()) {
+                                if (sourceLyrics.isNotBlank()) {
                                     database.query {
-                                        upsert(
-                                            currentLyrics.copy(
-                                                translatedLyrics = cachedTranslations.joinToString("\n"),
-                                                translationLanguage = targetLanguage,
-                                                translationMode = mode,
-                                            ),
-                                        )
+                                        // Recall-proof: runs on the executor at execution time, so
+                                        // stale generations (superseded trigger / clear / cancel)
+                                        // are dropped instead of resurrecting translations.
+                                        if (gen == translationGeneration) attachTranslationIfTextMatches(songId, sourceLyrics, cachedTranslations.joinToString("\n"), targetLanguage, mode)
                                     }
                                 }
                             } catch (e: Exception) {
@@ -358,12 +391,28 @@ object LyricsTranslationHelper {
                             )
                         }
 
+                    // Post-network recheck: the row may have changed while translating.
+                    // Placed here (not inside onSuccess) because onSuccess is non-suspend
+                    // and .first() cannot run in it. Gated on network success; benign race
+                    // resets to Idle without an error toast. Row absent proceeds (fail-open).
+                    if (result.getOrNull() != null && songId.isNotBlank() && database != null && sourceLyrics.isNotBlank()) {
+                        val rowText = database.lyrics(songId).first()?.lyrics
+                        if (rowText != null && rowText != sourceLyrics) {
+                            _status.value = TranslationStatus.Idle
+                            _hasActiveTranslations.value = false
+                            return@launch
+                        }
+                    }
+
                     result
                         .onSuccess { translatedLines ->
                             // Check if composition is still active before updating state
                             if (!isCompositionActive) {
                                 return@onSuccess
                             }
+                            // Superseded by a newer trigger/clear (e.g. language change
+                            // mid-flight): skip paint AND cache, the newer job owns UI state.
+                            if (gen != translationGeneration) return@onSuccess
 
                             // Cache the translations
                             val cacheKey = getCacheKey(fullText, mode, targetLanguage)
@@ -372,16 +421,12 @@ object LyricsTranslationHelper {
                             // Save to database if songId is provided
                             if (songId.isNotBlank() && database != null) {
                                 try {
-                                    val currentLyrics = database.lyrics(songId).first()
-                                    if (currentLyrics != null) {
+                                    if (sourceLyrics.isNotBlank()) {
                                         database.query {
-                                            upsert(
-                                                currentLyrics.copy(
-                                                    translatedLyrics = translatedLines.joinToString("\n"),
-                                                    translationLanguage = targetLanguage,
-                                                    translationMode = mode,
-                                                ),
-                                            )
+                                            // Recall-proof: runs on the executor at execution time, so
+                                            // stale generations (superseded trigger / clear / cancel)
+                                            // are dropped instead of clobbering a newer language.
+                                            if (gen == translationGeneration) attachTranslationIfTextMatches(songId, sourceLyrics, translatedLines.joinToString("\n"), targetLanguage, mode)
                                         }
                                     }
                                 } catch (e: Exception) {
