@@ -248,6 +248,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import timber.log.Timber
 import java.io.ObjectInputStream
@@ -410,6 +411,8 @@ class MusicService :
     private var controllerFuture: com.google.common.util.concurrent.ListenableFuture<MediaController>? = null
 
     private val playerInitialized = MutableStateFlow(false)
+    @Volatile
+    private var persistedQueueRestorePending = false
     val isPlayerReady: kotlinx.coroutines.flow.StateFlow<Boolean> = playerInitialized.asStateFlow()
 
     // Single batch-read of all DataStore preferences needed during onCreate().
@@ -1197,6 +1200,7 @@ class MusicService :
                 }.onSuccess { queue ->
                     runCatching {
                         val restoredQueue = queue.toQueue()
+                        persistedQueueRestorePending = queue.items.isNotEmpty()
                         scope.launch {
                             playerInitialized.first { it }
                             if (isActive) {
@@ -1859,6 +1863,28 @@ class MusicService :
                 applyShuffleOrder(player.currentMediaItemIndex, player.mediaItemCount, shufflePlaylistFirst)
             }
         }
+    }
+
+    /**
+     * Media3 asks for playback resumption when play arrives (headset, notification) while the
+     * player has no current item, then applies the result with setMediaItems. On a cold start
+     * that request beats the async persisted-queue restore, so wait for the restore and hand
+     * back its queue; an empty result would wipe the player and leave nothing to play.
+     */
+    suspend fun awaitPlaybackResumptionItems(): MediaSession.MediaItemsWithStartPosition? {
+        playerInitialized.first { it }
+        if (player.mediaItemCount == 0 && persistedQueueRestorePending) {
+            withTimeoutOrNull(PLAYBACK_RESUMPTION_TIMEOUT_MS) {
+                while (player.mediaItemCount == 0) delay(100)
+            }
+        }
+        persistedQueueRestorePending = false
+        if (player.mediaItemCount == 0) return null
+        return MediaSession.MediaItemsWithStartPosition(
+            player.mediaItems,
+            player.currentMediaItemIndex,
+            player.currentPosition,
+        )
     }
 
     fun adoptQueue(queue: Queue, title: String? = null, initialQueueSize: Int = 0) {
@@ -5055,6 +5081,7 @@ class MusicService :
         const val MAX_CONSECUTIVE_ERR = 5
         const val MAX_RETRY_COUNT = 10
 
+        private const val PLAYBACK_RESUMPTION_TIMEOUT_MS = 10_000L
         private const val INITIAL_BUFFER_RECOVERY_DELAY_MS = 15_000L
         private const val INITIAL_BUFFER_RECOVERY_POSITION_MS = 5_000L
         private const val TAG = "MusicService"
