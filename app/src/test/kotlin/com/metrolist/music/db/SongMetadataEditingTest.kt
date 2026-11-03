@@ -170,7 +170,17 @@ class SongMetadataEditingTest {
                                 artists = listOf(Artist("Primary", primary.id)),
                                 thumbnail = "thumbnail",
                             ),
-                        songs = emptyList(),
+                        songs =
+                            listOf(
+                                SongItem(
+                                    id = "shared-song",
+                                    title = "Shared song",
+                                    artists = emptyList(),
+                                    album = Album(name = "Album", id = album.id),
+                                    duration = 100,
+                                    thumbnail = "thumbnail",
+                                ),
+                            ),
                         otherVersions = emptyList(),
                     ),
             )
