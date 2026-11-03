@@ -862,7 +862,7 @@
     <string name="authentication_data_extraction_failed">YouTube Music のセッションを読み込めませんでした。もう一度お試しください。</string>
     <string name="login_failed_with_error">ログインに失敗 : %1$s</string>
     <string name="enable_zemer">歌詞の提供元に Zemer を使用</string>
-    <string name="error_explicit_login_recommended">露骨なコンテンツの再生は、アカウントにログインした状態で行うことをおすすめします。</string>
+    <string name="error_explicit_login_recommended">露骨な内容のコンテンツの再生は、アカウントにログインした状態で行うことをおすすめします。</string>
     <string name="force_bottom_navbar">下部ナビゲーションバーを強制的に表示</string>
     <string name="player_pause">一時停止</string>
     <string name="top_result">上位の結果</string>
