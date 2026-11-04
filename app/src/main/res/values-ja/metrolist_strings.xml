@@ -723,7 +723,7 @@
     <string name="time_transfer_target_song">対象の曲</string>
     <string name="time_transfer_listen_time_label">再生時間：</string>
     <string name="time_transfer_convert">変換</string>
-    <string name="song_dropdown_more_results">入力を続けると結果が絞り込まれます（さらに %d 件表示）</string>
+    <string name="song_dropdown_more_results">入力を続けると結果が絞り込まれます（他 %d 件）</string>
     <string name="parsed_from_link">リンクから取得</string>
     <string name="lyrics_from_provider">歌詞提供：%s</string>
     <string name="hide_status_bar_fullscreen">全画面時にステータスバーを非表示</string>
