@@ -359,7 +359,7 @@
     <string name="connected_users">Usuaris connectats</string>
     <string name="enter_username">Introduïsca el nom d\'usuari</string>
     <string name="error_username_empty">Cal el nom d\'usuari.</string>
-    <string name="resync">Tornar a sincronitzar</string>
+    <string name="resync">Torna a sincronitzar</string>
     <string name="crash_title">L\'aplicació ha fallat</string>
     <string name="crash_description">S\'ha produït un error inesperat. Per favor, enviï\'ns l\'informe de fallida per a ajudar-nos a solucionar el problema.</string>
     <string name="crash_share_logs">Compartir Registres</string>
@@ -506,7 +506,7 @@
     <string name="discord_connect_description">Inicia sessió a Discord per compartir el que estàs escoltant</string>
     <string name="discord_activity_name">Nom de l\'activitat</string>
     <string name="discord_advanced_mode">Mode avançat</string>
-    <string name="discord_advanced_mode_description">Mostra opcions de personalització avançades per a Rich Presence</string>
+    <string name="discord_advanced_mode_description">Personalitza tots els camps del teu Rich Presence amb marcadors de posició</string>
     <string name="player_background_solid">Sòlid</string>
     <string name="resume_on_bluetooth_connect">Reprèn la connexió Bluetooth</string>
     <string name="lyrics_romanize_as_main">Mostra lletres romanitzades principalment</string>
@@ -642,7 +642,7 @@
     </plurals>
     <string name="restore_confirm_title">Restablir còpia de seguretat?</string>
     <string name="restore_confirm_message">Aquesta acció restablirà les teues dades de la aplicació de la còpia de seguretat.</string>
-    <string name="restore_account_warning">Hauràs de tornar a iniciar sessió destrés del restabliment. Es tancarà la sessió del següent compte:</string>
+    <string name="restore_account_warning">Es restaurarà i es conservarà la següent informació del compte:</string>
     <string name="restore">Restablir</string>
     <string name="checking_previous_account">Cercant comptes anteriors…</string>
     <string name="no_account_found">No s\'ha trobat cap compte</string>
@@ -667,11 +667,11 @@
     <string name="monthly_most_playlist_name">Els més escoltats del mes</string>
     <string name="and">i</string>
     <string name="lyrics_from_provider">Lletra de %s</string>
-    <string name="hide_status_bar_fullscreen">Amaga la barra d’estat amb pantalla completa</string>
+    <string name="hide_status_bar_fullscreen">Amaga la barra d’estat en pantalla completa</string>
     <string name="hide_status_bar_fullscreen_desc">Amaga la barra d’estat quan el mode de pantalla completa de les lletres està actiu</string>
-    <string name="show_interval_indicator">Mostra l’indicator d’interval</string>
+    <string name="show_interval_indicator">Mostrar l’indicator d’interval</string>
     <string name="show_interval_indicator_desc">Mostra una barra de progrés durant els intervals instrumentals llargs</string>
-    <string name="respect_agent_positioning">Respetae el posicionament de l’agent</string>
+    <string name="respect_agent_positioning">Respectar el posicionament de l’agent</string>
     <string name="respect_agent_positioning_desc">Alinear les lletres segons el rol de l’agent (p. ex. veus de fons)</string>
     <string name="lyrics_animation_none">Cap</string>
     <string name="lyrics_animation_fade">Esvaïment</string>
@@ -739,4 +739,6 @@
     <string name="alarm_duplicate_time_warning">Ja hi ha una alarma en aquesta hora. Si totes dues s\'activen alhora, només una es reproduirà</string>
     <string name="alarm_random_song">Reprodueix una cançó aleatòria de la llista de reproducció</string>
     <string name="alarm_not_scheduled">No programat</string>
+    <string name="enable_landscape_scaling">Escalat en horitzontal</string>
+    <string name="enable_landscape_scaling_desc">Escala la interfície en horitzontal per a pantalles més grans</string>
 </resources>
