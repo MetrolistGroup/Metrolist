@@ -23,7 +23,7 @@ internal fun DataSpec.withResolvedStream(stream: CachedStreamUrl): DataSpec {
         withUri(stream.url.toUri())
             .withRequestHeaders(httpRequestHeaders + stream.requestHeaders)
     if ((!stream.requireBoundedRange && !stream.useRangeChunks) || stream.rangeChunkSizeBytes <= 0L) {
-        return resolved.withOpenRangeFromStart()
+        return resolved
     }
     val boundedLength =
         if (length == C.LENGTH_UNSET.toLong()) {
@@ -33,21 +33,6 @@ internal fun DataSpec.withResolvedStream(stream: CachedStreamUrl): DataSpec {
         }
     return resolved.subrange(0, boundedLength)
 }
-
-// googlevideo paces requests that carry no Range header to roughly the stream bitrate, while any
-// ranged request is served at full speed. media3 omits the header for reads that start at 0 with
-// an unknown length, which is how every uncached song starts.
-private fun DataSpec.withOpenRangeFromStart(): DataSpec =
-    if (position == 0L &&
-        length == C.LENGTH_UNSET.toLong() &&
-        uri.isHierarchical &&
-        uri.getQueryParameter("range") == null &&
-        httpRequestHeaders.keys.none { it.equals("Range", ignoreCase = true) }
-    ) {
-        withAdditionalHeaders(mapOf("Range" to "bytes=0-"))
-    } else {
-        this
-    }
 
 internal class StreamUrlCache(
     private val maxEntries: Int = 500,

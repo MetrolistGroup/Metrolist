@@ -3520,7 +3520,8 @@ class MusicService :
                                                 .header("Proxy-Authorization", auth)
                                                 .build()
                                         } ?: response.request
-                                    }.build(),
+                                    }.addInterceptor(OpenRangeInterceptor)
+                                    .build(),
                             ),
                         ),
                     ),
