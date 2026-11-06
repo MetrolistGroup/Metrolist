@@ -849,6 +849,9 @@ class ListenTogetherClient
                 }
         }
 
+        /**
+         * Dispatches a time synchronization ping with local monotonic timestamp.
+         */
         private fun sendTimeSyncPing() {
             sendMessage(
                 MessageTypes.PING,
@@ -1031,6 +1034,9 @@ class ListenTogetherClient
             }
         }
 
+        /**
+         * Cleans up connection jobs and clock state on disconnect, attempting reconnection if in a room.
+         */
         private fun handleDisconnect() {
             pingJob?.cancel()
             pingJob = null
@@ -1054,6 +1060,9 @@ class ListenTogetherClient
             evaluateBackgroundDisconnectPolicy("socket_disconnected")
         }
 
+        /**
+         * Handles transport-level connection failures with exponential backoff reconnection.
+         */
         private fun handleConnectionFailure(t: Throwable) {
             pingJob?.cancel()
             pingJob = null

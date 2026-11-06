@@ -800,6 +800,9 @@ class ListenTogetherManager
             muteForcedByPreference = false
         }
 
+        /**
+         * Syncs host volume to guest player when volume synchronization is enabled.
+         */
         private fun applyHostVolumeIfNeeded(volume: Float?) {
             if (!syncHostVolumeEnabled.value || isHost || !isInRoom) return
             val connection = playerConnection ?: return
