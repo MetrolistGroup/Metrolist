@@ -12,6 +12,7 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.WatchEndpoint
+import com.metrolist.music.constants.ListenTogetherAudioOffsetKey
 import com.metrolist.music.constants.ListenTogetherSyncVolumeKey
 import com.metrolist.music.extensions.currentMetadata
 import com.metrolist.music.extensions.metadata
@@ -81,10 +82,17 @@ class ListenTogetherManager
         companion object {
             private const val TAG = "ListenTogetherManager"
 
-            private const val SOFT_SYNC_THRESHOLD_MS = 50L
-            private const val HARD_SYNC_THRESHOLD_MS = 750L
-            private const val DRIFT_CORRECTION_SPEED = 0.02f
-            private const val DRIFT_CHECK_INTERVAL_MS = 250L
+            // Tight acoustic lock threshold: within +/- 4ms, audio phase reinforces constructively
+            private const val SOFT_SYNC_THRESHOLD_MS = 4L
+
+            // Boundary for soft seeks: drifts beyond 250ms jump directly to target
+            private const val HARD_SYNC_THRESHOLD_MS = 250L
+
+            // Maximum proportional speed adjustment (+/- 0.5%): completely imperceptible in pitch to human ears
+            private const val MAX_PROPORTIONAL_SPEED_TRIM = 0.005f
+
+            // Interval (100ms) for high-resolution phase evaluation and speed updates
+            private const val DRIFT_CHECK_INTERVAL_MS = 100L
         }
 
         private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -100,6 +108,10 @@ class ListenTogetherManager
         private var playerListenerRegistered = false
 
         private val syncHostVolumeEnabled = MutableStateFlow(true)
+        val audioOffsetMs = MutableStateFlow(0)
+        @Volatile private var driftTargetPosition: Long = 0L
+        @Volatile private var driftEffectiveServerTime: Long? = null
+        @Volatile private var driftTrackId: String? = null
         private var lastSyncedVolume: Float? = null
         private var previousMuteState: Boolean? = null
         private var muteForcedByPreference = false
@@ -377,6 +389,14 @@ class ListenTogetherManager
                         syncHostVolumeEnabled.value = enabled
                     }
             }
+            scope.launch {
+                context.dataStore.data
+                    .map { it[ListenTogetherAudioOffsetKey] ?: 0 }
+                    .distinctUntilChanged()
+                    .collect { offset ->
+                        audioOffsetMs.value = offset
+                    }
+            }
         }
 
         /**
@@ -529,6 +549,7 @@ class ListenTogetherManager
                     Timber.tag(TAG).d("BufferComplete for track: ${event.trackId}")
                     if (!isHost && bufferingTrackId == event.trackId) {
                         bufferCompleteReceivedForTrack = event.trackId
+                        client.triggerSyncBurst()
                         applyPendingSyncIfReady()
                     }
                 }
@@ -868,20 +889,41 @@ class ListenTogetherManager
             }
         }
 
+        /**
+         * Starts or updates continuous phase-locked loop (PLL) drift correction for a guest player.
+         *
+         * Rather than abruptly toggling speed or issuing jarring seeks that interrupt audio,
+         * this controller:
+         * 1. Evaluates drift e(t) = target_pos(t) - actual_pos(t) every 100ms.
+         * 2. If |e(t)| <= 4ms: operates at nominal 1.0x speed (in acoustic lock).
+         * 3. If 4ms < |e(t)| <= 250ms: smoothly trims playback speed proportionally (0.995x - 1.005x).
+         *    ExoPlayer's Sonic audio processor gently speeds up or slows down playback in memory
+         *    without pitch artifacts or buffer re-initialization.
+         * 4. Updates targets dynamically during host heartbeats without restarting the coroutine.
+         */
         private fun startDriftCorrection(
             connection: PlayerConnection,
             trackId: String?,
             position: Long,
             effectiveAtServerTime: Long?,
         ) {
-            cancelDriftCorrection()
+            driftTargetPosition = position
+            driftEffectiveServerTime = effectiveAtServerTime
+            driftTrackId = trackId
+
             val player = connection.player
             if (!player.playWhenReady || effectiveAtServerTime == null || client.serverTimeNow() == null) return
 
+            // If already actively correcting this player, updating target above is sufficient (avoids audio stutter)
+            if (driftCorrectionJob?.isActive == true && driftCorrectedPlayer === player) {
+                return
+            }
+
+            cancelDriftCorrection()
             val baseParameters = player.playbackParameters
             driftBasePlaybackParameters = baseParameters
             driftCorrectedPlayer = player
-            val generation = driftCorrectionGeneration
+            val generation = ++driftCorrectionGeneration
             driftCorrectionJob =
                 scope.launch {
                     while (
@@ -889,23 +931,37 @@ class ListenTogetherManager
                         playerConnection === connection &&
                         !isHost &&
                         player.playWhenReady &&
-                        (trackId == null || player.currentMediaItem?.mediaId == trackId)
+                        (driftTrackId == null || player.currentMediaItem?.mediaId == driftTrackId)
                     ) {
-                        val target = client.positionAtServerTime(position, effectiveAtServerTime, isPlaying = true)
+                        val serverTime = driftEffectiveServerTime
+                        if (serverTime == null || client.serverTimeNow() == null) {
+                            delay(DRIFT_CHECK_INTERVAL_MS)
+                            continue
+                        }
+                        val target = client.positionAtServerTime(driftTargetPosition, serverTime, isPlaying = true) + audioOffsetMs.value
                         val drift = target - player.currentPosition
                         val absoluteDrift = kotlin.math.abs(drift)
-                        if (absoluteDrift <= SOFT_SYNC_THRESHOLD_MS) break
+
                         if (absoluteDrift >= HARD_SYNC_THRESHOLD_MS) {
                             connection.seekTo(target)
-                            break
+                            delay(150)
+                            continue
                         }
 
-                        val appliedParameters = driftAppliedPlaybackParameters
-                        if (appliedParameters != null && player.playbackParameters != appliedParameters) break
-                        val multiplier = if (drift > 0L) 1f + DRIFT_CORRECTION_SPEED else 1f - DRIFT_CORRECTION_SPEED
-                        val correctedParameters = baseParameters.withSpeed(baseParameters.speed * multiplier)
-                        player.setPlaybackParameters(correctedParameters)
-                        driftAppliedPlaybackParameters = correctedParameters
+                        // Proportional speed trim: within deadband (+/- 4ms), run at nominal 1.0x speed
+                        val targetSpeedMultiplier = if (absoluteDrift <= SOFT_SYNC_THRESHOLD_MS) {
+                            1.0f
+                        } else {
+                            val trim = (drift.toFloat() / 20000f).coerceIn(-MAX_PROPORTIONAL_SPEED_TRIM, MAX_PROPORTIONAL_SPEED_TRIM)
+                            1.0f + trim
+                        }
+
+                        val currentParameters = player.playbackParameters
+                        val desiredParameters = baseParameters.withSpeed(baseParameters.speed * targetSpeedMultiplier)
+                        if (kotlin.math.abs(currentParameters.speed - desiredParameters.speed) > 0.0005f) {
+                            player.setPlaybackParameters(desiredParameters)
+                            driftAppliedPlaybackParameters = desiredParameters
+                        }
                         delay(DRIFT_CHECK_INTERVAL_MS)
                     }
 
@@ -934,7 +990,7 @@ class ListenTogetherManager
                     pending.position,
                     pending.lastUpdate.takeIf { it > 0L },
                     pending.isPlaying,
-                )
+                ) + audioOffsetMs.value
             val posDiff = kotlin.math.abs(player.currentPosition - targetPos)
             val willPlay = pending.isPlaying
 
@@ -1041,7 +1097,7 @@ class ListenTogetherManager
                     PlaybackActions.PLAY -> {
                         val basePos = actionPosition ?: 0L
                         val now = SystemClock.elapsedRealtime()
-                        val adjustedPos = client.positionAtServerTime(basePos, actionServerTime, isPlaying = true)
+                        val adjustedPos = client.positionAtServerTime(basePos, actionServerTime, isPlaying = true) + audioOffsetMs.value
 
                         Timber.tag(TAG).d("Guest: PLAY at position $adjustedPos, currently playing=${player.playWhenReady}")
 
@@ -1096,12 +1152,14 @@ class ListenTogetherManager
                                 Timber.tag(TAG).d("Guest: hard sync ${player.currentPosition} -> $adjustedPos (diff ${posDiff}ms)")
                                 connection.seekTo(adjustedPos)
                             }
+                            startDriftCorrection(connection, playTarget, basePos, actionServerTime)
                         } else {
                             cancelDriftCorrection()
                             if (posDiff > SOFT_SYNC_THRESHOLD_MS) {
                                 connection.seekTo(adjustedPos)
                             }
                             connection.play()
+                            startDriftCorrection(connection, playTarget, basePos, actionServerTime)
                         }
                         lastSyncActionTime = now
                     }
@@ -1169,7 +1227,7 @@ class ListenTogetherManager
                         val pos = actionPosition ?: 0L
                         val now = SystemClock.elapsedRealtime()
                         val playing = roomState.value?.isPlaying == true
-                        val adjustedPos = client.positionAtServerTime(pos, actionServerTime, playing)
+                        val adjustedPos = client.positionAtServerTime(pos, actionServerTime, playing) + audioOffsetMs.value
 
                         val seekTarget = actionTrackId
                         if (bufferingTrackId != null && (seekTarget == null || seekTarget == bufferingTrackId)) {
@@ -1575,7 +1633,7 @@ class ListenTogetherManager
                             attempts++
                         }
                         if (player.playbackState == Player.STATE_READY) {
-                            val readyPosition = client.positionAtServerTime(position, effectiveAtServerTime, isPlaying)
+                            val readyPosition = client.positionAtServerTime(position, effectiveAtServerTime, isPlaying) + audioOffsetMs.value
                             Timber.tag(TAG).d("Player ready after ${attempts * 50}ms, seeking to $readyPosition")
                             player.seekTo(readyPosition)
                             if (isPlaying) {
