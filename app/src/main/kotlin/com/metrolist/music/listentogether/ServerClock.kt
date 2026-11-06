@@ -74,11 +74,13 @@ internal class ServerClock(
             if (networkRoundTrip > currentMinRtt + GOOD_SAMPLE_MARGIN_MS) {
                 elevatedSamples.addLast(currentSample)
                 if (elevatedSamples.size >= SUSTAINED_RTT_COUNT) {
-                    // Sustained RTT shift: reset window and seed with the minimum-RTT sample among elevated samples
-                    val bestElevated = elevatedSamples.minWithOrNull(compareBy({ it.rtt }, { -it.timestamp })) ?: currentSample
+                    // Sustained RTT shift: reset window and seed with all eligible elevated samples
                     samples.clear()
+                    while (elevatedSamples.size > MAX_WINDOW_SIZE) {
+                        elevatedSamples.removeFirst()
+                    }
+                    samples.addAll(elevatedSamples)
                     elevatedSamples.clear()
-                    samples.addLast(bestElevated)
                 } else {
                     // Isolated spike: discard
                     return false

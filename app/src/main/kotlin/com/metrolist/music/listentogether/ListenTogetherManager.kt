@@ -947,6 +947,11 @@ class ListenTogetherManager
                             break
                         }
 
+                        // Exit drift correction when playback terminates (e.g. queue ended)
+                        if (player.playbackState == Player.STATE_ENDED || player.playbackState == Player.STATE_IDLE) {
+                            break
+                        }
+
                         // Suspend drift correction while buffering to avoid interrupting recovery
                         if (player.playbackState != Player.STATE_READY) {
                             delay(DRIFT_CHECK_INTERVAL_MS)
