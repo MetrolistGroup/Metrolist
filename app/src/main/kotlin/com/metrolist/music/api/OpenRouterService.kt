@@ -226,9 +226,12 @@ Output MUST be a JSON object {"lines": [...]} with EXACTLY $lineCount strings.""
         put(
             "response_format",
             buildJsonObject {
-                put("type", "json_schema")
-                put(
-                    "json_schema",
+                if (baseUrl.contains("api.deepseek.com", ignoreCase = true)) {
+                    put("type", "json_object")
+                } else {
+                    put("type", "json_schema")
+                    put(
+                        "json_schema",
                     buildJsonObject {
                         put("name", "translated_lyrics")
                         put("strict", true)
@@ -267,7 +270,8 @@ Output MUST be a JSON object {"lines": [...]} with EXACTLY $lineCount strings.""
                             },
                         )
                     },
-                )
+                    )
+                }
             },
         )
         // OpenRouter-only routing preference; fail instead of silently degrading to
