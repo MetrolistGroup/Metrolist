@@ -232,44 +232,44 @@ Output MUST be a JSON object {"lines": [...]} with EXACTLY $lineCount strings.""
                     put("type", "json_schema")
                     put(
                         "json_schema",
-                    buildJsonObject {
-                        put("name", "translated_lyrics")
-                        put("strict", true)
-                        put(
-                            "schema",
-                            buildJsonObject {
-                                put("type", "object")
-                                put(
-                                    "properties",
-                                    buildJsonObject {
-                                        put(
-                                            "lines",
-                                            buildJsonObject {
-                                                put("type", "array")
-                                                put(
-                                                    "description",
-                                                    "Translated lines, one per input line, empty lines preserved as empty strings",
-                                                )
-                                                put(
-                                                    "items",
-                                                    buildJsonObject {
-                                                        put("type", "string")
-                                                    },
-                                                )
-                                            },
-                                        )
-                                    },
-                                )
-                                put(
-                                    "required",
-                                    buildJsonArray {
-                                        add("lines")
-                                    },
-                                )
-                                put("additionalProperties", false)
-                            },
-                        )
-                    },
+                        buildJsonObject {
+                            put("name", "translated_lyrics")
+                            put("strict", true)
+                            put(
+                                "schema",
+                                buildJsonObject {
+                                    put("type", "object")
+                                    put(
+                                        "properties",
+                                        buildJsonObject {
+                                            put(
+                                                "lines",
+                                                buildJsonObject {
+                                                    put("type", "array")
+                                                    put(
+                                                        "description",
+                                                        "Translated lines, one per input line, empty lines preserved as empty strings",
+                                                    )
+                                                    put(
+                                                        "items",
+                                                        buildJsonObject {
+                                                            put("type", "string")
+                                                        },
+                                                    )
+                                                },
+                                            )
+                                        },
+                                    )
+                                    put(
+                                        "required",
+                                        buildJsonArray {
+                                            add("lines")
+                                        },
+                                    )
+                                    put("additionalProperties", false)
+                                },
+                            )
+                        },
                     )
                 }
             },
