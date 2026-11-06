@@ -800,9 +800,6 @@ class ListenTogetherManager
             muteForcedByPreference = false
         }
 
-        /**
-         * Syncs host volume to guest player when volume synchronization is enabled.
-         */
         private fun applyHostVolumeIfNeeded(volume: Float?) {
             if (!syncHostVolumeEnabled.value || isHost || !isInRoom) return
             val connection = playerConnection ?: return
@@ -929,7 +926,7 @@ class ListenTogetherManager
             }
 
             cancelDriftCorrection()
-            var baseParameters = player.playbackParameters
+            val baseParameters = player.playbackParameters
             driftBasePlaybackParameters = baseParameters
             driftCorrectedPlayer = player
             val generation = ++driftCorrectionGeneration
@@ -958,14 +955,6 @@ class ListenTogetherManager
                             continue
                         }
 
-                        // Update base parameters if user changed speed externally (e.g., via SpeedDialog)
-                        val currentParameters = player.playbackParameters
-                        val expectedParameters = driftAppliedPlaybackParameters ?: baseParameters
-                        if (currentParameters != expectedParameters) {
-                            baseParameters = currentParameters
-                            driftBasePlaybackParameters = currentParameters
-                        }
-
                         val target = client.positionAtServerTime(driftTargetPosition, serverTime, isPlaying = true) + audioOffsetMs.value
                         val drift = target - player.currentPosition
                         val absoluteDrift = kotlin.math.abs(drift)
@@ -976,16 +965,17 @@ class ListenTogetherManager
                             continue
                         }
 
+                        // Project playback rate to nominal 1.0x while synchronized, keeping base pitch
+                        val nominalParameters = baseParameters.withSpeed(1.0f)
                         if (absoluteDrift <= SOFT_SYNC_THRESHOLD_MS) {
-                            // Restore nominal base speed inside deadband
-                            if (player.playbackParameters != baseParameters) {
-                                player.setPlaybackParameters(baseParameters)
-                                driftAppliedPlaybackParameters = baseParameters
+                            if (player.playbackParameters != nominalParameters) {
+                                player.setPlaybackParameters(nominalParameters)
+                                driftAppliedPlaybackParameters = nominalParameters
                             }
                         } else {
                             val trim = (drift.toFloat() / 15000f).coerceIn(-MAX_PROPORTIONAL_SPEED_TRIM, MAX_PROPORTIONAL_SPEED_TRIM)
-                            val desiredParameters = baseParameters.withSpeed(baseParameters.speed * (1.0f + trim))
-                            if (kotlin.math.abs(currentParameters.speed - desiredParameters.speed) >= SPEED_UPDATE_THRESHOLD) {
+                            val desiredParameters = baseParameters.withSpeed(1.0f + trim)
+                            if (kotlin.math.abs(player.playbackParameters.speed - desiredParameters.speed) >= SPEED_UPDATE_THRESHOLD) {
                                 player.setPlaybackParameters(desiredParameters)
                                 driftAppliedPlaybackParameters = desiredParameters
                             }
@@ -1285,7 +1275,7 @@ class ListenTogetherManager
                             if (seekTarget != null) {
                                 reconcileGuestToHostTrack(
                                     seekTarget,
-                                    wantPlaying = player.playWhenReady,
+                                    wantPlaying = playing,
                                     positionMs = pos,
                                     effectiveAtServerTime = actionServerTime,
                                 )

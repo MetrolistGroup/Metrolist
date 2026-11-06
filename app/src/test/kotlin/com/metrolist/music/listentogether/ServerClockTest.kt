@@ -166,4 +166,35 @@ class ServerClockTest {
         // Offset has adapted to new baseline 9500ms (seeded with lowest-RTT elevated sample: 76ms)
         assertEquals(elapsedRealtime + 9500L, clock.now())
     }
+
+    @Test
+    fun `does not reseed window during short high-jitter burst`() {
+        var elapsedRealtime = 1_000L
+        val clock = ServerClock { elapsedRealtime }
+
+        // Initial 20ms baseline (offset = 9000ms)
+        elapsedRealtime = 1_020L
+        assertTrue(
+            clock.recordPong(
+                clientTime = 1_000L,
+                serverReceiveTime = 10_010L,
+                serverSendTime = 10_010L,
+            ),
+        )
+
+        // Rapid 100ms burst of 3 elevated samples within 200ms (does not satisfy sustained duration requirement)
+        for (i in 1..3) {
+            val send = 2_000L + (i - 1) * 100L
+            elapsedRealtime = send + 80L
+            assertFalse(
+                clock.recordPong(
+                    clientTime = send,
+                    serverReceiveTime = 11_540L + (i - 1) * 100L,
+                    serverSendTime = 11_540L + (i - 1) * 100L,
+                ),
+            )
+            // Clock offset remains protected at initial baseline 9000ms
+            assertEquals(elapsedRealtime + 9000L, clock.now())
+        }
+    }
 }
