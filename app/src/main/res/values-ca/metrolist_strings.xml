@@ -156,10 +156,10 @@
     <string name="line_by_line_option_title">EXPERIMENTAL: Detectar llengua línia per línia</string>
     <string name="romanize_current_track">Romanitzar la pista actual</string>
     <string name="settings_section_ui">Interfície</string>
-    <string name="settings_section_privacy">Privacitat i Seguretat</string>
-    <string name="settings_section_player_content">Reproductor i Contingut</string>
-    <string name="settings_section_storage">Emmagatzematge i Dades</string>
-    <string name="settings_section_system">Sistema i Sobre</string>
+    <string name="settings_section_privacy">Privacitat i seguretat</string>
+    <string name="settings_section_player_content">Reproductor i contingut</string>
+    <string name="settings_section_storage">Emmagatzematge i dades</string>
+    <string name="settings_section_system">Sistema i quant a</string>
     <string name="updater">Actualitzador</string>
     <string name="check_for_updates">Buscar actualitzacions automàticament</string>
     <string name="update_notifications">Habilitar notificacions d\'actualització</string>
@@ -205,11 +205,11 @@
     <string name="lyrics_line_spacing">Espai entre línies de la lletra</string>
     <string name="album_art_for">Portada d\'àlbum de %s</string>
     <string name="wrapped_total_albums_title">Has escoltat</string>
-    <string name="wrapped_total_albums_subtitle">àlbums únics</string>
+    <string name="wrapped_total_albums_subtitle">àlbums únics!</string>
     <string name="wrapped_top_album_title">El teu àlbum preferit és</string>
-    <string name="wrapped_playlist_ready">La teua llista de reproducció personal està llesta</string>
+    <string name="wrapped_playlist_ready">La teva llista de reproducció personal està llesta!</string>
     <string name="wrapped_top_5_albums_title">Els teus 5 àlbums preferits</string>
-    <string name="wrapped_album_listening_time">Has escoltat aquest àlbum durant %d minuts</string>
+    <string name="wrapped_album_listening_time">Has escoltat aquest àlbum durant %d minuts!</string>
     <string name="wrapped_album_listening_time_minutes">%d minuts</string>
     <string name="wrapped_no_data">No hi ha dades</string>
     <string name="wrapped_top_5_artists_title">El teu artista preferit d\'enguany</string>
@@ -218,13 +218,13 @@
     <string name="wrapped_top_song_album_art_content_description">Portada de l\'àlbum</string>
     <string name="wrapped_top_artist_title">El teu artista preferit d\'enguany és</string>
     <string name="wrapped_top_artist_image_content_description">Imatge de l\'artista preferit</string>
-    <string name="wrapped_top_artist_listening_time">Has escoltat %d minuts seus</string>
+    <string name="wrapped_top_artist_listening_time">L\'has escoltat per %d minuts!</string>
     <string name="wrapped_top_song_title">La cançó que més has reproduït és</string>
-    <string name="wrapped_top_song_listening_time">L\'has escoltada durant %d minuts</string>
+    <string name="wrapped_top_song_listening_time">Has escoltat %d minuts!</string>
     <string name="wrapped_total_artists_title">Has escoltat a</string>
     <string name="wrapped_total_artists_subtitle">artistes únics</string>
     <string name="wrapped_total_songs_title">Has escoltat</string>
-    <string name="wrapped_total_songs_subtitle">cançons diferents</string>
+    <string name="wrapped_total_songs_subtitle">cançons diferents!</string>
     <string name="wrapped_intro_title">METROLIST</string>
     <string name="wrapped_intro_subtitle">És hora de veure què has estat escoltant enguany…</string>
     <string name="wrapped_intro_button">anem!</string>
@@ -232,7 +232,7 @@
     <string name="wrapped_year">2025</string>
     <string name="wrapped_ready_title">EL TEU RECOPILATORI ESTÀ PREPARAT!</string>
     <string name="wrapped_ready_subtitle">És hora de veure què t\'ha encantat enguany…</string>
-    <string name="wrapped_thank_you">Gràcies per escoltar</string>
+    <string name="wrapped_thank_you">Gràcies per escoltar!</string>
     <string name="wrapped_special_thanks">Un especial agraïment a MO Agamy per crear Metrolist</string>
     <string name="wrapped_close">Tancar Recopilatori</string>
     <string name="wrapped_playlist_title">El teu Recopilatori %s</string>
@@ -466,7 +466,7 @@
     <string name="ai_deepl_formality_more">Més Formal</string>
     <string name="ai_deepl_formality_less">Menys Formal</string>
     <string name="enable_high_refresh_rate">Habilita una alta freqüència d\'actualització</string>
-    <string name="enable_high_refresh_rate_desc">Força la pantalla a treballar a la màxima freqüència d\'actualització (p.e. 120Hz)</string>
+    <string name="enable_high_refresh_rate_desc">Força la pantalla a treballar a la seva màxima freqüència d\'actualització (p.e. 120Hz)</string>
     <string name="recognize_music">Identificar Música</string>
     <string name="tap_to_recognize">Toca per identificar</string>
     <string name="listening">Escoltant…</string>
@@ -741,4 +741,11 @@
     <string name="alarm_not_scheduled">No programat</string>
     <string name="enable_landscape_scaling">Escalat en horitzontal</string>
     <string name="enable_landscape_scaling_desc">Escala la interfície en horitzontal per a pantalles més grans</string>
+    <string name="force_bottom_navbar">Forçar barra de navegació inferior</string>
+    <string name="enable_dynamic_icon_desc">Usa colors personalitzats per la icona de l\'aplicació. Quan està desactivat, la icona utilitza colors sòlids.</string>
+    <string name="android_auto_visible_sections">Seccions visibles</string>
+    <string name="android_auto_youtube_playlists_desc">Mostrar llistes de reproducció recomendades de YouTube Music en la secció de llistes de reproducció en Android Auto</string>
+    <string name="android_auto_reorder_hint">Toca una secció per activar-la o desactivar-la.\nMantén premuda l\'ansa per reordenar. La primera secció es mostrarà per defecte</string>
+    <string name="android_auto_target_playlist">Afegir destinació ràpidament</string>
+    <string name="enable_discord_rpc">Habilitar Rich Presence</string>
 </resources>
