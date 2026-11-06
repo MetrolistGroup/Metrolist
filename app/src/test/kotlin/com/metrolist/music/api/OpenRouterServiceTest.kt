@@ -47,6 +47,24 @@ class OpenRouterServiceTest {
     }
 
     @Test
+    fun `deepseek uses json object response format instead of json schema`() {
+        val request =
+            buildTranslationRequest(
+                text = "one\\ntwo",
+                targetLanguage = "Spanish",
+                model = "deepseek-flash",
+                mode = "Translated",
+                customSystemPrompt = "",
+                baseUrl = "https://api.deepseek.com/chat/completions",
+            )
+
+        val responseFormat = request.getValue("response_format").jsonObject
+        assertEquals("json_object", responseFormat.getValue("type").jsonPrimitive.content)
+        assertTrue("json_schema" !in responseFormat)
+        assertTrue("provider" !in request)
+    }
+
+    @Test
     fun `openrouter-only provider routing is omitted for direct providers`() {
         val request =
             buildTranslationRequest(
