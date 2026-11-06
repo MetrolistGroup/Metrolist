@@ -46,6 +46,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -56,6 +57,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -79,6 +81,7 @@ import com.metrolist.music.R
 import com.metrolist.music.constants.ListenTogetherAutoApprovalKey
 import com.metrolist.music.constants.ListenTogetherAutoApproveSuggestionsKey
 import com.metrolist.music.constants.ListenTogetherServerUrlKey
+import com.metrolist.music.constants.ListenTogetherAudioOffsetKey
 import com.metrolist.music.constants.ListenTogetherSyncVolumeKey
 import com.metrolist.music.constants.ListenTogetherUsernameKey
 import com.metrolist.music.LocalListenTogetherManager
@@ -118,8 +121,10 @@ fun ListenTogetherSettings(navController: NavController) {
     var autoApprovalJoins by rememberPreference(ListenTogetherAutoApprovalKey, false)
     var autoApproveSuggestions by rememberPreference(ListenTogetherAutoApproveSuggestionsKey, false)
     var syncHostVolume by rememberPreference(ListenTogetherSyncVolumeKey, true)
+    var audioOffset by rememberPreference(ListenTogetherAudioOffsetKey, 0)
 
     var showServerUrlDialog by rememberSaveable { mutableStateOf(false) }
+    var showAudioOffsetDialog by rememberSaveable { mutableStateOf(false) }
     var showUsernameDialog by rememberSaveable { mutableStateOf(false) }
     var showCreateRoomDialog by rememberSaveable { mutableStateOf(false) }
     var showJoinRoomDialog by rememberSaveable { mutableStateOf(false) }
@@ -332,6 +337,63 @@ fun ListenTogetherSettings(navController: NavController) {
         }
     }
 
+    if (showAudioOffsetDialog) {
+        var tempOffset by remember(showAudioOffsetDialog) { mutableFloatStateOf(audioOffset.toFloat()) }
+
+        DefaultDialog(
+            onDismiss = { showAudioOffsetDialog = false },
+            icon = { Icon(painterResource(R.drawable.speed), contentDescription = null) },
+            title = { Text(stringResource(R.string.listen_together_audio_offset)) },
+            buttons = {
+                TextButton(
+                    onClick = {
+                        tempOffset = 0f
+                        audioOffset = 0
+                        showAudioOffsetDialog = false
+                    },
+                ) {
+                    Text(stringResource(R.string.reset))
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                TextButton(onClick = { showAudioOffsetDialog = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+                TextButton(
+                    onClick = {
+                        audioOffset = tempOffset.toInt()
+                        showAudioOffsetDialog = false
+                    },
+                ) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = stringResource(R.string.listen_together_audio_offset_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "${if (tempOffset.toInt() > 0) "+" else ""}${tempOffset.toInt()} ms",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Slider(
+                    value = tempOffset,
+                    onValueChange = { tempOffset = it },
+                    valueRange = -150f..150f,
+                    steps = 299,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+
     if (showLogsDialog) {
         LogsDialog(
             logs = logs,
@@ -497,6 +559,21 @@ fun ListenTogetherSettings(navController: NavController) {
                                 )
                             },
                             onClick = { syncHostVolume = !syncHostVolume },
+                        ),
+                        IntegrationCardItem(
+                            icon = painterResource(R.drawable.speed),
+                            title = { Text(stringResource(R.string.listen_together_audio_offset)) },
+                            description = {
+                                Text(stringResource(R.string.listen_together_audio_offset_desc))
+                            },
+                            trailingContent = {
+                                Text(
+                                    text = if (audioOffset == 0) "0 ms" else "${if (audioOffset > 0) "+" else ""}${audioOffset} ms",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            },
+                            onClick = { showAudioOffsetDialog = true },
                         ),
                         IntegrationCardItem(
                             icon = painterResource(R.drawable.bug_report),
