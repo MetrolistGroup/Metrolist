@@ -50,7 +50,7 @@ class OpenRouterServiceTest {
     fun `deepseek uses json object response format instead of json schema`() {
         val request =
             buildTranslationRequest(
-                text = "one\\ntwo",
+                text = "one\ntwo",
                 targetLanguage = "Spanish",
                 model = "deepseek-flash",
                 mode = "Translated",
