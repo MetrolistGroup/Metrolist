@@ -56,4 +56,33 @@ class ServerClockTest {
         assertNull(clock.now())
         assertEquals(500L, clock.positionAt(500L, 10_000L, isPlaying = true))
     }
+
+    @Test
+    fun `rejects jitter spikes using sliding window min-rtt`() {
+        var elapsedRealtime = 1_000L
+        val clock = ServerClock { elapsedRealtime }
+
+        // Good baseline sample (RTT = 20ms)
+        elapsedRealtime = 1_020L
+        assertTrue(
+            clock.recordPong(
+                clientTime = 1_000L,
+                serverReceiveTime = 10_000L,
+                serverSendTime = 10_000L,
+            ),
+        )
+        val baseNow = clock.now()!!
+
+        // High jitter spike sample (RTT = 150ms)
+        elapsedRealtime = 1_200L
+        assertFalse(
+            clock.recordPong(
+                clientTime = 1_050L,
+                serverReceiveTime = 10_060L,
+                serverSendTime = 10_060L,
+            ),
+        )
+        // Since RTT (150ms) > minRTT (20ms) + 50ms, clock offset is protected from jitter distortion
+        assertEquals(baseNow + 180L, clock.now())
+    }
 }
