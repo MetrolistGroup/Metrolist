@@ -879,6 +879,9 @@ class ListenTogetherClient
             }
         }
 
+        /**
+         * Acquires or refreshes the partial wake lock to keep WebSocket and audio pipeline active.
+         */
         @Suppress("DEPRECATION")
         private fun acquireWakeLock() {
             if (wakeLock == null) {
@@ -889,19 +892,21 @@ class ListenTogetherClient
                         "Metrolist:ListenTogether",
                     )
             }
-            // Always release before acquiring so that the timeout is reset on each call.
-            // This is safe because the ping job calls acquireWakeLock() every PING_INTERVAL_MS
-            // (25 s), ensuring the lock is refreshed well before the 10-minute window elapses.
-            // Without the release-and-reacquire pattern the first acquire() sets the countdown
-            // and subsequent calls while isHeld is true are no-ops, so the lock would still
-            // expire after 10 minutes of continuous screen-off sessions.
-            if (wakeLock?.isHeld == true) {
+            val isRefresh = wakeLock?.isHeld == true
+            if (isRefresh) {
                 wakeLock?.release()
             }
             wakeLock?.acquire(10 * 60 * 1000L)
-            log(LogLevel.DEBUG, "Wake lock acquired")
+            if (isRefresh) {
+                Timber.tag(TAG).d("Wake lock refreshed")
+            } else {
+                log(LogLevel.DEBUG, "Wake lock acquired")
+            }
         }
 
+        /**
+         * Releases the partial wake lock when disconnecting or exiting a room.
+         */
         private fun releaseWakeLock() {
             if (wakeLock?.isHeld == true) {
                 wakeLock?.release()
@@ -1554,7 +1559,7 @@ class ListenTogetherClient
                                 )
                             if (firstSample && _role.value == RoomRole.GUEST) requestSync()
                         }
-                        log(LogLevel.DEBUG, "Pong received")
+                        Timber.tag(TAG).d("Pong received")
                     }
 
                     MessageTypes.RECONNECTED -> {

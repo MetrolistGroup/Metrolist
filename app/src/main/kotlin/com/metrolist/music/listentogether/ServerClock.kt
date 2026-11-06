@@ -13,7 +13,7 @@ internal class ServerClock(
     private var serverOffsetMs: Double? = null
     private var bestRoundTripMs = Long.MAX_VALUE
     private val samples = ArrayDeque<ClockSample>()
-    private var consecutiveElevatedRttCount = 0
+    private val elevatedSamples = ArrayDeque<ClockSample>()
 
     private data class ClockSample(
         val rtt: Long,
@@ -29,7 +29,7 @@ internal class ServerClock(
         serverOffsetMs = null
         bestRoundTripMs = Long.MAX_VALUE
         samples.clear()
-        consecutiveElevatedRttCount = 0
+        elevatedSamples.clear()
     }
 
     /**
@@ -63,30 +63,36 @@ internal class ServerClock(
         while (samples.isNotEmpty() && receivedAt - samples.first().timestamp > MAX_SAMPLE_AGE_MS) {
             samples.removeFirst()
         }
+        while (elevatedSamples.isNotEmpty() && receivedAt - elevatedSamples.first().timestamp > MAX_SAMPLE_AGE_MS) {
+            elevatedSamples.removeFirst()
+        }
+
+        val currentSample = ClockSample(networkRoundTrip, sampleOffset, receivedAt)
 
         if (samples.isNotEmpty()) {
             val currentMinRtt = samples.minOf { it.rtt }
             if (networkRoundTrip > currentMinRtt + GOOD_SAMPLE_MARGIN_MS) {
-                consecutiveElevatedRttCount++
-                if (consecutiveElevatedRttCount >= SUSTAINED_RTT_COUNT) {
-                    // Sustained RTT shift: reset window to adapt to the new baseline
+                elevatedSamples.addLast(currentSample)
+                if (elevatedSamples.size >= SUSTAINED_RTT_COUNT) {
+                    // Sustained RTT shift: reset window and seed with the minimum-RTT sample among elevated samples
+                    val bestElevated = elevatedSamples.minWithOrNull(compareBy({ it.rtt }, { -it.timestamp })) ?: currentSample
                     samples.clear()
-                    consecutiveElevatedRttCount = 0
-                    samples.addLast(ClockSample(networkRoundTrip, sampleOffset, receivedAt))
+                    elevatedSamples.clear()
+                    samples.addLast(bestElevated)
                 } else {
                     // Isolated spike: discard
                     return false
                 }
             } else {
-                consecutiveElevatedRttCount = 0
+                elevatedSamples.clear()
                 if (samples.size >= MAX_WINDOW_SIZE) {
                     samples.removeFirst()
                 }
-                samples.addLast(ClockSample(networkRoundTrip, sampleOffset, receivedAt))
+                samples.addLast(currentSample)
             }
         } else {
-            consecutiveElevatedRttCount = 0
-            samples.addLast(ClockSample(networkRoundTrip, sampleOffset, receivedAt))
+            elevatedSamples.clear()
+            samples.addLast(currentSample)
         }
 
         // Always anchor clock offset to the sample with minimum RTT in the active window

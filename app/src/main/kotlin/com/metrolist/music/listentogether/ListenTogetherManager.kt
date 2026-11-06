@@ -955,7 +955,8 @@ class ListenTogetherManager
 
                         // Update base parameters if user changed speed externally (e.g., via SpeedDialog)
                         val currentParameters = player.playbackParameters
-                        if (driftAppliedPlaybackParameters != null && currentParameters != driftAppliedPlaybackParameters) {
+                        val expectedParameters = driftAppliedPlaybackParameters ?: baseParameters
+                        if (currentParameters != expectedParameters) {
                             baseParameters = currentParameters
                             driftBasePlaybackParameters = currentParameters
                         }

@@ -121,7 +121,7 @@ class ServerClockTest {
         var elapsedRealtime = 1_000L
         val clock = ServerClock { elapsedRealtime }
 
-        // Initial 20ms RTT baseline
+        // Initial 20ms RTT baseline (offset = 9000ms)
         elapsedRealtime = 1_020L
         assertTrue(
             clock.recordPong(
@@ -131,38 +131,39 @@ class ServerClockTest {
             ),
         )
 
-        // First elevated sample (RTT = 80ms): rejected as potential spike
+        // First elevated sample (RTT = 80ms > 20ms + 50ms, new offset = 9500ms): rejected as potential spike
         elapsedRealtime = 2_080L
         assertFalse(
             clock.recordPong(
                 clientTime = 2_000L,
-                serverReceiveTime = 11_040L,
-                serverSendTime = 11_040L,
+                serverReceiveTime = 11_540L,
+                serverSendTime = 11_540L,
             ),
         )
+        // Verifies clock offset remains at initial baseline 9000ms
         assertEquals(elapsedRealtime + 9000L, clock.now())
 
-        // Second elevated sample: rejected
-        elapsedRealtime = 3_080L
+        // Second elevated sample (RTT = 76ms, offset = 9500ms): rejected
+        elapsedRealtime = 3_076L
         assertFalse(
             clock.recordPong(
                 clientTime = 3_000L,
-                serverReceiveTime = 12_040L,
-                serverSendTime = 12_040L,
+                serverReceiveTime = 12_538L,
+                serverSendTime = 12_538L,
             ),
         )
         assertEquals(elapsedRealtime + 9000L, clock.now())
 
-        // Third consecutive elevated sample: accepted as sustained baseline shift
-        elapsedRealtime = 4_080L
+        // Third consecutive elevated sample (RTT = 90ms, offset = 9500ms): accepted as sustained shift
+        elapsedRealtime = 4_090L
         assertFalse(
             clock.recordPong(
                 clientTime = 4_000L,
-                serverReceiveTime = 13_040L,
-                serverSendTime = 13_040L,
+                serverReceiveTime = 13_545L,
+                serverSendTime = 13_545L,
             ),
         )
-        // Offset has adapted to new baseline (13040 + 40 - 4080 = 9000)
-        assertEquals(4_080L + 9000L, clock.now())
+        // Offset has adapted to new baseline 9500ms (seeded with lowest-RTT elevated sample: 76ms)
+        assertEquals(elapsedRealtime + 9500L, clock.now())
     }
 }
