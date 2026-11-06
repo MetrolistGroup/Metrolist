@@ -234,7 +234,8 @@ class ListenTogetherClient
             private const val INITIAL_RECONNECT_DELAY_MS = 1000L // Start at 1 second
             private const val MAX_RECONNECT_DELAY_MS = 120000L // Cap at 2 minutes
             private const val PING_INTERVAL_MS = 25000L
-            private const val INITIAL_PING_INTERVAL_MS = 250L
+            private const val PING_INTERVAL_IN_ROOM_MS = 5000L
+            private const val INITIAL_PING_INTERVAL_MS = 100L
             private const val MAX_LOG_ENTRIES = 500
             private const val SESSION_GRACE_PERIOD_MS = 10 * 60 * 1000L // 10 minutes
             private const val BACKGROUND_DISCONNECT_DELAY_MS = 30 * 60 * 1000L // 30 minutes
@@ -807,11 +808,17 @@ class ListenTogetherClient
             emitEvent(ListenTogetherEvent.Disconnected)
         }
 
+        /**
+         * Starts the background ping coroutine for keepalive and high-precision NTP clock synchronization.
+         * Dispatches a fast burst of 5 pings upon connection to rapidly populate ServerClock's
+         * sliding window, followed by steady-state pings every 5s when in a room (25s when idle).
+         */
         private fun startPingJob() {
             pingJob?.cancel()
             pingJob =
                 scope.launch {
-                    repeat(3) {
+                    // Fast burst upon connection to establish a tight minimum-RTT clock offset
+                    repeat(5) {
                         sendTimeSyncPing()
                         delay(INITIAL_PING_INTERVAL_MS)
                     }
@@ -822,9 +829,24 @@ class ListenTogetherClient
                         // causing the WebSocket to degrade, resulting in choppy audio.
                         acquireWakeLock()
                         sendTimeSyncPing()
-                        delay(PING_INTERVAL_MS)
+                        // Use tighter 5-second interval during active rooms to maintain sub-5ms clock tracking
+                        val interval = if (isInRoom) PING_INTERVAL_IN_ROOM_MS else PING_INTERVAL_MS
+                        delay(interval)
                     }
                 }
+        }
+
+        /**
+         * Dispatches a rapid burst of pings (100ms apart) to immediately refresh the min-RTT clock estimate.
+         * Called on track changes, buffer completion, and seeks to eliminate transient network drift.
+         */
+        fun triggerSyncBurst() {
+            scope.launch {
+                repeat(3) {
+                    sendTimeSyncPing()
+                    delay(INITIAL_PING_INTERVAL_MS)
+                }
+            }
         }
 
         private fun sendTimeSyncPing() {
