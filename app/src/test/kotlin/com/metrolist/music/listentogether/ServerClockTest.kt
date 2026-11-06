@@ -62,7 +62,7 @@ class ServerClockTest {
         var elapsedRealtime = 1_000L
         val clock = ServerClock { elapsedRealtime }
 
-        // Good baseline sample (RTT = 20ms)
+        // Baseline sample (RTT = 20ms)
         elapsedRealtime = 1_020L
         assertTrue(
             clock.recordPong(
@@ -73,7 +73,7 @@ class ServerClockTest {
         )
         val baseNow = clock.now()!!
 
-        // High jitter spike sample (RTT = 150ms)
+        // Isolated jitter spike (RTT = 150ms > 20ms + 50ms)
         elapsedRealtime = 1_200L
         assertFalse(
             clock.recordPong(
@@ -82,7 +82,87 @@ class ServerClockTest {
                 serverSendTime = 10_060L,
             ),
         )
-        // Since RTT (150ms) > minRTT (20ms) + 50ms, clock offset is protected from jitter distortion
         assertEquals(baseNow + 180L, clock.now())
+    }
+
+    @Test
+    fun `unequal one-way delays within accepted margin do not shift clock offset`() {
+        var elapsedRealtime = 1_000L
+        val clock = ServerClock { elapsedRealtime }
+
+        // Symmetric 20ms RTT sample establishes baseline offset = 9000
+        elapsedRealtime = 1_020L
+        assertTrue(
+            clock.recordPong(
+                clientTime = 1_000L,
+                serverReceiveTime = 10_010L,
+                serverSendTime = 10_010L,
+            ),
+        )
+
+        // Multiple 34ms RTT samples with 14ms asymmetric downstream delay
+        for (i in 1..5) {
+            val send = 1_000L + i * 1_000L
+            elapsedRealtime = send + 34L
+            assertFalse(
+                clock.recordPong(
+                    clientTime = send,
+                    serverReceiveTime = 10_010L + i * 1_000L,
+                    serverSendTime = 10_010L + i * 1_000L,
+                ),
+            )
+            // Clock offset must remain anchored to the 20ms sample (offset = 9000)
+            assertEquals(elapsedRealtime + 9000L, clock.now())
+        }
+    }
+
+    @Test
+    fun `adapts to sustained RTT increase after consecutive elevated samples`() {
+        var elapsedRealtime = 1_000L
+        val clock = ServerClock { elapsedRealtime }
+
+        // Initial 20ms RTT baseline
+        elapsedRealtime = 1_020L
+        assertTrue(
+            clock.recordPong(
+                clientTime = 1_000L,
+                serverReceiveTime = 10_010L,
+                serverSendTime = 10_010L,
+            ),
+        )
+
+        // First elevated sample (RTT = 80ms): rejected as potential spike
+        elapsedRealtime = 2_080L
+        assertFalse(
+            clock.recordPong(
+                clientTime = 2_000L,
+                serverReceiveTime = 11_040L,
+                serverSendTime = 11_040L,
+            ),
+        )
+        assertEquals(elapsedRealtime + 9000L, clock.now())
+
+        // Second elevated sample: rejected
+        elapsedRealtime = 3_080L
+        assertFalse(
+            clock.recordPong(
+                clientTime = 3_000L,
+                serverReceiveTime = 12_040L,
+                serverSendTime = 12_040L,
+            ),
+        )
+        assertEquals(elapsedRealtime + 9000L, clock.now())
+
+        // Third consecutive elevated sample: accepted as sustained baseline shift
+        elapsedRealtime = 4_080L
+        assertFalse(
+            clock.recordPong(
+                clientTime = 4_000L,
+                serverReceiveTime = 13_040L,
+                serverSendTime = 13_040L,
+            ),
+        )
+        // Offset has adapted to new baseline (13040 + 40 - 4080 = 9000)
+        assertEquals(4_080L + 9000L, clock.now())
     }
 }

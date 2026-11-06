@@ -100,6 +100,11 @@ import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.flow.collectLatest
 
+/**
+ * Settings screen for configuring Listen Together room preferences, servers, and audio calibration.
+ *
+ * @param navController Navigation controller for routing to sub-screens.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListenTogetherSettings(navController: NavController) {
