@@ -14,6 +14,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -22,6 +23,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -226,7 +228,7 @@ Output MUST be a JSON object {"lines": [...]} with EXACTLY $lineCount strings.""
         put(
             "response_format",
             buildJsonObject {
-                if (baseUrl.contains("api.deepseek.com", ignoreCase = true)) {
+                if (baseUrl.toHttpUrlOrNull()?.host.equals("api.deepseek.com", ignoreCase = true)) {
                     put("type", "json_object")
                 } else {
                     put("type", "json_schema")
@@ -304,7 +306,13 @@ internal fun parseTranslationContent(
             sequenceOf(content.trim(), cleaned, bracketed)
                 .filterNotNull()
                 .mapNotNull { candidate ->
-                    runCatching { extractLines(translationJson.parseToJsonElement(candidate)) }.getOrNull()
+                    val element = runCatching { translationJson.parseToJsonElement(candidate) }.getOrNull()
+                    if (element is JsonObject) {
+                        // Do not reinterpret an invalid object (or an array inside it) as lyric text.
+                        requireNotNull(extractLines(element)) { "Unexpected translation JSON object" }
+                    } else {
+                        element?.let { runCatching { extractLines(it) }.getOrNull() }
+                    }
                 }.firstOrNull()
                 ?: cleaned
                     .lines()
@@ -319,7 +327,10 @@ internal fun parseTranslationContent(
 private fun extractLines(element: JsonElement): List<String>? =
     when (element) {
         // structured-output schema shape
-        is JsonObject -> (element["lines"] as? JsonArray)?.map { it.jsonPrimitive.content }
+        is JsonObject ->
+            (element["lines"] as? JsonArray)
+                ?.takeIf { lines -> lines.all { it is JsonPrimitive && it.isString } }
+                ?.map { it.jsonPrimitive.content }
         // legacy lenient path: bare arrays from models/providers that ignore the schema
         is JsonArray -> element.map { it.jsonPrimitive.content }
         else -> null

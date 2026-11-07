@@ -26,6 +26,39 @@ class OpenRouterServiceTest {
     }
 
     @Test
+    fun `translation parsing rejects unexpected JSON objects before fallbacks`() {
+        val invalidObjects =
+            listOf(
+                """{"translation":"uno"}""",
+                """{"translation":["uno"]}""",
+                """{}""",
+                """{"lines":"uno"}""",
+                """{"lines":[1, true, null]}""",
+                """{"lines":[{"text":"uno"}]}""",
+                """{"lines":[["uno"]]}""",
+            )
+
+        invalidObjects.forEach { content ->
+            assertTrue(content, parseTranslationContent(content, 1).isFailure)
+            assertTrue(content, parseTranslationContent("```json\n$content\n```", 1).isFailure)
+        }
+    }
+
+    @Test
+    fun `translation parsing preserves valid fenced objects and empty lines`() {
+        assertEquals(
+            listOf("uno", "", "dos"),
+            parseTranslationContent("```json\n{\"lines\":[\"uno\",\"\",\"dos\"]}\n```", 3).getOrThrow(),
+        )
+    }
+
+    @Test
+    fun `translation parsing preserves plain text and embedded array fallbacks`() {
+        assertEquals(listOf("uno", "dos"), parseTranslationContent("uno\ndos", 2).getOrThrow())
+        assertEquals(listOf("uno", ""), parseTranslationContent("Here: [\"uno\"]", 2).getOrThrow())
+    }
+
+    @Test
     fun `request uses structured outputs with a lines schema and strict parameter routing`() {
         val request =
             buildTranslationRequest(
@@ -62,6 +95,34 @@ class OpenRouterServiceTest {
         assertEquals("json_object", responseFormat.getValue("type").jsonPrimitive.content)
         assertTrue("json_schema" !in responseFormat)
         assertTrue("provider" !in request)
+    }
+
+    @Test
+    fun `deepseek response format matches only the URL hostname`() {
+        val endpoints =
+            mapOf(
+                "https://API.DEEPSEEK.COM/v1/chat/completions" to "json_object",
+                "https://api.deepseek.com:443/chat/completions" to "json_object",
+                "https://example.com/api.deepseek.com/chat/completions" to "json_schema",
+                "https://example.com/chat/completions?provider=api.deepseek.com" to "json_schema",
+                "https://api.deepseek.com.example.com/chat/completions" to "json_schema",
+                "https://api.deepseek.com@example.com/chat/completions" to "json_schema",
+            )
+
+        endpoints.forEach { (baseUrl, expectedFormat) ->
+            val request =
+                buildTranslationRequest(
+                    text = "one",
+                    targetLanguage = "Spanish",
+                    model = "model",
+                    mode = "Translated",
+                    customSystemPrompt = "",
+                    baseUrl = baseUrl,
+                )
+            val responseFormat = request.getValue("response_format").jsonObject
+            assertEquals(baseUrl, expectedFormat, responseFormat.getValue("type").jsonPrimitive.content)
+            assertEquals(baseUrl, expectedFormat == "json_schema", "json_schema" in responseFormat)
+        }
     }
 
     @Test
