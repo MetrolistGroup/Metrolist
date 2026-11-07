@@ -9,11 +9,16 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -57,6 +62,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
@@ -85,6 +93,7 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.music.LocalDatabase
+import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.AutoRadioQueueKey
@@ -139,9 +148,42 @@ fun OnlineSearchResult(
         ?.getStateFlow("scrollToTopCount", 0)
         ?.collectAsStateWithLifecycle(initialValue = 0) ?: remember { mutableIntStateOf(0) }
 
-    var lastHandledCount by rememberSaveable { mutableIntStateOf(0) }
+    var lastHandledCount by rememberSaveable { mutableIntStateOf(scrollToTopCount) }
     var isSearchFocused by remember { mutableStateOf(false) }
+    var isInitialized by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val searchBarInteractionSource = remember { MutableInteractionSource() }
+    val view = LocalView.current
+    val window = remember(view) { (view.context as? android.app.Activity)?.window }
+
+    LaunchedEffect(Unit) {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+        window?.let { WindowCompat.getInsetsController(it, view).hide(WindowInsetsCompat.Type.ime()) }
+        kotlinx.coroutines.delay(300)
+        isInitialized = true
+    }
+
+    LaunchedEffect(searchBarInteractionSource) {
+        searchBarInteractionSource.interactions.collect { interaction ->
+            if (interaction is PressInteraction.Release) {
+                isSearchFocused = true
+                isInitialized = true
+            }
+        }
+    }
+
+    LaunchedEffect(isSearchFocused) {
+        if (isSearchFocused) {
+            focusRequester.requestFocus()
+            keyboardController?.show()
+            window?.let { WindowCompat.getInsetsController(it, view).show(WindowInsetsCompat.Type.ime()) }
+        } else {
+            focusManager.clearFocus(force = true)
+            keyboardController?.hide()
+            window?.let { WindowCompat.getInsetsController(it, view).hide(WindowInsetsCompat.Type.ime()) }
+        }
+    }
 
     LaunchedEffect(scrollToTopCount) {
         if (scrollToTopCount > lastHandledCount) {
@@ -164,7 +206,9 @@ fun OnlineSearchResult(
 
     BackHandler(enabled = isSearchFocused) {
         isSearchFocused = false
-        focusManager.clearFocus()
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+        window?.let { WindowCompat.getInsetsController(it, view).hide(WindowInsetsCompat.Type.ime()) }
     }
 
     // Extract query from navigation arguments
@@ -176,11 +220,13 @@ fun OnlineSearchResult(
     }
 
     val onSearch: (String) -> Unit =
-        remember {
+        remember(view, window) {
             { searchQuery ->
                 if (searchQuery.isNotEmpty()) {
                     isSearchFocused = false
-                    focusManager.clearFocus()
+                    focusManager.clearFocus(force = true)
+                    keyboardController?.hide()
+                    window?.let { WindowCompat.getInsetsController(it, view).hide(WindowInsetsCompat.Type.ime()) }
 
                     navController.navigate(SearchRoutes.resultRoute(searchQuery)) {
                         popUpTo(SearchRoutes.ROUTE) {
@@ -374,6 +420,7 @@ fun OnlineSearchResult(
             onValueChange = { newQuery ->
                 query = newQuery
             },
+            readOnly = !isSearchFocused,
             placeholder = {
                 Text(
                     text = stringResource(R.string.search_yt_music),
@@ -397,6 +444,8 @@ fun OnlineSearchResult(
                     IconButton(
                         onClick = {
                             query = TextFieldValue("")
+                            isSearchFocused = true
+                            isInitialized = true
                         },
                     ) {
                         Icon(
@@ -419,6 +468,7 @@ fun OnlineSearchResult(
                 ),
             singleLine = true,
             shape = RoundedCornerShape(28.dp),
+            interactionSource = searchBarInteractionSource,
             colors =
                 OutlinedTextFieldDefaults.colors(
                     focusedContainerColor =
@@ -442,7 +492,7 @@ fun OnlineSearchResult(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .focusRequester(focusRequester)
                     .onFocusChanged { focusState ->
-                        if (focusState.isFocused) {
+                        if (focusState.isFocused && isInitialized) {
                             isSearchFocused = true
                         }
                     },
@@ -490,6 +540,11 @@ fun OnlineSearchResult(
 
                 LazyColumn(
                     state = lazyListState,
+                    contentPadding =
+                        LocalPlayerAwareWindowInsets.current
+                            .only(WindowInsetsSides.Bottom)
+                            .union(WindowInsets.ime)
+                            .asPaddingValues(),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     if (searchFilter == null) {
@@ -550,9 +605,6 @@ fun OnlineSearchResult(
                         }
                     }
 
-                    item(key = "bottom_spacer") {
-                        Spacer(modifier = Modifier.height(MiniPlayerHeight + MiniPlayerBottomSpacing + NavigationBarHeight))
-                    }
                 }
             }
             if (isSearchFocused) {
@@ -562,7 +614,9 @@ fun OnlineSearchResult(
                     onSearch = onSearch,
                     onDismiss = {
                         isSearchFocused = false
-                        focusManager.clearFocus()
+                        focusManager.clearFocus(force = true)
+                        keyboardController?.hide()
+                        window?.let { WindowCompat.getInsetsController(it, view).hide(WindowInsetsCompat.Type.ime()) }
                     },
                     pureBlack = pureBlack,
                 )
