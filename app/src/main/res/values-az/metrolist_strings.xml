@@ -870,4 +870,7 @@
     <string name="error_explicit_login_recommended">Açıq-aydın oxutma daxil olmuş hesabla daha yaxşı işləyir.</string>
     <string name="ai_provider_inception_help">API açarları üçün https://platform.inceptionlabs.ai saytına daxil olun</string>
     <string name="force_bottom_navbar">Alt naviqasiya panelini məcburi tətbiq et</string>
+    <string name="player_pause">Pauza</string>
+    <string name="top_result">Ən yaxşı nəticə</string>
+    <string name="other">Digər</string>
 </resources>
