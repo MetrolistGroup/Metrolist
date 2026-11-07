@@ -18,9 +18,11 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -46,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.metrolist.music.LocalNavController
+import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.CONTENT_TYPE_LIST
@@ -138,8 +141,9 @@ fun LocalSearchScreen(
             state = lazyListState,
             modifier = Modifier.weight(1f),
             contentPadding =
-                WindowInsets.systemBars
+                LocalPlayerAwareWindowInsets.current
                     .only(WindowInsetsSides.Bottom)
+                    .union(WindowInsets.ime)
                     .asPaddingValues(),
         ) {
             result.map.forEach { (filter, items) ->

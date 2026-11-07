@@ -59,7 +59,8 @@
             android:launchMode="singleTask"
             android:resizeableActivity="true"
             android:theme="@style/Theme.Metrolist"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <action android:name="android.intent.action.VIEW" />
