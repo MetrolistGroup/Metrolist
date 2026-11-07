@@ -866,12 +866,18 @@ class MainActivity : FragmentActivity() {
                         shouldShowNavigationBar,
                         playerBottomSheetState.isDismissed,
                         showRail,
+                        useNewMiniPlayerDesign,
                     ) {
                         var bottom = bottomInset
                         if (shouldShowNavigationBar && !showRail) {
                             bottom += NavigationBarHeight
                         }
-                        if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
+                        if (!playerBottomSheetState.isDismissed) {
+                            bottom += MiniPlayerHeight
+                            if (useNewMiniPlayerDesign) {
+                                bottom += MiniPlayerBottomSpacing
+                            }
+                        }
                         windowsInsets
                             .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
                             .add(WindowInsets(top = AppBarHeight, bottom = bottom))
