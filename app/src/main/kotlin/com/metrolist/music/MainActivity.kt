@@ -1045,6 +1045,7 @@ class MainActivity : FragmentActivity() {
                     LocalContentColor provides if (pureBlack) Color.White else contentColorFor(MaterialTheme.colorScheme.surface),
                     LocalPlayerConnection provides playerConnection,
                     LocalPlayerAwareWindowInsets provides playerAwareWindowInsets,
+                    LocalNavigationRailVisible provides showRail,
                     LocalDownloadUtil provides downloadUtil,
                     LocalShimmerTheme provides ShimmerTheme,
                     LocalSyncUtils provides syncUtils,
@@ -1335,6 +1336,13 @@ class MainActivity : FragmentActivity() {
                                 }
 
                             if (showRail && currentRoute != "wrapped") {
+                                val railBottomPadding =
+                                    if (!playerBottomSheetState.isDismissed) {
+                                        MiniPlayerHeight + (if (useNewMiniPlayerDesign) MiniPlayerBottomSpacing else 0.dp)
+                                    } else {
+                                        0.dp
+                                    }
+
                                 AppNavigationRail(
                                     navigationItems = navigationItems,
                                     currentRoute = currentRoute,
@@ -1342,6 +1350,7 @@ class MainActivity : FragmentActivity() {
                                     pureBlack = pureBlack,
                                     onSearchLongClick = onRailSearchLongClick,
                                     onHomeLongHold = { showAccountDialog = true },
+                                    modifier = Modifier.padding(bottom = railBottomPadding),
                                 )
                             }
                             Box(Modifier.weight(1f)) {
@@ -1725,6 +1734,7 @@ val LocalDatabase = staticCompositionLocalOf<MusicDatabase> { error("No database
 val LocalNavController = staticCompositionLocalOf<NavController> { error("No NavController provided") }
 val LocalPlayerConnection = staticCompositionLocalOf<PlayerConnection?> { error("No PlayerConnection provided") }
 val LocalPlayerAwareWindowInsets = compositionLocalOf<WindowInsets> { error("No WindowInsets provided") }
+val LocalNavigationRailVisible = compositionLocalOf { false }
 val LocalDownloadUtil = staticCompositionLocalOf<DownloadUtil> { error("No DownloadUtil provided") }
 val LocalSyncUtils = staticCompositionLocalOf<SyncUtils> { error("No SyncUtils provided") }
 val LocalListenTogetherManager = staticCompositionLocalOf<com.metrolist.music.listentogether.ListenTogetherManager?> { null }

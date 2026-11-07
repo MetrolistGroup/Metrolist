@@ -151,6 +151,7 @@ fun OnlineSearchResult(
     var lastHandledCount by rememberSaveable { mutableIntStateOf(scrollToTopCount) }
     var isSearchFocused by remember { mutableStateOf(false) }
     var isInitialized by remember { mutableStateOf(false) }
+    var hasPendingFocus by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val searchBarInteractionSource = remember { MutableInteractionSource() }
     val view = LocalView.current
@@ -162,6 +163,9 @@ fun OnlineSearchResult(
         window?.let { WindowCompat.getInsetsController(it, view).hide(WindowInsetsCompat.Type.ime()) }
         kotlinx.coroutines.delay(300)
         isInitialized = true
+        if (hasPendingFocus) {
+            isSearchFocused = true
+        }
     }
 
     LaunchedEffect(searchBarInteractionSource) {
@@ -492,8 +496,14 @@ fun OnlineSearchResult(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .focusRequester(focusRequester)
                     .onFocusChanged { focusState ->
-                        if (focusState.isFocused && isInitialized) {
-                            isSearchFocused = true
+                        if (focusState.isFocused) {
+                            if (isInitialized) {
+                                isSearchFocused = true
+                            } else {
+                                hasPendingFocus = true
+                            }
+                        } else {
+                            hasPendingFocus = false
                         }
                     },
         )

@@ -48,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.metrolist.music.LocalNavController
+import com.metrolist.music.LocalNavigationRailVisible
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
@@ -108,6 +109,7 @@ fun LocalSearchScreen(
 
     val configuration = LocalWindowInfo.current
     val isLandscape = configuration.containerSize.width > configuration.containerSize.height
+    val isNavigationRailVisible = LocalNavigationRailVisible.current
 
     Column(
         modifier =
@@ -117,7 +119,9 @@ fun LocalSearchScreen(
                 .let { base ->
                     if (isLandscape) {
                         base.windowInsetsPadding(
-                            WindowInsets.systemBars.only(WindowInsetsSides.Horizontal),
+                            WindowInsets.systemBars.only(
+                                if (isNavigationRailVisible) WindowInsetsSides.End else WindowInsetsSides.Horizontal,
+                            ),
                         )
                     } else {
                         base
