@@ -19,6 +19,7 @@ import coil3.SingletonImageLoader
 import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.memory.MemoryCache
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.CachePolicy
 import coil3.request.allowHardware
 import coil3.request.crossfade
@@ -49,6 +50,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import okhttp3.Credentials
+import okhttp3.OkHttpClient
 import timber.log.Timber
 import java.io.File
 import java.io.IOException
@@ -299,11 +301,30 @@ class App :
         val cacheSize = cachedCoilCacheSize ?: runBlocking {
             dataStore.data.map { it[MaxImageCacheSizeKey] ?: 512 }.first()
         }
+        val imageOkHttpClient = OkHttpClient.Builder()
+            .apply {
+                YouTube.proxy?.let { proxy(it) }
+                YouTube.proxyAuth?.let { auth ->
+                    proxyAuthenticator { _, response ->
+                        response.request.newBuilder()
+                            .header("Proxy-Authorization", auth)
+                            .build()
+                    }
+                }
+            }
+            .build()
         return ImageLoader
             .Builder(this)
             .apply {
                 crossfade(true)
                 allowHardware(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+                components {
+                    add(
+                        OkHttpNetworkFetcherFactory(
+                            callFactory = { imageOkHttpClient },
+                        ),
+                    )
+                }
                 // Memory cache for fast image loading (prevents network requests on recomposition)
                 memoryCache {
                     MemoryCache
