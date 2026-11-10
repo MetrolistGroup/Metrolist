@@ -994,4 +994,17 @@
     <string name="stream_source_web_creator_desc">Creator web client.</string>
     <string name="top_result">Top result</string>
     <string name="other">Other</string>
+    <string name="ki_dj">KI-DJ party mode</string>
+    <string name="ki_dj_start">Start party mode</string>
+    <string name="ki_dj_stop">Stop party mode</string>
+    <string name="ki_dj_no_wifi">No Wi-Fi or hotspot found. Guests must be on the same network as this phone.</string>
+    <string name="ki_dj_scan_hint">Guests scan the code or open %1$s</string>
+    <string name="ki_dj_camera">Watch the dance floor with the camera</string>
+    <string name="ki_dj_floor">Dance floor: %1$d%%</string>
+    <string name="ki_dj_sensitivity">Camera sensitivity</string>
+    <string name="ki_dj_rescue">Switch early when the floor stays empty</string>
+    <string name="ki_dj_wishes">Guest wishes</string>
+    <string name="ki_dj_no_wishes">No wishes yet</string>
+    <string name="ki_dj_play_now">Play now</string>
+    <string name="ki_dj_remove">Remove</string>
 </resources>

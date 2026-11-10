@@ -2054,6 +2054,18 @@ class MusicService :
         automixItems.value = emptyList()
     }
 
+    /** Skips to the next item with the user's crossfade instead of a hard cut, if crossfade is on. */
+    fun crossfadeToNext() {
+        if (crossfadeEnabled && crossfadeDuration > 0f && player.hasNextMediaItem() && !isCrossfading) {
+            crossfadeMessage?.cancel()
+            crossfadeMessage = null
+            startCrossfade()
+        } else {
+            player.seekToNext()
+            player.playWhenReady = true
+        }
+    }
+
     fun playNext(items: List<MediaItem>) {
         // If queue is empty or player is idle, play immediately instead
         if (player.mediaItemCount == 0 || player.playbackState == STATE_IDLE) {

@@ -873,4 +873,17 @@
     <string name="player_pause">Pause</string>
     <string name="top_result">Top-Ergebnis</string>
     <string name="other">Sonstiges</string>
+    <string name="ki_dj">KI-DJ Party-Modus</string>
+    <string name="ki_dj_start">Party-Modus starten</string>
+    <string name="ki_dj_stop">Party-Modus beenden</string>
+    <string name="ki_dj_no_wifi">Kein WLAN oder Hotspot gefunden. Gäste müssen im selben Netz wie dieses Handy sein.</string>
+    <string name="ki_dj_scan_hint">Gäste scannen den Code oder öffnen %1$s</string>
+    <string name="ki_dj_camera">Tanzfläche per Kamera beobachten</string>
+    <string name="ki_dj_floor">Tanzfläche: %1$d%%</string>
+    <string name="ki_dj_sensitivity">Kamera-Empfindlichkeit</string>
+    <string name="ki_dj_rescue">Früher wechseln, wenn die Tanzfläche leer bleibt</string>
+    <string name="ki_dj_wishes">Wünsche der Gäste</string>
+    <string name="ki_dj_no_wishes">Noch keine Wünsche</string>
+    <string name="ki_dj_play_now">Jetzt spielen</string>
+    <string name="ki_dj_remove">Entfernen</string>
 </resources>

@@ -368,6 +368,10 @@ fun NavGraphBuilder.navigationBuilder(
         AiSettings(navController)
     }
 
+    composable("ki_dj") {
+        KiDjScreen(navController)
+    }
+
     composable("settings/player") {
         PlayerSettings(navController)
     }

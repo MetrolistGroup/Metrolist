@@ -315,6 +315,12 @@ dependencies {
 
     implementation(libs.timber)
 
+    // KI-DJ: dance floor camera and guest QR code
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
+    implementation(libs.zxing.core)
+
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)

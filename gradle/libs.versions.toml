@@ -1,4 +1,6 @@
 [versions]
+camerax = "1.4.2"
+zxing = "3.5.3"
 androidGradlePlugin = "9.4.1"
 browser = "1.10.0"
 robolectric = "4.17"
@@ -36,6 +38,10 @@ tinypinyin = "2.0.3"
 protobuf = "4.36.2"
 
 [libraries]
+camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
+camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
+camera-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 coroutines-guava = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-guava", version.ref = "coroutinesGuava" }
 
