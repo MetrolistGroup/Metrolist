@@ -1,0 +1,35 @@
+name: KI-DJ APK
+
+# Builds an installable debug APK of the KI-DJ fork on GitHub's free runners.
+on:
+  workflow_dispatch:
+  push:
+    branches: ["ki-dj", "main"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x gradlew
+      - name: KI-DJ unit tests
+        run: ./gradlew --console=plain :app:testFossDebugUnitTest --tests "com.metrolist.music.kidj.*"
+      - name: Build debug APK
+        run: ./gradlew --console=plain :app:assembleFossDebug -x lint
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ki-dj-apk
+          path: app/build/outputs/apk/**/*.apk
