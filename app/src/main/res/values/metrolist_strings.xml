@@ -779,6 +779,7 @@
     <!-- CSV Import Strings -->
     <string name="map_csv_columns">Map CSV columns</string>
     <string name="first_row_is_header">First row is header</string>
+    <string name="track_number_column">Track number column (optional)</string>
     <string name="artist_name_column">Artist name column</string>
     <string name="song_title_column">Song title column</string>
     <string name="youtube_url_column">YouTube URL column (optional)</string>
@@ -802,8 +803,8 @@
     <string name="discord_error_invalid_scope">Discord rejected the connection. Please reconnect and grant the required permission.</string>
     <string name="discord_error_banner_title">Discord error</string>
     <string name="discord_rpc_preview">Rich Presence preview</string>
-    <string name="discord_integration">Discord Integration</string>
-    <string name="enable_discord_rpc">Enable Rich Presence</string>
+
+
     <string name="discord_advanced_mode">Advanced mode</string>
     <string name="discord_advanced_mode_description">Customize every field of your Rich Presence with placeholders</string>
     <string name="discord_presence">Presence</string>
@@ -994,4 +995,6 @@
     <string name="stream_source_web_creator_desc">Creator web client.</string>
     <string name="top_result">Top result</string>
     <string name="other">Other</string>
+    <string name="discord_integration">Discord integration</string>
+    <string name="enable_discord_rpc">Enable Discord RPC</string>
 </resources>

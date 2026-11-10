@@ -23,13 +23,15 @@ object PlaylistExporter {
             val csvContent =
                 buildString {
                     // Add CSV header
-                    append("Title,Artist,Album,YouTube Video ID\n")
+                    append("Index,Title,Artist,Album,YouTube Video ID\n")
 
                     // Add each song as a CSV row
-                    songs.forEach { playlistSong ->
+                    songs.forEachIndexed { index, playlistSong ->
                         val song = playlistSong.song.song
                         val artists = playlistSong.song.artists
                         val album = playlistSong.song.album
+                        append("${index + 1}")
+                        append(",")
                         append("\"${song.title.replace("\"", "\"\"")}\"")
                         append(",")
                         append("\"${artists.joinToString("; ") { it.name.replace("\"", "\"\"") }}\"")
@@ -91,10 +93,12 @@ fun exportYouTubePlaylistAsCSV(
         val csvContent =
             buildString {
                 // Add CSV header
-                append("Title,Artist,Album,YouTube Video ID\n")
+                append("Index,Title,Artist,Album,YouTube Video ID\n")
 
                 // Add each song as a CSV row
-                songs.forEach { songItem ->
+                songs.forEachIndexed { index, songItem ->
+                    append("${index + 1}")
+                    append(",")
                     append("\"${songItem.title.replace("\"", "\"\"")}\"")
                     append(",")
                     append("\"${songItem.artists.joinToString("; ") { it.name.replace("\"", "\"\"") }}\"")

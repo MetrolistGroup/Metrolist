@@ -56,6 +56,7 @@ fun CsvColumnMappingDialog(
 ) {
     if (!isVisible) return
 
+    var trackNumberColumnIndex by remember { mutableIntStateOf(csvState.trackNumberColumnIndex) }
     var artistColumnIndex by remember { mutableIntStateOf(csvState.artistColumnIndex) }
     var titleColumnIndex by remember { mutableIntStateOf(csvState.titleColumnIndex) }
     var urlColumnIndex by remember { mutableIntStateOf(csvState.urlColumnIndex) }
@@ -117,8 +118,9 @@ fun CsvColumnMappingDialog(
                                                 .width(120.dp)
                                                 .clip(RoundedCornerShape(4.dp))
                                                 .background(
-                                                    when {
+                                                        when {
                                                         rowIndex == 0 && hasHeader -> MaterialTheme.colorScheme.primaryContainer
+                                                        colIndex == trackNumberColumnIndex && trackNumberColumnIndex >= 0 -> MaterialTheme.colorScheme.tertiaryContainer
                                                         colIndex == artistColumnIndex -> MaterialTheme.colorScheme.tertiaryContainer
                                                         colIndex == titleColumnIndex -> MaterialTheme.colorScheme.secondaryContainer
                                                         colIndex == urlColumnIndex && urlColumnIndex >= 0 -> MaterialTheme.colorScheme.tertiaryContainer
@@ -161,6 +163,14 @@ fun CsvColumnMappingDialog(
 
             // Column selectors
             ColumnSelector(
+                label = stringResource(R.string.track_number_column),
+                selectedIndex = trackNumberColumnIndex,
+                maxColumns = csvState.previewRows.firstOrNull()?.size ?: 0,
+                allowNone = true,
+                onSelected = { trackNumberColumnIndex = it },
+            )
+
+            ColumnSelector(
                 label = stringResource(R.string.artist_name_column),
                 selectedIndex = artistColumnIndex,
                 maxColumns = csvState.previewRows.firstOrNull()?.size ?: 0,
@@ -198,6 +208,7 @@ fun CsvColumnMappingDialog(
                         onConfirm(
                             CsvImportState(
                                 previewRows = csvState.previewRows,
+                                trackNumberColumnIndex = trackNumberColumnIndex,
                                 artistColumnIndex = artistColumnIndex,
                                 titleColumnIndex = titleColumnIndex,
                                 urlColumnIndex = urlColumnIndex,

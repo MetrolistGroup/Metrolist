@@ -873,8 +873,8 @@
     <string name="enable_zemer">Ativar Zemer</string>
     <string name="enable_zemer_desc">Letras por Jewish music</string>
     <string name="update_available_message">Metrolist %s está pronto para download.</string>
-    <string name="discord_integration">Integração com o Discord</string>
-    <string name="enable_discord_rpc">Habilitar o Rich Presence</string>
+
+
     <string name="force_bottom_navbar">Forçar barra de navegação inferior</string>
     <string name="player_pause">Pausar</string>
     <string name="top_result">Principais resultados</string>

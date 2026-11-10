@@ -850,8 +850,8 @@
     <string name="error_no_internet_connection">沒有網路連結</string>
     <string name="error_offline_playback">你已離線。請連線到網路，或播放已下載的離線曲目。</string>
     <string name="ai_provider_inception_help">前往 https://platform.inceptionlabs.ai 以獲取 API 金鑰</string>
-    <string name="discord_integration">Discord 整合</string>
-    <string name="enable_discord_rpc">啟用 Rich Presence</string>
+
+
     <string name="stream_source_web_clients">網頁用戶端</string>
     <string name="stream_source_native_clients">原生用戶端</string>
     <string name="stream_source_web_creator_desc">創作者網頁用戶端。</string>

@@ -63,6 +63,7 @@ data class BackupPreviewInfo(
 
 data class CsvImportState(
     val previewRows: List<List<String>> = emptyList(),
+    val trackNumberColumnIndex: Int = -1,
     val artistColumnIndex: Int = 0,
     val titleColumnIndex: Int = 1,
     val urlColumnIndex: Int = -1,
@@ -511,7 +512,7 @@ class BackupRestoreViewModel @Inject constructor(
 
     fun previewCsvFile(context: Context, uri: Uri): CsvImportState {
         val previewRows = mutableListOf<List<String>>()
-        val csvState: CsvImportState
+        var csvState = CsvImportState()
         runCatching {
             context.contentResolver.openInputStream(uri)?.use { stream ->
                 val lines = stream.bufferedReader().readLines()
@@ -519,8 +520,39 @@ class BackupRestoreViewModel @Inject constructor(
                 previewRows.addAll(rowsToPreview)
 
                 val hasHeader = lines.isNotEmpty() && lines[0].contains(",")
+                
+                var trackNumberIndex = -1
+                var artistIndex = 0
+                var titleIndex = 1
+                var urlIndex = -1
+                
+                if (hasHeader && rowsToPreview.isNotEmpty()) {
+                    val headerRow = rowsToPreview[0]
+                    
+                    val trackNames = listOf("index", "#", "track", "number")
+                    val artistNames = listOf("artist", "creator")
+                    val titleNames = listOf("title", "name", "song")
+                    val urlNames = listOf("url", "link", "id", "video id", "youtube video id")
+                    
+                    headerRow.forEachIndexed { i, col ->
+                        val lowerCol = col.lowercase().trim()
+                        if (trackNames.any { lowerCol.contains(it) }) trackNumberIndex = i
+                        if (artistNames.any { lowerCol.contains(it) }) artistIndex = i
+                        if (titleNames.any { lowerCol.contains(it) }) titleIndex = i
+                        if (urlNames.any { lowerCol.contains(it) }) urlIndex = i
+                    }
+                    
+                    // Fallback to defaults if detection failed for required fields
+                    if (artistIndex == -1) artistIndex = if (headerRow.size > 1) 1 else 0
+                    if (titleIndex == -1) titleIndex = if (headerRow.size > 0) 0 else 0
+                }
+
                 csvState = CsvImportState(
                     previewRows = previewRows,
+                    trackNumberColumnIndex = trackNumberIndex,
+                    artistColumnIndex = artistIndex,
+                    titleColumnIndex = titleIndex,
+                    urlColumnIndex = urlIndex,
                     hasHeader = hasHeader,
                 )
                 return csvState
@@ -529,7 +561,7 @@ class BackupRestoreViewModel @Inject constructor(
             reportException(it)
             Toast.makeText(context, "Failed to preview CSV file", Toast.LENGTH_SHORT).show()
         }
-        return CsvImportState()
+        return csvState
     }
 
     suspend fun importPlaylistFromCsv(
@@ -541,6 +573,10 @@ class BackupRestoreViewModel @Inject constructor(
     ): ArrayList<Song> = kotlinx.coroutines.withContext(Dispatchers.IO) {
         val songs = arrayListOf<Song>()
         val recentLogs = mutableListOf<ConvertedSongLog>()
+        
+        // Helper to hold song with its parsed track number for sorting later
+        data class ParsedSong(val song: Song, val trackIndex: Int)
+        val parsedSongs = mutableListOf<ParsedSong>()
 
         runCatching {
             context.contentResolver.openInputStream(uri)?.use { stream ->
@@ -555,6 +591,24 @@ class BackupRestoreViewModel @Inject constructor(
                         if (columnMapping.artistColumnIndex < parts.size && columnMapping.titleColumnIndex < parts.size) {
                             val title = parts[columnMapping.titleColumnIndex].trim()
                             val artistStr = parts[columnMapping.artistColumnIndex].trim()
+                            
+                            var videoId = ""
+                            if (columnMapping.urlColumnIndex >= 0 && columnMapping.urlColumnIndex < parts.size) {
+                                val urlStr = parts[columnMapping.urlColumnIndex].trim()
+                                // Extract video ID if it's a URL, otherwise assume it's the ID itself
+                                videoId = if (urlStr.contains("v=")) {
+                                    urlStr.substringAfter("v=").substringBefore("&")
+                                } else if (urlStr.contains("youtu.be/")) {
+                                    urlStr.substringAfter("youtu.be/").substringBefore("?")
+                                } else {
+                                    urlStr
+                                }
+                            }
+                            
+                            var trackNumber = index
+                            if (columnMapping.trackNumberColumnIndex >= 0 && columnMapping.trackNumberColumnIndex < parts.size) {
+                                trackNumber = parts[columnMapping.trackNumberColumnIndex].trim().toIntOrNull() ?: index
+                            }
 
                             if (title.isNotEmpty() && artistStr.isNotEmpty()) {
                                 val artists = artistStr.split(";", ",").map { it.trim() }
@@ -563,12 +617,12 @@ class BackupRestoreViewModel @Inject constructor(
 
                                 val mockSong = Song(
                                     song = SongEntity(
-                                        id = "",
+                                        id = videoId,
                                         title = title,
                                     ),
                                     artists = artists,
                                 )
-                                songs.add(mockSong)
+                                parsedSongs.add(ParsedSong(mockSong, trackNumber))
 
                                 val logEntry = ConvertedSongLog(
                                     title = title,
@@ -586,6 +640,9 @@ class BackupRestoreViewModel @Inject constructor(
                     val progress = ((index + 1) * 100) / totalLines
                     onProgress(progress)
                 }
+                
+                // Sort by track number and extract the actual songs
+                songs.addAll(parsedSongs.sortedBy { it.trackIndex }.map { it.song })
             }
         }.onFailure {
             reportException(it)

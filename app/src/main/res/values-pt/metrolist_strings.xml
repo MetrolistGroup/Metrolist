@@ -709,8 +709,8 @@
     <string name="discord_error_invalid_scope">O Discord rejeitou a conexão. Por favor reconecte para recolher a permissão nessesaria.</string>
     <string name="discord_error_banner_title">Erro do Discord</string>
     <string name="discord_rpc_preview">Pré-visualização de \"Rich Presence\"</string>
-    <string name="discord_integration">Integração do Discord</string>
-    <string name="enable_discord_rpc">Habilitar \"Rich Presence\"</string>
+
+
     <string name="discord_advanced_mode">Modo Avançado</string>
     <string name="discord_advanced_mode_description">Personalize todos os campos da tua \"Rich Presence\"</string>
     <string name="discord_presence">Título</string>

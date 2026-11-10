@@ -691,8 +691,8 @@
     <string name="discord_error_invalid_scope">Discord bağlantını rədd etdi. Zəhmət olmasa, yenidən qoşulun və tələb olunan icazəni verin.</string>
     <string name="discord_error_banner_title">Discord xətası</string>
     <string name="discord_rpc_preview">Zəngin status önizləməsi</string>
-    <string name="discord_integration">Discord inteqrasiyası</string>
-    <string name="enable_discord_rpc">Zəngin statusu aktivləşdirin</string>
+
+
     <string name="discord_advanced_mode">Ətraflı rejim</string>
     <string name="discord_advanced_mode_description">Yerləşdiricilərdən istifadə edərək Zəngin statusunuzun hər sahəsini fərdiləşdirin</string>
     <string name="discord_presence">Mövcudluq</string>

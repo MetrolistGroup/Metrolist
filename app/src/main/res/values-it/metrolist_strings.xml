@@ -873,8 +873,8 @@
     <string name="update_available_message">Metrolist %s è pronto per essere scaricato.</string>
     <string name="update_action">Aggiorna</string>
     <string name="ai_provider_inception_help">Visita https://platform.inceptionlabs.ai per ottenere le chiavi API</string>
-    <string name="discord_integration">Integrazione Discord</string>
-    <string name="enable_discord_rpc">Abilita la Rich Presence</string>
+
+
     <string name="force_bottom_navbar">Forza la barra di navigazione in basso</string>
     <string name="other">Altro</string>
     <string name="player_pause">Pausa</string>

@@ -873,8 +873,8 @@
     <string name="enable_zemer_desc">Versuri pentru muzica evreiască</string>
     <string name="update_available_message">Metrolist %s este gata de descărcare.</string>
     <string name="update_action">Actualizează</string>
-    <string name="discord_integration">Integrare Discord</string>
-    <string name="enable_discord_rpc">Activează Rich Presence</string>
+
+
     <string name="force_bottom_navbar">Forțează bara de navigare jos</string>
     <string name="player_pause">Pauză</string>
     <string name="top_result">Rezultat de top</string>

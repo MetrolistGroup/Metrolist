@@ -879,8 +879,8 @@
     <string name="enable_zemer_desc">Тексты еврейских песен</string>
     <string name="update_available_message">Metrolist %s готов к загрузке.</string>
     <string name="update_action">Обновить</string>
-    <string name="discord_integration">Интеграция с Discord</string>
-    <string name="enable_discord_rpc">Включить Rich Presence</string>
+
+
     <string name="force_bottom_navbar">Всегда использовать нижнюю панель навигации</string>
     <string name="player_pause">Пауза</string>
     <string name="top_result">Лучший результат</string>
