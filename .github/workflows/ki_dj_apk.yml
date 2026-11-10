@@ -27,8 +27,21 @@ jobs:
       - run: chmod +x gradlew
       - name: KI-DJ unit tests
         run: ./gradlew --console=plain :app:testFossDebugUnitTest --tests "com.metrolist.music.kidj.*"
+      - name: Debug signing key
+        # A fixed key (repo secret KIDJ_DEBUG_KEYSTORE, base64) lets new APKs update the installed app.
+        env:
+          KEYSTORE_B64: ${{ secrets.KIDJ_DEBUG_KEYSTORE }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/debug.keystore"
+          else
+            keytool -genkeypair -keystore "$RUNNER_TEMP/debug.keystore" -storepass android -keypass android \
+              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=KI-DJ Debug"
+          fi
       - name: Build debug APK
         run: ./gradlew --console=plain :app:assembleFossDebug -x lint
+        env:
+          METROLIST_DEBUG_KEYSTORE_PATH: ${{ runner.temp }}/debug.keystore
       - uses: actions/upload-artifact@v4
         with:
           name: ki-dj-apk
