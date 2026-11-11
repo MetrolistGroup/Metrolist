@@ -893,6 +893,7 @@
     </plurals>
 
     <!-- Restore confirmation dialog -->
+    <string name="backup_credentials_excluded">Includes your library and settings. Sign in again and re-enter API keys and proxy credentials after restoring.</string>
     <string name="restore_confirm_title">Restore backup?</string>
     <string name="restore_confirm_message">This will restore your app data from the selected backup</string>
     <string name="restore_account_warning">The following account information will be restored and preserved:</string>

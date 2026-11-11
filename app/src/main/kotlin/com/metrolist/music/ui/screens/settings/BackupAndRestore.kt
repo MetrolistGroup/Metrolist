@@ -180,6 +180,7 @@ fun BackupAndRestore(
                 listOf(
                     Material3SettingsItem(
                         title = { Text(stringResource(R.string.action_backup)) },
+                        description = { Text(stringResource(R.string.backup_credentials_excluded)) },
                         icon = painterResource(R.drawable.backup),
                         onClick = {
                             val formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
