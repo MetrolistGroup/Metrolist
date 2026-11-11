@@ -262,14 +262,12 @@
     <string name="backup_create_success">Copia de seguridad creada con éxito</string>
     <string name="backup_create_failed">No se ha podido crear la copia de seguridad</string>
     <string name="restore_failed">Error al restaurar la copia de seguridad</string>
-    <string name="discord_integration">Integración con Discord</string>
     <string name="discord_information">Metrolist utiliza la biblioteca KizzyRPC para establecer el estado de su cuenta de Discord. Esto implica el uso de la conexión Discord Gateway, lo que podría considerarse una violación de las condiciones del servicio de Discord. Sin embargo, no se conocen casos de cuentas de usuario suspendidas por este motivo. Úselo bajo su propio riesgo.\n\nMetrolist solo extraerá su ficha; todo lo demás se almacena localmente.</string>
     <string name="dismiss">Descartar</string>
     <string name="options">Opciones</string>
     <string name="preview">Vista previa</string>
     <string name="login_failed">Error al acceder a la cuenta</string>
     <string name="action_logout">Finalizar sesión</string>
-    <string name="enable_discord_rpc">Activar Rich Presence</string>
     <string name="about">Acerca de</string>
     <string name="app_version">Versión de la app</string>
     <string name="new_version_available">Nueva versión disponible</string>
