@@ -59,6 +59,7 @@ fun CsvColumnMappingDialog(
     var trackNumberColumnIndex by remember { mutableIntStateOf(csvState.trackNumberColumnIndex) }
     var artistColumnIndex by remember { mutableIntStateOf(csvState.artistColumnIndex) }
     var titleColumnIndex by remember { mutableIntStateOf(csvState.titleColumnIndex) }
+    var albumColumnIndex by remember { mutableIntStateOf(csvState.albumColumnIndex) }
     var urlColumnIndex by remember { mutableIntStateOf(csvState.urlColumnIndex) }
     var hasHeader by remember { mutableStateOf(csvState.hasHeader) }
 
@@ -123,6 +124,7 @@ fun CsvColumnMappingDialog(
                                                         colIndex == trackNumberColumnIndex && trackNumberColumnIndex >= 0 -> MaterialTheme.colorScheme.tertiaryContainer
                                                         colIndex == artistColumnIndex -> MaterialTheme.colorScheme.tertiaryContainer
                                                         colIndex == titleColumnIndex -> MaterialTheme.colorScheme.secondaryContainer
+                                                        colIndex == albumColumnIndex && albumColumnIndex >= 0 -> MaterialTheme.colorScheme.secondaryContainer
                                                         colIndex == urlColumnIndex && urlColumnIndex >= 0 -> MaterialTheme.colorScheme.tertiaryContainer
                                                         else -> MaterialTheme.colorScheme.background
                                                     },
@@ -185,6 +187,14 @@ fun CsvColumnMappingDialog(
             )
 
             ColumnSelector(
+                label = stringResource(R.string.album_column),
+                selectedIndex = albumColumnIndex,
+                maxColumns = csvState.previewRows.firstOrNull()?.size ?: 0,
+                allowNone = true,
+                onSelected = { albumColumnIndex = it },
+            )
+
+            ColumnSelector(
                 label = stringResource(R.string.youtube_url_column),
                 selectedIndex = urlColumnIndex,
                 maxColumns = csvState.previewRows.firstOrNull()?.size ?: 0,
@@ -211,6 +221,7 @@ fun CsvColumnMappingDialog(
                                 trackNumberColumnIndex = trackNumberColumnIndex,
                                 artistColumnIndex = artistColumnIndex,
                                 titleColumnIndex = titleColumnIndex,
+                                albumColumnIndex = albumColumnIndex,
                                 urlColumnIndex = urlColumnIndex,
                                 hasHeader = hasHeader,
                             ),

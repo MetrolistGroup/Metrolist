@@ -1723,6 +1723,25 @@ interface DatabaseDao {
                 )
             )
         }
+
+        mediaMetadata.album?.let { album ->
+            val albumId = album.id.takeIf { it.isNotEmpty() } ?: "LOCAL_ALBUM_${album.title.hashCode()}"
+            insert(
+                AlbumEntity(
+                    id = albumId,
+                    title = album.title,
+                    songCount = 1,
+                    duration = 0,
+                )
+            )
+            insert(
+                SongAlbumMap(
+                    songId = mediaMetadata.id,
+                    albumId = albumId,
+                    index = 0,
+                )
+            )
+        }
     }
 
     @Transaction

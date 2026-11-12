@@ -30,6 +30,7 @@ import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.constants.VisitorDataKey
 import com.metrolist.music.db.InternalDatabase
 import com.metrolist.music.db.MusicDatabase
+import com.metrolist.music.db.entities.AlbumEntity
 import com.metrolist.music.db.entities.ArtistEntity
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.db.entities.SongEntity
@@ -66,6 +67,7 @@ data class CsvImportState(
     val trackNumberColumnIndex: Int = -1,
     val artistColumnIndex: Int = 0,
     val titleColumnIndex: Int = 1,
+    val albumColumnIndex: Int = -1,
     val urlColumnIndex: Int = -1,
     val hasHeader: Boolean = true,
 )
@@ -510,6 +512,14 @@ class BackupRestoreViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Reads a preview of a CSV file from a given URI and attempts to infer its column mappings
+     * (e.g., track number, artist, title, and YouTube URL) by matching header names.
+     *
+     * @param context Application context used to resolve the URI.
+     * @param uri The URI of the CSV file to preview.
+     * @return CsvImportState containing a sample of rows and the detected column indices.
+     */
     fun previewCsvFile(context: Context, uri: Uri): CsvImportState {
         val previewRows = mutableListOf<List<String>>()
         var csvState = CsvImportState()
@@ -524,6 +534,7 @@ class BackupRestoreViewModel @Inject constructor(
                 var trackNumberIndex = -1
                 var artistIndex = 0
                 var titleIndex = 1
+                var albumIndex = -1
                 var urlIndex = -1
                 
                 if (hasHeader && rowsToPreview.isNotEmpty()) {
@@ -532,14 +543,16 @@ class BackupRestoreViewModel @Inject constructor(
                     val trackNames = listOf("index", "#", "track", "number")
                     val artistNames = listOf("artist", "creator")
                     val titleNames = listOf("title", "name", "song")
+                    val albumNames = listOf("album", "release")
                     val urlNames = listOf("url", "link", "id", "video id", "youtube video id")
                     
                     headerRow.forEachIndexed { i, col ->
                         val lowerCol = col.lowercase().trim()
-                        if (trackNames.any { lowerCol.contains(it) }) trackNumberIndex = i
-                        if (artistNames.any { lowerCol.contains(it) }) artistIndex = i
-                        if (titleNames.any { lowerCol.contains(it) }) titleIndex = i
-                        if (urlNames.any { lowerCol.contains(it) }) urlIndex = i
+                        if (trackNames.any { lowerCol == it }) trackNumberIndex = i
+                        if (artistNames.any { lowerCol == it }) artistIndex = i
+                        if (titleNames.any { lowerCol == it }) titleIndex = i
+                        if (albumNames.any { lowerCol == it }) albumIndex = i
+                        if (urlNames.any { lowerCol == it }) urlIndex = i
                     }
                     
                     // Fallback to defaults if detection failed for required fields
@@ -552,6 +565,7 @@ class BackupRestoreViewModel @Inject constructor(
                     trackNumberColumnIndex = trackNumberIndex,
                     artistColumnIndex = artistIndex,
                     titleColumnIndex = titleIndex,
+                    albumColumnIndex = albumIndex,
                     urlColumnIndex = urlIndex,
                     hasHeader = hasHeader,
                 )
@@ -564,6 +578,17 @@ class BackupRestoreViewModel @Inject constructor(
         return csvState
     }
 
+    /**
+     * Imports a playlist from a CSV file. It parses the file according to the provided column mapping,
+     * extracts song data (title, artist, and optionally YouTube ID), and returns a list of songs sorted by track number.
+     *
+     * @param context Application context used to resolve the URI.
+     * @param uri The URI of the CSV file.
+     * @param columnMapping Configuration specifying which column index corresponds to which field.
+     * @param onProgress Callback invoked to report import progress (0-100).
+     * @param onLogUpdate Callback invoked with a log of recently parsed songs for UI updates.
+     * @return An ArrayList of parsed [Song] entities.
+     */
     suspend fun importPlaylistFromCsv(
         context: Context,
         uri: Uri,
@@ -610,6 +635,11 @@ class BackupRestoreViewModel @Inject constructor(
                                 trackNumber = parts[columnMapping.trackNumberColumnIndex].trim().toIntOrNull() ?: index
                             }
 
+                            var albumStr = ""
+                            if (columnMapping.albumColumnIndex >= 0 && columnMapping.albumColumnIndex < parts.size) {
+                                albumStr = parts[columnMapping.albumColumnIndex].trim()
+                            }
+
                             if (title.isNotEmpty() && artistStr.isNotEmpty()) {
                                 val artists = artistStr.split(";", ",").map { it.trim() }
                                     .filter { it.isNotEmpty() }
@@ -621,6 +651,7 @@ class BackupRestoreViewModel @Inject constructor(
                                         title = title,
                                     ),
                                     artists = artists,
+                                    album = if (albumStr.isNotEmpty()) AlbumEntity(id = "", title = albumStr, songCount = 1, duration = 0) else null
                                 )
                                 parsedSongs.add(ParsedSong(mockSong, trackNumber))
 
@@ -651,6 +682,17 @@ class BackupRestoreViewModel @Inject constructor(
         songs
     }
 
+    /**
+     * Imports a playlist from a CSV file. It parses the file according to the provided column mapping,
+     * extracts song data (title, artist, and optionally YouTube ID), and returns a list of songs sorted by track number.
+     *
+     * @param context Application context used to resolve the URI.
+     * @param uri The URI of the CSV file.
+     * @param columnMapping Configuration specifying which column index corresponds to which field.
+     * @param onProgress Callback invoked to report import progress (0-100).
+     * @param onLogUpdate Callback invoked with a log of recently parsed songs for UI updates.
+     * @return An ArrayList of parsed [Song] entities.
+     */
     suspend fun importPlaylistFromCsv(context: Context, uri: Uri): ArrayList<Song> {
         return importPlaylistFromCsv(context, uri, CsvImportState())
     }
