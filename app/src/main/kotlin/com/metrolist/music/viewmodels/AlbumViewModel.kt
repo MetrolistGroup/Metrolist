@@ -38,6 +38,9 @@ constructor(
     init {
         viewModelScope.launch {
             val album = database.album(albumId).first()
+            if (albumId.startsWith("LOCAL_ALBUM_")) {
+                return@launch
+            }
             YouTube
                 .album(albumId)
                 .onSuccess {
