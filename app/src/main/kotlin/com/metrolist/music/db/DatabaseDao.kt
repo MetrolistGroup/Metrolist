@@ -1701,7 +1701,8 @@ interface DatabaseDao {
         mediaMetadata: MediaMetadata,
         block: (SongEntity) -> SongEntity = { it },
     ) {
-        val inserted = insert(mediaMetadata.toSongEntity().let(block)) != -1L
+        val songEntity = mediaMetadata.toSongEntity().let(block)
+        val inserted = insert(songEntity) != -1L
         if (!inserted && songArtistMap(mediaMetadata.id).isNotEmpty()) return
 
         mediaMetadata.artists.forEachIndexed { index, artist ->
@@ -1725,7 +1726,7 @@ interface DatabaseDao {
         }
 
         mediaMetadata.album?.let { album ->
-            val albumId = album.id.takeIf { it.isNotEmpty() } ?: "LOCAL_ALBUM_${album.title.hashCode()}"
+            val albumId = songEntity.albumId ?: return@let
             insert(
                 AlbumEntity(
                     id = albumId,

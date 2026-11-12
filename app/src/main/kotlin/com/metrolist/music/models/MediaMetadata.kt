@@ -49,13 +49,16 @@ data class MediaMetadata(
         val title: String,
     ) : Serializable
 
-    fun toSongEntity() =
-        SongEntity(
+    fun toSongEntity(): SongEntity {
+        val computedAlbumId = album?.id?.takeIf { it.isNotEmpty() }
+            ?: album?.title?.let { "LOCAL_ALBUM_${(it + artists.joinToString { artist -> artist.name }).hashCode()}" }
+
+        return SongEntity(
             id = id,
             title = title,
             duration = duration,
             thumbnailUrl = thumbnailUrl,
-            albumId = album?.id,
+            albumId = computedAlbumId,
             albumName = album?.title,
             explicit = explicit,
             liked = liked,
@@ -67,6 +70,7 @@ data class MediaMetadata(
             isEpisode = isEpisode,
             uploadEntityId = uploadEntityId
         )
+    }
 
     fun toYTItem() = SongItem(
         id = id,

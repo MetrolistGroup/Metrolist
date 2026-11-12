@@ -782,6 +782,7 @@
     <string name="track_number_column">Track number column (optional)</string>
     <string name="artist_name_column">Artist name column</string>
     <string name="song_title_column">Song title column</string>
+    <string name="album_column">Album column (optional)</string>
     <string name="youtube_url_column">YouTube URL column (optional)</string>
     <string name="continue_action">Continue</string>
     <string name="importing_csv">Importing CSV…</string>
