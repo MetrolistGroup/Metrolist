@@ -51,7 +51,7 @@ data class MediaMetadata(
 
     fun toSongEntity(): SongEntity {
         val computedAlbumId = album?.id?.takeIf { it.isNotEmpty() }
-            ?: album?.title?.let { "LOCAL_ALBUM_${(it + artists.joinToString { artist -> artist.name }).hashCode()}" }
+            ?: album?.title?.let { "LOCAL_ALBUM_${it.hashCode()}" }
 
         return SongEntity(
             id = id,
