@@ -28,6 +28,7 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertubex.extraction.ContentHints
 import com.metrolist.music.constants.AudioQuality
 import com.metrolist.music.constants.AudioQualityKey
+import com.metrolist.music.constants.ExportDownloadsToPublicFolderKey
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.AlbumEntity
 import com.metrolist.music.db.entities.FormatEntity
@@ -37,8 +38,10 @@ import com.metrolist.music.di.DownloadCache
 import com.metrolist.music.di.PlayerCache
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.models.toMediaMetadata
+import com.metrolist.music.utils.DownloadExporter
 import com.metrolist.music.utils.InnerTubeXPlayer
 import com.metrolist.music.utils.enumPreference
+import com.metrolist.music.utils.preference
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -75,6 +78,7 @@ constructor(
     private val TAG = "DownloadUtil"
     private val connectivityManager = context.getSystemService<ConnectivityManager>()!!
     private val audioQuality by enumPreference(context, AudioQualityKey, AudioQuality.AUTO)
+    private val exportDownloadsToPublicFolder by preference(context, ExportDownloadsToPublicFolderKey, true)
     private val songUrlCache = StreamUrlCache()
     private val streamHttpClient =
         OkHttpClient.Builder()
@@ -265,6 +269,22 @@ constructor(
                                 Download.STATE_COMPLETED -> {
                                     removeFromPlayerCache(download.request.id)
                                     database.updateDownloadedInfo(download.request.id, true, LocalDateTime.now())
+                                    if (exportDownloadsToPublicFolder) {
+                                        val song = database.getSongByIdBlocking(download.request.id)
+                                        val title = song?.song?.title ?: "Unknown"
+                                        val artist = song?.artists?.joinToString { it.name } ?: "Unknown"
+                                        val mimeType = song?.format?.mimeType
+                                        val album = song?.album?.title
+                                        DownloadExporter.exportToDownloads(
+                                            context = context,
+                                            downloadCache = downloadCache,
+                                            songId = download.request.id,
+                                            title = title,
+                                            artist = artist,
+                                            mimeType = mimeType,
+                                            album = album,
+                                        )
+                                    }
                                 }
                                 Download.STATE_FAILED,
                                 Download.STATE_STOPPED,

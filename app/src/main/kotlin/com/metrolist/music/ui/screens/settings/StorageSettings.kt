@@ -51,6 +51,7 @@ import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.EnableSongCacheKey
+import com.metrolist.music.constants.ExportDownloadsToPublicFolderKey
 import com.metrolist.music.constants.MaxImageCacheSizeKey
 import com.metrolist.music.constants.MaxSongCacheSizeKey
 import com.metrolist.music.extensions.tryOrNull
@@ -94,6 +95,10 @@ fun StorageSettings(
     )
     val (enableSongCache, onEnableSongCacheChange) = rememberPreference(
         key = EnableSongCacheKey,
+        defaultValue = true
+    )
+    val (exportDownloadsToPublicFolder, onExportDownloadsToPublicFolderChange) = rememberPreference(
+        key = ExportDownloadsToPublicFolderKey,
         defaultValue = true
     )
 
@@ -306,6 +311,27 @@ fun StorageSettings(
                         description = {
                             Text(text = Formatter.formatShortFileSize(context, downloadCacheSize))
                         },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.download),
+                        title = { Text(stringResource(R.string.export_downloads_to_public_folder)) },
+                        description = { Text(stringResource(R.string.export_downloads_to_public_folder_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = exportDownloadsToPublicFolder,
+                                onCheckedChange = onExportDownloadsToPublicFolderChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter = painterResource(
+                                            id = if (exportDownloadsToPublicFolder) R.drawable.check else R.drawable.close
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            )
+                        },
+                        onClick = { onExportDownloadsToPublicFolderChange(!exportDownloadsToPublicFolder) }
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.clear_all),

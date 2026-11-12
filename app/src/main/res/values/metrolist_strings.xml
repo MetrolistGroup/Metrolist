@@ -994,4 +994,7 @@
     <string name="stream_source_web_creator_desc">Creator web client.</string>
     <string name="top_result">Top result</string>
     <string name="other">Other</string>
+
+    <string name="export_downloads_to_public_folder">Also save downloads to Downloads folder</string>
+    <string name="export_downloads_to_public_folder_desc">Save downloaded songs as audio files in Downloads/Metrolist</string>
 </resources>
