@@ -455,6 +455,7 @@ private fun NewMiniPlayer(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 // Cast indicator
+                DownloadSpeedButton()
                 if (isCasting) {
                     Icon(
                         painter = painterResource(R.drawable.cast_connected),
@@ -849,6 +850,7 @@ private fun LegacyMiniPlayer(
                 }
             }
 
+            DownloadSpeedButton()
             LegacyPlayPauseButton(
                 playbackState = playbackState,
                 isCasting = isCasting,

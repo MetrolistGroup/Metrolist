@@ -994,4 +994,8 @@
     <string name="stream_source_web_creator_desc">Creator web client.</string>
     <string name="top_result">Top result</string>
     <string name="other">Other</string>
+    <string name="download_audio_effects">Downloaded audio effects</string>
+    <string name="download_audio_effects_desc">Shared settings for all tracks. Original files stay unchanged. Reverb availability depends on your device.</string>
+    <string name="download_pitch">Pitch follows speed</string>
+    <string name="download_reverb">Reverb</string>
 </resources>

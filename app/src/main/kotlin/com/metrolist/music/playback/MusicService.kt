@@ -430,6 +430,7 @@ class MusicService :
     private val historyReporters = HashMap<Player, YouTubeHistoryReporter>()
     private val playerNormalizationProcessors = HashMap<Player, VolumeNormalizationAudioProcessor>()
     private val playerEqualizerProcessors = HashMap<Player, CustomEqualizerAudioProcessor>()
+    private val downloadedAudioEffects = HashMap<Player, DownloadedAudioEffects>()
 
     private var loudnessSetupJob: Job? = null
     private var loudnessSetupGeneration: Long = 0L
@@ -1342,6 +1343,7 @@ class MusicService :
                 .setDeviceVolumeControlEnabled(true)
                 .build()
         createdPlayer = player
+        downloadedAudioEffects[player] = DownloadedAudioEffects(this, player, scope)
 
         playerNormalizationProcessors[player] = normalizationProcessor
         playerSilenceProcessors[player] = silenceProcessor
@@ -5023,6 +5025,7 @@ class MusicService :
     }
 
     private fun releaseExoPlayer(player: ExoPlayer) {
+        downloadedAudioEffects.remove(player)?.release()
         historyReporters.remove(player)?.close()
         playerNormalizationProcessors.remove(player)
         playerSilenceProcessors.remove(player)

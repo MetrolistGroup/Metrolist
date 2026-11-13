@@ -14,6 +14,9 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 
 val EnableHighRefreshRateKey = booleanPreferencesKey("enableHighRefreshRate")
+val DownloadSpeedKey = floatPreferencesKey("downloadPlaybackSpeed")
+val DownloadPitchKey = intPreferencesKey("downloadPlaybackPitch")
+val DownloadReverbKey = intPreferencesKey("downloadPlaybackReverb")
 val EnableLandscapeScalingKey = booleanPreferencesKey("enableLandscapeScaling")
 val DynamicThemeKey = booleanPreferencesKey("dynamicTheme")
 val SelectedThemeColorKey = intPreferencesKey("selectedThemeColor")

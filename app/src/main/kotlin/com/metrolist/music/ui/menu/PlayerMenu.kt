@@ -47,6 +47,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -84,6 +86,9 @@ import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.ListItemHeight
 import com.metrolist.music.constants.VarispeedKey
+import com.metrolist.music.constants.DownloadSpeedKey
+import com.metrolist.music.constants.DownloadPitchKey
+import com.metrolist.music.constants.DownloadReverbKey
 import com.metrolist.music.listentogether.ConnectionState
 import com.metrolist.music.listentogether.ListenTogetherEvent
 import com.metrolist.music.models.MediaMetadata
@@ -133,6 +138,10 @@ fun PlayerMenu(
     val castDeviceName by castHandler?.castDeviceName?.collectAsStateWithLifecycle() ?: remember { mutableStateOf<String?>(null) }
 
     val varispeedMode by rememberPreference(VarispeedKey, defaultValue = false)
+    var showDownloadEffects by rememberSaveable { mutableStateOf(false) }
+    if (showDownloadEffects) {
+        DownloadEffectsDialog(onDismiss = { showDownloadEffects = false })
+    }
 
     val librarySong by database.song(mediaMetadata.id).collectAsStateWithLifecycle(initialValue = null)
     val coroutineScope = rememberCoroutineScope()
@@ -730,7 +739,8 @@ fun PlayerMenu(
                                         )
                                     },
                                     onClick = {
-                                        if (!varispeedMode) showPitchTempoDialog = true
+                                        if (!isCasting) showDownloadEffects = true
+                                        else if (!varispeedMode) showPitchTempoDialog = true
                                         else showSpeedDialog = true
                                     },
                                 ),
@@ -740,6 +750,66 @@ fun PlayerMenu(
             )
         }
     }
+}
+
+@Composable
+fun DownloadEffectsDialog(onDismiss: () -> Unit) {
+    var speed by rememberPreference(DownloadSpeedKey, 1f)
+    var pitch by rememberPreference(DownloadPitchKey, 0)
+    var reverb by rememberPreference(DownloadReverbKey, 0)
+    val isInRoom = LocalListenTogetherManager.current?.isInRoom == true
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.advanced)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.download_audio_effects_desc))
+                if (!isInRoom) {
+                    Text("${stringResource(R.string.speed)} · ${"%.2f".format(speed)}×")
+                    Slider(
+                        value = speed,
+                        onValueChange = { speed = (round(it * 20) / 20).coerceIn(0.25f, 2f) },
+                        valueRange = 0.25f..2f,
+                        steps = 34,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    ValueAdjuster(
+                        icon = R.drawable.speed,
+                        currentValue = speed,
+                        values = (0..35).map { (5 + it) / 20f },
+                        onValueUpdate = { speed = it },
+                        valueText = { "${"%.2f".format(it)}×" },
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(R.string.download_pitch))
+                    Switch(checked = pitch != 0, onCheckedChange = { pitch = if (it) 1 else 0 })
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(R.string.download_reverb))
+                    Switch(checked = reverb != 0, onCheckedChange = { reverb = if (it) 1 else 0 })
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = {
+                speed = 1f
+                pitch = 0
+                reverb = 0
+            }) { Text(stringResource(R.string.reset)) }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.ok)) }
+        },
+    )
 }
 
 @Composable
