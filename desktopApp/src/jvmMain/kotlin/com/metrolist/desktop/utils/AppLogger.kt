@@ -8,6 +8,8 @@ package com.metrolist.desktop.utils
 import com.metrolist.shared.BuildConfig
 import com.metrolist.shared.utils.LogBridge
 import com.metrolist.shared.utils.XdgUtils
+import com.metrolist.shared.youtube.playback.PlaybackEventLevel
+import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -216,6 +218,15 @@ object AppLogger {
     ) {
         if (!isInitialized.get()) return
         if (!detailedLoggingEnabled.get() && level < Level.WARNING) return
+
+        if (level >= Level.WARNING) {
+            PlaybackEventLog.captureApplicationFailure(
+                level = if (level == Level.ERROR) PlaybackEventLevel.ERROR else PlaybackEventLevel.WARN,
+                tag = tag,
+                message = message,
+                error = throwable,
+            )
+        }
 
         val entry =
             LogEntry(

@@ -138,6 +138,21 @@ object PlaybackEventLog {
         )
     }
 
+    fun captureApplicationFailure(
+        level: PlaybackEventLevel,
+        tag: String,
+        message: String,
+        error: Throwable? = null,
+    ) {
+        if (level != PlaybackEventLevel.WARN && level != PlaybackEventLevel.ERROR) return
+        record(
+            level = level,
+            kind = PlaybackEventKind.OTHER,
+            message = "[$tag] $message",
+            error = error,
+        )
+    }
+
     fun clear() {
         events.clear()
     }
@@ -150,7 +165,7 @@ object PlaybackEventLog {
         val snapshot = allEvents.takeLast(maxEvents.coerceAtLeast(0))
         val header =
             buildString {
-                appendLine("Metrolist playback event log")
+                appendLine("Metrolist application event log")
                 appendLine("Exported: ${Instant.fromEpochMilliseconds(Clock.System.now().toEpochMilliseconds())}")
                 appendLine("Events: ${snapshot.size} of ${allEvents.size}")
                 appendLine("Environment:")

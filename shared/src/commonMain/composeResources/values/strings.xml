@@ -937,21 +937,21 @@
     <string name="devtools_access_logged_in" translatable="false">Logged in</string>
     <!-- Translators: Label for client legend access in the playback developer tools. -->
     <string name="devtools_playback_client_legend_access" translatable="false">Account access</string>
-    <!-- Translators: Heading for log in the playback developer tools. -->
-    <string name="devtools_playback_log_title" translatable="false">Playback event log</string>
-    <!-- Translators: Supporting text beneath the log option in the playback developer tools. -->
-    <!-- Translators: Empty-state message for log empty in the playback developer tools. -->
-    <!-- Translators: Label for log count in the playback developer tools. %1$d is the captured event count. -->
-    <string name="devtools_playback_log_count" translatable="false">%1$d events captured</string>
+    <!-- Translators: Heading for the application failure log in the developer tools. -->
+    <string name="devtools_playback_log_title">Application failure log</string>
+    <!-- Translators: Supporting text beneath the application failure log. -->
+    <!-- Translators: Empty-state message for the application failure log. -->
+    <!-- Translators: Label for the application failure log count. %1$d is the captured event count. -->
+    <string name="devtools_playback_log_count">%1$d events captured</string>
     <!-- Translators: Label for log filter all in the playback developer tools. -->
     <!-- Translators: Label for log filter warnings in the playback developer tools. -->
     <!-- Translators: Error message about log filter errors in the playback developer tools. -->
     <!-- Translators: Label for log cleared in the playback developer tools. -->
-    <string name="devtools_playback_log_cleared" translatable="false">Playback log cleared</string>
+    <string name="devtools_playback_log_cleared">Failure log cleared</string>
     <!-- Translators: Error message about log export in the playback developer tools. -->
-    <string name="devtools_playback_log_export_failed" translatable="false">Could not export the playback log</string>
-    <!-- Translators: Heading for log share in the playback developer tools. -->
-    <string name="devtools_playback_log_share_title" translatable="false">Export playback log</string>
+    <string name="devtools_playback_log_export_failed">Could not export the failure log</string>
+    <!-- Translators: Share-sheet title for the application failure log. -->
+    <string name="devtools_playback_log_share_title">Export failure log</string>
     <!-- Translators: Input hint for search in the settings. -->
     <string name="settings_search_placeholder">Search settings</string>
     <!-- Translators: Imperative action label for results; retained for translation compatibility but not currently referenced by app code. -->
@@ -5082,8 +5082,8 @@
     <string name="settings_storage_summary">%1$s used • %2$s free</string>
     <string name="new_badge">New</string>
     <string name="live">LIVE</string>
-    <string name="playback_event_log_raw_description">Always-on playback diagnostics. Copy or export this raw log when playback breaks.</string>
-    <string name="playback_event_log_raw_empty">No playback events recorded yet. Play a track to capture diagnostics.</string>
+    <string name="playback_event_log_raw_description">Playback and application failures are recorded here. UI events are excluded.</string>
+    <string name="playback_event_log_raw_empty">No failures recorded yet.</string>
     <string name="import_error_playlist_tracks_unavailable">Could not load the playlist's tracks from %1$s. Export the playlist and paste the track list.</string>
     <string name="import_error_album_tracks_unavailable">Could not load the album's tracks from %1$s. Export the album and paste the track list.</string>
 <string name="audio_boost">Preamp</string>

@@ -14,6 +14,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.SystemClock
 import android.service.quicksettings.TileService
+import android.util.Log
 import android.webkit.WebView
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.core.app.NotificationChannelCompat
@@ -67,6 +68,8 @@ import com.metrolist.shared.state.coreModule
 import com.metrolist.shared.utils.isCrashReportingAvailable
 import com.metrolist.shared.youtube.di.sharedModule
 import com.metrolist.shared.youtube.playback.AndroidContextProvider
+import com.metrolist.shared.youtube.playback.PlaybackEventLevel
+import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -150,6 +153,7 @@ class App :
     @OptIn(ExperimentalResourceApi::class)
     override fun onCreate() {
         super.onCreate()
+        Timber.plant(AppFailureTree())
         instance = this
         AndroidContextProvider.applicationContext = applicationContext
         val processName = currentProcessName()
@@ -425,6 +429,23 @@ class App :
     }
 
     override fun newImageLoader(context: Context): ImageLoader = createAppImageLoader(context)
+}
+
+private class AppFailureTree : Timber.Tree() {
+    override fun log(
+        priority: Int,
+        tag: String?,
+        message: String,
+        t: Throwable?,
+    ) {
+        val level =
+            when (priority) {
+                Log.ERROR -> PlaybackEventLevel.ERROR
+                Log.WARN -> PlaybackEventLevel.WARN
+                else -> return
+            }
+        PlaybackEventLog.captureApplicationFailure(level, tag ?: "Android", message, t)
+    }
 }
 
 private fun currentProcessName(): String =

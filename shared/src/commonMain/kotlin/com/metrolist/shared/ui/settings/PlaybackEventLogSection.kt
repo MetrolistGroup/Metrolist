@@ -63,7 +63,7 @@ fun PlaybackEventLogSection(
     val previews by produceState(emptyList<Pair<Long, String>>(), events, formatTimestamp) {
         value =
             withContext(Dispatchers.Default) {
-                events.takeLast(300).map { it.id to it.previewText(formatTimestamp) }
+                events.takeLast(100).map { it.id to it.previewText(formatTimestamp) }
             }
     }
 
