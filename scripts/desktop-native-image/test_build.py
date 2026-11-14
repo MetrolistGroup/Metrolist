@@ -133,7 +133,9 @@ for name in ('libjava.so', 'libjvm.so'):
                         if target == 'windows-x64':
                             output = output.with_suffix('.exe')
                         output.write_text('executable')
-                with patch.object(native_image, 'host_platform', return_value=target), patch('subprocess.run', side_effect=run):
+                # Windows resource compilation has its own test and needs rc.exe from the Windows SDK.
+                with patch.object(native_image, 'host_platform', return_value=target), patch('subprocess.run', side_effect=run), \
+                        patch.object(native_image, 'windows_resources'):
                     native_image.build(graal, work, target)
                 self.assertFalse((work/'macos-awt.o').exists())
 
