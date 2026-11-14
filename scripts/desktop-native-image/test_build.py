@@ -123,6 +123,9 @@ for name in ('libjava.so', 'libjvm.so'):
                 library = 'jawt.dll' if target == 'windows-x64' else 'libjawt.so'
                 graal = work/'graal'; source = graal/('bin' if target == 'windows-x64' else 'lib')/library
                 source.parent.mkdir(parents=True); source.write_text('jawt')
+                if target == 'windows-x64':
+                    for runtime in ('vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll'):
+                        (graal/'bin'/runtime).write_text(runtime)
                 def run(command, **kwargs):
                     self.assertNotEqual(command[0], 'clang')
                     self.assertNotIn('env', kwargs)
@@ -138,6 +141,9 @@ for name in ('libjava.so', 'libjvm.so'):
                         patch.object(native_image, 'windows_resources'):
                     native_image.build(graal, work, target)
                 self.assertFalse((work/'macos-awt.o').exists())
+                if target == 'windows-x64':
+                    self.assertEqual({'vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll'},
+                                     {path.name for path in (work/'image').glob('*.dll') if path.name.startswith(('vcruntime', 'msvcp'))})
 
 
 if __name__ == "__main__":

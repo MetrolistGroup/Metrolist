@@ -213,6 +213,13 @@ def build(graal, work, target, experiment=False, agent=None):
         if target.startswith('windows'):
             (image / 'bin').mkdir(exist_ok=True)
             shutil.copy2(source, image / 'bin' / library)
+            # Metrolist.exe and the JDK DLLs link the MSVC runtime; ship GraalVM's app-local copies like the JDK does,
+            # because clean Windows installs have no Visual C++ Redistributable.
+            runtimes = sorted([*(graal / 'bin').glob('vcruntime*.dll'), *(graal / 'bin').glob('msvcp*.dll')])
+            if not any(path.name.lower() == 'vcruntime140_1.dll' for path in runtimes):
+                raise RuntimeError('GraalVM bin is missing the MSVC runtime DLLs the Windows image needs')
+            for runtime in runtimes:
+                shutil.copy2(runtime, image / runtime.name)
         resources = work / 'resources'
         if resources.exists():
             shutil.copytree(resources, image / 'resources')
