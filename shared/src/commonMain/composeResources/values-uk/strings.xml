@@ -533,4 +533,5 @@
     <string name="downloads_completed">Завантаження завершено</string>
     <string name="downloads_finished">Усі завантаження завершено</string>
     <string name="completed_downloads">Завершені завантаження</string>
+    <string name="download_completion_summary">Завантажено: %1$d, не вдалося завантажити: %2$d</string>
 </resources>
