@@ -8,7 +8,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -55,10 +54,15 @@ class DesktopPageBoundTokenRuntime(
     private val pending = ConcurrentHashMap<Long, CancellableContinuation<String>>()
 
     internal val requested = MutableStateFlow(false)
+    internal val hostRequested = MutableStateFlow(false)
     internal val session = MutableStateFlow(0L)
     private val navigator = MutableStateFlow<Result<WebViewNavigator>?>(null)
     private val platformAvailable by lazy(isPlatformAvailable)
     private val reaper = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // Force a fresh document even when Compose coalesces reset and the next request.
+    internal val pageUrl: String
+        get() = if (requested.value) "$PAGE_BOUND_TOKEN_ORIGIN_URL?metrolistSession=${session.value}" else "about:blank"
 
     override val available: Boolean
         get() = navigator.value?.isFailure != true && platformAvailable
@@ -72,8 +76,11 @@ class DesktopPageBoundTokenRuntime(
     internal fun attach(
         sessionId: Long,
         navigator: WebViewNavigator,
+        loadedUrl: String?,
     ) {
-        if (sessionId == session.value && requested.value && available) this.navigator.value = Result.success(navigator)
+        if (sessionId == session.value && requested.value && loadedUrl == pageUrl && available) {
+            this.navigator.value = Result.success(navigator)
+        }
     }
 
     internal fun detach(sessionId: Long = session.value) {
@@ -85,6 +92,7 @@ class DesktopPageBoundTokenRuntime(
     override suspend fun evaluate(script: String): String =
         mutex.withLock {
             check(available) { "Desktop page-bound WebView is unavailable" }
+            hostRequested.value = true
             requested.value = true
             withTimeoutOrNull(EVALUATION_TIMEOUT_MS.milliseconds) {
                 val activeNavigator = navigator.filterNotNull().first().getOrThrow()
@@ -138,16 +146,19 @@ class DesktopPageBoundTokenRuntime(
 
 @Composable
 fun DesktopPageBoundTokenHost(runtime: DesktopPageBoundTokenRuntime) {
+    val hostRequested by runtime.hostRequested.collectAsState()
     val requested by runtime.requested.collectAsState()
     val session by runtime.session.collectAsState()
-    if (!requested || !runtime.available) return
-    key(session) { DesktopPageBoundTokenSession(runtime, session) }
+    if (!hostRequested || !runtime.available) return
+    // Wry's native WebViews can survive disposal. Reuse one view and unload the attestation page on idle.
+    DesktopPageBoundTokenSession(runtime, session, requested)
 }
 
 @Composable
 private fun DesktopPageBoundTokenSession(
     runtime: DesktopPageBoundTokenRuntime,
     session: Long,
+    requested: Boolean,
 ) {
     val webViewDataDirectory = remember { runCatching { prepareDesktopWebViewDataDirectory().absolutePath } }
     if (webViewDataDirectory.isFailure) {
@@ -157,7 +168,7 @@ private fun DesktopPageBoundTokenSession(
         return
     }
     val state =
-        rememberWebViewState(PAGE_BOUND_TOKEN_ORIGIN_URL).apply {
+        rememberWebViewState(runtime.pageUrl).apply {
             webSettings.customUserAgentString = PAGE_BOUND_PO_TOKEN_USER_AGENT
             webSettings.desktopWebSettings.dataDirectory = webViewDataDirectory.getOrNull()
             webSettings.desktopWebSettings.incognito = true
@@ -166,12 +177,12 @@ private fun DesktopPageBoundTokenSession(
         }
     val scope = rememberCoroutineScope()
     val navigator = rememberWebViewNavigator(scope)
-    LaunchedEffect(state.loadingState) {
+    LaunchedEffect(state.loadingState, state.lastLoadedUrl, session, requested) {
         if (state.loadingState is LoadingState.Finished) {
-            runtime.attach(session, navigator)
+            runtime.attach(session, navigator, state.lastLoadedUrl)
         }
     }
-    DisposableEffect(runtime, navigator) {
+    DisposableEffect(runtime, navigator, session) {
         onDispose { runtime.detach(session) }
     }
     Box(Modifier.size(1.dp)) {
