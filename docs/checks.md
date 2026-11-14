@@ -218,6 +218,7 @@ python3 scripts/check_translation_mechanics.py
 python3 scripts/test_translation_mechanics.py
 python3 scripts/test_hooks.py
 python3 scripts/test_build_ios.py
+python3 -m unittest scripts.test_install_ios
 python3 scripts/test_build_appimage.py
 python3 scripts/test_desktop_smoke.py
 python3 scripts/test_dmg_packaging.py
