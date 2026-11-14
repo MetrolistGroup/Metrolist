@@ -1601,10 +1601,10 @@
     </plurals>
     <string name="app_data">Dati app</string>
     <string name="backup_picker_title">Ripristina backup Metrolist</string>
-    <string name="create_backup_dialog_title">Crea backup Metrolist</string>
+    <string name="create_backup_dialog_title">Crea backup di Metrolist</string>
     <string name="backup_created">Backup creato</string>
-    <string name="backup_failed">Errore nel backup: %1$s</string>
-    <string name="could_not_open_file_picker">Impossibile aprire il selettore file: %1$s</string>
+    <string name="backup_failed">Backup fallito: %1$s</string>
+    <string name="could_not_open_file_picker">Impossibile aprire il selettore dei file: %1$s</string>
     <string name="listen_together_how_it_works">Come funziona</string>
     <string name="listen_together_how_it_works_body">Ascolta la musica in contemporanea con i tuoi amici. L'host controlla la riproduzione e gli ospiti la seguono automaticamente.</string>
     <string name="listen_together_how_it_works_bullets">• Crea una stanza per diventare l\u0027host\n• Condividi il codice stanza con i tuoi amici\n• Gli ospiti possono unirsi con il codice stanza\n• Solo l\u0027host può controllare la riproduzione</string>
@@ -2021,7 +2021,7 @@
     <string name="edit_playlist_cover_note_wait">Dopo aver selezionato un'immagine, attendi un momento per far mostrare la nuova copertina nella tua playlist</string>
     <string name="choose_from_library">Scegli dalla libreria</string>
     <string name="remove_custom_image">Rimuovi immagine personalizzata</string>
-    <string name="playlist_cover_update_failed">Impossibile caricare la copertina per la playlist</string>
+    <string name="playlist_cover_update_failed">Impossibile aggiornare la copertina per la playlist</string>
     <string name="bottom_sheet_pane_title">Riquadro inferiore</string>
     <string name="lyrics_provider_lrcred_description">Database di testi con sincronizzazione per riga e per parola, con supporto a testi temporizzati e sincronizzati automaticamente</string>
     <string name="foreign_import_title">Importa da un\u0027altra app</string>
@@ -2283,7 +2283,7 @@
     <string name="playback_unable_to_play_queued_track">Impossibile riprodurre questa traccia in coda.</string>
     <string name="token_login_sensitive_warning_generic">NON condividere il token.</string>
     <string name="legacy_shuffle">Riproduzione casuale classica</string>
-    <string name="playlist_cover_updated">Copertina playlist caricata</string>
+    <string name="playlist_cover_updated">Copertina playlist aggiornata</string>
     <string name="playlist_cover_removed">Copertina playlist rimossa</string>
     <string name="together">Together</string>
     <string name="legacy_shuffle_desc">Riproduce in modo casuale tutti i brani. inclusi quelli riprodotti, con il brano corrente. Disabilita per usare la riproduzione di KMP, che mantiene i brani già ascoltati in ordine e mischia l'ordine dei successivi.</string>
@@ -2346,7 +2346,7 @@
     <string name="device_connect_direct_failed">Impossibile connettersi o completare l'abbinamento. Controlla l'indirizzo, porta di ascolto, accesso alla VPN e l'approvazione dell'abbinamento, quindi prova di nuovo.</string>
     <string name="device_connect_default_device">Dispositivo di riproduzione predefinito</string>
     <string name="device_connect_default_device_description">Inizia la riproduzione su questo dispositivo abbinato quando connesso. Scegli Nessuno per cancellare il predefinito.</string>
-    <string name="player_type_expressive">Expressive</string>
+    <string name="player_type_expressive">Espressivo</string>
     <string name="listen_together_suggestion_auto_approved">Suggerimento brano approvato automaticamente</string>
     <string name="album_save_to_account">Salva in YouTube Music</string>
     <string name="album_saved_to_account">L'album è stato salvato sull'account YouTube Music selezionato.</string>
