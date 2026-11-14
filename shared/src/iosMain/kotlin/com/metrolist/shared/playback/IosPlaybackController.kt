@@ -140,7 +140,7 @@ internal class IosPlaybackController(
             combine(manager.role, manager.isInRoom, snapshotFlow { Settings.shared.listenTogetherEnabled }) { role, active, enabled ->
                 listenTogetherControls(enabled, role, active).playbackLocked
             }.distinctUntilChanged().collect { locked ->
-                if (locked && isVideoModeActive.value) {
+                if (locked && (isVideoModeActive.value || isVideoResolving.value || videoModeJob?.isActive == true)) {
                     videoModeRequestId++
                     videoModeJob?.cancel()
                     clearVideoMode()
