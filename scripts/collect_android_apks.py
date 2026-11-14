@@ -8,7 +8,7 @@ import shutil
 from pathlib import Path
 
 def collect(apk_dir: Path, destination: Path, version: str, variant: str) -> None:
-    if variant not in {"debug", "release"} or not re.fullmatch(r"\d+\.\d+\.\d+(?:-[A-Za-z0-9][A-Za-z0-9._-]*)?", version):
+    if variant not in {"debug", "release"} or not re.fullmatch(r"\d+\.\d+\.\d+(?:-[A-Za-z0-9][A-Za-z0-9._-]*)?(?:\+[0-9A-Za-z.-]+)?", version):
         raise ValueError("Invalid Android variant or version")
     metadata = json.loads((apk_dir / "output-metadata.json").read_text())
     if metadata["variantName"] != variant:

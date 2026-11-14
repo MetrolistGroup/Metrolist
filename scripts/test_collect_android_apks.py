@@ -42,6 +42,17 @@ class CollectAndroidApksTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 collect(root, root / "bad", "14.0.0-rc0", "debug")
 
+    def test_nightly_build_metadata_version(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            metadata = self.metadata(root, "release", ["universal"])
+            metadata["elements"][0]["versionName"] = "14.0.0+abcdef0"
+            (root / "output-metadata.json").write_text(json.dumps(metadata))
+            collect(root, root / "dist", "14.0.0+abcdef0", "release")
+            self.assertTrue((root / "dist/Metrolist.apk").is_file())
+            with self.assertRaises(ValueError):
+                collect(root, root / "other", "14.0.0", "release")
+
     @staticmethod
     def metadata(root, variant, abis):
         elements = []
