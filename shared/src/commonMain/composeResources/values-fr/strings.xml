@@ -1402,7 +1402,7 @@
     <string name="onboarding_privacy_policy">Lire notre politique de confidentialité</string>
     <string name="onboarding_welcome_description">Réglez les paramètres de confidentialité et les permissions de l\u0027application avant votre première écoute.</string>
     <string name="onboarding_crash_reports_title">Contribuez à améliorer Metrolist</string>
-    <string name="onboarding_migration_title">Voici votre bibliothèque Metrolist v13</string>
+    <string name="onboarding_migration_title">Importez votre bibliothèque Metrolist v13</string>
     <string name="onboarding_migration_description">Nous avons trouvé des données issues de la version standard de Metrolist. Importez vos playlists, vos titres favoris, votre historique et votre bibliothèque. Les données d\u0027origine restent intactes si l\u0027importation échoue.</string>
     <string name="onboarding_migration_complete_title">Vos données ont été importées</string>
     <string name="onboarding_migration_complete_description">Votre compte, vos playlists, vos titres favoris, votre historique et votre bibliothèque sont maintenant disponibles dans cette version de Metrolist.</string>
