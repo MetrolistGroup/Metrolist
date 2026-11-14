@@ -265,7 +265,7 @@ def native_backend_smoke(package, output, system):
                 with packaged_command(package, work, system, log) as command:
                     result = subprocess.run([*command, f"-Duser.home={profile}", f"-Djava.io.tmpdir={work}",
                         "-Djava.awt.headless=true", "-Dmetrolist.native.backendSmoke=true",
-                        "-XX:MissingRegistrationReportingMode=Exit"], env=env, cwd=work,
+                        "-XX:MissingRegistrationReportingMode=Warn"], env=env, cwd=work,
                         stdout=log, stderr=subprocess.STDOUT, timeout=60)
         except subprocess.TimeoutExpired:
             pass
@@ -300,8 +300,9 @@ def smoke(package, output, system=sys.platform, native=False, trace_java=None, t
         profile = work / "profile"
         env = profile_environment(profile)
         # A non-English locale reaches localized JDK and app resources that an English trace never loads.
+        # Warn keeps running so every missing registration reaches the logs; any of them still fails the smoke below.
         native_options = [f"-Duser.home={profile}", f"-Djava.io.tmpdir={work}", "-Duser.language=fr", "-Duser.country=FR",
-                          "-XX:MissingRegistrationReportingMode=Exit"]
+                          "-XX:MissingRegistrationReportingMode=Warn"]
         if native and system != "win32":
             import resource
             resource.setrlimit(resource.RLIMIT_CORE, (0, resource.getrlimit(resource.RLIMIT_CORE)[1]))
