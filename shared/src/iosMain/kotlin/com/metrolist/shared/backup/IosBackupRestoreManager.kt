@@ -378,7 +378,7 @@ class IosBackupRestoreManager(
         path: String,
         manifest: BackupManifest?,
     ) {
-        validateDatabaseIntegrity(path)
+        withConnection(path, ::validateBackupDatabaseIntegrity)
         val version = databaseVersion(path)
         check(version > 0) { "Backup database version is missing or invalid" }
         requireSupportedBackupDatabaseVersion(version, DATABASE_VERSION)
@@ -393,6 +393,7 @@ class IosBackupRestoreManager(
             migrated.close()
         }
         check(databaseVersion(path) == DATABASE_VERSION) { "Backup database migration failed" }
+        validateDatabaseIntegrity(path)
         validateRoomSchema(path)
     }
 

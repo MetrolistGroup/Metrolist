@@ -353,6 +353,8 @@ Backup restore must roll back to the exact prior settings, and exports must reje
 
 Android backup snapshots use Room's writer connection: `VACUUM INTO` on API 30+, otherwise a copy of the main file and WAL under an exclusive transaction, checkpointed into the staged copy. After a failed Android legacy migration, onboarding can create an empty library while keeping the original database under the private `files/legacy-library-recovery/` directory.
 
+Legacy database conversion removes dangling children covered by cascading foreign keys after the data migrations, then checks all foreign keys. Dangling history provenance keeps its row with a null event reference. Format and lyrics rows without local songs remain intact. Android onboarding and manual restore use this shared conversion, as do desktop and iOS restores. Current backup validation still rejects foreign key violations.
+
 ## Integrations
 
 ### Casting
