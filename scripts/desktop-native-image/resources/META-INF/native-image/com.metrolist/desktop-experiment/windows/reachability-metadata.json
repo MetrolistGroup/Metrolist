@@ -153,7 +153,8 @@
       "jniAccessible": true,
       "allDeclaredFields": true,
       "allDeclaredMethods": true,
-      "allDeclaredConstructors": true
+      "allDeclaredConstructors": true,
+      "allPublicMethods": true
     },
     {
       "type": {
@@ -4117,6 +4118,559 @@
       "type": "com.sun.jna.platform.win32.Wtsapi32$WTS_SESSION_INFO",
       "allDeclaredFields": true,
       "allPublicConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.COM.DispatchVTable$AddRefCallback",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.COM.DispatchVTable$GetIDsOfNamesCallback",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.COM.DispatchVTable$GetTypeInfoCallback",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.COM.DispatchVTable$GetTypeInfoCountCallback",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.COM.DispatchVTable$InvokeCallback",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.COM.DispatchVTable$QueryInterfaceCallback",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.COM.DispatchVTable$ReleaseCallback",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.COM.UnknownVTable$AddRefCallback",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.COM.UnknownVTable$QueryInterfaceCallback",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.COM.UnknownVTable$ReleaseCallback",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Ddeml$DdeCallback",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinBase$EnumResNameProc",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinBase$EnumResTypeProc",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinBase$FE_EXPORT_FUNC",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinBase$FE_IMPORT_FUNC",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinBase$THREAD_START_ROUTINE",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinCrypt$CryptGetSignerCertificateCallback",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinNT$OVERLAPPED_COMPLETION_ROUTINE",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinRas$RasDialFunc2",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Winsvc$Handler",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Winsvc$HandlerEx",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Winsvc$SERVICE_MAIN_FUNCTION",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinUser$HOOKPROC",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinUser$LowLevelKeyboardProc",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinUser$LowLevelMouseProc",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinUser$MONITORENUMPROC",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinUser$WinEventProc",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinUser$WNDENUMPROC",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Advapi32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Advapi32"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.BluetoothApis",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.BluetoothApis"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Cfgmgr32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Cfgmgr32"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Crypt32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Crypt32"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Cryptui",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Cryptui"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Ddeml",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Ddeml"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Dxva2",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Dxva2"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.GDI32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.IPHlpAPI",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.IPHlpAPI"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Kernel32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Kernel32"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Mpr",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Mpr"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Msi",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Msi"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Netapi32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Netapi32"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.NtDll",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.NtDll"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Ole32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Ole32"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.OleAuto",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.OleAuto"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.OpenGL32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.OpenGL32"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Pdh",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Pdh"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.PowrProf",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.PowrProf"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Psapi",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Psapi"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Rasapi32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Rasapi32"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Secur32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Secur32"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.SetupApi",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.SetupApi"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Shell32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Shell32"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.ShellAPI",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.ShellAPI"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Shlwapi",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Shlwapi"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.User32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.User32"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Version",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Version"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Wevtapi",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Wevtapi"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Windot11",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Windot11"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Wininet",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Wininet"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Winsock2",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Winsock2"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Winspool",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Winspool"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WlanApi",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.WlanApi"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.jna.platform.win32.Wtsapi32",
+      "jniAccessible": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.Wtsapi32"
+        ]
+      }
     }
   ],
   "resources": [
