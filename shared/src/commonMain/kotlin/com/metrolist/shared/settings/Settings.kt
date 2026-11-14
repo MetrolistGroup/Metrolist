@@ -45,6 +45,7 @@ import com.metrolist.shared.constants.CanvasContentOrderKey
 import com.metrolist.shared.constants.CanvasEnabledSourcesKey
 import com.metrolist.shared.constants.CastEnabledKey
 import com.metrolist.shared.constants.CollectionCoversKey
+import com.metrolist.shared.constants.DatabaseLikesRecoveryVersionKey
 import com.metrolist.shared.constants.DefaultOpenTabKey
 import com.metrolist.shared.constants.DeletedPlaylistIdsJsonKey
 import com.metrolist.shared.constants.DensityScaleKey
@@ -736,6 +737,7 @@ class Settings(
     private var playlistCollectionSortingsJson by preference(PlaylistCollectionSortingsKey, "{}")
     var visibleAutoPlaylists by preference("liked,downloaded,top,uploaded,cached")
     var likedSongsJson by preference("[]")
+    var databaseLikesRecoveryVersion by preference(DatabaseLikesRecoveryVersionKey, 0)
     var likedSongsOrderCustomized by preference(LikedSongsOrderCustomizedKey, false)
     var likedSongsOrderAccount by preference(LikedSongsOrderAccountKey, "")
     var likedSongsCustomOrdersJson by preference(LikedSongsCustomOrdersJsonKey, "{}")

@@ -17,7 +17,6 @@ import com.metrolist.shared.backup.requireBackupSize
 import com.metrolist.shared.backup.requireSupportedBackupDatabaseVersion
 import com.metrolist.shared.backup.requireSupportedFormat
 import com.metrolist.shared.backup.shouldConvertRestoredDatabase
-import com.metrolist.shared.backup.shouldMigrateDatabaseLikes
 import com.metrolist.shared.backup.withLegacyArtistNameAliases
 import com.metrolist.shared.db.DATABASE_VERSION
 import com.metrolist.shared.db.JdbcSQLiteDriver
@@ -29,6 +28,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.ArtistNameAliases
 import com.metrolist.shared.settings.PortableSettings
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.state.restoreDatabaseLikes
 import com.metrolist.shared.utils.XdgUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -233,8 +233,6 @@ object DesktopBackupRestoreManager {
             File(restoreDir, BACKUP_SETTINGS_ENTRY).takeIf(File::exists)?.let {
                 json.decodeFromString(PortableSettings.serializer(), it.readText())
             }
-        val migrateDatabaseLikes =
-            shouldMigrateDatabaseLikes(restoredSettings?.entries?.mapTo(mutableSetOf()) { it.key })
         val settingsSnapshot = File(restoreDir, "previous-settings.json")
         val preservedMarker = File(restoreDir, "database-preserved")
         val installationMarker = File(restoreDir, "installation-started")
@@ -304,14 +302,12 @@ object DesktopBackupRestoreManager {
                 Files.copy(staged.toPath(), stagedLiveDatabase.toPath(), StandardCopyOption.REPLACE_EXISTING)
                 atomicMove(stagedLiveDatabase, databaseFile)
                 databasePromoted = true
-                val verifiedLikes = verifyRestored()
-                if (migrateDatabaseLikes) databaseLikedSongs = verifiedLikes
+                databaseLikedSongs = verifyRestored()
             }
             if (restoredSettings == null) settings.artistNameAliasesJson = "{}"
             restoredSettings?.let(settings::importBackupSettings)
-            if (databasePromoted && migrateDatabaseLikes) {
-                settings.likedSongsJson = json.encodeToString(databaseLikedSongs)
-                settings.likedSongIds = databaseLikedSongs.joinToString(",") { it.id }
+            if (databasePromoted) {
+                settings.restoreDatabaseLikes(databaseLikedSongs, restoredSettings?.entries?.mapTo(mutableSetOf()) { it.key })
             }
             Files.deleteIfExists(File(restoreDir, MARKER).toPath())
             runCatching {

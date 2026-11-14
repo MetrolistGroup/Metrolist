@@ -72,6 +72,7 @@ import com.metrolist.shared.playlist.storeIosPlaylistCover
 import com.metrolist.shared.playlist.uploadStoredPlaylistCover
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
+import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.state.SongMetadataState
 import com.metrolist.shared.state.contentCountryCodes
 import com.metrolist.shared.storage.IosAudioDownloadManager
@@ -191,6 +192,7 @@ fun MetrolistIOSApp() {
     val appJob = remember(databaseGeneration) { SupervisorJob(scope.coroutineContext[Job]) }
     val appScope = remember(appJob) { CoroutineScope(scope.coroutineContext + appJob) }
     LaunchedEffect(database, appScope) {
+        SongLikeState.recoverDatabaseLikes(database)
         SongMetadataState.bind(database, appScope)
     }
     val downloadManager = remember(database, appScope) { IosAudioDownloadManager(database, appScope) }

@@ -893,6 +893,7 @@ private fun runDesktopApp(args: Array<String>) {
                     exitWithStartupMessage(downgrade.message.orEmpty())
                 }
             startup.trace("database")
+            runBlocking { SongLikeState.recoverDatabaseLikes(database) }
             SongMetadataState.bind(database, applicationScope)
 
             LastFM.initialize(

@@ -247,6 +247,8 @@ In playlist reorder mode, dragging the handle moves a song immediately; holding 
 
 Playlist sort and direction are shared across ordinary local and remote playlists (authored order, ascending by default). Liked songs (newest first), downloaded and cached collections have their own saved sorting. Re-liking moves a song to the top of Date Added. Remote refreshes update like recency while preserving likes made during the refresh. Local Date Added uses the membership row ID as its insertion sequence; position updates must preserve it.
 
+Signed-out startup recovers Room likes into the settings catalog once, including partial v14 catalogs. Recovery keeps the existing order and recency, appends missing rows newest first, and leaves Room liked dates unchanged. Pending v14 unlikes and dislikes exclude stale Room rows. Database restores use the same recovery unless the backup already contains its version marker. Account-owned catalogs keep their existing sync behavior.
+
 Android playlist removals publish the remaining occurrences before refreshing remote contents. Queued removals revalidate membership under the mutation lock so a deleted row cannot resend its old item ID.
 
 Android and iOS share the add-to-playlist sheet. **Add** submits the song batch to each selected destination; completed ones stay marked and failed ones keep their progress for retry. Duplicate prompts apply per occurrence and destination; **Skip** continues without it. The chooser shades playlists that already contain all selected songs, checking stored membership first and remote membership when the cache is incomplete. Lookup failures leave a playlist selectable.

@@ -15,6 +15,8 @@ import com.metrolist.shared.api.SongVote
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.auth.YouTubeSyncState
 import com.metrolist.shared.auth.supportedYouTubeAuthCredential
+import com.metrolist.shared.db.MusicDatabase
+import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.deviceconnect.DeviceCrypto
 import com.metrolist.shared.deviceconnect.toBase64
 import com.metrolist.shared.model.SongItem
@@ -41,6 +43,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -116,6 +119,35 @@ object SongLikeState {
         private set
 
     fun initialize() = Unit
+
+    suspend fun recoverDatabaseLikes(database: MusicDatabase) {
+        val settings = Settings.shared
+        if (settings.databaseLikesRecoveryVersion >= DATABASE_LIKES_RECOVERY_VERSION) return
+        // Runs at startup in unguarded app scopes; a malformed setting must not crash every launch.
+        try {
+            val account = remoteSyncGate.withLock { currentOrderAccount(settings) }
+            val songs =
+                database
+                    .dao()
+                    .likedSongsByCreateDateAsc()
+                    .first()
+                    .map { it.toSongItem() }
+            remoteSyncGate.withLock {
+                if (Settings.shared !== settings || currentOrderAccount(settings) != account) return
+                persistenceGate.withLock {
+                    if (settings.recoverDatabaseLikes(songs, likedSongs, likedSongRecency)) {
+                        persistenceRevision.incrementAndGet()
+                        likedSongRecency = loadLikedSongRecency()
+                        updateLikedSongs(loadLikedSongs())
+                    }
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            YtLogger.e(TAG, "Database like recovery failed", e)
+        }
+    }
 
     fun refreshFromSettings() =
         remoteSyncGate.withLock {

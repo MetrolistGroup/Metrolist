@@ -113,6 +113,7 @@ val LikedSongsOrderCustomizedKey = "likedSongsOrderCustomized"
 val LikedSongsOrderAccountKey = "likedSongsOrderAccount"
 val LikedSongsCustomOrdersJsonKey = "likedSongsCustomOrdersJson"
 val LikedSongsRecencyJsonKey = "likedSongsRecencyJson"
+val DatabaseLikesRecoveryVersionKey = "databaseLikesRecoveryVersion"
 
 val GitHubNTransformEnabledKey = "githubNTransformEnabled"
 val GitHubNTransformConfigUrlKey = "githubNTransformConfigUrl"

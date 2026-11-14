@@ -10,6 +10,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.ArtistNameAliases
 import com.metrolist.shared.settings.PortableSettings
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.state.restoreDatabaseLikes
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
@@ -243,13 +244,11 @@ class IosBackupRestoreManager(
                         prepareRestoreRecovery(previousSettings, hasDatabase = false, hadDatabase = hadDatabase)
                         recoveryPrepared = true
                     }
-                    val migrateLikes = restored.hasDatabase && restored.migrateDatabaseLikes
-                    val likes = if (migrateLikes) readLikedSongs(databasePath) else emptyList()
+                    val likes = if (restored.hasDatabase) readLikedSongs(databasePath) else emptyList()
                     withContext(Dispatchers.Main) {
                         restored.settings?.let(settings::importBackupSettings)
-                        if (migrateLikes) {
-                            settings.likedSongsJson = json.encodeToString(likes)
-                            settings.likedSongIds = likes.joinToString(",") { it.id }
+                        if (restored.hasDatabase) {
+                            settings.restoreDatabaseLikes(likes, restored.settings?.entries?.mapTo(mutableSetOf()) { it.key })
                         }
                     }
                     finishRestoreRecovery()
@@ -369,7 +368,6 @@ class IosBackupRestoreManager(
                 manifest = manifest,
                 settings = portableSettings,
                 hasDatabase = databaseEntry != null,
-                migrateDatabaseLikes = shouldMigrateDatabaseLikes(portableSettings?.entries?.mapTo(mutableSetOf()) { it.key }),
             )
         }
     }
@@ -730,7 +728,6 @@ class IosBackupRestoreManager(
         val manifest: BackupManifest?,
         val settings: PortableSettings?,
         val hasDatabase: Boolean,
-        val migrateDatabaseLikes: Boolean,
     )
 
     private class IosFileInputStream(

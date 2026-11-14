@@ -29,7 +29,6 @@ import com.metrolist.shared.backup.copyLegacyBackupTables
 import com.metrolist.shared.backup.requireBackupSize
 import com.metrolist.shared.backup.requireSupportedFormat
 import com.metrolist.shared.backup.shouldConvertRestoredDatabase
-import com.metrolist.shared.backup.shouldMigrateDatabaseLikes
 import com.metrolist.shared.backup.withLegacyArtistNameAliases
 import com.metrolist.shared.db.DATABASE_VERSION
 import com.metrolist.shared.db.MusicDatabase
@@ -40,6 +39,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.ArtistNameAliases
 import com.metrolist.shared.settings.PortableSettings
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.state.restoreDatabaseLikes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -544,9 +544,8 @@ class BackupRestoreManager(
                     }
                 if (request.settings == null) ArtistNameAliases.restore(emptyMap())
                 request.settings?.let(Settings.shared::importBackupSettings)
-                if (request.hasDatabase && shouldMigrateDatabaseLikes(request.settings?.entries?.mapTo(mutableSetOf()) { it.key })) {
-                    Settings.shared.likedSongsJson = json.encodeToString(likedSongs)
-                    Settings.shared.likedSongIds = likedSongs.joinToString(",") { it.id }
+                if (request.hasDatabase) {
+                    Settings.shared.restoreDatabaseLikes(likedSongs, request.settings?.entries?.mapTo(mutableSetOf()) { it.key })
                 }
                 Settings.shared.flush()
             }

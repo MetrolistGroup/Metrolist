@@ -356,6 +356,9 @@ class App :
     }
 
     private fun startDatabaseDependentServices() {
+        get<CoroutineScope>().launch(Dispatchers.IO) {
+            SongLikeState.recoverDatabaseLikes(get<MusicDatabase>())
+        }
         get<CoroutineScope>().launch {
             MusicRecognitionService.status.collect {
                 TileService.requestListeningState(this@App, ComponentName(this@App, MusicRecognizerTileService::class.java))
