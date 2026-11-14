@@ -14,6 +14,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -27,7 +28,16 @@ SIDELOADER_REPOSITORY: Final[str] = "Dadoum/Sideloader"
 WINDOWS_DEVICE_LIBRARIES_REPOSITORY: Final[str] = "libimobiledevice-win32/imobiledevice-net"
 WINDOWS_ITUNES: Final[str] = "https://www.apple.com/itunes/download/win64"
 USER_AGENT: Final[str] = "Metrolist-iOS-Installer/1.0"
-INSTALL_DIR: Final[Path] = Path.home() / "Metrolist-iOS" / "tools"
+SIDELOADER_RELEASE: Final[str] = "1.0-pre4"
+WINDOWS_DEVICE_LIBRARIES_RELEASE: Final[str] = "v1.3.17"
+PINNED_ASSET_SHA256: Final[dict[str, str]] = {
+    "sideloader-cli-aarch64-linux-gnu.zip": "3bd61364aee655a44a99837e2f8046d4d9f2455b401a8c32aa909b5de9e6de03",
+    "sideloader-cli-arm64-apple-macos.zip": "7cc8e17dec05a89a5a1d982d401357151953c47f907589eebd8f5102357b9b90",
+    "sideloader-cli-x86_64-apple-darwin.zip": "23b38b94b579ec4321d77189a46490098901cc01db8d84219c11ffabb0daba02",
+    "sideloader-cli-x86_64-linux-gnu.zip": "e193c02d661a5d797af4b44186c8655d078a0bfde419bdeab934c513d1a7b737",
+    "sideloader-cli-x86_64-windows-msvc.zip": "c60b7d92c6a5dcc312cb6eb2fe1a855326722aa0b3aebf6827689241dbc0f5a9",
+    "libimobiledevice.1.2.1-r1122-win-x64.zip": "d7cb57a71270848c35c3f01006701535aadf6dfb52325863ea368c94a34a2cab",
+}
 
 
 class ReleaseAsset(TypedDict):
@@ -199,6 +209,8 @@ def latest_sideloader_asset() -> tuple[str, str, str, int]:
         asset_name,
         releases_endpoint=True,
     )
+    if tag != SIDELOADER_RELEASE:
+        raise InstallError(f"Review and pin the Sideloader {tag} release before using it.")
     return tag, asset_name, url, size
 
 
@@ -215,14 +227,14 @@ def latest_windows_device_libraries_asset() -> tuple[str, str, str, int]:
         if not isinstance(release, dict):
             continue
         tag = release.get("tag_name")
+        if tag != WINDOWS_DEVICE_LIBRARIES_RELEASE:
+            continue
         assets = release.get("assets")
         if not isinstance(tag, str) or not isinstance(assets, list):
             continue
         for asset in assets:
             name = asset.get("name") if isinstance(asset, dict) else None
-            if not isinstance(name, str) or not re.fullmatch(
-                r"libimobiledevice\..+-win-x64\.zip", name
-            ):
+            if name != "libimobiledevice.1.2.1-r1122-win-x64.zip":
                 continue
             url = asset.get("browser_download_url")
             size = asset.get("size")
@@ -394,6 +406,9 @@ def install_windows_device_libraries(install_dir: Path) -> None:
     if archive_path.stat().st_size != expected_size:
         archive_path.unlink(missing_ok=True)
         raise InstallError("The Windows device-library archive size does not match GitHub metadata.")
+    if sha256_file(archive_path) != PINNED_ASSET_SHA256[archive_name]:
+        archive_path.unlink(missing_ok=True)
+        raise InstallError("The Windows device-library checksum does not match the reviewed release.")
     required = {
         "imobiledevice.dll",
         "plist.dll",
@@ -426,6 +441,7 @@ def install_windows_device_libraries(install_dir: Path) -> None:
 
 
 def install_sideloader(install_dir: Path) -> Path:
+    tag, archive_name, archive_url, expected_size = latest_sideloader_asset()
     if sys.platform.startswith("linux"):
         install_linux_dependencies()
     elif sys.platform == "darwin":
@@ -434,13 +450,15 @@ def install_sideloader(install_dir: Path) -> Path:
         install_windows_device_support(install_dir)
 
     install_dir.mkdir(parents=True, exist_ok=True)
-    tag, archive_name, archive_url, expected_size = latest_sideloader_asset()
     archive_path = install_dir / archive_name
     print(f"Downloading Dadoum Sideloader {tag}...")
     download(archive_url, archive_path)
     if archive_path.stat().st_size != expected_size:
         archive_path.unlink(missing_ok=True)
         raise InstallError("The Sideloader archive size does not match GitHub release metadata.")
+    if sha256_file(archive_path) != PINNED_ASSET_SHA256[archive_name]:
+        archive_path.unlink(missing_ok=True)
+        raise InstallError("The Sideloader archive checksum does not match the reviewed release.")
 
     binary_name = archive_name.removesuffix(".zip")
     executable_name = binary_name + (".exe" if os.name == "nt" else "")
@@ -481,16 +499,17 @@ def main() -> int:
     if not sys.platform.startswith("linux") and sys.platform != "darwin" and os.name != "nt":
         raise InstallError("Run this script on Linux, macOS, or Windows.")
 
-    work_dir = Path.home() / "Metrolist-iOS"
-    work_dir.mkdir(parents=True, exist_ok=True)
-    sideloader = install_sideloader(INSTALL_DIR)
+    with tempfile.TemporaryDirectory(prefix="metrolist-ios-") as temporary:
+        work_dir = Path(temporary)
+        tool_dir = work_dir / "tools"
+        sideloader = install_sideloader(tool_dir)
 
-    release = latest_release()
-    print(f"Downloading Metrolist {release['tag_name']} and verifying SHA-256...")
-    ipa_path = work_dir / "Metrolist.ipa"
-    download_verified_release_ipa(release, ipa_path)
-    print("Sideloader will prompt for your Apple ID and 2FA, then sign and install Metrolist.")
-    run_command([str(sideloader), "install", str(ipa_path), "-i"])
+        release = latest_release()
+        print(f"Downloading Metrolist {release['tag_name']} and verifying SHA-256...")
+        ipa_path = work_dir / "Metrolist.ipa"
+        download_verified_release_ipa(release, ipa_path)
+        print("Sideloader will prompt for your Apple ID and 2FA, then sign and install Metrolist.")
+        run_command([str(sideloader), "install", str(ipa_path), "-i"])
     return 0
 
 

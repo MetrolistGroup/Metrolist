@@ -17,7 +17,7 @@ Follow your tool's setup and refresh instructions. Its OS support and signing li
 
 On Linux, macOS or Windows with Python 3.10 or later, run `python3 scripts/install_ios.py` from a checkout of Metrolist (or `py scripts/install_ios.py` on Windows). The repository's latest GitHub release must be public and include `Metrolist.ipa` and `SHA256SUMS`.
 
-The script uses the Dadoum [Sideloader CLI](https://github.com/Dadoum/Sideloader) on all three platforms. It downloads the matching CLI release, verifies the IPA checksum, then asks for the Apple ID, password and 2FA code in the terminal before signing and installing the app. The script does not read or store Apple credentials.
+The script uses a reviewed, checksum-pinned Dadoum [Sideloader CLI](https://github.com/Dadoum/Sideloader) release on Linux x64/ARM64, macOS x64/Apple silicon, and Windows x64. Windows ARM64 is not supported. The tool checksums are updated with each reviewed CLI release. It also verifies the IPA checksum, then asks for the Apple ID, password and 2FA code in the terminal before signing and installing the app. The script does not read or store Apple credentials.
 
 On Linux, the script installs missing device libraries with `pacman`, `apt-get` or `dnf`; the package manager may ask for administrator authentication. On macOS, install [Homebrew](https://brew.sh) first; the script uses it to install Sideloader's libraries. On Windows, the script downloads the required device-library DLLs and starts Apple's web iTunes installer if the Apple Mobile Device driver is missing. Complete that installer if prompted; Sideloader setup then resumes. Keep the iPhone connected, accept its Trust prompt, and enable Developer Mode when iOS requests it.
 
