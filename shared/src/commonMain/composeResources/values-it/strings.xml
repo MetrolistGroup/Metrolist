@@ -842,7 +842,7 @@
     <string name="playlist">Playlist</string>
     <string name="playlist_link">Link playlist</string>
     <string name="playlist_metadata_unavailable">Metadati playlist non disponibili</string>
-    <string name="playlist_unavailable">Playlist non disponibile</string>
+    <string name="playlist_unavailable">La playlist non è disponibile</string>
     <string name="playlist_update_failed">Impossibile aggiornare la playlist</string>
     <string name="podcast">Podcast</string>
     <string name="queued_song">%1$s in coda</string>
@@ -2581,4 +2581,8 @@
     <string name="ai_translation_failed_empty">Traduzione con IA fallita: risposta vuota</string>
     <string name="ai_translation_failed_invalid">Traduzione con IA fallita: risposta non valida</string>
     <string name="ai_translation_failed_incomplete">Traduzione con IA fallita: risposta incompleta</string>
+    <string name="desktop_minimize_to_tray">Riduci a icona</string>
+    <string name="desktop_minimize_to_tray_desc">Chiudendo la finestra Metrolist verrà ridotto a icona</string>
+    <string name="desktop_tray_toggle_on_click_desc">Premendo l'icona con il tasto destro verrà aperta o chiusa la finestra di Metrolist</string>
+    <string name="ai_setup_verifying">Prova di traduzione in corso…</string>
 </resources>
