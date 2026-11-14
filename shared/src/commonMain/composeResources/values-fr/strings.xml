@@ -2390,7 +2390,6 @@
     <string name="lyrics_progressive_blur_description">Ajoute un effet de flou progressif aux paroles suivant et précédent la ligne en cours de lecture</string>
     <string name="desktop_minimize_to_tray">Réduire vers la barre d'état</string>
     <string name="desktop_minimize_to_tray_desc">Fermer la fenêtre réduit Metrolist vers la barre d'état système à la place</string>
-    <string name="desktop_tray_toggle_on_click"></string>
     <string name="no_other_devices_nearby">Aucun appareil à proximité</string>
     <string name="album_order_original">Par défaut</string>
     <string name="settings_cast_title">Cast</string>
@@ -2424,7 +2423,6 @@
     <string name="scrobble_login_failed">Échec de la connexion</string>
     <string name="together">Ensemble</string>
     <string name="equalizer_create_custom">Créer un profil</string>
-    <string name="library_grid_columns"></string>
     <string name="metroeq_profiles">Profils sauvegardés</string>
     <string name="metroeq_preset_treble">Boost des aigus</string>
     <string name="metroeq_preset_flat">Plat</string>
