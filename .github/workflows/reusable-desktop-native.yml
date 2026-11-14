@@ -120,7 +120,7 @@ jobs:
           LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
         run: |
           ./gradlew -I scripts/desktop-native-image/prepare.init.gradle \
-            -PnativeExperimentDir="$NATIVE_WORK" -Pmetrolist.sourceRevision="$GITHUB_SHA" \
+            -PnativeExperimentDir="$NATIVE_WORK" -Pmetrolist.sourceRevision="$GITHUB_SHA" -Pmetrolist.debug=false \
             :desktopApp:prepareNativeImage --no-daemon --no-build-cache --no-configuration-cache
 
       - name: Trace Windows startup when a desktop is available

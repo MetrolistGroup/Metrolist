@@ -365,6 +365,9 @@
     },
     {
       "glob": "windows-x86_64-gpl/*"
+    },
+    {
+      "glob": "*.ico"
     }
   ]
 }
