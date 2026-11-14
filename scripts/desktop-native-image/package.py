@@ -98,7 +98,8 @@ def main():
     parser.add_argument('--platform', required=True)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
-    version = next(line.split('=',1)[1] for line in (ROOT/'gradle.properties').read_text().splitlines() if line.startswith('appVersion='))
+    # Same precedence as Gradle: an ORG_GRADLE_PROJECT_ override beats gradle.properties.
+    version = __import__('os').environ.get('ORG_GRADLE_PROJECT_appVersion') or next(line.split('=',1)[1] for line in (ROOT/'gradle.properties').read_text().splitlines() if line.startswith('appVersion='))
     output = package(args.image.resolve(), args.platform, args.output.resolve(), version)
     print(output)
     import os

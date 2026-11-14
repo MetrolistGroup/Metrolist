@@ -23,7 +23,15 @@ The prepare jobs have read-only Actions and checks permissions for this gate. Re
 
 ## Native tester builds
 
-Native packages are never published to users. Dispatch `build-desktop-native.yml` for one target; the package and its evidence archive are uploaded as workflow artifacts. Linux x64 is the first native test target; Windows x64 is available for manual coverage. Releases ship only the JVM/mobile packages. See [Native Image](desktop-native-image.md#opt-in-native-tester-builds) for pinned builders, strict smoke coverage, disabled ARM jobs and rollback/promotion criteria.
+Dispatch `build-desktop-native.yml` for one target; the package and its evidence archive are uploaded as workflow artifacts. Nightly prereleases also publish Linux x64 and Windows x64 native packages. Stable releases keep JVM desktop packages. See [Native Image](desktop-native-image.md#opt-in-native-tester-builds) for pinned builders, strict smoke coverage and rollback/promotion criteria.
+
+## Nightly prereleases
+
+[`nightly.yml`](../.github/workflows/nightly.yml) runs after pushes to main, except changes limited to docs, Markdown, fastlane metadata or assets. GitHub's `[skip ci]` commit marker skips push runs. Maintainers can also dispatch it on main. New runs cancel an unfinished nightly.
+
+All three builds must succeed before publication. The rolling `nightly` tag moves to the built commit, and the "Metrolist Nightly" prerelease replaces its assets with exactly one signed Android release APK, one native Linux x64 AppImage and one native Windows x64 portable ZIP. The assets use the stable release names: `Metrolist.apk`, `metrolist-desktop-linux-x64-<version>.AppImage` and `Metrolist-Desktop-windows.zip`. Publication keeps the release in draft while replacing assets, then publishes it as a prerelease without marking it latest. A failed publication can leave a draft; rerun the workflow to finish it.
+
+Notes link the built commit and list up to 50 first-parent commits since the previous nightly tag target. Nightly builds override `appVersion` with the commit as semver build metadata, such as `14.0.0+abc1234`, so the app and filenames show the exact commit. Build metadata keeps update checks treating a nightly as equal to its base release, where a `-suffix` would mark it older and offer the stable release as an update. The reusable Android and native workflows take this through their `app-version` input, which sets `ORG_GRADLE_PROJECT_appVersion`. Android uses the same signing, Last.fm and Lyprio secrets as stable releases; signing must be available to push runs. Signing secrets stay in the Android job. Nightlies do not upload or finalize Sentry releases. Mapping files and native build evidence remain workflow artifacts.
 
 ## Stable releases
 

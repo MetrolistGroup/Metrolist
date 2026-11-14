@@ -6,6 +6,11 @@ on:
       platform:
         required: true
         type: string
+      app-version:
+        description: Override gradle.properties appVersion, such as a nightly build with commit metadata
+        required: false
+        default: ''
+        type: string
     secrets:
       LASTFM_API_KEY:
         required: true
@@ -34,9 +39,15 @@ jobs:
       NATIVE_PLATFORM: ${{ inputs.platform }}
       NATIVE_WORK: ''
     steps:
-      - name: Set native output directory
+      - name: Set native output directory and version
         shell: bash
-        run: echo "NATIVE_WORK=$RUNNER_TEMP/r6-native-image" >> "$GITHUB_ENV"
+        env:
+          APP_VERSION_OVERRIDE: ${{ inputs.app-version }}
+        run: |
+          echo "NATIVE_WORK=$RUNNER_TEMP/r6-native-image" >> "$GITHUB_ENV"
+          if [[ -n "$APP_VERSION_OVERRIDE" ]]; then
+            echo "ORG_GRADLE_PROJECT_appVersion=$APP_VERSION_OVERRIDE" >> "$GITHUB_ENV"
+          fi
 
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
