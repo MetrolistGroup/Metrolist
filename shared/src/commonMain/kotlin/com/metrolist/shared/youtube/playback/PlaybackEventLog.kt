@@ -155,6 +155,7 @@ object PlaybackEventLog {
         error: Throwable? = null,
     ) {
         if (level != PlaybackEventLevel.WARN && level != PlaybackEventLevel.ERROR) return
+        if (error != null && hasRecentStructuredFailure(tag, error)) return
         record(
             level = level,
             kind = kindForYtTag(tag).takeUnless { it == PlaybackEventKind.TRACE } ?: PlaybackEventKind.OTHER,
@@ -162,6 +163,21 @@ object PlaybackEventLog {
             error = error,
             describePlaybackError = false,
         )
+    }
+
+    private fun hasRecentStructuredFailure(
+        tag: String,
+        error: Throwable,
+    ): Boolean {
+        val now = Clock.System.now().toEpochMilliseconds()
+        val exceptionType = error::class.simpleName ?: error::class.qualifiedName ?: "Throwable"
+        val prefix = "[$tag] "
+        val lastEvent = events.value.lastOrNull() ?: return false
+        val age = now - lastEvent.timestampMs
+        return age in 0..1_000 &&
+            lastEvent.kind != PlaybackEventKind.OTHER &&
+            lastEvent.message.startsWith(prefix) &&
+            exceptionType in lastEvent.details["exceptionTypes"].orEmpty().split(',')
     }
 
     fun clear() {
