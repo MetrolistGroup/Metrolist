@@ -226,6 +226,33 @@
           ]
         }
       ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$HMENU",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$HBITMAP",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.BaseTSD$ULONG_PTR",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
     }
   ],
   "resources": [
@@ -240,6 +267,18 @@
     },
     {
       "glob": "icudtl.dat"
+    },
+    {
+      "glob": "org/windows-x86_64/*"
+    },
+    {
+      "glob": "org/windows-x86_64-gpl/*"
+    },
+    {
+      "glob": "windows-x86_64/*"
+    },
+    {
+      "glob": "windows-x86_64-gpl/*"
     }
   ]
 }
