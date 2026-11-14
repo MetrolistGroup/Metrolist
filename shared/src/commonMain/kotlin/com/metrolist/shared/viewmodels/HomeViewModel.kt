@@ -145,7 +145,7 @@ internal fun HomeViewModel.HomeUiState.primaryHomeContentLoaded(
         isContentLoading = false,
         isLoadingMore = false,
         error = null,
-        isAllContentPending = true,
+        isAllContentPending = selectedChip == null,
         chips = chips,
         continuation = null,
     )
