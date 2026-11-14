@@ -576,6 +576,15 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "sun.java2d.pipe.ShapeSpanIterator",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "pData"
+        }
+      ]
     }
   ]
 }

@@ -339,6 +339,90 @@
           ]
         }
       ]
+    },
+    {
+      "type": "androidx.compose.ui.scene.ComposeScene_skikoKt",
+      "methods": [
+        {
+          "name": "getLocalComposeScene",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "androidx.compose.ui.node.RootNodeOwner",
+      "methods": [
+        {
+          "name": "getOwner",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "androidx.compose.ui.node.Owner",
+      "methods": [
+        {
+          "name": "getRoot",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "androidx.compose.ui.node.LayoutNode",
+      "allDeclaredMethods": true
+    },
+    {
+      "type": "androidx.compose.ui.node.HitTestResult",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "androidx.compose.ui.scene.PlatformLayersComposeSceneImpl",
+      "methods": [
+        {
+          "name": "getMainOwner",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "androidx.compose.ui.scene.CanvasLayersComposeSceneImpl",
+      "allDeclaredClasses": true,
+      "fields": [
+        {
+          "name": "mainOwner"
+        },
+        {
+          "name": "_layersCopyCache"
+        },
+        {
+          "name": "focusedLayer"
+        }
+      ]
+    },
+    {
+      "type": "androidx.compose.ui.scene.CanvasLayersComposeSceneImpl$AttachedComposeSceneLayer",
+      "allDeclaredMethods": true,
+      "fields": [
+        {
+          "name": "owner"
+        }
+      ]
+    },
+    {
+      "type": "androidx.compose.ui.scene.CopiedList",
+      "methods": [
+        {
+          "name": "withCopy",
+          "parameterTypes": [
+            "kotlin.jvm.functions.Function1"
+          ]
+        }
+      ]
     }
   ],
   "resources": [
