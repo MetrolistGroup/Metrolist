@@ -1,0 +1,195 @@
+{
+  "contents": [
+    {
+      "musicPlaylistShelfRenderer": {
+        "contents": [
+          {
+            "musicResponsiveListItemRenderer": {
+              "thumbnail": {
+                "musicThumbnailRenderer": {
+                  "thumbnail": {
+                    "thumbnails": [
+                      {
+                        "url": "https://i.ytimg.com/vi/cJaGsk3e5ME/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3m0ij40rK6pf054AMCJ0gC3z0DKxg",
+                        "width": 400,
+                        "height": 225
+                      }
+                    ]
+                  },
+                  "thumbnailCrop": "MUSIC_THUMBNAIL_CROP_UNSPECIFIED",
+                  "thumbnailScale": "MUSIC_THUMBNAIL_SCALE_ASPECT_FIT"
+                }
+              },
+              "overlay": {
+                "musicItemThumbnailOverlayRenderer": {
+                  "content": {
+                    "musicPlayButtonRenderer": {}
+                  }
+                }
+              },
+              "flexColumns": [
+                {
+                  "musicResponsiveListItemFlexColumnRenderer": {
+                    "text": {
+                      "runs": [
+                        {
+                          "text": "Interpol - Obstacle 1 (Extended Version)"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "musicResponsiveListItemFlexColumnRenderer": {
+                    "text": {
+                      "runs": [
+                        {
+                          "text": "Lisbon"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "musicResponsiveListItemFlexColumnRenderer": {
+                    "text": {}
+                  }
+                }
+              ],
+              "fixedColumns": [
+                {
+                  "musicResponsiveListItemFixedColumnRenderer": {
+                    "text": {
+                      "runs": [
+                        {
+                          "text": "4:13"
+                        }
+                      ]
+                    },
+                    "size": "MUSIC_RESPONSIVE_LIST_ITEM_FIXED_COLUMN_SIZE_SMALL"
+                  }
+                }
+              ],
+              "playlistItemData": {
+                "playlistSetVideoId": "6128676B35F5529F",
+                "videoId": "cJaGsk3e5ME",
+                "voteSortValue": 1486137368
+              },
+              "musicItemRendererDisplayPolicy": "MUSIC_ITEM_RENDERER_DISPLAY_POLICY_GREY_OUT"
+            }
+          },
+          {
+            "musicResponsiveListItemRenderer": {
+              "thumbnail": {
+                "musicThumbnailRenderer": {
+                  "thumbnail": {
+                    "thumbnails": [
+                      {
+                        "url": "https://i.ytimg.com/vi/zuuObGsB0No/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3l8rxtEwWnW1rw4cYymfuh4YJ7DPg",
+                        "width": 400,
+                        "height": 225
+                      }
+                    ]
+                  },
+                  "thumbnailCrop": "MUSIC_THUMBNAIL_CROP_UNSPECIFIED",
+                  "thumbnailScale": "MUSIC_THUMBNAIL_SCALE_ASPECT_FIT"
+                }
+              },
+              "overlay": {
+                "musicItemThumbnailOverlayRenderer": {
+                  "content": {
+                    "musicPlayButtonRenderer": {
+                      "playNavigationEndpoint": {
+                        "watchEndpoint": {
+                          "videoId": "zuuObGsB0No",
+                          "playlistId": "PL_9VDNdrlb8qexQEo8Wv6lsDj9y47WaK4",
+                          "playerParams": "iAQB8AUBygYQNTZCNDRGNkQxMDU1N0NDNg%3D%3D",
+                          "playlistSetVideoId": "56B44F6D10557CC6",
+                          "watchEndpointMusicSupportedConfigs": {
+                            "watchEndpointMusicConfig": {
+                              "musicVideoType": "MUSIC_VIDEO_TYPE_OMV"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "flexColumns": [
+                {
+                  "musicResponsiveListItemFlexColumnRenderer": {
+                    "text": {
+                      "runs": [
+                        {
+                          "text": "Love Will Tear Us Apart",
+                          "navigationEndpoint": {
+                            "watchEndpoint": {
+                              "videoId": "zuuObGsB0No",
+                              "playlistId": "PL_9VDNdrlb8qexQEo8Wv6lsDj9y47WaK4",
+                              "playerParams": "iAQB8AUB",
+                              "watchEndpointMusicSupportedConfigs": {
+                                "watchEndpointMusicConfig": {
+                                  "musicVideoType": "MUSIC_VIDEO_TYPE_OMV"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "musicResponsiveListItemFlexColumnRenderer": {
+                    "text": {
+                      "runs": [
+                        {
+                          "text": "Joy Division",
+                          "navigationEndpoint": {
+                            "browseEndpoint": {
+                              "browseId": "UCj9bYSgqVuUxqd3x9myLWKA",
+                              "browseEndpointContextSupportedConfigs": {
+                                "browseEndpointContextMusicConfig": {
+                                  "pageType": "MUSIC_PAGE_TYPE_ARTIST"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "musicResponsiveListItemFlexColumnRenderer": {
+                    "text": {}
+                  }
+                }
+              ],
+              "fixedColumns": [
+                {
+                  "musicResponsiveListItemFixedColumnRenderer": {
+                    "text": {
+                      "runs": [
+                        {
+                          "text": "3:31"
+                        }
+                      ]
+                    },
+                    "size": "MUSIC_RESPONSIVE_LIST_ITEM_FIXED_COLUMN_SIZE_SMALL"
+                  }
+                }
+              ],
+              "playlistItemData": {
+                "playlistSetVideoId": "56B44F6D10557CC6",
+                "videoId": "zuuObGsB0No",
+                "voteSortValue": 1486137368
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

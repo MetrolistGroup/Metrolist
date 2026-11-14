@@ -1,0 +1,275 @@
+name: Desktop Windows
+
+on:
+  workflow_call:
+    inputs:
+      run-verification:
+        description: Run tests and launch checks, disabled only after the release gate succeeds
+        required: false
+        default: true
+        type: boolean
+      upload-artifact:
+        description: Upload packaged output as workflow artifacts
+        required: false
+        default: false
+        type: boolean
+      artifact-prefix:
+        description: Prefix for workflow artifact names
+        required: false
+        default: ''
+        type: string
+      staging-release-tag:
+        description: Draft release tag used for cross-job package handoff
+        required: false
+        default: ''
+        type: string
+      cache-read-only:
+        description: Keep the Gradle cache read-only
+        required: false
+        default: false
+        type: boolean
+      upload-sentry:
+        description: Require Sentry credentials and upload desktop source context
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      GRADLE_ENCRYPTION_KEY:
+        required: false
+      SENTRY_AUTH_TOKEN:
+        required: false
+      LASTFM_API_KEY:
+        required: true
+      LASTFM_SECRET:
+        required: true
+      LYPRIO_BASE_URL:
+        required: true
+      LYPRIO_HMAC_KEY:
+        required: true
+
+jobs:
+  package:
+    name: ${{ matrix.arch }} ZIP
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: ${{ matrix.arch == 'arm64' && 60 || 30 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: blacksmith-4vcpu-windows-2025
+            rid: win-x64
+            zip: Metrolist-Desktop-Windows.zip
+            machine: '8664'
+          # Blacksmith has no Windows ARM64 runners; GitHub's native one avoids cross-building the runtime and launcher.
+          - arch: arm64
+            runner: ${{ vars.WINDOWS_ARM64_RUNNER || 'windows-11-arm' }}
+            rid: win-arm64
+            zip: Metrolist-Desktop-Windows-arm64.zip
+            machine: AA64
+    env:
+      PACKAGE_ZIP: dist/${{ matrix.zip }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Validate release credentials
+        shell: bash
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          UPLOAD_SENTRY: ${{ inputs.upload-sentry }}
+          LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+          LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ "$UPLOAD_SENTRY" == "true" ]]; then
+            test -n "$SENTRY_AUTH_TOKEN" || { echo "SENTRY_AUTH_TOKEN is required when Sentry upload is enabled" >&2; exit 1; }
+          fi
+          test -n "$LYPRIO_BASE_URL" || { echo "LYPRIO_BASE_URL is required" >&2; exit 1; }
+          test -n "$LYPRIO_HMAC_KEY" || { echo "LYPRIO_HMAC_KEY is required" >&2; exit 1; }
+
+      - name: Prepare CI Gradle
+        uses: ./.github/actions/prepare-ci-gradle
+        with:
+          cache-scope: desktop-windows${{ matrix.arch == 'arm64' && '-arm64' || '' }}
+          java-distribution: ${{ matrix.arch == 'arm64' && 'microsoft' || 'temurin' }}
+          persist-configuration-cache: 'false'
+          cache-read-only: ${{ inputs.cache-read-only }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Generate installer icons
+        uses: ./.github/actions/generate-icons
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          global-json-file: metro-wv2-helper/global.json
+
+      - name: Cache NuGet packages
+        if: ${{ !inputs.cache-read-only }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('metro-wv2-helper/global.json', 'metro-wv2-helper/**/*.csproj') }}
+
+      - name: Restore NuGet packages (read-only)
+        if: inputs.cache-read-only
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('metro-wv2-helper/global.json', 'metro-wv2-helper/**/*.csproj') }}
+
+      - name: Cache native Rust toolchain
+        if: matrix.arch == 'arm64'
+        uses: ./.github/actions/cache-rust-toolchain
+        with:
+          cache-read-only: ${{ inputs.cache-read-only }}
+
+      - name: Install Rust for the ARM64 WebView
+        # The prebuilt Compose WebView JAR has no ARM64 DLL; Gradle builds it with the pinned Rust toolchain.
+        if: matrix.arch == 'arm64'
+        shell: pwsh
+        run: |
+          if (-not (Get-Command rustup -ErrorAction SilentlyContinue)) {
+            Invoke-WebRequest -Uri https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe -OutFile "$env:RUNNER_TEMP\rustup-init.exe"
+            & "$env:RUNNER_TEMP\rustup-init.exe" -y --default-toolchain none --profile minimal
+            if ($LASTEXITCODE -ne 0) { throw "rustup-init failed" }
+            Add-Content $env:GITHUB_PATH "$env:USERPROFILE\.cargo\bin"
+            $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+          }
+          rustup toolchain install 1.99.1 --profile minimal --no-self-update
+          if ($LASTEXITCODE -ne 0) { throw "Rust toolchain install failed" }
+
+      - name: Build Windows login helper
+        shell: pwsh
+        working-directory: metro-wv2-helper
+        env:
+          RUN_VERIFICATION: ${{ inputs.run-verification }}
+        run: |
+          if ($env:RUN_VERIFICATION -eq 'true') {
+            dotnet run --project tests/LoginCompletion.Tests.csproj --configuration Release
+            if ($LASTEXITCODE -ne 0) { throw "Windows login helper tests failed with exit code $LASTEXITCODE" }
+          }
+          $output = "../desktopApp/src/desktopMain/resources/windows"
+          dotnet publish "metro-wv2-helper.csproj" --configuration Release --runtime ${{ matrix.rid }} --self-contained true --output $output -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false -p:PublishReadyToRun=true
+          if ($LASTEXITCODE -ne 0) { throw "Windows login helper build failed with exit code $LASTEXITCODE" }
+          $helper = Join-Path $output "metro-wv2-helper.exe"
+          if (-not (Test-Path $helper -PathType Leaf)) { throw "Windows login helper was not produced at $helper" }
+
+      - name: Build Windows portable package
+        shell: bash
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+          LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          verification=()
+          if [[ '${{ inputs.run-verification }}' == 'true' ]]; then
+            verification+=(:desktopApp:jvmTest)
+          fi
+          ./gradlew "${verification[@]}" \
+            :desktopApp:assembleWindowsRelease \
+            -Pmetrolist.verifyPackaging=${{ inputs.run-verification }} \
+            -Pmetrolist.desktop.arch=${{ matrix.arch == 'arm64' && 'aarch64' || 'x86_64' }} \
+            --no-daemon \
+            --no-configuration-cache
+          if [[ "dist/Metrolist-Desktop-Windows.zip" != "$PACKAGE_ZIP" ]]; then
+            mv dist/Metrolist-Desktop-Windows.zip "$PACKAGE_ZIP"
+          fi
+
+      # The artifact quota can be full, so failed test details go to the log.
+      - name: Print failed desktop tests
+        if: failure()
+        shell: bash
+        run: |
+          shopt -s nullglob
+          for report in desktopApp/build/test-results/jvmTest/*.xml; do
+            if grep -q '<failure' "$report"; then
+              sed -n '/<testcase/,/<\/testcase>/p' "$report" | head -c 20000 || true
+            fi
+          done
+          exit 0
+
+      - name: Upload desktop Sentry source context
+        # JVM sources are the same for both architectures.
+        if: inputs.upload-sentry && matrix.arch == 'x64'
+        uses: ./.github/actions/upload-desktop-sentry
+        with:
+          sentry-auth-token: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          source-revision: ${{ github.sha }}
+
+      - name: Verify Windows portable package
+        shell: pwsh
+        run: |
+          $archive = $env:PACKAGE_ZIP
+          if (-not (Test-Path $archive)) { throw "Missing $archive" }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $archive))
+          try {
+            $manifest = $zip.Entries | Where-Object FullName -eq "install-manifest.json"
+            $launcher = $zip.Entries | Where-Object FullName -eq "Metrolist.exe"
+            $helper = @($zip.Entries | Where-Object { $_.FullName -match '(^|/)resources/(windows/)?metro-wv2-helper\.exe$' })
+            $helperChecksum = @($zip.Entries | Where-Object { $_.FullName -match '(^|/)resources/(windows/)?metro-wv2-helper\.exe\.sha256$' })
+            if ($null -eq $manifest) { throw "Portable ZIP is missing install-manifest.json" }
+            if ($null -eq $launcher) { throw "Portable ZIP is missing Metrolist.exe" }
+            if ($helper.Count -ne 1) { throw "Portable ZIP must contain exactly one Windows login helper, found $($helper.Count)" }
+            if ($helperChecksum.Count -ne 1) { throw "Portable ZIP must contain exactly one Windows login helper checksum, found $($helperChecksum.Count)" }
+            $jvm = $zip.Entries | Where-Object { $_.FullName -match '(^|/)runtime/bin/server/jvm\.dll$' }
+            if ($null -eq $jvm) { throw "Portable ZIP is missing the Java runtime" }
+            foreach ($entry in @($launcher, $jvm, $helper[0])) {
+              $stream = $entry.Open()
+              try {
+                $bytes = New-Object byte[] 4096
+                $read = $stream.Read($bytes, 0, $bytes.Length)
+                $offset = [BitConverter]::ToInt32($bytes, 0x3C)
+                $machine = [BitConverter]::ToUInt16($bytes, $offset + 4).ToString("X4")
+              } finally {
+                $stream.Dispose()
+              }
+              if ($machine -ne "${{ matrix.machine }}") { throw "$($entry.FullName) targets machine $machine, expected ${{ matrix.machine }}" }
+            }
+          } finally {
+            $zip.Dispose()
+          }
+
+      - name: Smoke test Windows portable package
+        if: inputs.run-verification
+        id: smoke
+        timeout-minutes: 3
+        shell: pwsh
+        run: python scripts/desktop_smoke.py "$env:PACKAGE_ZIP" --output "$env:RUNNER_TEMP/desktop-smoke"
+
+      - name: Upload Windows launch evidence
+        if: always() && steps.smoke.outcome != 'skipped'
+        # Evidence only; the smoke step decides the result, and the artifact quota can be full.
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ${{ inputs.artifact-prefix }}desktop-smoke-windows-${{ matrix.arch }}
+          path: ${{ runner.temp }}/desktop-smoke
+          if-no-files-found: error
+          retention-days: 4
+
+      - name: Upload Windows artifact
+        if: inputs.upload-artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ${{ inputs.artifact-prefix }}desktop-windows${{ matrix.arch == 'arm64' && '-arm64' || '' }}
+          path: ${{ env.PACKAGE_ZIP }}
+          if-no-files-found: error
+          retention-days: 4
+
+      - name: Upload Windows staging asset
+        if: inputs.staging-release-tag != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STAGING_RELEASE_TAG: ${{ inputs.staging-release-tag }}
+        run: gh release upload "$STAGING_RELEASE_TAG" "$PACKAGE_ZIP" --clobber --repo "$GITHUB_REPOSITORY"

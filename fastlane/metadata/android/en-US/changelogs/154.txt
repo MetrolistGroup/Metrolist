@@ -1,0 +1,8 @@
+First public Metrolist-KMP release, replacing standalone Android 13.x.
+Material 3 Expressive design and new player layouts.
+Music videos, ListenBrainz scrobbling and podcast SponsorBlock.
+Playlist and compatible app-backup imports.
+Google Cast without Play Services, FCast, DLNA and Sonos.
+Opt-in local Device Connect, shared MetroEQ and new lyrics sources and editor.
+Improved Android TV navigation and Android Auto playlists.
+Music alarms, LyricsPlus and Zemer are not included.

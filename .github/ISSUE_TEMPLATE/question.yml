@@ -1,0 +1,31 @@
+name: Ask a question
+description: Ask about Metrolist
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Writing this with an LLM? Check [rejected features](https://github.com/MetrolistGroup/Metrolist/blob/main/AGENTS.md#rejected-features) and existing issues first, apply [unslop](https://github.com/MetrolistGroup/Metrolist/blob/main/skills/unslop/SKILL.md) to the text and keep it short.
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      multiple: true
+      options:
+        - Android
+        - Android Auto
+        - Android TV
+        - Windows
+        - macOS
+        - Linux
+  - type: input
+    id: version
+    attributes:
+      label: Version
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Ask your question. You can drag and drop files, screenshots, or videos here.
+    validations:
+      required: true

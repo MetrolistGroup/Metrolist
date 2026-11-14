@@ -1,0 +1,58 @@
+# Maintainer: Metrolist contributors
+pkgname=metrolist-git
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='YouTube Music desktop client'
+arch=('x86_64')
+url='https://github.com/MetrolistGroup/Metrolist'
+license=('GPL-3.0-only')
+depends=('gtk3' 'webkit2gtk-4.1')
+makedepends=('git' 'jdk21-openjdk' 'jdk25-temurin')
+provides=('metrolist')
+conflicts=('metrolist')
+_project_dir="$startdir/.."
+if [[ -f "$_project_dir/settings.gradle.kts" && -x "$_project_dir/gradlew" ]]; then
+  source=('metrolist.desktop')
+  sha256sums=('6bc3cdc5bb32247d119b77f763484a26f65c5d6f38ec840a159c2f021f94da1a')
+else
+  source=("metrolist-kmp::git+https://github.com/MetrolistGroup/Metrolist.git#branch=main"
+          'metrolist.desktop')
+  sha256sums=('SKIP'
+              '6bc3cdc5bb32247d119b77f763484a26f65c5d6f38ec840a159c2f021f94da1a')
+fi
+
+_source_dir() {
+  if [[ -f "$_project_dir/settings.gradle.kts" && -x "$_project_dir/gradlew" ]]; then
+    printf '%s\n' "$_project_dir"
+  else
+    printf '%s\n' "$srcdir/metrolist-kmp"
+  fi
+}
+
+pkgver() {
+  cd "$(_source_dir)"
+  printf '0.r%s.%s' "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+prepare() {
+  if [[ ! -f "$_project_dir/settings.gradle.kts" || ! -x "$_project_dir/gradlew" ]]; then
+    cd "$(_source_dir)"
+    git submodule update --init --recursive
+  fi
+}
+
+build() {
+  cd "$(_source_dir)"
+  "${GRADLE:-./gradlew}" --no-daemon :desktopApp:createReleaseDistributable
+}
+
+package() {
+  cd "$(_source_dir)"
+  local appdir='desktopApp/build/compose/binaries/main-release/app/Metrolist'
+  install -d "$pkgdir/opt/metrolist" "$pkgdir/usr/bin" "$pkgdir/usr/share/applications" "$pkgdir/usr/share/icons/hicolor/512x512/apps"
+  cp -a "$appdir/." "$pkgdir/opt/metrolist/"
+  ln -s /opt/metrolist/bin/Metrolist "$pkgdir/usr/bin/metrolist"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 desktopApp/src/desktopMain/resources/logo.png "$pkgdir/usr/share/icons/hicolor/512x512/apps/metrolist.png"
+  install -Dm644 "$srcdir/metrolist.desktop" "$pkgdir/usr/share/applications/metrolist.desktop"
+}

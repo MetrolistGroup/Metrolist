@@ -1,0 +1,23 @@
+YouTube Music Material 3 İstemcisi (Android için)
+
+Özellikler:
+
+- YouTube Music'ten her türlü şarkı veya video çalma
+- Arka planda çalma
+- Kişiselleştirilmiş hızlı öneriler
+- Kütüphane yönetimi
+- Çevrimdışı çalma için şarkıları indirip önbelleğe alma
+- Şarkılar, albümler, sanatçılar, videolar ve çalma listeleri arama
+- Canlı şarkı sözleri
+- YouTube Music hesabı ile giriş desteği
+- Hesabınızla şarkı, sanatçı, albüm ve çalma listelerinin senkronizasyonu
+- Sessizlik atlama
+- Çalma listelerini içe aktarma
+- Ses normalizasyonu
+- Tempo/ton ayarı
+- Yerel çalma listesi yönetimi
+- Çalma listesinde veya sırada şarkıları yeniden düzenleme
+- Açık - Koyu - Siyah - Dinamik tema
+- Uyku zamanlayıcı
+- Material 3
+- vb.

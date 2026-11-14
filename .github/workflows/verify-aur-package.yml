@@ -1,0 +1,125 @@
+name: Verify Arch package
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: aur-package-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Select checks
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      platform: ${{ steps.paths.outputs.arch }}
+      shared-only: ${{ steps.paths.outputs.shared-only }}
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select platform checks
+        id: paths
+        uses: ./.github/actions/ci-changes
+
+  package:
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.platform == 'true'
+    runs-on: blacksmith-4vcpu-ubuntu-2604
+    container: archlinux:base-devel
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    env:
+      GRADLE_USER_HOME: /home/builder/.gradle
+    steps:
+      - name: Install Arch build tools
+        run: pacman -Syu --needed --noconfirm git jdk21-openjdk
+
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Set up Temurin JDK 25
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Prepare unprivileged package builder
+        run: |
+          useradd --create-home --shell /bin/bash builder
+          mkdir -p "$GITHUB_WORKSPACE/build/aur-tmp" "$GRADLE_USER_HOME"
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+
+      - name: Restore builder Gradle cache
+        id: gradle-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            /home/builder/.gradle/caches
+            /home/builder/.gradle/wrapper
+          key: aur-gradle-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.gradle.kts', 'gradle.properties', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}-${{ github.sha }}
+          restore-keys: |
+            aur-gradle-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.gradle.kts', 'gradle.properties', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}-
+
+      - name: Give builder ownership of restored cache
+        run: chown -R builder:builder "$GRADLE_USER_HOME"
+
+      - name: Verify local and remote recipe sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote_dir="$(mktemp -d "$RUNNER_TEMP/aur-remote.XXXXXX")"
+          cp aur/PKGBUILD aur/.SRCINFO aur/metrolist.desktop "$remote_dir/"
+          chown -R builder:builder "$remote_dir"
+          # shellcheck disable=SC2016
+          runuser -u builder -- env GITHUB_WORKSPACE="$GITHUB_WORKSPACE" RUNNER_TEMP="$RUNNER_TEMP" bash -c '
+            set -euo pipefail
+            cd "$GITHUB_WORKSPACE/aur"
+            makepkg --printsrcinfo > "$GITHUB_WORKSPACE/build/aur-local-srcinfo"
+            grep -q "source = metrolist.desktop" "$GITHUB_WORKSPACE/build/aur-local-srcinfo"
+            ! grep -q "git+https://" "$GITHUB_WORKSPACE/build/aur-local-srcinfo"
+            cd "$1"
+            makepkg --printsrcinfo > .SRCINFO.generated
+            cmp .SRCINFO .SRCINFO.generated
+          ' _ "$remote_dir"
+
+      - name: Test recipe build and package functions
+        run: runuser -u builder -- bash aur/test-recipe.sh
+
+      - name: Build local Arch package
+        shell: bash
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2016
+          runuser -u builder -- env \
+            HOME=/home/builder \
+            GRADLE_USER_HOME="$GRADLE_USER_HOME" \
+            GITHUB_WORKSPACE="$GITHUB_WORKSPACE" \
+            JAVA_HOME="$JAVA_HOME" \
+            PATH="$JAVA_HOME/bin:/usr/bin" \
+            GRADLE_OPTS="-Dorg.gradle.java.installations.paths=$JAVA_HOME,/usr/lib/jvm/java-21-openjdk" \
+            JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=$GITHUB_WORKSPACE/build/aur-tmp" \
+            TMPDIR="$GITHUB_WORKSPACE/build/aur-tmp" \
+            bash -c 'cd "$GITHUB_WORKSPACE/aur" && makepkg --nodeps --noconfirm --noprogress'
+
+      - name: Save builder Gradle cache
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.gradle-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            /home/builder/.gradle/caches
+            /home/builder/.gradle/wrapper
+          key: ${{ steps.gradle-cache.outputs.cache-primary-key }}

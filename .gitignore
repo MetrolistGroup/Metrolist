@@ -1,0 +1,97 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+.kotlin/
+.kotlin/errors/
+gradle/gradle-daemon-jvm.properties
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.bak
+
+# VSCode
+.vscode/
+
+# Zed
+.zed/
+
+# Android
+local.properties
+.externalNativeBuild
+.cxx
+*.keystore
+!debug.keystore
+
+# Desktop
+*.dll
+*.so
+*.so.*
+*.dylib
+*.class
+bin/
+!external/*.dll
+!external/*.so
+!external/*.dylib
+external/
+desktopApp/src/desktopMain/resources/windows/*.exe
+desktopApp/src/desktopMain/resources/windows/*.dll
+desktopApp/src/desktopMain/resources/linux/bgutil-ytdlp-pot-provider-rs
+desktopApp/src/desktopMain/resources/macos/bgutil-ytdlp-pot-provider-rs
+/desktopApp/src/jvmMain/proto/listentogether.proto
+metro-wv2-helper/bin/
+metro-wv2-helper/obj/
+metro-wv2-helper/tests/obj/
+
+# iOS / Xcode
+DerivedData/
+iosApp/DerivedData/
+iosApp/build/
+project.xcworkspace/
+xcuserdata/
+*.xcuserstate
+*.ipa
+
+# Swift
+.swift-version
+swiftly-x86_64.tar.gz
+
+# Secrets
+secrets.properties
+chucker-export-*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs / dumps
+*.log
+*.har
+/*.txt
+!androidApp/src/main/baseline-prof.txt
+!opusDecoder/src/main/jni/CMakeLists.txt
+!opusDecoder/src/main/resources/META-INF/LICENSE-libopus.txt
+Screenshot_*.png
+
+# Local / scratch
+stuff
+.stuff/
+stuff/*
+skills
+dist/
+tools/
+scripts/.fonts/
+__pycache__/
+/linter/
+HANDOFF.md
+
+# AI tooling
+.cortexkit
+.cursor
+.claude
+.codex
+.codeium
+.opencode
+.mcp.json

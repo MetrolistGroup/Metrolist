@@ -1,0 +1,109 @@
+name: Upload desktop Sentry debug files
+description: Upload artifact-bound JVM source context and Windows native symbols
+inputs:
+  sentry-auth-token:
+    description: Sentry auth token
+    required: true
+  source-revision:
+    description: Exact commit used to build the package
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Download pinned Sentry CLI
+      shell: bash
+      env:
+        SENTRY_AUTH_TOKEN: ${{ inputs.sentry-auth-token }}
+      run: |
+        set -euo pipefail
+        version="3.8.2"
+        case "${RUNNER_OS}:${RUNNER_ARCH}" in
+          Linux:X64)
+            asset="sentry-cli-Linux-x86_64"
+            sha256="c958865f9d4000183509ea21b1f04925d5390de6d8d87386b9e69f2b305070c3"
+            ;;
+          Linux:ARM64)
+            asset="sentry-cli-Linux-aarch64"
+            sha256="b6e49fca868a36d20da2ada1832a0ce2f9ac7012c128207518b09d6b6c991f4d"
+            ;;
+          macOS:X64)
+            asset="sentry-cli-Darwin-x86_64"
+            sha256="084591ee1f0a43ba8696ccde30d4a79cd9a70d0fa294c5a10143a340f8f332ff"
+            ;;
+          macOS:ARM64)
+            asset="sentry-cli-Darwin-arm64"
+            sha256="c80d92b6d34eb64fe7402f56cc7968fbb15aab1c763254ad428b55cc98ec7dcf"
+            ;;
+          Windows:X64)
+            asset="sentry-cli-Windows-x86_64.exe"
+            sha256="50009f23c49d6e9ff7624204c7035855303b49c5e326708ee783c1fdf783ac83"
+            ;;
+          *)
+            echo "Unsupported runner: ${RUNNER_OS}:${RUNNER_ARCH}" >&2
+            exit 1
+            ;;
+        esac
+        cli="${RUNNER_TEMP}/${asset}"
+        if command -v cygpath >/dev/null 2>&1; then cli="$(cygpath -u "$cli")"; fi
+        curl --fail --location --silent --show-error --retry 3 \
+          "https://downloads.sentry-cdn.com/sentry-cli/${version}/${asset}" \
+          --output "$cli"
+        actual_sha256="$(sha256sum "$cli")"
+        [[ "${actual_sha256%% *}" == "$sha256" ]]
+        chmod +x "$cli"
+        echo "SENTRY_CLI=$cli" >> "$GITHUB_ENV"
+
+    - name: Verify packaged JVM debug identity
+      shell: bash
+      env:
+        SOURCE_REVISION: ${{ inputs.source-revision }}
+      run: |
+        set -euo pipefail
+        [[ "$(git rev-parse HEAD)" == "$SOURCE_REVISION" ]] || {
+          echo "Source checkout does not match packaged revision" >&2
+          exit 1
+        }
+        meta="desktopApp/build/generated/sentry/sentry-debug-meta.properties"
+        test -f "$meta"
+        bundle_id="$(awk -F= '$1 == "io.sentry.bundle-ids" { print $2; exit }' "$meta")"
+        [[ "$bundle_id" =~ ^[0-9a-fA-F-]{36}$ ]] || { echo "Invalid Sentry JVM bundle ID" >&2; exit 1; }
+        python3 .github/actions/upload-desktop-sentry/verify_metadata.py \
+          "$meta" desktopApp/build/compose/binaries
+
+    - name: Upload JVM source context
+      shell: bash
+      env:
+        SENTRY_AUTH_TOKEN: ${{ inputs.sentry-auth-token }}
+      run: |
+        set -euo pipefail
+        test -n "$SENTRY_AUTH_TOKEN"
+        meta="desktopApp/build/generated/sentry/sentry-debug-meta.properties"
+        bundle_id="$(awk -F= '$1 == "io.sentry.bundle-ids" { print $2; exit }' "$meta")"
+        source_root="${RUNNER_TEMP}/metrolist-sentry-sources"
+        bundle_dir="${RUNNER_TEMP}/metrolist-sentry-jvm"
+        if command -v cygpath >/dev/null 2>&1; then
+          source_root="$(cygpath -u "$source_root")"
+          bundle_dir="$(cygpath -u "$bundle_dir")"
+        fi
+        rm -rf "$source_root" "$bundle_dir"
+        mkdir -p "$source_root" "$bundle_dir"
+        for source in \
+          desktopApp/src/jvmMain/kotlin \
+          shared/src/commonMain/kotlin \
+          shared/src/jvmSharedMain/kotlin \
+          shared/src/desktopMain/kotlin; do
+          test -d "$source"
+          tar -cf - "$source" | tar -C "$source_root" -xf -
+        done
+        "$SENTRY_CLI" debug-files bundle-jvm \
+          --org metrolistgroup \
+          --output "$bundle_dir" \
+          --debug-id "$bundle_id" \
+          "$source_root"
+        "$SENTRY_CLI" debug-files upload \
+          --org metrolistgroup \
+          --project metrolist-kmp \
+          --auth-token "$SENTRY_AUTH_TOKEN" \
+          --type jvm \
+          --wait \
+          "$bundle_dir"

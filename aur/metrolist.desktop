@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Metrolist
+Comment=YouTube Music desktop client
+Exec=metrolist %u
+Icon=metrolist
+Terminal=false
+Categories=AudioVideo;Player;
+MimeType=x-scheme-handler/metrolist;x-scheme-handler/metrolist-auth;

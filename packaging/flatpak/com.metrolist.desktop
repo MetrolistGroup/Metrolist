@@ -1,0 +1,3 @@
+#!/bin/sh
+export APPDIR=/app/metrolist
+exec "$APPDIR/AppRun" "$@"

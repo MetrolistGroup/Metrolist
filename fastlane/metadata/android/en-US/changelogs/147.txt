@@ -1,0 +1,8 @@
+v13.4.3
+Maintenance mode: bug fixes and minor improvements only.
+- Rewrote Discord RPC integration
+- Improved playlist screens; new playlist widget
+- Proper Apple Music lyrics support
+- Normalization level selector
+- Hide monthly/weekly most-played playlists
+- Faster lyrics fetch; crash/memory fixes; playlist paging

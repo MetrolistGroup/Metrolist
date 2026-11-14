@@ -1,0 +1,227 @@
+{
+  "contents": [
+    {
+      "musicPlaylistShelfRenderer": {
+        "contents": [
+          {
+            "musicResponsiveListItemRenderer": {
+              "thumbnail": {
+                "musicThumbnailRenderer": {
+                  "thumbnail": {
+                    "thumbnails": [
+                      {
+                        "url": "https://yt3.googleusercontent.com/pgfnc0KwVEOH4TZDXUOQWX3jOJi1qrPOFg5DhLEtoazdXW70-UstZ6ef8p0S370KSTP5mjYKYVW3NeBZ=w60-h60-l90-rj",
+                        "width": 60,
+                        "height": 60
+                      },
+                      {
+                        "url": "https://yt3.googleusercontent.com/pgfnc0KwVEOH4TZDXUOQWX3jOJi1qrPOFg5DhLEtoazdXW70-UstZ6ef8p0S370KSTP5mjYKYVW3NeBZ=w120-h120-l90-rj",
+                        "width": 120,
+                        "height": 120
+                      }
+                    ]
+                  },
+                  "thumbnailCrop": "MUSIC_THUMBNAIL_CROP_UNSPECIFIED",
+                  "thumbnailScale": "MUSIC_THUMBNAIL_SCALE_ASPECT_FIT"
+                }
+              },
+              "overlay": {
+                "musicItemThumbnailOverlayRenderer": {
+                  "content": {
+                    "musicPlayButtonRenderer": {}
+                  }
+                }
+              },
+              "flexColumns": [
+                {
+                  "musicResponsiveListItemFlexColumnRenderer": {
+                    "text": {
+                      "runs": [
+                        {
+                          "text": "scars"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "musicResponsiveListItemFlexColumnRenderer": {
+                    "text": {
+                      "runs": [
+                        {
+                          "text": "Novulent"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "musicResponsiveListItemFlexColumnRenderer": {
+                    "text": {
+                      "runs": [
+                        {
+                          "text": "scars"
+                        }
+                      ]
+                    }
+                  }
+                }
+              ],
+              "fixedColumns": [
+                {
+                  "musicResponsiveListItemFixedColumnRenderer": {
+                    "text": {
+                      "runs": [
+                        {
+                          "text": "1:36"
+                        }
+                      ]
+                    },
+                    "size": "MUSIC_RESPONSIVE_LIST_ITEM_FIXED_COLUMN_SIZE_SMALL"
+                  }
+                }
+              ],
+              "playlistItemData": {
+                "playlistSetVideoId": "1DEA1858853BBAA5",
+                "videoId": "lDDgg8iatv8",
+                "voteSortValue": 1791547267
+              },
+              "musicItemRendererDisplayPolicy": "MUSIC_ITEM_RENDERER_DISPLAY_POLICY_GREY_OUT"
+            }
+          },
+          {
+            "musicResponsiveListItemRenderer": {
+              "thumbnail": {
+                "musicThumbnailRenderer": {
+                  "thumbnail": {
+                    "thumbnails": [
+                      {
+                        "url": "https://yt3.googleusercontent.com/7lBZVP36HoE0vwQqDxVvtayPB4YzNYKd8derIsvTEKT_zkXHIoAIOs0sbrTGfWsyTbFzumEI3viUGIfY=w60-h60-l90-rj",
+                        "width": 60,
+                        "height": 60
+                      },
+                      {
+                        "url": "https://yt3.googleusercontent.com/7lBZVP36HoE0vwQqDxVvtayPB4YzNYKd8derIsvTEKT_zkXHIoAIOs0sbrTGfWsyTbFzumEI3viUGIfY=w120-h120-l90-rj",
+                        "width": 120,
+                        "height": 120
+                      }
+                    ]
+                  },
+                  "thumbnailCrop": "MUSIC_THUMBNAIL_CROP_UNSPECIFIED",
+                  "thumbnailScale": "MUSIC_THUMBNAIL_SCALE_ASPECT_FIT"
+                }
+              },
+              "overlay": {
+                "musicItemThumbnailOverlayRenderer": {
+                  "content": {
+                    "musicPlayButtonRenderer": {
+                      "playNavigationEndpoint": {
+                        "watchEndpoint": {
+                          "videoId": "NhO5-OUecvY",
+                          "playlistId": "PLDCecPcalK_0",
+                          "playerParams": "iAQB8AUBygYQNzIxNzNGQTlBODI2NUEwNQ%3D%3D",
+                          "playlistSetVideoId": "72173FA9A8265A05",
+                          "watchEndpointMusicSupportedConfigs": {
+                            "watchEndpointMusicConfig": {
+                              "musicVideoType": "MUSIC_VIDEO_TYPE_ATV"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "flexColumns": [
+                {
+                  "musicResponsiveListItemFlexColumnRenderer": {
+                    "text": {
+                      "runs": [
+                        {
+                          "text": "Stargazing",
+                          "navigationEndpoint": {
+                            "watchEndpoint": {
+                              "videoId": "NhO5-OUecvY",
+                              "playlistId": "PLDCecPcalK_0",
+                              "playerParams": "iAQB8AUB",
+                              "watchEndpointMusicSupportedConfigs": {
+                                "watchEndpointMusicConfig": {
+                                  "musicVideoType": "MUSIC_VIDEO_TYPE_ATV"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "musicResponsiveListItemFlexColumnRenderer": {
+                    "text": {
+                      "runs": [
+                        {
+                          "text": "The Neighbourhood",
+                          "navigationEndpoint": {
+                            "browseEndpoint": {
+                              "browseId": "UC1cnYMXqKdazz-gDPKaDFyg",
+                              "browseEndpointContextSupportedConfigs": {
+                                "browseEndpointContextMusicConfig": {
+                                  "pageType": "MUSIC_PAGE_TYPE_ARTIST"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "musicResponsiveListItemFlexColumnRenderer": {
+                    "text": {
+                      "runs": [
+                        {
+                          "text": "Chip Chrome & The Mono-Tones (Deluxe)",
+                          "navigationEndpoint": {
+                            "browseEndpoint": {
+                              "browseId": "MPREb_qbPNNVjzU0R",
+                              "browseEndpointContextSupportedConfigs": {
+                                "browseEndpointContextMusicConfig": {
+                                  "pageType": "MUSIC_PAGE_TYPE_ALBUM"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ],
+              "fixedColumns": [
+                {
+                  "musicResponsiveListItemFixedColumnRenderer": {
+                    "text": {
+                      "runs": [
+                        {
+                          "text": "3:38"
+                        }
+                      ]
+                    },
+                    "size": "MUSIC_RESPONSIVE_LIST_ITEM_FIXED_COLUMN_SIZE_SMALL"
+                  }
+                }
+              ],
+              "playlistItemData": {
+                "playlistSetVideoId": "72173FA9A8265A05",
+                "videoId": "NhO5-OUecvY",
+                "voteSortValue": 1791547309
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

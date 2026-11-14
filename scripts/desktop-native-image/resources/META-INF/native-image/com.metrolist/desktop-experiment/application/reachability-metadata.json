@@ -1,0 +1,53 @@
+{
+  "resources": [
+    {
+      "glob": "composeResources/**"
+    },
+    {
+      "glob": "org/bytedeco/**"
+    },
+    {
+      "glob": "composeResources"
+    },
+    {
+      "glob": "romanization/**"
+    },
+    {
+      "glob": "com/ibm/icu/impl/data/**"
+    },
+    {
+      "glob": "com/atilika/kuromoji/**"
+    },
+    {
+      "module": "java.desktop",
+      "glob": "com/sun/swing/internal/plaf/**"
+    },
+    {
+      "module": "java.desktop",
+      "glob": "com/sun/java/swing/plaf/**"
+    },
+    {
+      "module": "java.desktop",
+      "glob": "com/sun/accessibility/internal/resources/**"
+    },
+    {
+      "module": "java.desktop",
+      "glob": "sun/awt/resources/**"
+    },
+    {
+      "module": "java.desktop",
+      "glob": "sun/print/resources/**"
+    },
+    {
+      "module": "java.logging",
+      "glob": "sun/util/logging/resources/**"
+    }
+  ],
+  "reflection": [
+    {
+      "type": "java.awt.AWTError",
+      "jniAccessible": true,
+      "allDeclaredConstructors": true
+    }
+  ]
+}

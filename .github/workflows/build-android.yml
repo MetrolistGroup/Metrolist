@@ -1,0 +1,62 @@
+name: Verify Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: APK variant to build and upload as an artifact
+        type: choice
+        options: [release, debug]
+        default: release
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  # Dispatched APK builds get their own group so pushes to main cannot cancel them.
+  group: android-${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Select checks
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      platform: ${{ steps.paths.outputs.android }}
+      shared-only: ${{ steps.paths.outputs.shared-only }}
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select platform checks
+        id: paths
+        uses: ./.github/actions/ci-changes
+
+  build:
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.platform == 'true'
+    name: Android
+    uses: ./.github/workflows/reusable-android-build.yml
+    permissions:
+      contents: read
+    with:
+      variant: ${{ inputs.variant || 'debug' }}
+      upload-artifact: ${{ github.event_name == 'workflow_dispatch' }}
+      require-signing: ${{ inputs.variant == 'release' }}
+      cache-read-only: ${{ github.event_name == 'pull_request' }}
+    secrets:
+      KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH || secrets.KEYSTORE }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}

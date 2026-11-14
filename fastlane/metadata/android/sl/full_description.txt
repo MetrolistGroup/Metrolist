@@ -1,0 +1,23 @@
+Material 3 odjemalec YouTube Music za Android
+
+Lastnosti:
+
+- Predvajajte katerokoli skladbo ali videoposnetek iz YT Music.
+- Predvajanje v ozadju
+- Osebne prilagojene hitre izbire
+- Upravljanje knjižnice
+- Prenos in predpomnjenje skladb za predvajanje brez povezave
+- Iskanje skladb, albumov, izvajalcev, videoposnetkov in seznamov predvajanja
+- Besedila v živo
+- Podpora za prijavo v račun YouTube Music
+- Sinhronizacija skladb, izvajalcev, albumov in seznamov predvajanja iz računa in v račun
+- Preskakanje tišine
+- Uvoz seznamov predvajanja
+- Normalizacija zvoka
+- Nastavitev tempa/višine tona
+- Upravljanje lokalnih seznamov predvajanja
+- Spreminjanje vrstnega reda skladb na seznamu ali v vrsti predvajanja
+- Svetla, temna, črna in dinamična tema
+- Časovnik za spanje
+- Material 3
+- itd.

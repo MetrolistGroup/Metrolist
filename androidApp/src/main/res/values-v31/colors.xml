@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Original icon follows the wallpaper's primary container, like the About screen logo. -->
+    <color name="ic_launcher_background">@color/widget_primary_container</color>
+    <color name="ic_launcher_glyph">@color/widget_on_primary_container</color>
+</resources>

@@ -1,0 +1,18 @@
+//
+// Config.xcconfig
+// Metrolist iOS App Scaffold Configuration
+//
+
+PRODUCT_NAME = Metrolist
+PRODUCT_BUNDLE_IDENTIFIER = com.metrolist.MetrolistApp
+CODE_SIGN_ENTITLEMENTS = Configuration/iosApp.entitlements
+INFOPLIST_PREPROCESS = YES
+INFOPLIST_PREFIX_HEADER = $(DERIVED_FILE_DIR)/MetrolistVersion.h
+SWIFT_VERSION = 5.9
+SWIFT_STRICT_CONCURRENCY = complete
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+SDKROOT = iphoneos
+// The KMP dependency graph publishes arm64 simulator binaries only.
+EXCLUDED_ARCHS[sdk=iphonesimulator*] = x86_64
+TARGETED_DEVICE_FAMILY = 1,2
+ENABLE_USER_SCRIPT_SANDBOXING = NO

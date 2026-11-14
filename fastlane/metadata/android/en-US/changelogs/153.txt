@@ -1,0 +1,8 @@
+v13.7.0
+- Migrated networking to InnerTubeX with automatic client fallback
+- Reduced memory use in large libraries, History, Cache, Android Auto
+- Fixed upgrades, Android Auto, artist metadata, channel switching
+- Improved login, uploads, downloads, caching, playlist sync
+- Playlist add position option; Zemer lyrics; copyable error reports
+- Unified update prompt; restored classic icon and x86 support
+- Fixed artwork, lyrics, repeat/shuffle/crossfade, Listen Together

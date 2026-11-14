@@ -1,0 +1,312 @@
+{
+  "reflection": [
+    {
+      "type": "io.github.kdroidfilter.webview.wry.IntegrityCheckingUniffiLib",
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "jniAccessible": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiLib",
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true,
+      "jniAccessible": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.ForeignBytesStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.ForeignBytesStruct$ByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.RustBufferStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.RustBufferStruct$ByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.RustBufferStruct$ByReference",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiCallbackInterfaceFree",
+      "methods": [
+        {
+          "name": "callback",
+          "parameterTypes": [
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiCallbackInterfaceJavaScriptCallbackMethod0",
+      "methods": [
+        {
+          "name": "callback",
+          "parameterTypes": [
+            "long",
+            "io.github.kdroidfilter.webview.wry.RustBufferStruct$ByValue",
+            "com.sun.jna.Pointer",
+            "io.github.kdroidfilter.webview.wry.UniffiRustCallStatusStruct$ByReference"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiCallbackInterfaceNativeLoggerMethod0"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiCallbackInterfaceNavigationHandlerMethod0",
+      "methods": [
+        {
+          "name": "callback",
+          "parameterTypes": [
+            "long",
+            "io.github.kdroidfilter.webview.wry.RustBufferStruct$ByValue",
+            "com.sun.jna.ptr.ByteByReference",
+            "io.github.kdroidfilter.webview.wry.UniffiRustCallStatusStruct$ByReference"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiRustCallStatusStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiRustCallStatusStruct$ByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiRustCallStatusStruct$ByReference",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStruct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructF32Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructF32Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructF64Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructF64Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructI8Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructI8Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructI16Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructI16Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructI32Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructI32Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructI64Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructI64Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructU8Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructU8Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructU16Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructU16Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructU32Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructU32Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructU64Struct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructU64Struct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructPointerStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructPointerStruct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructRustBufferStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructRustBufferStruct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructVoidStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiForeignFutureStructVoidStruct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiVTableCallbackInterfaceJavaScriptCallbackStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiVTableCallbackInterfaceJavaScriptCallbackStruct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiVTableCallbackInterfaceNativeLoggerStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiVTableCallbackInterfaceNativeLoggerStruct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiVTableCallbackInterfaceNavigationHandlerStruct",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiVTableCallbackInterfaceNavigationHandlerStruct$UniffiByValue",
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.WryWebViewPanel"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.uniffiCallbackInterfaceJavaScriptCallback$onResult"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.uniffiCallbackInterfaceJavaScriptCallback$uniffiFree"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.uniffiCallbackInterfaceNativeLogger$handleLog"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.uniffiCallbackInterfaceNativeLogger$uniffiFree"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.uniffiCallbackInterfaceNavigationHandler$handleNavigation"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.uniffiCallbackInterfaceNavigationHandler$uniffiFree"
+    },
+    {
+      "type": {
+        "proxy": [
+          "io.github.kdroidfilter.webview.wry.UniffiLib"
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "glob": "linux-x86-64/libcomposewebview_wry.so"
+    },
+    {
+      "glob": "darwin-x86-64/libcomposewebview_wry.dylib"
+    },
+    {
+      "glob": "darwin-aarch64/libcomposewebview_wry.dylib"
+    },
+    {
+      "glob": "win32-x86-64/composewebview_wry.dll"
+    }
+  ]
+}

@@ -1,0 +1,172 @@
+name: Desktop Native Image
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+    secrets:
+      LASTFM_API_KEY:
+        required: true
+      LASTFM_SECRET:
+        required: true
+      LYPRIO_BASE_URL:
+        required: true
+      LYPRIO_HMAC_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    # No push/PR builds. ARM64 targets need an explicit maintainer switch as well as a dispatch.
+    if: >-
+      (github.event_name == 'workflow_dispatch' || github.event_name == 'push') &&
+      (inputs.platform == 'linux-x64' || inputs.platform == 'windows-x64' ||
+      (inputs.platform == 'macos-arm64' && vars.ENABLE_NATIVE_MACOS_ARM64 == 'true') ||
+      (inputs.platform == 'linux-arm64' && vars.ENABLE_NATIVE_LINUX_ARM64 == 'true'))
+    name: ${{ inputs.platform }} native tester
+    runs-on: ${{ fromJSON('{"linux-x64":"blacksmith-8vcpu-ubuntu-2404","windows-x64":"blacksmith-8vcpu-windows-2025","macos-arm64":"blacksmith-6vcpu-macos-15","linux-arm64":"blacksmith-8vcpu-ubuntu-2404-arm"}')[inputs.platform] }}
+    timeout-minutes: 45
+    env:
+      NATIVE_PLATFORM: ${{ inputs.platform }}
+      NATIVE_WORK: ''
+    steps:
+      - name: Set native output directory
+        shell: bash
+        run: echo "NATIVE_WORK=$RUNNER_TEMP/r6-native-image" >> "$GITHUB_ENV"
+
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Prepare CI Gradle
+        uses: ./.github/actions/prepare-ci-gradle
+        with:
+          cache-scope: desktop-native-${{ inputs.platform }}
+          cache-read-only: 'true'
+          persist-configuration-cache: 'false'
+
+      - name: Generate installer icons
+        uses: ./.github/actions/generate-icons
+
+      - name: Cache verified GraalVM archives
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ runner.tool_cache }}/metrolist-graalvm/archives
+          key: graalvm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/graalvm-pins.json', 'scripts/desktop-native-image/toolchain.py') }}
+
+      - name: Install pinned GraalVM
+        shell: bash
+        run: |
+          python scripts/desktop-native-image/toolchain.py --platform "$NATIVE_PLATFORM" \
+            --cache "$RUNNER_TOOL_CACHE/metrolist-graalvm/archives" \
+            --destination "$RUNNER_TOOL_CACHE/metrolist-graalvm/current"
+          mkdir -p "$NATIVE_WORK/evidence"
+
+      - name: Prepare Linux native dependencies and user scope
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential zlib1g-dev libfreetype-dev libasound2-dev \
+            libx11-dev libxext-dev libxrender-dev libxtst-dev libxi-dev xvfb xauth scrot \
+            imagemagick libgl1-mesa-dri dbus-user-session
+          sudo loginctl enable-linger "$(id -un)"
+          sudo systemctl start "user@$(id -u).service"
+          echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"
+          echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
+
+      - name: Prepare ARM64 WebView
+        if: inputs.platform == 'linux-arm64'
+        uses: ./.github/actions/prepare-linux-webview
+        with:
+          cache-read-only: 'true'
+
+      - name: Set up Windows login helper SDK
+        if: runner.os == 'Windows'
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          global-json-file: metro-wv2-helper/global.json
+
+      - name: Build Windows login helper
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          dotnet publish metro-wv2-helper/metro-wv2-helper.csproj --configuration Release --runtime win-x64 --self-contained true --output desktopApp/src/desktopMain/resources/windows -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false -p:PublishReadyToRun=true
+          if ($LASTEXITCODE -ne 0) { throw 'Windows login helper build failed' }
+
+      - name: Prepare native application inputs
+        shell: bash
+        env:
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+          LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+        run: |
+          ./gradlew -I scripts/desktop-native-image/prepare.init.gradle \
+            -PnativeExperimentDir="$NATIVE_WORK" -Pmetrolist.sourceRevision="$GITHUB_SHA" \
+            :desktopApp:prepareNativeImage --no-daemon --no-build-cache --no-configuration-cache
+
+      - name: Trace Windows startup when a desktop is available
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          python scripts/desktop_smoke.py "$NATIVE_WORK/classpath.txt" \
+            --trace-java "$GRAALVM_HOME/bin/java.exe" --trace-classpath "$NATIVE_WORK/classpath.txt" \
+            --trace-agent "$NATIVE_WORK/agent" --resources "$NATIVE_WORK/resources" \
+            --output "$NATIVE_WORK/evidence/trace"
+
+      - name: Build native image with Serial GC and Os
+        shell: bash
+        run: |
+          python scripts/desktop-native-image/native_image.py --platform "$NATIVE_PLATFORM" \
+            --work "$NATIVE_WORK" --graalvm "$GRAALVM_HOME" --agent "$NATIVE_WORK/agent"
+
+      - name: Package native tester
+        id: package
+        shell: bash
+        run: |
+          python scripts/desktop-native-image/package.py --platform "$NATIVE_PLATFORM" \
+            --image "$NATIVE_WORK/image" --output "$NATIVE_WORK/packages"
+
+      - name: Strict native launch smoke
+        shell: bash
+        env:
+          PACKAGE: ${{ steps.package.outputs.path }}
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          SKIKO_RENDER_API: SOFTWARE_COMPAT
+          SKIKO_WAYLAND: '0'
+        run: |
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            xvfb-run -a -s '-screen 0 1440x1000x24' python scripts/desktop_smoke.py "$PACKAGE" --native --output "$NATIVE_WORK/evidence/smoke"
+          else
+            python scripts/desktop_smoke.py "$PACKAGE" --native --output "$NATIVE_WORK/evidence/smoke"
+          fi
+
+      - name: Collect build evidence
+        if: always()
+        shell: bash
+        run: |
+          python scripts/desktop-native-image/evidence.py --work "$NATIVE_WORK" --platform "$NATIVE_PLATFORM"
+
+      - name: Upload native package
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: desktop-native-${{ inputs.platform }}
+          path: ${{ steps.package.outputs.path }}
+          if-no-files-found: error
+          retention-days: 4
+
+      - name: Upload native build evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: desktop-native-${{ inputs.platform }}-evidence
+          path: ${{ env.NATIVE_WORK }}/native-evidence.zip
+          if-no-files-found: warn
+          retention-days: 4

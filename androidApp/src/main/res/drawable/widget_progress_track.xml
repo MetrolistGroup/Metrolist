@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/widget_secondary_container" />
+            <corners android:radius="2dp" />
+        </shape>
+    </item>
+    <!-- Stop indicator marking the end of the track -->
+    <item android:gravity="end|center_vertical" android:width="4dp" android:height="4dp">
+        <shape android:shape="oval">
+            <solid android:color="@color/widget_primary" />
+        </shape>
+    </item>
+</layer-list>

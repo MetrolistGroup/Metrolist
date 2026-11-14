@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+"""Validate the Conventional Commit subject without modifying the message."""
+from pathlib import Path
+import re
+import sys
+
+
+if len(sys.argv) != 2:
+    print("Usage: commit-msg <message-file>", file=sys.stderr)
+    sys.exit(2)
+
+try:
+    subject = Path(sys.argv[1]).read_text(encoding="utf-8").partition("\n")[0]
+except (OSError, UnicodeError) as error:
+    print(f"Cannot read commit message: {error}", file=sys.stderr)
+    sys.exit(1)
+
+match = re.fullmatch(
+    r"(?:feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)"
+    r"(?:\((?P<scope>[^()\r\n]+)\))?"
+    r"!?: (?P<description>\S(?:[^\r\n]*\S)?)",
+    subject,
+)
+if (
+    match is None
+    or (match["scope"] is not None and not match["scope"].strip())
+    or match["description"].endswith(".")
+):
+    print(
+        "Use <type>[optional scope][!]: <description> without a trailing period.\n"
+        "Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert.",
+        file=sys.stderr,
+    )
+    sys.exit(1)

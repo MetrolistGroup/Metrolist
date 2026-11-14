@@ -1,0 +1,129 @@
+name: Desktop Verify
+
+on:
+  workflow_call:
+    inputs:
+      shared-only:
+        description: Verify common code once on Linux x64
+        required: false
+        default: false
+        type: boolean
+      cache-read-only:
+        description: Keep the Gradle cache read-only
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      GRADLE_ENCRYPTION_KEY:
+        required: false
+      LASTFM_API_KEY:
+        required: false
+      LASTFM_SECRET:
+        required: false
+      LYPRIO_BASE_URL:
+        required: false
+      LYPRIO_HMAC_KEY:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Linux ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include: >-
+          ${{ fromJSON((inputs.shared-only || github.event_name == 'pull_request')
+            && '[{"arch":"x64","runner":"blacksmith-4vcpu-ubuntu-2604"}]'
+            || '[{"arch":"x64","runner":"blacksmith-4vcpu-ubuntu-2604"},{"arch":"arm64","runner":"blacksmith-4vcpu-ubuntu-2604-arm"}]') }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Validate Compose resources
+        run: python3 scripts/check_compose_resource_escapes.py
+
+      - name: Prepare CI Gradle
+        uses: ./.github/actions/prepare-ci-gradle
+        with:
+          cache-scope: desktop-verify-${{ matrix.arch }}
+          persist-configuration-cache: 'false'
+          cache-read-only: ${{ inputs.cache-read-only }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Install desktop runtime libraries
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2t64 \
+            libdrm2 \
+            libegl1 \
+            libfontconfig1 \
+            libfreetype6 \
+            libgl1 \
+            libpulse0 \
+            libva-drm2 \
+            libva2 \
+            libx11-6 \
+            libxcb-shm0
+
+      - name: Prepare ARM64 WebView build
+        if: matrix.arch == 'arm64'
+        uses: ./.github/actions/prepare-linux-webview
+        with:
+          cache-read-only: ${{ inputs.cache-read-only }}
+
+      - name: Set up Windows helper test SDK
+        if: matrix.arch == 'x64' && !inputs.shared-only
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          global-json-file: metro-wv2-helper/global.json
+
+      - name: Test Windows login completion
+        if: matrix.arch == 'x64' && !inputs.shared-only
+        working-directory: metro-wv2-helper
+        run: dotnet run --project tests/LoginCompletion.Tests.csproj --configuration Release
+
+      - name: Check local CI scripts
+        if: matrix.arch == 'x64' && !inputs.shared-only
+        shell: bash
+        run: |
+          python3 scripts/test_build_appimage.py
+          python3 scripts/test_desktop_smoke.py
+          python3 scripts/test_dmg_packaging.py
+          python3 scripts/test_hooks.py
+          python3 scripts/test_compose_resource_escapes.py
+
+      - name: Build and verify desktop app
+        shell: bash
+        env:
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+          LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+          # The local 4 GB heap is too small for in-process Kotlin compiling desktop and iOS sources together.
+          GRADLE_OPTS: >-
+            -Dorg.gradle.jvmargs="-XX:MaxRAMPercentage=60.0 -XX:+UseParallelGC -Dfile.encoding=UTF-8"
+        run: |
+          set -euo pipefail
+          if [[ "${{ matrix.arch }}" == "x64" ]]; then
+            tasks=(
+              :desktopApp:compileKotlinJvm :shared:desktopTest
+              :shared:verifyDesktopJarIntegrity :shared:verifyKuromojiPackaging :shared:verifyIosKuromojiPackaging
+              :shared:ktlintCheck :listenTogetherProto:ktlintCheck
+            )
+            if [[ '${{ inputs.shared-only }}' != 'true' ]]; then
+              tasks+=(:desktopApp:jvmTest :desktopApp:ktlintCheck)
+            fi
+            ./gradlew "${tasks[@]}" --no-daemon -Pmetrolist.sourceRevision=
+          else
+            ./gradlew :desktopApp:assemble --no-daemon -Pmetrolist.sourceRevision=
+          fi

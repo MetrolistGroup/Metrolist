@@ -1,0 +1,545 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_NAME="${0##*/}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+OUTPUT_BASE="${XDG_STATE_HOME:-$HOME/.local/state}/metrolist/memory-logs"
+STAGES=("Startup" "Home Screen" "Screen Transition" "Playing Song"
+        "While Playing" "Lyrics Open" "Song Change" "Screen Change")
+
+NMT_BASELINED=false
+PID=""
+SESSION_DIR=""
+CSV_FILE=""
+LOG_FILE=""
+WATCH_SECS=0
+RUN_GRADLE=false
+GRADLE_RUN_PID=""
+APPIMAGE_RUN_PID=""
+
+usage() {
+    cat <<EOF
+Usage:
+  $SCRIPT_NAME <appimage_path> [--watch <secs>]        Launch AppImage and monitor
+  $SCRIPT_NAME --pid <pid> [--watch <secs>]            Attach to running process
+  $SCRIPT_NAME --run [--watch <secs>]                   gradlew :desktopApp:run + monitor
+  $SCRIPT_NAME --analyze <csv_file>                     Analyze saved CSV log
+  $SCRIPT_NAME --help                                   Show this help
+
+Modes:
+  interactive   Press Enter at each labelled stage
+  --watch <N>   Auto-sample every N seconds (no Enter needed)
+
+Examples:
+  $SCRIPT_NAME --run                           # gradlew run + interactive stages
+  $SCRIPT_NAME --run --watch 5                 # gradlew run + auto 5s snapshots
+  $SCRIPT_NAME --pid 12345 --watch 3           # attach + auto 3s snapshots
+EOF
+    exit 0
+}
+
+die() { echo "[!] $*" >&2; exit 1; }
+warn() { echo "[w] $*" >&2; }
+info() { echo "[*] $*"; }
+
+
+check_deps() {
+    local missing=()
+    for cmd in jcmd jstat pmap awk; do
+        command -v "$cmd" &>/dev/null || missing+=("$cmd")
+    done
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        die "Missing dependencies: ${missing[*]} (install JDK for jcmd/jstat, pmap is linux-specific)"
+    fi
+}
+
+
+find_desktop_pids() {
+    local status=0
+    pgrep -f "com.metrolist.desktop.MainKt" || status=$?
+    # pgrep uses 1 for an empty process list; other failures must stop the launch.
+    if [[ "$status" -gt 1 ]]; then
+        return "$status"
+    fi
+}
+
+launch_gradle() {
+    if [[ ! -f "$PROJECT_ROOT/gradlew" ]]; then
+        die "gradlew not found at $PROJECT_ROOT"
+    fi
+    local gradle_out="$SESSION_DIR/gradle.log"
+    local existing_pids
+    existing_pids=" $(find_desktop_pids | tr '\n' ' ')"
+    info "Starting memory-bounded Gradle run (log → $gradle_out)"
+    (
+        cd "$PROJECT_ROOT"
+        ./gradlew \
+            --no-daemon \
+            --max-workers=2 \
+            -Dorg.gradle.jvmargs=-Xmx1536m \
+            -Dkotlin.compiler.execution.strategy=in-process \
+            -Dorg.gradle.parallel=false \
+            :desktopApp:run
+    ) &>"$gradle_out" &
+    GRADLE_RUN_PID=$!
+    info "Gradle PID $GRADLE_RUN_PID, waiting for JVM..."
+    for i in $(seq 1 120); do
+        local candidate candidates
+        candidates=$(find_desktop_pids)
+        for candidate in $candidates; do
+            if [[ " $existing_pids " != *" $candidate "* ]]; then
+                PID="$candidate"
+                info "JVM PID $PID"
+                return 0
+            fi
+        done
+        sleep 1
+    done
+    die "JVM not found after 120s (check $gradle_out)"
+}
+
+launch_appimage() {
+    local target="$1"
+    if [[ ! -f "$target" || ! -x "$target" ]]; then
+        die "Not a valid AppImage/executable: $target"
+    fi
+    local existing_pids
+    existing_pids=" $(find_desktop_pids | tr '\n' ' ')"
+    info "Launching AppImage: $target"
+    "$target" &>/dev/null &
+    APPIMAGE_RUN_PID=$!
+    info "AppImage launched, waiting for JVM..."
+    for i in $(seq 1 60); do
+        local candidate candidates
+        candidates=$(find_desktop_pids)
+        for candidate in $candidates; do
+            if [[ " $existing_pids " != *" $candidate "* ]]; then
+                PID="$candidate"
+                info "JVM PID $PID"
+                return 0
+            fi
+        done
+        sleep 0.5
+    done
+    die "JVM not found after 30s"
+}
+
+verify_pid() {
+    local pid="$1"
+    if [[ ! -d "/proc/$pid" ]]; then
+        die "PID $pid not found (/proc/$pid does not exist)"
+    fi
+    local cmdline
+    cmdline=$(cat "/proc/$pid/cmdline" 2>/dev/null | tr '\0' ' ')
+    if [[ "$cmdline" != *"java"* && "$cmdline" != *"Metrolist"* && "$cmdline" != *"metrolist"* ]]; then
+        warn "PID $pid does not appear to be a Metrolist/Java process"
+        info "Continue anyway? [Y/n]"
+        read -r resp
+        if [[ "$resp" =~ ^[nN] ]]; then exit 1; fi
+    fi
+}
+
+
+write_session_meta() {
+    {
+        echo "=== Metromem Session ==="
+        echo "Date: $(date)"
+        echo "PID: $PID"
+        echo "App: $(cat /proc/$PID/cmdline 2>/dev/null | tr '\0' ' ' || echo 'N/A')"
+        [[ "$WATCH_SECS" -gt 0 ]] && echo "Mode: watch (${WATCH_SECS}s interval)"
+        echo "========================="
+    } > "$LOG_FILE"
+}
+
+
+proc_status_val() {
+    local key="$1"
+    awk -v k="$key:" '$1 == k { gsub(/[^0-9]/, "", $2); print $2 }' "/proc/$PID/status" 2>/dev/null || echo 0
+}
+
+capture_snapshot() {
+    local snap_num="$1"
+    local label="$2"
+    if [[ ! -r "/proc/$PID/status" ]]; then
+        warn "Target process exited"
+        return 1
+    fi
+    local ts
+    ts=$(date +%Y-%m-%dT%H:%M:%S%z)
+
+    local snap_dir="$SESSION_DIR/snap-$(printf '%02d' "$snap_num")-$(echo "$label" | tr ' ' '-')"
+    mkdir -p "$snap_dir"
+
+    local vmrss_kb=0 threads=0
+    vmrss_kb=$(proc_status_val "VmRSS")
+    threads=$(proc_status_val "Threads")
+
+    local private_dirty_kb=0
+    if [[ -f "/proc/$PID/smaps_rollup" ]]; then
+        while IFS=: read -r key val; do
+            val="${val%% kB}"
+            val="${val## }"
+            if [[ "$key" == "Private_Dirty" ]]; then
+                private_dirty_kb=$val
+                break
+            fi
+        done < "/proc/$PID/smaps_rollup"
+    fi
+
+    local young_kb=0 old_kb=0 metaspace_kb=0
+    local gc_young=0 gc_full=0 gc_time=0
+    local jstat_out
+    jstat_out=$(jstat -gc "$PID" 2>/dev/null | tail -1)
+    if [[ -n "$jstat_out" ]]; then
+        local -a cols
+        read -ra cols <<< "$jstat_out"
+        young_kb=$(awk "BEGIN {print int(${cols[3]:-0} + ${cols[5]:-0})}" 2>/dev/null)
+        old_kb=$(awk "BEGIN {print int(${cols[7]:-0})}" 2>/dev/null)
+        metaspace_kb=$(awk "BEGIN {print int(${cols[9]:-0})}" 2>/dev/null)
+        gc_young=${cols[12]:-0}
+        gc_full=${cols[14]:-0}
+        gc_time=$(awk "BEGIN {print int(${cols[13]:-0} * 1000)}" 2>/dev/null || echo 0)
+    fi
+
+    local heap_used_kb=0 heap_max_kb=0
+    local jcmd_heap
+    jcmd_heap=$(jcmd "$PID" GC.heap_info 2>/dev/null)
+    if [[ -n "$jcmd_heap" ]]; then
+        heap_used_kb=$(echo "$jcmd_heap" | awk '
+            /^ *garbage-first heap|^ *heap|^ *def new|^ *PSYoungGen|^ *concurrent mark-sweep/ {found=1}
+            found && /used/ { gsub(/[^0-9KMG]/,"",$2); v=$2; if(v~/.$/) print substr(v,1,length(v)-1); else print v; exit }
+        ' | head -1)
+        heap_max_kb=$(echo "$jcmd_heap" | awk '
+            /^ *garbage-first heap|^ *heap|^ *def new|^ *PSYoungGen|^ *concurrent mark-sweep/ {found=1}
+            found && /used/ { gsub(/[^0-9KMG]/,"",$4); v=$4; if(v~/.$/) print substr(v,1,length(v)-1); else print v; exit }
+        ' | head -1)
+    fi
+    if [[ "$heap_used_kb" -eq 0 ]]; then
+        heap_used_kb=$(( young_kb + old_kb ))
+    fi
+
+    local nmt_total_kb=0 nmt_ok=false
+    local nmt_out
+    nmt_out=$(jcmd "$PID" VM.native_memory summary 2>/dev/null)
+    if [[ -n "$nmt_out" ]]; then
+        echo "$nmt_out" > "$snap_dir/nmt.txt"
+        if echo "$nmt_out" | grep -q "not enabled"; then
+            warn "NMT disabled — rebuild with -XX:NativeMemoryTracking=summary for category details"
+        else
+            nmt_ok=true
+            nmt_total_kb=$(echo "$nmt_out" | awk -F'[,= ]' '
+                /^Total:/ { for(i=1;i<=NF;i++) if($i=="committed") { gsub(/[^0-9]/,"",$(i+1)); print $(i+1); exit } }
+            ' | head -1)
+        fi
+    fi
+    if [[ "$nmt_ok" == true ]]; then
+        if [[ "$NMT_BASELINED" == true ]]; then
+            local nmt_diff
+            nmt_diff=$(jcmd "$PID" VM.native_memory summary.diff 2>/dev/null)
+            if [[ -n "$nmt_diff" ]]; then
+                echo "$nmt_diff" > "$snap_dir/nmt.diff"
+            fi
+        else
+            jcmd "$PID" VM.native_memory baseline 2>/dev/null
+            NMT_BASELINED=true
+        fi
+    fi
+
+    pmap -x "$PID" > "$snap_dir/pmap.txt" 2>/dev/null || warn "pmap failed"
+    if [[ ! -r "/proc/$PID/status" ]]; then
+        warn "Target process exited during snapshot"
+        return 1
+    fi
+
+    local native_est_kb=0
+    if [[ "$vmrss_kb" -gt "$heap_used_kb" ]]; then
+        native_est_kb=$(( vmrss_kb - heap_used_kb ))
+    fi
+
+    printf "%d,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n" \
+        "$snap_num" "$label" "$ts" \
+        "$vmrss_kb" "$heap_used_kb" "$heap_max_kb" \
+        "$young_kb" "$old_kb" "$metaspace_kb" \
+        "$gc_young" "$gc_full" "$gc_time" \
+        "$nmt_total_kb" "$private_dirty_kb" "$native_est_kb" "$threads" >> "$CSV_FILE"
+
+    {
+        echo "--- Snapshot $snap_num: $label ($ts) ---"
+        echo "  VmRSS:        ${vmrss_kb} KB"
+        echo "  Heap Used:    ${heap_used_kb} KB"
+        echo "  Outside heap: ${native_est_kb} KB"
+        echo "  Priv Dirty:   ${private_dirty_kb} KB"
+        [[ "$nmt_ok" == true ]] && echo "  NMT Total:    ${nmt_total_kb} KB" || echo "  NMT:          disabled"
+        echo "  GC:           ${gc_young}Y/${gc_full}F, ${gc_time}ms"
+        echo "  Threads:      $threads"
+    } >> "$LOG_FILE"
+
+    local rss_fmt h_fmt n_fmt
+    rss_fmt=$(numfmt --to=iec "$(( vmrss_kb * 1024 ))" 2>/dev/null || echo "${vmrss_kb}K")
+    h_fmt=$(numfmt --to=iec "$(( heap_used_kb * 1024 ))" 2>/dev/null || echo "${heap_used_kb}K")
+    n_fmt=$(numfmt --to=iec "$(( native_est_kb * 1024 ))" 2>/dev/null || echo "${native_est_kb}K")
+    info "Snap #$snap_num [$label]: RSS=$rss_fmt  Heap=$h_fmt  OutsideHeap≈$n_fmt  Dirty=${private_dirty_kb}K"
+}
+
+
+summary_table() {
+    if [[ ! -f "$CSV_FILE" ]]; then return; fi
+
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo "  Metromem Summary  |  PID: $PID  |  Snapshots: $(tail -n +2 "$CSV_FILE" | wc -l)"
+    echo "  Log: $SESSION_DIR"
+    echo "═══════════════════════════════════════════════════════════════════"
+    printf "  %-4s %-22s %10s %10s %10s %10s %10s\n" \
+        "Snap" "Stage" "VmRSS" "Heap" "Outside" "PrvDirty" "RSS"
+    echo "  ---- ---------------------- ---------- ---------- ---------- ---------- ----------"
+
+    local prev_rss=0 first_rss=0 last_rss=0
+    local first_heap=0 last_heap=0 first_native=0 last_native=0
+
+    while IFS=, read -r snap label ts vmrss heap_used heap_max young old meta gc_y gc_f gc_t nmt dirty native threads; do
+        [[ "$snap" == "snap" || "$snap" == "nmt_total_kb" ]] && continue
+        if [[ "$prev_rss" -eq 0 ]]; then
+            first_rss=$vmrss; first_heap=$heap_used; first_native=$native
+        fi
+        local delta="--"
+        if [[ "$prev_rss" -gt 0 ]]; then
+            local diff=$(( vmrss - prev_rss ))
+            delta=$([[ "$diff" -ge 0 ]] && echo "+${diff}K" || echo "${diff}K")
+        fi
+        local rss_fmt h_fmt n_fmt d_fmt
+        rss_fmt=$(numfmt --to=iec "$(( vmrss * 1024 ))" 2>/dev/null || echo "${vmrss}K")
+        h_fmt=$(numfmt --to=iec "$(( heap_used * 1024 ))" 2>/dev/null || echo "${heap_used}K")
+        n_fmt=$(numfmt --to=iec "$(( native * 1024 ))" 2>/dev/null || echo "${native}K")
+        d_fmt=$(numfmt --to=iec "$(( dirty * 1024 ))" 2>/dev/null || echo "${dirty}K")
+        printf "  %-4s %-22s %10s %10s %10s %10s %10s\n" \
+            "$snap" "$label" "$rss_fmt" "$h_fmt" "$n_fmt" "$d_fmt" "$delta"
+        prev_rss=$vmrss; last_rss=$vmrss; last_heap=$heap_used; last_native=$native
+    done < "$CSV_FILE"
+
+    echo "  ---- ---------------------- ---------- ---------- ---------- ---------- ----------"
+
+    local rss_growth=$(( last_rss - first_rss ))
+    local heap_growth=$(( last_heap - first_heap ))
+    local native_growth=$(( last_native - first_native ))
+
+    echo ""
+    echo "  Analysis:"
+    echo "  ---------"
+    echo "  VmRSS change:   $(numfmt --to=iec "$(( rss_growth * 1024 ))" 2>/dev/null || echo "${rss_growth}K")"
+    echo "  Heap change:    $(numfmt --to=iec "$(( heap_growth * 1024 ))" 2>/dev/null || echo "${heap_growth}K")"
+    echo "  Outside-heap change: $(numfmt --to=iec "$(( native_growth * 1024 ))" 2>/dev/null || echo "${native_growth}K")"
+
+    if [[ "$rss_growth" -gt 0 && "$heap_growth" -lt "$rss_growth" ]]; then
+        echo "  ! VmRSS grew ${rss_growth}K but heap only grew ${heap_growth}K -> inspect NMT/pmap for non-heap growth"
+    fi
+    if [[ "$native_growth" -gt $(( rss_growth / 2 )) ]]; then
+        echo "  ! Outside-heap estimate grew ${native_growth}K -- check NMT/pmap sidecars"
+    fi
+    echo ""
+}
+
+analyze_csv() {
+    local csv="$1"
+    if [[ ! -f "$csv" ]]; then
+        die "CSV not found: $csv"
+    fi
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo "  Metromem Analysis: $csv"
+    echo "═══════════════════════════════════════════════════════════════════"
+    printf "  %-4s %-22s %10s %10s %10s %10s %10s %10s\n" \
+        "Snap" "Stage" "VmRSS" "Heap" "Outside" "PrvDirty" "RSS" "Outside"
+    echo "  ---- ---------------------- ---------- ---------- ---------- ---------- ---------- ----------"
+
+    local prev_rss=0 prev_native=0
+    while IFS=, read -r snap label ts vmrss heap_used heap_max young old meta gc_y gc_f gc_t nmt dirty native threads; do
+        [[ "$snap" == "snap" || "$snap" == "nmt_total_kb" ]] && continue
+        local delta_rss="--" delta_native="--"
+        if [[ "$prev_rss" -gt 0 ]]; then
+            local dr=$(( vmrss - prev_rss ))
+            delta_rss=$([[ "$dr" -ge 0 ]] && echo "+${dr}K" || echo "${dr}K")
+        fi
+        if [[ "$prev_native" -gt 0 ]]; then
+            local dn=$(( native - prev_native ))
+            delta_native=$([[ "$dn" -ge 0 ]] && echo "+${dn}K" || echo "${dn}K")
+        fi
+        local rss_fmt h_fmt n_fmt d_fmt
+        rss_fmt=$(numfmt --to=iec "$(( vmrss * 1024 ))" 2>/dev/null || echo "${vmrss}K")
+        h_fmt=$(numfmt --to=iec "$(( heap_used * 1024 ))" 2>/dev/null || echo "${heap_used}K")
+        n_fmt=$(numfmt --to=iec "$(( native * 1024 ))" 2>/dev/null || echo "${native}K")
+        d_fmt=$(numfmt --to=iec "$(( dirty * 1024 ))" 2>/dev/null || echo "${dirty}K")
+        printf "  %-4s %-22s %10s %10s %10s %10s %10s %10s\n" \
+            "$snap" "$label" "$rss_fmt" "$h_fmt" "$n_fmt" "$d_fmt" "$delta_rss" "$delta_native"
+        prev_rss=$vmrss; prev_native=$native
+    done < "$csv"
+    echo "  ---- ---------------------- ---------- ---------- ---------- ---------- ---------- ----------"
+    echo ""
+}
+
+
+cleanup() {
+    local exit_code=$?
+    trap - EXIT INT TERM
+    echo ""
+    warn "Finalizing..."
+    summary_table
+    info "Session: $SESSION_DIR/metromem.csv"
+    if [[ -n "$GRADLE_RUN_PID" ]]; then
+        info "Stopping Gradle (PID $GRADLE_RUN_PID)..."
+        kill "$GRADLE_RUN_PID" 2>/dev/null
+        if [[ -n "$PID" ]]; then
+            kill "$PID" 2>/dev/null
+        fi
+    elif [[ -n "$APPIMAGE_RUN_PID" ]]; then
+        info "Stopping AppImage (PID $APPIMAGE_RUN_PID)..."
+        kill "$APPIMAGE_RUN_PID" 2>/dev/null
+        if [[ -n "$PID" && "$PID" != "$APPIMAGE_RUN_PID" ]]; then
+            kill "$PID" 2>/dev/null
+        fi
+    fi
+    exit "$exit_code"
+}
+
+
+run_interactive() {
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo "  Metromem -- Metrolist Memory Profiler -- PID $PID"
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo ""
+    echo "  Suggested stages:"
+    for i in "${!STAGES[@]}"; do
+        printf "    %2d. %s\n" $(( i + 1 )) "${STAGES[$i]}"
+    done
+    echo ""
+    echo "  <Enter>  ->  capture with suggested label"
+    echo "  <label>  ->  capture with custom label"
+    echo "  q        ->  quit + summary"
+    echo ""
+
+    snap_num=0
+    for stage in "${STAGES[@]}"; do
+        snap_num=$(( snap_num + 1 ))
+        echo -n "[$snap_num/${#STAGES[@]}] Press Enter for '$stage' (type label, q=quit): "
+        while ! read -r -t 1 input; do
+            if [[ ! -r "/proc/$PID/status" ]]; then
+                warn "Target process exited"
+                return
+            fi
+        done
+        case "$input" in
+            q) break ;;
+        "") capture_snapshot "$snap_num" "$stage" || break ;;
+        *)  capture_snapshot "$snap_num" "$input" || break ;;
+        esac
+        echo ""
+    done
+
+    extra_num=$snap_num
+    while true; do
+        extra_num=$(( extra_num + 1 ))
+        echo -n "[$extra_num] Enter label (or press Enter to finish, q=quit): "
+        while ! read -r -t 1 input; do
+            if [[ ! -r "/proc/$PID/status" ]]; then
+                warn "Target process exited"
+                return
+            fi
+        done
+        case "$input" in
+            ""|q) break ;;
+            *) capture_snapshot "$extra_num" "$input" || break; echo "" ;;
+        esac
+    done
+}
+
+
+run_watch() {
+    local interval="$1"
+    info "Watch mode: sampling every ${interval}s"
+    info "Press Ctrl+C to stop and see summary"
+    echo ""
+
+    snap_num=0
+    while true; do
+        snap_num=$(( snap_num + 1 ))
+        capture_snapshot "$snap_num" "auto-$(printf '%03d' "$snap_num")" || break
+        echo ""
+        sleep "$interval"
+    done
+}
+
+
+if [[ $# -eq 0 ]]; then usage; fi
+
+PID_ARG=""
+ANALYZE_ARG=""
+APPIMAGE_ARG=""
+HELP=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --help|-h) HELP=true ;;
+        --run) RUN_GRADLE=true ;;
+        --pid) shift; PID_ARG="$1" ;;
+        --watch) shift; WATCH_SECS="${1:-0}" ;;
+        --analyze) shift; ANALYZE_ARG="$1" ;;
+        -*) die "Unknown option: $1 (see --help)" ;;
+        *) APPIMAGE_ARG="$1" ;;
+    esac
+    shift
+done
+
+$HELP && usage
+
+if [[ -n "$ANALYZE_ARG" ]]; then
+    analyze_csv "$ANALYZE_ARG"
+    exit 0
+fi
+
+if [[ -z "$PID_ARG" && -z "$APPIMAGE_ARG" && "$RUN_GRADLE" == false ]]; then
+    die "No target (provide --pid, --run, or AppImage path)"
+fi
+if [[ -n "$PID_ARG" && -n "$APPIMAGE_ARG" ]]; then
+    die "Provide either --pid or an AppImage path, not both"
+fi
+
+check_deps
+
+SESSION_DIR="$OUTPUT_BASE/metromem-$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$SESSION_DIR"
+CSV_FILE="$SESSION_DIR/metromem.csv"
+LOG_FILE="$SESSION_DIR/metromem.log"
+printf "snap,label,timestamp,vmrss_kb,heap_used_kb,heap_max_kb,young_used_kb,old_used_kb,metaspace_kb,gc_count_young,gc_count_full,gc_time_ms,nmt_total_kb,private_dirty_kb,native_est_kb,threads\n" > "$CSV_FILE"
+info "Logging to: $SESSION_DIR"
+trap cleanup EXIT INT TERM
+
+if [[ -n "$PID_ARG" ]]; then
+    PID="$PID_ARG"
+    verify_pid "$PID"
+elif $RUN_GRADLE; then
+    launch_gradle
+elif [[ -n "$APPIMAGE_ARG" ]]; then
+    launch_appimage "$APPIMAGE_ARG"
+fi
+
+if [[ -z "$PID" ]]; then
+    die "No PID resolved"
+fi
+
+write_session_meta
+
+if [[ ! -r "/proc/$PID/status" ]]; then
+    die "Cannot read /proc/$PID/status (permission)"
+fi
+
+nmt_test=$(jcmd "$PID" VM.native_memory summary 2>/dev/null)
+if echo "$nmt_test" | grep -q "not enabled"; then
+    info "Note: NMT disabled -- rebuild with -XX:NativeMemoryTracking=summary for per-category breakdown"
+fi
+
+if [[ "$WATCH_SECS" -gt 0 ]]; then
+    run_watch "$WATCH_SECS"
+else
+    run_interactive
+fi

@@ -1,0 +1,7 @@
+v13.4.0
+Maintenance mode: bug fixes and minor improvements only.
+- Playback fixes; revamped Lyrics engine
+- Crash fixes; Android Auto improvements
+- Treat cached songs as offline; music alarm scheduling
+- Miniplayer styles; copy lyrics; stats time transfer
+- AI translation prompt customization; QS music recognition

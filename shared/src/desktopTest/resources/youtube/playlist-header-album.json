@@ -1,0 +1,177 @@
+{
+  "contents": {
+    "twoColumnBrowseResultsRenderer": {
+      "tabs": [
+        {
+          "tabRenderer": {
+            "content": {
+              "sectionListRenderer": {
+                "contents": [
+                  {
+                    "musicResponsiveHeaderRenderer": {
+                      "thumbnail": {
+                        "musicThumbnailRenderer": {
+                          "thumbnail": {
+                            "thumbnails": [
+                              {
+                                "url": "https://yt3.googleusercontent.com/iHfFRYvYFTReeQxYqzzRXu1sEUyU1Y5Nnl9_TSNmpnpjLQzaBdhlf3pNkkonFneT8JnwHZJvz8lX9Ec=w60-h60-l90-rj",
+                                "width": 60,
+                                "height": 60
+                              },
+                              {
+                                "url": "https://yt3.googleusercontent.com/iHfFRYvYFTReeQxYqzzRXu1sEUyU1Y5Nnl9_TSNmpnpjLQzaBdhlf3pNkkonFneT8JnwHZJvz8lX9Ec=w120-h120-l90-rj",
+                                "width": 120,
+                                "height": 120
+                              },
+                              {
+                                "url": "https://yt3.googleusercontent.com/iHfFRYvYFTReeQxYqzzRXu1sEUyU1Y5Nnl9_TSNmpnpjLQzaBdhlf3pNkkonFneT8JnwHZJvz8lX9Ec=w226-h226-l90-rj",
+                                "width": 226,
+                                "height": 226
+                              },
+                              {
+                                "url": "https://yt3.googleusercontent.com/iHfFRYvYFTReeQxYqzzRXu1sEUyU1Y5Nnl9_TSNmpnpjLQzaBdhlf3pNkkonFneT8JnwHZJvz8lX9Ec=w544-h544-l90-rj",
+                                "width": 544,
+                                "height": 544
+                              }
+                            ]
+                          },
+                          "thumbnailCrop": "MUSIC_THUMBNAIL_CROP_UNSPECIFIED",
+                          "thumbnailScale": "MUSIC_THUMBNAIL_SCALE_UNSPECIFIED"
+                        }
+                      },
+                      "title": {
+                        "runs": [
+                          {
+                            "text": "WOOF."
+                          }
+                        ]
+                      },
+                      "subtitle": {
+                        "runs": [
+                          {
+                            "text": "Album"
+                          },
+                          {
+                            "text": " • "
+                          },
+                          {
+                            "text": "2024"
+                          }
+                        ]
+                      },
+                      "straplineTextOne": {
+                        "runs": [
+                          {
+                            "text": "Fat Dog",
+                            "navigationEndpoint": {
+                              "browseEndpoint": {
+                                "browseId": "UCZD6H27aZwvim4h72mbGVMg",
+                                "browseEndpointContextSupportedConfigs": {
+                                  "browseEndpointContextMusicConfig": {
+                                    "pageType": "MUSIC_PAGE_TYPE_ARTIST"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "straplineThumbnail": {
+                        "musicThumbnailRenderer": {
+                          "thumbnail": {
+                            "thumbnails": [
+                              {
+                                "url": "https://lh3.googleusercontent.com/c2Zr8Pb2J6DElsxZ84K-rIHkS_L4N2d-7Bc_FRO-H4sTSvUfVDXpMu_8N0DOXF1bcqj5WHGqi2OWUCY=w60-h60-p-l90-rj",
+                                "width": 60,
+                                "height": 60
+                              },
+                              {
+                                "url": "https://lh3.googleusercontent.com/c2Zr8Pb2J6DElsxZ84K-rIHkS_L4N2d-7Bc_FRO-H4sTSvUfVDXpMu_8N0DOXF1bcqj5WHGqi2OWUCY=w120-h120-p-l90-rj",
+                                "width": 120,
+                                "height": 120
+                              },
+                              {
+                                "url": "https://lh3.googleusercontent.com/c2Zr8Pb2J6DElsxZ84K-rIHkS_L4N2d-7Bc_FRO-H4sTSvUfVDXpMu_8N0DOXF1bcqj5WHGqi2OWUCY=w226-h226-p-l90-rj",
+                                "width": 226,
+                                "height": 226
+                              },
+                              {
+                                "url": "https://lh3.googleusercontent.com/c2Zr8Pb2J6DElsxZ84K-rIHkS_L4N2d-7Bc_FRO-H4sTSvUfVDXpMu_8N0DOXF1bcqj5WHGqi2OWUCY=w544-h544-p-l90-rj",
+                                "width": 544,
+                                "height": 544
+                              }
+                            ]
+                          },
+                          "thumbnailCrop": "MUSIC_THUMBNAIL_CROP_UNSPECIFIED",
+                          "thumbnailScale": "MUSIC_THUMBNAIL_SCALE_UNSPECIFIED"
+                        }
+                      },
+                      "description": {
+                        "musicDescriptionShelfRenderer": {
+                          "description": {
+                            "runs": [
+                              {
+                                "text": "Woof is the debut studio album by British band, Fat Dog. The album was released on 6 September 2024 through Domino.\n\nFrom Wikipedia ("
+                              },
+                              {
+                                "text": "https://en.wikipedia.org/wiki/Woof_(a...",
+                                "navigationEndpoint": {
+                                  "urlEndpoint": {
+                                    "url": "https://en.wikipedia.org/wiki/Woof_(album)",
+                                    "target": "TARGET_NEW_WINDOW"
+                                  }
+                                }
+                              },
+                              {
+                                "text": ") under Creative Commons Attribution CC-BY-SA 3.0 ("
+                              },
+                              {
+                                "text": "https://creativecommons.org/licenses/...",
+                                "navigationEndpoint": {
+                                  "urlEndpoint": {
+                                    "url": "https://creativecommons.org/licenses/by-sa/3.0/legalcode",
+                                    "target": "TARGET_NEW_WINDOW"
+                                  }
+                                }
+                              },
+                              {
+                                "text": ")"
+                              }
+                            ]
+                          },
+                          "shelfStyle": "MUSIC_SHELF_STYLE_OPEN_DIALOG_ON_CLICK",
+                          "straplineBadge": [
+                            {
+                              "musicInlineBadgeRenderer": {
+                                "icon": {
+                                  "iconType": "MUSIC_EXPLICIT_BADGE"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      "secondSubtitle": {
+                        "runs": [
+                          {
+                            "text": "9 songs"
+                          },
+                          {
+                            "text": " • "
+                          },
+                          {
+                            "text": "33 minutes"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

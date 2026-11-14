@@ -1,0 +1,23 @@
+Cliente de YouTube Music Material 3 para Android
+
+Características:
+
+- Reproducir calquera canción ou vídeo de YouTube Music
+- Reprodución en segundo plano
+- Suxestións personalizadas rápidas
+- Xestión da biblioteca
+- Descargar e almacenar cancións para a reprodución sen conexión
+- Procurar cancións, álbums, artistas, vídeos e listas de reprodución
+- Letras en directo
+- Soporte para inicio de sesión na conta de YouTube Music
+- Sincronización de cancións, artistas, álbums e listas de reprodución, desde e cara a túa conta
+- Saltar silencios
+- Importar listas de reprodución
+- Normalización de audio
+- Axustar o tempo/timbre
+- Xestión de listas de reprodución locais
+- Reordenar cancións na lista de reprodución ou cola
+- Tema claro - escuro - negro - dinámico
+- Temporizador do sono
+- Material 3
+- etc.

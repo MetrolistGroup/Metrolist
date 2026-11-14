@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude domain="file" path="datastore/settings.preferences_pb" />
+    <exclude domain="sharedpref" path="secure_settings.xml" />
+    <exclude domain="file" path="downloads" />
+    <exclude domain="file" path="audio_cache" />
+    <exclude domain="file" path="exoplayer" />
+    <exclude domain="file" path="animated_cover_video_cache" />
+    <exclude domain="root" path="app_webview" />
+    <exclude domain="database" path="exoplayer_internal.db" />
+    <exclude domain="external" path="Metrolist/Downloads" />
+    <exclude domain="external" path="Metrolist/Cache" />
+</full-backup-content>

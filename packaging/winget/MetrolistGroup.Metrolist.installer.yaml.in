@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.9.0.schema.json
+PackageIdentifier: MetrolistGroup.Metrolist
+PackageVersion: '@VERSION@'
+InstallerType: exe
+Scope: user
+InstallModes:
+  - interactive
+  - silent
+InstallerSwitches:
+  Silent: --silent --launch=false
+  SilentWithProgress: --silent --launch=false
+  Custom: --launch=false
+UpgradeBehavior: install
+Protocols:
+  - metrolist
+AppsAndFeaturesEntries:
+  - DisplayName: Metrolist Desktop
+    Publisher: MetrolistGroup
+    ProductCode: Metrolist
+Installers:
+  - Architecture: x64
+    InstallerUrl: '@WINDOWS_URL@'
+    InstallerSha256: '@WINDOWS_SHA256@'
+ManifestType: installer
+ManifestVersion: 1.9.0

@@ -1,0 +1,458 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stable-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    permissions:
+      contents: read
+      actions: read
+      checks: read
+    name: Validate stable release
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || {
+            echo "Stable release tags must use vMAJOR.MINOR.PATCH" >&2
+            exit 1
+          }
+
+          declared_version=""
+          while IFS='=' read -r key value; do
+            if [[ "$key" == "appVersion" ]]; then declared_version="$value"; break; fi
+          done < gradle.properties
+          test "$version" = "$declared_version" || {
+            echo "Release tag version $version does not match gradle.properties version $declared_version" >&2
+            exit 1
+          }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Validate release notes
+        shell: bash
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          bash .github/scripts/parse_changelog.sh "$APP_VERSION" docs/changelog.md > "$RUNNER_TEMP/release-notes.md"
+          version_code="$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+)[[:space:]]*$/\1/p' androidApp/build.gradle.kts)"
+          [[ "$version_code" =~ ^[0-9]+$ ]] || {
+            echo "Could not read Android versionCode from androidApp/build.gradle.kts" >&2
+            exit 1
+          }
+          fastlane_notes="fastlane/metadata/android/en-US/changelogs/$version_code.txt"
+          test -s "$fastlane_notes" || {
+            echo "Missing or empty fastlane changelog: $fastlane_notes" >&2
+            exit 1
+          }
+
+      - name: Require prior verification
+        # Maintainers can skip the gate for an urgent release by setting this repository variable.
+        if: vars.SKIP_RELEASE_VERIFICATION != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/release_verification.py
+
+  android:
+    name: Android
+    needs: prepare
+    uses: ./.github/workflows/reusable-android-build.yml
+    permissions:
+      contents: read
+    with:
+      run-verification: false
+      variant: release
+      upload-artifact: true
+      artifact-name: release-android
+      require-signing: true
+      upload-sentry: true
+    secrets:
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH || secrets.KEYSTORE }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+
+  windows:
+    name: Windows
+    needs: prepare
+    uses: ./.github/workflows/reusable-desktop-windows.yml
+    permissions:
+      contents: read
+    with:
+      run-verification: false
+      upload-artifact: true
+      artifact-prefix: release-
+      upload-sentry: true
+    secrets:
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+
+  linux:
+    name: Linux
+    needs: prepare
+    uses: ./.github/workflows/reusable-desktop-linux.yml
+    permissions:
+      contents: read
+    with:
+      run-verification: false
+      upload-artifact: true
+      artifact-prefix: release-
+      upload-sentry: true
+    secrets:
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+
+  macos:
+    name: macOS
+    needs: prepare
+    uses: ./.github/workflows/reusable-desktop-macos.yml
+    permissions:
+      contents: read
+    with:
+      run-verification: false
+      x64-use-intel-runner: ${{ vars.MACOS_X64_USE_INTEL_RUNNER == 'true' }}
+      upload-artifact: true
+      artifact-prefix: release-
+      upload-sentry: true
+    secrets:
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+
+  ios:
+    name: iOS
+    needs: prepare
+    uses: ./.github/workflows/reusable-ios-build.yml
+    permissions:
+      contents: read
+    with:
+      run-verification: false
+      upload-sentry: true
+      build-ipa: true
+      upload-artifact: true
+      artifact-name: release-ios
+    secrets:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+
+  windows-manager:
+    name: Windows manager
+    needs: prepare
+    uses: ./.github/workflows/reusable-windows-manager.yml
+    permissions:
+      contents: read
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      run-verification: false
+
+  publish:
+    name: Publish stable release
+    needs:
+      - prepare
+      - android
+      - windows
+      - windows-manager
+      - linux
+      - macos
+      - ios
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Check out changelog
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/parse_changelog.sh
+            docs/changelog.md
+            scripts/generate_altstore_source.py
+          sparse-checkout-cone-mode: false
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Validate and checksum release assets
+        shell: bash
+        env:
+          APP_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          mv \
+            release-assets/Metrolist-Desktop-Windows.zip \
+            release-assets/Metrolist-Desktop-windows.zip
+          mv \
+            release-assets/Metrolist-Desktop-Windows-arm64.zip \
+            "release-assets/metrolist-desktop-windows-arm64-${APP_VERSION}.zip"
+          # Legacy v13 GMS builds only update from this asset name; the app has one variant.
+          cp release-assets/Metrolist.apk release-assets/Metrolist-with-Google-Cast.apk
+          if [[ -f release-assets/Metrolist.ipa ]]; then
+            python3 scripts/generate_altstore_source.py \
+              "$GITHUB_REPOSITORY" "$APP_VERSION" release-assets/Metrolist.ipa release-assets/metrolist-altstore.json
+          fi
+          expected=(
+            "release-assets/Metrolist.apk"
+            "release-assets/Metrolist-with-Google-Cast.apk"
+            "release-assets/Metrolist-KMP-mapping.txt"
+            "release-assets/Metrolist.ipa"
+            "release-assets/metrolist-altstore.json"
+            "release-assets/Metrolist-Desktop-windows.zip"
+            "release-assets/metrolist-installer-windows-x64-${APP_VERSION}.exe"
+            "release-assets/metrolist-desktop-windows-arm64-${APP_VERSION}.zip"
+            "release-assets/metrolist-desktop-linux-x64-${APP_VERSION}.AppImage"
+            "release-assets/metrolist-desktop-linux-arm64-${APP_VERSION}.AppImage"
+            "release-assets/metrolist-desktop-macos-arm64-${APP_VERSION}.dmg"
+            "release-assets/metrolist-desktop-macos-x64-${APP_VERSION}.dmg"
+          )
+          for file in "${expected[@]}"; do
+            test -f "$file" || { echo "Missing release asset: $file" >&2; exit 1; }
+          done
+          actual=(release-assets/*)
+          test "${#actual[@]}" -eq "${#expected[@]}" || {
+            echo "Expected ${#expected[@]} release assets, found ${#actual[@]}" >&2
+            exit 1
+          }
+          (
+            cd release-assets
+            sha256sum -- * > SHA256SUMS
+          )
+
+      - name: Create or update draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          bash .github/scripts/parse_changelog.sh "$APP_VERSION" docs/changelog.md > "$RUNNER_TEMP/release-notes.md"
+          files=(release-assets/*)
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            is_draft="$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft')"
+            if [[ "$is_draft" != "true" ]]; then
+              mapfile -t published_assets < <(
+                gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name'
+              )
+              for file in "${files[@]}"; do
+                name="${file##*/}"
+                found=false
+                for asset in "${published_assets[@]}"; do
+                  if [[ "$asset" == "$name" ]]; then found=true; break; fi
+                done
+                [[ "$found" == "true" ]] || {
+                  echo "Published release is missing $name; refusing to mutate a live release" >&2
+                  exit 1
+                }
+              done
+              echo "Stable release is already published with every expected asset."
+              exit 0
+            fi
+            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+              --title "$APP_VERSION" --notes-file "$RUNNER_TEMP/release-notes.md"
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$APP_VERSION" \
+              --notes-file "$RUNNER_TEMP/release-notes.md" \
+              --verify-tag \
+              --draft
+          fi
+          gh release upload "$GITHUB_REF_NAME" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+
+          mapfile -t published_assets < <(
+            gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name'
+          )
+          for file in "${files[@]}"; do
+            name="${file##*/}"
+            found=false
+            for asset in "${published_assets[@]}"; do
+              if [[ "$asset" == "$name" ]]; then
+                found=true
+                break
+              fi
+            done
+            [[ "$found" == "true" ]] || { echo "Published release is missing $name" >&2; exit 1; }
+          done
+
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
+
+  distribution:
+    name: Generate distribution recipes
+    needs: [prepare, publish]
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Download published assets and metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --json tagName,isDraft,isPrerelease,url,publishedAt,body,assets > release.json
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --dir distribution-assets --pattern SHA256SUMS \
+            --pattern 'metrolist-installer-windows-*.exe' \
+            --pattern 'metrolist-desktop-linux-*.AppImage' \
+            --pattern 'metrolist-desktop-macos-*.dmg'
+
+      - name: Generate recipes from verified assets
+        run: >-
+          python3 scripts/generate_distribution.py
+          --assets distribution-assets --release release.json --output distribution
+
+      - name: Upload distribution recipes for review
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: distribution-recipes
+          path: distribution/
+          if-no-files-found: error
+          retention-days: 30
+          overwrite: true
+
+  propose-distribution:
+    name: Propose ${{ matrix.kind }} update
+    needs: [prepare, distribution]
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kind: winget
+            repository: ${{ vars.WINGET_REPOSITORY }}
+          - kind: homebrew
+            repository: ${{ vars.HOMEBREW_REPOSITORY }}
+          - kind: nix
+            repository: ${{ vars.NIX_REPOSITORY }}
+          - kind: flatpak
+            repository: ${{ vars.FLATPAK_REPOSITORY }}
+    env:
+      PACKAGING_PR_TOKEN: ${{ secrets.PACKAGING_PR_TOKEN }}
+      PACKAGING_REPOSITORY: ${{ matrix.repository }}
+    steps:
+      - name: Check out repository
+        if: env.PACKAGING_PR_TOKEN != '' && env.PACKAGING_REPOSITORY != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Download distribution recipes
+        if: env.PACKAGING_PR_TOKEN != '' && env.PACKAGING_REPOSITORY != ''
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: distribution-recipes
+          path: distribution
+
+      - name: Open draft packaging proposal
+        if: env.PACKAGING_PR_TOKEN != '' && env.PACKAGING_REPOSITORY != ''
+        env:
+          GH_TOKEN: ${{ secrets.PACKAGING_PR_TOKEN }}
+          PACKAGE_KIND: ${{ matrix.kind }}
+          APP_VERSION: ${{ needs.prepare.outputs.version }}
+          FLATPAK_BINARY_EXCEPTION: ${{ vars.FLATPAK_BINARY_EXCEPTION }}
+        run: >-
+          python3 scripts/propose_distribution.py "$PACKAGE_KIND"
+          --generated distribution --repository "$PACKAGING_REPOSITORY" --version "$APP_VERSION"
+
+  finalize-sentry:
+    name: Finalize Sentry releases
+    needs:
+      - prepare
+      - publish
+    permissions:
+      contents: read
+    uses: ./.github/workflows/reusable-finalize-sentry.yml
+    with:
+      app-version: ${{ needs.prepare.outputs.version }}
+    secrets:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+  cleanup-artifacts:
+    name: Clean up intermediate artifacts
+    if: always() && needs.publish.result == 'success'
+    needs:
+      - prepare
+      - android
+      - windows
+      - windows-manager
+      - linux
+      - macos
+      - ios
+      - publish
+      - finalize-sentry
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Delete artifacts from this run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api --paginate \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" \
+            --jq '.artifacts[] | select(.name | startswith("release-")) | .id' > artifact-ids.txt
+          while IFS= read -r artifact_id; do
+            [[ -z "$artifact_id" ]] || gh api --method DELETE \
+              "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
+          done < artifact-ids.txt

@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RemoteViews inflates framework ImageViews, which cannot read AppCompat tint attributes. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="48dp"
+    android:layoutDirection="ltr"
+    android:orientation="horizontal"
+    tools:ignore="UseAppTint">
+
+    <FrameLayout
+        android:id="@+id/widget_prev_container"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:clickable="true"
+        android:contentDescription="@string/previous"
+        android:focusable="true">
+
+        <ImageView
+            android:id="@+id/widget_prev_background"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY"
+            android:src="@drawable/widget_group_start_bg"
+            android:tint="@color/widget_primary" />
+
+        <ImageView
+            android:id="@+id/widget_prev"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_widget_skip_previous"
+            android:tint="@color/widget_on_primary" />
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/widget_play_pause_container"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="4dp"
+        android:layout_weight="1"
+        android:clickable="true"
+        android:contentDescription="@string/play"
+        android:focusable="true">
+
+        <ImageView
+            android:id="@+id/widget_play_background"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY"
+            android:src="@drawable/widget_play_pill_bg"
+            android:tint="@color/widget_primary" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:importantForAccessibility="noHideDescendants"
+            android:orientation="horizontal"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <ImageView
+                android:id="@+id/widget_play_pause"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_widget_play"
+                android:tint="@color/widget_on_primary" />
+
+            <TextView
+                android:id="@+id/widget_play_pause_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/play"
+                android:textColor="@color/widget_on_primary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/widget_next_container"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="4dp"
+        android:clickable="true"
+        android:contentDescription="@string/next"
+        android:focusable="true">
+
+        <ImageView
+            android:id="@+id/widget_next_background"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY"
+            android:src="@drawable/widget_group_end_bg"
+            android:tint="@color/widget_primary" />
+
+        <ImageView
+            android:id="@+id/widget_next"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_widget_skip_next"
+            android:tint="@color/widget_on_primary" />
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/widget_like_container"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="4dp"
+        android:clickable="true"
+        android:contentDescription="@string/action_like"
+        android:focusable="true">
+
+        <ImageView
+            android:id="@+id/widget_like_background"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY"
+            android:src="@drawable/widget_like_button_bg"
+            android:tint="@color/widget_primary" />
+
+        <ImageView
+            android:id="@+id/widget_like_button"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_widget_heart_outline_nav"
+            android:tint="@color/widget_on_primary" />
+    </FrameLayout>
+</LinearLayout>

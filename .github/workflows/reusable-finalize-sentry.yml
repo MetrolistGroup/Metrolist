@@ -1,0 +1,66 @@
+name: Finalize Sentry releases
+
+on:
+  workflow_call:
+    inputs:
+      app-version:
+        required: true
+        type: string
+    secrets:
+      SENTRY_AUTH_TOKEN:
+        required: true
+
+jobs:
+  finalize-sentry:
+    name: Finalize Sentry releases
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Finalize uploaded releases
+        shell: bash
+        env:
+          APP_VERSION: ${{ inputs.app-version }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$SENTRY_AUTH_TOKEN" || { echo "SENTRY_AUTH_TOKEN is required" >&2; exit 1; }
+          for release in "com.metrolist.music.kmp@$APP_VERSION" "com.metrolist.desktop@$APP_VERSION" "com.metrolist.ios@$APP_VERSION"; do
+            readarray -t release_data < <(python3 - "$release" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$GITHUB_REPOSITORY" "$GITHUB_SHA" <<'PY'
+          import json
+          import sys
+          from urllib.parse import quote
+          print(quote(sys.argv[1], safe=""))
+          print(json.dumps({"version": sys.argv[1], "projects": ["metrolist-kmp"], "refs": [{"repository": sys.argv[3], "commit": sys.argv[4]}]}, separators=(",", ":")))
+          print(json.dumps({"dateReleased": sys.argv[2]}, separators=(",", ":")))
+          PY
+            )
+            encoded_release="${release_data[0]}"
+            response="$(mktemp)"
+            create_status="$(curl --silent --show-error --retry 3 --connect-timeout 20 --max-time 60 \
+              --output "$response" --write-out '%{http_code}' \
+              --request POST \
+              --header "Authorization: Bearer $SENTRY_AUTH_TOKEN" \
+              --header 'Content-Type: application/json' \
+              --data-binary "${release_data[1]}" \
+              'https://sentry.io/api/0/organizations/metrolistgroup/releases/')"
+            [[ "$create_status" == 2* ]] || {
+              cat "$response" >&2
+              echo "Could not create or find Sentry release $release (HTTP $create_status)" >&2
+              exit 1
+            }
+            finalize_status="$(curl --silent --show-error --retry 3 --connect-timeout 20 --max-time 60 \
+              --output "$response" --write-out '%{http_code}' \
+              --request PUT \
+              --header "Authorization: Bearer $SENTRY_AUTH_TOKEN" \
+              --header 'Content-Type: application/json' \
+              --data-binary "${release_data[2]}" \
+              "https://sentry.io/api/0/organizations/metrolistgroup/releases/$encoded_release/")"
+            [[ "$finalize_status" == 2* ]] || {
+              cat "$response" >&2
+              echo "Could not finalize Sentry release $release (HTTP $finalize_status)" >&2
+              exit 1
+            }
+            rm -f "$response"
+          done

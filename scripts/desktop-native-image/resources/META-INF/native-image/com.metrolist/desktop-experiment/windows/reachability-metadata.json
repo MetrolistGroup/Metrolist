@@ -1,0 +1,193 @@
+{
+  "reflection": [
+    {
+      "type": "com.metrolist.desktop.window.jna.User32Extend",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.metrolist.desktop.window.jna.ComposeWindowProcedure",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.metrolist.desktop.window.jna.SkiaLayerWindowProcedure",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.metrolist.desktop.window.jna.structure.MENUITEMINFO",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.media.sound.DirectAudioDeviceProvider",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.media.sound.DirectAudioDeviceProvider$DirectAudioDeviceInfo",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.media.sound.DirectAudioDevice",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.media.sound.DirectAudioDevice$DirectDL",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.media.sound.DirectAudioDevice$DirectDLI",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.media.sound.DirectAudioDevice$DirectSDL",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.media.sound.PortMixerProvider",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.media.sound.PortMixerProvider$PortMixerInfo",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.media.sound.PortMixer",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.media.sound.PortMixer$PortInfo",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.desktop.window.jna.User32Extend"
+        ]
+      }
+    },
+    {
+      "type": "com.sun.media.sound.DirectAudioDevice$DirectTDL",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.media.sound.DirectAudioDevice$DirectClip",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.media.sound.PortMixer$BoolCtrl",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.media.sound.PortMixer$FloatCtrl",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.media.sound.PortMixer$CompCtrl",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.media.sound.PortMixer$PortMixerPort",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinUser$WindowProc",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.win32.GDI32"
+        ]
+      }
+    },
+    {
+      "type": "com.metrolist.desktop.utils.NativeMemoryTrimmer$WindowsAllocator",
+      "allDeclaredMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.desktop.utils.NativeMemoryTrimmer$WindowsAllocator"
+        ]
+      }
+    },
+    {
+      "type": "com.metrolist.desktop.window.jna.structure.WindowMargins",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    }
+  ],
+  "resources": [
+    {
+      "glob": "**/*.dll"
+    },
+    {
+      "glob": "org/bytedeco/**"
+    },
+    {
+      "glob": "windows/**"
+    }
+  ]
+}

@@ -1,0 +1,128 @@
+{
+  "contents": {
+    "twoColumnBrowseResultsRenderer": {
+      "tabs": [
+        {
+          "tabRenderer": {
+            "content": {
+              "sectionListRenderer": {
+                "contents": [
+                  {
+                    "musicResponsiveHeaderRenderer": {
+                      "thumbnail": {
+                        "musicThumbnailRenderer": {
+                          "thumbnail": {
+                            "thumbnails": [
+                              {
+                                "url": "https://yt3.googleusercontent.com/A5YscjF1mKYbiWiZFyL4EMOoc5r3kc0yxxOYTU7LDY9xlZNx2P60Wfuc8ywcZ5pQ69kDUCDmAkU=s192",
+                                "width": 192,
+                                "height": 192
+                              },
+                              {
+                                "url": "https://yt3.googleusercontent.com/A5YscjF1mKYbiWiZFyL4EMOoc5r3kc0yxxOYTU7LDY9xlZNx2P60Wfuc8ywcZ5pQ69kDUCDmAkU=s576",
+                                "width": 576,
+                                "height": 576
+                              },
+                              {
+                                "url": "https://yt3.googleusercontent.com/A5YscjF1mKYbiWiZFyL4EMOoc5r3kc0yxxOYTU7LDY9xlZNx2P60Wfuc8ywcZ5pQ69kDUCDmAkU=s1200",
+                                "width": 1200,
+                                "height": 1200
+                              }
+                            ]
+                          },
+                          "thumbnailCrop": "MUSIC_THUMBNAIL_CROP_UNSPECIFIED",
+                          "thumbnailScale": "MUSIC_THUMBNAIL_SCALE_UNSPECIFIED"
+                        }
+                      },
+                      "title": {
+                        "runs": [
+                          {
+                            "text": "WOOF"
+                          }
+                        ]
+                      },
+                      "subtitle": {
+                        "runs": [
+                          {
+                            "text": "Playlist"
+                          },
+                          {
+                            "text": " • "
+                          },
+                          {
+                            "text": "2026"
+                          }
+                        ]
+                      },
+                      "secondSubtitle": {
+                        "runs": [
+                          {
+                            "text": "140 views"
+                          },
+                          {
+                            "text": " • "
+                          },
+                          {
+                            "text": "16 tracks"
+                          },
+                          {
+                            "text": " • "
+                          },
+                          {
+                            "text": "57 minutes"
+                          }
+                        ]
+                      },
+                      "facepile": {
+                        "avatarStackViewModel": {
+                          "avatars": [
+                            {
+                              "avatarViewModel": {
+                                "image": {
+                                  "sources": [
+                                    {
+                                      "url": "https://yt3.ggpht.com/ytc/AIdro_krOvw37jTzdXxKx9LLxqthA0TYsfEMIBqW17GhNiJZj6fAXWZX5VrvzLyMIgKzxEDtDw=s48-c-k-c0x00000000-no-cc-rj-rp"
+                                    }
+                                  ],
+                                  "processor": {
+                                    "borderImageProcessor": {
+                                      "circular": true
+                                    }
+                                  }
+                                },
+                                "avatarImageSize": "AVATAR_SIZE_XS"
+                              }
+                            }
+                          ],
+                          "text": {
+                            "content": "Hann"
+                          },
+                          "rendererContext": {
+                            "commandContext": {
+                              "onTap": {
+                                "innertubeCommand": {
+                                  "browseEndpoint": {
+                                    "browseId": "UCOdhZ1tDraXdiU3Y6HskbhQ",
+                                    "browseEndpointContextSupportedConfigs": {
+                                      "browseEndpointContextMusicConfig": {
+                                        "pageType": "MUSIC_PAGE_TYPE_USER_CHANNEL"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

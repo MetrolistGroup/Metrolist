@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Widget.Metrolist" parent="@android:style/Theme.DeviceDefault.DayNight">
+        <item name="android:colorBackground">#E6E1E5</item>
+    </style>
+</resources>

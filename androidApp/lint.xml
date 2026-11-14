@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Kept in sync with the official app's known Weblate plural limitation. -->
+    <issue id="MissingQuantity" severity="error">
+        <ignore path="src/main/res/values-cs" />
+    </issue>
+
+    <issue id="UnsafeOptInUsageError">
+        <option name="opt-in" value="androidx.media3.common.util.UnstableApi" />
+    </issue>
+</lint>

@@ -1,0 +1,38 @@
+/**
+ * Metrolist Project (C) 2026
+ * Licensed under GPL-3.0 | See git history for contributors
+ */
+
+package com.metrolist.shared.db.entities
+
+import androidx.room3.ColumnInfo
+import androidx.room3.Entity
+import androidx.room3.ForeignKey
+import androidx.room3.Index
+import androidx.room3.PrimaryKey
+
+@Entity(
+    tableName = "playlist_song_map",
+    indices = [Index(value = ["playlistId", "position"])],
+    foreignKeys = [
+        ForeignKey(
+            entity = PlaylistEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["playlistId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+        ForeignKey(
+            entity = SongEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["songId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+)
+data class PlaylistSongMap(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @ColumnInfo(index = true) val playlistId: String,
+    @ColumnInfo(index = true) val songId: String,
+    val position: Int = 0,
+    val setVideoId: String? = null,
+)

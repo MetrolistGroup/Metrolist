@@ -1,0 +1,22 @@
+{
+  "version": "25.0.4",
+  "distribution": "Oracle GraalVM",
+  "platforms": {
+    "linux-x64": {
+      "url": "https://download.oracle.com/graalvm/25/archive/graalvm-jdk-25.0.4_linux-x64_bin.tar.gz",
+      "sha256": "76007c309f821aaf435bce63162ea0395587fc77350801c81643fe7feea37276"
+    },
+    "windows-x64": {
+      "url": "https://download.oracle.com/graalvm/25/archive/graalvm-jdk-25.0.4_windows-x64_bin.zip",
+      "sha256": "5198b29a6448cb72b9a3cef10866723e2d1e2ec4799561a344e032bb7c61e555"
+    },
+    "macos-arm64": {
+      "url": "https://download.oracle.com/graalvm/25/archive/graalvm-jdk-25.0.4_macos-aarch64_bin.tar.gz",
+      "sha256": "0b79e23c133facbad2f7aa55a3b76d17bd59d2fa15e2735bb63391ace223fd13"
+    },
+    "linux-arm64": {
+      "url": "https://download.oracle.com/graalvm/25/archive/graalvm-jdk-25.0.4_linux-aarch64_bin.tar.gz",
+      "sha256": "7031aead8da4c6a7816c4e2be4eabfddaf7f4abcfe8e5f16134c4da69a5e70de"
+    }
+  }
+}
