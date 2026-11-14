@@ -155,7 +155,12 @@ class IosBackupRestoreManager(
                 }
                 val databases = mutableListOf<String>()
                 val prismDataFiles = mutableMapOf<String, String>()
-                validateZipEntryCount(sourcePath, MAX_FOREIGN_ARCHIVE_ENTRIES, allowNestedPaths = true)
+                validateZipEntryCount(
+                    sourcePath,
+                    MAX_FOREIGN_ARCHIVE_ENTRIES,
+                    allowNestedPaths = true,
+                    maximumUncompressedBytes = BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES,
+                )
                 ZipFile(fileSeekableSource(sourcePath)).use { archive ->
                     requireBackupSize(archive.entries.size.toLong(), MAX_FOREIGN_ARCHIVE_ENTRIES.toLong())
                     var total = 0L
@@ -163,12 +168,19 @@ class IosBackupRestoreManager(
                         val prismEntry = entry.name.removePrefix(PRISM_ARCHIVE_DIRECTORY)
                         if (isPrismBackupDataEntry(prismEntry) || prismEntry == PRISM_ARTIST_PREFERENCES) {
                             check(prismEntry !in prismDataFiles) { "Backup contains duplicate Prism library files" }
+                            check(entry.size >= 0) { "Backup entry size is invalid" }
+                            val limit =
+                                minOf(
+                                    BackupArchiveLimits.SETTINGS_BYTES,
+                                    BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES - total,
+                                )
+                            requireBackupSize(entry.size, limit)
                             val target = "$stagingPath/prism/$prismEntry"
                             fs.createDirectories(target.toPath().parent!!)
                             val copied =
                                 archive.getInputStream(entry).use { input ->
                                     IosFileOutputStream(target).use { output ->
-                                        input.copyTo(output, BackupArchiveLimits.SETTINGS_BYTES)
+                                        input.copyTo(output, limit)
                                     }
                                 }
                             total += copied
@@ -180,7 +192,8 @@ class IosBackupRestoreManager(
                         check(entry.size >= 0) { "Backup entry size is invalid" }
                         val isSidecar = name.endsWith("-wal") || name.endsWith("-shm")
                         val shouldStage = name.isNotBlank() && !name.startsWith('.') && "exoplayer" !in name.lowercase()
-                        val limit = if (shouldStage) BackupArchiveLimits.DATABASE_BYTES else BackupArchiveLimits.UNKNOWN_ENTRY_BYTES
+                        val entryLimit = if (shouldStage) BackupArchiveLimits.DATABASE_BYTES else BackupArchiveLimits.UNKNOWN_ENTRY_BYTES
+                        val limit = minOf(entryLimit, BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES - total)
                         requireBackupSize(entry.size, limit)
                         val target = if (shouldStage) "$stagingPath/$name" else null
                         if (target != null) check(!fs.exists(target.toPath())) { "Backup contains duplicate file names" }
@@ -803,6 +816,7 @@ class IosBackupRestoreManager(
         path: String,
         maximumEntries: Int = BackupArchiveLimits.ENTRY_COUNT,
         allowNestedPaths: Boolean = false,
+        maximumUncompressedBytes: Long = BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES,
     ) {
         fileSeekableSource(path).use { source ->
             requireBackupSize(source.size, MAX_ARCHIVE_BYTES)
@@ -830,6 +844,7 @@ class IosBackupRestoreManager(
                 "Backup archive is corrupt or uses unsupported ZIP64 features"
             }
             var position = centralOffset
+            var totalUncompressedBytes = 0L
             repeat(count) {
                 val header = source.readFully(position, 46)
                 check(header.readLeInt(0) == 0x02014b50L) { "Backup archive central directory is corrupt" }
@@ -843,6 +858,10 @@ class IosBackupRestoreManager(
                 check(if (allowNestedPaths) isSafeForeignEntryName(name) else isSafeEntryName(name)) {
                     "Backup contains an unsafe entry name"
                 }
+                val entryUncompressedBytes = header.readLeInt(24)
+                check(entryUncompressedBytes != 0xffffffffL) { "ZIP64 backup entries are not supported" }
+                requireBackupSize(entryUncompressedBytes, maximumUncompressedBytes - totalUncompressedBytes)
+                totalUncompressedBytes += entryUncompressedBytes
                 position += recordLength
             }
             check(position == centralOffset + centralSize) { "Backup archive central directory is corrupt" }
