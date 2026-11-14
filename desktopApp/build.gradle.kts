@@ -735,8 +735,11 @@ compose.desktop {
             }
             packageName = "Metrolist"
             val versionMatch =
-                Regex("""^(\d+)\.(\d+)\.(\d+)(?:-[A-Za-z0-9][A-Za-z0-9._-]*)?$""").matchEntire(appVersion)
-                    ?: throw GradleException("appVersion must use MAJOR.MINOR.PATCH with an optional alphanumeric suffix: $appVersion")
+                Regex("""^(\d+)\.(\d+)\.(\d+)(?:-[A-Za-z0-9][A-Za-z0-9._-]*)?(?:\+[0-9A-Za-z.-]+)?$""")
+                    .matchEntire(appVersion)
+                    ?: throw GradleException(
+                        "appVersion must use MAJOR.MINOR.PATCH with optional alphanumeric suffix and build metadata: $appVersion",
+                    )
             val versionComponents =
                 versionMatch.groupValues.slice(1..3).map { component ->
                     component.toIntOrNull()

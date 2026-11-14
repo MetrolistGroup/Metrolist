@@ -2,7 +2,7 @@
 
 ## Opt-in native tester builds
 
-The supported path keeps Serial GC, `-Os`, a 32 MiB initial heap and a 384 MiB maximum heap. GraalVM 25.0.4 downloads and SHA-256 hashes live in [graalvm-pins.json](../scripts/graalvm-pins.json). The hashes come from Oracle's adjacent `.sha256` URLs. Local Linux builds use `/mnt/work/tools/graalvm-25`; do not download or unpack a builder under RAM-backed `/tmp`.
+The supported path keeps Serial GC, `-Os`, a 32 MiB initial heap and a 384 MiB maximum heap. It compiles with `-march=compatibility`, because GraalVM's default x86-64-v3 target exits on x64 CPUs without AVX2, FMA or BMI2 and its default ARM target excludes Raspberry Pi 4 class cores. The measurements below used the default target. GraalVM 25.0.4 downloads and SHA-256 hashes live in [graalvm-pins.json](../scripts/graalvm-pins.json). The hashes come from Oracle's adjacent `.sha256` URLs. Local Linux builds use `/mnt/work/tools/graalvm-25`; do not download or unpack a builder under RAM-backed `/tmp`.
 
 | Target | Build and package | CI state |
 | --- | --- | --- |
@@ -42,9 +42,9 @@ One native-only substitution replaces `configureDesktopJvmErrorFile`. Native Ima
 
 ### CI, metadata and caches
 
-Run `build-desktop-native.yml` manually with one target. Linux x64 and Windows x64 use Blacksmith 8-vCPU runners for builder memory, rather than adding CPUs to existing JVM jobs. Linux ARM64 also uses 8; macOS ARM64 uses the existing 6-vCPU Apple Silicon tier. The ARM jobs require their enable variables and manual dispatch. No native build runs on push, PR or the cold-build schedule. These jobs add manual-run cost only; check actual hosted time before enabling more targets or scheduling builds.
+Run `build-desktop-native.yml` manually with one target. Linux x64 and Windows x64 use Blacksmith 8-vCPU runners for builder memory, rather than adding CPUs to existing JVM jobs. Linux ARM64 also uses 8; macOS ARM64 uses the existing 6-vCPU Apple Silicon tier. The ARM jobs require their enable variables and manual dispatch. The [nightly workflow](releasing.md#nightly-prereleases) also builds Linux x64 and Windows x64 after eligible main pushes. No native build runs on PRs or the cold-build schedule. Check actual hosted time before enabling more targets or scheduling builds.
 
-Releases never include native packages. The native package and its separate evidence archive are uploaded as workflow artifacts of the dispatched run.
+Stable releases keep JVM desktop packages. The rolling nightly prerelease includes the native Linux x64 AppImage and Windows x64 portable ZIP. Native packages and their separate evidence archives remain available as workflow artifacts of the calling run.
 
 The toolchain cache holds only the original builder archives. Its key covers OS, architecture, the complete pin manifest and installer source. Every restore rechecks SHA-256 and extracts afresh. A missing or corrupt cache triggers a verified download. Native images, profiles, traces and compiled application outputs are never cached. Native jobs restore Gradle caches read-only, disable the Gradle build cache and do not persist configuration caches, so generated credentials cannot enter new caches. Every native invocation performs a full build from current classes, metadata, resources and sidecars.
 
@@ -52,7 +52,7 @@ Windows loads pinned Nucleus Windows, AWT, font, graphics and JNA/COM metadata a
 
 ### Test and inspect
 
-Linux CI gives the packaged AppImage a private Xvfb display. Every smoke run uses an isolated profile. Native executables default to warning on a missing registration and falling back as the JVM would, because an English trace cannot see every locale's resources and a tester build must not exit for that. The smoke runner passes strict mode explicitly and runs with a French locale (`-Duser.language=fr`), so CI still fails on any missing registration, including localized JDK resources. The GUI smoke checks startup, screenshot, shutdown and logs. On Windows service runners without a desktop, the native executable instead runs a strict backend probe for AWT/Skia fonts, Java Sound providers, FFmpeg and JNA/COM initialization. Its result explicitly says GUI behavior is unverified. The smoke collector also checks redirected native stderr, so a missing-registration error there cannot count as a pass. JVM packages retain their existing unavailable-desktop handling.
+Linux CI gives the packaged AppImage a private Xvfb display. Every smoke run uses an isolated profile. Native executables default to warning on a missing registration and falling back as the JVM would, because an English trace cannot see every locale's resources and a tester build must not exit for that. The smoke runner uses warning mode so every missing registration reaches the logs, and it fails on any reported registration. Exit mode would hide the cause, because its report goes through `System.out`, which the app logger buffers, and the process exits first. It runs with a French locale (`-Duser.language=fr`), so CI still fails on any missing registration, including localized JDK resources. The GUI smoke checks startup, screenshot, shutdown and logs. On Windows service runners without a desktop, the native executable instead runs a strict backend probe for AWT/Skia fonts, Java Sound providers, FFmpeg and JNA/COM initialization. Its result explicitly says GUI behavior is unverified. The smoke collector also checks redirected native stderr, so a missing-registration error there cannot count as a pass. JVM packages retain their existing unavailable-desktop handling.
 
 ```sh
 xvfb-run -a -s '-screen 0 1440x1000x24' \

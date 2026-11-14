@@ -1,0 +1,194 @@
+name: Nightly
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'fastlane/**'
+      - 'assets/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly
+  cancel-in-progress: true
+
+jobs:
+  version:
+    name: Resolve nightly version
+    if: github.ref == 'refs/heads/main'
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 5
+    outputs:
+      value: ${{ steps.version.outputs.value }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Add the commit as build metadata
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^appVersion=//p' gradle.properties)"
+          # Build metadata keeps nightlies equal to their base release in update checks, unlike a prerelease suffix.
+          echo "value=${version%%+*}+${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+
+  android:
+    needs: version
+    uses: ./.github/workflows/reusable-android-build.yml
+    permissions:
+      contents: read
+    with:
+      variant: release
+      app-version: ${{ needs.version.outputs.value }}
+      upload-artifact: true
+      artifact-name: nightly-android
+      require-signing: true
+    secrets:
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH || secrets.KEYSTORE }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+
+  linux:
+    needs: version
+    uses: ./.github/workflows/reusable-desktop-native.yml
+    permissions:
+      contents: read
+    with:
+      platform: linux-x64
+      app-version: ${{ needs.version.outputs.value }}
+    secrets:
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+
+  windows:
+    needs: version
+    uses: ./.github/workflows/reusable-desktop-native.yml
+    permissions:
+      contents: read
+    with:
+      platform: windows-x64
+      app-version: ${{ needs.version.outputs.value }}
+    secrets:
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+
+  publish:
+    name: Publish nightly prerelease
+    needs: [version, android, linux, windows]
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Check out nightly history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download signed Android APK
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: nightly-android
+          path: artifacts/android
+
+      - name: Download native Linux x64 AppImage
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: desktop-native-linux-x64
+          path: artifacts/linux
+
+      - name: Download native Windows x64 portable ZIP
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: desktop-native-windows-x64
+          path: artifacts/windows
+
+      - name: Prepare nightly assets
+        shell: bash
+        env:
+          APP_VERSION: ${{ needs.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          apks=(artifacts/android/*.apk)
+          appimages=(artifacts/linux/*.AppImage)
+          zips=(artifacts/windows/*.zip)
+          [[ ${#apks[@]} -eq 1 && ${#appimages[@]} -eq 1 && ${#zips[@]} -eq 1 ]] || {
+            echo "Expected one signed APK, one native AppImage and one native portable ZIP" >&2
+            exit 1
+          }
+          for file in "${apks[0]}" "${appimages[0]}" "${zips[0]}"; do
+            test -s "$file" || { echo "Empty nightly asset: $file" >&2; exit 1; }
+          done
+          # Same names as the stable release assets; the version carries the commit.
+          mkdir nightly-assets
+          cp "${apks[0]}" nightly-assets/Metrolist.apk
+          cp "${appimages[0]}" "nightly-assets/metrolist-desktop-linux-x64-${APP_VERSION}.AppImage"
+          cp "${zips[0]}" nightly-assets/Metrolist-Desktop-windows.zip
+
+      - name: Write nightly notes
+        shell: bash
+        env:
+          APP_VERSION: ${{ needs.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          {
+            printf 'Version %s, built from [%s](https://github.com/%s/commit/%s). This prerelease may be unstable.\n' \
+              "$APP_VERSION" "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_SHA"
+            printf '\n## Changes since previous nightly\n\n'
+            if previous="$(git rev-parse --verify 'refs/tags/nightly^{commit}' 2>/dev/null)"; then
+              git log --first-parent --max-count=50 --format='* %s (%h)' "$previous..$GITHUB_SHA"
+            else
+              git log --first-parent --max-count=50 --format='* %s (%h)' "$GITHUB_SHA"
+            fi
+            printf '\nAt most 50 first-parent commits are shown.\n'
+          } > "$RUNNER_TEMP/nightly-notes.md"
+
+      - name: Publish nightly prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if git show-ref --verify --quiet refs/tags/nightly; then
+            gh api --method PATCH "repos/$GH_REPO/git/refs/tags/nightly" \
+              -f sha="$GITHUB_SHA" -F force=true
+          else
+            gh api --method POST "repos/$GH_REPO/git/refs" \
+              -f ref=refs/tags/nightly -f sha="$GITHUB_SHA"
+          fi
+
+          # Keep partial uploads in a draft until all three current assets are present.
+          if gh release view nightly --json assets --jq '.assets[].name' > "$RUNNER_TEMP/old-nightly-assets.txt"; then
+            gh release edit nightly --draft --prerelease --latest=false
+            while IFS= read -r asset; do
+              gh release delete-asset nightly "$asset" --yes
+            done < "$RUNNER_TEMP/old-nightly-assets.txt"
+          else
+            gh release create nightly --verify-tag --target "$GITHUB_SHA" \
+              --title "Metrolist Nightly" --draft --prerelease --latest=false
+          fi
+          gh release upload nightly nightly-assets/* --clobber
+          gh release edit nightly --target "$GITHUB_SHA" \
+            --title "Metrolist Nightly" --notes-file "$RUNNER_TEMP/nightly-notes.md" \
+            --draft=false --prerelease --latest=false

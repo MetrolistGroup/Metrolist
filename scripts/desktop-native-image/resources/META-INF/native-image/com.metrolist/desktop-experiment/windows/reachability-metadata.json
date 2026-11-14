@@ -177,6 +177,82 @@
       "allDeclaredFields": true,
       "allDeclaredMethods": true,
       "allDeclaredConstructors": true
+    },
+    {
+      "type": "java.util.HashMap",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "put",
+          "parameterTypes": [
+            "java.lang.Object",
+            "java.lang.Object"
+          ]
+        },
+        {
+          "name": "containsKey",
+          "parameterTypes": [
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.util.ArrayList",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
+          "name": "add",
+          "parameterTypes": [
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.lang.String",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "toLowerCase",
+          "parameterTypes": [
+            "java.util.Locale"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$HMENU",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$HBITMAP",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.BaseTSD$ULONG_PTR",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
     }
   ],
   "resources": [
@@ -188,6 +264,21 @@
     },
     {
       "glob": "windows/**"
+    },
+    {
+      "glob": "icudtl.dat"
+    },
+    {
+      "glob": "org/windows-x86_64/*"
+    },
+    {
+      "glob": "org/windows-x86_64-gpl/*"
+    },
+    {
+      "glob": "windows-x86_64/*"
+    },
+    {
+      "glob": "windows-x86_64-gpl/*"
     }
   ]
 }

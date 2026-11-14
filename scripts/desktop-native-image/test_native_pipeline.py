@@ -31,6 +31,23 @@ def executable(path, machine=0x8664):
 
 
 class PipelineTest(unittest.TestCase):
+    def test_nucleus_natives_use_nucleus_platform_names(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for target, platform in [('linux-arm64', 'linux-aarch64'), ('macos-arm64', 'darwin-aarch64')]:
+                path = native_image.nucleus_natives(Path(directory), target) / 'reachability-metadata.json'
+                self.assertEqual(f'nucleus/native/{platform}/*', json.loads(path.read_text())['resources'][0]['glob'])
+
+    def test_output_argument_leaves_exe_suffix_to_native_image(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory); (work/'classpath.txt').write_text('app.jar')
+            for target, output, expected in [('windows-x64', work/'image/Metrolist.exe', work/'image/Metrolist'),
+                                             ('linux-x64', work/'image/Metrolist', work/'image/Metrolist')]:
+                command = native_image.arguments(work, work, output, target)
+                self.assertEqual(str(expected), command[command.index('-o') + 1])
+                self.assertIn('-march=compatibility', command)
+                metadata = json.loads((work/'nucleus-natives/reachability-metadata.json').read_text())
+                self.assertEqual([{'glob': f'nucleus/native/{target.replace("windows", "win32")}/*'}], metadata['resources'])
+
     def test_checksum_cache_hit_and_corrupt_cache_recovery(self):
         data = jdk_archive()
         pin = {'platforms': {'windows-x64': {'url':'https://example.invalid/jdk.zip','sha256':hashlib.sha256(data).hexdigest()}}}
