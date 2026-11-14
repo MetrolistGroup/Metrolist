@@ -103,7 +103,7 @@ class FFmpegFrameGrabber : FrameGrabber {
                         if (t !is InterruptedIOException &&
                             t !is kotlin.coroutines.cancellation.CancellationException
                         ) {
-                            Logger.w("FFmpegGrabber", "Error on InputStream.read(): $t")
+                            Logger.w("FFmpegGrabber", "Error on InputStream.read()", t)
                         }
                         -1
                     }
