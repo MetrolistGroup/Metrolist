@@ -15,6 +15,8 @@ import android.os.Build
 import android.os.SystemClock
 import android.service.quicksettings.TileService
 import android.util.Log
+import java.io.PrintWriter
+import java.io.StringWriter
 import android.webkit.WebView
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.core.app.NotificationChannelCompat
@@ -446,10 +448,10 @@ private class AppFailureTree : Timber.Tree() {
             }
         val messageWithoutThrowable =
             t?.let { throwable ->
-                Log.getStackTraceString(throwable)
-                    .takeIf(String::isNotEmpty)
-                    ?.let { stackTrace -> message.removeSuffix("\n$stackTrace").removeSuffix(stackTrace).removeSuffix("\n") }
-                    ?: message
+                val stackTrace = StringWriter(256).also { writer ->
+                    throwable.printStackTrace(PrintWriter(writer, false))
+                }.toString()
+                message.removeSuffix("\n$stackTrace").removeSuffix(stackTrace).removeSuffix("\n")
             } ?: message
         PlaybackEventLog.captureApplicationFailure(level, tag ?: "Android", messageWithoutThrowable, t)
     }
