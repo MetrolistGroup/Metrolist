@@ -729,9 +729,11 @@ private fun installMacOsDesktopHandlers() {
         }
         if (desktop.isSupported(Desktop.Action.APP_QUIT_HANDLER)) {
             desktop.setQuitHandler { _, response ->
-                response.cancelQuit()
                 AppLogger.info("Main", "macOS quit handler requested shutdown")
-                shutdownApp { exitProcess(0) }
+                shutdownApp {
+                    response.performQuit()
+                    exitProcess(0)
+                }
             }
         }
     }
