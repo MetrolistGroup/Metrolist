@@ -717,7 +717,7 @@
     <string name="hidden_item_type_other">Outro</string>
     <string name="history_also_delete_from_youtube">Excluir também do YouTube</string>
     <string name="history_delete_item_title">Excluir item do histórico?</string>
-    <string name="history_deleting_message">A entrada do histórico está sendo removida.</string>
+    <string name="history_deleting_message">Removendo registro do histórico…</string>
     <string name="history_deleting_title">Excluindo item do histórico</string>
     <string name="history_empty">Nenhum histórico de reprodução</string>
     <string name="history_just_now">há pouco</string>
@@ -832,7 +832,7 @@
     <string name="removed_from_library">Removido da biblioteca</string>
     <string name="remove_dislike">Remover \u0027Não gostei\u0027</string>
     <string name="remove_from_device">Remover do dispositivo</string>
-    <string name="remove_from_favorites">Remover das Curtidas</string>
+    <string name="remove_from_favorites">Remover dos favoritos</string>
     <string name="remove_from_recent_question">Remover da aba recentes?</string>
     <string name="remove_from_saved_episodes">Remover dos episódios salvos</string>
     <string name="remove_from_speed_dial">Remover do Acesso Rápido</string>
@@ -1123,7 +1123,7 @@
     <string name="add_to_queue_desc">Adicione ao final da sua lista</string>
     <string name="download_desc">Deixe disponível para reprodução offline</string>
     <string name="refetch_desc">Obtenha os metadados mais recentes do YouTube Music</string>
-    <string name="cache_size_warning_title">Limite de cache</string>
+    <string name="cache_size_warning_title">Reduzir o limite de cache?</string>
     <string name="cache_size_warning_message">O novo limite de cache é menor do que o uso atual (%1$s). O app pode remover alguns arquivos de %2$s para atender o novo limite. Deseja continuar?</string>
     <string name="lyrics_animation_style">Estilo de animação palavra por palavra</string>
     <string name="none">Nenhum</string>
@@ -1228,7 +1228,7 @@
     <string name="onboarding_notification_downloads">Progresso do download</string>
     <string name="onboarding_notification_playback">Reprodução em segundo plano confiável</string>
     <string name="onboarding_step_of">Passo %1$d de %2$d</string>
-    <string name="onboarding_finish_title">Tudo pronto!</string>
+    <string name="onboarding_finish_title">Tudo pronto</string>
     <string name="onboarding_finish_description">Configuração concluída. Comece a ouvir, ou traga sua conta e dados primeiro.</string>
     <string name="finish">Finalizar</string>
     <string name="onboarding_restore_backup">Restaurar do backup</string>
@@ -1504,7 +1504,7 @@
     <string name="menu_show_album_in_library">Mostrar o álbum na biblioteca</string>
     <string name="menu_show_in_youtube_music">Mostrar no YouTube Music</string>
     <string name="menu_love_song">Adicionar às Curtidas</string>
-    <string name="menu_unlove_song">Remover das Curtidas</string>
+    <string name="menu_unlove_song">Remover das músicas curtidas</string>
     <string name="sign_in_to_add_playlists">Entre para adicionar às playlists</string>
     <string name="sign_in">Entrar</string>
     <string name="complete_sign_in">Login completo</string>
@@ -2041,12 +2041,12 @@
     <string name="seek_seconds_addup">Pesquisa progressiva</string>
     <string name="seek_seconds_addup_desc">Aumente o tamanho dos pulos com cada pesquisa rápida</string>
     <string name="pause_music_when_media_is_muted">Pausar enquanto a media estiver mutada</string>
-    <string name="pause_music_when_media_is_muted_desc">Pause a reprodução quando o volume do dispositivo estiver mutado e continue quando for restaurado</string>
+    <string name="pause_music_when_media_is_muted_desc">Pausa a reprodução quando o volume do dispositivo estiver mutado. O app continua a reprodução ao restaurar o volume.</string>
     <string name="no_episode_description">Não há nenhuma descrição disponível para esse episódio.</string>
     <plurals name="episode_duration_hours">
-        <item quantity="one">%1$d hr</item>
-        <item quantity="many">%1$d hr</item>
-        <item quantity="other">%1$d hr</item>
+        <item quantity="one">%1$d h</item>
+        <item quantity="many">%1$d h</item>
+        <item quantity="other">%1$d h</item>
     </plurals>
     <plurals name="episode_duration_minutes">
         <item quantity="one">%1$d min</item>
@@ -2296,4 +2296,23 @@
     <string name="settings_player_layout_summary">Altere a disposição das capas e dos controles de reprodução</string>
     <string name="settings_filter_q_summary">Q controla a largura ou a ressonância do filtro selecionado</string>
     <string name="lyrics_song_artist">Artista da música</string>
+    <string name="yeah">Sim!</string>
+    <string name="together">Juntos</string>
+    <string name="current_version">Versão atual</string>
+    <string name="leave_room">Sair da sala</string>
+    <string name="charts">Paradas</string>
+    <string name="room_code">Código da sala</string>
+    <string name="create_room">Criar sala</string>
+    <string name="lyrics_capability_line_syllable">Linha e sílaba</string>
+    <string name="lyrics_capability_line_syllable_unsynced">Linha, sílaba e não-sincronizada</string>
+    <string name="lyrics_capability_line_unsynced">Linha e não-sincronizada</string>
+    <string name="lyrics_capability_line">Linha</string>
+    <string name="lyrics_capability_unsynced">Não-sincronizada</string>
+    <string name="lyrics_youtube_captions">Legendas do YouTube</string>
+    <string name="sleep_timer_hour">Hora</string>
+    <string name="sleep_timer_minute">Minuto</string>
+    <string name="sleep_timer_advanced_options">Opções avançadas</string>
+    <string name="sleep_timer_finish_current_song">Parar o temporizador ao final da faixa atual quando o temporizador terminar</string>
+    <string name="sleep_timer_set_default">Definir como padrão</string>
+    <string name="navigation">Navegação</string>
 </resources>
