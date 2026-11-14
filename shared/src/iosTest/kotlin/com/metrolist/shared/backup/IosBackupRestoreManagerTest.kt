@@ -101,6 +101,78 @@ class IosBackupRestoreManagerTest {
         }
 
     @Test
+    fun importsPrismCompanionsAtOriginalArchivePaths() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val directory = "${NSTemporaryDirectory()}prism-import-${NSUUID().UUIDString}".toPath()
+            val fs = FileSystem.SYSTEM
+            fs.createDirectories(directory)
+            val source = directory / "prism.db"
+            val target = directory / "library.db"
+            val archive = directory / "prism.zip"
+            val companion = """{"lists":[{"title":"Companion only","songs":[{"id":"abcdefghijk","title":"Companion song"}]}]}"""
+            try {
+                BundledSQLiteDriver().open(source.toString()).use { connection ->
+                    connection
+                        .prepare(
+                            "CREATE TABLE songs (id TEXT, title TEXT, artistName TEXT, durationSec INTEGER, liked INTEGER, likedAt INTEGER, lastPlayed INTEGER)",
+                        ).use { it.step() }
+                    connection
+                        .prepare(
+                            "CREATE TABLE play_events (id TEXT, songId TEXT, timestamp INTEGER, playedMs INTEGER)",
+                        ).use { it.step() }
+                }
+                fs.write(archive) {
+                    val sink = this
+                    val output =
+                        object : OutputStream() {
+                            override fun write(b: Int) {
+                                sink.writeByte(b)
+                            }
+
+                            override fun write(
+                                b: ByteArray,
+                                off: Int,
+                                len: Int,
+                            ) {
+                                sink.write(b, off, len)
+                            }
+
+                            override fun close() = Unit
+                        }
+                    ZipOutputStream(output).use { zip ->
+                        zip.putNextEntry(ZipEntry("databases/prism.db"))
+                        zip.write(fs.read(source) { readByteArray() })
+                        zip.closeEntry()
+                        zip.putNextEntry(ZipEntry("files/library/prism.json"))
+                        zip.write(companion.encodeToByteArray())
+                        zip.closeEntry()
+                        zip.putNextEntry(ZipEntry("shared_prefs/artist_prefs.xml"))
+                        zip.write(
+                            """<map><string name="favorites">[{"id":"UCstarred","name":"Star &amp; Artist","thumbnail":null,"at":1700000000000}]</string></map>"""
+                                .encodeToByteArray(),
+                        )
+                        zip.closeEntry()
+                    }
+                }
+                val database = getIosDatabaseBuilder(target.toString()).build()
+                try {
+                    IosBackupRestoreManager(target.toString(), Settings(MapSettings()))
+                        .importForeignBackup(archive.toString(), database)
+                        .getOrThrow()
+                    assertTrue(database.dao().getSongById("abcdefghijk") != null)
+                    assertTrue(database.dao().findPlaylistByName("Companion only") != null)
+                    assertEquals("Star & Artist", database.dao().getArtistById("UCstarred")?.name)
+                    assertEquals(null, database.dao().getArtistById("UCstarred")?.thumbnailUrl)
+                } finally {
+                    database.close()
+                }
+            } finally {
+                fs.deleteRecursively(directory)
+            }
+        }
+
+    @Test
     fun successfulRestoreAndSettingsFailureKeepDatabaseAndPreferencesTogether() =
         runTest {
             // Restore closes and reopens the database on Main, which runTest blocks on iOS.

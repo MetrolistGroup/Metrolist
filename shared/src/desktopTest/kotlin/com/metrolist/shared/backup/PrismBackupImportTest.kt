@@ -67,6 +67,25 @@ class PrismBackupImportTest {
     }
 
     @Test
+    fun nullFavoriteThumbnailRemainsMissing() {
+        val preferences =
+            checkNotNull(prismArchiveFile(directory, "shared_prefs/artist_prefs.xml"))
+        preferences.apply {
+            parentFile.mkdirs()
+            writeText("""<map><string name="favorites">[{"id":"UCartist","name":"Artist","thumbnail":null}]</string></map>""")
+        }
+        val library = ForeignLibrary(ForeignLibraryFamily.PRISM, emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+
+        assertNull(
+            library
+                .withPrismArchive(directory)
+                .artists
+                .single()
+                .thumbnailUrl,
+        )
+    }
+
+    @Test
     fun malformedOptionalFavoritesDoNotDiscardValidLibraryCollections() =
         runBlocking {
             val source = sourceDatabase()
@@ -75,7 +94,11 @@ class PrismBackupImportTest {
                 withDestination { database ->
                     val summary = archive.inputStream().use { database.importForeignBackup(it, staging(), driver) }
                     assertEquals(ForeignLibraryFamily.PRISM, summary.family)
-                    assertNotNull(database.dao().getSongById("ddddddddddd"))
+                    assertNotNull(
+                        database
+                            .dao()
+                            .getSongById("ddddddddddd"),
+                    )
                     assertNotNull(database.dao().findPlaylistByName("My Prism list"))
                     assertNotNull(database.dao().getArtistById("UCfollowed")?.bookmarkedAt)
                     assertNotNull(database.dao().getArtistById("UCstarred"))

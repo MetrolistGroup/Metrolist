@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.album
+import com.metrolist.shared.generated.resources.back
 import com.metrolist.shared.generated.resources.import_action_choose_file
 import com.metrolist.shared.generated.resources.import_action_start
 import com.metrolist.shared.generated.resources.import_cancel
@@ -58,6 +59,15 @@ import com.metrolist.shared.generated.resources.import_error_resolution_failed
 import com.metrolist.shared.generated.resources.import_error_track_limit
 import com.metrolist.shared.generated.resources.import_error_unsupported_playlist_entries
 import com.metrolist.shared.generated.resources.import_error_youtube_dedicated_flow
+import com.metrolist.shared.generated.resources.import_provider_amazon
+import com.metrolist.shared.generated.resources.import_provider_apple_music
+import com.metrolist.shared.generated.resources.import_provider_deezer
+import com.metrolist.shared.generated.resources.import_provider_file
+import com.metrolist.shared.generated.resources.import_provider_file_desc
+import com.metrolist.shared.generated.resources.import_provider_public_link_desc
+import com.metrolist.shared.generated.resources.import_provider_spotify
+import com.metrolist.shared.generated.resources.import_provider_tidal
+import com.metrolist.shared.generated.resources.import_provider_youtube
 import com.metrolist.shared.generated.resources.import_source_text_file
 import com.metrolist.shared.generated.resources.import_source_youtube_music
 import com.metrolist.shared.generated.resources.import_status_failed
@@ -72,6 +82,7 @@ import com.metrolist.shared.generated.resources.or_choose_existing_playlist
 import com.metrolist.shared.generated.resources.playlist
 import com.metrolist.shared.generated.resources.playlist_import_success
 import com.metrolist.shared.generated.resources.playlist_name
+import com.metrolist.shared.generated.resources.playlist_text_or_link
 import com.metrolist.shared.generated.resources.playlist_url
 import com.metrolist.shared.generated.resources.spotify_import_create_new_playlist
 import com.metrolist.shared.generated.resources.track
@@ -93,6 +104,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -100,6 +112,27 @@ class PlaylistImportFile(
     val name: String,
     val bytes: ByteArray,
 )
+
+private data class IosPlaylistImportSource(
+    val type: ImportSourceType,
+    val title: StringResource,
+    val description: StringResource,
+)
+
+private val IOS_PLAYLIST_IMPORT_SOURCES =
+    listOf(
+        IosPlaylistImportSource(ImportSourceType.SPOTIFY, Res.string.import_provider_spotify, Res.string.import_provider_public_link_desc),
+        IosPlaylistImportSource(
+            ImportSourceType.APPLE_MUSIC,
+            Res.string.import_provider_apple_music,
+            Res.string.import_provider_public_link_desc,
+        ),
+        IosPlaylistImportSource(ImportSourceType.YOUTUBE, Res.string.import_provider_youtube, Res.string.import_provider_public_link_desc),
+        IosPlaylistImportSource(ImportSourceType.DEEZER, Res.string.import_provider_deezer, Res.string.import_provider_public_link_desc),
+        IosPlaylistImportSource(ImportSourceType.TIDAL, Res.string.import_provider_tidal, Res.string.import_provider_public_link_desc),
+        IosPlaylistImportSource(ImportSourceType.AMAZON, Res.string.import_provider_amazon, Res.string.import_provider_public_link_desc),
+        IosPlaylistImportSource(ImportSourceType.FILE_OR_TEXT, Res.string.import_provider_file, Res.string.import_provider_file_desc),
+    )
 
 @Composable
 @Suppress("FunctionName")
@@ -122,6 +155,7 @@ fun IosPlaylistImportSettings(
     var sourceYouTubePlaylistId by remember { mutableStateOf<String?>(null) }
     var coverUrl by remember { mutableStateOf<String?>(null) }
     var provider by remember { mutableStateOf<ImportSourceType?>(null) }
+    var selectedSource by remember { mutableStateOf<ImportSourceType?>(null) }
     var destination by remember { mutableStateOf<PlaylistImportManager.Destination>(PlaylistImportManager.Destination.NewLocal) }
     var progress by remember { mutableStateOf<ImportProgressState>(ImportProgressState.Idle) }
     var operation by remember { mutableStateOf<Job?>(null) }
@@ -294,46 +328,90 @@ fun IosPlaylistImportSettings(
                 .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        OutlinedTextField(
-            value = input,
-            onValueChange = { input = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text(stringResource(Res.string.playlist_url)) },
-            minLines = 2,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Button(onClick = { loadPlaylist() }, enabled = operation == null && input.isNotBlank(), shapes = ButtonDefaults.shapes()) {
-                Text(stringResource(Res.string.load_playlist))
-            }
-            if (onPickPlaylistFile != null) {
-                TextButton(
-                    onClick = {
-                        operation =
-                            scope.launch {
-                                val currentJob = currentCoroutineContext()[Job]
-                                try {
-                                    val file = onPickPlaylistFile()
-                                    if (operation === currentJob) operation = null
-                                    if (file != null) loadPlaylist(file)
-                                } catch (error: CancellationException) {
-                                    if (operation === currentJob) progress = ImportProgressState.Idle
-                                    throw error
-                                } catch (error: Exception) {
-                                    if (operation ===
-                                        currentJob
-                                    ) {
-                                        progress =
-                                            ImportProgressState.Failed(error.message.orEmpty(), error, ImportErrorKey.FileReadFailed)
-                                    }
-                                } finally {
-                                    if (operation === currentJob) operation = null
-                                }
-                            }
-                    },
+        if (selectedSource == null) {
+            IOS_PLAYLIST_IMPORT_SOURCES.forEach { source ->
+                Button(
+                    onClick = { selectedSource = source.type },
+                    modifier = Modifier.fillMaxWidth(),
                     enabled = operation == null,
                     shapes = ButtonDefaults.shapes(),
                 ) {
-                    Text(stringResource(Res.string.import_action_choose_file))
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(stringResource(source.title))
+                        Text(stringResource(source.description), style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        } else {
+            TextButton(
+                onClick = {
+                    selectedSource = null
+                    input = ""
+                    tracks = emptyList()
+                    pendingCsv = null
+                    provider = null
+                    sourceYouTubePlaylistId = null
+                    coverUrl = null
+                    title = ""
+                    progress = ImportProgressState.Idle
+                    duplicate = null
+                },
+                enabled = operation == null,
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(Res.string.back))
+            }
+            OutlinedTextField(
+                value = input,
+                onValueChange = { input = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = {
+                    Text(
+                        stringResource(
+                            if (selectedSource == ImportSourceType.FILE_OR_TEXT) {
+                                Res.string.playlist_text_or_link
+                            } else {
+                                Res.string.playlist_url
+                            },
+                        ),
+                    )
+                },
+                minLines = 2,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = { loadPlaylist() }, enabled = operation == null && input.isNotBlank(), shapes = ButtonDefaults.shapes()) {
+                    Text(stringResource(Res.string.load_playlist))
+                }
+                if (selectedSource == ImportSourceType.FILE_OR_TEXT && onPickPlaylistFile != null) {
+                    TextButton(
+                        onClick = {
+                            operation =
+                                scope.launch {
+                                    val currentJob = currentCoroutineContext()[Job]
+                                    try {
+                                        val file = onPickPlaylistFile()
+                                        if (operation === currentJob) operation = null
+                                        if (file != null) loadPlaylist(file)
+                                    } catch (error: CancellationException) {
+                                        if (operation === currentJob) progress = ImportProgressState.Idle
+                                        throw error
+                                    } catch (error: Exception) {
+                                        if (operation ===
+                                            currentJob
+                                        ) {
+                                            progress =
+                                                ImportProgressState.Failed(error.message.orEmpty(), error, ImportErrorKey.FileReadFailed)
+                                        }
+                                    } finally {
+                                        if (operation === currentJob) operation = null
+                                    }
+                                }
+                        },
+                        enabled = operation == null,
+                        shapes = ButtonDefaults.shapes(),
+                    ) {
+                        Text(stringResource(Res.string.import_action_choose_file))
+                    }
                 }
             }
         }

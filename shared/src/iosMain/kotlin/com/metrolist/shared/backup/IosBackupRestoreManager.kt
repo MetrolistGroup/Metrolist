@@ -3,6 +3,7 @@ package com.metrolist.shared.backup
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.metrolist.shared.db.DATABASE_VERSION
+import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.db.getIosDatabaseBuilder
 import com.metrolist.shared.db.iosDatabaseFilePath
@@ -52,6 +53,12 @@ import platform.posix.link
 import platform.posix.realpath
 import platform.posix.rename
 
+private val SQLITE_HEADER = "SQLite format 3\u0000".encodeToByteArray()
+private const val MAX_FOREIGN_ARCHIVE_ENTRIES = 4096
+private const val PRISM_ARCHIVE_DIRECTORY = ".prism/"
+private const val PRISM_ARTIST_PREFERENCES = "shared_prefs/artist_prefs.xml"
+
+/** File-based backup API; copy document-provider URLs into the app container before calling. */
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 class IosBackupRestoreManager(
     private val databasePath: String = iosDatabaseFilePath(),
@@ -128,6 +135,132 @@ class IosBackupRestoreManager(
                 operationMutex.unlock()
             }
         }
+
+    suspend fun importForeignBackup(
+        sourcePath: String,
+        database: MusicDatabase,
+    ): Result<ForeignImportSummary> =
+        withContext(Dispatchers.IO) {
+            val stagingPath = temporaryPath("foreign-import")
+            val staging = stagingPath.toPath()
+            val fs = FileSystem.SYSTEM
+            try {
+                fs.createDirectories(staging)
+                val source = fileSeekableSource(sourcePath)
+                val header = ByteArray(SQLITE_HEADER.size)
+                val headerLength = source.use { it.read(0, header, 0, header.size) }
+                if (headerLength == SQLITE_HEADER.size && header.contentEquals(SQLITE_HEADER)) {
+                    val candidate = "$stagingPath/source.db"
+                    copyFile(sourcePath, candidate, BackupArchiveLimits.DATABASE_BYTES)
+                    return@withContext readAndImportForeignDatabase(candidate, database)
+                }
+                val databases = mutableListOf<String>()
+                val prismDataFiles = mutableMapOf<String, String>()
+                ZipFile(fileSeekableSource(sourcePath)).use { archive ->
+                    requireBackupSize(archive.entries.size.toLong(), MAX_FOREIGN_ARCHIVE_ENTRIES.toLong())
+                    var total = 0L
+                    archive.entries.forEach { entry ->
+                        val prismEntry = entry.name.removePrefix(PRISM_ARCHIVE_DIRECTORY)
+                        if (isPrismBackupDataEntry(prismEntry) || prismEntry == PRISM_ARTIST_PREFERENCES) {
+                            check(prismEntry !in prismDataFiles) { "Backup contains duplicate Prism library files" }
+                            val target = "$stagingPath/prism/$prismEntry"
+                            fs.createDirectories(target.toPath().parent!!)
+                            val copied =
+                                archive.getInputStream(entry).use { input ->
+                                    IosFileOutputStream(target).use { output ->
+                                        input.copyTo(output, BackupArchiveLimits.SETTINGS_BYTES)
+                                    }
+                                }
+                            total += copied
+                            requireBackupSize(total, BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES)
+                            prismDataFiles[prismEntry] = target
+                            return@forEach
+                        }
+                        val name = entry.name.substringAfterLast('/').substringAfterLast('\\')
+                        check(entry.size >= 0) { "Backup entry size is invalid" }
+                        val isSidecar = name.endsWith("-wal") || name.endsWith("-shm")
+                        val shouldStage = name.isNotBlank() && !name.startsWith('.') && "exoplayer" !in name.lowercase()
+                        val limit = if (shouldStage) BackupArchiveLimits.DATABASE_BYTES else BackupArchiveLimits.UNKNOWN_ENTRY_BYTES
+                        requireBackupSize(entry.size, limit)
+                        val target = if (shouldStage) "$stagingPath/$name" else null
+                        if (target != null) check(!fs.exists(target.toPath())) { "Backup contains duplicate file names" }
+                        val copied =
+                            archive.getInputStream(entry).use { input ->
+                                if (target ==
+                                    null
+                                ) {
+                                    input.copyTo(DiscardOutputStream, limit)
+                                } else {
+                                    IosFileOutputStream(target).use { output -> input.copyTo(output, limit) }
+                                }
+                            }
+                        total += copied
+                        requireBackupSize(total, BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES)
+                        if (target != null && !isSidecar && hasSqliteHeader(target)) {
+                            databases += target
+                        } else if (target != null && !isSidecar) {
+                            fs.delete(target.toPath(), mustExist = false)
+                        }
+                    }
+                }
+                val library =
+                    databases.firstNotNullOfOrNull { candidate ->
+                        runCatching {
+                            BundledSQLiteDriver().open(candidate).use { connection ->
+                                connection.takeIf { it.detectForeignLibraryFamily() != null }?.readForeignLibrary()
+                            }
+                        }.getOrNull()
+                    } ?: throw UnsupportedForeignLibraryException()
+                val enhanced =
+                    library.withPrismBackupData { entry ->
+                        prismDataFiles[entry]?.let { path -> fs.read(path.toPath()) { readUtf8() } }
+                    }
+                val favorites =
+                    prismDataFiles[PRISM_ARTIST_PREFERENCES]?.let { path ->
+                        fs.read(path.toPath()) { readUtf8() }
+                    }
+                Result.success(database.importForeignLibrary(enhanced.withPrismArtistPreferences(favorites)))
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Result.failure(error)
+            } finally {
+                fs.deleteRecursively(staging, mustExist = false)
+            }
+        }
+
+    private suspend fun readAndImportForeignDatabase(
+        path: String,
+        database: MusicDatabase,
+    ): Result<ForeignImportSummary> =
+        try {
+            val library =
+                BundledSQLiteDriver().open(path).use { connection ->
+                    if (connection.detectForeignLibraryFamily() == null) throw UnsupportedForeignLibraryException()
+                    connection.readForeignLibrary()
+                }
+            Result.success(database.importForeignLibrary(library))
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Result.failure(error)
+        }
+
+    private fun copyFile(
+        source: String,
+        destination: String,
+        limit: Long,
+    ) {
+        IosFileInputStream(source).use { input ->
+            IosFileOutputStream(destination).use { output -> input.copyTo(output, limit) }
+        }
+    }
+
+    private fun hasSqliteHeader(path: String): Boolean {
+        val file = path.toPath()
+        if ((FileSystem.SYSTEM.metadata(file).size ?: 0L) < SQLITE_HEADER.size) return false
+        return FileSystem.SYSTEM.read(file) { readByteArray(SQLITE_HEADER.size.toLong()).contentEquals(SQLITE_HEADER) }
+    }
 
     private fun backupLocked(destinationPath: String): Result<Unit> {
         val fileManager = NSFileManager.defaultManager
