@@ -295,6 +295,50 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "org.jetbrains.skiko.renderer.Direct3DRenderer",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "isAdapterSupported",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "onLiveResizeStarted",
+          "parameterTypes": []
+        },
+        {
+          "name": "onLiveResizeEnded",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skiko.graphicapi.InternalDirectXApi",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "isAdapterSupported",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skiko.RenderExceptionsHandler",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "throwException",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
     }
   ],
   "resources": [
