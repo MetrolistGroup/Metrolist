@@ -155,7 +155,7 @@ class IosBackupRestoreManager(
                 }
                 val databases = mutableListOf<String>()
                 val prismDataFiles = mutableMapOf<String, String>()
-                validateZipEntryCount(sourcePath, MAX_FOREIGN_ARCHIVE_ENTRIES)
+                validateZipEntryCount(sourcePath, MAX_FOREIGN_ARCHIVE_ENTRIES, allowNestedPaths = true)
                 ZipFile(fileSeekableSource(sourcePath)).use { archive ->
                     requireBackupSize(archive.entries.size.toLong(), MAX_FOREIGN_ARCHIVE_ENTRIES.toLong())
                     var total = 0L
@@ -779,9 +779,17 @@ class IosBackupRestoreManager(
             name.length <= 255 &&
             !name.startsWith('/') &&
             '\\' !in name &&
+            '\u0000' !in name &&
             '/' !in name &&
             name != "." &&
             name != ".."
+
+    private fun isSafeForeignEntryName(name: String): Boolean {
+        if (name.isBlank() || name.length > 255 || name.startsWith('/') || '\\' in name || '\u0000' in name) return false
+        val path = name.removeSuffix("/")
+        val segments = path.split('/')
+        return path.isNotEmpty() && ':' !in segments.first() && segments.all { it.isNotEmpty() && it != "." && it != ".." }
+    }
 
     private fun entryLimit(name: String): Long =
         when (name) {
@@ -794,6 +802,7 @@ class IosBackupRestoreManager(
     private fun validateZipEntryCount(
         path: String,
         maximumEntries: Int = BackupArchiveLimits.ENTRY_COUNT,
+        allowNestedPaths: Boolean = false,
     ) {
         fileSeekableSource(path).use { source ->
             requireBackupSize(source.size, MAX_ARCHIVE_BYTES)
@@ -831,7 +840,9 @@ class IosBackupRestoreManager(
                 check(position + recordLength <= centralOffset + centralSize) { "Backup archive central directory is truncated" }
                 val nameBytes = source.readFully(position + 46, nameLength)
                 val name = nameBytes.decodeToString(throwOnInvalidSequence = true)
-                check(isSafeEntryName(name)) { "Backup contains an unsafe entry name" }
+                check(if (allowNestedPaths) isSafeForeignEntryName(name) else isSafeEntryName(name)) {
+                    "Backup contains an unsafe entry name"
+                }
                 position += recordLength
             }
             check(position == centralOffset + centralSize) { "Backup archive central directory is corrupt" }
