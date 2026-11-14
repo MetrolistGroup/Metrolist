@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:clipToOutline="true"
+    android:theme="@style/Theme.Widget.Metrolist">
+
+    <ImageView
+        android:id="@+id/widget_surface_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_background" />
+
+    <LinearLayout xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        tools:targetApi="s">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/widget_album_art"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:contentDescription="@string/album_art"
+                android:scaleType="centerCrop"
+                android:src="@mipmap/ic_launcher" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/widget_song_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/not_playing"
+                    android:textColor="@color/widget_text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/widget_artist_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/tap_to_play"
+                    android:textColor="@color/widget_text_secondary"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <include
+            layout="@layout/widget_music_controls"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="4dp" />
+
+        <FrameLayout
+            android:id="@+id/widget_progress_container"
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:layout_marginTop="4dp"
+            android:importantForAccessibility="noHideDescendants">
+
+            <ImageView
+                android:id="@+id/widget_progress_track"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@null"
+                android:scaleType="fitXY"
+                android:src="@drawable/widget_progress_track" />
+
+            <ImageView
+                android:id="@+id/widget_progress_fill"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@null"
+                android:scaleType="fitXY"
+                android:src="@drawable/widget_progress_clip" />
+        </FrameLayout>
+    </LinearLayout>
+</FrameLayout>

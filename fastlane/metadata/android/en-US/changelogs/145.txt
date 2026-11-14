@@ -1,0 +1,7 @@
+v13.4.1
+Maintenance mode: bug fixes and minor improvements only.
+- Fixed cached songs in downloads; playback for YouTube changes
+- Paste URLs in search to play; Library search bar
+- Bind pitch and speed; Gemini voice playback
+- Highest audio quality option; create playlist from Library
+- Lyrics, Listen Together, Play next, and service crash fixes

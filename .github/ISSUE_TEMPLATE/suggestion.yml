@@ -1,0 +1,47 @@
+name: Suggest an improvement
+description: Suggest a feature or improvement for Metrolist
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Writing this with an LLM? Check [rejected features](https://github.com/MetrolistGroup/Metrolist/blob/main/AGENTS.md#rejected-features) and existing issues first, apply [unslop](https://github.com/MetrolistGroup/Metrolist/blob/main/skills/unslop/SKILL.md) to the text and keep it short.
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Issues that skip these checks or duplicate an existing issue are closed without a response.
+      options:
+        - label: This is not already available in the [latest release](https://github.com/MetrolistGroup/Metrolist/releases).
+          required: true
+        - label: I searched open and closed issues and found no duplicate.
+          required: true
+        - label: This issue contains only one suggestion.
+          required: true
+        - label: The title describes the suggestion.
+          required: true
+        - label: This issue is written in English.
+          required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      multiple: true
+      options:
+        - Android
+        - Android Auto
+        - Android TV
+        - Windows
+        - macOS
+        - Linux
+  - type: input
+    id: version
+    attributes:
+      label: Version
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggestion
+      description: Describe what you would like to change. You can drag and drop files, screenshots, or videos here.
+    validations:
+      required: true

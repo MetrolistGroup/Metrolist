@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.metrolist.desktop</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Metrolist</name>
+  <summary>Stream and manage your YouTube Music library</summary>
+
+  <description>
+    <p>
+      Metrolist is a YouTube Music client for Linux. Browse, search and play
+      your YouTube Music library, manage playlists and play music in the
+      background.
+    </p>
+    <ul>
+      <li>Browse and search your YouTube Music library</li>
+      <li>Create and edit playlists</li>
+      <li>Listen in the background or offline</li>
+      <li>MPRIS controls, system tray integration and desktop integration</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">com.metrolist.desktop.desktop</launchable>
+
+  <url type="homepage">https://github.com/MetrolistGroup/Metrolist</url>
+  <url type="bugtracker">https://github.com/MetrolistGroup/Metrolist/issues</url>
+
+  <developer id="com.metrolist">
+    <name>MetrolistGroup</name>
+  </developer>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="@VERSION@" date="@DATE@"/>
+  </releases>
+</component>

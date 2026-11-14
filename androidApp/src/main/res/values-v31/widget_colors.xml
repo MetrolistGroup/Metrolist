@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Wallpaper colors, light: Accent 2 surface (tone 95), Accent 1 controls. -->
+    <color name="widget_surface">@android:color/system_accent2_50</color>
+    <color name="widget_surface_highest">@color/widget_primary_container</color>
+    <color name="widget_on_surface">@android:color/system_accent2_900</color>
+    <color name="widget_on_surface_variant">@android:color/system_accent2_700</color>
+    <color name="widget_primary">@android:color/system_accent1_600</color>
+    <color name="widget_on_primary">@android:color/system_accent1_0</color>
+    <color name="widget_primary_container">@android:color/system_accent1_100</color>
+    <color name="widget_on_primary_container">@android:color/system_accent1_900</color>
+    <color name="widget_secondary_container">@color/widget_primary_container</color>
+    <color name="widget_on_secondary_container">@color/widget_on_primary_container</color>
+    <color name="widget_tertiary">@color/widget_primary</color>
+    <color name="widget_on_tertiary">@color/widget_on_primary</color>
+    <color name="widget_tertiary_container">@android:color/system_accent3_100</color>
+    <color name="widget_on_tertiary_container">@android:color/system_accent3_900</color>
+</resources>

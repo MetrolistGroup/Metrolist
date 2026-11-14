@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The manager insets this frame so artwork and controls share a centered square. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="4dp"
+    android:theme="@style/Theme.Widget.Metrolist">
+
+    <!-- Album Art - circular bitmap set programmatically -->
+    <ImageView
+        android:id="@+id/widget_turntable_album_art"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:scaleType="fitCenter"
+        android:src="@drawable/widget_turntable_default_art"
+        android:contentDescription="@string/album_art" />
+
+    <!-- Navigation Buttons Container - Top Right (Previous & Next) -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_gravity="top|end"
+        android:orientation="horizontal"
+        android:background="@drawable/widget_transport_button_bg"
+        android:gravity="center_vertical">
+
+        <!-- Previous Button -->
+        <ImageButton
+            android:id="@+id/widget_turntable_prev_button"
+            android:layout_width="48dp"
+            android:layout_height="match_parent"
+            android:padding="8dp"
+            android:scaleType="fitCenter"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_widget_skip_previous"
+            android:contentDescription="@string/previous" />
+
+        <!-- Next Button -->
+        <ImageButton
+            android:id="@+id/widget_turntable_next_button"
+            android:layout_width="48dp"
+            android:layout_height="match_parent"
+            android:padding="8dp"
+            android:scaleType="fitCenter"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_widget_skip_next"
+            android:contentDescription="@string/next" />
+
+    </LinearLayout>
+
+    <!-- Play Button - Bottom Left -->
+    <FrameLayout
+        android:id="@+id/widget_turntable_play_container"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="bottom|start"
+        android:background="@drawable/widget_play_pill_bg">
+
+        <ImageView
+            android:id="@+id/widget_turntable_play_pause"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_widget_play"
+            android:contentDescription="@string/play_pause" />
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/widget_turntable_like_button"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="bottom|end"
+        android:background="@drawable/widget_like_button_bg">
+
+        <ImageView
+            android:id="@+id/widget_turntable_like_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:contentDescription="@string/action_like"
+            android:src="@drawable/ic_widget_heart_outline_nav" />
+    </FrameLayout>
+
+</FrameLayout>

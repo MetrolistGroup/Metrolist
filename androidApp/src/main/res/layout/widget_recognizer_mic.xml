@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mic toggle: round when idle, rounded square with a spinning ring while listening -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_recognizer_mic_container"
+    android:layout_width="56dp"
+    android:layout_height="56dp"
+    android:layout_gravity="center">
+
+    <ProgressBar
+        android:id="@+id/widget_recognizer_progress"
+        style="@android:style/Widget.Material.ProgressBar"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:indeterminate="true"
+        android:indeterminateTint="@color/widget_primary"
+        android:visibility="gone" />
+
+    <FrameLayout
+        android:id="@+id/widget_recognizer_mic_button"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_gravity="center"
+        android:background="@drawable/widget_mic_bg">
+
+        <ImageView
+            android:id="@+id/widget_recognizer_mic_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:contentDescription="@string/widget_recognizer_mic_desc"
+            android:src="@drawable/ic_widget_mic" />
+    </FrameLayout>
+</FrameLayout>

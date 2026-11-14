@@ -1,0 +1,184 @@
+name: Desktop Linux
+
+on:
+  workflow_call:
+    inputs:
+      run-verification:
+        description: Run tests and launch checks, disabled only after the release gate succeeds
+        required: false
+        default: true
+        type: boolean
+      upload-artifact:
+        description: Upload packaged output as workflow artifacts
+        required: false
+        default: false
+        type: boolean
+      artifact-prefix:
+        description: Prefix for workflow artifact names
+        required: false
+        default: ''
+        type: string
+      staging-release-tag:
+        description: Draft release tag used for cross-job package handoff
+        required: false
+        default: ''
+        type: string
+      cache-read-only:
+        description: Keep the Gradle cache read-only
+        required: false
+        default: false
+        type: boolean
+      upload-sentry:
+        description: Require Sentry credentials and upload desktop source context
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      GRADLE_ENCRYPTION_KEY:
+        required: false
+      SENTRY_AUTH_TOKEN:
+        required: false
+      LASTFM_API_KEY:
+        required: true
+      LASTFM_SECRET:
+        required: true
+      LYPRIO_BASE_URL:
+        required: true
+      LYPRIO_HMAC_KEY:
+        required: true
+
+jobs:
+  package:
+    name: ${{ matrix.arch }} AppImage
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: blacksmith-4vcpu-ubuntu-2404
+          - arch: arm64
+            runner: blacksmith-8vcpu-ubuntu-2404-arm
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Prepare CI Gradle
+        uses: ./.github/actions/prepare-ci-gradle
+        with:
+          cache-scope: desktop-linux-${{ matrix.arch }}
+          persist-configuration-cache: 'false'
+          cache-read-only: ${{ inputs.cache-read-only }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Prepare ARM64 WebView build
+        if: matrix.arch == 'arm64'
+        uses: ./.github/actions/prepare-linux-webview
+        with:
+          cache-read-only: ${{ inputs.cache-read-only }}
+
+      - name: Generate installer icons
+        uses: ./.github/actions/generate-icons
+
+      - name: Validate Sentry configuration
+        if: inputs.upload-sentry
+        shell: bash
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: test -n "$SENTRY_AUTH_TOKEN" || { echo "SENTRY_AUTH_TOKEN is required when Sentry upload is enabled" >&2; exit 1; }
+
+      - name: Build Linux AppImage
+        shell: bash
+        env:
+          CARGO_BUILD_JOBS: ${{ matrix.arch == 'arm64' && '4' || '2' }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+          LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+        run: ./scripts/build_appimage.sh -Pmetrolist.verifyPackaging=${{ inputs.run-verification }}
+
+      - name: Upload desktop Sentry source context
+        if: inputs.upload-sentry
+        uses: ./.github/actions/upload-desktop-sentry
+        with:
+          sentry-auth-token: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          source-revision: ${{ github.sha }}
+
+      - name: Collect Linux AppImage
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=""
+          while IFS='=' read -r key value; do
+            if [[ "$key" == "appVersion" ]]; then version="$value"; break; fi
+          done < gradle.properties
+          source="dist/Metrolist.AppImage"
+          test -x "$source" || { echo "Linux AppImage was not produced or is not executable" >&2; exit 1; }
+          description="$(file -b "$source")"
+          case "${{ matrix.arch }}" in
+            x64) grep -Eiq 'x86-64|x86_64' <<< "$description" || { echo "Expected x86_64 AppImage, got: $description" >&2; exit 1; } ;;
+            arm64) grep -Eiq 'aarch64|ARM64' <<< "$description" || { echo "Expected aarch64 AppImage, got: $description" >&2; exit 1; } ;;
+            *) echo "Unsupported Linux artifact architecture: ${{ matrix.arch }}" >&2; exit 1 ;;
+          esac
+          output="dist/metrolist-desktop-linux-${{ matrix.arch }}-${version}.AppImage"
+          mv "$source" "$output"
+          echo "path=$output" >> "$GITHUB_OUTPUT"
+
+      - name: Install launch smoke dependencies
+        if: inputs.run-verification
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            xvfb xauth scrot imagemagick libgl1-mesa-dri \
+            libasound2t64 libdrm2 libegl1 libfontconfig1 libfreetype6 \
+            libgl1 libpulse0 libva-drm2 libva2 libx11-6 libxcb-shm0
+
+      - name: Smoke test Linux AppImage
+        if: inputs.run-verification
+        id: smoke
+        timeout-minutes: 3
+        shell: bash
+        env:
+          PACKAGE_PATH: ${{ steps.package.outputs.path }}
+          # Xvfb has no GPU. Use Mesa and Skiko's software renderer.
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          SKIKO_RENDER_API: SOFTWARE
+          SKIKO_WAYLAND: '0'
+        run: xvfb-run -a -s '-screen 0 1440x1000x24' python3 scripts/desktop_smoke.py "$PACKAGE_PATH" --output "$RUNNER_TEMP/desktop-smoke"
+
+      - name: Upload Linux launch evidence
+        if: always() && steps.smoke.outcome != 'skipped'
+        # Evidence only; the smoke step decides the result, and the artifact quota can be full.
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ${{ inputs.artifact-prefix }}desktop-smoke-linux-${{ matrix.arch }}
+          path: ${{ runner.temp }}/desktop-smoke
+          if-no-files-found: error
+          retention-days: 4
+
+      - name: Upload Linux artifact
+        if: inputs.upload-artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ${{ inputs.artifact-prefix }}desktop-linux-${{ matrix.arch }}
+          path: ${{ steps.package.outputs.path }}
+          if-no-files-found: error
+          retention-days: 4
+
+      - name: Upload Linux staging asset
+        if: inputs.staging-release-tag != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STAGING_RELEASE_TAG: ${{ inputs.staging-release-tag }}
+          PACKAGE_PATH: ${{ steps.package.outputs.path }}
+        run: gh release upload "$STAGING_RELEASE_TAG" "$PACKAGE_PATH" --clobber --repo "$GITHUB_REPOSITORY"

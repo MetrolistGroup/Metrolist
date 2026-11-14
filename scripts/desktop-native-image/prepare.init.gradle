@@ -1,0 +1,26 @@
+// Opt in with -I. Normal builds do not include native entry points.
+gradle.projectsEvaluated {
+    def desktop = gradle.rootProject.project(':desktopApp')
+    def experiment = gradle.startParameter.taskNames.any { it.endsWith('prepareNativeImageExperiment') }
+    desktop.extensions.getByName('kotlin').sourceSets.getByName('jvmMain').kotlin.srcDir(
+        new File(gradle.rootProject.projectDir, experiment ? 'scripts/desktop-native-image/kotlin' : 'scripts/desktop-native-image/kotlin/native'))
+    def runtime = desktop.configurations.getByName('jvmRuntimeClasspath')
+    def appJar = desktop.tasks.named('jvmJar')
+    ['prepareNativeImage', 'prepareNativeImageExperiment'].each { taskName ->
+        desktop.tasks.register(taskName) {
+            dependsOn(appJar, runtime, desktop.tasks.named('syncExternalResources'))
+            doLast {
+                def output = new File(desktop.providers.gradleProperty('nativeExperimentDir').get())
+                output.mkdirs()
+                def jars = [appJar.get().archiveFile.get().asFile] + runtime.files.toList()
+                assert jars.every { it.exists() }
+                new File(output, 'classpath.txt').text = jars.collect { it.absolutePath }.join(File.pathSeparator)
+                def resources = new File(output, 'resources')
+                resources.mkdirs()
+                desktop.copy { from(desktop.layout.buildDirectory.dir('native-resources')); into(resources) }
+                new File(output, 'dependencies.txt').text = runtime.resolvedConfiguration.resolvedArtifacts
+                    .collect { "${it.moduleVersion.id}\t${it.file.absolutePath}" }.sort().join('\n') + '\n'
+            }
+        }
+    }
+}

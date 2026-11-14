@@ -1,20 +1,21 @@
-plugins {
-    alias(libs.plugins.hilt) apply (false)
-    alias(libs.plugins.kotlin.ksp) apply (false)
-    alias(libs.plugins.kotlin.serialization) apply false
-}
+import org.jlleitschuh.gradle.ktlint.KtlintExtension
+import org.jlleitschuh.gradle.ktlint.tasks.BaseKtLintCheckTask
 
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-        maven { setUrl("https://jitpack.io") }
-        maven { setUrl("https://maven.aliyun.com/repository/public") }
-    }
-    dependencies {
-        classpath(libs.gradle)
-        classpath(kotlin("gradle-plugin", libs.versions.kotlin.get()))
-    }
+@Suppress("DSL_SCOPE_VIOLATION")
+plugins {
+    alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.android.library) apply false
+    alias(libs.plugins.android.kotlin.multiplatform.library) apply false
+    alias(libs.plugins.compose.multiplatform) apply false
+    alias(libs.plugins.compose.compiler) apply false
+    alias(libs.plugins.kotlin.ksp) apply false
+    alias(libs.plugins.ktlint) apply false
+    alias(libs.plugins.protobuf) apply false
+    alias(libs.plugins.sentry.android) apply false
+    alias(libs.plugins.sentry.jvm) apply false
 }
 
 tasks.register<Delete>("clean") {
@@ -22,13 +23,19 @@ tasks.register<Delete>("clean") {
 }
 
 subprojects {
-    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-        compilerOptions {
-            if (project.findProperty("enableComposeCompilerReports") == "true") {
-                arrayOf("reports", "metrics").forEach {
-                    freeCompilerArgs.add("-P")
-                    freeCompilerArgs.add("plugin:androidx.compose.compiler.plugins.kotlin:${it}Destination=${project.layout.buildDirectory}/compose_metrics")
-                }
+    apply(plugin = "org.jlleitschuh.gradle.ktlint")
+
+    configure<KtlintExtension> {
+        version.set("1.8.0")
+        filter {
+            exclude { element -> element.file.invariantSeparatorsPath.contains("/build/generated/") }
+        }
+    }
+
+    tasks.withType<BaseKtLintCheckTask>().configureEach {
+        exclude { element ->
+            element.file.invariantSeparatorsPath.let { path ->
+                path.contains("/build/generated/") || path.contains("/build/kspCaches/")
             }
         }
     }

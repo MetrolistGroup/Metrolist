@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Mic pulse ring – idle state (transparent, no ring) -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval">
-    <solid android:color="@android:color/transparent" />
-    <size android:width="56dp" android:height="56dp" />
-</shape>

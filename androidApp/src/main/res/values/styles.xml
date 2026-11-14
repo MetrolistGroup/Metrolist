@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Widget.Metrolist" parent="@android:style/Theme.DeviceDefault">
+        <item name="android:colorBackground">#E6E1E5</item>
+    </style>
+
+    <style name="MetrolistPlaylistWidgetCard">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">center_horizontal</item>
+    </style>
+
+    <style name="MetrolistPlaylistWidgetArtworkFrame">
+        <item name="android:layout_width">72dp</item>
+        <item name="android:layout_height">72dp</item>
+    </style>
+
+    <style name="MetrolistPlaylistWidgetArtwork">
+        <item name="android:layout_width">72dp</item>
+        <item name="android:layout_height">72dp</item>
+        <item name="android:scaleType">centerCrop</item>
+        <item name="android:src">@mipmap/ic_launcher</item>
+        <item name="android:contentDescription">@string/playlists</item>
+    </style>
+
+    <style name="MetrolistPlaylistWidgetCardPlayButton">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_gravity">bottom|end</item>
+        <item name="android:layout_marginEnd">2dp</item>
+        <item name="android:layout_marginBottom">2dp</item>
+        <item name="android:background">@drawable/widget_playlist_card_play_bg</item>
+    </style>
+
+    <style name="MetrolistPlaylistWidgetCardPlayIcon">
+        <item name="android:layout_width">22dp</item>
+        <item name="android:layout_height">22dp</item>
+        <item name="android:layout_gravity">center</item>
+        <item name="android:src">@drawable/ic_widget_play_low</item>
+        <item name="android:contentDescription">@string/play</item>
+    </style>
+
+    <style name="MetrolistPlaylistWidgetCardTitle">
+        <item name="android:layout_width">76dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">5dp</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColor">@color/widget_text_primary</item>
+        <item name="android:maxLines">2</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:gravity">center</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+</resources>

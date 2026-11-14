@@ -1,0 +1,19 @@
+cask "metrolist" do
+  arch arm: "arm64", intel: "x64"
+
+  version "@VERSION@"
+  sha256 arm:   "@MACOS_ARM64_SHA256@",
+         intel: "@MACOS_X64_SHA256@"
+
+  url "https://github.com/MetrolistGroup/Metrolist/releases/download/v#{version}/metrolist-desktop-macos-#{arch}-#{version}.dmg"
+  name "Metrolist"
+  desc "YouTube Music desktop client"
+  homepage "https://github.com/MetrolistGroup/Metrolist"
+
+  livecheck do
+    url :url
+    strategy :github_latest
+  end
+
+  app "Metrolist.app"
+end

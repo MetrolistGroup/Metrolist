@@ -1,0 +1,600 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.wifi"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.bluetooth"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.type.automotive"
+        android:required="false" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE"
+        tools:ignore="ForegroundServicesPolicy" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Required by the user-initiated updater in direct-distribution builds. -->
+    <uses-permission
+        android:name="android.permission.REQUEST_INSTALL_PACKAGES"
+        tools:ignore="RequestInstallPackagesPolicy" />
+
+    <queries>
+        <provider android:authorities="androidx.car.app.connection" />
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="discord" />
+        </intent>
+        <intent>
+            <action android:name="android.media.action.DISPLAY_AUDIO_EFFECT_CONTROL_PANEL" />
+        </intent>
+    </queries>
+
+    <!-- PiP is explicitly user-entered and replaces the player layout, so automatic entry and a persistent source rect do not apply. -->
+    <application
+        tools:ignore="PictureInPictureIssue"
+        android:name="com.metrolist.android.App"
+        android:banner="@mipmap/tv_banner"
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:label="${appLabel}"
+        android:supportsRtl="true"
+        android:enableOnBackInvokedCallback="true"
+        android:networkSecurityConfig="@xml/network_security_config"
+        tools:targetApi="tiramisu"
+        android:theme="@style/Theme.Metrolist.Starting">
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
+        <!-- Media clients need exported artwork URIs; the provider checks callers and serves only approved artwork. -->
+        <provider
+            android:name="com.metrolist.android.playback.MediaArtworkProvider"
+            android:authorities="${applicationId}.media-artwork"
+            android:exported="true"
+            tools:ignore="ExportedContentProvider" />
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_provider_paths" />
+        </provider>
+        <meta-data
+            android:name="com.android.automotive"
+            android:resource="@xml/automotive_app_desc" />
+
+        <activity
+            android:name="com.metrolist.android.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:supportsPictureInPicture="true"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.metrolist.music.action.SEARCH" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="com.metrolist.music.action.LIBRARY" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.MUSIC_PLAYER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="metrolist.cc" />
+                <data android:pathPrefix="/listen" />
+                <data android:pathPrefix="/party" />
+                <data android:pathPrefix="/watch" />
+                <data android:pathPrefix="/playlist" />
+                <data android:pathPrefix="/channel/" />
+                <data android:pathPrefix="/browse/" />
+                <data android:pathPrefix="/album/" />
+                <data android:pathPrefix="/artist/" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="metrolist" android:host="listen-together" />
+            </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:host="youtube.com" />
+                <data android:host="m.youtube.com" />
+                <data android:host="www.youtube.com" />
+                <data android:host="music.youtube.com" />
+                <data android:pathPrefix="/v/" />
+                <data android:pathPrefix="/embed/" />
+                <data android:pathPrefix="/live/" />
+                <data android:pathPrefix="/watch" />
+                <data android:pathPrefix="/channel/" />
+                <data android:pathPrefix="/user/" />
+                <data android:pathPrefix="/c/" />
+                <data android:pathPrefix="/playlist" />
+                <data android:pathPrefix="/browse/" />
+                <data android:pathPrefix="/search" />
+            </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:host="youtu.be" />
+                <data android:pathPrefix="/" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="vnd.youtube" />
+                <data android:scheme="vnd.youtube.launch" />
+                <data android:scheme="metrolist" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="metrolist-auth" />
+                <data android:host="discord" />
+                <data android:pathPrefix="/callback" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity>
+
+        <activity
+            android:name="com.metrolist.android.backup.RestoreRestartActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:finishOnTaskLaunch="true"
+            android:noHistory="true"
+            android:process=":restore_restart"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <activity-alias
+            android:name=".MainActivityOriginal"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="${appLabel}"
+            android:targetActivity="com.metrolist.android.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivityArcticHaze"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_arctic_haze"
+            android:label="${appLabel}"
+            android:targetActivity="com.metrolist.android.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivityLavenderLeap"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_lavender_leap"
+            android:label="${appLabel}"
+            android:targetActivity="com.metrolist.android.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivityMetromallow"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_metromallow"
+            android:label="${appLabel}"
+            android:targetActivity="com.metrolist.android.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivityPrideSpecial"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pride_special"
+            android:label="${appLabel}"
+            android:targetActivity="com.metrolist.android.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivityDynamicBg"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="${appLabel}"
+            android:targetActivity="com.metrolist.android.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivityKayeStatic"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_kaye_static"
+            android:label="${appLabel}"
+            android:targetActivity="com.metrolist.android.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivityZenithBlack"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_zenith_black"
+            android:label="${appLabel}"
+            android:targetActivity="com.metrolist.android.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivityZenithWhite"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_zenith_white"
+            android:label="${appLabel}"
+            android:targetActivity="com.metrolist.android.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivityGradient"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_gradient"
+            android:label="${appLabel}"
+            android:targetActivity="com.metrolist.android.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivityDefault"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="${appLabel}"
+            android:targetActivity="com.metrolist.android.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivityDynamic"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="${appLabel}"
+            android:targetActivity="com.metrolist.android.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <service
+            android:name="com.metrolist.shared.youtube.playback.PoTokenService"
+            android:exported="false"
+            android:process=":potoken" />
+
+        <service
+            android:name="com.metrolist.android.playlistimport.AndroidPlaylistImportService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+            android:stopWithTask="false" />
+
+        <service
+            android:name="com.metrolist.android.playback.DownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+            android:stopWithTask="false" />
+
+        <service
+            android:name="com.metrolist.android.playback.MusicService"
+            android:enabled="true"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaLibraryService" />
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name="com.metrolist.android.listentogether.ListenTogetherNotificationReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name="com.metrolist.android.playback.DownloadNotificationReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name="com.metrolist.android.update.CrashUpdateInstallReceiver"
+            android:process=":crash"
+            android:exported="false" />
+        <receiver
+            android:name="com.metrolist.android.update.UpdateInstallReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name="com.metrolist.android.widget.MusicWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_music_player">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/music_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name="com.metrolist.android.widget.PlaylistWidgetReceiver"
+            android:exported="true"
+            android:label="@string/playlists">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/playlist_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name="com.metrolist.android.widget.TurntableWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_turntable">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/turntable_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name="com.metrolist.android.widget.RecognizerWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_recognizer_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/recognizer_widget_info" />
+        </receiver>
+
+        <service
+            android:name="com.metrolist.android.recognition.RecognitionWidgetService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <activity
+            android:name="com.metrolist.android.recognition.RecognitionLaunchActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <service
+            android:name="com.metrolist.android.quicksettings.MusicRecognizerTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_widget_mic"
+            android:label="@string/recognize_music"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="true" />
+        </service>
+
+        <receiver
+            android:name="com.metrolist.android.widget.WidgetActionReceiver"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.screens.CrashActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:process=":crash" />
+
+        <activity
+            android:name=".ui.screens.CrashLogsActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:process=":crash">
+            <intent-filter>
+                <action android:name="com.metrolist.music.action.CRASH_LOGS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name="androidx.media3.session.MediaButtonReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

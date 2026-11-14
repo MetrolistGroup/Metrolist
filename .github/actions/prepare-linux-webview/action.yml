@@ -1,0 +1,49 @@
+name: Prepare Linux ARM64 WebView
+description: Install the pinned Rust toolchain and reuse locked WebView dependencies
+
+inputs:
+  cache-read-only:
+    description: Restore without saving caches for pull requests
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Cache native Rust toolchain
+      uses: ./.github/actions/cache-rust-toolchain
+      with:
+        cache-read-only: ${{ inputs.cache-read-only }}
+
+    - name: Install WebView build dependencies
+      id: toolchain
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Runner images can ship a stale package index whose pinned .deb versions are gone from the mirror.
+        sudo apt-get update
+        sudo apt-get install -y build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev libxdo-dev
+        if ! command -v rustup >/dev/null; then sudo apt-get install -y rustup; fi
+        rustup toolchain install 1.99.1 --profile minimal --no-self-update
+        libraries=$(dpkg-query -W -f='${Package}=${Version}\n' gcc libc6-dev libgtk-3-dev libwebkit2gtk-4.1-dev libxdo-dev | sha256sum | cut -d ' ' -f 1)
+        echo "libraries=$libraries" >> "$GITHUB_OUTPUT"
+        echo "os=$(. /etc/os-release; echo "$ID-$VERSION_ID")" >> "$GITHUB_OUTPUT"
+
+    # Cargo needs source timestamps as well as target artifacts to reuse dependencies.
+    - name: Restore WebView compilation (read-only)
+      if: inputs.cache-read-only == 'true'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: |
+          ~/.cargo/registry
+          desktopApp/build/linux-webview/target
+        key: linux-webview-v3-${{ steps.toolchain.outputs.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.libraries }}-${{ hashFiles('scripts/build_linux_webview.sh', '.github/actions/prepare-linux-webview/action.yml') }}
+
+    - name: Cache WebView compilation
+      if: inputs.cache-read-only != 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: |
+          ~/.cargo/registry
+          desktopApp/build/linux-webview/target
+        key: linux-webview-v3-${{ steps.toolchain.outputs.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.libraries }}-${{ hashFiles('scripts/build_linux_webview.sh', '.github/actions/prepare-linux-webview/action.yml') }}

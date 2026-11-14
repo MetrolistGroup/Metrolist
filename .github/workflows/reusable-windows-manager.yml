@@ -1,0 +1,124 @@
+name: Windows manager
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version embedded in the installer
+        required: true
+        type: string
+      portable-artifact:
+        description: Portable ZIP used by manual installer verification
+        default: release-desktop-windows
+        type: string
+      run-verification:
+        description: Run installer tests against the packaged ZIP
+        default: true
+        type: boolean
+
+jobs:
+  build:
+    name: Windows manager
+    runs-on: blacksmith-2vcpu-windows-2025
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Check out Metrolist
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Check out pinned MetrolistManager
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: MetrolistGroup/MetrolistManager
+          ref: 18d2846bcc95847f08ea969d707222c1566d9f65
+          path: manager-source
+          persist-credentials: false
+
+      - name: Download portable artifact
+        if: inputs.run-verification
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: ${{ inputs.portable-artifact }}
+          path: release-input
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: manager-source/go.mod
+          cache-dependency-path: manager-source/go.sum
+
+      - name: Generate release-bound manager config
+        shell: pwsh
+        env:
+          APP_VERSION: ${{ inputs.version }}
+        run: |
+          $config = @"
+          package buildconfig
+
+          const (
+              TargetVersion = "$env:APP_VERSION"
+              ReleaseTag = "v$env:APP_VERSION"
+              DesktopAssetName = "Metrolist-Desktop-windows.zip"
+              RepositoryOwner = "MetrolistGroup"
+              RepositoryName = "Metrolist"
+          )
+          "@
+          Set-Content -Path "manager-source/internal/buildconfig/config.go" -Value $config -Encoding utf8
+
+      - name: Test manager
+        if: inputs.run-verification
+        working-directory: manager-source
+        shell: pwsh
+        run: |
+          go test ./...
+          go vet ./...
+
+      - name: Validate portable payload
+        if: inputs.run-verification
+        working-directory: manager-source
+        shell: pwsh
+        env:
+          APP_VERSION: ${{ inputs.version }}
+        run: go run ./cmd/validate-payload "../release-input/Metrolist-Desktop-Windows.zip" "$env:APP_VERSION"
+
+      - name: Embed Windows resources
+        working-directory: manager-source
+        shell: pwsh
+        run: >-
+          go run github.com/akavel/rsrc@v0.10.2
+          -arch amd64
+          -manifest MetrolistManager.exe.manifest
+          -ico ../desktopApp/src/desktopMain/resources/logo.ico
+          -o rsrc_windows_amd64.syso
+
+      - name: Build manager
+        working-directory: manager-source
+        shell: pwsh
+        env:
+          APP_VERSION: ${{ inputs.version }}
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          go build -trimpath -ldflags "-s -w -H=windowsgui" -o "dist/metrolist-installer-windows-x64-$env:APP_VERSION.exe" .
+
+      - name: Install, repair and uninstall end to end
+        if: inputs.run-verification
+        working-directory: manager-source
+        shell: pwsh
+        env:
+          APP_VERSION: ${{ inputs.version }}
+        run: |
+          $env:METROLIST_MANAGER_E2E_BINARY = (Resolve-Path "dist/metrolist-installer-windows-x64-$env:APP_VERSION.exe").Path
+          $env:METROLIST_MANAGER_E2E_PAYLOAD = (Resolve-Path "../release-input/Metrolist-Desktop-Windows.zip").Path
+          $env:METROLIST_MANAGER_E2E_VERSION = $env:APP_VERSION
+          go test -run TestEndToEndInstallUpdateAndUninstall -count=1 -v .
+
+      - name: Upload manager artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: release-windows-manager
+          path: manager-source/dist/metrolist-installer-windows-x64-${{ inputs.version }}.exe
+          if-no-files-found: error
+          retention-days: 4

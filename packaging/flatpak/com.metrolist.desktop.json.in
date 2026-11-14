@@ -1,0 +1,46 @@
+{
+  "app-id": "com.metrolist.desktop",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "50",
+  "sdk": "org.gnome.Sdk",
+  "command": "com.metrolist.desktop",
+  "finish-args": [
+    "--share=network",
+    "--share=ipc",
+    "--socket=x11",
+    "--socket=pulseaudio",
+    "--device=dri",
+    "--talk-name=org.freedesktop.secrets",
+    "--own-name=org.mpris.MediaPlayer2.metrolist",
+    "--filesystem=xdg-download",
+    "--filesystem=xdg-music"
+  ],
+  "modules": [
+    {
+      "name": "metrolist",
+      "buildsystem": "simple",
+      "build-commands": [
+        "chmod +x Metrolist.AppImage",
+        "./Metrolist.AppImage --appimage-extract",
+        "test -x squashfs-root/bin/Metrolist",
+        "test -f squashfs-root/lib/runtime/lib/server/libjvm.so",
+        "mkdir -p /app/metrolist /app/bin",
+        "cp -a squashfs-root/. /app/metrolist/",
+        "install -Dm755 com.metrolist.desktop /app/bin/com.metrolist.desktop",
+        "install -Dm644 com.metrolist.desktop.desktop /app/share/applications/com.metrolist.desktop.desktop",
+        "install -Dm644 com.metrolist.desktop.metainfo.xml /app/share/metainfo/com.metrolist.desktop.metainfo.xml",
+        "install -Dm644 com.metrolist.desktop.png /app/share/icons/hicolor/512x512/apps/com.metrolist.desktop.png",
+        "install -Dm644 com.metrolist.desktop.svg /app/share/icons/hicolor/scalable/apps/com.metrolist.desktop.svg"
+      ],
+      "sources": [
+        {"type": "file", "url": "@LINUX_X64_URL@", "sha256": "@LINUX_X64_SHA256@", "dest-filename": "Metrolist.AppImage", "only-arches": ["x86_64"]},
+        {"type": "file", "url": "@LINUX_ARM64_URL@", "sha256": "@LINUX_ARM64_SHA256@", "dest-filename": "Metrolist.AppImage", "only-arches": ["aarch64"]},
+        {"type": "file", "path": "com.metrolist.desktop"},
+        {"type": "file", "path": "com.metrolist.desktop.desktop"},
+        {"type": "file", "path": "com.metrolist.desktop.metainfo.xml"},
+        {"type": "file", "path": "com.metrolist.desktop.png"},
+        {"type": "file", "path": "com.metrolist.desktop.svg"}
+      ]
+    }
+  ]
+}

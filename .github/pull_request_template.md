@@ -1,18 +1,5 @@
-## Problem
-<!-- Describe the issue or limitation this PR addresses  
-DO NOT PR NEW FEATURES, WE'RE ON A FEATURE FREEZE!!! -->
-
-## Cause
-<!-- Explain the root cause of the problem -->
-
-## Solution
-<!-- List the changes made to fix the issue -->
-- 
-
-## Testing
-<!-- Describe how the changes were tested -->
-
-## Related Issues
-<!-- List any related issues or PRs -->
-- Closes #
-- Related to #
+<!--
+Describe in a few sentences of plain prose what this PR solves and why. Do not use lists.
+Reference the issue it resolves with "fixes: #<issue>", or "related to: #<issue>" when it does not resolve it.
+LLM-written? Check AGENTS.md rejected features and existing PRs first, apply skills/unslop/SKILL.md and keep it short.
+-->

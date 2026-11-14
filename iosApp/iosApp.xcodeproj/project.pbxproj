@@ -1,0 +1,348 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		48D55D6E3B0150F6A3E5DBD2 /* iosApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E06ED7E670B5D21A160DA9E /* iosApp.swift */; };
+		9FE61069A71042D393E7AA0B /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 9FE61069A71042D393E7AA0C /* Sentry */; };
+		A6A0F9B42F3D4A2B91B6C814 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1E6D6B4964F047A8A6DC43F5 /* Assets.xcassets */; };
+		B161A9B6D7F34140A19AC001 /* kuromoji.js in Resources */ = {isa = PBXBuildFile; fileRef = B161A9B6D7F34140A19AC101 /* kuromoji.js */; };
+		B161A9B6D7F34140A19AC002 /* kuromoji-bootstrap.js in Resources */ = {isa = PBXBuildFile; fileRef = B161A9B6D7F34140A19AC102 /* kuromoji-bootstrap.js */; };
+		B161A9B6D7F34140A19AC003 /* kuromoji-LICENSE-2.0.txt in Resources */ = {isa = PBXBuildFile; fileRef = B161A9B6D7F34140A19AC103 /* kuromoji-LICENSE-2.0.txt */; };
+		B161A9B6D7F34140A19AC004 /* kuromoji-NOTICE.md in Resources */ = {isa = PBXBuildFile; fileRef = B161A9B6D7F34140A19AC104 /* kuromoji-NOTICE.md */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		C2DBF4EF9D605889B54F6416 /* Metrolist.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Metrolist.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5E06ED7E670B5D21A160DA9E /* iosApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iosApp.swift; sourceTree = "<group>"; };
+		0418C23F19355BB18E625B53 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Configuration/Config.xcconfig; sourceTree = "<group>"; };
+		B0FD6575DF35547EA4A7F264 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Configuration/Info.plist; sourceTree = "<group>"; };
+		1E6D6B4964F047A8A6DC43F5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B161A9B6D7F34140A19AC101 /* kuromoji.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = ../shared/src/iosMain/resources/kuromoji.js; sourceTree = SOURCE_ROOT; };
+		B161A9B6D7F34140A19AC102 /* kuromoji-bootstrap.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = ../shared/src/iosMain/resources/kuromoji-bootstrap.js; sourceTree = SOURCE_ROOT; };
+		B161A9B6D7F34140A19AC103 /* kuromoji-LICENSE-2.0.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ../shared/src/iosMain/resources/kuromoji-LICENSE-2.0.txt; sourceTree = SOURCE_ROOT; };
+		B161A9B6D7F34140A19AC104 /* kuromoji-NOTICE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = ../shared/src/iosMain/resources/kuromoji-NOTICE.md; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		E7110709DB0758BE85F9923E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9FE61069A71042D393E7AA0B /* Sentry in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2D2E6A3402C950B78E0D2671 = {
+			isa = PBXGroup;
+			children = (
+				7070D71935FF5FC499D11EDA /* iosApp */,
+				92C43B9FC0E65F6DB2CAB38E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		7070D71935FF5FC499D11EDA /* iosApp */ = {
+			isa = PBXGroup;
+			children = (
+				5E06ED7E670B5D21A160DA9E /* iosApp.swift */,
+				1E6D6B4964F047A8A6DC43F5 /* Assets.xcassets */,
+				B161A9B6D7F34140A19AC101 /* kuromoji.js */,
+				B161A9B6D7F34140A19AC102 /* kuromoji-bootstrap.js */,
+				B161A9B6D7F34140A19AC103 /* kuromoji-LICENSE-2.0.txt */,
+				B161A9B6D7F34140A19AC104 /* kuromoji-NOTICE.md */,
+				A2402BE361735165BE944747 /* Configuration */,
+			);
+			sourceTree = "<group>";
+		};
+		A2402BE361735165BE944747 /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				0418C23F19355BB18E625B53 /* Config.xcconfig */,
+				B0FD6575DF35547EA4A7F264 /* Info.plist */,
+			);
+			sourceTree = "<group>";
+		};
+		92C43B9FC0E65F6DB2CAB38E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C2DBF4EF9D605889B54F6416 /* Metrolist.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3CD07ED54BD95B1693892797 /* iosApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7ACB944F5C185612A580ED6D /* Build configuration list for PBXNativeTarget "iosApp" */;
+			buildPhases = (
+				A1B2C3D4E5F60718293A4B5C /* Compile Kotlin Multiplatform Framework */,
+				94356E21ACD05315AC55060D /* Sources */,
+				E7110709DB0758BE85F9923E /* Frameworks */,
+				D84F9A442AB949ABB58F7BA8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			packageProductDependencies = (
+				9FE61069A71042D393E7AA0C /* Sentry */,
+			);
+			name = iosApp;
+			productName = Metrolist;
+			productReference = C2DBF4EF9D605889B54F6416 /* Metrolist.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		73E67FC67FAD57E1BC7A83AC /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1520;
+				TargetAttributes = {
+					3CD07ED54BD95B1693892797 = {
+						CreatedOnToolsVersion = 15.2;
+					};
+				};
+			};
+			buildConfigurationList = 4D6435FF64F051828AC9E49B /* Build configuration list for PBXProject "Metrolist" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 2D2E6A3402C950B78E0D2671;
+			productRefGroup = 92C43B9FC0E65F6DB2CAB38E /* Products */;
+			packageReferences = (
+				9FE61069A71042D393E7AA0D /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+			);
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3CD07ED54BD95B1693892797 /* iosApp */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D84F9A442AB949ABB58F7BA8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A6A0F9B42F3D4A2B91B6C814 /* Assets.xcassets in Resources */,
+				B161A9B6D7F34140A19AC001 /* kuromoji.js in Resources */,
+				B161A9B6D7F34140A19AC002 /* kuromoji-bootstrap.js in Resources */,
+				B161A9B6D7F34140A19AC003 /* kuromoji-LICENSE-2.0.txt in Resources */,
+				B161A9B6D7F34140A19AC004 /* kuromoji-NOTICE.md in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A1B2C3D4E5F60718293A4B5C /* Compile Kotlin Multiplatform Framework */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Compile Kotlin Multiplatform Framework";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/MetrolistVersion.h",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\ncd \"$SRCROOT/..\"\nbash scripts/ios_version.sh \"$DERIVED_FILE_DIR/MetrolistVersion.h\"\n./gradlew :shared:embedAndSignAppleFrameworkForXcode\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		94356E21ACD05315AC55060D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				48D55D6E3B0150F6A3E5DBD2 /* iosApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		F006DA927BA25D0496E4F476 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0418C23F19355BB18E625B53 /* Config.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
+				);
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		8D984F6E1182562CB6D72DD2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0418C23F19355BB18E625B53 /* Config.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
+				);
+				GCC_OPTIMIZATION_LEVEL = s;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		0D5E18CC5FC05B3ABE711B80 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0418C23F19355BB18E625B53 /* Config.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = (
+					"ARCTIC_HAZE",
+					"LAVENDER_LEAP",
+					"METROMALLOW",
+					"PRIDE_SPECIAL",
+					"STATIC",
+					"ZENITH_BLACK",
+					"ZENITH_WHITE",
+					"GRADIENT",
+				);
+				CODE_SIGN_STYLE = Automatic;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
+				);
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Configuration/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+			};
+			name = Debug;
+		};
+		45FA7D8EA9745FFEB759DB6D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0418C23F19355BB18E625B53 /* Config.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = (
+					"ARCTIC_HAZE",
+					"LAVENDER_LEAP",
+					"METROMALLOW",
+					"PRIDE_SPECIAL",
+					"STATIC",
+					"ZENITH_BLACK",
+					"ZENITH_WHITE",
+					"GRADIENT",
+				);
+				CODE_SIGN_STYLE = Automatic;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
+				);
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Configuration/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		9FE61069A71042D393E7AA0D /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+			requirement = {
+				kind = exactVersion;
+				version = 9.33.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9FE61069A71042D393E7AA0C /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9FE61069A71042D393E7AA0D /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
+		};
+/* End XCSwiftPackageProductDependency section */
+
+/* Begin XCConfigurationList section */
+		4D6435FF64F051828AC9E49B /* Build configuration list for PBXProject "Metrolist" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F006DA927BA25D0496E4F476 /* Debug */,
+				8D984F6E1182562CB6D72DD2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7ACB944F5C185612A580ED6D /* Build configuration list for PBXNativeTarget "iosApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0D5E18CC5FC05B3ABE711B80 /* Debug */,
+				45FA7D8EA9745FFEB759DB6D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = 73E67FC67FAD57E1BC7A83AC /* Project object */;
+}

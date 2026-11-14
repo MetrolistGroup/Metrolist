@@ -1,0 +1,62 @@
+name: Prepare Android signing
+description: Check signing secrets and materialize the keystore file for release builds
+
+outputs:
+  signing_available:
+    description: Whether all signing secrets are configured
+    value: ${{ steps.prepare.outputs.signing_available }}
+  keystore_path:
+    description: Path to the keystore file on the runner
+    value: ${{ steps.prepare.outputs.keystore_path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Prepare signing keystore
+      id: prepare
+      shell: bash
+      env:
+        KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+        KEYSTORE_PASSWORD: ${{ env.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ env.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ env.KEY_PASSWORD }}
+      run: |
+        if [ -z "$KEYSTORE_PATH" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+          echo "Signing secrets not fully configured; release builds will be unsigned"
+          echo "signing_available=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        KEYSTORE_FILE="${RUNNER_TEMP}/release.keystore"
+        umask 077
+
+        if [ -f "$KEYSTORE_PATH" ]; then
+          KEYSTORE_FILE="$KEYSTORE_PATH"
+        else
+          printf '%s' "$KEYSTORE_PATH" | base64 --decode > "$KEYSTORE_FILE"
+        fi
+
+        if [ ! -s "$KEYSTORE_FILE" ]; then
+          echo "Keystore file is missing or empty"
+          exit 1
+        fi
+
+        VALIDATION_STORE="${RUNNER_TEMP}/signing-validation.p12"
+        rm -f "$VALIDATION_STORE"
+        if ! keytool -importkeystore \
+          -srckeystore "$KEYSTORE_FILE" \
+          -srcstorepass "$KEYSTORE_PASSWORD" \
+          -srcalias "$KEY_ALIAS" \
+          -srckeypass "$KEY_PASSWORD" \
+          -destkeystore "$VALIDATION_STORE" \
+          -deststoretype PKCS12 \
+          -deststorepass metrolist-ci-validation \
+          -destkeypass metrolist-ci-validation \
+          -noprompt; then
+          echo "::error::Unable to read the Android signing key. Verify KEYSTORE_PASSWORD, KEY_ALIAS, and KEY_PASSWORD."
+          exit 1
+        fi
+        rm -f "$VALIDATION_STORE"
+
+        echo "signing_available=true" >> "$GITHUB_OUTPUT"
+        echo "keystore_path=$KEYSTORE_FILE" >> "$GITHUB_OUTPUT"

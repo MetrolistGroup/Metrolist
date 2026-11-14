@@ -1,0 +1,8 @@
+v13.3.0
+- Song upload and delete
+- Playback reliability fixes
+- Reproducible Builds and Listen Together ProGuard fixes
+- Playlist export from context menu
+- Stats Play all; QS music recognition tile
+- Auto sleep timer with fade-out; profile search filter
+- Channel subscriptions for podcasts and artists

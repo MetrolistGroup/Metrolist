@@ -1,0 +1,754 @@
+{
+  "reflection": [
+    {
+      "type": "org.jetbrains.skia.AnimationFrameInfo",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int",
+            "boolean",
+            "int",
+            "boolean",
+            "int",
+            "int",
+            "org.jetbrains.skia.IRect"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.Color4f",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.Drawable",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "_onDraw",
+          "parameterTypes": [
+            "long"
+          ]
+        },
+        {
+          "name": "onGetBounds",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.FontFamilyName",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.FontFeature",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "_tag"
+        },
+        {
+          "name": "end"
+        },
+        {
+          "name": "start"
+        },
+        {
+          "name": "value"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.FontMetrics",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "java.lang.Float",
+            "java.lang.Float",
+            "java.lang.Float",
+            "java.lang.Float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.FontVariation",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "_tag"
+        },
+        {
+          "name": "value"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.FontVariationAxis",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "float",
+            "float",
+            "float",
+            "boolean"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.IPoint",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.IRect",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "bottom"
+        },
+        {
+          "name": "left"
+        },
+        {
+          "name": "right"
+        },
+        {
+          "name": "top"
+        }
+      ],
+      "methods": [
+        {
+          "name": "makeLTRB",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.ImageInfo",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "int",
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.PaintFilterCanvas",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "onFilter",
+          "parameterTypes": [
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.Path",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.PathSegment",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "boolean"
+          ]
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "boolean"
+          ]
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "boolean"
+          ]
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "boolean",
+            "boolean"
+          ]
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "float",
+            "float",
+            "boolean"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.Point",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "x"
+        },
+        {
+          "name": "y"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.RRect",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "radii"
+        }
+      ],
+      "methods": [
+        {
+          "name": "makeComplexLTRB",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float[]"
+          ]
+        },
+        {
+          "name": "makeLTRB",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float"
+          ]
+        },
+        {
+          "name": "makeLTRB",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float"
+          ]
+        },
+        {
+          "name": "makeLTRB",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float"
+          ]
+        },
+        {
+          "name": "makeNinePatchLTRB",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.RSXform",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.Rect",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "bottom"
+        },
+        {
+          "name": "left"
+        },
+        {
+          "name": "right"
+        },
+        {
+          "name": "top"
+        }
+      ],
+      "methods": [
+        {
+          "name": "makeLTRB",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.impl.Native",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "_ptr"
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.paragraph.DecorationStyle",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "boolean",
+            "boolean",
+            "boolean",
+            "boolean",
+            "int",
+            "int",
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.paragraph.LineMetrics",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "int",
+            "boolean",
+            "double",
+            "double",
+            "double",
+            "double",
+            "double",
+            "double",
+            "double",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.paragraph.LineMetrics[]"
+    },
+    {
+      "type": "org.jetbrains.skia.paragraph.Shadow",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "float",
+            "float",
+            "double"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.paragraph.TextBox",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.paragraph.TextBox[]"
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.BidiRun",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "end"
+        },
+        {
+          "name": "level"
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.FontMgrRunIterator",
+      "jniAccessible": true
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.FontRun",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "end"
+        }
+      ],
+      "methods": [
+        {
+          "name": "_getFontPtr",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.HbIcuScriptRunIterator",
+      "jniAccessible": true
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.IcuBidiRunIterator",
+      "jniAccessible": true
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.LanguageRun",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "end"
+        },
+        {
+          "name": "language"
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.RunHandler",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "beginLine",
+          "parameterTypes": []
+        },
+        {
+          "name": "commitLine",
+          "parameterTypes": []
+        },
+        {
+          "name": "commitRun",
+          "parameterTypes": [
+            "org.jetbrains.skia.shaper.RunInfo",
+            "short[]",
+            "org.jetbrains.skia.Point[]",
+            "int[]"
+          ]
+        },
+        {
+          "name": "commitRunInfo",
+          "parameterTypes": []
+        },
+        {
+          "name": "runInfo",
+          "parameterTypes": [
+            "org.jetbrains.skia.shaper.RunInfo"
+          ]
+        },
+        {
+          "name": "runOffset",
+          "parameterTypes": [
+            "org.jetbrains.skia.shaper.RunInfo"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.RunInfo",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "_fontPtr"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "int",
+            "float",
+            "float",
+            "int",
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.ScriptRun",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "end"
+        },
+        {
+          "name": "scriptTag"
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.ShapingOptions",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "features"
+        },
+        {
+          "name": "fontMgr"
+        },
+        {
+          "name": "isApproximatePunctuation"
+        },
+        {
+          "name": "isApproximateSpaces"
+        },
+        {
+          "name": "isLeftToRight"
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.TextBlobBuilderRunHandler",
+      "jniAccessible": true
+    },
+    {
+      "type": "org.jetbrains.skia.skottie.LogLevel",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "ERROR"
+        },
+        {
+          "name": "WARNING"
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.skottie.Logger",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "log",
+          "parameterTypes": [
+            "org.jetbrains.skia.skottie.LogLevel",
+            "java.lang.String",
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.svg.SVGLength",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.svg.SVGPreserveAspectRatio",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skiko.HardwareLayer"
+    },
+    {
+      "type": "org.jetbrains.skiko.SkiaLayer$1"
+    },
+    {
+      "type": "org.jetbrains.skiko.redrawer.Direct3DRedrawer",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "isAdapterSupported",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "glob": "*skiko*.sha256"
+    }
+  ]
+}

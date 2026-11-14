@@ -1,0 +1,109 @@
+name: Verify Desktop
+
+on:
+  workflow_dispatch:
+    inputs:
+      macos-x64-use-intel-runner:
+        description: Build the x64 DMG on Intel instead of Apple Silicon with Rosetta
+        required: false
+        default: false
+        type: boolean
+      windows-manager:
+        description: Build and test the Windows installer against its portable package
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: desktop-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Select checks
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+      platform: ${{ steps.paths.outputs.desktop }}
+      shared-only: ${{ steps.paths.outputs.shared-only }}
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Read installer version
+        id: version
+        run: echo "value=$(sed -n 's/^appVersion=//p' gradle.properties)" >> "$GITHUB_OUTPUT"
+      - name: Select platform checks
+        id: paths
+        uses: ./.github/actions/ci-changes
+
+  macos:
+    name: macOS packages
+    if: github.event_name == 'workflow_dispatch' && !inputs.windows-manager
+    uses: ./.github/workflows/reusable-desktop-macos.yml
+    permissions:
+      contents: read
+    with:
+      upload-artifact: true
+      artifact-prefix: verify-
+      cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+      x64-use-intel-runner: ${{ inputs.macos-x64-use-intel-runner || vars.MACOS_X64_USE_INTEL_RUNNER == 'true' }}
+    secrets:
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+
+  windows:
+    name: Windows package
+    if: github.event_name == 'workflow_dispatch' && inputs.windows-manager
+    uses: ./.github/workflows/reusable-desktop-windows.yml
+    permissions:
+      contents: read
+    with:
+      upload-artifact: true
+      cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+    secrets:
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+
+  windows-manager:
+    name: Verify Windows installer
+    if: github.event_name == 'workflow_dispatch' && inputs.windows-manager
+    needs: [changes, windows]
+    uses: ./.github/workflows/reusable-windows-manager.yml
+    permissions:
+      contents: read
+    with:
+      version: ${{ needs.changes.outputs.version }}
+      portable-artifact: desktop-windows
+
+  build:
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.platform == 'true'
+    name: Desktop
+    uses: ./.github/workflows/reusable-desktop-verify.yml
+    permissions:
+      contents: read
+    with:
+      shared-only: ${{ needs.changes.outputs.shared-only == 'true' }}
+      cache-read-only: ${{ github.event_name == 'pull_request' }}
+    secrets:
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}

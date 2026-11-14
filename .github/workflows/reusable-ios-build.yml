@@ -1,0 +1,290 @@
+name: Reusable iOS Build
+
+on:
+  workflow_call:
+    inputs:
+      run-verification:
+        description: Run tests and launch checks, disabled only after the release gate succeeds
+        required: false
+        default: true
+        type: boolean
+      upload-artifact:
+        description: Upload packaged output as workflow artifacts
+        required: false
+        default: false
+        type: boolean
+      artifact-name:
+        description: Workflow artifact name
+        required: false
+        default: Metrolist-iOS-IPA
+        type: string
+      build-ipa:
+        description: Build the IPA for stable releases
+        required: false
+        default: false
+        type: boolean
+      cache-read-only:
+        description: Keep the Gradle cache read-only
+        required: false
+        default: false
+        type: boolean
+      staging-release-tag:
+        description: Draft release tag used for cross-job package handoff
+        required: false
+        default: ''
+        type: string
+      upload-sentry:
+        description: Upload the archive's debug symbols to Sentry
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      SENTRY_AUTH_TOKEN:
+        required: false
+      GRADLE_ENCRYPTION_KEY:
+        required: false
+      LYPRIO_BASE_URL:
+        required: false
+      LYPRIO_HMAC_KEY:
+        required: false
+      LASTFM_API_KEY:
+        required: false
+      LASTFM_SECRET:
+        required: false
+
+jobs:
+  build-ios:
+    name: Validate iOS
+    if: inputs.run-verification
+    runs-on: blacksmith-6vcpu-macos-latest
+    timeout-minutes: 45
+    env:
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      GRADLE_OPTS: >-
+        -Dorg.gradle.jvmargs="-XX:MaxRAMPercentage=60.0 -XX:+UseParallelGC -Dkotlin.daemon.jvm.options=-XX:MaxRAMPercentage=60.0"
+      ORG_GRADLE_PROJECT_org.gradle.workers.max: "2"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Validate Compose resources
+        run: python3 scripts/check_compose_resource_escapes.py
+
+      - name: Validate build script
+        run: |
+          bash -n scripts/build_ios.sh
+          python3 scripts/test_build_ios.py
+
+      - name: Prepare CI Gradle
+        uses: ./.github/actions/prepare-ci-gradle
+        with:
+          cache-scope: ios-test
+          persist-configuration-cache: 'false'
+          cache-read-only: ${{ inputs.cache-read-only }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Verify Xcode device SDK
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+
+      - name: Fingerprint Kotlin Native toolchain
+        id: native-toolchain
+        shell: bash
+        run: |
+          echo "xcode=$(xcodebuild -version | shasum -a 256 | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+          echo "kotlin=$(python3 -c 'import tomllib; print(tomllib.load(open("gradle/libs.versions.toml", "rb"))["versions"]["kotlin"])')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Kotlin Native
+        if: ${{ !inputs.cache-read-only }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.konan
+          key: konan-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-toolchain.outputs.kotlin }}-${{ steps.native-toolchain.outputs.xcode }}-test-${{ hashFiles('**/*.gradle.kts', 'gradle.properties', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties', 'shared/src/iosMain/cinterop/**') }}
+          restore-keys: |
+            konan-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-toolchain.outputs.kotlin }}-${{ steps.native-toolchain.outputs.xcode }}-test-
+            konan-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-toolchain.outputs.kotlin }}-${{ steps.native-toolchain.outputs.xcode }}-test
+
+      - name: Restore Kotlin Native (read-only)
+        if: inputs.cache-read-only
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.konan
+          key: konan-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-toolchain.outputs.kotlin }}-${{ steps.native-toolchain.outputs.xcode }}-test-${{ hashFiles('**/*.gradle.kts', 'gradle.properties', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties', 'shared/src/iosMain/cinterop/**') }}
+          restore-keys: |
+            konan-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-toolchain.outputs.kotlin }}-${{ steps.native-toolchain.outputs.xcode }}-test-
+            konan-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-toolchain.outputs.kotlin }}-${{ steps.native-toolchain.outputs.xcode }}-test
+
+      - name: Validate Swift Syntax
+        run: |
+          echo "Validating Swift source files in iosApp/..."
+          swift --version
+          find iosApp -name "*.swift" -print0 | xargs -0 xcrun --sdk iphonesimulator swiftc -target arm64-apple-ios17.0-simulator -parse
+          echo "Static Swift validation passed."
+
+      # AVPlayerItem fails with -12746 on a simulator when the host has no audio device.
+      - name: Install a virtual audio device
+        run: |
+          brew install --cask blackhole-2ch
+          sudo killall coreaudiod
+
+      - name: Run iOS backend tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          device=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          print(next(device["udid"] for runtime, items in devices.items() if ".iOS-" in runtime for device in items if device["name"].startswith("iPhone")))')
+          xcrun simctl bootstatus "$device" -b
+          ./gradlew :shared:iosSimulatorArm64Test --device "$device" -Pmetrolist.sourceRevision=
+
+      - name: Shut down iOS simulator
+        if: always()
+        shell: bash
+        run: |
+          device=$(xcrun simctl list devices booted --json | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          print(next((device["udid"] for runtime, items in devices.items() if ".iOS-" in runtime for device in items if device["state"] == "Booted"), ""))')
+          if [ -n "$device" ]; then
+            xcrun simctl shutdown "$device"
+          fi
+
+  package-ios:
+    name: Package iOS IPA
+    if: inputs.build-ipa || inputs.upload-artifact || inputs.staging-release-tag != ''
+    runs-on: blacksmith-6vcpu-macos-latest
+    timeout-minutes: 45
+    env:
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      GRADLE_OPTS: >-
+        -Dorg.gradle.jvmargs="-XX:MaxRAMPercentage=60.0 -XX:+UseParallelGC -Dkotlin.daemon.jvm.options=-XX:MaxRAMPercentage=60.0"
+      ORG_GRADLE_PROJECT_org.gradle.workers.max: "2"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Prepare CI Gradle
+        uses: ./.github/actions/prepare-ci-gradle
+        with:
+          cache-scope: ios-package
+          persist-configuration-cache: 'false'
+          cache-read-only: ${{ inputs.cache-read-only }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Fingerprint Kotlin Native toolchain
+        id: native-toolchain
+        shell: bash
+        run: |
+          echo "xcode=$(xcodebuild -version | shasum -a 256 | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+          echo "kotlin=$(python3 -c 'import tomllib; print(tomllib.load(open("gradle/libs.versions.toml", "rb"))["versions"]["kotlin"])')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Kotlin Native
+        if: ${{ !inputs.cache-read-only }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.konan
+          key: konan-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-toolchain.outputs.kotlin }}-${{ steps.native-toolchain.outputs.xcode }}-package-${{ hashFiles('**/*.gradle.kts', 'gradle.properties', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties', 'shared/src/iosMain/cinterop/**') }}
+          restore-keys: |
+            konan-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-toolchain.outputs.kotlin }}-${{ steps.native-toolchain.outputs.xcode }}-package-
+            konan-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-toolchain.outputs.kotlin }}-${{ steps.native-toolchain.outputs.xcode }}-package
+
+      - name: Restore Kotlin Native (read-only)
+        if: inputs.cache-read-only
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.konan
+          key: konan-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-toolchain.outputs.kotlin }}-${{ steps.native-toolchain.outputs.xcode }}-package-${{ hashFiles('**/*.gradle.kts', 'gradle.properties', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties', 'shared/src/iosMain/cinterop/**') }}
+          restore-keys: |
+            konan-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-toolchain.outputs.kotlin }}-${{ steps.native-toolchain.outputs.xcode }}-package-
+            konan-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-toolchain.outputs.kotlin }}-${{ steps.native-toolchain.outputs.xcode }}-package
+
+      - name: Validate tester release credentials
+        if: inputs.staging-release-tag != ''
+        env:
+          LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+          LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+        run: |
+          test -n "$LASTFM_API_KEY" || { echo "LASTFM_API_KEY is required for tester releases" >&2; exit 1; }
+          test -n "$LASTFM_SECRET" || { echo "LASTFM_SECRET is required for tester releases" >&2; exit 1; }
+          test -n "$LYPRIO_BASE_URL" || { echo "LYPRIO_BASE_URL is required for tester releases" >&2; exit 1; }
+          test -n "$LYPRIO_HMAC_KEY" || { echo "LYPRIO_HMAC_KEY is required for tester releases" >&2; exit 1; }
+
+      - name: Compile iOS release framework
+        env:
+          CONFIGURATION: Release
+          ORG_GRADLE_PROJECT_metrolist.verifyPackaging: ${{ inputs.run-verification }}
+          LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+          LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+        run: ./gradlew :shared:linkReleaseFrameworkIosArm64 --no-configuration-cache
+
+      - name: Build iOS IPA
+        env:
+          ORG_GRADLE_PROJECT_metrolist.verifyPackaging: ${{ inputs.run-verification }}
+          LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+          LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+        run: |
+          ./scripts/build_ios.sh --ipa
+
+      - name: Upload iOS debug symbols to Sentry
+        if: inputs.upload-sentry
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$SENTRY_AUTH_TOKEN" || { echo "SENTRY_AUTH_TOKEN is required when Sentry upload is enabled" >&2; exit 1; }
+          version="3.8.2"
+          case "$RUNNER_ARCH" in
+            ARM64)
+              asset="sentry-cli-Darwin-arm64"
+              sha256="c80d92b6d34eb64fe7402f56cc7968fbb15aab1c763254ad428b55cc98ec7dcf"
+              ;;
+            X64)
+              asset="sentry-cli-Darwin-x86_64"
+              sha256="084591ee1f0a43ba8696ccde30d4a79cd9a70d0fa294c5a10143a340f8f332ff"
+              ;;
+            *)
+              echo "Unsupported runner architecture: $RUNNER_ARCH" >&2
+              exit 1
+              ;;
+          esac
+          cli="$RUNNER_TEMP/$asset"
+          curl --fail --location --silent --show-error --retry 3 \
+            "https://downloads.sentry-cdn.com/sentry-cli/${version}/${asset}" \
+            --output "$cli"
+          actual_sha256="$(shasum -a 256 "$cli")"
+          [[ "${actual_sha256%% *}" == "$sha256" ]]
+          chmod +x "$cli"
+          dsyms="iosApp/build/Metrolist.xcarchive/dSYMs"
+          find "$dsyms" -maxdepth 1 -name '*.dSYM' | grep -q . || { echo "No dSYMs in $dsyms" >&2; exit 1; }
+          "$cli" debug-files upload \
+            --org metrolistgroup \
+            --project metrolist-kmp \
+            --include-sources \
+            --wait \
+            "$dsyms"
+
+      - name: Upload iOS IPA Artifact
+        if: inputs.upload-artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7 / v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: dist/Metrolist.ipa
+          if-no-files-found: error
+          retention-days: 4
+
+      - name: Upload iOS IPA to staging release
+        if: inputs.staging-release-tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STAGING_RELEASE_TAG: ${{ inputs.staging-release-tag }}
+        run: gh release upload "$STAGING_RELEASE_TAG" dist/Metrolist.ipa --clobber --repo "$GITHUB_REPOSITORY"

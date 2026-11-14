@@ -1,0 +1,32 @@
+name: Build desktop native tester
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Native target; ARM64 targets also require their repository enable variable
+        type: choice
+        default: linux-x64
+        options:
+          - linux-x64
+          - windows-x64
+          - macos-arm64
+          - linux-arm64
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-native-${{ inputs.platform }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    uses: ./.github/workflows/reusable-desktop-native.yml
+    with:
+      platform: ${{ inputs.platform }}
+    secrets:
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}

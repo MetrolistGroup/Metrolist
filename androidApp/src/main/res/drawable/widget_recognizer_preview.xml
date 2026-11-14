@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:width="300dp"
+        android:height="72dp"
+        android:drawable="@drawable/widget_background" />
+    <item
+        android:width="180dp"
+        android:height="10dp"
+        android:left="12dp"
+        android:top="31dp"
+        android:gravity="top|left">
+        <shape>
+            <solid android:color="@color/widget_text_primary" />
+            <corners android:radius="5dp" />
+        </shape>
+    </item>
+    <item
+        android:width="44dp"
+        android:height="44dp"
+        android:left="242dp"
+        android:top="14dp"
+        android:gravity="top|left"
+        android:drawable="@drawable/widget_mic_bg" />
+    <item
+        android:width="24dp"
+        android:height="24dp"
+        android:left="252dp"
+        android:top="24dp"
+        android:gravity="top|left"
+        android:drawable="@drawable/ic_widget_mic" />
+</layer-list>

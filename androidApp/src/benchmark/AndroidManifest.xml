@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <profileable android:shell="true" />
+
+        <meta-data
+            android:name="io.sentry.auto-init"
+            android:value="false" />
+        <meta-data
+            android:name="io.sentry.tombstone.enable"
+            android:value="true" />
+        <meta-data
+            android:name="io.sentry.tombstone.attach-raw"
+            android:value="true" />
+    </application>
+</manifest>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Material 3 baseline scheme for Android &lt; 12, dark -->
+    <color name="widget_surface">#211F26</color>
+    <color name="widget_surface_highest">#36343B</color>
+    <color name="widget_on_surface">#E6E0E9</color>
+    <color name="widget_on_surface_variant">#CAC4D0</color>
+    <color name="widget_primary">#D0BCFF</color>
+    <color name="widget_on_primary">#381E72</color>
+    <color name="widget_primary_container">#4F378B</color>
+    <color name="widget_on_primary_container">#EADDFF</color>
+    <color name="widget_secondary_container">#4A4458</color>
+    <color name="widget_on_secondary_container">#E8DEF8</color>
+    <color name="widget_tertiary">#EFB8C8</color>
+    <color name="widget_on_tertiary">#492532</color>
+    <color name="widget_tertiary_container">#633B48</color>
+    <color name="widget_on_tertiary_container">#FFD8E4</color>
+</resources>

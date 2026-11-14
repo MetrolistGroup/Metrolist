@@ -1,0 +1,209 @@
+{
+  "reflection": [
+    {
+      "type": "sun.font.CharToGlyphMapper",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "charToGlyph",
+          "parameterTypes": [
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.font.CompositeFont"
+    },
+    {
+      "type": "sun.font.Font2D",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "canDisplay",
+          "parameterTypes": [
+            "char"
+          ]
+        },
+        {
+          "name": "charToGlyphRaw",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
+          "name": "charToVariationGlyphRaw",
+          "parameterTypes": [
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "getMapper",
+          "parameterTypes": []
+        },
+        {
+          "name": "getTableBytes",
+          "parameterTypes": [
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.font.Font2DHandle"
+    },
+    {
+      "type": "sun.font.FontManager"
+    },
+    {
+      "type": "sun.font.FontManagerFactory"
+    },
+    {
+      "type": "sun.font.FontStrike",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "getGlyphMetrics",
+          "parameterTypes": [
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.font.FontUtilities",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "debugFonts",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.font.FreetypeFontScaler",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "invalidateScaler",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.font.GlyphList",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "gposx"
+        },
+        {
+          "name": "gposy"
+        },
+        {
+          "name": "images"
+        },
+        {
+          "name": "lcdRGBOrder"
+        },
+        {
+          "name": "lcdSubPixPos"
+        },
+        {
+          "name": "len"
+        },
+        {
+          "name": "positions"
+        },
+        {
+          "name": "usePositions"
+        }
+      ]
+    },
+    {
+      "type": "sun.font.PhysicalFont"
+    },
+    {
+      "type": "sun.font.PhysicalStrike",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "pScalerContext"
+        }
+      ],
+      "methods": [
+        {
+          "name": "adjustPoint",
+          "parameterTypes": [
+            "java.awt.geom.Point2D$Float"
+          ]
+        },
+        {
+          "name": "getGlyphPoint",
+          "parameterTypes": [
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.font.StrikeMetrics",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.font.SunFontManager"
+    },
+    {
+      "type": "sun.font.TrueTypeFont",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "readBlock",
+          "parameterTypes": [
+            "java.nio.ByteBuffer",
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "readBytes",
+          "parameterTypes": [
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.font.Type1Font",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "readFile",
+          "parameterTypes": [
+            "java.nio.ByteBuffer"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,229 @@
+name: Desktop macOS
+
+on:
+  workflow_call:
+    inputs:
+      run-verification:
+        description: Run tests and launch checks, disabled only after the release gate succeeds
+        required: false
+        default: true
+        type: boolean
+      x64-use-intel-runner:
+        description: Build x64 on Intel instead of Apple Silicon with Rosetta
+        required: false
+        default: false
+        type: boolean
+      upload-artifact:
+        description: Upload packaged output as workflow artifacts
+        required: false
+        default: false
+        type: boolean
+      artifact-prefix:
+        description: Prefix for workflow artifact names
+        required: false
+        default: ''
+        type: string
+      staging-release-tag:
+        description: Draft release tag used for cross-job package handoff
+        required: false
+        default: ''
+        type: string
+      cache-read-only:
+        description: Keep the Gradle cache read-only
+        required: false
+        default: false
+        type: boolean
+      upload-sentry:
+        description: Require Sentry credentials and upload desktop source context
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      GRADLE_ENCRYPTION_KEY:
+        required: false
+      SENTRY_AUTH_TOKEN:
+        required: false
+      LASTFM_API_KEY:
+        required: true
+      LASTFM_SECRET:
+        required: true
+      LYPRIO_BASE_URL:
+        required: true
+      LYPRIO_HMAC_KEY:
+        required: true
+
+jobs:
+  package:
+    name: ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: blacksmith-6vcpu-macos-15
+            native_arch: arm64
+          - arch: x64
+            runner: ${{ inputs.x64-use-intel-runner && 'macos-15-intel' || 'blacksmith-6vcpu-macos-15' }}
+            native_arch: x86_64
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install Rosetta for x64 packaging
+        if: matrix.arch == 'x64' && runner.arch == 'ARM64'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! /usr/bin/arch -x86_64 /usr/bin/true; then
+            sudo softwareupdate --install-rosetta --agree-to-license
+          fi
+
+      - name: Set up x64 packaging JDK
+        if: matrix.arch == 'x64'
+        id: packaging-jdk
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '25'
+          architecture: x64
+
+      - name: Prepare CI Gradle
+        uses: ./.github/actions/prepare-ci-gradle
+        with:
+          cache-scope: desktop-macos-${{ matrix.arch }}
+          persist-configuration-cache: 'false'
+          cache-read-only: ${{ inputs.cache-read-only }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          cache-strict-match: ${{ matrix.arch == 'x64' }}
+
+      - name: Generate installer icons
+        uses: ./.github/actions/generate-icons
+
+      - name: Validate Sentry configuration
+        if: inputs.upload-sentry
+        shell: bash
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: test -n "$SENTRY_AUTH_TOKEN" || { echo "SENTRY_AUTH_TOKEN is required when Sentry upload is enabled" >&2; exit 1; }
+
+      - name: Build macOS DMG
+        shell: bash
+        env:
+          ARCH: ${{ matrix.arch }}
+          PACKAGING_JAVA_HOME: ${{ steps.packaging-jdk.outputs.path }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+          LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+        run: |
+          set -euo pipefail
+          args=(
+            :desktopApp:packageReleaseDmg
+            -Pmetrolist.verifyPackaging=${{ inputs.run-verification }}
+            --no-daemon
+            --no-configuration-cache
+          )
+          if [[ "$ARCH" == 'x64' ]]; then
+            args+=(
+              -Pmetrolist.desktop.arch=x86_64
+              "-Pmetrolist.desktop.javaHome=$PACKAGING_JAVA_HOME"
+              -Dorg.gradle.java.installations.auto-detect=false
+              -Dorg.gradle.java.installations.auto-download=false
+              "-Dorg.gradle.java.installations.paths=$JAVA_HOME"
+            )
+          fi
+          ./gradlew "${args[@]}"
+
+      - name: Verify macOS app bundle
+        shell: bash
+        env:
+          NATIVE_ARCH: ${{ matrix.native_arch }}
+        run: |
+          set -euo pipefail
+          app="desktopApp/build/compose/binaries/main-release/app/Metrolist.app"
+          test -d "$app"
+          test -x "$app/Contents/MacOS/Metrolist"
+          lipo "$app/Contents/MacOS/Metrolist" -verify_arch "$NATIVE_ARCH"
+
+      - name: Verify x64 DMG native architectures
+        if: matrix.arch == 'x64'
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(desktopApp/build/compose/binaries/main-release/dmg/*.dmg)
+          test "${#files[@]}" -eq 1
+          test -f "${files[0]}"
+          mount_dir="$(mktemp -d "$RUNNER_TEMP/metrolist-x64.XXXXXX")"
+          trap 'status=$?; hdiutil detach "$mount_dir" -force || status=1; exit "$status"' EXIT
+          hdiutil attach "${files[0]}" -mountpoint "$mount_dir" -readonly -nobrowse
+          python3 .github/scripts/verify_macos_arch.py "$mount_dir/Metrolist.app" x86_64
+
+      - name: Upload desktop Sentry source context
+        if: inputs.upload-sentry
+        uses: ./.github/actions/upload-desktop-sentry
+        with:
+          sentry-auth-token: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          source-revision: ${{ github.sha }}
+
+      - name: Collect macOS DMG
+        id: package
+        shell: bash
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          version=""
+          while IFS='=' read -r key value; do
+            if [[ "$key" == "appVersion" ]]; then version="$value"; break; fi
+          done < gradle.properties
+          files=(desktopApp/build/compose/binaries/main-release/dmg/*.dmg)
+          test -f "${files[0]}" || { echo "macOS DMG was not produced" >&2; exit 1; }
+          test "${#files[@]}" -eq 1 || { echo "Expected one macOS DMG, found ${#files[@]}" >&2; exit 1; }
+          mkdir -p dist
+          output="dist/metrolist-desktop-macos-${ARCH}-${version}.dmg"
+          cp "${files[0]}" "$output"
+          echo "path=$output" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke test macOS DMG
+        if: inputs.run-verification
+        id: smoke
+        timeout-minutes: 3
+        shell: bash
+        env:
+          PACKAGE_PATH: ${{ steps.package.outputs.path }}
+        run: python3 scripts/desktop_smoke.py "$PACKAGE_PATH" --output "$RUNNER_TEMP/desktop-smoke"
+
+      - name: Upload macOS launch evidence
+        if: always() && steps.smoke.outcome != 'skipped'
+        # Evidence only; the smoke step decides the result, and the artifact quota can be full.
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ${{ inputs.artifact-prefix }}desktop-smoke-macos-${{ matrix.arch }}
+          path: ${{ runner.temp }}/desktop-smoke
+          if-no-files-found: error
+          retention-days: 4
+
+      - name: Upload macOS artifact
+        if: inputs.upload-artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ${{ inputs.artifact-prefix }}desktop-macos-${{ matrix.arch }}
+          path: ${{ steps.package.outputs.path }}
+          if-no-files-found: error
+          retention-days: 4
+
+      - name: Upload macOS staging asset
+        if: inputs.staging-release-tag != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STAGING_RELEASE_TAG: ${{ inputs.staging-release-tag }}
+          PACKAGE_PATH: ${{ steps.package.outputs.path }}
+        run: gh release upload "$STAGING_RELEASE_TAG" "$PACKAGE_PATH" --clobber --repo "$GITHUB_REPOSITORY"

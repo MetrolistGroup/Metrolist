@@ -1,0 +1,5691 @@
+{
+  "reflection": [
+    {
+      "type": "android.os.Build"
+    },
+    {
+      "type": "android.os.Build$VERSION"
+    },
+    {
+      "type": "androidx.compose.ui.awt.ComposeWindow"
+    },
+    {
+      "type": "androidx.compose.ui.awt.ComposeWindowPanel"
+    },
+    {
+      "type": "androidx.compose.ui.awt.SwingInteropViewGroup"
+    },
+    {
+      "type": "androidx.compose.ui.platform.GlobalSnapshotManager$Registration"
+    },
+    {
+      "type": "androidx.compose.ui.scene.ComposeSceneMediator$InvisibleComponent"
+    },
+    {
+      "type": "androidx.compose.ui.scene.skia.SurfaceSkiaLayerComponent$hierarchyRoot$1"
+    },
+    {
+      "type": "boolean[]",
+      "jniAccessible": true
+    },
+    {
+      "type": "byte"
+    },
+    {
+      "type": "coil3.RealImageLoader"
+    },
+    {
+      "type": "coil3.compose.internal.DeferredDispatchCoroutineDispatcher"
+    },
+    {
+      "type": "coil3.network.okhttp.internal.OkHttpNetworkFetcherServiceLoaderTarget"
+    },
+    {
+      "type": "com.metrolist.innertubex.models.body.BrowseBody",
+      "fields": [
+        {
+          "name": "Companion"
+        }
+      ]
+    },
+    {
+      "type": "com.metrolist.innertubex.models.body.BrowseBody$Companion",
+      "methods": [
+        {
+          "name": "serializer",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.metrolist.innertubex.models.body.NextBody",
+      "fields": [
+        {
+          "name": "Companion"
+        }
+      ]
+    },
+    {
+      "type": "com.metrolist.innertubex.models.body.NextBody$Companion",
+      "methods": [
+        {
+          "name": "serializer",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.metrolist.innertubex.models.body.PlayerBody",
+      "fields": [
+        {
+          "name": "Companion"
+        }
+      ]
+    },
+    {
+      "type": "com.metrolist.innertubex.models.body.PlayerBody$Companion",
+      "methods": [
+        {
+          "name": "serializer",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.metrolist.innertubex.models.body.SearchBody",
+      "fields": [
+        {
+          "name": "Companion"
+        }
+      ]
+    },
+    {
+      "type": "com.metrolist.innertubex.models.body.SearchBody$Companion",
+      "methods": [
+        {
+          "name": "serializer",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.metrolist.shared.db.MusicDatabase_Impl",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.AESCipher$General",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.ARCFOURCipher",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.ChaCha20Cipher$ChaCha20Poly1305",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.DESCipher",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.DESedeCipher",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.DHParameters",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.GaloisCounterMode$AESGCM",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.HKDFKeyDerivation$HKDFSHA256",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "javax.crypto.KDFParameters"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.HmacCore$HmacSHA256",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.TlsMasterSecretGenerator",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.Callback",
+      "jniAccessible": true
+    },
+    {
+      "type": "com.sun.jna.CallbackProxy",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "callback",
+          "parameterTypes": [
+            "java.lang.Object[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.CallbackReference",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "getCallback",
+          "parameterTypes": [
+            "java.lang.Class",
+            "com.sun.jna.Pointer",
+            "boolean"
+          ]
+        },
+        {
+          "name": "getFunctionPointer",
+          "parameterTypes": [
+            "com.sun.jna.Callback",
+            "boolean"
+          ]
+        },
+        {
+          "name": "getNativeString",
+          "parameterTypes": [
+            "java.lang.Object",
+            "boolean"
+          ]
+        },
+        {
+          "name": "initializeThread",
+          "parameterTypes": [
+            "com.sun.jna.Callback",
+            "com.sun.jna.CallbackReference$AttachOptions"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.CallbackReference$AttachOptions",
+      "jniAccessible": true
+    },
+    {
+      "type": "com.sun.jna.FromNativeConverter",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "nativeType",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.IntegerType",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "value"
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.JNIEnv",
+      "jniAccessible": true
+    },
+    {
+      "type": "com.sun.jna.Native",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "dispose",
+          "parameterTypes": []
+        },
+        {
+          "name": "fromNative",
+          "parameterTypes": [
+            "com.sun.jna.FromNativeConverter",
+            "java.lang.Object",
+            "java.lang.reflect.Method"
+          ]
+        },
+        {
+          "name": "fromNative",
+          "parameterTypes": [
+            "java.lang.Class",
+            "java.lang.Object"
+          ]
+        },
+        {
+          "name": "fromNative",
+          "parameterTypes": [
+            "java.lang.reflect.Method",
+            "java.lang.Object"
+          ]
+        },
+        {
+          "name": "nativeType",
+          "parameterTypes": [
+            "java.lang.Class"
+          ]
+        },
+        {
+          "name": "toNative",
+          "parameterTypes": [
+            "com.sun.jna.ToNativeConverter",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.Native$ffi_callback",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "invoke",
+          "parameterTypes": [
+            "long",
+            "long",
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.NativeLong",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.NativeMapped",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "toNative",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.Pointer",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "peer"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.PointerType",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "pointer"
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.SecurityManagerExposer"
+    },
+    {
+      "type": "com.sun.jna.Structure",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "memory"
+        },
+        {
+          "name": "typeInfo"
+        }
+      ],
+      "methods": [
+        {
+          "name": "autoRead",
+          "parameterTypes": []
+        },
+        {
+          "name": "autoWrite",
+          "parameterTypes": []
+        },
+        {
+          "name": "getTypeInfo",
+          "parameterTypes": []
+        },
+        {
+          "name": "newInstance",
+          "parameterTypes": [
+            "java.lang.Class",
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.Structure$ByValue",
+      "jniAccessible": true
+    },
+    {
+      "type": "com.sun.jna.Structure$FFIType",
+      "fields": [
+        {
+          "name": "alignment"
+        },
+        {
+          "name": "elements"
+        },
+        {
+          "name": "size"
+        },
+        {
+          "name": "type"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.Structure$FFIType$FFITypes",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "ffi_type_double"
+        },
+        {
+          "name": "ffi_type_float"
+        },
+        {
+          "name": "ffi_type_longdouble"
+        },
+        {
+          "name": "ffi_type_pointer"
+        },
+        {
+          "name": "ffi_type_sint16"
+        },
+        {
+          "name": "ffi_type_sint32"
+        },
+        {
+          "name": "ffi_type_sint64"
+        },
+        {
+          "name": "ffi_type_sint8"
+        },
+        {
+          "name": "ffi_type_uint16"
+        },
+        {
+          "name": "ffi_type_uint32"
+        },
+        {
+          "name": "ffi_type_uint64"
+        },
+        {
+          "name": "ffi_type_uint8"
+        },
+        {
+          "name": "ffi_type_void"
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.Structure$FFIType$size_t",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.WString",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.ptr.ByteByReference",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.ptr.PointerByReference",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.media.sound.DirectAudioDevice",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "addFormat",
+          "parameterTypes": [
+            "java.util.Vector",
+            "int",
+            "int",
+            "int",
+            "float",
+            "int",
+            "boolean",
+            "boolean"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.media.sound.DirectAudioDeviceProvider$DirectAudioDeviceInfo",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.media.sound.PortMixerProvider$PortMixerInfo",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.nio.file.SensitivityWatchEventModifier",
+      "fields": [
+        {
+          "name": "HIGH"
+        }
+      ]
+    },
+    {
+      "type": "com.sun.swing.internal.plaf.basic.resources.basic"
+    },
+    {
+      "type": "com.sun.swing.internal.plaf.metal.resources.metal"
+    },
+    {
+      "type": "double"
+    },
+    {
+      "type": "float"
+    },
+    {
+      "type": "int"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.ForeignBytesStruct",
+      "fields": [
+        {
+          "name": "data"
+        },
+        {
+          "name": "len"
+        }
+      ]
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.ForeignBytesStruct$ByValue",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.IntegrityCheckingUniffiLib"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.RustBufferStruct",
+      "fields": [
+        {
+          "name": "capacity"
+        },
+        {
+          "name": "data"
+        },
+        {
+          "name": "len"
+        }
+      ]
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.RustBufferStruct$ByValue",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiCallbackInterfaceFree",
+      "methods": [
+        {
+          "name": "callback",
+          "parameterTypes": [
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiCallbackInterfaceJavaScriptCallbackMethod0",
+      "methods": [
+        {
+          "name": "callback",
+          "parameterTypes": [
+            "long",
+            "io.github.kdroidfilter.webview.wry.RustBufferStruct$ByValue",
+            "com.sun.jna.Pointer",
+            "io.github.kdroidfilter.webview.wry.UniffiRustCallStatusStruct$ByReference"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiCallbackInterfaceNativeLoggerMethod0"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiCallbackInterfaceNavigationHandlerMethod0",
+      "methods": [
+        {
+          "name": "callback",
+          "parameterTypes": [
+            "long",
+            "io.github.kdroidfilter.webview.wry.RustBufferStruct$ByValue",
+            "com.sun.jna.ptr.ByteByReference",
+            "io.github.kdroidfilter.webview.wry.UniffiRustCallStatusStruct$ByReference"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiLib"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiRustCallStatusStruct",
+      "fields": [
+        {
+          "name": "code"
+        },
+        {
+          "name": "errorBuf"
+        }
+      ]
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiRustCallStatusStruct$ByReference",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiVTableCallbackInterfaceJavaScriptCallbackStruct",
+      "fields": [
+        {
+          "name": "onResult"
+        },
+        {
+          "name": "uniffiFree"
+        }
+      ]
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiVTableCallbackInterfaceNativeLoggerStruct",
+      "fields": [
+        {
+          "name": "handleLog"
+        },
+        {
+          "name": "uniffiFree"
+        }
+      ]
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.UniffiVTableCallbackInterfaceNavigationHandlerStruct",
+      "fields": [
+        {
+          "name": "handleNavigation"
+        },
+        {
+          "name": "uniffiFree"
+        }
+      ]
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.WryWebViewPanel"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.uniffiCallbackInterfaceJavaScriptCallback$onResult"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.uniffiCallbackInterfaceJavaScriptCallback$uniffiFree"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.uniffiCallbackInterfaceNativeLogger$handleLog"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.uniffiCallbackInterfaceNativeLogger$uniffiFree"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.uniffiCallbackInterfaceNavigationHandler$handleNavigation"
+    },
+    {
+      "type": "io.github.kdroidfilter.webview.wry.uniffiCallbackInterfaceNavigationHandler$uniffiFree"
+    },
+    {
+      "type": "io.ktor.client.HttpClient"
+    },
+    {
+      "type": "io.ktor.client.call.HttpClientCall"
+    },
+    {
+      "type": "io.ktor.client.engine.HttpClientEngineBase"
+    },
+    {
+      "type": "io.ktor.network.selector.LockFreeMPSCQueue"
+    },
+    {
+      "type": "io.ktor.network.selector.LockFreeMPSCQueueCore"
+    },
+    {
+      "type": "io.ktor.serialization.kotlinx.json.KotlinxSerializationJsonExtensionProvider"
+    },
+    {
+      "type": "io.ktor.util.collections.CopyOnWriteHashMap"
+    },
+    {
+      "type": "io.ktor.util.internal.LockFreeLinkedListNode"
+    },
+    {
+      "type": "io.ktor.utils.io.ByteChannel"
+    },
+    {
+      "type": "io.ktor.utils.io.pool.DefaultPool"
+    },
+    {
+      "type": "java.awt.AlphaComposite",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "extraAlpha"
+        },
+        {
+          "name": "rule"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Color",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "getRGB",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Component",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "appContext"
+        },
+        {
+          "name": "background"
+        },
+        {
+          "name": "foreground"
+        },
+        {
+          "name": "graphicsConfig"
+        },
+        {
+          "name": "height"
+        },
+        {
+          "name": "isPacked"
+        },
+        {
+          "name": "name"
+        },
+        {
+          "name": "peer"
+        },
+        {
+          "name": "width"
+        },
+        {
+          "name": "x"
+        },
+        {
+          "name": "y"
+        }
+      ],
+      "methods": [
+        {
+          "name": "getLocationOnScreen_NoTreeLock",
+          "parameterTypes": []
+        },
+        {
+          "name": "getParent_NoClientCode",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Desktop$Action",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "OPEN"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.DisplayMode",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.awt.GraphicsEnvironment",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "isHeadless",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.awt.Rectangle",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.awt.SequencedEvent"
+    },
+    {
+      "type": "java.awt.event.KeyEvent",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "VK_CONTEXT_MENU"
+        },
+        {
+          "name": "VK_F10"
+        },
+        {
+          "name": "isProxyActive"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.geom.AffineTransform",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "m00"
+        },
+        {
+          "name": "m01"
+        },
+        {
+          "name": "m02"
+        },
+        {
+          "name": "m10"
+        },
+        {
+          "name": "m11"
+        },
+        {
+          "name": "m12"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.geom.Path2D",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "numTypes"
+        },
+        {
+          "name": "pointTypes"
+        },
+        {
+          "name": "windingRule"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.geom.Path2D$Float",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "floatCoords"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.image.BufferedImage",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "colorModel"
+        },
+        {
+          "name": "imageType"
+        },
+        {
+          "name": "raster"
+        }
+      ],
+      "methods": [
+        {
+          "name": "getRGB",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "int",
+            "int[]",
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "setRGB",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "int",
+            "int[]",
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.awt.image.ColorModel",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "colorSpace"
+        },
+        {
+          "name": "colorSpaceType"
+        },
+        {
+          "name": "isAlphaPremultiplied"
+        },
+        {
+          "name": "is_sRGB"
+        },
+        {
+          "name": "nBits"
+        },
+        {
+          "name": "numComponents"
+        },
+        {
+          "name": "supportsAlpha"
+        },
+        {
+          "name": "transparency"
+        }
+      ],
+      "methods": [
+        {
+          "name": "getRGBdefault",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.awt.image.DirectColorModel",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.awt.image.IndexColorModel",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "allgrayopaque"
+        },
+        {
+          "name": "colorData"
+        },
+        {
+          "name": "map_size"
+        },
+        {
+          "name": "rgb"
+        },
+        {
+          "name": "transparent_index"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.image.Raster",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "dataBuffer"
+        },
+        {
+          "name": "height"
+        },
+        {
+          "name": "minX"
+        },
+        {
+          "name": "minY"
+        },
+        {
+          "name": "numBands"
+        },
+        {
+          "name": "numDataElements"
+        },
+        {
+          "name": "sampleModel"
+        },
+        {
+          "name": "sampleModelTranslateX"
+        },
+        {
+          "name": "sampleModelTranslateY"
+        },
+        {
+          "name": "width"
+        }
+      ]
+    },
+    {
+      "type": "java.awt.image.SampleModel",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "height"
+        },
+        {
+          "name": "width"
+        }
+      ],
+      "methods": [
+        {
+          "name": "getPixels",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "int",
+            "int[]",
+            "java.awt.image.DataBuffer"
+          ]
+        },
+        {
+          "name": "setPixels",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "int",
+            "int[]",
+            "java.awt.image.DataBuffer"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.awt.image.SinglePixelPackedSampleModel",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "bitMasks"
+        },
+        {
+          "name": "bitOffsets"
+        },
+        {
+          "name": "bitSizes"
+        },
+        {
+          "name": "maxBitSize"
+        }
+      ]
+    },
+    {
+      "type": "java.io.OutputStream",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "flush",
+          "parameterTypes": []
+        },
+        {
+          "name": "write",
+          "parameterTypes": [
+            "byte[]",
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Boolean",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "TYPE"
+        },
+        {
+          "name": "value"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "boolean"
+          ]
+        },
+        {
+          "name": "booleanValue",
+          "parameterTypes": []
+        },
+        {
+          "name": "getBoolean",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Byte",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "TYPE"
+        },
+        {
+          "name": "value"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "byte"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Character",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "TYPE"
+        },
+        {
+          "name": "value"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "char"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Class",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "getComponentType",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Double",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "TYPE"
+        },
+        {
+          "name": "value"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "double"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Enum",
+      "methods": [
+        {
+          "name": "name",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Float",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "TYPE"
+        },
+        {
+          "name": "value"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Integer",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "TYPE"
+        },
+        {
+          "name": "value"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Long",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "TYPE"
+        },
+        {
+          "name": "value"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.lang.NullPointerException"
+    },
+    {
+      "type": "java.lang.Object",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "toString",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Object[]"
+    },
+    {
+      "type": "java.lang.RuntimeException",
+      "jniAccessible": true
+    },
+    {
+      "type": "java.lang.Short",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "TYPE"
+        },
+        {
+          "name": "value"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "short"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.lang.StackWalker"
+    },
+    {
+      "type": "java.lang.StackWalker$Option"
+    },
+    {
+      "type": "java.lang.StackWalker$StackFrame"
+    },
+    {
+      "type": "java.lang.String",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "byte[]"
+          ]
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "byte[]",
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "byte[]",
+            "java.nio.charset.Charset"
+          ]
+        },
+        {
+          "name": "getBytes",
+          "parameterTypes": []
+        },
+        {
+          "name": "getBytes",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "getBytes",
+          "parameterTypes": [
+            "java.nio.charset.Charset"
+          ]
+        },
+        {
+          "name": "toCharArray",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.System",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "getProperty",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "load",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Throwable",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "printStackTrace",
+          "parameterTypes": []
+        },
+        {
+          "name": "toString",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.UnsatisfiedLinkError",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Void",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "TYPE"
+        }
+      ]
+    },
+    {
+      "type": "java.lang.invoke.MethodHandle"
+    },
+    {
+      "type": "java.lang.invoke.MethodHandles"
+    },
+    {
+      "type": "java.lang.invoke.MethodHandles$Lookup"
+    },
+    {
+      "type": "java.lang.invoke.MethodType"
+    },
+    {
+      "type": "java.lang.reflect.Method",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "getParameterTypes",
+          "parameterTypes": []
+        },
+        {
+          "name": "getReturnType",
+          "parameterTypes": []
+        },
+        {
+          "name": "isDefault",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.nio.Buffer",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "capacity"
+        },
+        {
+          "name": "limit"
+        },
+        {
+          "name": "position"
+        }
+      ],
+      "methods": [
+        {
+          "name": "array",
+          "parameterTypes": []
+        },
+        {
+          "name": "arrayOffset",
+          "parameterTypes": []
+        },
+        {
+          "name": "position",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.nio.ByteBuffer",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "array",
+          "parameterTypes": []
+        },
+        {
+          "name": "arrayOffset",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.nio.CharBuffer",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "array",
+          "parameterTypes": []
+        },
+        {
+          "name": "arrayOffset",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.nio.DoubleBuffer",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "array",
+          "parameterTypes": []
+        },
+        {
+          "name": "arrayOffset",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.nio.FloatBuffer",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "array",
+          "parameterTypes": []
+        },
+        {
+          "name": "arrayOffset",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.nio.IntBuffer",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "array",
+          "parameterTypes": []
+        },
+        {
+          "name": "arrayOffset",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.nio.LongBuffer",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "array",
+          "parameterTypes": []
+        },
+        {
+          "name": "arrayOffset",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.nio.ShortBuffer",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "array",
+          "parameterTypes": []
+        },
+        {
+          "name": "arrayOffset",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.nio.charset.Charset",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "forName",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.nio.file.Files"
+    },
+    {
+      "type": "java.security.AccessController"
+    },
+    {
+      "type": "java.security.AlgorithmParametersSpi"
+    },
+    {
+      "type": "java.security.KeyStoreSpi"
+    },
+    {
+      "type": "java.security.interfaces.ECPrivateKey"
+    },
+    {
+      "type": "java.security.interfaces.ECPublicKey"
+    },
+    {
+      "type": "java.security.interfaces.RSAPrivateKey"
+    },
+    {
+      "type": "java.security.interfaces.RSAPublicKey"
+    },
+    {
+      "type": "java.sql.SQLException"
+    },
+    {
+      "type": "java.util.ArrayList",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "add",
+          "parameterTypes": [
+            "java.lang.Object"
+          ]
+        },
+        {
+          "name": "clear",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.util.Iterator",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "hasNext",
+          "parameterTypes": []
+        },
+        {
+          "name": "next",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.util.Locale",
+      "methods": [
+        {
+          "name": "getDefault",
+          "parameterTypes": [
+            "java.util.Locale$Category"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.util.Locale$Category"
+    },
+    {
+      "type": "java.util.concurrent.ScheduledThreadPoolExecutor"
+    },
+    {
+      "type": "javax.imageio.spi.ImageReaderSpi"
+    },
+    {
+      "type": "javax.imageio.spi.ImageWriterSpi"
+    },
+    {
+      "type": "javax.swing.plaf.basic.BasicPanelUI",
+      "methods": [
+        {
+          "name": "createUI",
+          "parameterTypes": [
+            "javax.swing.JComponent"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "javax.swing.plaf.metal.MetalRootPaneUI",
+      "methods": [
+        {
+          "name": "createUI",
+          "parameterTypes": [
+            "javax.swing.JComponent"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "kotlin.SafePublicationLazyImpl"
+    },
+    {
+      "type": "kotlin.coroutines.SafeContinuation"
+    },
+    {
+      "type": "kotlin.jvm.functions.Function0",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "invoke",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "kotlin.reflect.jvm.internal.ReflectionFactoryImpl"
+    },
+    {
+      "type": "kotlinx.atomicfu.AtomicInt"
+    },
+    {
+      "type": "kotlinx.atomicfu.AtomicLong"
+    },
+    {
+      "type": "kotlinx.coroutines.CancellableContinuationImpl"
+    },
+    {
+      "type": "kotlinx.coroutines.CancelledContinuation"
+    },
+    {
+      "type": "kotlinx.coroutines.CompletedExceptionally"
+    },
+    {
+      "type": "kotlinx.coroutines.DispatchedCoroutine"
+    },
+    {
+      "type": "kotlinx.coroutines.EventLoopImplBase"
+    },
+    {
+      "type": "kotlinx.coroutines.InvokeOnCancelling"
+    },
+    {
+      "type": "kotlinx.coroutines.JobSupport"
+    },
+    {
+      "type": "kotlinx.coroutines.JobSupport$Finishing"
+    },
+    {
+      "type": "kotlinx.coroutines.ThreadState"
+    },
+    {
+      "type": "kotlinx.coroutines.channels.BufferedChannel"
+    },
+    {
+      "type": "kotlinx.coroutines.flow.ChannelAsFlow"
+    },
+    {
+      "type": "kotlinx.coroutines.flow.StateFlowImpl"
+    },
+    {
+      "type": "kotlinx.coroutines.internal.ConcurrentLinkedListNode"
+    },
+    {
+      "type": "kotlinx.coroutines.internal.DispatchedContinuation"
+    },
+    {
+      "type": "kotlinx.coroutines.internal.LimitedDispatcher"
+    },
+    {
+      "type": "kotlinx.coroutines.internal.LockFreeLinkedListNode"
+    },
+    {
+      "type": "kotlinx.coroutines.internal.LockFreeTaskQueue"
+    },
+    {
+      "type": "kotlinx.coroutines.internal.LockFreeTaskQueueCore"
+    },
+    {
+      "type": "kotlinx.coroutines.internal.Segment"
+    },
+    {
+      "type": "kotlinx.coroutines.internal.ThreadSafeHeap"
+    },
+    {
+      "type": "kotlinx.coroutines.scheduling.CoroutineScheduler"
+    },
+    {
+      "type": "kotlinx.coroutines.scheduling.CoroutineScheduler$Worker"
+    },
+    {
+      "type": "kotlinx.coroutines.scheduling.WorkQueue"
+    },
+    {
+      "type": "kotlinx.coroutines.swing.SwingDispatcherFactory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "kotlinx.coroutines.sync.MutexImpl"
+    },
+    {
+      "type": "kotlinx.coroutines.sync.SemaphoreAndMutexImpl"
+    },
+    {
+      "type": "kotlinx.io.RefCountingCopyTracker"
+    },
+    {
+      "type": "long"
+    },
+    {
+      "type": "okhttp3.internal.connection.RealCall"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVBSFContext"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVBSFList"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVBitStreamFilter"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCPBProperties"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodec",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Draw_horiz_band_AVCodecContext_AVFrame_IntPointer_int_int_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Execute2_AVCodecContext_Func_AVCodecContext_Pointer_int_int_Pointer_IntPointer_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Execute_AVCodecContext_Func_AVCodecContext_Pointer_Pointer_IntPointer_int_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Func_AVCodecContext_Pointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Func_AVCodecContext_Pointer_int_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Get_buffer2_AVCodecContext_AVFrame_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Get_encode_buffer_AVCodecContext_AVPacket_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Get_format_AVCodecContext_IntPointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecDescriptor"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecHWConfig"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParameters",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParser"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParser$Parser_close_AVCodecParserContext"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParser$Parser_init_AVCodecParserContext"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParser$Parser_parse_AVCodecParserContext_AVCodecContext_PointerPointer_IntPointer_BytePointer_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParser$Split_AVCodecContext_BytePointer_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParserContext"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVHWAccel"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVPacket"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVPacketList"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVPacketSideData"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVPanScan"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVProducerReferenceTime"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVProfile"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVRTCPSenderReport"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVSubtitle"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.AVSubtitleRect"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.Func_AVCodecContext_Pointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.Func_AVCodecContext_Pointer_int_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avcodec.RcOverride"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVChapter"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVCodecTag"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVFormatContext",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVFormatContext$Io_close2_AVFormatContext_AVIOContext"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVFormatContext$Io_open_AVFormatContext_PointerPointer_BytePointer_int_PointerPointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVIAMFAudioElement"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVIAMFMixPresentation"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Read_packet_Pointer_BytePointer_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Read_pause_Pointer_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Read_seek_Pointer_int_long_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Seek_Pointer_long_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Update_checksum_long_BytePointer_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Write_data_type_Pointer_BytePointer_int_int_long"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Write_packet_Pointer_BytePointer_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVIODirEntry"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOInterruptCB"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOInterruptCB$Callback_Pointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVIndexEntry"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVInputFormat"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVOpenCallback"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVOutputFormat"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVProbeData"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVProgram"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVRTSPCommandRequest"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVRTSPResponse"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVStream",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVStreamGroup"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVStreamGroupLCEVC"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVStreamGroupTileGrid"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.Read_packet_Pointer_ByteBuffer_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.Read_packet_Pointer_BytePointer_int",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "call",
+          "parameterTypes": [
+            "org.bytedeco.javacpp.Pointer",
+            "org.bytedeco.javacpp.BytePointer",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.Read_packet_Pointer_byte___int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.Seek_Pointer_long_int",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "call",
+          "parameterTypes": [
+            "org.bytedeco.javacpp.Pointer",
+            "long",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.Write_packet_Pointer_ByteBuffer_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.Write_packet_Pointer_BytePointer_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.Write_packet_Pointer_byte___int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.av_format_control_message"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVAES"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVAESCTR"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVAudioFifo"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVBPrint"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVBlowfish"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVBuffer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVBufferPool"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVBufferRef"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVCAMELLIA"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVCAST5"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVChannelCustom"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVChannelLayout",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVClass"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVClass$Child_class_iterate_PointerPointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVClass$Child_next_Pointer_Pointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVClass$Get_category_Pointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVClass$Item_name_Pointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVClass$Query_ranges_PointerPointer_Pointer_BytePointer_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVComplexDouble"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVComplexFloat"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVComplexInt32"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVComponentDescriptor"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVContainerFifo"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVContentLightMetadata"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVDES"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVDictionary"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVDictionaryEntry"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVDownmixInfo"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVDynamicHDRPlus"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVEncryptionInfo"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVEncryptionInitInfo"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVFifo"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVFifoCB"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVFrame",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVFrameSideData"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVHDRPlusColorTransformParams"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVHDRPlusPercentile"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVHMAC"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVHWDeviceContext"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVHWDeviceContext$Free_AVHWDeviceContext"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVHWFramesConstraints"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVHWFramesContext"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVHWFramesContext$Free_AVHWFramesContext"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVLFG"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVMD5"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVMasteringDisplayMetadata"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVMotionVector"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVOption"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVOptionArrayDef"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVOptionRange"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVOptionRanges"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVPixFmtDescriptor"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVRC4"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVRIPEMD"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVRational",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVRegionOfInterest"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVReplayGain"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVSHA"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVSHA512"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVSideDataDescriptor"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVSphericalMapping"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVStereo3D"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVSubsampleEncryptionInfo"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVTEA"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVTWOFISH"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVTXContext"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVTimecode"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVTreeNode"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVXTEA"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Alloc_Pointer_long"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Alloc_long"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Callback_Pointer_int_BytePointer_Pointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Callback_Pointer_int_String_Pointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Cmp_Const_Pointer_Const_Pointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Cmp_Pointer_Pointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Container_alloc_Pointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Container_free_Pointer_Pointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Container_reset_Pointer_Pointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Enu_Pointer_Pointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Fifo_transfer_Pointer_Pointer_Pointer_int"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Free_Pointer_ByteBuffer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Free_Pointer_BytePointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Free_Pointer_byte__"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Free_func_Pointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Funcs1_Pointer_double"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Funcs2_Pointer_double_double"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.LogCallback",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "call",
+          "parameterTypes": [
+            "int",
+            "org.bytedeco.javacpp.BytePointer"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.Pool_free_Pointer"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.av_alias16"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.av_alias32"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.av_alias64"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.av_intfloat32"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.av_intfloat64"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.av_pixelutils_sad_fn"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.av_tx_fn"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.ff_pad_helper_AVBPrint"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.unaligned_16"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.unaligned_32"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.unaligned_64"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.global.avcodec"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.global.avformat"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.global.avutil"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.global.swresample"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.global.swscale"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.swresample.SwrContext"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.swscale.SwsContext"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.swscale.SwsFilter"
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.swscale.SwsVector"
+    },
+    {
+      "type": "org.bytedeco.javacpp.BoolPointer"
+    },
+    {
+      "type": "org.bytedeco.javacpp.BooleanPointer"
+    },
+    {
+      "type": "org.bytedeco.javacpp.BytePointer",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.CLongPointer"
+    },
+    {
+      "type": "org.bytedeco.javacpp.CharPointer"
+    },
+    {
+      "type": "org.bytedeco.javacpp.DoublePointer"
+    },
+    {
+      "type": "org.bytedeco.javacpp.FloatPointer"
+    },
+    {
+      "type": "org.bytedeco.javacpp.IntPointer"
+    },
+    {
+      "type": "org.bytedeco.javacpp.Loader",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "putMemberOffset",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.bytedeco.javacpp.Loader$Helper"
+    },
+    {
+      "type": "org.bytedeco.javacpp.LongPointer"
+    },
+    {
+      "type": "org.bytedeco.javacpp.Pointer",
+      "unsafeAllocated": true,
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "address"
+        },
+        {
+          "name": "capacity"
+        },
+        {
+          "name": "deallocator"
+        },
+        {
+          "name": "limit"
+        },
+        {
+          "name": "position"
+        }
+      ],
+      "methods": [
+        {
+          "name": "init",
+          "parameterTypes": [
+            "long",
+            "long",
+            "long",
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.bytedeco.javacpp.Pointer$NativeDeallocator",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "ownerAddress"
+        }
+      ]
+    },
+    {
+      "type": "org.bytedeco.javacpp.PointerPointer"
+    },
+    {
+      "type": "org.bytedeco.javacpp.ShortPointer"
+    },
+    {
+      "type": "org.bytedeco.javacpp.SizeTPointer"
+    },
+    {
+      "type": "org.bytedeco.javacpp.presets.javacpp",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.AnimationFrameInfo",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int",
+            "boolean",
+            "int",
+            "boolean",
+            "int",
+            "int",
+            "org.jetbrains.skia.IRect"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.Color4f",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.Drawable",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "_onDraw",
+          "parameterTypes": [
+            "long"
+          ]
+        },
+        {
+          "name": "onGetBounds",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.FontFamilyName",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.FontFeature",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "_tag"
+        },
+        {
+          "name": "end"
+        },
+        {
+          "name": "start"
+        },
+        {
+          "name": "value"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.FontVariation",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "_tag"
+        },
+        {
+          "name": "value"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.FontVariationAxis",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "float",
+            "float",
+            "float",
+            "boolean"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.IPoint",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.IRect",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "bottom"
+        },
+        {
+          "name": "left"
+        },
+        {
+          "name": "right"
+        },
+        {
+          "name": "top"
+        }
+      ],
+      "methods": [
+        {
+          "name": "makeLTRB",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.ImageInfo",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "int",
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.PaintFilterCanvas",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "onFilter",
+          "parameterTypes": [
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.Path",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.PathSegment",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "boolean"
+          ]
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "boolean"
+          ]
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "boolean"
+          ]
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "boolean",
+            "boolean"
+          ]
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "float",
+            "float",
+            "boolean"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.Point",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "x"
+        },
+        {
+          "name": "y"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.RRect",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "radii"
+        }
+      ],
+      "methods": [
+        {
+          "name": "makeComplexLTRB",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float[]"
+          ]
+        },
+        {
+          "name": "makeLTRB",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float"
+          ]
+        },
+        {
+          "name": "makeLTRB",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float"
+          ]
+        },
+        {
+          "name": "makeLTRB",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float"
+          ]
+        },
+        {
+          "name": "makeNinePatchLTRB",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float",
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.RSXform",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.Rect",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "bottom"
+        },
+        {
+          "name": "left"
+        },
+        {
+          "name": "right"
+        },
+        {
+          "name": "top"
+        }
+      ],
+      "methods": [
+        {
+          "name": "makeLTRB",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.impl.Native",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "_ptr"
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.paragraph.DecorationStyle",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "boolean",
+            "boolean",
+            "boolean",
+            "boolean",
+            "int",
+            "int",
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.paragraph.LineMetrics",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "int",
+            "boolean",
+            "double",
+            "double",
+            "double",
+            "double",
+            "double",
+            "double",
+            "double",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.paragraph.LineMetrics[]"
+    },
+    {
+      "type": "org.jetbrains.skia.paragraph.Shadow",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "float",
+            "float",
+            "double"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.paragraph.TextBox",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "float",
+            "float",
+            "float",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.paragraph.TextBox[]"
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.BidiRun",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "end"
+        },
+        {
+          "name": "level"
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.FontMgrRunIterator",
+      "jniAccessible": true
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.FontRun",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "end"
+        }
+      ],
+      "methods": [
+        {
+          "name": "_getFontPtr",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.HbIcuScriptRunIterator",
+      "jniAccessible": true
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.IcuBidiRunIterator",
+      "jniAccessible": true
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.LanguageRun",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "end"
+        },
+        {
+          "name": "language"
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.RunHandler",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "beginLine",
+          "parameterTypes": []
+        },
+        {
+          "name": "commitLine",
+          "parameterTypes": []
+        },
+        {
+          "name": "commitRun",
+          "parameterTypes": [
+            "org.jetbrains.skia.shaper.RunInfo",
+            "short[]",
+            "org.jetbrains.skia.Point[]",
+            "int[]"
+          ]
+        },
+        {
+          "name": "commitRunInfo",
+          "parameterTypes": []
+        },
+        {
+          "name": "runInfo",
+          "parameterTypes": [
+            "org.jetbrains.skia.shaper.RunInfo"
+          ]
+        },
+        {
+          "name": "runOffset",
+          "parameterTypes": [
+            "org.jetbrains.skia.shaper.RunInfo"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.RunInfo",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "_fontPtr"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "int",
+            "float",
+            "float",
+            "int",
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.ScriptRun",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "end"
+        },
+        {
+          "name": "scriptTag"
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.ShapingOptions",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "features"
+        },
+        {
+          "name": "fontMgr"
+        },
+        {
+          "name": "isApproximatePunctuation"
+        },
+        {
+          "name": "isApproximateSpaces"
+        },
+        {
+          "name": "isLeftToRight"
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.shaper.TextBlobBuilderRunHandler",
+      "jniAccessible": true
+    },
+    {
+      "type": "org.jetbrains.skia.svg.SVGLength",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "float",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skia.svg.SVGPreserveAspectRatio",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skiko.HardwareLayer"
+    },
+    {
+      "type": "org.jetbrains.skiko.SkiaLayer"
+    },
+    {
+      "type": "org.jetbrains.skiko.SkiaLayer$1"
+    },
+    {
+      "type": "org.slf4j.Logger"
+    },
+    {
+      "type": "org.slf4j.simple.SimpleServiceProvider"
+    },
+    {
+      "type": "org.sqlite.BusyHandler",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "callback",
+          "parameterTypes": [
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.sqlite.Collation",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "xCompare",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.sqlite.Function",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "args"
+        },
+        {
+          "name": "context"
+        },
+        {
+          "name": "value"
+        }
+      ],
+      "methods": [
+        {
+          "name": "xFunc",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.sqlite.Function$Aggregate",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "clone",
+          "parameterTypes": []
+        },
+        {
+          "name": "xFinal",
+          "parameterTypes": []
+        },
+        {
+          "name": "xStep",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.sqlite.Function$Window",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "xInverse",
+          "parameterTypes": []
+        },
+        {
+          "name": "xValue",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.sqlite.JDBC"
+    },
+    {
+      "type": "org.sqlite.ProgressHandler",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "progress",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.sqlite.core.DB",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "onCommit",
+          "parameterTypes": [
+            "boolean"
+          ]
+        },
+        {
+          "name": "onUpdate",
+          "parameterTypes": [
+            "int",
+            "java.lang.String",
+            "java.lang.String",
+            "long"
+          ]
+        },
+        {
+          "name": "throwex",
+          "parameterTypes": []
+        },
+        {
+          "name": "throwex",
+          "parameterTypes": [
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.sqlite.core.DB$ProgressObserver",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "progress",
+          "parameterTypes": [
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.sqlite.core.NativeDB",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "busyHandler"
+        },
+        {
+          "name": "commitListener"
+        },
+        {
+          "name": "pointer"
+        },
+        {
+          "name": "progressHandler"
+        },
+        {
+          "name": "updateListener"
+        }
+      ],
+      "methods": [
+        {
+          "name": "stringToUtf8ByteArray",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "throwex",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "short"
+    },
+    {
+      "type": "sun.awt.SunHints",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "INTVAL_STROKE_PURE"
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.SunToolkit",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "awtLock",
+          "parameterTypes": []
+        },
+        {
+          "name": "awtLockNotify",
+          "parameterTypes": []
+        },
+        {
+          "name": "awtLockNotifyAll",
+          "parameterTypes": []
+        },
+        {
+          "name": "awtLockWait",
+          "parameterTypes": [
+            "long"
+          ]
+        },
+        {
+          "name": "awtUnlock",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.X11.XBaseWindow",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "window"
+        }
+      ],
+      "methods": [
+        {
+          "name": "getWindow",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.X11.XCanvasPeer"
+    },
+    {
+      "type": "sun.awt.X11.XContentWindow"
+    },
+    {
+      "type": "sun.awt.X11.XDesktopPeer",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "supportedActions"
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.X11.XErrorHandlerUtil",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "globalErrorHandler",
+          "parameterTypes": [
+            "long",
+            "long"
+          ]
+        },
+        {
+          "name": "init",
+          "parameterTypes": [
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.X11.XFramePeer"
+    },
+    {
+      "type": "sun.awt.X11.XToolkit",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "awtAppClassName"
+        },
+        {
+          "name": "modLockIsShiftLock"
+        },
+        {
+          "name": "numLockMask"
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.X11.XWindow",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "drawState"
+        },
+        {
+          "name": "graphicsConfig"
+        },
+        {
+          "name": "target"
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.X11GraphicsConfig",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "aData"
+        },
+        {
+          "name": "bitsPerPixel"
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.X11GraphicsDevice",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "addDoubleBufferVisual",
+          "parameterTypes": [
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.X11InputMethodBase",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "pData"
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.image.BufImgSurfaceData$ICMColorData",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "pData"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.image.ByteComponentRaster",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "data"
+        },
+        {
+          "name": "dataOffsets"
+        },
+        {
+          "name": "pixelStride"
+        },
+        {
+          "name": "scanlineStride"
+        },
+        {
+          "name": "type"
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.image.IntegerComponentRaster",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "data"
+        },
+        {
+          "name": "dataOffsets"
+        },
+        {
+          "name": "pixelStride"
+        },
+        {
+          "name": "scanlineStride"
+        },
+        {
+          "name": "type"
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.Disposer",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "addRecord",
+          "parameterTypes": [
+            "java.lang.Object",
+            "long",
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.InvalidPipeException",
+      "jniAccessible": true
+    },
+    {
+      "type": "sun.java2d.NullSurfaceData",
+      "jniAccessible": true
+    },
+    {
+      "type": "sun.java2d.SunGraphics2D",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "clipRegion"
+        },
+        {
+          "name": "composite"
+        },
+        {
+          "name": "eargb"
+        },
+        {
+          "name": "lcdTextContrast"
+        },
+        {
+          "name": "pixel"
+        },
+        {
+          "name": "strokeHint"
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.SurfaceData",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "pData"
+        },
+        {
+          "name": "valid"
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.Blit",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.BlitBg",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.CompositeType",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "AnyAlpha"
+        },
+        {
+          "name": "Src"
+        },
+        {
+          "name": "SrcNoEa"
+        },
+        {
+          "name": "SrcOver"
+        },
+        {
+          "name": "SrcOverNoEa"
+        },
+        {
+          "name": "Xor"
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.DrawGlyphList",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.DrawGlyphListAA",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.DrawGlyphListLCD",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.DrawLine",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.DrawParallelogram",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.DrawPath",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.DrawPolygons",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.DrawRect",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.FillParallelogram",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.FillPath",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.FillRect",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.FillSpans",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.GraphicsPrimitive",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "pNativePrim"
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.GraphicsPrimitiveMgr",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "register",
+          "parameterTypes": [
+            "sun.java2d.loops.GraphicsPrimitive[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.GraphicsPrimitive[]"
+    },
+    {
+      "type": "sun.java2d.loops.MaskBlit",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.MaskFill",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.OpaqueCopyAnyToArgb",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.OpaqueCopyArgbToAny",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.ScaledBlit",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.SetDrawLineANY",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.SetDrawPathANY",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.SetDrawPolygonsANY",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.SetDrawRectANY",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.SetFillPathANY",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.SetFillRectANY",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.SetFillSpansANY",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.SurfaceType",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "Any3Byte"
+        },
+        {
+          "name": "Any4Byte"
+        },
+        {
+          "name": "AnyByte"
+        },
+        {
+          "name": "AnyColor"
+        },
+        {
+          "name": "AnyInt"
+        },
+        {
+          "name": "AnyShort"
+        },
+        {
+          "name": "ByteBinary1Bit"
+        },
+        {
+          "name": "ByteBinary2Bit"
+        },
+        {
+          "name": "ByteBinary4Bit"
+        },
+        {
+          "name": "ByteGray"
+        },
+        {
+          "name": "ByteIndexed"
+        },
+        {
+          "name": "ByteIndexedBm"
+        },
+        {
+          "name": "FourByteAbgr"
+        },
+        {
+          "name": "FourByteAbgrPre"
+        },
+        {
+          "name": "Index12Gray"
+        },
+        {
+          "name": "Index8Gray"
+        },
+        {
+          "name": "IntArgb"
+        },
+        {
+          "name": "IntArgbBm"
+        },
+        {
+          "name": "IntArgbPre"
+        },
+        {
+          "name": "IntBgr"
+        },
+        {
+          "name": "IntRgb"
+        },
+        {
+          "name": "IntRgbx"
+        },
+        {
+          "name": "OpaqueColor"
+        },
+        {
+          "name": "ThreeByteBgr"
+        },
+        {
+          "name": "Ushort4444Argb"
+        },
+        {
+          "name": "Ushort555Rgb"
+        },
+        {
+          "name": "Ushort555Rgbx"
+        },
+        {
+          "name": "Ushort565Rgb"
+        },
+        {
+          "name": "UshortGray"
+        },
+        {
+          "name": "UshortIndexed"
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.TransformHelper",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long",
+            "sun.java2d.loops.SurfaceType",
+            "sun.java2d.loops.CompositeType",
+            "sun.java2d.loops.SurfaceType"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.loops.XORComposite",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "alphaMask"
+        },
+        {
+          "name": "xorColor"
+        },
+        {
+          "name": "xorPixel"
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.marlin.DMarlinRenderingEngine",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.pipe.Region",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "bands"
+        },
+        {
+          "name": "endIndex"
+        },
+        {
+          "name": "hix"
+        },
+        {
+          "name": "hiy"
+        },
+        {
+          "name": "lox"
+        },
+        {
+          "name": "loy"
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.pipe.RegionIterator",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "curIndex"
+        },
+        {
+          "name": "numXbands"
+        },
+        {
+          "name": "region"
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.xr.XRBackendNative",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "FMTPTR_A8"
+        },
+        {
+          "name": "FMTPTR_ARGB32"
+        },
+        {
+          "name": "MASK_XIMG"
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.xr.XRSurfaceData",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "picture"
+        },
+        {
+          "name": "xid"
+        }
+      ]
+    },
+    {
+      "type": "sun.management.VMManagementImpl",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "compTimeMonitoringSupport"
+        },
+        {
+          "name": "currentThreadCpuTimeSupport"
+        },
+        {
+          "name": "objectMonitorUsageSupport"
+        },
+        {
+          "name": "otherThreadCpuTimeSupport"
+        },
+        {
+          "name": "remoteDiagnosticCommandsSupport"
+        },
+        {
+          "name": "synchronizerUsageSupport"
+        },
+        {
+          "name": "threadAllocatedMemorySupport"
+        },
+        {
+          "name": "threadContentionMonitoringSupport"
+        }
+      ]
+    },
+    {
+      "type": "sun.security.pkcs12.PKCS12KeyStore",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.pkcs12.PKCS12KeyStore$DualFormatPKCS12",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.DSA$SHA224withDSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.DSA$SHA256withDSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.NativePRNG",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.security.SecureRandomParameters"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.NativePRNG$NonBlocking",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.security.SecureRandomParameters"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA2$SHA224",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA2$SHA256",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA5$SHA384",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA5$SHA512",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.X509Factory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.certpath.PKIXCertPathValidator",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.PSSParameters",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.RSAKeyFactory$Legacy",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.RSAPSSSignature",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.RSASignature$SHA224withRSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.RSASignature$SHA256withRSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.ssl.SSLContextImpl$TLSContext",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.ssl.TrustManagerFactoryImpl$PKIXFactory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.AuthorityInfoAccessExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.AuthorityKeyIdentifierExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.BasicConstraintsExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.CRLDistributionPointsExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.CertificatePoliciesExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.ExtendedKeyUsageExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.KeyUsageExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.NetscapeCertTypeExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.PrivateKeyUsageExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.SubjectAlternativeNameExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.SubjectKeyIdentifierExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData"
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData_en"
+    },
+    {
+      "type": "sun.util.resources.cldr.CalendarData"
+    },
+    {
+      "type": "sun.util.resources.cldr.LocaleNames"
+    },
+    {
+      "type": "sun.util.resources.cldr.LocaleNames_en"
+    },
+    {
+      "type": "sun.util.resources.cldr.TimeZoneNames"
+    },
+    {
+      "type": "sun.util.resources.cldr.TimeZoneNames_en"
+    },
+    {
+      "type": "sun.util.resources.cldr.TimeZoneNames_en_US"
+    },
+    {
+      "type": "void"
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.desktop.utils.NativeMemoryTrimmer$LinuxAllocator"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.desktop.utils.WaylandScale$LibC"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.shared.settings.LinuxSecretServiceWriter$Gio"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.shared.settings.LinuxSecretServiceWriter$Glib"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.shared.settings.LinuxSecretServiceWriter$Gobject"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.shared.settings.LinuxSecretServiceWriter$Secret"
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "glob": "META-INF/maven/org.bytedeco/ffmpeg/pom.properties"
+    },
+    {
+      "glob": "META-INF/maven/org.bytedeco/javacpp/pom.properties"
+    },
+    {
+      "glob": "META-INF/maven/org.xerial/sqlite-jdbc/pom.properties"
+    },
+    {
+      "glob": "META-INF/services/coil3.util.DecoderServiceLoaderTarget"
+    },
+    {
+      "glob": "META-INF/services/coil3.util.FetcherServiceLoaderTarget"
+    },
+    {
+      "glob": "META-INF/services/io.ktor.serialization.kotlinx.KotlinxSerializationExtensionProvider"
+    },
+    {
+      "glob": "META-INF/services/java.awt.im.spi.InputMethodDescriptor"
+    },
+    {
+      "glob": "META-INF/services/java.net.spi.InetAddressResolverProvider"
+    },
+    {
+      "glob": "META-INF/services/java.net.spi.URLStreamHandlerProvider"
+    },
+    {
+      "glob": "META-INF/services/java.nio.channels.spi.SelectorProvider"
+    },
+    {
+      "glob": "META-INF/services/java.sql.Driver"
+    },
+    {
+      "glob": "META-INF/services/java.time.zone.ZoneRulesProvider"
+    },
+    {
+      "glob": "META-INF/services/javax.imageio.spi.ImageInputStreamSpi"
+    },
+    {
+      "glob": "META-INF/services/javax.imageio.spi.ImageOutputStreamSpi"
+    },
+    {
+      "glob": "META-INF/services/javax.imageio.spi.ImageReaderSpi"
+    },
+    {
+      "glob": "META-INF/services/javax.imageio.spi.ImageTranscoderSpi"
+    },
+    {
+      "glob": "META-INF/services/javax.imageio.spi.ImageWriterSpi"
+    },
+    {
+      "glob": "META-INF/services/javax.sound.sampled.spi.MixerProvider"
+    },
+    {
+      "glob": "META-INF/services/kotlinx.coroutines.internal.MainDispatcherFactory"
+    },
+    {
+      "glob": "META-INF/services/org.slf4j.spi.SLF4JServiceProvider"
+    },
+    {
+      "glob": "com/ibm/icu/ICUConfig.properties"
+    },
+    {
+      "glob": "com/ibm/icu/impl/data/icudata/langInfo.res"
+    },
+    {
+      "glob": "com/ibm/icu/impl/data/icudata/metadata.res"
+    },
+    {
+      "glob": "com/ibm/icu/impl/data/icudata/pnames.icu"
+    },
+    {
+      "glob": "com/ibm/icu/impl/data/icudata/pool.res"
+    },
+    {
+      "glob": "com/ibm/icu/impl/data/icudata/res_index.res"
+    },
+    {
+      "glob": "com/ibm/icu/impl/data/icudata/root.res"
+    },
+    {
+      "glob": "com/ibm/icu/impl/data/icudata/uprops.icu"
+    },
+    {
+      "glob": "com/sun/jna/linux-x86-64/libjnidispatch.so"
+    },
+    {
+      "glob": "composeResources/com.metrolist.shared.generated.resources/drawable/logo.png"
+    },
+    {
+      "glob": "composeResources/com.metrolist.shared.generated.resources/values-en/strings.commonMain.cvr"
+    },
+    {
+      "glob": "composeResources/com.metrolist.shared.generated.resources/values/strings.commonMain.cvr"
+    },
+    {
+      "glob": "composetray/native/linux-x64/libLinuxTray.so"
+    },
+    {
+      "glob": "libskiko-linux-x64.so"
+    },
+    {
+      "glob": "libskiko-linux-x64.so.sha256"
+    },
+    {
+      "glob": "linux-x86-64/libcomposewebview_wry.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libavcodec.62.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libavcodec.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libavcodec.so.62"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libavformat.62.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libavformat.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libavformat.so.62"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libavutil.60.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libavutil.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libavutil.so.60"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libdrm.2.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libdrm.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libdrm.so.2"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libjniavcodec.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libjniavformat.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libjniavutil.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libjniswresample.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libjniswscale.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libswresample.6.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libswresample.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libswresample.so.6"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libswscale.9.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libswscale.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libswscale.so.9"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libva-drm.2.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libva-drm.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libva-drm.so.2"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libva.2.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libva.so"
+    },
+    {
+      "glob": "linux-x86_64-gpl/libva.so.2"
+    },
+    {
+      "glob": "linux-x86_64/libavcodec.62.so"
+    },
+    {
+      "glob": "linux-x86_64/libavcodec.so"
+    },
+    {
+      "glob": "linux-x86_64/libavformat.62.so"
+    },
+    {
+      "glob": "linux-x86_64/libavformat.so"
+    },
+    {
+      "glob": "linux-x86_64/libavutil.60.so"
+    },
+    {
+      "glob": "linux-x86_64/libavutil.so"
+    },
+    {
+      "glob": "linux-x86_64/libdrm.2.so"
+    },
+    {
+      "glob": "linux-x86_64/libdrm.so"
+    },
+    {
+      "glob": "linux-x86_64/libjnijavacpp.so"
+    },
+    {
+      "glob": "linux-x86_64/libswresample.6.so"
+    },
+    {
+      "glob": "linux-x86_64/libswresample.so"
+    },
+    {
+      "glob": "linux-x86_64/libswscale.9.so"
+    },
+    {
+      "glob": "linux-x86_64/libswscale.so"
+    },
+    {
+      "glob": "linux-x86_64/libva-drm.2.so"
+    },
+    {
+      "glob": "linux-x86_64/libva-drm.so"
+    },
+    {
+      "glob": "linux-x86_64/libva.2.so"
+    },
+    {
+      "glob": "linux-x86_64/libva.so"
+    },
+    {
+      "glob": "logo.png"
+    },
+    {
+      "glob": "logo.svg"
+    },
+    {
+      "glob": "nucleus/native/linux-x64/libnucleus_linux_theme.so"
+    },
+    {
+      "glob": "nucleus/native/linux-x64/libnucleus_media_control_linux.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libavcodec.62.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libavcodec.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libavcodec.so.62"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libavformat.62.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libavformat.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libavformat.so.62"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libavutil.60.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libavutil.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libavutil.so.60"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libdrm.2.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libdrm.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libdrm.so.2"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libjniavcodec.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libjniavformat.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libjniavutil.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libjniswresample.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libjniswscale.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libswresample.6.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libswresample.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libswresample.so.6"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libswscale.9.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libswscale.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libswscale.so.9"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libva-drm.2.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libva-drm.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libva-drm.so.2"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libva.2.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libva.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64-gpl/libva.so.2"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libavcodec.62.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libavcodec.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libavcodec.so.62"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libavformat.62.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libavformat.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libavformat.so.62"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libavutil.60.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libavutil.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libavutil.so.60"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libdrm.2.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libdrm.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libdrm.so.2"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libjniavcodec.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libjniavformat.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libjniavutil.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libjniswresample.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libjniswscale.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libswresample.6.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libswresample.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libswresample.so.6"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libswscale.9.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libswscale.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libswscale.so.9"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libva-drm.2.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libva-drm.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libva-drm.so.2"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libva.2.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libva.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/global/linux-x86_64/libva.so.2"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libavcodec.62.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libavcodec.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libavcodec.so.62"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libavformat.62.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libavformat.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libavformat.so.62"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libavutil.60.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libavutil.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libavutil.so.60"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libdrm.2.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libdrm.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libdrm.so.2"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libjniavcodec.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libjniavformat.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libjniavutil.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libjniswresample.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libjniswscale.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libswresample.6.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libswresample.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libswresample.so.6"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libswscale.9.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libswscale.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libswscale.so.9"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libva-drm.2.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libva-drm.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libva-drm.so.2"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libva.2.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libva.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64-gpl/libva.so.2"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libavcodec.62.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libavcodec.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libavcodec.so.62"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libavformat.62.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libavformat.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libavformat.so.62"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libavutil.60.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libavutil.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libavutil.so.60"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libdrm.2.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libdrm.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libdrm.so.2"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libjniavcodec.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libjniavformat.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libjniavutil.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libjniswresample.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libjniswscale.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libswresample.6.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libswresample.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libswresample.so.6"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libswscale.9.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libswscale.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libswscale.so.9"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libva-drm.2.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libva-drm.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libva-drm.so.2"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libva.2.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libva.so"
+    },
+    {
+      "glob": "org/bytedeco/ffmpeg/linux-x86_64/libva.so.2"
+    },
+    {
+      "glob": "org/bytedeco/javacpp/linux-x86_64/libjnijavacpp.so"
+    },
+    {
+      "glob": "org/bytedeco/javacpp/properties/linux-x86_64.properties"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libavcodec.62.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libavcodec.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libavcodec.so.62"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libavformat.62.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libavformat.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libavformat.so.62"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libavutil.60.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libavutil.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libavutil.so.60"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libdrm.2.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libdrm.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libdrm.so.2"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libjniavcodec.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libjniavformat.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libjniavutil.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libjniswresample.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libjniswscale.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libswresample.6.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libswresample.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libswresample.so.6"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libswscale.9.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libswscale.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libswscale.so.9"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libva-drm.2.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libva-drm.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libva-drm.so.2"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libva.2.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libva.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64-gpl/libva.so.2"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libavcodec.62.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libavcodec.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libavformat.62.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libavformat.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libavutil.60.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libavutil.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libdrm.2.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libdrm.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libjnijavacpp.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libswresample.6.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libswresample.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libswscale.9.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libswscale.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libva-drm.2.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libva-drm.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libva.2.so"
+    },
+    {
+      "glob": "org/bytedeco/linux-x86_64/libva.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libavcodec.62.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libavcodec.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libavcodec.so.62"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libavformat.62.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libavformat.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libavformat.so.62"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libavutil.60.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libavutil.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libavutil.so.60"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libdrm.2.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libdrm.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libdrm.so.2"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libjniavcodec.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libjniavformat.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libjniavutil.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libjniswresample.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libjniswscale.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libswresample.6.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libswresample.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libswresample.so.6"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libswscale.9.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libswscale.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libswscale.so.9"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libva-drm.2.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libva-drm.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libva-drm.so.2"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libva.2.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libva.so"
+    },
+    {
+      "glob": "org/linux-x86_64-gpl/libva.so.2"
+    },
+    {
+      "glob": "org/linux-x86_64/libavcodec.62.so"
+    },
+    {
+      "glob": "org/linux-x86_64/libavcodec.so"
+    },
+    {
+      "glob": "org/linux-x86_64/libavformat.62.so"
+    },
+    {
+      "glob": "org/linux-x86_64/libavformat.so"
+    },
+    {
+      "glob": "org/linux-x86_64/libavutil.60.so"
+    },
+    {
+      "glob": "org/linux-x86_64/libavutil.so"
+    },
+    {
+      "glob": "org/linux-x86_64/libdrm.2.so"
+    },
+    {
+      "glob": "org/linux-x86_64/libdrm.so"
+    },
+    {
+      "glob": "org/linux-x86_64/libjnijavacpp.so"
+    },
+    {
+      "glob": "org/linux-x86_64/libswresample.6.so"
+    },
+    {
+      "glob": "org/linux-x86_64/libswresample.so"
+    },
+    {
+      "glob": "org/linux-x86_64/libswscale.9.so"
+    },
+    {
+      "glob": "org/linux-x86_64/libswscale.so"
+    },
+    {
+      "glob": "org/linux-x86_64/libva-drm.2.so"
+    },
+    {
+      "glob": "org/linux-x86_64/libva-drm.so"
+    },
+    {
+      "glob": "org/linux-x86_64/libva.2.so"
+    },
+    {
+      "glob": "org/linux-x86_64/libva.so"
+    },
+    {
+      "glob": "org/sqlite/native/Linux/x86_64/libsqlitejdbc.so"
+    },
+    {
+      "glob": "simplelogger.properties"
+    },
+    {
+      "module": "java.base",
+      "glob": "jdk/internal/icu/impl/data/icudt76b/nfc.nrm"
+    },
+    {
+      "module": "java.base",
+      "glob": "jdk/internal/icu/impl/data/icudt76b/nfkc.nrm"
+    },
+    {
+      "module": "java.base",
+      "glob": "jdk/internal/icu/impl/data/icudt76b/uprops.icu"
+    },
+    {
+      "module": "java.base",
+      "glob": "sun/net/idn/uidna.spp"
+    },
+    {
+      "module": "java.desktop",
+      "glob": "com/sun/swing/internal/plaf/basic/resources/basic_en.properties"
+    },
+    {
+      "module": "java.desktop",
+      "glob": "com/sun/swing/internal/plaf/metal/resources/metal_en.properties"
+    },
+    {
+      "module": "java.desktop",
+      "glob": "sun/awt/resources/awt_en.properties"
+    },
+    {
+      "module": "java.logging",
+      "glob": "sun/util/logging/resources/logging_en.properties"
+    },
+    {
+      "bundle": "com.sun.swing.internal.plaf.basic.resources.basic"
+    },
+    {
+      "bundle": "com.sun.swing.internal.plaf.metal.resources.metal"
+    },
+    {
+      "bundle": "sun.awt.resources.awt"
+    },
+    {
+      "bundle": "sun.util.logging.resources.logging"
+    }
+  ]
+}

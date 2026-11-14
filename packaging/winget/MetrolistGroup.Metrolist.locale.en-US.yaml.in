@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.9.0.schema.json
+PackageIdentifier: MetrolistGroup.Metrolist
+PackageVersion: '@VERSION@'
+PackageLocale: en-US
+Publisher: MetrolistGroup
+PublisherUrl: https://github.com/MetrolistGroup
+PublisherSupportUrl: https://github.com/MetrolistGroup/Metrolist/issues
+PackageName: Metrolist Desktop
+PackageUrl: https://github.com/MetrolistGroup/Metrolist
+License: GPL-3.0
+LicenseUrl: https://github.com/MetrolistGroup/Metrolist/blob/v@VERSION@/LICENSE
+ShortDescription: YouTube Music desktop client
+ReleaseNotesUrl: https://github.com/MetrolistGroup/Metrolist/releases/tag/v@VERSION@
+ManifestType: defaultLocale
+ManifestVersion: 1.9.0
