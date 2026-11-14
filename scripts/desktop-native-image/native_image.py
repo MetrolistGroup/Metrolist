@@ -50,7 +50,7 @@ def arguments(graal, work, output, target, experiment=False, agent=None):
                '-H:+AddAllCharsets', '-H:+IncludeAllLocales',
                '-H:ConfigurationFileDirectories=' + ','.join(str(p.resolve()) for p in configurations(target, agent, experiment))]
     if not experiment:
-        # Testers fall back like the JVM on a missing registration; CI smoke passes -XX:...=Exit to stay strict.
+        # Testers fall back like the JVM on a missing registration; CI smoke fails on any reported registration.
         options += ['-R:MaxHeapSize=384m', '-R:MinHeapSize=32m', '-R:MissingRegistrationReportingMode=Warn']
         # The default x86-64-v3 / armv8.1-a target refuses to start on CPUs without AVX2 or on Raspberry Pi 4 class ARM.
         options += ['-march=compatibility']
@@ -107,6 +107,10 @@ def build(graal, work, target, experiment=False, agent=None):
             shutil.copy2(freetype, image / freetype.name)
         (image / 'lib').mkdir(exist_ok=True)
         shutil.copy2(source, image / 'lib' / library)
+        # Windows AWT reads its font configuration from java.home/lib, which is the image directory here.
+        for name in ('fontconfig.bfc', 'fontconfig.properties.src', 'psfontj2d.properties', 'psfont.properties.ja'):
+            if (graal / 'lib' / name).is_file():
+                shutil.copy2(graal / 'lib' / name, image / 'lib' / name)
         if target.startswith('windows'):
             (image / 'bin').mkdir(exist_ok=True)
             shutil.copy2(source, image / 'bin' / library)
