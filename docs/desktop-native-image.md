@@ -2,7 +2,7 @@
 
 ## Opt-in native tester builds
 
-The supported path keeps Serial GC, `-Os`, a 32 MiB initial heap and a 384 MiB maximum heap. GraalVM 25.0.4 downloads and SHA-256 hashes live in [graalvm-pins.json](../scripts/graalvm-pins.json). The hashes come from Oracle's adjacent `.sha256` URLs. Local Linux builds use `/mnt/work/tools/graalvm-25`; do not download or unpack a builder under RAM-backed `/tmp`.
+The supported path keeps Serial GC, `-Os`, a 32 MiB initial heap and a 384 MiB maximum heap. It compiles with `-march=compatibility`, because GraalVM's default x86-64-v3 target exits on x64 CPUs without AVX2, FMA or BMI2 and its default ARM target excludes Raspberry Pi 4 class cores. The measurements below used the default target. GraalVM 25.0.4 downloads and SHA-256 hashes live in [graalvm-pins.json](../scripts/graalvm-pins.json). The hashes come from Oracle's adjacent `.sha256` URLs. Local Linux builds use `/mnt/work/tools/graalvm-25`; do not download or unpack a builder under RAM-backed `/tmp`.
 
 | Target | Build and package | CI state |
 | --- | --- | --- |
