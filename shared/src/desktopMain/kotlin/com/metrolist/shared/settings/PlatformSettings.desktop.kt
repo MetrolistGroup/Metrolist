@@ -52,6 +52,8 @@ private const val LEGACY_PREFERENCES_MIGRATED = "desktopLegacyPreferencesMigrate
 private const val LEGACY_SECRET_CLEANUP_V2 = "desktopLegacySecretCleanupV2"
 private const val AUTO_CACHE_DEFAULT_MIGRATION = "desktopAutoCacheDefaultDisabledV1"
 
+internal actual fun defaultMinimizeToTrayOnClose(): Boolean = OsUtil.isMac
+
 private val secretKeys =
     setOf(
         "innerTubeCookie",

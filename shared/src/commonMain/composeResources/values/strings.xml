@@ -4422,6 +4422,10 @@
     <string name="tray_hide_window">Hide window</string>
     <!-- Translators: Imperative action label for show window in the desktop system tray. -->
     <string name="tray_show_window">Show window</string>
+    <string name="desktop_minimize_to_tray">Minimize to tray</string>
+    <string name="desktop_minimize_to_tray_desc">Closing the window will minimize Metrolist to the tray instead</string>
+    <string name="desktop_tray_toggle_on_click">Hide or show on tray click</string>
+    <string name="desktop_tray_toggle_on_click_desc">Left-clicking the tray icon will open or close the Metrolist window</string>
     <!-- Translators: Imperative action label for show miniplayer in the desktop system tray. -->
     <string name="tray_show_miniplayer">Show miniplayer</string>
     <!-- Translators: Label for tray settings in the desktop system tray. -->

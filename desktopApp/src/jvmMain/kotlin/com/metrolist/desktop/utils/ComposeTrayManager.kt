@@ -29,6 +29,7 @@ import com.metrolist.shared.generated.resources.tray_tooltip_paused
 import com.metrolist.shared.generated.resources.tray_tooltip_playing
 import com.metrolist.shared.generated.resources.tray_unknown
 import com.metrolist.shared.generated.resources.tray_unknown_title
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.ui.navigation.Screen
 import com.metrolist.shared.utils.OsUtil
@@ -114,6 +115,17 @@ object ComposeTrayManager {
         }
     }
 
+    fun hideWindow() {
+        EventQueue.invokeLater {
+            val window = mainWindow?.takeIf { it.isDisplayable } ?: return@invokeLater
+            windowState?.let { state ->
+                state.isMinimized = true
+                isWindowVisible.value = false
+            }
+            window.isVisible = false
+        }
+    }
+
     fun setWindowVisible(visible: Boolean) {
         isWindowVisible.value = visible
     }
@@ -176,6 +188,15 @@ object ComposeTrayManager {
         Tray(
             icon = icon,
             tooltip = tooltip,
+            primaryAction = {
+                if (Settings.shared.desktopTrayToggleOnClick) {
+                    if (isWindowVisible.value) {
+                        hideWindow()
+                    } else {
+                        showWindow()
+                    }
+                }
+            },
             menuContent = {
                 currentTrack?.let { track ->
                     val titleLabel = track.title.takeIf { it.isNotBlank() } ?: strUnknownTitle

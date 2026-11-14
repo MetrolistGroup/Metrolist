@@ -30,3 +30,5 @@ internal actual fun defaultKmpSettings(): KmpSettings {
     val plaintextSettings = AndroidBatchSettings(store)
     return AndroidFileSettings(appContext, AndroidSecureSettings(appContext, plaintextSettings))
 }
+
+internal actual fun defaultMinimizeToTrayOnClose(): Boolean = false

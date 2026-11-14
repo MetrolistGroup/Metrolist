@@ -294,6 +294,18 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                     settings.disableWaylandScaleFix = it
                     host.onSettingChanged(SettingsChangeEffect.RESTART, null)
                 }
+                switch(
+                    id = "minimizeToTrayOnClose",
+                    title = stringResource(Res.string.desktop_minimize_to_tray),
+                    description = stringResource(Res.string.desktop_minimize_to_tray_desc),
+                    checked = settings.minimizeToTrayOnClose,
+                ) { settings.minimizeToTrayOnClose = it }
+                switch(
+                    id = "desktopTrayToggleOnClick",
+                    title = stringResource(Res.string.desktop_tray_toggle_on_click),
+                    description = stringResource(Res.string.desktop_tray_toggle_on_click_desc),
+                    checked = settings.desktopTrayToggleOnClick,
+                ) { settings.desktopTrayToggleOnClick = it }
             }
         }
         if (host.platform != SettingsPlatform.DESKTOP) {

@@ -1189,10 +1189,16 @@ private fun runDesktopApp(args: Array<String>) {
             onDispose { DesktopNavigation.unbind(navigator) }
         }
 
-        Window(
-            onCloseRequest = {
+        fun minimizeToTrayOrClose() {
+            if (Settings.shared.minimizeToTrayOnClose) {
+                ComposeTrayManager.hideWindow()
+            } else {
                 shutdownApp { exitProcess(0) }
-            },
+            }
+        }
+
+        Window(
+            onCloseRequest = { minimizeToTrayOrClose() },
             title = if (BuildConfig.DEBUG) "Metrolist Debug" else "Metrolist",
             state = windowState,
             undecorated = isLinux && !useSystemWindowFrame,
@@ -1229,7 +1235,7 @@ private fun runDesktopApp(args: Array<String>) {
                         }
                         if (isLinux) {
                             LinuxWindowFrame(
-                                onCloseRequest = { shutdownApp { exitProcess(0) } },
+                                onCloseRequest = { minimizeToTrayOrClose() },
                                 darkTheme = !MaterialTheme.colorScheme.background.isLight(),
                                 state = windowState,
                             ) { shell() }
@@ -1274,9 +1280,7 @@ private fun runDesktopApp(args: Array<String>) {
                             UiState.isRefreshingApp = false
                         }
                     },
-                    onCloseWindow = {
-                        shutdownApp { exitProcess(0) }
-                    },
+                    onCloseWindow = { minimizeToTrayOrClose() },
                 )
             }
 
@@ -1452,8 +1456,12 @@ private fun runDesktopApp(args: Array<String>) {
             }
 
             fun onClose() {
-                AppLogger.info("Main", "Application shutting down")
-                shutdownApp { exitProcess(0) }
+                if (Settings.shared.minimizeToTrayOnClose) {
+                    ComposeTrayManager.hideWindow()
+                } else {
+                    AppLogger.info("Main", "Application shutting down")
+                    shutdownApp { exitProcess(0) }
+                }
             }
 
             val areWeInDarkMode = remember { mutableStateOf(false) }

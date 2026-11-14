@@ -847,6 +847,8 @@ class Settings(
     var lastHomePageJson by blobPreference("lastHomePageJson")
 
     var enableSystemWindowFrame by preference(false)
+    var minimizeToTrayOnClose by preference(defaultMinimizeToTrayOnClose())
+    var desktopTrayToggleOnClick by preference(true)
     var waylandDefaultFrameApplied by preference(false)
     var disableWaylandScaleFix by preference(false)
     var macDefaultFrameApplied by preference(false)
