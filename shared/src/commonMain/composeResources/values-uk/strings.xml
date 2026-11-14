@@ -453,7 +453,6 @@
     <string name="lastfm_service_error">Вхід до Last.fm недоступний. Спробуйте ще раз пізніше.</string>
     <string name="song_cache_location_custom">Власна папка</string>
     <string name="song_cache_location_custom_desc">Власна папка, вибрана через Storage Access Framework</string>
-
     <string name="settings_appearance_overview">Тема, шрифти й оформлення плеєра</string>
     <string name="settings_android_auto_overview">Списки в автомобілі та список для швидкого додавання</string>
     <string name="settings_about_overview">Учасники проєкту, посилання спільноти й ліцензії</string>
@@ -521,4 +520,17 @@
     <string name="settings_resume_prompt_summary">Запитувати перед відновленням збереженої черги під час запуску застосунку</string>
     <string name="settings_player_layout_summary">Змінити розташування обкладинок та елементів керування відтворенням</string>
     <string name="settings_filter_q_summary">Q визначає ширину або резонанс вибраного фільтра</string>
+    <string name="offline_mode">Автономний режим</string>
+    <string name="new_releases">Нові релізи</string>
+    <string name="podcasts_for_you">Подкасти для вас</string>
+    <string name="home_unavailable">Головна сторінка недоступна</string>
+    <string name="search_library">Шукати в бібліотеці</string>
+    <string name="settings_reset_to_default">Скинути до типового значення</string>
+    <string name="mix">Мікс</string>
+    <string name="pause">Призупинити</string>
+    <string name="download_notification_title">Завантаження пісень</string>
+    <string name="download_notification_paused">Завантаження призупинено</string>
+    <string name="downloads_completed">Завантаження завершено</string>
+    <string name="downloads_finished">Усі завантаження завершено</string>
+    <string name="completed_downloads">Завершені завантаження</string>
 </resources>
