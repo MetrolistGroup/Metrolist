@@ -38,6 +38,19 @@ def configurations(target, agent, experiment=False):
     return paths
 
 
+NUCLEUS_NATIVE_DIRECTORIES = {'linux-x64': 'linux-x64', 'linux-arm64': 'linux-aarch64',
+                              'macos-arm64': 'darwin-aarch64', 'windows-x64': 'win32-x64'}
+
+
+def nucleus_natives(work, target):
+    # Nucleus extracts its JNI libraries from nucleus/native/<platform>/ at runtime; traces only saw linux-x64.
+    directory = work / 'nucleus-natives'
+    directory.mkdir(parents=True, exist_ok=True)
+    glob = f'nucleus/native/{NUCLEUS_NATIVE_DIRECTORIES[target]}/*'
+    (directory / 'reachability-metadata.json').write_text(json.dumps({'resources': [{'glob': glob}]}, indent=2) + '\n')
+    return directory
+
+
 def arguments(graal, work, output, target, experiment=False, agent=None):
     windows = target.startswith('windows-')
     compiler = graal / 'bin' / ('native-image.cmd' if windows else 'native-image')
@@ -48,7 +61,7 @@ def arguments(graal, work, output, target, experiment=False, agent=None):
                '--exact-reachability-metadata', '--enable-url-protocols=http,https',
                '--enable-native-access=ALL-UNNAMED', '-Djava.awt.headless=false',
                '-H:+AddAllCharsets', '-H:+IncludeAllLocales',
-               '-H:ConfigurationFileDirectories=' + ','.join(str(p.resolve()) for p in configurations(target, agent, experiment))]
+               '-H:ConfigurationFileDirectories=' + ','.join(str(p.resolve()) for p in [*configurations(target, agent, experiment), nucleus_natives(work, target)])]
     if not experiment:
         # Testers fall back like the JVM on a missing registration; CI smoke fails on any reported registration.
         options += ['-R:MaxHeapSize=384m', '-R:MinHeapSize=32m', '-R:MissingRegistrationReportingMode=Warn']
