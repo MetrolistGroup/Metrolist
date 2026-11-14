@@ -83,6 +83,8 @@ python3 -m unittest discover -s .github/tests
 actionlint
 ```
 
+To diagnose a hang, start the native executable with `METROLIST_NATIVE_THREAD_DUMP_SECONDS=<n>`. After n seconds it writes every Java thread's stack to its `native_err_pid*.log`, since Native Image has no `jstack`.
+
 CI evidence includes source revision, platform, GraalVM pin, flags, artifact sizes/hashes, builder timing, build log and smoke logs. It includes no profile directory or application credentials. Backend-only Windows evidence does not verify the window frame, taskbar interaction, WebView2 login, Direct3D hardware or actual audio output. Those need a real Windows desktop before Windows promotion. macOS signing and ARM64 runtime behavior need their first hosted builds. The macOS smoke runner launches the executable inside a `.app` or extracted ZIP in the runner's GUI session, captures it with `screencapture`, and checks strict registrations and normal shutdown. Notarization is outside this tester path.
 
 ### Supported path verification
