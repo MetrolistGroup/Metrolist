@@ -133,10 +133,10 @@ internal object AudioDownloadTranscoder {
         metadata: Map<String, String>,
     ) : AutoCloseable {
         private val format = AVFormatContext(null)
-        private val codec: AVCodecContext
+        private var codec: AVCodecContext? = null
         private val stream: AVStream
-        private val frame: AVFrame = av_frame_alloc()
-        private val packet: AVPacket = av_packet_alloc()
+        private var frame: AVFrame? = null
+        private var packet: AVPacket? = null
         private val frameSize: Int
 
         private val pending = Array(channels) { FloatArray(0) }
@@ -145,15 +145,24 @@ internal object AudioDownloadTranscoder {
         private var closed = false
 
         init {
-            val encoder = avcodec_find_encoder_by_name("aac")
-            codec = avcodec_alloc_context3(encoder)
             try {
-                if (encoder == null || encoder.isNull) throw IOException("AAC encoder is unavailable")
+                val encoder =
+                    avcodec_find_encoder_by_name("aac")?.takeUnless { it.isNull }
+                        ?: throw IOException("AAC encoder is unavailable")
+                val frame =
+                    av_frame_alloc()?.takeUnless { it.isNull }?.also { this.frame = it }
+                        ?: throw IOException("Could not allocate an audio frame")
+                packet =
+                    av_packet_alloc()?.takeUnless { it.isNull }
+                        ?: throw IOException("Could not allocate an audio packet")
+                val codec =
+                    avcodec_alloc_context3(encoder)?.takeUnless { it.isNull }?.also { this.codec = it }
+                        ?: throw IOException("Could not allocate the AAC encoder")
                 ffmpeg(avformat_alloc_output_context2(format, null as AVOutputFormat?, "ipod", file.path), "create the M4A muxer")
                 codec.sample_fmt(AV_SAMPLE_FMT_FLTP)
                 codec.sample_rate(sampleRate)
                 codec.bit_rate(AAC_BITRATE)
-                codec.time_base(av_make_q(1, sampleRate))
+                av_make_q(1, sampleRate).use { codec.time_base(it) }
                 av_channel_layout_default(codec.ch_layout(), channels)
                 if (format.oformat().flags() and AVFMT_GLOBALHEADER != 0) {
                     codec.flags(codec.flags() or AV_CODEC_FLAG_GLOBAL_HEADER)
@@ -165,8 +174,18 @@ internal object AudioDownloadTranscoder {
                 ffmpeg(avcodec_parameters_from_context(stream.codecpar(), codec), "configure the audio stream")
 
                 val tags = AVDictionary(null)
-                metadata.forEach { (key, value) -> av_dict_set(tags, BytePointer(key, "UTF-8"), BytePointer(value, "UTF-8"), 0) }
-                format.metadata(tags)
+                try {
+                    metadata.forEach { (key, value) ->
+                        BytePointer(key, "UTF-8").use { nativeKey ->
+                            BytePointer(value, "UTF-8").use { nativeValue ->
+                                ffmpeg(av_dict_set(tags, nativeKey, nativeValue, 0), "set $key metadata")
+                            }
+                        }
+                    }
+                } finally {
+                    // Format teardown also owns a partially populated dictionary.
+                    format.metadata(tags)
+                }
 
                 val io = AVIOContext(null)
                 ffmpeg(avio_open2(io, file.path, AVIO_FLAG_WRITE, null as AVIOInterruptCB?, null as AVDictionary?), "open ${file.name}")
@@ -175,7 +194,7 @@ internal object AudioDownloadTranscoder {
 
                 frame.format(AV_SAMPLE_FMT_FLTP)
                 frame.sample_rate(sampleRate)
-                av_channel_layout_copy(frame.ch_layout(), codec.ch_layout())
+                ffmpeg(av_channel_layout_copy(frame.ch_layout(), codec.ch_layout()), "configure the audio frame layout")
                 frame.nb_samples(frameSize)
                 ffmpeg(av_frame_get_buffer(frame, 0), "allocate an audio frame")
             } catch (error: Throwable) {
@@ -218,10 +237,11 @@ internal object AudioDownloadTranscoder {
             offset: Int,
             samples: Int,
         ) {
+            val frame = checkNotNull(frame)
             ffmpeg(av_frame_make_writable(frame), "reuse the audio frame")
             frame.nb_samples(samples)
             for (channel in 0 until channels) {
-                FloatPointer(frame.data(channel)).put(pending[channel], offset, samples)
+                FloatPointer(frame.data(channel)).use { it.put(pending[channel], offset, samples) }
             }
             frame.pts(nextPts)
             nextPts += samples
@@ -229,6 +249,8 @@ internal object AudioDownloadTranscoder {
         }
 
         private fun drain(input: AVFrame?) {
+            val codec = checkNotNull(codec)
+            val packet = checkNotNull(packet)
             ffmpeg(avcodec_send_frame(codec, input), "encode audio")
             while (true) {
                 val result = avcodec_receive_packet(codec, packet)

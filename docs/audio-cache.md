@@ -24,6 +24,8 @@ Remote playlist download refreshes store every page of unfiltered membership. Of
 
 Android shared-folder exports remux WebM/Opus to tagged Ogg Opus and AAC to tagged M4A without re-encoding. Conversion or tagging failure must not publish raw source files. Private storage keeps the original representation. Shared-cache migrations retain originals until replacement files and format metadata commit.
 
+Desktop downloads transcode to tagged AAC/M4A before publication. Temporary JavaCPP tag strings, rational values and frame views are released at their call sites; partially initialized encoders and metadata dictionaries also have cleanup owners.
+
 SABR downloads and incomplete playback captures use validated transfers. Tokenless downloads renew sessions after 45 seconds of media and resume at a segment boundary. Renewal must preserve the encoded representation. Reject gaps, changed bytes and incomplete transfers; see [SABR constraints](innertube.md#sabr).
 
 iOS capture validates URLs, redirects, response ranges and lengths. Captures retain session ownership through preloads and crossfades. Cache clear prevents publication while allowing attached readers to finish. Startup removes abandoned session files.
