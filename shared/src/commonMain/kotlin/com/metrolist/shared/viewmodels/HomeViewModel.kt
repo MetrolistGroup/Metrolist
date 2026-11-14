@@ -686,7 +686,7 @@ class HomeViewModel(
                                     sections = uncategorizedHomeSections(hydratedPrimarySections),
                                 ).withoutBlockedContent()
                         }
-                        if (!isFiltered) primaryContentPublished = true
+                        primaryContentPublished = true
                         Logger.d(
                             HOME_LOG_TAG,
                             "primary home content published elapsedMs=${loadStartedAt.elapsedNow().inWholeMilliseconds}",
@@ -870,7 +870,11 @@ class HomeViewModel(
                                 isAllContentPending =
                                     if (!isFiltered && primaryContentPublished) false else currentState.isAllContentPending,
                                 continuation =
-                                    if (!isFiltered && primaryContentPublished) primaryContinuation else currentState.continuation,
+                                    homeContinuationAfterAssemblyFailure(
+                                        currentContinuation = currentState.continuation,
+                                        primaryContinuation = primaryContinuation,
+                                        primaryContentPublished = primaryContentPublished,
+                                    ),
                                 error = e.message,
                             )
                         _uiState.value = failedState
@@ -881,6 +885,9 @@ class HomeViewModel(
                                 val locale = GlobalYouTube.innerTube.locale
                                 lastKnownLocaleSignature = "${locale.hl}:${locale.gl}"
                             }
+                        } else if (primaryContentPublished) {
+                            cachedSelectedChipContent = failedState
+                            failedState.selectedChip?.let { chip -> cacheChipContent(chip, failedState) }
                         }
                     } finally {
                         if (generation == contentLoadGeneration) {
@@ -1597,7 +1604,8 @@ class HomeViewModel(
                 .distinctBy(SongItem::id)
 
         val showLoadingPlaceholder: Boolean
-            get() = (isRestoringCache || isLoading || isRefreshing || isContentLoading) && !hasHomeFeedContent()
+            get() = (isRestoringCache || isLoading || isRefreshing || isContentLoading || isAllContentPending) &&
+                !hasHomeFeedContent()
 
         fun hasNoHomeContent(): Boolean = chips.isEmpty() && !hasHomeFeedContent()
 
@@ -1694,6 +1702,12 @@ internal fun homeCacheAfterAssemblyFailure(
     primaryContentPublished: Boolean,
 ): HomeViewModel.HomeUiState? =
     if (primaryContentPublished) cacheableAllContentSnapshot(failedState) ?: cachedAllContent else cachedAllContent
+
+internal fun homeContinuationAfterAssemblyFailure(
+    currentContinuation: String?,
+    primaryContinuation: String?,
+    primaryContentPublished: Boolean,
+): String? = if (primaryContentPublished) primaryContinuation else currentContinuation
 
 internal fun homeContentAfterBlockedContentChange(
     currentState: HomeViewModel.HomeUiState,
