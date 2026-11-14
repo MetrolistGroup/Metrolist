@@ -1,7 +1,7 @@
 <div style="display: flex; gap: 1rem;">
   <img src="fastlane/metadata/android/en-US/images/icon.png" alt="Metrolist app icon" width="200" height="200" />
   <div>
-      <h1>Metrolist [KMP]</h1>
+      <h1>Metrolist</h1>
       <h3>A Material Design YouTube Music client for Android, iOS and desktop</h3>
       <div style="display: flex; gap: 1rem;">
         <a href="https://github.com/MetrolistGroup/Metrolist/releases"><img src="https://img.shields.io/github/v/release/MetrolistGroup/Metrolist?style=for-the-badge&labelColor=0d1117" alt="Latest release" /></a>
@@ -77,10 +77,10 @@ DO NOT REMOVE THIS SECTION, I WANT TO ADD IT LATER!!!
 
 <h1><a id="download-now"></a>Download now</h1>
 
-<p>Install Metrolist KMP: <a href="docs/install/android.md">Android</a>, <a href="docs/install/ios.md">iOS</a>, <a href="docs/install/windows.md">Windows</a>, <a href="docs/install/macos.md">macOS</a> or <a href="docs/install/linux.md">Linux</a>. Check <a href="docs/install/README.md#get-the-package">KMP download availability</a> before choosing a package.</p>
+<p>Install Metrolist: <a href="docs/install/android.md">Android</a>, <a href="docs/install/ios.md">iOS</a>, <a href="docs/install/windows.md">Windows</a>, <a href="docs/install/macos.md">macOS</a> or <a href="docs/install/linux.md">Linux</a>. Check <a href="docs/install/README.md#get-the-package">download availability</a> before choosing a package.</p>
 
 <p>
-  <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest">Choose a KMP release for your device</a>
+  <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest">Choose a release for your device</a>
 </p>
 
 <table>
@@ -146,7 +146,7 @@ DO NOT REMOVE THIS SECTION, I WANT TO ADD IT LATER!!!
         <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest"><img alt="Download the x86_64 Linux AppImage" src="assets/badges/platform/linux-appimage.svg"></a>
       </p>
       <p>
-        <a href="https://aur.archlinux.org/packages/metrolist-bin"><img alt="Get the AUR PKGBUILD for Metrolist" src="assets/badges/platform/linux-aur.svg"></a>
+        <a href="https://aur.archlinux.org/packages/metrolist-desktop-bin"><img alt="Get the AUR PKGBUILD for Metrolist" src="assets/badges/platform/linux-aur.svg"></a>
       </p>
       <p>
         <a href="https://github.com/MetrolistGroup/Metrolist#nix"><img alt="Get the Nix flake" src="assets/badges/platform/linux-nix.svg"></a>
@@ -161,7 +161,7 @@ DO NOT REMOVE THIS SECTION, I WANT TO ADD IT LATER!!!
       <p>The app already has a built-in updater.</p>
       <p>
         <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/MetrolistGroup/Metrolist/">
-          <img alt="Add the Metrolist KMP repository to Obtainium" src="assets/badges/platform/store-obtainium.svg">
+          <img alt="Add the Metrolist repository to Obtainium" src="assets/badges/platform/store-obtainium.svg">
         </a>
       </p>
       <p>

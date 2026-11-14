@@ -21,7 +21,7 @@ chmod u+x -- ./Metrolist.AppImage
 
 Substitute the downloaded filename. Check playback, sign-in and retained credentials after restart.
 
-On Arch Linux, install [`metrolist-bin`](https://aur.archlinux.org/packages/metrolist-bin) for the release build or [`metrolist-git`](https://aur.archlinux.org/packages/metrolist-git) to build `main` from source, for example with `yay -S metrolist-bin`. Update them through your AUR helper instead of replacing an AppImage.
+On Arch Linux, install the community-maintained [`metrolist-desktop-bin`](https://aur.archlinux.org/packages/metrolist-desktop-bin) package, which wraps the x86_64 release AppImage, for example with `yay -S metrolist-desktop-bin`. Update it through your AUR helper instead of replacing the AppImage.
 
 ## Update and uninstall
 
