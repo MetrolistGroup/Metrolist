@@ -145,6 +145,7 @@ internal fun HomeViewModel.HomeUiState.primaryHomeContentLoaded(
         isContentLoading = false,
         isLoadingMore = false,
         error = null,
+        isAllContentPending = true,
         chips = chips,
         continuation = null,
     )
@@ -273,6 +274,7 @@ class HomeViewModel(
     private val initialSpeedDialPins = CompletableDeferred<Unit>()
 
     private val paginationInProgress = MutableStateFlow(false)
+    private var allContentReloadRequired = false
     private val chipFeedPager =
         HomeChipFeedPager(
             loadFirst = { chip ->
@@ -565,6 +567,7 @@ class HomeViewModel(
         isRefresh: Boolean = false,
         onComplete: () -> Unit = {},
     ) {
+        if (!isFilteredHome(params, browseId)) allContentReloadRequired = true
         val loadStartedAt = TimeSource.Monotonic.markNow()
         val generation = ++contentLoadGeneration
         val sessionKey = GlobalYouTube.innerTube.sessionSnapshot().homeCacheSessionKey()
@@ -823,6 +826,7 @@ class HomeViewModel(
                                     cacheChipContent(chip, loadedState)
                                 }
                             } else {
+                                allContentReloadRequired = false
                                 cacheAllContentState(loadedState)
                             }
                             saveLastHomePage(loadedState)
@@ -875,7 +879,7 @@ class HomeViewModel(
         if (continuation == null) {
             val state = _uiState.value
             if (!state.isLoading && !state.isRefreshing && !state.isRestoringCache &&
-                !state.isRevalidating && !state.isContentLoading
+                !state.isRevalidating && !state.isContentLoading && !state.isAllContentPending
             ) {
                 loadMoreChipSections()
             } else {
@@ -1222,7 +1226,8 @@ class HomeViewModel(
         val locale = GlobalYouTube.innerTube.locale
         val currentSignature = "${locale.hl}:${locale.gl}"
         val cached = cachedAllContent?.takeIf { lastKnownLocaleSignature == currentSignature }
-        if (cached != null) {
+        val reloadIncompleteFeed = allContentReloadRequired || _uiState.value.isAllContentPending
+        if (cached != null && !reloadIncompleteFeed) {
             val restored =
                 homeContentForAllSelection(_uiState.value, cached).copy(
                     isLoading = false,
