@@ -59,7 +59,8 @@ def arguments(graal, work, output, target, experiment=False, agent=None):
     classpath = (work / 'classpath.txt').read_text().strip()
     if not experiment:
         classpath = str(work / 'native-glue') + os.pathsep + classpath
-    return [*options, '-cp', classpath, '-o', str(output), main]
+    # Native Image appends .exe on Windows itself, so -o names the image without the suffix.
+    return [*options, '-cp', classpath, '-o', str(output.with_suffix('') if windows else output), main]
 
 
 def build(graal, work, target, experiment=False, agent=None):

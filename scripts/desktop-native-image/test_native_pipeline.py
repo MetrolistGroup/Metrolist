@@ -135,6 +135,14 @@ class PipelineTest(unittest.TestCase):
             self.assertTrue(os.access(app/'AppRun',os.X_OK))
             self.assertTrue((app/'resources').is_symlink())
 
+    def test_output_argument_leaves_exe_suffix_to_native_image(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory); (work/'classpath.txt').write_text('app.jar')
+            for target, output, expected in [('windows-x64', work/'image/Metrolist.exe', work/'image/Metrolist'),
+                                             ('linux-x64', work/'image/Metrolist', work/'image/Metrolist')]:
+                command = native_image.arguments(work, work, output, target)
+                self.assertEqual(str(expected), command[command.index('-o') + 1])
+
     def test_posix_architecture_checks_launcher_libraries_and_sidecars(self):
         for target, foreign, library in [('linux-x64', 'linux-arm64', 'libshim.so'), ('linux-arm64', 'linux-x64', 'libavutil.so.60'), ('macos-arm64', 'linux-arm64', 'libjawt.dylib')]:
             with self.subTest(target=target), tempfile.TemporaryDirectory() as directory:
