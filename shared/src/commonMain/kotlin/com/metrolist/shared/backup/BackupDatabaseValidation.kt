@@ -3,11 +3,15 @@ package com.metrolist.shared.backup
 import androidx.sqlite.SQLiteConnection
 
 internal fun validateBackupDatabase(connection: SQLiteConnection) {
-    connection.prepare("PRAGMA integrity_check").use {
-        check(it.step() && it.getText(0) == "ok") { "Backup database failed integrity check" }
-    }
+    validateBackupDatabaseIntegrity(connection)
     connection.prepare("PRAGMA foreign_key_check").use {
         check(!it.step()) { "Backup database contains invalid relationships" }
+    }
+}
+
+internal fun validateBackupDatabaseIntegrity(connection: SQLiteConnection) {
+    connection.prepare("PRAGMA integrity_check").use {
+        check(it.step() && it.getText(0) == "ok") { "Backup database failed integrity check" }
     }
 }
 
