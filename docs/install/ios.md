@@ -13,6 +13,14 @@ Follow your tool's setup and refresh instructions. Its OS support and signing li
 - [Sideloadly](https://sideloadly.io/faq.html).
 - [TrollStore](https://github.com/opa334/TrollStore), only where its supported OS versions overlap this app's minimum.
 
+### Automated installation
+
+On Linux, macOS or Windows with Python 3.10 or later, run `python3 scripts/install_ios.py` from a checkout of Metrolist (or `py scripts/install_ios.py` on Windows). The repository's latest GitHub release must be public and include `Metrolist.ipa` and `SHA256SUMS`.
+
+The script uses the Dadoum [Sideloader CLI](https://github.com/Dadoum/Sideloader) on all three platforms. It downloads the matching CLI release, verifies the IPA checksum, then asks for the Apple ID, password and 2FA code in the terminal before signing and installing the app. The script does not read or store Apple credentials.
+
+On Linux, the script installs missing device libraries with `pacman`, `apt-get` or `dnf`; the package manager may ask for administrator authentication. On macOS, install [Homebrew](https://brew.sh) first; the script uses it to install Sideloader's libraries. On Windows, the script downloads the required device-library DLLs and starts Apple's web iTunes installer if the Apple Mobile Device driver is missing. Complete that installer if prompted; Sideloader setup then resumes. Keep the iPhone connected, accept its Trust prompt, and enable Developer Mode when iOS requests it.
+
 Use the same signing account and resulting bundle ID for updates. Check the expiry shown by the tool and refresh before it expires. Refresh renews signing; download a new IPA separately to update Metrolist. Keep pairing files private.
 
 To receive updates in AltStore or SideStore, add the source `https://github.com/MetrolistGroup/Metrolist/releases/latest/download/metrolist-altstore.json`. Each stable release regenerates it. Metrolist also shows a notice once per new stable release and opens its release page; it does not install anything.
