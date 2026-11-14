@@ -372,7 +372,7 @@ private fun FullscreenControlsOverlay(
     onToggleRepeat: () -> Unit,
     onShowSleepTimer: () -> Unit,
     onShowPlayerMenu: () -> Unit,
-    onToggleSubtitle: () -> Unit,
+    onToggleSubtitle: (() -> Unit)?,
     onOpenCast: () -> Unit,
     isCasting: Boolean,
     isBuffering: Boolean = false,

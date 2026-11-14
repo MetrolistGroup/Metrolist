@@ -2075,8 +2075,10 @@ fun MobileApp(
                     SideEffect { playerSheetCoversSnackbars = expandedPlayerVisible }
                     IosPlayerVisibilityEffect(
                         expandedPlayerVisible = expandedPlayerVisible,
-                        lyricsVisible = playerUiState.isLyricsVisible,
-                        lyricsFullscreenVisible = playerUiState.isLyricsVisible && playerUiState.isLyricsExpanded,
+                        lyricsVisible = playerUiState.isLyricsVisible && !playerUiState.isVideoModeActive,
+                        lyricsFullscreenVisible =
+                            playerUiState.isLyricsVisible && playerUiState.isLyricsExpanded &&
+                                !playerUiState.isVideoModeActive,
                         isPlaying = playerUiState.isPlaying,
                     )
                     CompositionLocalProvider(
