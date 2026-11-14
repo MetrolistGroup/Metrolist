@@ -147,15 +147,15 @@ class IosBackupRestoreManager(
             try {
                 fs.createDirectories(staging)
                 val source = fileSeekableSource(sourcePath)
-                val header = ByteArray(SQLITE_HEADER.size)
-                val headerLength = source.use { it.read(0, header, 0, header.size) }
-                if (headerLength == SQLITE_HEADER.size && header.contentEquals(SQLITE_HEADER)) {
+                val header = source.use { if (it.size >= SQLITE_HEADER.size) it.readFully(0, SQLITE_HEADER.size) else ByteArray(0) }
+                if (header.contentEquals(SQLITE_HEADER)) {
                     val candidate = "$stagingPath/source.db"
                     copyFile(sourcePath, candidate, BackupArchiveLimits.DATABASE_BYTES)
                     return@withContext readAndImportForeignDatabase(candidate, database)
                 }
                 val databases = mutableListOf<String>()
                 val prismDataFiles = mutableMapOf<String, String>()
+                validateZipEntryCount(sourcePath, MAX_FOREIGN_ARCHIVE_ENTRIES)
                 ZipFile(fileSeekableSource(sourcePath)).use { archive ->
                     requireBackupSize(archive.entries.size.toLong(), MAX_FOREIGN_ARCHIVE_ENTRIES.toLong())
                     var total = 0L
@@ -791,7 +791,10 @@ class IosBackupRestoreManager(
             else -> BackupArchiveLimits.UNKNOWN_ENTRY_BYTES
         }
 
-    private fun validateZipEntryCount(path: String) {
+    private fun validateZipEntryCount(
+        path: String,
+        maximumEntries: Int = BackupArchiveLimits.ENTRY_COUNT,
+    ) {
         fileSeekableSource(path).use { source ->
             requireBackupSize(source.size, MAX_ARCHIVE_BYTES)
             check(source.size >= 22) { "Backup archive is truncated" }
@@ -810,7 +813,7 @@ class IosBackupRestoreManager(
                 } ?: error("Backup archive is corrupt")
             check(tail.readLeShort(eocd + 4) == 0 && tail.readLeShort(eocd + 6) == 0) { "Split archives are not supported" }
             val count = tail.readLeShort(eocd + 10)
-            requireBackupSize(count.toLong(), BackupArchiveLimits.ENTRY_COUNT.toLong())
+            requireBackupSize(count.toLong(), maximumEntries.toLong())
             check(tail.readLeShort(eocd + 8) == count) { "Backup archive is corrupt" }
             val centralSize = tail.readLeInt(eocd + 12)
             val centralOffset = tail.readLeInt(eocd + 16)
