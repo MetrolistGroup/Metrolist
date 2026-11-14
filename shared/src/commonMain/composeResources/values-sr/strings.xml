@@ -1217,4 +1217,6 @@
         <item quantity="few">%1$d sata</item>
         <item quantity="other">%1$d sati</item>
     </plurals>
+    <string name="clear_recent_searches_question">Obriši skorašnje pretrage?</string>
+    <string name="text_color">Boja teksta</string>
 </resources>
