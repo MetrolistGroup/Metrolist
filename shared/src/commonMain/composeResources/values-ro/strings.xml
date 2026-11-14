@@ -1714,7 +1714,7 @@
     <string name="import_deezer_picker_title">Alege din biblioteca Deezer</string>
     <string name="import_deezer_picker_description">Selectează playlisturile pe care vrei să le imporți</string>
     <string name="import_deezer_selected_count">%1$d selectate</string>
-    <string name="deezer_login_failed">Autentificarea la Deezer a eșuat.</string>
+    <string name="deezer_login_failed">Autentificarea la Deezer a eșuat</string>
     <string name="import_connect_tidal_account">Autentifică-te folosind contul Tidal</string>
     <string name="import_tidal_session_sign_in">Autentifică-te folosind contul tău Tidal în fereastra de mai sus pentru a continua.</string>
     <string name="import_tidal_picker_title">Alege din biblioteca Tidal</string>
@@ -2615,4 +2615,9 @@
     <string name="devtools_render_backend_software">Software</string>
     <string name="devtools_render_backend_metal">Metal</string>
     <string name="devtools_render_backend">Backend randare</string>
+    <string name="devtools_render_backend_description">Modificările vor avea efect după o repornire. Suprascrierile API-ului de randare ale mediului și al JVM vor avea prioritate. Skiko poate reveni dacă backend-ul selectat nu poate fi inițializat.</string>
+    <string name="desktop_minimize_to_tray">Minimizează în bară</string>
+    <string name="desktop_minimize_to_tray_desc">Închiderea ferestrei va minimiza aplicația Metrolist în bară în loc să o închidă</string>
+    <string name="desktop_tray_toggle_on_click">Ascunde sau afișează la apăsarea pictogramei din bară</string>
+    <string name="desktop_tray_toggle_on_click_desc">Atunci când vei face clic-stânga pe pictograma din bară, fereastra aplicației Metrolist va fi deschisă sau închisă</string>
 </resources>
