@@ -859,17 +859,26 @@ class HomeViewModel(
                             return@supervisorScope
                         }
                         if (!isFiltered && !primaryContentPublished) allContentReloadRequired = false
-                        _uiState.update {
-                            it.copy(
+                        val failedState =
+                            _uiState.value.copy(
                                 isLoading = false,
                                 isRefreshing = false,
                                 isRevalidating = false,
                                 isContentLoading = false,
                                 isLoadingMore = false,
                                 isAllContentPending = if (!isFiltered && primaryContentPublished) false else it.isAllContentPending,
-                                continuation = if (!isFiltered && primaryContentPublished) primaryContinuation else it.continuation,
+                                continuation =
+                                    if (!isFiltered && primaryContentPublished) primaryContinuation else _uiState.value.continuation,
                                 error = e.message,
                             )
+                        _uiState.value = failedState
+                        if (!isFiltered) {
+                            cachedAllContent =
+                                homeCacheAfterAssemblyFailure(cachedAllContent, failedState, primaryContentPublished)
+                            if (primaryContentPublished) {
+                                val locale = GlobalYouTube.innerTube.locale
+                                lastKnownLocaleSignature = "${locale.hl}:${locale.gl}"
+                            }
                         }
                     } finally {
                         if (generation == contentLoadGeneration) {
@@ -1088,19 +1097,10 @@ class HomeViewModel(
     }
 
     private fun cacheAllContentState(state: HomeUiState = _uiState.value) {
-        if (!isCacheableAllContent(state)) return
+        val cacheSnapshot = cacheableAllContentSnapshot(state) ?: return
         val locale = GlobalYouTube.innerTube.locale
         lastKnownLocaleSignature = "${locale.hl}:${locale.gl}"
-        cachedAllContent =
-            state.copy(
-                isLoading = false,
-                isRefreshing = false,
-                isRevalidating = false,
-                isContentLoading = false,
-                isLoadingMore = false,
-                error = null,
-                selectedChip = null,
-            )
+        cachedAllContent = cacheSnapshot
     }
 
     private fun cancelPagination() {
@@ -1670,6 +1670,28 @@ internal fun homeContentForAllSelection(
 internal fun isCacheableAllContent(state: HomeViewModel.HomeUiState): Boolean =
     !state.isAllContentPending &&
         !isFilteredHome(state.selectedChip?.params, state.selectedChip?.browseId ?: "FEmusic_home")
+
+internal fun cacheableAllContentSnapshot(state: HomeViewModel.HomeUiState): HomeViewModel.HomeUiState? =
+    if (!isCacheableAllContent(state)) {
+        null
+    } else {
+        state.copy(
+            isLoading = false,
+            isRefreshing = false,
+            isRevalidating = false,
+            isContentLoading = false,
+            isLoadingMore = false,
+            error = null,
+            selectedChip = null,
+        )
+    }
+
+internal fun homeCacheAfterAssemblyFailure(
+    cachedAllContent: HomeViewModel.HomeUiState?,
+    failedState: HomeViewModel.HomeUiState,
+    primaryContentPublished: Boolean,
+): HomeViewModel.HomeUiState? =
+    if (primaryContentPublished) cacheableAllContentSnapshot(failedState) ?: cachedAllContent else cachedAllContent
 
 internal fun homeContentAfterBlockedContentChange(
     currentState: HomeViewModel.HomeUiState,
