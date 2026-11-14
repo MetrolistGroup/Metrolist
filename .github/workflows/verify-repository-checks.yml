@@ -62,6 +62,7 @@ jobs:
           python3 scripts/test_translation_mechanics.py
           python3 scripts/test_hooks.py
           python3 scripts/test_build_ios.py
+          python3 -m unittest scripts.test_install_ios
           python3 scripts/test_metromem.py
           python3 -m unittest discover -s .github/tests
           python3 -m unittest discover -s scripts/desktop-native-image -p test_native_pipeline.py
