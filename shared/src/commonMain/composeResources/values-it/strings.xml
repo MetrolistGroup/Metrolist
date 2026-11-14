@@ -1005,9 +1005,9 @@
     <string name="unlike">Non mi piace</string>
     <string name="history_empty">Cronologia d\u0027ascolto vuota</string>
     <plurals name="history_hours_ago">
-        <item quantity="one">%1$do fa</item>
-        <item quantity="many">%1$do fa</item>
-        <item quantity="other">%1$do fa</item>
+        <item quantity="one">%1$d ora fa</item>
+        <item quantity="many">%1$d ore fa</item>
+        <item quantity="other">%1$d ore fa</item>
     </plurals>
     <string name="music_video_not_found">Nessun video musicale disponibile per questa traccia.</string>
     <string name="video">Video</string>
