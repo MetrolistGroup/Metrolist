@@ -41,6 +41,16 @@
           "com.metrolist.desktop.utils.MacMenuBarTemplateHelper$LibObjC"
         ]
       }
+    },
+    {
+      "type": "com.metrolist.desktop.utils.MacMenuBarTemplateHelper$DispatchCallback",
+      "jniAccessible": true,
+      "allDeclaredMethods": true
+    },
+    {
+      "type": "com.metrolist.desktop.utils.MacMenuBarTemplateHelper$MenuWillOpenCallback",
+      "jniAccessible": true,
+      "allDeclaredMethods": true
     }
   ]
 }

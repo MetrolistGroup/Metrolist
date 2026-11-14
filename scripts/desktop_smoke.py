@@ -67,6 +67,8 @@ def packaged_command(package, work, system, stdout):
         with zipfile.ZipFile(package) as archive:
             archive.extractall(app)
         yield [str(app / "Metrolist.exe")]
+    elif system == "darwin" and package.suffix == ".app":
+        yield [str(package / "Contents/MacOS/Metrolist")]
     elif system == "darwin" and package.suffix == ".zip":
         app = work / "app"
         with zipfile.ZipFile(package) as archive:
@@ -308,7 +310,10 @@ def smoke(package, output, system=sys.platform, native=False, trace_java=None, t
             resource.setrlimit(resource.RLIMIT_CORE, (0, resource.getrlimit(resource.RLIMIT_CORE)[1]))
         if native:
             env.pop("_JAVA_OPTIONS", None)
-            env.update(HOME=str(profile), USERPROFILE=str(profile), DBUS_SESSION_BUS_ADDRESS="unix:path=/nonexistent-metrolist-native-smoke")
+            env.update(USERPROFILE=str(profile), DBUS_SESSION_BUS_ADDRESS="unix:path=/nonexistent-metrolist-native-smoke")
+            # macOS finds the login keychain through HOME; a profile HOME makes Keychain block startup with a modal dialog.
+            if system != "darwin":
+                env["HOME"] = str(profile)
         if trace_java:
             trace_agent.mkdir(parents=True, exist_ok=True)
             command_context = nullcontext([str(trace_java), f"-agentlib:native-image-agent=config-merge-dir={trace_agent}",

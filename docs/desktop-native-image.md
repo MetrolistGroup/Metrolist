@@ -6,12 +6,14 @@ The supported path keeps Serial GC, `-Os`, a 32 MiB initial heap and a 384 MiB m
 
 | Target | Build and package | CI state |
 | --- | --- | --- |
-| Linux x64 | Native app directory and AppImage | Manual dispatch |
-| Windows x64 | Native app directory and portable ZIP | Manual dispatch on Windows, without cross-compilation |
-| macOS ARM64 | Native `.app` and ZIP | Disabled until `ENABLE_NATIVE_MACOS_ARM64=true` |
-| Linux ARM64 | Native app directory and AppImage | Disabled until `ENABLE_NATIVE_LINUX_ARM64=true` |
+| Linux x64 | Native app directory and AppImage | Dispatch or reusable push caller |
+| Windows x64 | Native app directory and portable ZIP | Dispatch or reusable push caller |
+| macOS ARM64 | Native `.app` and ZIP built; AWT startup port awaits CI verification | Dispatch or reusable push caller |
+| Linux ARM64 | Native app directory and AppImage | Dispatch or reusable push caller |
+| Windows ARM64 | JVM only | No GraalVM distribution ships a Windows AArch64 builder |
+| macOS Intel | JVM only | Oracle GraalVM 25 dropped macOS x64 |
 
-Windows ARM64 and macOS Intel keep their JVM packages. Every existing JVM package stays the default. The native Linux artifact has a separate `metrolist-desktop-native-linux-x64-<version>.AppImage` name. Native Windows uses `Metrolist.exe`, the existing portable install-manifest schema, and `resources/windows` login helper/checksum layout. Its ZIP has a separate native filename. The native path validates the launcher/helper/DLL architecture and helper checksum.
+Windows ARM64 and macOS Intel keep their JVM packages. Every existing JVM package stays the default. The native Linux artifact has a separate `metrolist-desktop-native-linux-x64-<version>.AppImage` name. Native Windows uses `Metrolist.exe`, the existing portable install-manifest schema, and `resources/windows` login helper/checksum layout. Its ZIP has a separate native filename. The native path validates Windows launcher/helper/DLL architecture and helper checksums. Linux packages require ELF64 libraries and executables with the target machine type. macOS packages require ARM64 Mach-O libraries and executables, including loose sidecars under `Contents/Resources`.
 
 ### Build locally
 
@@ -19,7 +21,7 @@ Prepare with the opt-in Gradle init script. This adds native entry points only f
 
 ```sh
 JAVA_TOOL_OPTIONS=-Djava.awt.headless=true \
-  /mnt/work/projects/Metrolist-KMP-lanes/bin/gradlew-lane \
+  /mnt/work/projects/Metrolist-lanes/bin/gradlew-lane \
   -I scripts/desktop-native-image/prepare.init.gradle \
   -PnativeExperimentDir=/tmp/r6-native-image/supported \
   :desktopApp:prepareNativeImage :desktopApp:compileKotlinJvm \
@@ -40,9 +42,21 @@ For Windows use the same prepare task on a Windows x64 host, build the existing 
 
 One native-only substitution replaces `configureDesktopJvmErrorFile`. Native Image has neither HotSpot's `ErrorFile` option nor `_JAVA_OPTIONS` processing, so the JVM AppImage relaunch check otherwise loops. The substitution opens a per-process `native_err_pid*.log` under the same XDG state log directory and redirects native stderr there. It uses GraalVM's bundled C interop SDK and platform C functions, with wide paths on Windows. It changes no JVM source, crash-log setup or restart command. Ordinary application exceptions keep the existing app logger and crash-report flow. Native VM-fatal logs use a native format, so tester reports must include `native_err_pid*.log`; automatic import of those files as HotSpot reports is not claimed.
 
+For macOS use the prepare task on an Apple Silicon host with Xcode command-line tools, then pass `--platform macos-arm64` to the builder and packager. Packaging also needs `--graalvm <home>` or `GRAALVM_HOME`, which CI already exports. The init script exports the host runtime classpath, including platform-filtered sqlite-jdbc and JavaCPP/FFmpeg jars. JNA, Skiko, Wry and sqlite native resources remain embedded for their loaders. The builder selects macOS AWT/JNI metadata and POSIX crash-log glue and preserves any generated JVM shims.
+
+The macOS builder compiles [Nucleus-derived C stubs](../scripts/desktop-native-image/macos-awt.c) with the host's `clang`. They export the removed cursor finalizer that AWT's flat-namespace dylibs still reference, and initialize JNU encoding on the bundled dynamic `libjava.dylib`. A macOS-only [Native Image feature](../scripts/desktop-native-image/java/macos/MacosAwtFeature.java) runs before main and AWT. It sets `java.library.path` and `sun.boot.library.path` to the executable directory, then initializes the dylib with SubstrateVM's JNI environment. Unlike the upstream shim's initial `RTLD_DEFAULT` lookup, this port always opens the bundled library so it cannot initialize the image's static copy by mistake. A missing encoding symbol fails startup explicitly. Linux and Windows do not compile or register this feature.
+
+Both `clang` and Native Image receive `MACOSX_DEPLOYMENT_TARGET`, and Native Image also receives `-H:NativeLinkerOption=-mmacosx-version-min=<target>`. An explicit environment value wins; otherwise the builder reads the minimum macOS version from the GraalVM AWT dylib with `otool`. This keeps link-time symbol resolution tied to the selected target instead of the runner's SDK. The plist still reports the highest actual minimum across bundled binaries. `-march=compatibility` stays in place. Nucleus chooses `native` on Apple Silicon for performance, without documenting a compatibility failure that needs that change.
+
+The macOS ZIP contains an ad-hoc signed `.app`. Downloaded copies are quarantined, so Gatekeeper requires explicit approval. There is no Developer ID signing or notarization.
+
+Packaging copies Nucleus's selected AWT/JDK dylibs from the same GraalVM home into `Contents/MacOS`, including `lib/server/libjvm.dylib` as `libjvm.dylib`, without overwriting generated shims. It retains the JDK's `lib/libjawt.dylib` for Skiko. Optional JDK libraries are copied when present; missing core AWT libraries fail packaging. The JDK's `fontconfig.bfc`, when present, goes into `Contents/Resources`, and the startup feature sets `sun.awt.fontconfig` to that path.
+
+All files under `Contents/MacOS` must be ARM64 Mach-O code. Packaging adds `@executable_path/.` to the launcher's rpaths for the JDK's `@rpath` install names before signing. It signs nested libraries and sidecars first, then the executable and bundle, and runs `codesign --verify --deep --strict`. The plist retains the JVM app's local-network declarations and both `metrolist` and `metrolist-auth` URL schemes and enables high-resolution rendering.
+
 ### CI, metadata and caches
 
-Run `build-desktop-native.yml` manually with one target. Linux x64 and Windows x64 use Blacksmith 8-vCPU runners for builder memory, rather than adding CPUs to existing JVM jobs. Linux ARM64 also uses 8; macOS ARM64 uses the existing 6-vCPU Apple Silicon tier. The ARM jobs require their enable variables and manual dispatch. The [nightly workflow](releasing.md#nightly-prereleases) also builds Linux x64 and Windows x64 after eligible main pushes. No native build runs on PRs or the cold-build schedule. Check actual hosted time before enabling more targets or scheduling builds.
+Run `build-desktop-native.yml` manually with one target. Linux x64 and Windows x64 use Blacksmith 8-vCPU runners for builder memory, rather than adding CPUs to existing JVM jobs. Linux ARM64 also uses 8; macOS ARM64 uses the existing 6-vCPU Apple Silicon tier. All four targets run without repository enable variables. The reusable workflow also accepts push callers and rejects pull requests and schedules. Each build runs on its target OS and architecture. The [nightly workflow](releasing.md#nightly-prereleases) builds Linux x64 and Windows x64 after eligible main pushes. Check actual hosted time before adding more push targets or scheduling builds.
 
 Stable releases keep JVM desktop packages. The rolling nightly prerelease includes the native Linux x64 AppImage and Windows x64 portable ZIP. Native packages and their separate evidence archives remain available as workflow artifacts of the calling run.
 
@@ -69,7 +83,7 @@ python3 -m unittest discover -s .github/tests
 actionlint
 ```
 
-CI evidence includes source revision, platform, GraalVM pin, flags, artifact sizes/hashes, builder timing, build log and smoke logs. It includes no profile directory or application credentials. Backend-only Windows evidence does not verify the window frame, taskbar interaction, WebView2 login, Direct3D hardware or actual audio output. Those need a real Windows desktop before Windows promotion. macOS signing/notarization and ARM64 runtime behavior also remain unverified while those jobs are disabled.
+CI evidence includes source revision, platform, GraalVM pin, flags, artifact sizes/hashes, builder timing, build log and smoke logs. It includes no profile directory or application credentials. Backend-only Windows evidence does not verify the window frame, taskbar interaction, WebView2 login, Direct3D hardware or actual audio output. Those need a real Windows desktop before Windows promotion. macOS signing and ARM64 runtime behavior need their first hosted builds. The macOS smoke runner launches the executable inside a `.app` or extracted ZIP in the runner's GUI session, captures it with `screencapture`, and checks strict registrations and normal shutdown. Notarization is outside this tester path.
 
 ### Supported path verification
 
@@ -79,11 +93,28 @@ The packaged AppImage passed strict startup, live Home content, screenshot and n
 
 `actionlint`, all 54 `.github/tests`, 17 native build/launcher tests, 13 smoke-runner tests and seven AppImage tests passed. Changed Kotlin was formatted. Metadata JSON, local documentation links, Bash syntax and `git diff --check` passed. The lane wrapper passed desktop compilation, shared tests and ktlint, Android assembly and Android unit tests. The results contain 3,443 desktop tests with five skipped and 803 Android tests, without failures. Existing coverage still includes 60 SongLikeState tests and 20 playback-reporter tests.
 
-Windows metadata and packaging have backend checks, and the Windows C-interop Java sources compile against GraalVM's SDK. No Windows native compilation or hosted workflow has run from this local branch. No push or dispatch was performed. The macOS ARM64 and Linux ARM64 paths are prepared and disabled, without native build evidence. The fetched main has no `cold-build.yml`; this change does not restore or alter scheduled workflows.
+### CI results
+
+On 2026-11-14 the hosted native builds gave these results.
+
+| Target | Result |
+| --- | --- |
+| Linux x64 | Builds with `-march=compatibility`, packages the AppImage and passes strict GUI startup, screenshot and shutdown under Xvfb. |
+| Linux ARM64 | Builds, packages the ARM AppImage and passes the same strict GUI smoke after the target's Nucleus native libraries were registered. |
+| Windows x64 | Builds `Metrolist.exe` and the portable ZIP. The service runner has no desktop, so only the strict backend probe runs. It needed the JDK font configuration files, the font manager's JNI lookups and Skiko's `icudtl.dat`. |
+| macOS ARM64 | The hosted build compiled, packaged and ad-hoc signed the `.app`, then exited because Native Image emitted no JDK libraries and AWT could not load `libawt.dylib`. The new port copies Nucleus's selected dylibs, links the cursor/encoding stubs, initializes the bundled `libjava.dylib`, sets library paths and pins the deployment target. The port passes mocked backend checks on Linux; a new macOS CI build and startup smoke have not run yet. |
+
+The next macOS CI run must compile the C stubs and Java feature, link with the same deployment target used for stub compilation, and package the JDK dylibs beside `Metrolist`. Check that `Contents/MacOS` contains only ARM64 Mach-O files, `fontconfig.bfc` is under `Contents/Resources` when the JDK supplies it, the launcher has the executable-directory rpath, and `codesign --verify --deep --strict` passes after all edits. The strict packaged GUI smoke must launch from outside `Contents/MacOS`, show Home in its screenshot and shut down normally, without missing registrations, `UnsatisfiedLinkError`, unresolved cursor symbols or platform-encoding errors. The startup hook's ordering and dyld resolution still need that macOS run; Linux Java/C compilation and mocked subprocess tests cannot verify them.
+
+A small Linux Native Image harness also ran the hook with its Darwin restriction removed and a JNI `GetVersion` check in place of the macOS encoding shim. It confirmed that the hook runs before main, sets both executable-relative library paths and receives a usable JNI environment. It did not load the macOS dylibs.
+
+The startup smoke does not open a Wry login window or play audio. On macOS and Linux ARM64, check Wry login, sqlite persistence, FFmpeg playback, GPU/audio output and desktop integrations on real hardware before promotion. macOS also needs a downloaded, quarantined ZIP check for Gatekeeper approval, Retina rendering, local-network permissions, and dispatch of both URL schemes through Launch Services. CI bundle metadata alone does not prove those flows.
+
+No animation code changes. History checks for the affected packager, native arguments, smoke launcher and macOS callbacks found the v14 import `6f7351ca5`. This change keeps generated JVM shims, failed-build image preservation, strict smoke registration handling, ZIP modes, DMG cleanup, Windows unavailable-desktop handling and AppImage checksum/cache behavior.
 
 ### Roll back and promote
 
-To roll back, leave the tester native input off and use the unchanged JVM package. Remove either ARM enable variable to disable its native job. No version bump, default artifact replacement or automatic switch is part of this path. Profile schemas and settings code stay shared with the JVM build; use the same application version when comparing or rolling back.
+To roll back, stop dispatching the affected native target, remove it from push callers, and use its JVM package. No version bump, default artifact replacement or automatic switch is part of this path. Profile schemas and settings code stay shared with the JVM build; use the same application version when comparing or rolling back.
 
 Before changing a default, the maintainer must record the tester cohort, start date and agreed test period. That duration is still a maintainer decision. Require no Linux tester regressions or missing-registration crashes for the whole agreed period, including launch, persistence, playback, settings, resources and normal desktop integrations. Repeat paired cold/warm startup and idle/local/streaming RSS/PSS measurements on representative hardware; the startup and memory gains must hold and playback CPU must remain acceptable. Test real GPU/audio output and recovery/restart paths. Fix a regression before restarting the agreed observation period. Each later platform needs its own strict CI result and real-machine checks. Windows ARM64 and macOS Intel remain JVM targets.
 
