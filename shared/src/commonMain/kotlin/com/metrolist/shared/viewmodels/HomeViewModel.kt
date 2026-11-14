@@ -136,9 +136,11 @@ internal fun HomeViewModel.HomeUiState.loadingChip(chip: Chip): HomeViewModel.Ho
 internal fun HomeViewModel.HomeUiState.primaryHomeContentLoaded(
     sections: List<HomeSection>,
     chips: List<Chip>,
+    userPlaylists: List<UserPlaylist>,
 ): HomeViewModel.HomeUiState =
     copy(
         data = sections,
+        userPlaylists = userPlaylists,
         discoverySections = emptyList(),
         isLoading = false,
         isRefreshing = false,
@@ -658,12 +660,14 @@ class HomeViewModel(
                         }
                         val hydratedPrimarySections =
                             rawHomeSections.withLocalSongMetadata(primaryLocalSongMetadata).withoutNonMusicalVideos()
+                        val userPlaylists = userPlaylistsDeferred.await()
                         val chartSections = findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_charts")
                         _uiState.update { state ->
                             state
                                 .primaryHomeContentLoaded(
                                     sections = hydratedPrimarySections,
                                     chips = homeChipsForSelection(homePageData.chips, state.selectedChip),
+                                    userPlaylists = userPlaylists,
                                 ).copy(
                                     trending = chartSections.flatMap { it.items.filterIsInstance<SongItem>() },
                                     albumCharts = chartSections.flatMap { it.items.filterIsInstance<AlbumItem>() },
@@ -701,7 +705,6 @@ class HomeViewModel(
                                             .flatMap { it.items.filterIsInstance<PlaylistItem>() }
                                     }
                             ).distinctBy { it.id }
-                        val userPlaylists = userPlaylistsDeferred.await()
                         val localQuickPicks = quickPicksDeferred.await().map { it.toSongItem() }
                         val localForgottenFavorites = forgottenFavoritesDeferred.await().map { it.toSongItem() }
                         val localKeepListening = keepListeningDeferred.await().map { it.toSongItem() }
@@ -1104,7 +1107,7 @@ class HomeViewModel(
     }
 
     private fun cacheAllContentState(state: HomeUiState = _uiState.value) {
-        val cacheSnapshot = cacheableAllContentSnapshot(state) ?: return
+        val cacheSnapshot = cacheableAllContentSnapshot(state, allContentReloadRequired) ?: return
         val locale = GlobalYouTube.innerTube.locale
         lastKnownLocaleSignature = "${locale.hl}:${locale.gl}"
         cachedAllContent = cacheSnapshot
@@ -1248,8 +1251,9 @@ class HomeViewModel(
         val locale = GlobalYouTube.innerTube.locale
         val currentSignature = "${locale.hl}:${locale.gl}"
         val cached = cachedAllContent?.takeIf { lastKnownLocaleSignature == currentSignature }
-        val reloadIncompleteFeed = shouldReloadIncompleteAllContent(allContentReloadRequired, _uiState.value)
+        val reloadIncompleteFeed = shouldReloadIncompleteAllContent(allContentReloadRequired, _uiState.value, cached != null)
         if (cached != null && !reloadIncompleteFeed) {
+            allContentReloadRequired = false
             val restored =
                 homeContentForAllSelection(_uiState.value, cached).copy(
                     isLoading = false,
@@ -1675,17 +1679,25 @@ internal fun homeContentForAllSelection(
         isAllContentPending = cachedAllContent == null,
     )
 
-internal fun isCacheableAllContent(state: HomeViewModel.HomeUiState): Boolean =
-    !state.isAllContentPending &&
+internal fun isCacheableAllContent(
+    state: HomeViewModel.HomeUiState,
+    reloadRequired: Boolean = false,
+): Boolean =
+    !reloadRequired &&
+        !state.isAllContentPending &&
         !isFilteredHome(state.selectedChip?.params, state.selectedChip?.browseId ?: "FEmusic_home")
 
 internal fun shouldReloadIncompleteAllContent(
     reloadRequired: Boolean,
     state: HomeViewModel.HomeUiState,
-): Boolean = reloadRequired || state.isAllContentPending
+    hasCachedAllContent: Boolean,
+): Boolean = state.isAllContentPending || (reloadRequired && !hasCachedAllContent)
 
-internal fun cacheableAllContentSnapshot(state: HomeViewModel.HomeUiState): HomeViewModel.HomeUiState? =
-    if (!isCacheableAllContent(state)) {
+internal fun cacheableAllContentSnapshot(
+    state: HomeViewModel.HomeUiState,
+    reloadRequired: Boolean = false,
+): HomeViewModel.HomeUiState? =
+    if (!isCacheableAllContent(state, reloadRequired)) {
         null
     } else {
         state.copy(
