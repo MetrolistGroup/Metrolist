@@ -277,6 +277,24 @@
           ]
         }
       ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$DWORD",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.jna.platform.win32.WinDef$WORD",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
     }
   ],
   "resources": [
