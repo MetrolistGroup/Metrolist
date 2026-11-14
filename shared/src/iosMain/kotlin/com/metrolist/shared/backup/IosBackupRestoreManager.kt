@@ -55,6 +55,7 @@ import platform.posix.rename
 
 private val SQLITE_HEADER = "SQLite format 3\u0000".encodeToByteArray()
 private const val MAX_FOREIGN_ARCHIVE_ENTRIES = 4096
+private const val MAX_ZIP_CENTRAL_DIRECTORY_BYTES = 16L * 1024 * 1024
 private const val PRISM_ARCHIVE_DIRECTORY = ".prism/"
 private const val PRISM_ARTIST_PREFERENCES = "shared_prefs/artist_prefs.xml"
 
@@ -843,6 +844,7 @@ class IosBackupRestoreManager(
             check(centralSize != 0xffffffffL && centralOffset != 0xffffffffL && centralOffset + centralSize <= source.size) {
                 "Backup archive is corrupt or uses unsupported ZIP64 features"
             }
+            requireBackupSize(centralSize, MAX_ZIP_CENTRAL_DIRECTORY_BYTES)
             var position = centralOffset
             var totalUncompressedBytes = 0L
             repeat(count) {
