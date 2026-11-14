@@ -319,8 +319,8 @@
     <string name="song_artwork_colors">Couleurs tirées des pochettes</string>
     <string name="song_artwork_colors_description">Utilise si possible les couleurs de la pochette du titre en cours au lieu des couleurs par défaut</string>
     <string name="theme_palette_style">Style de palette</string>
-    <string name="theme_palette_tonal_spot">Nuancée</string>
-    <string name="theme_palette_vibrant">Vibrante</string>
+    <string name="theme_palette_tonal_spot">Nuancé</string>
+    <string name="theme_palette_vibrant">Vibrant</string>
     <string name="theme_palette_rainbow">Arc-en-ciel</string>
     <string name="theme_palette_fruit_salad">Salade de fruits</string>
     <string name="theme_palette_monochrome">Monochrome</string>
@@ -1403,7 +1403,7 @@
     <string name="onboarding_welcome_description">Réglez les paramètres de confidentialité et les permissions de l\u0027application avant votre première écoute.</string>
     <string name="onboarding_crash_reports_title">Contribuez à améliorer Metrolist</string>
     <string name="onboarding_migration_title">Importez votre bibliothèque Metrolist v13</string>
-    <string name="onboarding_migration_description">Nous avons trouvé des données issues de la version standard de Metrolist. Importez vos playlists, vos titres favoris, votre historique et votre bibliothèque. Les données d\u0027origine restent intactes si l\u0027importation échoue.</string>
+    <string name="onboarding_migration_description">Nous avons trouvé des données issues de la version précédente de Metrolist. Importez vos playlists, vos titres favoris, votre historique et votre bibliothèque. Les données d'origine restent intactes si l'importation échoue.</string>
     <string name="onboarding_migration_complete_title">Vos données ont été importées</string>
     <string name="onboarding_migration_complete_description">Votre compte, vos playlists, vos titres favoris, votre historique et votre bibliothèque sont maintenant disponibles dans cette version de Metrolist.</string>
     <string name="onboarding_crash_reports_description">Partagez des données de diagnostic optionnelles via Sentry pour nous aider à identifier et corriger les problèmes. Vous pouvez changer d'avis à tout moment depuis les paramètres.</string>
@@ -1420,7 +1420,7 @@
     <string name="onboarding_finish_title">Tout est prêt</string>
     <string name="onboarding_finish_description">Configuration terminée. Écoutez de la musique ou connectez d\u0027abord votre compte pour accéder à vos données.</string>
     <string name="onboarding_restore_backup">Restaurer une sauvegarde</string>
-    <string name="onboarding_settings_hint">Après avoir cliqué sur Terminé, ouvrez les paramètres en haut à droite pour régler l\u0027application selon vos préférences.</string>
+    <string name="onboarding_settings_hint">Après avoir cliqué sur Terminé, ouvrez les paramètres en haut à droite pour les ajuster selon vos préférences.</string>
     <string name="onboarding_no_saved_accounts">Aucun compte lié n\u0027a été trouvé.</string>
     <string name="onboarding_backup_picker_title">Restaurez une sauvegarde Metrolist</string>
     <string name="onboarding_backup_restore_failed">Échec de la restauration : %1$s</string>
@@ -2021,11 +2021,11 @@
     <string name="import_notification_progress_channel_name">Progression de l'importation de playlists</string>
     <string name="cast_discovery_failed">Impossible de rechercher des appareils Cast. Fermez puis rouvrez le sélecteur d'appareils pour réessayer.</string>
     <string name="listen_together_pending_approvals">Approbations en attente</string>
-    <string name="onboarding_library_migrated_title">Votre bibliothèque a été migrée.</string>
+    <string name="onboarding_library_migrated_title">Votre bibliothèque a été importée.</string>
     <string name="onboarding_continue_without_migration">Continuer avec une bibliothèque vide</string>
     <string name="onboarding_migration_recovery_description">Vous pouvez réessayer ou continuer avec une bibliothèque vide. Une copie de récupération de votre base de données d'origine restera sur cet appareil. Vous pourrez restaurer une sauvegarde après la configuration.</string>
     <string name="onboarding_migration_failed">Impossible de préparer votre bibliothèque. Vos données d'origine ont été conservées.</string>
-    <string name="onboarding_library_migrated_description">Vos playlists, votre historique, vos favoris et les données de votre bibliothèque sont prêts dans cette version de Metrolist.</string>
+    <string name="onboarding_library_migrated_description">Vos playlists, votre historique, vos favoris et les données de votre bibliothèque sont prêts à être utilisés.</string>
     <string name="onboarding_notifications_denied">Les notifications sont désactivées. Vous pouvez les activer plus tard dans les paramètres Android de l'application ou choisir Non pour continuer.</string>
     <string name="mini_player_video_prerequisite">Activez d'abord Lire les clips musicaux dans les paramètres de lecture</string>
     <string name="download_folder_access_failed">Impossible de conserver l'accès à ce dossier. Choisissez un dossier accessible en lecture et en écriture.</string>
@@ -2306,7 +2306,7 @@
     <string name="canvas">Canvas</string>
     <string name="canvas_cache">Cache des Canvas</string>
     <string name="equalizer_band_gain">%1$s Hz · %2$s dB</string>
-    <string name="sleep_timer_finish_current_song">À la fin du minuteur, terminer le titre en cours.</string>
+    <string name="sleep_timer_finish_current_song">Terminer le titre en cours à la fin du minuteur</string>
     <string name="lyrics_capability_line_syllable">Ligne et syllabe</string>
     <string name="lyrics_capability_line_syllable_unsynced">Ligne, syllabe et non synchronisées</string>
     <string name="lyrics_capability_line_unsynced">Ligne et non synchronisées</string>
