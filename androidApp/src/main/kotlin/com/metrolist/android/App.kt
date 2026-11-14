@@ -444,7 +444,8 @@ private class AppFailureTree : Timber.Tree() {
                 Log.WARN -> PlaybackEventLevel.WARN
                 else -> return
             }
-        PlaybackEventLog.captureApplicationFailure(level, tag ?: "Android", message, t)
+        val messageWithoutThrowable = t?.let { message.removeSuffix("\n${Log.getStackTraceString(it)}") } ?: message
+        PlaybackEventLog.captureApplicationFailure(level, tag ?: "Android", messageWithoutThrowable, t)
     }
 }
 

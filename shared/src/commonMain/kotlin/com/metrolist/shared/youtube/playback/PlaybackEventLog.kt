@@ -7,6 +7,7 @@ import kotlin.time.Instant
 object PlaybackEventLog {
     const val MAX_EVENTS = 500
     val events = PlaybackEventBuffer(MAX_EVENTS)
+    private var lastStructuredFailure: StructuredFailure? = null
 
     fun debug(
         kind: PlaybackEventKind,
@@ -117,6 +118,7 @@ object PlaybackEventLog {
         error: Throwable,
     ) {
         val timestampMs = Clock.System.now().toEpochMilliseconds()
+        lastStructuredFailure = StructuredFailure(tag, error, timestampMs)
         events.append { id ->
             PlaybackEvent(
                 id = id,
@@ -155,7 +157,9 @@ object PlaybackEventLog {
         error: Throwable? = null,
     ) {
         if (level != PlaybackEventLevel.WARN && level != PlaybackEventLevel.ERROR) return
-        if (error != null && hasRecentStructuredFailure(tag, error)) return
+        val structuredFailure = lastStructuredFailure
+        lastStructuredFailure = null
+        if (error != null && structuredFailure?.matches(tag, error) == true) return
         record(
             level = level,
             kind = kindForYtTag(tag).takeUnless { it == PlaybackEventKind.TRACE } ?: PlaybackEventKind.OTHER,
@@ -165,22 +169,13 @@ object PlaybackEventLog {
         )
     }
 
-    private fun hasRecentStructuredFailure(
-        tag: String,
-        error: Throwable,
-    ): Boolean {
-        val now = Clock.System.now().toEpochMilliseconds()
-        val exceptionType = error::class.simpleName ?: error::class.qualifiedName ?: "Throwable"
-        val prefix = "[$tag] "
-        val lastEvent = events.value.lastOrNull() ?: return false
-        val age = now - lastEvent.timestampMs
-        return age in 0..1_000 &&
-            lastEvent.kind != PlaybackEventKind.OTHER &&
-            lastEvent.message.startsWith(prefix) &&
-            exceptionType in lastEvent.details["exceptionTypes"].orEmpty().split(',')
+    private data class StructuredFailure(val tag: String, val error: Throwable, val timestampMs: Long) {
+        fun matches(tag: String, error: Throwable): Boolean =
+            this.tag == tag && this.error === error && Clock.System.now().toEpochMilliseconds() - timestampMs in 0..1_000
     }
 
     fun clear() {
+        lastStructuredFailure = null
         events.clear()
     }
 
