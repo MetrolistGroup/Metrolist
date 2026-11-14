@@ -29,7 +29,7 @@ Read these when working on the corresponding feature. They are not prerequisites
 
 ## Release and CI
 
-- [Releasing](releasing.md) covers version changes and releases.
+- [Releasing](releasing.md) covers version changes, stable releases and [nightly prereleases](releasing.md#nightly-prereleases).
 - [Build performance](build-performance.md) covers release build bottlenecks, caching and compiler settings.
 - [Running without kotlin-reflect](kotlin-reflect.md) lists restrictions on the embedded server.
 - [Test fixtures](test-fixtures.md) records provenance and regeneration commands.
