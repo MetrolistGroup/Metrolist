@@ -164,7 +164,8 @@ fun FullscreenPlayerContent(
     var controlsVisible by remember { mutableStateOf(true) }
     var subtitleOffset by remember { mutableStateOf(IntOffset.Zero) }
 
-    val isSplitScreen = uiState.isLyricsVisible || uiState.isQueueVisible
+    val canShowLyrics = !uiState.isVideoModeActive
+    val isSplitScreen = (canShowLyrics && uiState.isLyricsVisible) || uiState.isQueueVisible
     val drawerVisibility = remember { MutableTransitionState(isSplitScreen) }
     drawerVisibility.targetState = isSplitScreen
     var queueClosing by remember { mutableStateOf(false) }
@@ -271,7 +272,7 @@ fun FullscreenPlayerContent(
                         onShareSong = onShareSong,
                         onToggleFullscreen = onToggleFullscreen,
                         onNavigateToArtist = onNavigateToArtist,
-                        onToggleLyrics = { viewModel.setLyricsVisible(!uiState.isLyricsVisible) },
+                        onToggleLyrics = { viewModel.setLyricsVisible(!uiState.isLyricsVisible) }.takeIf { canShowLyrics },
                         onToggleQueue = { viewModel.setQueueVisible(!uiState.isQueueVisible) },
                         onToggleShuffle = viewModel::toggleShuffle,
                         onToggleRepeat = viewModel::toggleRepeat,
@@ -286,7 +287,7 @@ fun FullscreenPlayerContent(
                         viewModel = viewModel,
                     )
                 }
-                if (uiState.isSubtitleActive && !uiState.isLyricsVisible) {
+                if (uiState.isSubtitleActive && !(canShowLyrics && uiState.isLyricsVisible)) {
                     SubtitleOverlay(
                         uiState = uiState,
                         currentPositionFlow = viewModel.currentPosition,
@@ -314,7 +315,7 @@ fun FullscreenPlayerContent(
                         },
                 ) {
                     Box(Modifier.fillMaxSize().graphicsLayer { applySheetBackContentTransform(backProgress.value) }) {
-                        if (uiState.isLyricsVisible) {
+                        if (canShowLyrics && uiState.isLyricsVisible) {
                             Box(modifier = Modifier.padding(24.dp)) {
                                 LyricsViewWithPosition(
                                     viewModel = viewModel,
@@ -365,7 +366,7 @@ private fun FullscreenControlsOverlay(
     onAltShareSong: (() -> Unit)? = null,
     onToggleFullscreen: () -> Unit,
     onNavigateToArtist: (String) -> Unit,
-    onToggleLyrics: () -> Unit,
+    onToggleLyrics: (() -> Unit)?,
     onToggleQueue: () -> Unit,
     onToggleShuffle: () -> Unit,
     onToggleRepeat: () -> Unit,
@@ -612,7 +613,7 @@ private fun FullscreenControlsOverlay(
                                 modifier = Modifier.weight(1f, fill = false),
                                 onQueueClick = onToggleQueue,
                                 onLyricsClick = onToggleLyrics,
-                                isLyricsActive = uiState.isLyricsVisible,
+                                isLyricsActive = onToggleLyrics != null && uiState.isLyricsVisible,
                                 isQueueActive = uiState.isQueueVisible,
                                 isShuffled = uiState.isShuffleOn,
                                 onShuffleClick = onToggleShuffle.takeIf { canControlPlayback },
