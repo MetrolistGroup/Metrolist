@@ -135,6 +135,12 @@ class PipelineTest(unittest.TestCase):
             self.assertTrue(os.access(app/'AppRun',os.X_OK))
             self.assertTrue((app/'resources').is_symlink())
 
+    def test_nucleus_natives_use_nucleus_platform_names(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for target, platform in [('linux-arm64', 'linux-aarch64'), ('macos-arm64', 'darwin-aarch64')]:
+                path = native_image.nucleus_natives(Path(directory), target) / 'reachability-metadata.json'
+                self.assertEqual(f'nucleus/native/{platform}/*', json.loads(path.read_text())['resources'][0]['glob'])
+
     def test_output_argument_leaves_exe_suffix_to_native_image(self):
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory); (work/'classpath.txt').write_text('app.jar')
@@ -143,6 +149,8 @@ class PipelineTest(unittest.TestCase):
                 command = native_image.arguments(work, work, output, target)
                 self.assertEqual(str(expected), command[command.index('-o') + 1])
                 self.assertIn('-march=compatibility', command)
+                metadata = json.loads((work/'nucleus-natives/reachability-metadata.json').read_text())
+                self.assertEqual([{'glob': f'nucleus/native/{target.replace("windows", "win32")}/*'}], metadata['resources'])
 
     def test_posix_architecture_checks_launcher_libraries_and_sidecars(self):
         for target, foreign, library in [('linux-x64', 'linux-arm64', 'libshim.so'), ('linux-arm64', 'linux-x64', 'libavutil.so.60'), ('macos-arm64', 'linux-arm64', 'libjawt.dylib')]:
