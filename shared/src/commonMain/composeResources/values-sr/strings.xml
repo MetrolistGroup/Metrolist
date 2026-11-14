@@ -1148,4 +1148,25 @@
     <string name="sleep_timer_finish_current_song">Sačekaj kraj pesme kada tajmer istekne</string>
     <string name="sleep_timer_set_default">Postavi kao podrazumevano</string>
     <string name="lyrics_curated_by">(dodao/la: %1$s)</string>
+    <string name="show_again">Prikaži ponovo</string>
+    <string name="restore_hidden_item_title">Prikazati ponovo?</string>
+    <string name="restore_hidden_item_message">Prikazati "%1$s" ponovo?</string>
+    <string name="unblock_artist_title">Odblokirati izvođača?</string>
+    <string name="unblock_artist_message">Ponovo dozvoliti „%1$s“ u redosledima, preporukama i statistici?</string>
+    <string name="hide_from_library">Sakrij iz biblioteke</string>
+    <string name="hide_explicit_desc">Ne prikazuj eksplicitne pesme u pregledu, pretrazi i reprodukciji</string>
+    <string name="explicit_only">Samo eksplicitne pesme</string>
+    <string name="explicit_only_desc">Prikaži samo pesme označene kao eksplicitne</string>
+    <string name="bottom_sheet_pane_title">Donji panel</string>
+    <string name="credits_android_lead">Vodeći Android programer</string>
+    <string name="credits_desktop_lead">Vodeći desktop programer</string>
+    <string name="credits_multiplatform_developer">Multiplatformski programer</string>
+    <string name="credits_lyrics_ui_services">Interfejs za tekstove pesama i servisi</string>
+    <string name="open_github_profile">Otvori GitHub profil</string>
+    <string name="credits_license_desc">Metrolist je licenciran pod GPL-3.0</string>
+    <string name="credits_collaborators_section">Saradnici</string>
+    <string name="credits_leads_section">Vodiči</string>
+    <string name="credits_creator_section">Autor</string>
+    <string name="devmode_already_active" translatable="true">Režim za programere je već uključen</string>
+    <string name="discord_enable_rich_presence">Discord Rich Presence</string>
 </resources>
