@@ -12,6 +12,7 @@ import com.metrolist.shared.db.upsertHistorySong
 import com.metrolist.shared.db.withDatabaseTransaction
 import com.metrolist.shared.deviceconnect.DcScrobbleSession
 import com.metrolist.shared.listentogether.ListenTogetherManager
+import com.metrolist.shared.listentogether.listenTogetherControls
 import com.metrolist.shared.model.RadioQueueChip
 import com.metrolist.shared.model.RadioQueuePage
 import com.metrolist.shared.model.RadioRecommendationHistory
@@ -133,6 +134,17 @@ internal class IosPlaybackController(
                 }
                 player.updateRemotePlaybackLock()
                 player.updateRemoteSkipAvailability(!guestLocked && canSkipNext, !guestLocked && canSkipPrevious)
+            }
+        }
+        scope.launch {
+            combine(manager.role, manager.isInRoom, snapshotFlow { Settings.shared.listenTogetherEnabled }) { role, active, enabled ->
+                listenTogetherControls(enabled, role, active).playbackLocked
+            }.distinctUntilChanged().collect { locked ->
+                if (locked && isVideoModeActive.value) {
+                    videoModeRequestId++
+                    videoModeJob?.cancel()
+                    clearVideoMode()
+                }
             }
         }
     }
@@ -274,6 +286,7 @@ internal class IosPlaybackController(
     private val isVideoResolving = MutableStateFlow(false)
     private var videoModeJob: Job? = null
     private var videoModeRequestId = 0L
+    private var failedVideoResourceId: String? = null
 
     private val coreState =
         combine(baseState, player.currentMediaItemIndex, pendingPlayback, playbackError) { base, index, pending, error ->
@@ -1054,19 +1067,20 @@ internal class IosPlaybackController(
                                     ?: repository().getSongMetadata(resolvedVideo.videoId)
                             }
                         } ?: return@launch
+                    val hints = videoSong.toContentHints(wantVideo = true).withIosAudioCapabilities(allowHls = true)
                     val resource =
                         withContext(videoPlaybackDispatcher) {
-                            resolver.resolve(
-                                videoSong.id,
-                                videoSong.toContentHints(wantVideo = true).withIosAudioCapabilities(allowHls = true),
-                                iosPlaybackAudioQuality(Settings.shared.audioQuality),
-                                videoSong,
-                            )
+                            if (failedVideoResourceId == videoSong.id) {
+                                resolver.refresh(videoSong.id, hints, iosPlaybackAudioQuality(Settings.shared.audioQuality), videoSong)
+                            } else {
+                                resolver.resolve(videoSong.id, hints, iosPlaybackAudioQuality(Settings.shared.audioQuality), videoSong)
+                            }
                         }
                     if (requestId != videoModeRequestId || player.currentSong.value?.id != song.id) return@launch
                     if (!resource.hasDirectVideo) return@launch
                     videoPositionMap.value = resolvedVideo.positionMap
                     videoPlaybackResource.value = resource
+                    failedVideoResourceId = null
                     isVideoModeActive.value = true
                 } catch (error: CancellationException) {
                     throw error
@@ -1083,6 +1097,13 @@ internal class IosPlaybackController(
         isVideoModeActive.value = false
         videoPlaybackResource.value = null
         videoPositionMap.value = null
+    }
+
+    override fun reportVideoPlaybackFailure() {
+        failedVideoResourceId = videoPlaybackResource.value?.videoId
+        videoModeRequestId++
+        videoModeJob?.cancel()
+        clearVideoMode()
     }
 
     override fun seekTo(positionMs: Long) {
@@ -1667,9 +1688,11 @@ internal class IosPlaybackController(
             }
         val song = pendingQueue.currentItem() ?: return null
         audioRecovery.select(song.id)
-        videoModeRequestId++
-        videoModeJob?.cancel()
-        clearVideoMode()
+        if (song.id != player.currentSong.value?.id) {
+            videoModeRequestId++
+            videoModeJob?.cancel()
+            clearVideoMode()
+        }
         resolveJob?.cancel()
         audioQualityReloadJob?.cancel()
         preResolveJob?.cancel()

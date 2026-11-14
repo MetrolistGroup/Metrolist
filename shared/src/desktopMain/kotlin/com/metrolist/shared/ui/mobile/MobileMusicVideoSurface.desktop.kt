@@ -9,4 +9,6 @@ import androidx.compose.ui.unit.Dp
 internal actual fun MobileMusicVideoSurface(
     modifier: Modifier,
     cornerRadius: Dp,
+    showControls: Boolean,
+    onFullscreenClick: (() -> Unit)?,
 ) = Box(modifier)

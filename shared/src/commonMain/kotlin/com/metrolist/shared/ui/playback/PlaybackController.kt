@@ -162,6 +162,8 @@ interface PlaybackController {
 
     fun setVideoMode(wantVideo: Boolean) = Unit
 
+    fun reportVideoPlaybackFailure() = setVideoMode(false)
+
     fun startCastDiscovery() = Unit
 
     fun stopCastDiscovery() = Unit
