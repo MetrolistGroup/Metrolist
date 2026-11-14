@@ -1536,7 +1536,7 @@
     <string name="animated_artwork_cache">Cache animasi artwork</string>
     <string name="max_animated_artwork_cache_size">Ukuran maksimum cache animasi artwork</string>
     <string name="clear_animated_artwork_cache">Hapus cache animasi artwork</string>
-    <string name="clear_animated_artwork_cache_dialog">Hapus semua sampul animasi dan video Canvas yang tersimpan di cache? Semuanya perlu dimuat ulang saat Anda terhubung ke internet.</string>
+    <string name="clear_animated_artwork_cache_dialog">Hapus semua sampul animasi dan Video Kanvas yang tersimpan di cache? Semuanya perlu dimuat ulang saat Anda terhubung ke internet.</string>
     <string name="now_playing">Sedang diputar</string>
     <string name="file_size_unit_byte">B</string>
     <string name="file_size_unit_kilobyte">kB</string>
@@ -1717,7 +1717,7 @@
     <string name="loudness_level_quiet">Senyap (-19 dB)</string>
     <string name="lyrics_share_limit">Anda dapat memilih hingga %1$d baris.</string>
     <string name="lyrics_share_auto_fit">Atur ulang ke auto-fit</string>
-    <string name="canvas_cache">Cache Canvas</string>
+    <string name="canvas_cache">Cache kanvas</string>
     <string name="no_other_devices_nearby">Tidak ada perangkat lain di sekitar</string>
     <string name="lyrics_share_color">%1$s: #%2$s</string>
     <string name="edit_artist">Edit artis</string>
@@ -2501,4 +2501,8 @@
     <string name="devtools_render_backend_description">Perubahan akan berlaku setelah memulai ulang. Override untuk environment dan API rendering JVM diprioritaskan. Skiko dapat beralih ke opsi lain jika backend yang dipilih gagal diinisialisasi.</string>
     <string name="ai_setup_privacy_hint">Kebijakan data OpenRouter Anda mengecualikan endpoint untuk model ini. Tinjau opsi model gratis dan penyedia layanan dalam pengaturan privasi OpenRouter, lalu coba lagi.</string>
     <string name="ai_setup_credit_hint">Periksa saldo akun Anda dan batas kredit pada kunci OpenRouter Anda. Kunci OAuth dapat memiliki batasnya sendiri. Coba lagi setelah menyelesaikan masalah batas tersebut.</string>
+    <string name="desktop_minimize_to_tray">Minimalkan ke tray</string>
+    <string name="desktop_minimize_to_tray_desc">Menutup jendela akan memperkecil Metrolist ke tray</string>
+    <string name="desktop_tray_toggle_on_click">Sembunyikan atau tampilkan saat klik di tray</string>
+    <string name="desktop_tray_toggle_on_click_desc">Klik kiri ikon tray akan membuka atau menutup jendela Metrolist</string>
 </resources>
