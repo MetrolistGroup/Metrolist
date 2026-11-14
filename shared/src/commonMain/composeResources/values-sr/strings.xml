@@ -581,7 +581,7 @@
     <string name="close">Zatvori</string>
     <string name="gradient">Gradijent</string>
     <string name="token_login_show_token">Pokaži token</string>
-    <string name="token_login_sensitive_warning_title">Senzitivni podaci</string>
+    <string name="token_login_sensitive_warning_title">Ovaj token sadrži senzitivne podatke.</string>
     <string name="statistics">Statistika</string>
     <string name="general">Opšte</string>
     <string name="persistent_shuffle_title">Trajno nasumično puštanje</string>
@@ -601,7 +601,7 @@
     <string name="disconnect_cast">Prekini vezu</string>
     <string name="username">Korisničko ime</string>
     <string name="password">Lozinka</string>
-    <string name="cache_size_warning_title">Sačekaj!</string>
+    <string name="cache_size_warning_title">Smanji ograničenje keš memorije?</string>
     <string name="none">Nijedno</string>
     <string name="expressive_style">Ekspresivno</string>
     <string name="simple_style">Jednostavno</string>
@@ -1219,4 +1219,10 @@
     </plurals>
     <string name="clear_recent_searches_question">Obriši skorašnje pretrage?</string>
     <string name="text_color">Boja teksta</string>
+    <plurals name="downloads_failed_banner">
+        <item quantity="one">%1$d preuzimanje nije uspelo</item>
+        <item quantity="few">%1$d preuzimanja nisu uspela</item>
+        <item quantity="other">%1$d preuzimanja nije uspelo</item>
+    </plurals>
+    <string name="edit_playlist_cover">Promeni omot plejliste</string>
 </resources>
