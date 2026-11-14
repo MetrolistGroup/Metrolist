@@ -290,10 +290,10 @@ def require_compatible_libplist(version: str) -> None:
         raise InstallError("Sideloader 1.0-pre4 requires libplist 2.2.x or older; upgrade Sideloader before using newer libplist.")
 
 
-def linux_libplist_version() -> str:
+def libplist_version() -> str:
     pkg_config = shutil.which("pkg-config")
     if not pkg_config:
-        raise InstallError("Install pkg-config and a compatible libplist 2.2.x before running Sideloader.")
+        raise InstallError("Install pkg-config and libplist 2.2.x or older before running Sideloader.")
     result = run_command([pkg_config, "--modversion", "libplist-2.0"], capture_output=True, check=False)
     if result.returncode != 0:
         raise InstallError("Install a compatible libplist 2.2.x before running Sideloader.")
@@ -301,7 +301,7 @@ def linux_libplist_version() -> str:
 
 
 def require_linux_libplist() -> None:
-    require_compatible_libplist(linux_libplist_version())
+    require_compatible_libplist(libplist_version())
 
 
 def run_linux_package_manager(arguments: Sequence[str]) -> None:
@@ -359,11 +359,8 @@ def install_macos_dependencies() -> None:
         raise InstallError(
             "Install Homebrew from https://brew.sh, then rerun this script to install Sideloader dependencies."
         )
-    version_result = run_command([brew, "list", "--versions", "libplist"], capture_output=True, check=False)
-    version_match = re.search(r"\blibplist\s+(\S+)", version_result.stdout)
-    if not version_match:
-        raise InstallError("Install a compatible libplist 2.2.x with Homebrew before running Sideloader.")
-    require_compatible_libplist(version_match.group(1))
+    run_command([brew, "install", "pkgconf"])
+    require_compatible_libplist(libplist_version())
     packages = ("libimobiledevice", "openssl@3")
     run_command([brew, "install", *packages])
     library_dirs: list[str] = []

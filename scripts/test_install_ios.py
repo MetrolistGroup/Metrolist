@@ -1,6 +1,7 @@
 import hashlib
 import importlib.util
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -95,6 +96,20 @@ class InstallIosTest(unittest.TestCase):
         install_ios.require_compatible_libplist("2.2.0")
         with self.assertRaises(install_ios.InstallError):
             install_ios.require_compatible_libplist("2.3.0")
+
+    def test_libplist_version_comes_from_pkg_config_metadata(self):
+        result = subprocess.CompletedProcess(args=[], returncode=0, stdout="2.2.0\n", stderr="")
+        with (
+            patch.object(install_ios.shutil, "which", return_value="/usr/bin/pkg-config"),
+            patch.object(install_ios, "run_command", return_value=result) as run_command,
+        ):
+            self.assertEqual("2.2.0", install_ios.libplist_version())
+
+        run_command.assert_called_once_with(
+            ["/usr/bin/pkg-config", "--modversion", "libplist-2.0"],
+            capture_output=True,
+            check=False,
+        )
 
     def test_release_lookup_uses_the_pinned_tag(self):
         payload = {

@@ -19,7 +19,18 @@ On Linux, macOS or Windows with Python 3.10 or later, run `python3 scripts/insta
 
 The script uses a reviewed, checksum-pinned Dadoum [Sideloader CLI](https://github.com/Dadoum/Sideloader) release on Linux x64/ARM64, macOS x64/Apple silicon, and Windows x64. Windows ARM64 is not supported. The tool checksums are updated with each reviewed CLI release. It also verifies the IPA checksum, then asks for the Apple ID, password and 2FA code in the terminal before signing and installing the app. The script does not read or store Apple credentials.
 
-On Linux, the script installs missing device libraries with `pacman`, `apt-get` or `dnf`; the package manager may ask for administrator authentication. Sideloader 1.0-pre4 requires libplist 2.2.x or older on Linux and macOS. The script checks this before running Sideloader and stops when it cannot verify a compatible version; distribution packages and current Homebrew formulas may be newer. On macOS, install [Homebrew](https://brew.sh) first; the script uses it for libimobiledevice and OpenSSL. On Windows x64, install the latest [Microsoft Visual C++ v14 Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist/) before running the script. The script downloads the required device-library DLLs and starts Apple's web iTunes installer if the Apple Mobile Device driver is missing. Complete that installer if prompted; Sideloader setup then resumes. Keep the iPhone connected, accept its Trust prompt, and enable Developer Mode when iOS requests it.
+Before running on Linux, install `pkg-config` and development metadata for `libplist-2.0` version 2.2.x or older. Package names are `pkg-config libplist-dev` on Debian or Ubuntu, `pkgconf-pkg-config libplist-devel` on Fedora, and `pkgconf libplist` on Arch. The installer checks these prerequisites before it installs missing device libraries with `apt-get`, `dnf` or `pacman`; the package manager may ask for administrator authentication. Current distribution repositories may provide a newer, incompatible libplist, which the script rejects.
+
+On macOS, install [Homebrew](https://brew.sh) and use its [version-install command](https://docs.brew.sh/Versions) to install compatible libplist 2.2.0 before running the script. Homebrew's current formula may be newer. Install `pkgconf`, then set the package metadata and library paths for the extracted formula:
+
+```sh
+brew install pkgconf
+brew version-install libplist 2.2.0
+export PKG_CONFIG_PATH="$(brew --prefix libplist@2.2.0)/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+export DYLD_LIBRARY_PATH="$(brew --prefix libplist@2.2.0)/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
+```
+
+The script uses Homebrew for libimobiledevice and OpenSSL and stops if it cannot verify the compatible libplist. On Windows x64, install the latest [Microsoft Visual C++ v14 Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist/) before running the script. The script downloads the required device-library DLLs and starts Apple's web iTunes installer if the Apple Mobile Device driver is missing. Complete that installer if prompted; Sideloader setup then resumes. Keep the iPhone connected, accept its Trust prompt, and enable Developer Mode when iOS requests it.
 
 Use the same signing account and resulting bundle ID for updates. Check the expiry shown by the tool and refresh before it expires. Refresh renews signing; download a new IPA separately to update Metrolist. Keep pairing files private.
 
