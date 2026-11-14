@@ -1139,4 +1139,13 @@
     <string name="lyrics_song_artist">Izvođač pesme</string>
     <string name="lyrics_capability_unsynced">Nesinhronizovano</string>
     <string name="lyrics_youtube_captions">YouTube titlovi</string>
+    <string name="edit_playlist_cover_note_wait">Nakon izbora slike, sačekajte trenutak da se nova slika pojavi na vašoj plejlisti</string>
+    <string name="choose_from_library">Izaberi iz biblioteke</string>
+    <string name="remove_custom_image">Ukloni prilagođenu sliku</string>
+    <string name="sleep_timer_hour">Sat</string>
+    <string name="sleep_timer_minute">Minut</string>
+    <string name="sleep_timer_advanced_options">Napredne opcije</string>
+    <string name="sleep_timer_finish_current_song">Sačekaj kraj pesme kada tajmer istekne</string>
+    <string name="sleep_timer_set_default">Postavi kao podrazumevano</string>
+    <string name="lyrics_curated_by">(dodao/la: %1$s)</string>
 </resources>
