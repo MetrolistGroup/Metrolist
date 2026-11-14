@@ -20,6 +20,7 @@ final class NativeErrorOutput {
     @CConstant("S_IRUSR") static native int readMode();
     @CConstant("S_IWUSR") static native int writeMode();
     @CFunction("open") static native int open(CCharPointer path, int flags, int mode);
+    @CFunction("fchmod") static native int fchmod(int fd, int mode);
     @CFunction("dup2") static native int dup2(int source, int target);
     @CFunction("close") static native int close(int fd);
 
@@ -28,6 +29,8 @@ final class NativeErrorOutput {
             int fd = open(name.get(), writeOnly() | create() | append(), readMode() | writeMode());
             if (fd < 0) throw new IllegalStateException("Cannot open native crash log");
             try {
+                // open is variadic and Apple arm64 passes variadic arguments on the stack, so the mode above is unreliable there.
+                if (fchmod(fd, readMode() | writeMode()) < 0) throw new IllegalStateException("Cannot set native crash log mode");
                 if (dup2(fd, 2) < 0) throw new IllegalStateException("Cannot redirect native stderr");
             } finally {
                 if (fd != 2) close(fd);
