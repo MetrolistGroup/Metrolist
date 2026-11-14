@@ -567,7 +567,8 @@ class HomeViewModel(
         isRefresh: Boolean = false,
         onComplete: () -> Unit = {},
     ) {
-        if (!isFilteredHome(params, browseId)) allContentReloadRequired = true
+        val isFiltered = isFilteredHome(params, browseId)
+        if (!isFiltered) allContentReloadRequired = true
         val loadStartedAt = TimeSource.Monotonic.markNow()
         val generation = ++contentLoadGeneration
         val sessionKey = GlobalYouTube.innerTube.sessionSnapshot().homeCacheSessionKey()
@@ -578,6 +579,7 @@ class HomeViewModel(
         loadJob =
             scope.launch(Dispatchers.Default) {
                 if (!PlaybackNetworkStateStore.current.connected) {
+                    if (!isFiltered) allContentReloadRequired = false
                     _uiState.update(HomeUiState::asOfflineSnapshot)
                     scope.launch { onComplete() }
                     return@launch
@@ -592,9 +594,9 @@ class HomeViewModel(
                     )
                 }
 
+                var primaryContentPublished = false
                 supervisorScope {
                     try {
-                        val isFiltered = isFilteredHome(params, browseId)
                         val homePageDataDeferred =
                             async {
                                 homeRequestResult("primary home") {
@@ -646,9 +648,14 @@ class HomeViewModel(
                         ) {
                             return@supervisorScope
                         }
-                        val primarySections = rawHomeSections.withoutNonMusicalVideos()
-                        val primaryLocalSongMetadata = loadLocalSongMetadata(primarySections)
-                        val hydratedPrimarySections = primarySections.withLocalSongMetadata(primaryLocalSongMetadata)
+                        val primaryLocalSongMetadata = loadLocalSongMetadata(rawHomeSections)
+                        if (generation != contentLoadGeneration ||
+                            sessionKey != GlobalYouTube.innerTube.sessionSnapshot().homeCacheSessionKey()
+                        ) {
+                            return@supervisorScope
+                        }
+                        val hydratedPrimarySections =
+                            rawHomeSections.withLocalSongMetadata(primaryLocalSongMetadata).withoutNonMusicalVideos()
                         val chartSections = findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_charts")
                         _uiState.update { state ->
                             state
@@ -677,6 +684,7 @@ class HomeViewModel(
                                     sections = uncategorizedHomeSections(hydratedPrimarySections),
                                 ).withoutBlockedContent()
                         }
+                        if (!isFiltered) primaryContentPublished = true
                         Logger.d(
                             HOME_LOG_TAG,
                             "primary home content published elapsedMs=${loadStartedAt.elapsedNow().inWholeMilliseconds}",
@@ -848,6 +856,7 @@ class HomeViewModel(
                         ) {
                             return@supervisorScope
                         }
+                        if (!isFiltered && !primaryContentPublished) allContentReloadRequired = false
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
@@ -880,8 +889,8 @@ class HomeViewModel(
         if (!paginationInProgress.compareAndSet(false, true)) return
         if (continuation == null) {
             val state = _uiState.value
-            if (!state.isLoading && !state.isRefreshing && !state.isRestoringCache &&
-                !state.isRevalidating && !state.isContentLoading && !state.isAllContentPending
+            if (!state.isLoading && !state.isRefreshing && !state.isRestoringCache && !state.isAllContentPending &&
+                !state.isRevalidating && !state.isContentLoading
             ) {
                 loadMoreChipSections()
             } else {
