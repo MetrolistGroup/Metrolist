@@ -253,6 +253,30 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "java.awt.event.KeyEvent",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.awt.Component",
+            "int",
+            "long",
+            "int",
+            "int",
+            "char",
+            "int"
+          ]
+        },
+        {
+          "name": "getExtendedKeyCodeForChar",
+          "parameterTypes": [
+            "int"
+          ]
+        }
+      ]
     }
   ],
   "resources": [

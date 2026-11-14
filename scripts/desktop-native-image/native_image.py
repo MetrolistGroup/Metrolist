@@ -53,6 +53,56 @@ def nucleus_natives(work, target):
     return directory
 
 
+# Nucleus's GraalVM manifest plus supportedOS: without it GetVersion reports Windows 8 (build 9200) and the
+# Windows 10 startup check rejects the native executable. The JVM build inherits java.exe's manifest.
+WINDOWS_MANIFEST = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
+    </application>
+  </compatibility>
+  <asmv3:application>
+    <asmv3:windowsSettings>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/PM</dpiAware>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2,PerMonitor</dpiAwareness>
+      <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
+      <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
+    </asmv3:windowsSettings>
+  </asmv3:application>
+</assembly>
+"""
+
+
+def windows_resources(work, version, rc=None):
+    """Compile the manifest, icon and version info that Native Image links into Metrolist.exe."""
+    directory = work / 'windows-resources'
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / 'metrolist.manifest').write_text(WINDOWS_MANIFEST, encoding='utf-8')
+    numbers = [int(part) for part in version.split('+')[0].split('-')[0].split('.')] + [0]
+    numeric = ','.join(str(part) for part in numbers[:4])
+    quoted = lambda path: '"' + str(path).replace('\\', '\\\\') + '"'
+    (directory / 'metrolist.rc').write_text('\n'.join([
+        '#pragma code_page(65001)',
+        f'1 ICON {quoted(ROOT / "desktopApp/src/desktopMain/resources/logo.ico")}',
+        f'1 24 {quoted(directory / "metrolist.manifest")}',
+        '1 VERSIONINFO', f'FILEVERSION {numeric}', f'PRODUCTVERSION {numeric}', 'BEGIN',
+        '  BLOCK "StringFileInfo"', '  BEGIN', '    BLOCK "040904B0"', '    BEGIN',
+        '      VALUE "FileDescription", "Metrolist"', f'      VALUE "FileVersion", "{version}"',
+        '      VALUE "InternalName", "Metrolist"', '      VALUE "OriginalFilename", "Metrolist.exe"',
+        '      VALUE "ProductName", "Metrolist"', f'      VALUE "ProductVersion", "{version}"',
+        '    END', '  END', '  BLOCK "VarFileInfo"', '  BEGIN', '    VALUE "Translation", 0x0409, 0x04B0', '  END', 'END', '']),
+        encoding='utf-8')
+    if rc is None:
+        kits = sorted(Path(os.environ.get('ProgramFiles(x86)', r'C:\Program Files (x86)'), 'Windows Kits/10/bin').glob('10.*/x64/rc.exe'))
+        rc = shutil.which('rc') or (kits[-1] if kits else None)
+        if rc is None:
+            raise RuntimeError('rc.exe from the Windows SDK is required to build the Windows native image')
+    output = directory / 'metrolist.res'
+    subprocess.run([str(rc), '/nologo', '/fo', str(output), str(directory / 'metrolist.rc')], check=True)
+    return output
+
+
 def arguments(graal, work, output, target, experiment=False, agent=None):
     windows = target.startswith('windows-')
     compiler = graal / 'bin' / ('native-image.cmd' if windows else 'native-image')
@@ -72,6 +122,7 @@ def arguments(graal, work, output, target, experiment=False, agent=None):
         if windows:
             # Match Nucleus's GUI launcher while retaining Native Image's main entry point.
             options += ['-H:NativeLinkerOption=/SUBSYSTEM:WINDOWS', '-H:NativeLinkerOption=/ENTRY:mainCRTStartup']
+            options += [f'-H:NativeLinkerOption={work / "windows-resources/metrolist.res"}']
     main = 'com.metrolist.desktop.experiment.NativeImageMainKt' if experiment else 'com.metrolist.desktop.nativeimage.NativeDesktopMainKt'
     classpath = (work / 'classpath.txt').read_text().strip()
     classpath = str(work / 'serialization-config') + os.pathsep + classpath
@@ -105,6 +156,9 @@ def build(graal, work, target, experiment=False, agent=None):
             java_args.write_text('\n'.join(json.dumps(str(arg), ensure_ascii=False) for arg in java[1:]) + '\n', encoding='utf-8')
             with (work / 'java-glue.log').open('w') as log:
                 subprocess.run([str(java[0]), '-J-Xmx512m', '@' + str(java_args)], check=True, stdout=log, stderr=subprocess.STDOUT)
+        if target.startswith('windows') and not experiment:
+            windows_resources(work, os.environ.get('ORG_GRADLE_PROJECT_appVersion') or next(
+                line.split('=', 1)[1] for line in (ROOT / 'gradle.properties').read_text().splitlines() if line.startswith('appVersion=')))
         command = arguments(graal, work, output, target, experiment, agent)
         argfile = work / 'native-image.args'
         argfile.write_text('\n'.join(json.dumps(arg, ensure_ascii=False) for arg in command[1:]) + '\n', encoding='utf-8')

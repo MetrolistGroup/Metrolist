@@ -37,6 +37,26 @@ class PipelineTest(unittest.TestCase):
                 path = native_image.nucleus_natives(Path(directory), target) / 'reachability-metadata.json'
                 self.assertEqual(f'nucleus/native/{platform}/*', json.loads(path.read_text())['resources'][0]['glob'])
 
+    def test_windows_resources_declare_windows_10_and_link_into_the_image(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            with patch('subprocess.run') as run:
+                res = native_image.windows_resources(work, '14.2.1+abcdef0', rc='rc.exe')
+            run.assert_called_once()
+            self.assertEqual(['rc.exe', '/nologo', '/fo', str(res)], run.call_args.args[0][:4])
+            manifest = (work/'windows-resources/metrolist.manifest').read_text()
+            self.assertIn('{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}', manifest)
+            self.assertIn('PerMonitorV2', manifest)
+            rc = (work/'windows-resources/metrolist.rc').read_text()
+            self.assertIn('FILEVERSION 14,2,1,0', rc)
+            self.assertIn('"ProductVersion", "14.2.1+abcdef0"', rc)
+            self.assertIn('logo.ico', rc)
+            (work/'classpath.txt').write_text('app.jar')
+            command = native_image.arguments(work, work, work/'image/Metrolist.exe', 'windows-x64')
+            self.assertIn(f'-H:NativeLinkerOption={work / "windows-resources/metrolist.res"}', command)
+            linux = native_image.arguments(work, work, work/'image/Metrolist', 'linux-x64')
+            self.assertFalse(any('metrolist.res' in arg for arg in linux))
+
     def test_output_argument_leaves_exe_suffix_to_native_image(self):
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory); (work/'classpath.txt').write_text('app.jar')

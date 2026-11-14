@@ -1,7 +1,9 @@
 package com.metrolist.desktop.nativeimage
 
+import com.metrolist.desktop.utils.isDesktopPlatformSupported
 import com.metrolist.desktop.window.jna.User32Extend
 import com.metrolist.desktop.window.jna.structure.MENUITEMINFO
+import com.metrolist.desktop.window.jna.structure.windowsBuildNumber
 import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.COM.COMUtils
 import com.sun.jna.platform.win32.Ole32
@@ -47,6 +49,8 @@ private fun serializationSmoke() {
 }
 
 internal fun nativeBackendSmoke() {
+    // The packaged executable must pass the same platform gate as the app, including the Windows build check.
+    check(isDesktopPlatformSupported()) { "Desktop platform check rejected this system, Windows build $windowsBuildNumber" }
     serializationSmoke()
     check(GraphicsEnvironment.getLocalGraphicsEnvironment().allFonts.isNotEmpty())
     check(FontMgr.default.familiesCount > 0)
