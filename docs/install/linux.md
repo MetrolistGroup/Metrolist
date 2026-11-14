@@ -21,6 +21,8 @@ chmod u+x -- ./Metrolist.AppImage
 
 Substitute the downloaded filename. Check playback, sign-in and retained credentials after restart.
 
+On Arch Linux, install [`metrolist-bin`](https://aur.archlinux.org/packages/metrolist-bin) for the release build or [`metrolist-git`](https://aur.archlinux.org/packages/metrolist-git) to build `main` from source, for example with `yay -S metrolist-bin`. Update them through your AUR helper instead of replacing an AppImage.
+
 ## Update and uninstall
 
 Back up, quit, then replace the AppImage with a verified download of the same architecture. Deleting an AppImage leaves profile data and music outside it. Sign out first to remove saved sessions, and preserve backups before clearing data.

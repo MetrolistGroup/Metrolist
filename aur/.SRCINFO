@@ -1,6 +1,6 @@
 pkgbase = metrolist-git
 	pkgdesc = YouTube Music desktop client
-	pkgver = 0.1.0
+	pkgver = 14.0.0
 	pkgrel = 1
 	url = https://github.com/MetrolistGroup/Metrolist
 	arch = x86_64
@@ -8,13 +8,24 @@ pkgbase = metrolist-git
 	makedepends = git
 	makedepends = jdk21-openjdk
 	makedepends = jdk25-temurin
+	depends = alsa-lib
+	depends = dbus
+	depends = fontconfig
 	depends = gtk3
+	depends = hicolor-icon-theme
+	depends = libglvnd
+	depends = libsecret
+	depends = libxi
+	depends = libxrender
+	depends = libxtst
 	depends = webkit2gtk-4.1
 	provides = metrolist
 	conflicts = metrolist
+	options = !strip
+	options = !debug
 	source = metrolist-kmp::git+https://github.com/MetrolistGroup/Metrolist.git#branch=main
 	source = metrolist.desktop
 	sha256sums = SKIP
-	sha256sums = 6bc3cdc5bb32247d119b77f763484a26f65c5d6f38ec840a159c2f021f94da1a
+	sha256sums = 1c1b9dedc07ec7ed0efc27f524c21e35727b934791772296bff8f7a4461cbef0
 
 pkgname = metrolist-git

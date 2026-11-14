@@ -1,24 +1,25 @@
 # Maintainer: Metrolist contributors
 pkgname=metrolist-git
-pkgver=0.1.0
+pkgver=14.0.0
 pkgrel=1
 pkgdesc='YouTube Music desktop client'
 arch=('x86_64')
 url='https://github.com/MetrolistGroup/Metrolist'
 license=('GPL-3.0-only')
-depends=('gtk3' 'webkit2gtk-4.1')
+depends=('alsa-lib' 'dbus' 'fontconfig' 'gtk3' 'hicolor-icon-theme' 'libglvnd' 'libsecret' 'libxi' 'libxrender' 'libxtst' 'webkit2gtk-4.1')
 makedepends=('git' 'jdk21-openjdk' 'jdk25-temurin')
 provides=('metrolist')
 conflicts=('metrolist')
+options=('!strip' '!debug')
 _project_dir="$startdir/.."
 if [[ -f "$_project_dir/settings.gradle.kts" && -x "$_project_dir/gradlew" ]]; then
   source=('metrolist.desktop')
-  sha256sums=('6bc3cdc5bb32247d119b77f763484a26f65c5d6f38ec840a159c2f021f94da1a')
+  sha256sums=('1c1b9dedc07ec7ed0efc27f524c21e35727b934791772296bff8f7a4461cbef0')
 else
   source=("metrolist-kmp::git+https://github.com/MetrolistGroup/Metrolist.git#branch=main"
           'metrolist.desktop')
   sha256sums=('SKIP'
-              '6bc3cdc5bb32247d119b77f763484a26f65c5d6f38ec840a159c2f021f94da1a')
+              '1c1b9dedc07ec7ed0efc27f524c21e35727b934791772296bff8f7a4461cbef0')
 fi
 
 _source_dir() {
@@ -31,7 +32,7 @@ _source_dir() {
 
 pkgver() {
   cd "$(_source_dir)"
-  printf '0.r%s.%s' "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+  printf '%s.r%s.g%s' "$(sed -n 's/^appVersion=//p' gradle.properties)" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 prepare() {

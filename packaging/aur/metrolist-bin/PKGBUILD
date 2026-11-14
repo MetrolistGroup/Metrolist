@@ -1,0 +1,38 @@
+# Maintainer: nyxiereal <98595166+nyxiereal@users.noreply.github.com>
+pkgname=metrolist-bin
+pkgver=14.0.0
+pkgrel=1
+pkgdesc='YouTube Music client (prebuilt desktop release)'
+arch=('x86_64' 'aarch64')
+url='https://github.com/MetrolistGroup/Metrolist'
+license=('GPL-3.0-only')
+depends=('alsa-lib' 'dbus' 'fontconfig' 'gtk3' 'hicolor-icon-theme' 'libglvnd' 'libsecret' 'libxi' 'libxrender' 'libxtst' 'webkit2gtk-4.1')
+provides=('metrolist')
+conflicts=('metrolist' 'metrolist-git')
+options=('!strip' '!debug')
+_appimage=metrolist-desktop-linux
+source_x86_64=("$_appimage-x64-$pkgver.AppImage::$url/releases/download/v$pkgver/$_appimage-x64-$pkgver.AppImage")
+source_aarch64=("$_appimage-arm64-$pkgver.AppImage::$url/releases/download/v$pkgver/$_appimage-arm64-$pkgver.AppImage")
+noextract=("$_appimage-x64-$pkgver.AppImage" "$_appimage-arm64-$pkgver.AppImage")
+sha256sums_x86_64=('0e75981e7a805ce669290edfb5537b96a4ac8951c2c3e6a50f00ed2b7896045f')
+sha256sums_aarch64=('4e73eb3fa6b8bc8d20e783bd931fcf36365a9dae836d76ed9870e1be34d0e54a')
+
+prepare() {
+  local arch=x64
+  [[ $CARCH == aarch64 ]] && arch=arm64
+  rm -rf squashfs-root
+  chmod +x "$_appimage-$arch-$pkgver.AppImage"
+  # The AppImage runtime extracts itself without FUSE.
+  "./$_appimage-$arch-$pkgver.AppImage" --appimage-extract >/dev/null
+  sed -i -e 's|^Exec=.*|Exec=metrolist %u|' -e 's|^Icon=.*|Icon=metrolist|' squashfs-root/Metrolist.desktop
+}
+
+package() {
+  cd squashfs-root
+  install -d "$pkgdir/opt/metrolist" "$pkgdir/usr/bin"
+  cp -a bin lib "$pkgdir/opt/metrolist/"
+  chmod -R u+rwX,go+rX,go-w "$pkgdir/opt/metrolist"
+  ln -s /opt/metrolist/bin/Metrolist "$pkgdir/usr/bin/metrolist"
+  install -Dm644 Metrolist.png "$pkgdir/usr/share/icons/hicolor/512x512/apps/metrolist.png"
+  install -Dm644 Metrolist.desktop "$pkgdir/usr/share/applications/metrolist.desktop"
+}
