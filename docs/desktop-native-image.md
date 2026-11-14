@@ -8,7 +8,7 @@ The supported path keeps Serial GC, `-Os`, a 32 MiB initial heap and a 384 MiB m
 | --- | --- | --- |
 | Linux x64 | Native app directory and AppImage | Dispatch or reusable push caller |
 | Windows x64 | Native app directory and portable ZIP | Dispatch or reusable push caller |
-| macOS ARM64 | Native `.app` and ZIP | Dispatch or reusable push caller |
+| macOS ARM64 | Native `.app` and ZIP; does not start yet, see CI results | Dispatch or reusable push caller |
 | Linux ARM64 | Native app directory and AppImage | Dispatch or reusable push caller |
 | Windows ARM64 | JVM only | No GraalVM distribution ships a Windows AArch64 builder |
 | macOS Intel | JVM only | Oracle GraalVM 25 dropped macOS x64 |
@@ -81,18 +81,16 @@ The packaged AppImage passed strict startup, live Home content, screenshot and n
 
 `actionlint`, all 54 `.github/tests`, 17 native build/launcher tests, 13 smoke-runner tests and seven AppImage tests passed. Changed Kotlin was formatted. Metadata JSON, local documentation links, Bash syntax and `git diff --check` passed. The lane wrapper passed desktop compilation, shared tests and ktlint, Android assembly and Android unit tests. The results contain 3,443 desktop tests with five skipped and 803 Android tests, without failures. Existing coverage still includes 60 SongLikeState tests and 20 playback-reporter tests.
 
-Windows metadata and packaging have backend checks, and the Windows C-interop Java sources compile against GraalVM's SDK. No Windows native compilation or hosted workflow has run from this local branch. No push or dispatch was performed. The macOS ARM64 and Linux ARM64 paths are now enabled, without native build evidence. The fetched main has no `cold-build.yml`; this change does not restore or alter scheduled workflows.
+### CI results
 
-### First dispatch checks
+On 2026-11-14 the hosted native builds gave these results.
 
-No macOS, Windows or ARM64 native build ran during this change. The first dispatch for each target must confirm the following results. A successful build must upload both the package and its evidence archive.
-
-| Target | First CI dispatch must confirm |
+| Target | Result |
 | --- | --- |
-| Linux x64 | Oracle 25.0.4 installs from the verified pin; Gradle preparation and the bounded Serial/Os native build complete; ELF x64 validation and AppImage packaging pass; strict French-locale GUI startup, screenshot, logs and shutdown pass under Xvfb with the explicit runtime dependencies. |
-| Linux ARM64 | The ARM runner installs the pinned builder and GTK/WebKit dependencies; the locked Rust build produces `linux-aarch64/libcomposewebview_wry.so` on the exported classpath; ARM64 Skiko, sqlite-jdbc and JavaCPP/FFmpeg resources survive Native Image; ELF AArch64 validation and ARM AppImage packaging pass; strict GUI startup, screenshot, logs and shutdown pass under Xvfb. |
-| macOS ARM64 | The Apple Silicon runner installs the pinned builder and exports ARM64 inputs; POSIX glue, macOS AWT/JNI metadata and native linking compile; JNA, Skiko, sqlite-jdbc and JavaCPP/FFmpeg load; every loose executable/library passes the Mach-O CPU check; the plist, resource paths and deployment minimum match the bundle; individual ad-hoc signatures and final bundle verification pass; the extracted ZIP preserves executable modes and passes strict GUI startup, screenshot, logs and shutdown in the runner session. |
-| Windows x64 | The pinned builder and Visual C++ toolchain compile the GUI executable; the login helper and checksum are present; all PE files pass x64 validation; the portable ZIP passes strict GUI smoke if a desktop exists, or the documented strict backend probe with GUI explicitly unverified on a service runner. |
+| Linux x64 | Builds with `-march=compatibility`, packages the AppImage and passes strict GUI startup, screenshot and shutdown under Xvfb. |
+| Linux ARM64 | Builds, packages the ARM AppImage and passes the same strict GUI smoke after the target's Nucleus native libraries were registered. |
+| Windows x64 | Builds `Metrolist.exe` and the portable ZIP. The service runner has no desktop, so only the strict backend probe runs. It needed the JDK font configuration files, the font manager's JNI lookups and Skiko's `icudtl.dat`. |
+| macOS ARM64 | Builds, packages and ad-hoc signs the `.app`, but does not start. Native Image emits no JDK libraries on macOS, so `libawt.dylib` is missing and AWT fails to load. Nucleus copies the AWT dylibs into the bundle, links C stubs for symbols the flat-namespace AWT dylibs reference, initializes the platform encoding on the bundled `libjava.dylib` and pins the deployment target; none of that is ported yet. |
 
 The startup smoke does not open a Wry login window or play audio. On macOS and Linux ARM64, check Wry login, sqlite persistence, FFmpeg playback, GPU/audio output and desktop integrations on real hardware before promotion. macOS also needs a downloaded, quarantined ZIP check for Gatekeeper approval, Retina rendering, local-network permissions, and dispatch of both URL schemes through Launch Services. CI bundle metadata alone does not prove those flows.
 
