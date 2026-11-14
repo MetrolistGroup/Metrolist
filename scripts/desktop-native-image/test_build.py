@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+import zipfile
 from unittest.mock import patch
 
 import native_image
@@ -20,6 +21,8 @@ class BuildTest(unittest.TestCase):
             (work / "image").mkdir(parents=True)
             (work / "image/metrolist").write_text("working image")
             (work / "image/libjvm.so").write_text("working shim")
+            with zipfile.ZipFile(root / "input.jar", "w"):
+                pass
             (work / "classpath.txt").write_text(str(root / "input.jar"))
             graal = root / "graal"
             (graal / "bin").mkdir(parents=True)
