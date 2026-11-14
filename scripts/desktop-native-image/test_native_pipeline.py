@@ -31,6 +31,15 @@ def executable(path, machine=0x8664):
 
 
 class PipelineTest(unittest.TestCase):
+    def test_output_argument_leaves_exe_suffix_to_native_image(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory); (work/'classpath.txt').write_text('app.jar')
+            for target, output, expected in [('windows-x64', work/'image/Metrolist.exe', work/'image/Metrolist'),
+                                             ('linux-x64', work/'image/Metrolist', work/'image/Metrolist')]:
+                command = native_image.arguments(work, work, output, target)
+                self.assertEqual(str(expected), command[command.index('-o') + 1])
+                self.assertIn('-march=compatibility', command)
+
     def test_checksum_cache_hit_and_corrupt_cache_recovery(self):
         data = jdk_archive()
         pin = {'platforms': {'windows-x64': {'url':'https://example.invalid/jdk.zip','sha256':hashlib.sha256(data).hexdigest()}}}
