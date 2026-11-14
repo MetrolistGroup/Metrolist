@@ -3,6 +3,7 @@ package com.metrolist.shared.playlistimport
 import com.metrolist.shared.model.AlbumTiny
 import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.SongItem
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
@@ -11,6 +12,26 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PlaylistImportCommonTest {
+    @Test
+    fun unresolvedVideoIdFallsBackToTrackSearch() =
+        runTest {
+            val searchedSong = SongItem("search-result", "Song", null, emptyList(), null)
+            var fallbackUsed = false
+
+            val resolved =
+                resolveSongByVideoIdOrFallback(
+                    videoId = "stale-video-id",
+                    metadataLookup = { null },
+                    fallback = {
+                        fallbackUsed = true
+                        searchedSong
+                    },
+                )
+
+            assertEquals(searchedSong, resolved)
+            assertTrue(fallbackUsed)
+        }
+
     @Test
     fun matchingRejectsDifferentRecordingsAndUsesAlbumAndDurationToRankCandidates() {
         val track = PlaylistImportManager.CsvTrack("Song!", "Artist", null, album = "Album", durationSeconds = 180)

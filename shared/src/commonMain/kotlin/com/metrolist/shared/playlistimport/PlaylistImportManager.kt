@@ -41,6 +41,15 @@ import kotlin.time.Duration.Companion.milliseconds
 
 private fun uriScheme(value: String): String? = Regex("^([A-Za-z][A-Za-z0-9+.-]*):").find(value)?.groupValues?.get(1)
 
+internal suspend fun resolveSongByVideoIdOrFallback(
+    videoId: String?,
+    metadataLookup: suspend (String) -> SongItem?,
+    fallback: suspend () -> SongItem?,
+): SongItem? {
+    if (videoId != null) metadataLookup(videoId)?.let { return it }
+    return fallback()
+}
+
 class PlaylistImportManager(
     private val database: MusicDatabase,
     private val repository: YouTubeRepository,
@@ -432,22 +441,26 @@ class PlaylistImportManager(
         if (searchQueries.isEmpty()) return null
         repeat(RESOLVE_RETRIES) { attempt ->
             try {
-                track.videoId?.let { return repository.getSongMetadata(it) }
-                for (searchQuery in searchQueries) {
-                    val match =
-                        bestTrackMatch(
-                            track,
-                            repository
-                                .searchFiltered(
-                                    searchQuery,
-                                    SearchFilter.SONG,
-                                    allowOfflineFallback = false,
-                                ).items
-                                .filterIsInstance<SongItem>(),
-                        )
-                    if (match != null) return match
+                return resolveSongByVideoIdOrFallback(
+                    track.videoId,
+                    metadataLookup = { videoId -> repository.getSongMetadata(videoId) },
+                ) {
+                    for (searchQuery in searchQueries) {
+                        val match =
+                            bestTrackMatch(
+                                track,
+                                repository
+                                    .searchFiltered(
+                                        searchQuery,
+                                        SearchFilter.SONG,
+                                        allowOfflineFallback = false,
+                                    ).items
+                                    .filterIsInstance<SongItem>(),
+                            )
+                        if (match != null) return@resolveSongByVideoIdOrFallback match
+                    }
+                    null
                 }
-                return null
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
