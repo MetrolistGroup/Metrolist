@@ -118,7 +118,7 @@ object PlaybackEventLog {
         error: Throwable,
     ) {
         val timestampMs = Clock.System.now().toEpochMilliseconds()
-        lastStructuredFailure = StructuredFailure(tag, error, timestampMs)
+        lastStructuredFailure = StructuredFailure(tag, error::class.simpleName, error.hashCode(), timestampMs)
         events.append { id ->
             PlaybackEvent(
                 id = id,
@@ -169,9 +169,17 @@ object PlaybackEventLog {
         )
     }
 
-    private data class StructuredFailure(val tag: String, val error: Throwable, val timestampMs: Long) {
+    private data class StructuredFailure(
+        val tag: String,
+        val exceptionType: String?,
+        val errorHashCode: Int,
+        val timestampMs: Long,
+    ) {
         fun matches(tag: String, error: Throwable): Boolean =
-            this.tag == tag && this.error === error && Clock.System.now().toEpochMilliseconds() - timestampMs in 0..1_000
+            this.tag == tag &&
+                exceptionType == error::class.simpleName &&
+                errorHashCode == error.hashCode() &&
+                Clock.System.now().toEpochMilliseconds() - timestampMs in 0..1_000
     }
 
     fun clear() {
