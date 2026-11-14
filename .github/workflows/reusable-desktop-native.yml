@@ -21,12 +21,11 @@ permissions:
 
 jobs:
   package:
-    # No push/PR builds. ARM64 targets need an explicit maintainer switch as well as a dispatch.
+    # Only dispatches and tester push callers may build native packages.
     if: >-
       (github.event_name == 'workflow_dispatch' || github.event_name == 'push') &&
       (inputs.platform == 'linux-x64' || inputs.platform == 'windows-x64' ||
-      (inputs.platform == 'macos-arm64' && vars.ENABLE_NATIVE_MACOS_ARM64 == 'true') ||
-      (inputs.platform == 'linux-arm64' && vars.ENABLE_NATIVE_LINUX_ARM64 == 'true'))
+      inputs.platform == 'macos-arm64' || inputs.platform == 'linux-arm64')
     name: ${{ inputs.platform }} native tester
     runs-on: ${{ fromJSON('{"linux-x64":"blacksmith-8vcpu-ubuntu-2404","windows-x64":"blacksmith-8vcpu-windows-2025","macos-arm64":"blacksmith-6vcpu-macos-15","linux-arm64":"blacksmith-8vcpu-ubuntu-2404-arm"}')[inputs.platform] }}
     timeout-minutes: 45
@@ -75,7 +74,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential zlib1g-dev libfreetype-dev libasound2-dev \
             libx11-dev libxext-dev libxrender-dev libxtst-dev libxi-dev xvfb xauth scrot \
-            imagemagick libgl1-mesa-dri dbus-user-session
+            imagemagick libgl1-mesa-dri dbus-user-session libdrm2 libegl1 libfontconfig1 \
+            libgl1 libpulse0 libva-drm2 libva2 libxcb-shm0
           sudo loginctl enable-linger "$(id -un)"
           sudo systemctl start "user@$(id -u).service"
           echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"

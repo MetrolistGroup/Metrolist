@@ -6,12 +6,14 @@ The supported path keeps Serial GC, `-Os`, a 32 MiB initial heap and a 384 MiB m
 
 | Target | Build and package | CI state |
 | --- | --- | --- |
-| Linux x64 | Native app directory and AppImage | Manual dispatch |
-| Windows x64 | Native app directory and portable ZIP | Manual dispatch on Windows, without cross-compilation |
-| macOS ARM64 | Native `.app` and ZIP | Disabled until `ENABLE_NATIVE_MACOS_ARM64=true` |
-| Linux ARM64 | Native app directory and AppImage | Disabled until `ENABLE_NATIVE_LINUX_ARM64=true` |
+| Linux x64 | Native app directory and AppImage | Dispatch or reusable push caller |
+| Windows x64 | Native app directory and portable ZIP | Dispatch or reusable push caller |
+| macOS ARM64 | Native `.app` and ZIP | Dispatch or reusable push caller |
+| Linux ARM64 | Native app directory and AppImage | Dispatch or reusable push caller |
+| Windows ARM64 | JVM only | No GraalVM distribution ships a Windows AArch64 builder |
+| macOS Intel | JVM only | Oracle GraalVM 25 dropped macOS x64 |
 
-Windows ARM64 and macOS Intel keep their JVM packages. Every existing JVM package stays the default. The native Linux artifact has a separate `metrolist-desktop-native-linux-x64-<version>.AppImage` name. Native Windows uses `Metrolist.exe`, the existing portable install-manifest schema, and `resources/windows` login helper/checksum layout. Its ZIP has a separate native filename. The native path validates the launcher/helper/DLL architecture and helper checksum.
+Windows ARM64 and macOS Intel keep their JVM packages. Every existing JVM package stays the default. The native Linux artifact has a separate `metrolist-desktop-native-linux-x64-<version>.AppImage` name. Native Windows uses `Metrolist.exe`, the existing portable install-manifest schema, and `resources/windows` login helper/checksum layout. Its ZIP has a separate native filename. The native path validates Windows launcher/helper/DLL architecture and helper checksums. Linux packages require ELF64 libraries and executables with the target machine type. macOS packages require ARM64 Mach-O libraries and executables, including loose sidecars under `Contents/Resources`.
 
 ### Build locally
 
@@ -19,7 +21,7 @@ Prepare with the opt-in Gradle init script. This adds native entry points only f
 
 ```sh
 JAVA_TOOL_OPTIONS=-Djava.awt.headless=true \
-  /mnt/work/projects/Metrolist-KMP-lanes/bin/gradlew-lane \
+  /mnt/work/projects/Metrolist-lanes/bin/gradlew-lane \
   -I scripts/desktop-native-image/prepare.init.gradle \
   -PnativeExperimentDir=/tmp/r6-native-image/supported \
   :desktopApp:prepareNativeImage :desktopApp:compileKotlinJvm \
@@ -40,11 +42,15 @@ For Windows use the same prepare task on a Windows x64 host, build the existing 
 
 One native-only substitution replaces `configureDesktopJvmErrorFile`. Native Image has neither HotSpot's `ErrorFile` option nor `_JAVA_OPTIONS` processing, so the JVM AppImage relaunch check otherwise loops. The substitution opens a per-process `native_err_pid*.log` under the same XDG state log directory and redirects native stderr there. It uses GraalVM's bundled C interop SDK and platform C functions, with wide paths on Windows. It changes no JVM source, crash-log setup or restart command. Ordinary application exceptions keep the existing app logger and crash-report flow. Native VM-fatal logs use a native format, so tester reports must include `native_err_pid*.log`; automatic import of those files as HotSpot reports is not claimed.
 
+For macOS use the prepare task on an Apple Silicon host with Xcode command-line tools, then pass `--platform macos-arm64` to the builder and packager. The init script exports the host runtime classpath, including platform-filtered sqlite-jdbc and JavaCPP/FFmpeg jars. JNA, Skiko, Wry and sqlite native resources remain embedded for their loaders. The builder selects macOS AWT/JNI metadata and POSIX crash-log glue, keeps GraalVM's generated JVM shims, and uses the default macOS linker rather than Windows subsystem flags.
+
+The macOS ZIP contains an ad-hoc signed `.app`. Downloaded copies are quarantined, so Gatekeeper requires explicit approval. There is no Developer ID signing or notarization. Packaging copies resources and the icon, writes the plist, signs each loose Mach-O file without `--deep`, then signs and verifies the completed bundle. The plist retains the JVM app's local-network declarations and both `metrolist` and `metrolist-auth` URL schemes, enables high-resolution rendering, and derives `LSMinimumSystemVersion` from the highest deployment target in the loose binaries.
+
 ### CI, metadata and caches
 
-Run `build-desktop-native.yml` manually with one target. Linux x64 and Windows x64 use Blacksmith 8-vCPU runners for builder memory, rather than adding CPUs to existing JVM jobs. Linux ARM64 also uses 8; macOS ARM64 uses the existing 6-vCPU Apple Silicon tier. The ARM jobs require their enable variables and manual dispatch. No native build runs on push, PR or the cold-build schedule. These jobs add manual-run cost only; check actual hosted time before enabling more targets or scheduling builds.
+Run `build-desktop-native.yml` manually with one target. Linux x64 and Windows x64 use Blacksmith 8-vCPU runners for builder memory, rather than adding CPUs to existing JVM jobs. Linux ARM64 also uses 8; macOS ARM64 uses the existing 6-vCPU Apple Silicon tier. All four targets run without repository enable variables. The reusable workflow also accepts push callers and rejects pull requests and schedules. Each build runs on its target OS and architecture. The manual workflow selects one target per dispatch; callers control which push targets run.
 
-Releases never include native packages. The native package and its separate evidence archive are uploaded as workflow artifacts of the dispatched run.
+Releases never include native packages. The native package and its separate evidence archive are uploaded as workflow artifacts of the calling run.
 
 The toolchain cache holds only the original builder archives. Its key covers OS, architecture, the complete pin manifest and installer source. Every restore rechecks SHA-256 and extracts afresh. A missing or corrupt cache triggers a verified download. Native images, profiles, traces and compiled application outputs are never cached. Native jobs restore Gradle caches read-only, disable the Gradle build cache and do not persist configuration caches, so generated credentials cannot enter new caches. Every native invocation performs a full build from current classes, metadata, resources and sidecars.
 
@@ -65,7 +71,7 @@ python3 -m unittest discover -s .github/tests
 actionlint
 ```
 
-CI evidence includes source revision, platform, GraalVM pin, flags, artifact sizes/hashes, builder timing, build log and smoke logs. It includes no profile directory or application credentials. Backend-only Windows evidence does not verify the window frame, taskbar interaction, WebView2 login, Direct3D hardware or actual audio output. Those need a real Windows desktop before Windows promotion. macOS signing/notarization and ARM64 runtime behavior also remain unverified while those jobs are disabled.
+CI evidence includes source revision, platform, GraalVM pin, flags, artifact sizes/hashes, builder timing, build log and smoke logs. It includes no profile directory or application credentials. Backend-only Windows evidence does not verify the window frame, taskbar interaction, WebView2 login, Direct3D hardware or actual audio output. Those need a real Windows desktop before Windows promotion. macOS signing and ARM64 runtime behavior need their first hosted builds. The macOS smoke runner launches the executable inside a `.app` or extracted ZIP in the runner's GUI session, captures it with `screencapture`, and checks strict registrations and normal shutdown. Notarization is outside this tester path.
 
 ### Supported path verification
 
@@ -75,11 +81,26 @@ The packaged AppImage passed strict startup, live Home content, screenshot and n
 
 `actionlint`, all 54 `.github/tests`, 17 native build/launcher tests, 13 smoke-runner tests and seven AppImage tests passed. Changed Kotlin was formatted. Metadata JSON, local documentation links, Bash syntax and `git diff --check` passed. The lane wrapper passed desktop compilation, shared tests and ktlint, Android assembly and Android unit tests. The results contain 3,443 desktop tests with five skipped and 803 Android tests, without failures. Existing coverage still includes 60 SongLikeState tests and 20 playback-reporter tests.
 
-Windows metadata and packaging have backend checks, and the Windows C-interop Java sources compile against GraalVM's SDK. No Windows native compilation or hosted workflow has run from this local branch. No push or dispatch was performed. The macOS ARM64 and Linux ARM64 paths are prepared and disabled, without native build evidence. The fetched main has no `cold-build.yml`; this change does not restore or alter scheduled workflows.
+Windows metadata and packaging have backend checks, and the Windows C-interop Java sources compile against GraalVM's SDK. No Windows native compilation or hosted workflow has run from this local branch. No push or dispatch was performed. The macOS ARM64 and Linux ARM64 paths are now enabled, without native build evidence. The fetched main has no `cold-build.yml`; this change does not restore or alter scheduled workflows.
+
+### First dispatch checks
+
+No macOS, Windows or ARM64 native build ran during this change. The first dispatch for each target must confirm the following results. A successful build must upload both the package and its evidence archive.
+
+| Target | First CI dispatch must confirm |
+| --- | --- |
+| Linux x64 | Oracle 25.0.4 installs from the verified pin; Gradle preparation and the bounded Serial/Os native build complete; ELF x64 validation and AppImage packaging pass; strict French-locale GUI startup, screenshot, logs and shutdown pass under Xvfb with the explicit runtime dependencies. |
+| Linux ARM64 | The ARM runner installs the pinned builder and GTK/WebKit dependencies; the locked Rust build produces `linux-aarch64/libcomposewebview_wry.so` on the exported classpath; ARM64 Skiko, sqlite-jdbc and JavaCPP/FFmpeg resources survive Native Image; ELF AArch64 validation and ARM AppImage packaging pass; strict GUI startup, screenshot, logs and shutdown pass under Xvfb. |
+| macOS ARM64 | The Apple Silicon runner installs the pinned builder and exports ARM64 inputs; POSIX glue, macOS AWT/JNI metadata and native linking compile; JNA, Skiko, sqlite-jdbc and JavaCPP/FFmpeg load; every loose executable/library passes the Mach-O CPU check; the plist, resource paths and deployment minimum match the bundle; individual ad-hoc signatures and final bundle verification pass; the extracted ZIP preserves executable modes and passes strict GUI startup, screenshot, logs and shutdown in the runner session. |
+| Windows x64 | The pinned builder and Visual C++ toolchain compile the GUI executable; the login helper and checksum are present; all PE files pass x64 validation; the portable ZIP passes strict GUI smoke if a desktop exists, or the documented strict backend probe with GUI explicitly unverified on a service runner. |
+
+The startup smoke does not open a Wry login window or play audio. On macOS and Linux ARM64, check Wry login, sqlite persistence, FFmpeg playback, GPU/audio output and desktop integrations on real hardware before promotion. macOS also needs a downloaded, quarantined ZIP check for Gatekeeper approval, Retina rendering, local-network permissions, and dispatch of both URL schemes through Launch Services. CI bundle metadata alone does not prove those flows.
+
+No animation code changes. History checks for the affected packager, native arguments, smoke launcher and macOS callbacks found the v14 import `6f7351ca5`. This change keeps generated JVM shims, failed-build image preservation, strict smoke registration handling, ZIP modes, DMG cleanup, Windows unavailable-desktop handling and AppImage checksum/cache behavior.
 
 ### Roll back and promote
 
-To roll back, leave the tester native input off and use the unchanged JVM package. Remove either ARM enable variable to disable its native job. No version bump, default artifact replacement or automatic switch is part of this path. Profile schemas and settings code stay shared with the JVM build; use the same application version when comparing or rolling back.
+To roll back, stop dispatching the affected native target, remove it from push callers, and use its JVM package. No version bump, default artifact replacement or automatic switch is part of this path. Profile schemas and settings code stay shared with the JVM build; use the same application version when comparing or rolling back.
 
 Before changing a default, the maintainer must record the tester cohort, start date and agreed test period. That duration is still a maintainer decision. Require no Linux tester regressions or missing-registration crashes for the whole agreed period, including launch, persistence, playback, settings, resources and normal desktop integrations. Repeat paired cold/warm startup and idle/local/streaming RSS/PSS measurements on representative hardware; the startup and memory gains must hold and playback CPU must remain acceptable. Test real GPU/audio output and recovery/restart paths. Fix a regression before restarting the agreed observation period. Each later platform needs its own strict CI result and real-machine checks. Windows ARM64 and macOS Intel remain JVM targets.
 

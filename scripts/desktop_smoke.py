@@ -67,6 +67,8 @@ def packaged_command(package, work, system, stdout):
         with zipfile.ZipFile(package) as archive:
             archive.extractall(app)
         yield [str(app / "Metrolist.exe")]
+    elif system == "darwin" and package.suffix == ".app":
+        yield [str(package / "Contents/MacOS/Metrolist")]
     elif system == "darwin" and package.suffix == ".zip":
         app = work / "app"
         with zipfile.ZipFile(package) as archive:

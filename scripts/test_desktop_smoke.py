@@ -181,6 +181,27 @@ while True:
                 self.assertEqual(b"launcher", Path(command[0]).read_bytes())
                 self.assertTrue((work / "app/runtime/bin/server/jvm.dll").is_file())
 
+    def test_macos_launches_app_and_zip_with_executable_modes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            app = work / 'Metrolist.app'
+            launcher = app / 'Contents/MacOS/Metrolist'
+            launcher.parent.mkdir(parents=True)
+            launcher.write_bytes(b'launcher')
+            launcher.chmod(0o755)
+            with patch.object(smoke.subprocess, 'run') as run:
+                with smoke.packaged_command(app, work, 'darwin', None) as command:
+                    self.assertEqual(command, [str(launcher)])
+                package = work / 'native.zip'
+                with zipfile.ZipFile(package, 'w') as archive:
+                    archive.write(launcher, 'Metrolist.app/Contents/MacOS/Metrolist')
+                with smoke.packaged_command(package, work, 'darwin', None) as command:
+                    extracted = work / 'app/Metrolist.app/Contents/MacOS/Metrolist'
+                    self.assertEqual(command, [str(extracted)])
+                    self.assertEqual(extracted.read_bytes(), b'launcher')
+                    self.assertEqual(extracted.stat().st_mode & 0o777, 0o755)
+                run.assert_not_called()
+
     def test_macos_launches_from_final_dmg_and_detaches_on_failure(self):
         for failure in (False, True):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:

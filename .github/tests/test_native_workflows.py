@@ -30,15 +30,14 @@ def evaluate(expression, bindings):
 
 
 class NativeWorkflowTest(unittest.TestCase):
-    def test_platforms_only_run_for_dispatch_or_tester_push_and_arm_enable(self):
+    def test_platforms_only_run_for_dispatch_or_tester_push(self):
         text=(ROOT/'.github/workflows/reusable-desktop-native.yml').read_text()
         condition=guard(text,'package')
         for event in ['push','pull_request','schedule','workflow_dispatch']:
             for target in ['linux-x64','windows-x64','linux-arm64','macos-arm64','windows-arm64','macos-x64']:
-                for enabled in ['true','false']:
-                    bindings={'github.event_name':event,'inputs.platform':target,'vars.ENABLE_NATIVE_MACOS_ARM64':enabled,'vars.ENABLE_NATIVE_LINUX_ARM64':enabled}
-                    expected=event in ['workflow_dispatch','push'] and (target in ['linux-x64','windows-x64'] or enabled=='true' and target in ['linux-arm64','macos-arm64'])
-                    self.assertEqual(evaluate(condition,bindings),expected,(event,target,enabled))
+                bindings={'github.event_name':event,'inputs.platform':target}
+                expected=event in ['workflow_dispatch','push'] and target in ['linux-x64','windows-x64','linux-arm64','macos-arm64']
+                self.assertEqual(evaluate(condition,bindings),expected,(event,target))
 
     def test_native_caches_exclude_application_outputs_and_credentials(self):
         text=(ROOT/'.github/workflows/reusable-desktop-native.yml').read_text()

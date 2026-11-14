@@ -300,6 +300,9 @@
       "glob": "linux-x86-64/libcomposewebview_wry.so"
     },
     {
+      "glob": "linux-aarch64/libcomposewebview_wry.so"
+    },
+    {
       "glob": "darwin-x86-64/libcomposewebview_wry.dylib"
     },
     {
