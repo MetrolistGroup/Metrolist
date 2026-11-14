@@ -108,9 +108,11 @@ def build(graal, work, target, experiment=False, agent=None):
         (image / 'lib').mkdir(exist_ok=True)
         shutil.copy2(source, image / 'lib' / library)
         # Windows AWT reads its font configuration from java.home/lib, which is the image directory here.
-        for name in ('fontconfig.bfc', 'fontconfig.properties.src', 'psfontj2d.properties', 'psfont.properties.ja'):
-            if (graal / 'lib' / name).is_file():
-                shutil.copy2(graal / 'lib' / name, image / 'lib' / name)
+        # macOS must not get these: data files inside Contents/MacOS break codesign.
+        if target.startswith('windows'):
+            for name in ('fontconfig.bfc', 'fontconfig.properties.src', 'psfontj2d.properties', 'psfont.properties.ja'):
+                if (graal / 'lib' / name).is_file():
+                    shutil.copy2(graal / 'lib' / name, image / 'lib' / name)
         if target.startswith('windows'):
             (image / 'bin').mkdir(exist_ok=True)
             shutil.copy2(source, image / 'bin' / library)
