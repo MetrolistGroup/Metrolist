@@ -3,6 +3,9 @@ package com.metrolist.shared.playback
 import androidx.compose.runtime.snapshotFlow
 import com.metrolist.innertubex.extraction.ContentHints
 import com.metrolist.shared.api.YouTubeRepository
+import com.metrolist.shared.api.musicvideo.CounterpartPositionMap
+import com.metrolist.shared.api.musicvideo.MusicVideoResolver
+import com.metrolist.shared.api.musicvideo.MusicVideoResult
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.Event
 import com.metrolist.shared.db.upsertHistorySong
@@ -15,7 +18,9 @@ import com.metrolist.shared.model.RadioRecommendationHistory
 import com.metrolist.shared.model.RepeatMode
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.buildRadioQueueRecommendations
+import com.metrolist.shared.model.canSwitchToMusicVideo
 import com.metrolist.shared.model.isPodcast
+import com.metrolist.shared.model.isVideoSong
 import com.metrolist.shared.model.selectRadioQueueChip
 import com.metrolist.shared.playback.QUEUE_SOURCE_AUTO_MIX
 import com.metrolist.shared.scrobble.ScrobbleManager
@@ -96,9 +101,12 @@ internal class IosPlaybackController(
     private val timeSource: TimeSource = TimeSource.Monotonic,
     private val audioStorage: IosAudioDownloadManager? = null,
     private val persistenceDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val musicVideoResolver: MusicVideoResolver = MusicVideoResolver(),
+    private val videoSongLookup: (suspend (String) -> SongItem?)? = null,
+    private val videoPlaybackDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val repository: () -> YouTubeRepository = { GlobalYouTubeRepository.instance },
 ) : PlaybackController {
-    override val supportsVideoPlayback = false
+    override val supportsVideoPlayback = true
     override val supportsCasting = false
     override val canSkipNext: Boolean
         get() = !guestLocked && state.value.canSkipNext(allowSuggestions = !isFiniteQueue || canAutoLoadMore)
@@ -260,6 +268,12 @@ internal class IosPlaybackController(
     private val queueChips = MutableStateFlow<List<RadioQueueChip>>(emptyList())
     private val isQueueLoading = MutableStateFlow(false)
     private val suggestedTracks = MutableStateFlow<List<SongItem>>(emptyList())
+    private val videoPlaybackResource = MutableStateFlow<PlaybackResource?>(null)
+    private val videoPositionMap = MutableStateFlow<CounterpartPositionMap?>(null)
+    private val isVideoModeActive = MutableStateFlow(false)
+    private val isVideoResolving = MutableStateFlow(false)
+    private var videoModeJob: Job? = null
+    private var videoModeRequestId = 0L
 
     private val coreState =
         combine(baseState, player.currentMediaItemIndex, pendingPlayback, playbackError) { base, index, pending, error ->
@@ -278,13 +292,12 @@ internal class IosPlaybackController(
 
     private val extendedState =
         combine(coreState, queueTitle, queueChips, isQueueLoading, suggestedTracks) { base, title, chips, loading, suggested ->
-            base.copy(
-                queueTitle = title,
-                queueChips = chips,
-                isQueueLoading = loading,
-                suggestedTracks = suggested,
-            )
-        }
+            base.copy(queueTitle = title, queueChips = chips, isQueueLoading = loading, suggestedTracks = suggested)
+        }.combine(videoPlaybackResource) { state, resource -> state.copy(videoPlaybackResource = resource) }
+            .combine(videoPositionMap) { state, positionMap -> state.copy(videoPositionMap = positionMap) }
+            .combine(isVideoModeActive) { state, active ->
+                state.copy(isVideoModeActive = active, retimeLyricsOnVideoMode = false)
+            }.combine(isVideoResolving) { state, resolving -> state.copy(isVideoResolving = resolving) }
 
     private val sleepTimerPlayer =
         object : SleepTimerPlayer {
@@ -369,6 +382,27 @@ internal class IosPlaybackController(
     init {
         player.playbackCache = audioStorage?.playbackCache
         restorePersistedPlayback()
+        scope.launch {
+            snapshotFlow { Settings.shared.musicVideoPlaybackEnabled }.distinctUntilChanged().collect { enabled ->
+                if (!enabled) {
+                    videoModeRequestId++
+                    videoModeJob?.cancel()
+                    clearVideoMode()
+                }
+            }
+        }
+        scope.launch {
+            var observedSongId = player.currentSong.value?.id
+            player.currentSong.collect { song ->
+                val songId = song?.id
+                if (songId != observedSongId) {
+                    observedSongId = songId
+                    videoModeRequestId++
+                    videoModeJob?.cancel()
+                    clearVideoMode()
+                }
+            }
+        }
         scope.launch {
             sleepTimerController.state.collect { timer ->
                 player.setStopAfterSongFade(timer.stopAfterCurrentSong && timer.fadeOut)
@@ -984,6 +1018,73 @@ internal class IosPlaybackController(
         }
     }
 
+    override fun toggleVideoMode() = setVideoMode(!isVideoModeActive.value)
+
+    override fun setVideoMode(wantVideo: Boolean) {
+        videoModeRequestId++
+        val requestId = videoModeRequestId
+        videoModeJob?.cancel()
+        if (!wantVideo || !Settings.shared.musicVideoPlaybackEnabled || guestLocked || pendingPlayback.value != null) {
+            clearVideoMode()
+            return
+        }
+        val song = player.currentSong.value
+        if (song == null || song.isLocal || song.isUploaded || song.id.startsWith("local_") ||
+            (!song.isVideoSong && !song.isPodcast && !song.canSwitchToMusicVideo)
+        ) {
+            clearVideoMode()
+            return
+        }
+        isVideoResolving.value = true
+        videoModeJob =
+            scope.launch {
+                try {
+                    val resolvedVideo =
+                        if (song.isVideoSong || song.isPodcast) {
+                            MusicVideoResult.Found(song.id)
+                        } else {
+                            withContext(videoPlaybackDispatcher) { musicVideoResolver.resolveMusicVideo(song) }
+                        } as? MusicVideoResult.Found ?: return@launch
+                    val videoSong =
+                        if (resolvedVideo.videoId == song.id) {
+                            song
+                        } else {
+                            withContext(videoPlaybackDispatcher) {
+                                videoSongLookup?.invoke(resolvedVideo.videoId)
+                                    ?: repository().getSongMetadata(resolvedVideo.videoId)
+                            }
+                        } ?: return@launch
+                    val resource =
+                        withContext(videoPlaybackDispatcher) {
+                            resolver.resolve(
+                                videoSong.id,
+                                videoSong.toContentHints(wantVideo = true).withIosAudioCapabilities(allowHls = true),
+                                iosPlaybackAudioQuality(Settings.shared.audioQuality),
+                                videoSong,
+                            )
+                        }
+                    if (requestId != videoModeRequestId || player.currentSong.value?.id != song.id) return@launch
+                    if (!resource.hasDirectVideo) return@launch
+                    videoPositionMap.value = resolvedVideo.positionMap
+                    videoPlaybackResource.value = resource
+                    isVideoModeActive.value = true
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    Logger.w("IosPlaybackController", "Video resolution failed id=${song.id} type=${error::class.simpleName}")
+                } finally {
+                    if (requestId == videoModeRequestId) isVideoResolving.value = false
+                }
+            }
+    }
+
+    private fun clearVideoMode() {
+        isVideoResolving.value = false
+        isVideoModeActive.value = false
+        videoPlaybackResource.value = null
+        videoPositionMap.value = null
+    }
+
     override fun seekTo(positionMs: Long) {
         if (guestLocked) return
         seekFromListenTogether(positionMs)
@@ -1566,6 +1667,9 @@ internal class IosPlaybackController(
             }
         val song = pendingQueue.currentItem() ?: return null
         audioRecovery.select(song.id)
+        videoModeRequestId++
+        videoModeJob?.cancel()
+        clearVideoMode()
         resolveJob?.cancel()
         audioQualityReloadJob?.cancel()
         preResolveJob?.cancel()

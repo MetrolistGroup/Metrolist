@@ -284,6 +284,7 @@ class PlayerViewModel(
                                 isExplicit = it.isExplicit,
                                 explicitness = it.artworkExplicitness,
                                 isUploaded = it.isUploaded,
+                                isLocal = it.isLocal,
                                 isVideoSong = it.isVideoSong,
                                 musicVideoType = it.musicVideoType,
                                 isLiked = isSongLiked,
@@ -1432,7 +1433,12 @@ class PlayerViewModel(
                 var loaded = false
                 try {
                     val currentSong = _uiState.value.currentSong
-                    val isVideo = !isCustomQuery && (_uiState.value.isVideoModeActive || currentSong?.isVideoSong == true)
+                    val isVideo =
+                        !isCustomQuery &&
+                            (
+                                currentSong?.isVideoSong == true ||
+                                    (_uiState.value.isVideoModeActive && playerConnection.retimeLyricsOnVideoMode)
+                            )
                     val resolvedDuration =
                         if (isCustomQuery) {
                             null
@@ -1445,7 +1451,7 @@ class PlayerViewModel(
                         }
                     val resolvedAlbum = album.takeUnless { isCustomQuery }
                     val publicationContext = currentCoroutineContext()
-                    val activeOffsetVideoId = resolveActiveLyricsOffsetVideoId(songId, isVideo)
+                    val activeOffsetVideoId = resolveActiveLyricsOffsetVideoId(songId)
                     val lyricsOffsetMs = lyricsRepository.getLyricsOffset(activeOffsetVideoId)
 
                     var publishedResult: LyricsWithProvider? = null
@@ -1605,7 +1611,7 @@ class PlayerViewModel(
         if (lyricsRequestCacheOnly || !isCurrentLyricsRequest(songId, requestId)) return
         val currentSong = _uiState.value.currentSong ?: return
         val rawLyrics = _uiState.value.rawLyrics ?: return
-        val isVideoContext = _uiState.value.isVideoModeActive || currentSong.isVideoSong
+        val isVideoContext = (_uiState.value.isVideoModeActive && playerConnection.retimeLyricsOnVideoMode) || currentSong.isVideoSong
         val isUserSelected = _uiState.value.lyricsUserSelected
         retimeLyricsJob?.cancel()
         if (isUserSelected && currentSong.isVideoSong) return
@@ -1935,17 +1941,13 @@ class PlayerViewModel(
         }
     }
 
-    private fun resolveActiveLyricsOffsetVideoId(
-        songId: String,
-        isVideoActive: Boolean,
-    ): String {
+    private fun resolveActiveLyricsOffsetVideoId(songId: String): String {
         val currentSong = _uiState.value.currentSong
-        return if (currentSong?.isVideoSong == true) {
-            currentSong.id
-        } else if (isVideoActive) {
-            _uiState.value.mvVideoId ?: songId
-        } else {
-            songId
+        val useCounterpart = _uiState.value.isVideoModeActive && playerConnection.retimeLyricsOnVideoMode
+        return when {
+            currentSong?.isVideoSong == true -> currentSong.id
+            useCounterpart -> _uiState.value.mvVideoId ?: songId
+            else -> songId
         }
     }
 
@@ -1954,7 +1956,7 @@ class PlayerViewModel(
         isVideoActive: Boolean,
     ) {
         viewModelScope.launch {
-            val targetId = resolveActiveLyricsOffsetVideoId(songId, isVideoActive)
+            val targetId = resolveActiveLyricsOffsetVideoId(songId)
             val offset = lyricsRepository.getLyricsOffset(targetId)
             if (_uiState.value.currentSong?.id == songId && _uiState.value.isVideoModeActive == isVideoActive) {
                 _uiState.value = _uiState.value.copy(lyricsOffsetMs = offset)
@@ -1966,7 +1968,7 @@ class PlayerViewModel(
         songId: String,
         offsetMs: Int,
     ) {
-        val targetId = resolveActiveLyricsOffsetVideoId(songId, _uiState.value.isVideoModeActive)
+        val targetId = resolveActiveLyricsOffsetVideoId(songId)
         if (_uiState.value.currentSong?.id == songId) {
             _uiState.value = _uiState.value.copy(lyricsOffsetMs = offsetMs)
         }
@@ -2122,6 +2124,7 @@ class PlayerViewModel(
         val isExplicit: Boolean = false,
         val explicitness: Boolean? = null,
         val isUploaded: Boolean = false,
+        val isLocal: Boolean = false,
         val isVideoSong: Boolean = false,
         val musicVideoType: String? = null,
         val isLiked: Boolean = false,
@@ -2149,6 +2152,7 @@ class PlayerViewModel(
                 duration = duration?.div(1000L),
                 isExplicit = isExplicit,
                 isUploaded = isUploaded,
+                isLocal = isLocal,
                 musicVideoType = musicVideoType,
                 explicitness = explicitness,
             )
