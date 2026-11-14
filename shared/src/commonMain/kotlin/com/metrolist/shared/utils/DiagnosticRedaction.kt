@@ -23,7 +23,7 @@ private val URL_PARTS_PATTERN = Regex("(?i)(https?|wss?)://(?:[^@/?#]*@)?([^/?#]
 private val AUTH_SCHEME_PATTERN = Regex("(?i)\\b(Bearer|Basic|SAPISIDHASH|SAPISID1PHASH|SAPISID3PHASH)\\s+[^\\s,;\"']+")
 private val SECRET_PATTERN =
     Regex(
-        "(?i)\\b(auth[_-]?token|access[_-]?token|refresh[_-]?token|id[_-]?token|po[_-]?token|token|cookie|set-cookie|authorization|password|secret|" +
+        "(?i)\\b(auth[_-]?token|auth|access[_-]?token|refresh[_-]?token|id[_-]?token|po[_-]?token|token|cookie|set-cookie|authorization|password|secret|" +
             "api[_-]?key|key|session|sapisid|sid|signature|sig)\\b[\"']?\\s*[:=]\\s*[\"']?[^\\s,;\"']+",
     )
 

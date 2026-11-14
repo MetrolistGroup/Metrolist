@@ -87,26 +87,28 @@ object PlaybackEventLog {
         describePlaybackError: Boolean = true,
     ) {
         val timestampMs = Clock.System.now().toEpochMilliseconds()
+        val diagnosticMessage =
+            redactDiagnosticText(
+                when {
+                    error == null -> message
+                    describePlaybackError -> mergeMessage(message, error)
+                    else -> "$message (${error::class.simpleName ?: "failure"})"
+                },
+            )
+        val diagnosticDetails =
+            (if (error == null) details else details + throwableDiagnostics(error))
+                .mapValues { (_, value) -> redactDiagnosticText(value) }
         events.append { id ->
             PlaybackEvent(
                 id = id,
                 timestampMs = timestampMs,
                 level = level,
                 kind = kind,
-                message =
-                    redactDiagnosticText(
-                        when {
-                            error == null -> message
-                            describePlaybackError -> mergeMessage(message, error)
-                            else -> "$message (${error::class.simpleName ?: "failure"})"
-                        },
-                    ),
+                message = diagnosticMessage,
                 videoId = videoId,
                 clientName = clientName,
                 profileId = profileId,
-                details =
-                    (if (error == null) details else details + throwableDiagnostics(error))
-                        .mapValues { (_, value) -> redactDiagnosticText(value) },
+                details = diagnosticDetails,
             )
         }
     }
@@ -119,14 +121,16 @@ object PlaybackEventLog {
     ) {
         val timestampMs = Clock.System.now().toEpochMilliseconds()
         lastStructuredFailure = StructuredFailure(tag, error::class.simpleName, error.hashCode(), timestampMs)
+        val diagnosticMessage = redactDiagnosticText("[$tag] $message (${error::class.simpleName ?: "failure"})")
+        val diagnosticDetails = throwableDiagnostics(error).mapValues { (_, value) -> redactDiagnosticText(value) }
         events.append { id ->
             PlaybackEvent(
                 id = id,
                 timestampMs = timestampMs,
                 level = PlaybackEventLevel.ERROR,
                 kind = kind,
-                message = redactDiagnosticText("[$tag] $message (${error::class.simpleName ?: "failure"})"),
-                details = throwableDiagnostics(error).mapValues { (_, value) -> redactDiagnosticText(value) },
+                message = diagnosticMessage,
+                details = diagnosticDetails,
             )
         }
     }
