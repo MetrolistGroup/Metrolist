@@ -166,10 +166,13 @@ def github_release_asset(
     repository: str,
     asset_name: str,
     *,
+    release_tag: str | None = None,
     releases_endpoint: bool = False,
 ) -> tuple[str, str, int]:
     endpoint = f"https://api.github.com/repos/{repository}/releases"
-    if releases_endpoint:
+    if release_tag is not None:
+        endpoint += f"/tags/{urllib.parse.quote(release_tag, safe='')}"
+    elif releases_endpoint:
         endpoint += "?per_page=20"
     else:
         endpoint += "/latest"
@@ -207,7 +210,7 @@ def latest_sideloader_asset() -> tuple[str, str, str, int]:
     tag, url, size = github_release_asset(
         SIDELOADER_REPOSITORY,
         asset_name,
-        releases_endpoint=True,
+        release_tag=SIDELOADER_RELEASE,
     )
     if tag != SIDELOADER_RELEASE:
         raise InstallError(f"Review and pin the Sideloader {tag} release before using it.")
@@ -215,36 +218,13 @@ def latest_sideloader_asset() -> tuple[str, str, str, int]:
 
 
 def latest_windows_device_libraries_asset() -> tuple[str, str, str, int]:
-    endpoint = f"https://api.github.com/repos/{WINDOWS_DEVICE_LIBRARIES_REPOSITORY}/releases?per_page=20"
-    try:
-        releases = json.loads(request_bytes(endpoint))
-    except json.JSONDecodeError as error:
-        raise InstallError("GitHub returned invalid Windows device-library release data.") from error
-    if not isinstance(releases, list):
-        raise InstallError("GitHub returned invalid Windows device-library release data.")
-
-    for release in releases:
-        if not isinstance(release, dict):
-            continue
-        tag = release.get("tag_name")
-        if tag != WINDOWS_DEVICE_LIBRARIES_RELEASE:
-            continue
-        assets = release.get("assets")
-        if not isinstance(tag, str) or not isinstance(assets, list):
-            continue
-        for asset in assets:
-            name = asset.get("name") if isinstance(asset, dict) else None
-            if name != "libimobiledevice.1.2.1-r1122-win-x64.zip":
-                continue
-            url = asset.get("browser_download_url")
-            size = asset.get("size")
-            if not isinstance(url, str) or not isinstance(size, int):
-                raise InstallError("GitHub returned invalid Sideloader asset metadata.")
-            parsed = urllib.parse.urlparse(url)
-            if parsed.scheme != "https" or parsed.hostname != "github.com":
-                raise InstallError("Windows device-library asset has an unexpected download URL.")
-            return tag, name, url, size
-    raise InstallError("No 64-bit Windows device-library archive was found.")
+    name = "libimobiledevice.1.2.1-r1122-win-x64.zip"
+    tag, url, size = github_release_asset(
+        WINDOWS_DEVICE_LIBRARIES_REPOSITORY,
+        name,
+        release_tag=WINDOWS_DEVICE_LIBRARIES_RELEASE,
+    )
+    return tag, name, url, size
 
 
 def sha256_file(path: Path) -> str:
@@ -290,7 +270,6 @@ def download_verified_release_ipa(release: GitHubRelease, destination: Path) -> 
 def missing_linux_dependencies() -> tuple[str, ...]:
     requirements = {
         "libimobiledevice": ("imobiledevice-1.0", "imobiledevice"),
-        "libplist": ("plist-2.0", "plist"),
         "OpenSSL": ("ssl",),
     }
     missing = [
@@ -305,6 +284,26 @@ def missing_linux_dependencies() -> tuple[str, ...]:
     return tuple(missing)
 
 
+def require_compatible_libplist(version: str) -> None:
+    match = re.match(r"^(\d+)\.(\d+)(?:\.(\d+))?", version)
+    if not match or (int(match.group(1)), int(match.group(2))) > (2, 2):
+        raise InstallError("Sideloader 1.0-pre4 requires libplist 2.2.x or older; upgrade Sideloader before using newer libplist.")
+
+
+def linux_libplist_version() -> str:
+    pkg_config = shutil.which("pkg-config")
+    if not pkg_config:
+        raise InstallError("Install pkg-config and a compatible libplist 2.2.x before running Sideloader.")
+    result = run_command([pkg_config, "--modversion", "libplist-2.0"], capture_output=True, check=False)
+    if result.returncode != 0:
+        raise InstallError("Install a compatible libplist 2.2.x before running Sideloader.")
+    return result.stdout.strip()
+
+
+def require_linux_libplist() -> None:
+    require_compatible_libplist(linux_libplist_version())
+
+
 def run_linux_package_manager(arguments: Sequence[str]) -> None:
     if hasattr(os, "geteuid") and os.geteuid() == 0:
         run_command(arguments)
@@ -316,6 +315,7 @@ def run_linux_package_manager(arguments: Sequence[str]) -> None:
 
 
 def install_linux_dependencies() -> None:
+    require_linux_libplist()
     if not missing_linux_dependencies():
         return
     try:
@@ -326,7 +326,7 @@ def install_linux_dependencies() -> None:
 
     if distribution_ids.intersection({"arch", "manjaro", "endeavouros"}) and shutil.which("pacman"):
         run_linux_package_manager(
-            ["pacman", "-S", "--needed", "libimobiledevice", "libplist", "openssl", "usbmuxd"]
+            ["pacman", "-S", "--needed", "libimobiledevice", "openssl", "usbmuxd"]
         )
     elif distribution_ids.intersection({"debian", "ubuntu", "linuxmint", "pop"}) and shutil.which("apt-get"):
         run_linux_package_manager(["apt-get", "update"])
@@ -336,14 +336,13 @@ def install_linux_dependencies() -> None:
                 "install",
                 "--yes",
                 "libimobiledevice-dev",
-                "libplist-dev",
                 "libssl-dev",
                 "usbmuxd",
             ]
         )
     elif distribution_ids.intersection({"fedora", "rhel", "centos"}) and shutil.which("dnf"):
         run_linux_package_manager(
-            ["dnf", "install", "--assumeyes", "libimobiledevice", "libplist", "openssl-libs", "usbmuxd"]
+            ["dnf", "install", "--assumeyes", "libimobiledevice", "openssl-libs", "usbmuxd"]
         )
     else:
         missing = ", ".join(missing_linux_dependencies())
@@ -360,7 +359,12 @@ def install_macos_dependencies() -> None:
         raise InstallError(
             "Install Homebrew from https://brew.sh, then rerun this script to install Sideloader dependencies."
         )
-    packages = ("libimobiledevice", "libplist", "openssl@3")
+    version_result = run_command([brew, "list", "--versions", "libplist"], capture_output=True, check=False)
+    version_match = re.search(r"\blibplist\s+(\S+)", version_result.stdout)
+    if not version_match:
+        raise InstallError("Install a compatible libplist 2.2.x with Homebrew before running Sideloader.")
+    require_compatible_libplist(version_match.group(1))
+    packages = ("libimobiledevice", "openssl@3")
     run_command([brew, "install", *packages])
     library_dirs: list[str] = []
     for package in packages:

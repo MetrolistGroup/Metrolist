@@ -1,5 +1,6 @@
 import hashlib
 import importlib.util
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -89,6 +90,31 @@ class InstallIosTest(unittest.TestCase):
                     install_ios.install_sideloader(install_dir)
 
             install_support.assert_not_called()
+
+    def test_libplist_versions_incompatible_with_sideloader_are_rejected(self):
+        install_ios.require_compatible_libplist("2.2.0")
+        with self.assertRaises(install_ios.InstallError):
+            install_ios.require_compatible_libplist("2.3.0")
+
+    def test_release_lookup_uses_the_pinned_tag(self):
+        payload = {
+            "tag_name": install_ios.SIDELOADER_RELEASE,
+            "assets": [
+                {
+                    "name": "sideloader-cli-x86_64-linux-gnu.zip",
+                    "browser_download_url": "https://github.com/Dadoum/Sideloader/download/tool.zip",
+                    "size": 10,
+                }
+            ],
+        }
+        with patch.object(install_ios, "request_bytes", return_value=json.dumps(payload).encode()) as request:
+            install_ios.github_release_asset(
+                install_ios.SIDELOADER_REPOSITORY,
+                "sideloader-cli-x86_64-linux-gnu.zip",
+                release_tag=install_ios.SIDELOADER_RELEASE,
+            )
+
+        self.assertIn(f"/releases/tags/{install_ios.SIDELOADER_RELEASE}", request.call_args.args[0])
 
 
 if __name__ == "__main__":
