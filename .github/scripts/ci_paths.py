@@ -54,7 +54,7 @@ def classify(paths):
         elif path.startswith("aur/"):
             selected.update(("arch", "repository"))
         elif path.startswith(("scripts/", ".github/tests/", ".github/scripts/", ".githooks/", "packaging/", "flatpak/", "fastlane/")) or path in (
-            "Makefile", "flake.nix", "README.md", "AGENTS.md", "CLAUDE.md", ".gitignore",
+            "Makefile", "flake.nix", "flake.lock", "README.md", "AGENTS.md", "CLAUDE.md", ".gitignore",
         ):
             selected.add("repository")
         else:

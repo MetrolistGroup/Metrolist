@@ -149,7 +149,7 @@ DO NOT REMOVE THIS SECTION, I WANT TO ADD IT LATER!!!
         <a href="https://aur.archlinux.org/packages/metrolist-desktop-bin"><img alt="Get the AUR PKGBUILD for Metrolist" src="assets/badges/platform/linux-aur.svg"></a>
       </p>
       <p>
-        <a href="https://github.com/MetrolistGroup/Metrolist#nix"><img alt="Get the Nix flake" src="assets/badges/platform/linux-nix.svg"></a>
+        <a href="docs/install/linux.md#nix"><img alt="Get the Nix flake" src="assets/badges/platform/linux-nix.svg"></a>
       </p>
       <p><sub>ARM64 · AppImage only</sub></p>
       <p>

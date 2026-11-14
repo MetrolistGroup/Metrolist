@@ -45,7 +45,7 @@ nix build path:./build/distribution/nix
 nix run path:./build/distribution/nix
 ```
 
-To use the root flake, copy generated `release.json` to `packaging/release.json`. Missing metadata fails with generation instructions rather than a fake hash. Verify login, Secret Service, audio and desktop integration on both architectures.
+The root flake reads the committed `packaging/release.json`, so `nix run github:MetrolistGroup/Metrolist` installs the latest stable release. After each stable release, copy the generated `release.json` to `packaging/release.json` and commit it. Missing metadata fails with generation instructions rather than a fake hash. Verify login, Secret Service, audio and desktop integration on both architectures.
 
 ## Flatpak and Flathub
 
