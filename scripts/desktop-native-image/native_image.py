@@ -10,6 +10,8 @@ import subprocess
 import sys
 import tempfile
 
+from serialization_metadata import generate
+
 ROOT = Path(__file__).resolve().parents[2]
 METADATA = Path(__file__).parent / 'resources/META-INF/native-image/com.metrolist/desktop-experiment'
 
@@ -48,7 +50,7 @@ def arguments(graal, work, output, target, experiment=False, agent=None):
                '--exact-reachability-metadata', '--enable-url-protocols=http,https',
                '--enable-native-access=ALL-UNNAMED', '-Djava.awt.headless=false',
                '-H:+AddAllCharsets', '-H:+IncludeAllLocales',
-               '-H:ConfigurationFileDirectories=' + ','.join(str(p.resolve()) for p in configurations(target, agent, experiment))]
+               '-H:ConfigurationFileDirectories=' + ','.join(str(p.resolve()) for p in [*configurations(target, agent, experiment), work / 'serialization-config'])]
     if not experiment:
         # Testers fall back like the JVM on a missing registration; CI smoke passes -XX:...=Exit to stay strict.
         options += ['-R:MaxHeapSize=384m', '-R:MinHeapSize=32m', '-R:MissingRegistrationReportingMode=Warn']
@@ -57,6 +59,7 @@ def arguments(graal, work, output, target, experiment=False, agent=None):
             options += ['-H:NativeLinkerOption=/SUBSYSTEM:WINDOWS', '-H:NativeLinkerOption=/ENTRY:mainCRTStartup']
     main = 'com.metrolist.desktop.experiment.NativeImageMainKt' if experiment else 'com.metrolist.desktop.nativeimage.NativeDesktopMainKt'
     classpath = (work / 'classpath.txt').read_text().strip()
+    classpath = str(work / 'serialization-config') + os.pathsep + classpath
     if not experiment:
         classpath = str(work / 'native-glue') + os.pathsep + classpath
     return [*options, '-cp', classpath, '-o', str(output), main]
@@ -65,6 +68,7 @@ def arguments(graal, work, output, target, experiment=False, agent=None):
 def build(graal, work, target, experiment=False, agent=None):
     if target != host_platform() or target not in ('linux-x64', 'linux-arm64', 'windows-x64', 'macos-arm64'):
         raise ValueError('Native Image must build on its supported target OS and architecture')
+    generate((work / 'classpath.txt').read_text().strip().split(os.pathsep), work / 'serialization-config')
     (work / 'native-tmp').mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='image-build.', dir=work) as directory:
         image = Path(directory)

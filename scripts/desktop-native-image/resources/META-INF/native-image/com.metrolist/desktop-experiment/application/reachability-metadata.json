@@ -41,6 +41,9 @@
     {
       "module": "java.logging",
       "glob": "sun/util/logging/resources/**"
+    },
+    {
+      "glob": "version.properties"
     }
   ],
   "reflection": [
@@ -48,6 +51,34 @@
       "type": "java.awt.AWTError",
       "jniAccessible": true,
       "allDeclaredConstructors": true
+    },
+    {
+      "type": "sun.security.provider.SecureRandom",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.security.SecureRandomParameters"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Module",
+      "methods": [
+        {
+          "name": "getDescriptor",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "androidx.compose.material3.TooltipStateImpl$show$cancellableShow$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
     }
   ]
 }
