@@ -605,29 +605,35 @@ internal fun BraccatoWordAnimation(
                     runtime.exitWall = wallMs
                 }
                 val speed = Settings.shared.playbackSpeed.coerceAtLeast(0.1f)
-                val exitPos = runtime.exitPos
-                val started = exitPos > bst.lineStartMs
-                val needsFinish = started && exitPos < bst.lineEndMs
-                val finishMs = if (needsFinish) FINISH_MS else 0f
-                val fxRemainingMs = if (started) max(0f, (bst.fxEndMs - exitPos) / speed) else 0f
-                val holdMs = max(finishMs, fxRemainingMs)
-                val elapsed = (wallMs - runtime.exitWall).toFloat()
-                fadeOpacity = braccatoExitOpacity(elapsed)
-                if (elapsed >= max(holdMs, FADE_OUT_MS)) {
+                val elapsed = (wallMs - runtime.exitWall).toFloat().coerceAtLeast(0f)
+                val curPos = latestPosition()
+                val maxExpectedPos = runtime.exitPos + (if (isPlaying) (elapsed * speed).toLong() else 0L) + 500L
+                if (curPos < runtime.lastPos - 80L || curPos > maxExpectedPos) {
                     runtime.hadActive = false
-                } else if (elapsed < holdMs) {
-                    mode = 1
-                    fxPos = exitPos + (elapsed * speed).toLong()
-                    pos =
-                        if (elapsed < finishMs) {
-                            val t = LinearOutSlowInEasing.transform(elapsed / finishMs)
-                            exitPos + ((bst.lineEndMs - exitPos) * t).toLong()
-                        } else {
-                            max(exitPos, bst.lineEndMs)
-                        }
                 } else {
-                    mode = 2
-                    pos = if (needsFinish) bst.lineEndMs else exitPos
+                    val exitPos = runtime.exitPos
+                    val started = exitPos > bst.lineStartMs
+                    val needsFinish = started && exitPos < bst.lineEndMs
+                    val finishMs = if (needsFinish) FINISH_MS else 0f
+                    val fxRemainingMs = if (started) max(0f, (bst.fxEndMs - exitPos) / speed) else 0f
+                    val holdMs = max(finishMs, fxRemainingMs)
+                    fadeOpacity = braccatoExitOpacity(elapsed)
+                    if (elapsed >= max(holdMs, FADE_OUT_MS)) {
+                        runtime.hadActive = false
+                    } else if (elapsed < holdMs) {
+                        mode = 1
+                        fxPos = exitPos + (elapsed * speed).toLong()
+                        pos =
+                            if (elapsed < finishMs) {
+                                val t = LinearOutSlowInEasing.transform(elapsed / finishMs)
+                                exitPos + ((bst.lineEndMs - exitPos) * t).toLong()
+                            } else {
+                                max(exitPos, bst.lineEndMs)
+                            }
+                    } else {
+                        mode = 2
+                        pos = if (needsFinish) bst.lineEndMs else exitPos
+                    }
                 }
             }
 
