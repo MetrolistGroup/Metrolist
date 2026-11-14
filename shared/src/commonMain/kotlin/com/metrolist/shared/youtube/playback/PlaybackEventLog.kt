@@ -1,15 +1,11 @@
 package com.metrolist.shared.youtube.playback
 
+import com.metrolist.shared.utils.redactDiagnosticText
 import kotlin.time.Clock
 import kotlin.time.Instant
 
 object PlaybackEventLog {
     const val MAX_EVENTS = 500
-    private val sensitiveQueryRegex =
-        Regex("""(?i)([?&](?:pot|sig|signature|n|ns|spc|lsig|token|key|auth|cookie|authorization|access_token|refresh_token)=)[^&\s]+""")
-    private val sensitiveHeaderRegex = Regex("""(?i)\b(cookie|authorization|proxy-authorization)\s*[:=]\s*[^\r\n]+""")
-    private val urlCredentialsRegex = Regex("""(?i)(https?://)[^/@\s]+@""")
-
     val events = PlaybackEventBuffer(MAX_EVENTS)
 
     fun debug(
@@ -223,12 +219,6 @@ object PlaybackEventLog {
             "$message $described"
         }
     }
-
-    private fun redactDiagnosticText(value: String): String =
-        value
-            .replace(sensitiveQueryRegex, "$1<redacted>")
-            .replace(sensitiveHeaderRegex, "$1: <redacted>")
-            .replace(urlCredentialsRegex, "$1<redacted>@")
 
     private fun kindForYtTag(tag: String): PlaybackEventKind =
         when {

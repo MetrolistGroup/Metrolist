@@ -219,7 +219,7 @@ object AppLogger {
         if (!isInitialized.get()) return
         if (!detailedLoggingEnabled.get() && level < Level.WARNING) return
 
-        if (level >= Level.WARNING && tag != "STDERR") {
+        if (level >= Level.WARNING && tag != "STDERR" && tag != "FFmpeg") {
             PlaybackEventLog.captureApplicationFailure(
                 level = if (level == Level.ERROR) PlaybackEventLevel.ERROR else PlaybackEventLevel.WARN,
                 tag = tag,
