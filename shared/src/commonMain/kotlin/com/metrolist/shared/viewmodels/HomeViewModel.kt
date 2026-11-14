@@ -580,7 +580,6 @@ class HomeViewModel(
         loadJob =
             scope.launch(Dispatchers.Default) {
                 if (!PlaybackNetworkStateStore.current.connected) {
-                    if (!isFiltered) allContentReloadRequired = false
                     _uiState.update(HomeUiState::asOfflineSnapshot)
                     scope.launch { onComplete() }
                     return@launch
@@ -859,7 +858,6 @@ class HomeViewModel(
                         ) {
                             return@supervisorScope
                         }
-                        if (!isFiltered && !primaryContentPublished) allContentReloadRequired = false
                         val currentState = _uiState.value
                         val failedState =
                             currentState.copy(
@@ -1250,7 +1248,7 @@ class HomeViewModel(
         val locale = GlobalYouTube.innerTube.locale
         val currentSignature = "${locale.hl}:${locale.gl}"
         val cached = cachedAllContent?.takeIf { lastKnownLocaleSignature == currentSignature }
-        val reloadIncompleteFeed = allContentReloadRequired || _uiState.value.isAllContentPending
+        val reloadIncompleteFeed = shouldReloadIncompleteAllContent(allContentReloadRequired, _uiState.value)
         if (cached != null && !reloadIncompleteFeed) {
             val restored =
                 homeContentForAllSelection(_uiState.value, cached).copy(
@@ -1680,6 +1678,11 @@ internal fun homeContentForAllSelection(
 internal fun isCacheableAllContent(state: HomeViewModel.HomeUiState): Boolean =
     !state.isAllContentPending &&
         !isFilteredHome(state.selectedChip?.params, state.selectedChip?.browseId ?: "FEmusic_home")
+
+internal fun shouldReloadIncompleteAllContent(
+    reloadRequired: Boolean,
+    state: HomeViewModel.HomeUiState,
+): Boolean = reloadRequired || state.isAllContentPending
 
 internal fun cacheableAllContentSnapshot(state: HomeViewModel.HomeUiState): HomeViewModel.HomeUiState? =
     if (!isCacheableAllContent(state)) {
