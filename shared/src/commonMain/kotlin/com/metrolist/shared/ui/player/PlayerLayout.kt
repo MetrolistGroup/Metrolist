@@ -992,7 +992,7 @@ internal fun LandscapePlayerContent(
                         onLyricsClick = {
                             hapticManager.perform(HapticEvent.PRESS)
                             onIsLyricsVisibleChange(!lyricsVisible)
-                        },
+                        }.takeIf { !isVideoModeActive },
                         contentColor = controlsColor,
                         horizontalPadding = 0.dp,
                         verticalPadding = if (compactHeight) 0.dp else 12.dp,
@@ -1012,7 +1012,7 @@ internal fun LandscapePlayerContent(
                             onLyricsClick = {
                                 hapticManager.perform(HapticEvent.PRESS)
                                 onIsLyricsVisibleChange(!lyricsVisible)
-                            },
+                            }.takeIf { !isVideoModeActive },
                             isLyricsActive = lyricsVisible,
                             isQueueActive = false,
                             modifier = Modifier.weight(1f, fill = false),
@@ -1611,7 +1611,7 @@ private fun PlayerActionButtons(
     val hapticManager = rememberMetrolistHaptics()
 
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        if (lyricsVisible) {
+        if (uiState.isLyricsVisible) {
             FocusedPlayerActionIconButton(
                 onClick = {
                     hapticManager.perform(HapticEvent.PRESS)
