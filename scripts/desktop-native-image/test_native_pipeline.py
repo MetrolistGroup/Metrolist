@@ -50,11 +50,13 @@ def macos_jdk(graal):
 
 
 class PipelineTest(unittest.TestCase):
-    def test_nucleus_natives_use_nucleus_platform_names(self):
+    def test_platform_natives_use_nucleus_and_javacpp_platform_names(self):
         with tempfile.TemporaryDirectory() as directory:
-            for target, platform in [('linux-arm64', 'linux-aarch64'), ('macos-arm64', 'darwin-aarch64')]:
-                path = native_image.nucleus_natives(Path(directory), target) / 'reachability-metadata.json'
-                self.assertEqual(f'nucleus/native/{platform}/*', json.loads(path.read_text())['resources'][0]['glob'])
+            for target, nucleus, javacpp in [('linux-arm64', 'linux-aarch64', 'linux-arm64'), ('macos-arm64', 'darwin-aarch64', 'macosx-arm64'),
+                                              ('windows-x64', 'win32-x64', 'windows-x86_64')]:
+                path = native_image.platform_natives(Path(directory), target) / 'reachability-metadata.json'
+                globs = [entry['glob'] for entry in json.loads(path.read_text())['resources']]
+                self.assertEqual([f'nucleus/native/{nucleus}/*', f'org/{javacpp}/*', f'org/{javacpp}-gpl/*', f'{javacpp}/*', f'{javacpp}-gpl/*'], globs)
 
     def test_output_argument_leaves_exe_suffix_to_native_image(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -64,8 +66,8 @@ class PipelineTest(unittest.TestCase):
                 command = native_image.arguments(work, work, output, target)
                 self.assertEqual(str(expected), command[command.index('-o') + 1])
                 self.assertIn('-march=compatibility', command)
-                metadata = json.loads((work/'nucleus-natives/reachability-metadata.json').read_text())
-                self.assertEqual([{'glob': f'nucleus/native/{target.replace("windows", "win32")}/*'}], metadata['resources'])
+                metadata = json.loads((work/'platform-natives/reachability-metadata.json').read_text())
+                self.assertEqual({'glob': f'nucleus/native/{target.replace("windows", "win32")}/*'}, metadata['resources'][0])
 
     def test_checksum_cache_hit_and_corrupt_cache_recovery(self):
         data = jdk_archive()
@@ -159,23 +161,6 @@ class PipelineTest(unittest.TestCase):
             app=root/'dist/metrolist-desktop-native-linux-x64-14.0.0-test.AppDir'
             self.assertTrue(os.access(app/'AppRun',os.X_OK))
             self.assertTrue((app/'resources').is_symlink())
-
-    def test_nucleus_natives_use_nucleus_platform_names(self):
-        with tempfile.TemporaryDirectory() as directory:
-            for target, platform in [('linux-arm64', 'linux-aarch64'), ('macos-arm64', 'darwin-aarch64')]:
-                path = native_image.nucleus_natives(Path(directory), target) / 'reachability-metadata.json'
-                self.assertEqual(f'nucleus/native/{platform}/*', json.loads(path.read_text())['resources'][0]['glob'])
-
-    def test_output_argument_leaves_exe_suffix_to_native_image(self):
-        with tempfile.TemporaryDirectory() as directory:
-            work = Path(directory); (work/'classpath.txt').write_text('app.jar')
-            for target, output, expected in [('windows-x64', work/'image/Metrolist.exe', work/'image/Metrolist'),
-                                             ('linux-x64', work/'image/Metrolist', work/'image/Metrolist')]:
-                command = native_image.arguments(work, work, output, target)
-                self.assertEqual(str(expected), command[command.index('-o') + 1])
-                self.assertIn('-march=compatibility', command)
-                metadata = json.loads((work/'nucleus-natives/reachability-metadata.json').read_text())
-                self.assertEqual([{'glob': f'nucleus/native/{target.replace("windows", "win32")}/*'}], metadata['resources'])
 
     def test_posix_architecture_checks_launcher_libraries_and_sidecars(self):
         for target, foreign, library in [('linux-x64', 'linux-arm64', 'libshim.so'), ('linux-arm64', 'linux-x64', 'libavutil.so.60'), ('macos-arm64', 'linux-arm64', 'libjawt.dylib')]:

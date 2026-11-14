@@ -45,12 +45,19 @@ NUCLEUS_NATIVE_DIRECTORIES = {'linux-x64': 'linux-x64', 'linux-arm64': 'linux-aa
                               'macos-arm64': 'darwin-aarch64', 'windows-x64': 'win32-x64'}
 
 
-def nucleus_natives(work, target):
+JAVACPP_PLATFORMS = {'linux-x64': 'linux-x86_64', 'linux-arm64': 'linux-arm64',
+                     'macos-arm64': 'macosx-arm64', 'windows-x64': 'windows-x86_64'}
+
+
+def platform_natives(work, target):
     # Nucleus extracts its JNI libraries from nucleus/native/<platform>/ at runtime; traces only saw linux-x64.
-    directory = work / 'nucleus-natives'
+    # JavaCPP's loader probes these paths before the real org/bytedeco locations; unregistered probes are reported.
+    directory = work / 'platform-natives'
     directory.mkdir(parents=True, exist_ok=True)
-    glob = f'nucleus/native/{NUCLEUS_NATIVE_DIRECTORIES[target]}/*'
-    (directory / 'reachability-metadata.json').write_text(json.dumps({'resources': [{'glob': glob}]}, indent=2) + '\n')
+    javacpp = JAVACPP_PLATFORMS[target]
+    globs = [f'nucleus/native/{NUCLEUS_NATIVE_DIRECTORIES[target]}/*',
+             f'org/{javacpp}/*', f'org/{javacpp}-gpl/*', f'{javacpp}/*', f'{javacpp}-gpl/*']
+    (directory / 'reachability-metadata.json').write_text(json.dumps({'resources': [{'glob': g} for g in globs]}, indent=2) + '\n')
     return directory
 
 
@@ -68,7 +75,7 @@ def arguments(graal, work, output, target, experiment=False, agent=None, macos_v
                '--exact-reachability-metadata', '--enable-url-protocols=http,https',
                '--enable-native-access=ALL-UNNAMED', '-Djava.awt.headless=false',
                '-H:+AddAllCharsets', '-H:+IncludeAllLocales',
-               '-H:ConfigurationFileDirectories=' + ','.join(str(p.resolve()) for p in [*configurations(target, agent, experiment), work / 'serialization-config', nucleus_natives(work, target)])]
+               '-H:ConfigurationFileDirectories=' + ','.join(str(p.resolve()) for p in [*configurations(target, agent, experiment), work / 'serialization-config', platform_natives(work, target)])]
     if not experiment:
         # Testers fall back like the JVM on a missing registration; CI smoke fails on any reported registration.
         options += ['-R:MaxHeapSize=384m', '-R:MinHeapSize=32m', '-R:MissingRegistrationReportingMode=Warn']
