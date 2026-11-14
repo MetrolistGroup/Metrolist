@@ -1126,4 +1126,15 @@
     <string name="settings_resume_prompt_summary">Pitaj pre nastavljanja sačuvanog reda pri pokretanju aplikacije</string>
     <string name="settings_player_layout_summary">Promeni raspored omota i kontrola reprodukcije</string>
     <string name="settings_filter_q_summary">Q određuje širinu ili rezonancu izabranog filtera</string>
+    <string name="settings_reset_to_default">Vrati na podrazumevano</string>
+    <plurals name="download_queue_pending">
+        <item quantity="one">%1$d pesma u redu za preuzimanje</item>
+        <item quantity="few">%1$d pesme u redu za preuzimanje</item>
+        <item quantity="other">%1$d pesama u redu za preuzimanje</item>
+    </plurals>
+    <string name="download_paused">Pauzirano</string>
+    <string name="downloads_empty">Nema preuzimanja u toku</string>
+    <string name="downloads_empty_hint">Pesme koje sačuvate za slušanje van mreže biće ovde prikazane tokom preuzimanja.</string>
+    <string name="remove_all_downloads">Ukloni sva preuzimanja</string>
+    <string name="lyrics_song_artist">Izvođač pesme</string>
 </resources>
