@@ -635,7 +635,7 @@
     <string name="device_connect_no_devices">Aucun appareil détecté sur ce réseau pour l\u0027instant.</string>
     <string name="device_connect_rescan">Rechercher</string>
     <string name="device_connect_account_mismatch">Comptes différents</string>
-    <string name="device_connect_permission_needed">La permission d\u0027accès au réseau local est requise pour trouver et se connecter à d\u0027autres appareils</string>
+    <string name="device_connect_permission_needed">L'accès au réseau local est nécessaire pour trouver et se connecter à d'autres appareils</string>
     <string name="device_connect_grant_permission">Accorder la permission</string>
     <string name="device_connect_pair">Appairer</string>
     <string name="device_connect_paired">Appairé</string>
@@ -1761,7 +1761,7 @@
     <string name="ai_test_connection_running">Test de la connexion…</string>
     <string name="ai_test_connection_description">Envoie une requête contenant un échantillon de paroles en utilisant vos paramètres actuels</string>
     <string name="ai_test_connection_success">Connexion réussie.</string>
-    <string name="ai_test_connection_failed">Connexion échouée. Vérifiez vos modèles et votre clé API.</string>
+    <string name="ai_test_connection_failed">Échec de la connexion. Vérifiez votre clé API et vos modèles.</string>
     <string name="ai_test_missing_credentials">Ajoutez une clé API pour tester la connexion.</string>
     <string name="ai_test_detection_result">Détection : à traduire = %1$s</string>
     <string name="ai_test_translation_result">Traduction de l\u0027échantillon : %1$s</string>
@@ -2563,6 +2563,12 @@
     <string name="ai_setup_view_limits">Vérifiez les limites actuelles</string>
     <string name="ai_setup_browser_failed">Impossible d'ouvrir le navigateur, veuillez réessayer.</string>
     <string name="ai_setup_sign_in">Se connecter à OpenRouter</string>
-    <string name="ai_setup_configure">Choisissez un modèle d'IA et une langue</string>
-    <string name="ai_setup_model_description">Ce modèle</string>
+    <string name="ai_setup_configure">Sélectionnez un modèle d'IA et une langue</string>
+    <string name="ai_setup_model_description">Ce modèle traduit les paroles gratuitement dans les limites définies par OpenRouter. La traduction d'un titre peut nécessiter plusieurs requêtes. Vous pouvez sélectionner des modèles payants ou d'autres fournisseurs dans les paramètres avancés.</string>
+    <string name="ai_setup_verifying">Test de traduction…</string>
+    <string name="ai_setup_key_hint">Reconnectez-vous à OpenRouter pour remplacer la clé non valide ou expirée, puis réessayez.</string>
+    <string name="ai_setup_model_hint">Sélectionnez un autre modèle gratuit, ou réessayez quand celui-ci sera disponible.</string>
+    <string name="ai_setup_network_hint">Vérifiez votre connexion internet puis réessayez.</string>
+    <string name="ai_setup_privacy_settings">Ouvrir les paramètres de confidentialité</string>
+    <string name="ai_setup_sign_in_again">Se reconnecter</string>
 </resources>
