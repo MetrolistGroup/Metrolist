@@ -859,16 +859,18 @@ class HomeViewModel(
                             return@supervisorScope
                         }
                         if (!isFiltered && !primaryContentPublished) allContentReloadRequired = false
+                        val currentState = _uiState.value
                         val failedState =
-                            _uiState.value.copy(
+                            currentState.copy(
                                 isLoading = false,
                                 isRefreshing = false,
                                 isRevalidating = false,
                                 isContentLoading = false,
                                 isLoadingMore = false,
-                                isAllContentPending = if (!isFiltered && primaryContentPublished) false else it.isAllContentPending,
+                                isAllContentPending =
+                                    if (!isFiltered && primaryContentPublished) false else currentState.isAllContentPending,
                                 continuation =
-                                    if (!isFiltered && primaryContentPublished) primaryContinuation else _uiState.value.continuation,
+                                    if (!isFiltered && primaryContentPublished) primaryContinuation else currentState.continuation,
                                 error = e.message,
                             )
                         _uiState.value = failedState
