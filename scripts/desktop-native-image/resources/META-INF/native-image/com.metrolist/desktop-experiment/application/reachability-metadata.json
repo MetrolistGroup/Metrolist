@@ -1,6 +1,12 @@
 {
   "resources": [
     {
+      "glob": "libskiko-*"
+    },
+    {
+      "glob": "org/sqlite/native/**"
+    },
+    {
       "glob": "composeResources/**"
     },
     {

@@ -1,10 +1,12 @@
 """Check downloads, package boundaries and build isolation without a compiler or GUI."""
 
+import fnmatch
 import hashlib
 import io
 import json
 import os
 from pathlib import Path
+import plistlib
 import struct
 import sys
 import tempfile
@@ -28,6 +30,15 @@ def jdk_archive():
 def executable(path, machine=0x8664):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(b'MZ' + bytes(58) + struct.pack('<I',64) + b'PE\0\0' + struct.pack('<H',machine))
+
+
+def posix_executable(path, target):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if target == 'macos-arm64':
+        path.write_bytes(b'\xcf\xfa\xed\xfe' + struct.pack('<I', 0x100000C) + bytes(24))
+    else:
+        path.write_bytes(b'\x7fELF\x02\x01' + bytes(12) + struct.pack('<H', 62 if target == 'linux-x64' else 183) + bytes(44))
+    path.chmod(0o755)
 
 
 class PipelineTest(unittest.TestCase):
@@ -112,7 +123,7 @@ class PipelineTest(unittest.TestCase):
 
     def test_linux_appimage_does_not_replace_jvm_package(self):
         with tempfile.TemporaryDirectory() as directory:
-            root=Path(directory);image=root/'image';image.mkdir();(image/'Metrolist').write_text('binary')
+            root=Path(directory);image=root/'image';posix_executable(image/'Metrolist','linux-x64')
             previous=root/'dist/Metrolist.AppImage';previous.parent.mkdir();previous.write_text('JVM package')
             def pack(command,**_):
                 Path(command[-1]).write_text('native package')
@@ -123,6 +134,108 @@ class PipelineTest(unittest.TestCase):
             app=root/'dist/metrolist-desktop-native-linux-x64-14.0.0-test.AppDir'
             self.assertTrue(os.access(app/'AppRun',os.X_OK))
             self.assertTrue((app/'resources').is_symlink())
+
+    def test_nucleus_natives_use_nucleus_platform_names(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for target, platform in [('linux-arm64', 'linux-aarch64'), ('macos-arm64', 'darwin-aarch64')]:
+                path = native_image.nucleus_natives(Path(directory), target) / 'reachability-metadata.json'
+                self.assertEqual(f'nucleus/native/{platform}/*', json.loads(path.read_text())['resources'][0]['glob'])
+
+    def test_output_argument_leaves_exe_suffix_to_native_image(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory); (work/'classpath.txt').write_text('app.jar')
+            for target, output, expected in [('windows-x64', work/'image/Metrolist.exe', work/'image/Metrolist'),
+                                             ('linux-x64', work/'image/Metrolist', work/'image/Metrolist')]:
+                command = native_image.arguments(work, work, output, target)
+                self.assertEqual(str(expected), command[command.index('-o') + 1])
+                self.assertIn('-march=compatibility', command)
+                metadata = json.loads((work/'nucleus-natives/reachability-metadata.json').read_text())
+                self.assertEqual([{'glob': f'nucleus/native/{target.replace("windows", "win32")}/*'}], metadata['resources'])
+
+    def test_posix_architecture_checks_launcher_libraries_and_sidecars(self):
+        for target, foreign, library in [('linux-x64', 'linux-arm64', 'libshim.so'), ('linux-arm64', 'linux-x64', 'libavutil.so.60'), ('macos-arm64', 'linux-arm64', 'libjawt.dylib')]:
+            with self.subTest(target=target), tempfile.TemporaryDirectory() as directory:
+                image = Path(directory)
+                paths = [image/'Metrolist', image/'lib'/library, image/'resources/sidecar']
+                for path in paths:
+                    posix_executable(path, target)
+                self.assertCountEqual(package.validate_posix(image, target), paths)
+                for path in paths:
+                    posix_executable(path, foreign)
+                    with self.assertRaisesRegex(ValueError, target):
+                        package.validate_posix(image, target)
+                    posix_executable(path, target)
+                (image/'resources/Example.class').write_bytes(b'\xca\xfe\xba\xbe' + bytes(16))
+                self.assertCountEqual(package.validate_posix(image, target), paths)
+                if target == 'macos-arm64':
+                    fat = lambda *types: b'\xca\xfe\xba\xbe' + struct.pack('>I', len(types)) + b''.join(struct.pack('>I', t) + bytes(16) for t in types)
+                    paths[1].write_bytes(fat(0x1000007, 0x100000C))
+                    self.assertCountEqual(package.validate_posix(image, target), paths)
+                    paths[1].write_bytes(fat(0x1000007))
+                    with self.assertRaisesRegex(ValueError, target):
+                        package.validate_posix(image, target)
+                    paths[1].write_bytes(b'\xcf\xfa\xed\xfe' + struct.pack('<I', 0x1000007) + bytes(24))
+                    with self.assertRaisesRegex(ValueError, target):
+                        package.validate_posix(image, target)
+                (image/'Metrolist').write_bytes(b'\x7fELF')
+                with self.assertRaises(ValueError):
+                    package.validate_posix(image, target)
+                (image/'Metrolist').unlink()
+                with self.assertRaisesRegex(ValueError, 'no Metrolist'):
+                    package.validate_posix(image, target)
+
+    def test_macos_bundle_signs_completed_contents_before_bundle(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); image = root/'image'
+            for name in ['Metrolist', 'libjawt.dylib', 'lib/libjawt.dylib', 'resources/macos/libsidecar.dylib']:
+                posix_executable(image/name, 'macos-arm64')
+            (image/'resources/config.txt').write_text('resource')
+            signed = []
+            def sign(command, **kwargs):
+                self.assertTrue(kwargs['check'])
+                path = Path(command[-1])
+                app = root/'dist/metrolist-desktop-native-macos-arm64-14.0.0-test/Metrolist.app'
+                self.assertTrue((app/'Contents/Resources/logo.icns').is_file())
+                self.assertTrue((app/'Contents/Info.plist').is_file())
+                if '--sign' in command:
+                    self.assertNotIn('--deep', command)
+                    signed.append(path)
+                else:
+                    self.assertEqual(command, ['codesign', '--verify', '--deep', '--strict', str(app)])
+                    self.assertEqual(signed[-1], app)
+            with patch('subprocess.run', side_effect=sign), patch('subprocess.check_output', return_value='Load command 1\n      cmd LC_BUILD_VERSION\n    minos 14.0\n'):
+                result = package.package(image, 'macos-arm64', root/'dist', '14.0.0-test')
+            self.assertEqual(len(signed), 5)
+            with zipfile.ZipFile(result) as archive:
+                info = plistlib.loads(archive.read('Metrolist.app/Contents/Info.plist'))
+                self.assertTrue(info['NSHighResolutionCapable'])
+                self.assertEqual(info['LSMinimumSystemVersion'], '14.0')
+                self.assertEqual(info['CFBundleURLTypes'][0]['CFBundleURLSchemes'], ['metrolist', 'metrolist-auth'])
+                self.assertEqual(info['NSBonjourServices'], ['_fcast._tcp', '_googlecast._tcp'])
+                self.assertEqual(archive.read('Metrolist.app/Contents/Resources/config.txt'), b'resource')
+                self.assertTrue(archive.getinfo('Metrolist.app/Contents/MacOS/Metrolist').external_attr >> 16 & 0o111)
+
+    def test_macos_minimum_version_covers_legacy_and_current_load_commands(self):
+        with patch('subprocess.check_output', side_effect=[
+            'Load command 0\n      cmd LC_BUILD_VERSION\n    minos 11.0\n      sdk 15.0\n',
+            'Load command 1\n      cmd LC_VERSION_MIN_MACOSX\n  version 12.3\n      sdk 14.0\n',
+        ]):
+            self.assertEqual(package.macos_minimum_version([Path('launcher'), Path('library')]), '12.3')
+        with patch('subprocess.check_output', return_value='Load command 0\n      cmd LC_UUID\n'):
+            with self.assertRaisesRegex(ValueError, 'minimum system version'):
+                package.macos_minimum_version([Path('launcher')])
+
+    def test_target_metadata_retains_platform_native_resources(self):
+        for target, natives in {
+            'macos-arm64': ['libskiko-macos-arm64.dylib', 'com/sun/jna/darwin-aarch64/libjnidispatch.jnilib', 'org/sqlite/native/Mac/aarch64/libsqlitejdbc.dylib', 'org/bytedeco/ffmpeg/macosx-arm64/libavcodec.dylib', 'org/bytedeco/javacpp/macosx-arm64/libjnijavacpp.dylib', 'darwin-aarch64/libcomposewebview_wry.dylib'],
+            'linux-arm64': ['libskiko-linux-arm64.so', 'org/sqlite/native/Linux/aarch64/libsqlitejdbc.so', 'linux-aarch64/libcomposewebview_wry.so'],
+        }.items():
+            resources = []
+            for directory in native_image.configurations(target, None):
+                metadata = json.loads((directory/'reachability-metadata.json').read_text())
+                resources.extend(item['glob'] for item in metadata.get('resources', []) if 'glob' in item)
+            for name in natives:
+                self.assertTrue(any(fnmatch.fnmatchcase(name, glob) for glob in resources), (target, name))
 
 
 if __name__=='__main__':

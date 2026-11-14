@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       platform:
-        description: Native target; ARM64 targets also require their repository enable variable
+        description: Native target
         type: choice
         default: linux-x64
         options:

@@ -38,6 +38,19 @@ def configurations(target, agent, experiment=False):
     return paths
 
 
+NUCLEUS_NATIVE_DIRECTORIES = {'linux-x64': 'linux-x64', 'linux-arm64': 'linux-aarch64',
+                              'macos-arm64': 'darwin-aarch64', 'windows-x64': 'win32-x64'}
+
+
+def nucleus_natives(work, target):
+    # Nucleus extracts its JNI libraries from nucleus/native/<platform>/ at runtime; traces only saw linux-x64.
+    directory = work / 'nucleus-natives'
+    directory.mkdir(parents=True, exist_ok=True)
+    glob = f'nucleus/native/{NUCLEUS_NATIVE_DIRECTORIES[target]}/*'
+    (directory / 'reachability-metadata.json').write_text(json.dumps({'resources': [{'glob': glob}]}, indent=2) + '\n')
+    return directory
+
+
 def arguments(graal, work, output, target, experiment=False, agent=None):
     windows = target.startswith('windows-')
     compiler = graal / 'bin' / ('native-image.cmd' if windows else 'native-image')
@@ -48,10 +61,12 @@ def arguments(graal, work, output, target, experiment=False, agent=None):
                '--exact-reachability-metadata', '--enable-url-protocols=http,https',
                '--enable-native-access=ALL-UNNAMED', '-Djava.awt.headless=false',
                '-H:+AddAllCharsets', '-H:+IncludeAllLocales',
-               '-H:ConfigurationFileDirectories=' + ','.join(str(p.resolve()) for p in configurations(target, agent, experiment))]
+               '-H:ConfigurationFileDirectories=' + ','.join(str(p.resolve()) for p in [*configurations(target, agent, experiment), nucleus_natives(work, target)])]
     if not experiment:
-        # Testers fall back like the JVM on a missing registration; CI smoke passes -XX:...=Exit to stay strict.
+        # Testers fall back like the JVM on a missing registration; CI smoke fails on any reported registration.
         options += ['-R:MaxHeapSize=384m', '-R:MinHeapSize=32m', '-R:MissingRegistrationReportingMode=Warn']
+        # The default x86-64-v3 / armv8.1-a target refuses to start on CPUs without AVX2 or on Raspberry Pi 4 class ARM.
+        options += ['-march=compatibility']
         if windows:
             # Match Nucleus's GUI launcher while retaining Native Image's main entry point.
             options += ['-H:NativeLinkerOption=/SUBSYSTEM:WINDOWS', '-H:NativeLinkerOption=/ENTRY:mainCRTStartup']
@@ -59,7 +74,8 @@ def arguments(graal, work, output, target, experiment=False, agent=None):
     classpath = (work / 'classpath.txt').read_text().strip()
     if not experiment:
         classpath = str(work / 'native-glue') + os.pathsep + classpath
-    return [*options, '-cp', classpath, '-o', str(output), main]
+    # Native Image appends .exe on Windows itself, so -o names the image without the suffix.
+    return [*options, '-cp', classpath, '-o', str(output.with_suffix('') if windows else output), main]
 
 
 def build(graal, work, target, experiment=False, agent=None):
@@ -104,6 +120,12 @@ def build(graal, work, target, experiment=False, agent=None):
             shutil.copy2(freetype, image / freetype.name)
         (image / 'lib').mkdir(exist_ok=True)
         shutil.copy2(source, image / 'lib' / library)
+        # Windows AWT reads its font configuration from java.home/lib, which is the image directory here.
+        # macOS must not get these: data files inside Contents/MacOS break codesign.
+        if target.startswith('windows'):
+            for name in ('fontconfig.bfc', 'fontconfig.properties.src', 'psfontj2d.properties', 'psfont.properties.ja'):
+                if (graal / 'lib' / name).is_file():
+                    shutil.copy2(graal / 'lib' / name, image / 'lib' / name)
         if target.startswith('windows'):
             (image / 'bin').mkdir(exist_ok=True)
             shutil.copy2(source, image / 'bin' / library)
