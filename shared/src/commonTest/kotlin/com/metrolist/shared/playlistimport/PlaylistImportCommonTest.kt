@@ -44,6 +44,20 @@ class PlaylistImportCommonTest {
     }
 
     @Test
+    fun spotifyResolutionRetriesWithoutAlbumMetadataButKeepsOtherProvidersSinglePass() {
+        val track = PlaylistImportManager.CsvTrack("Song", "Artist", null, album = "Spotify Album")
+
+        assertEquals(
+            listOf("Song Artist Spotify Album", "Song Artist"),
+            PlaylistImportManager.resolutionSearchQueries(track, ImportSourceType.SPOTIFY),
+        )
+        assertEquals(
+            listOf("Song Artist Spotify Album"),
+            PlaylistImportManager.resolutionSearchQueries(track, ImportSourceType.APPLE_MUSIC),
+        )
+    }
+
+    @Test
     fun parsesPortablePlaylistTextAndRejectsMalformedFiles() {
         val content = "Artist - Song"
         val utf16 =

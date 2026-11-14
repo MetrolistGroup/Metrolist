@@ -86,7 +86,7 @@ class PlaylistImportManager(
                             cached[track.matchKey()]?.takeIf {
                                 track.isResolvedLocalReference || track.videoId == it.id || bestTrackMatch(track, listOf(it)) != null
                             }
-                        val song = cachedSong ?: resolveTrack(track)
+                        val song = cachedSong ?: resolveTrack(track, provider)
                         results[index] =
                             song?.let {
                                 val customTitle = track.customTitle?.takeIf(String::isNotBlank)
@@ -408,7 +408,10 @@ class PlaylistImportManager(
         }
     }
 
-    private suspend fun resolveTrack(track: CsvTrack): SongItem? {
+    private suspend fun resolveTrack(
+        track: CsvTrack,
+        provider: ImportSourceType?,
+    ): SongItem? {
         if (track.isResolvedLocalReference) {
             val uri = track.directReference ?: return null
             return SongItem(
@@ -425,20 +428,26 @@ class PlaylistImportManager(
                 isLocal = true,
             )
         }
-        val searchQuery = resolutionSearchQuery(track) ?: return null
+        val searchQueries = resolutionSearchQueries(track, provider)
+        if (searchQueries.isEmpty()) return null
         repeat(RESOLVE_RETRIES) { attempt ->
             try {
-                return track.videoId?.let { repository.getSongMetadata(it) }
-                    ?: bestTrackMatch(
-                        track,
-                        repository
-                            .searchFiltered(
-                                searchQuery,
-                                SearchFilter.SONG,
-                                allowOfflineFallback = false,
-                            ).items
-                            .filterIsInstance<SongItem>(),
-                    )
+                track.videoId?.let { return repository.getSongMetadata(it) }
+                for (searchQuery in searchQueries) {
+                    val match =
+                        bestTrackMatch(
+                            track,
+                            repository
+                                .searchFiltered(
+                                    searchQuery,
+                                    SearchFilter.SONG,
+                                    allowOfflineFallback = false,
+                                ).items
+                                .filterIsInstance<SongItem>(),
+                        )
+                    if (match != null) return match
+                }
+                return null
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -678,6 +687,16 @@ class PlaylistImportManager(
                 return null
             }
             return listOf(track.title, track.artist, track.album).filter(String::isNotBlank).joinToString(" ")
+        }
+
+        internal fun resolutionSearchQueries(
+            track: CsvTrack,
+            provider: ImportSourceType?,
+        ): List<String> {
+            val primary = resolutionSearchQuery(track) ?: return emptyList()
+            if (provider != ImportSourceType.SPOTIFY || track.album.isBlank()) return listOf(primary)
+            val withoutAlbum = listOf(track.title, track.artist).filter(String::isNotBlank).joinToString(" ")
+            return listOf(primary, withoutAlbum).distinct()
         }
 
         fun parseCsv(
