@@ -1,0 +1,21 @@
+Material 3 Youtube Music -sovellus Androidille
+
+Ominaisuudet:
+
+-Älyttömän nopea katkeamaton toisto Youtube Musicista
+-Mahdollisuus Youtube Music -kirjautumiseen, mutta sovellus toimii myös kirjautumatta
+-**Material 3 Expressive** -muotoilu
+- **Discord Rich Presence**, Scrobblaaminen **Last.fm:in and Listenbrainzin** kautta
+- **Ei mainoksia**, ikinä
+- Listen Togetherillä voit kuunnella musiikkia reaaliajassa muiden kanssa
+- **Google Cast**-, F-Cast-, SONOS-laitteisiin, ja DLNA:lla striimaaminen
+- Varmuuskopioiden/soittolistojen tuonti yli 29:stä muusta ohjelmasta ja 6:sta eri palvelusta
+- Musiikintunnistus **Shazamilla**
+- Nopea sanoituslähde, sanoitusten käännökset ja translitterointituki
+- Käännetty yli 15:lle kielelle
+- Mahdollisuus **Videotoistoon**
+- Kattava sisällön suodatus
+- **Canvas-videot Apple Musicista**, Spotifysta ja YouTube Musicista
+- Valittavana useita soittimen, kansikuvien, minisoittimen, ja taustan tyyppejä
+- Mukautettujen fonttien ja sovelluskuvakkeiden tuki
+- ... ja paljon muuta!
