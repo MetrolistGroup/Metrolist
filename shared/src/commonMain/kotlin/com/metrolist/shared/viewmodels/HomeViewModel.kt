@@ -647,32 +647,34 @@ class HomeViewModel(
                             return@supervisorScope
                         }
                         val primarySections = rawHomeSections.withoutNonMusicalVideos()
-                        val chartSections = findSectionsByBrowseId(primarySections, "FEmusic_charts")
+                        val primaryLocalSongMetadata = loadLocalSongMetadata(primarySections)
+                        val hydratedPrimarySections = primarySections.withLocalSongMetadata(primaryLocalSongMetadata)
+                        val chartSections = findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_charts")
                         _uiState.update { state ->
                             state
                                 .primaryHomeContentLoaded(
-                                    sections = primarySections,
+                                    sections = hydratedPrimarySections,
                                     chips = homeChipsForSelection(homePageData.chips, state.selectedChip),
                                 ).copy(
                                     trending = chartSections.flatMap { it.items.filterIsInstance<SongItem>() },
                                     albumCharts = chartSections.flatMap { it.items.filterIsInstance<AlbumItem>() },
-                                    quickPicks = findSectionSongs(primarySections, "FEmusic_quickpicks"),
-                                    keepListening = findSectionSongs(primarySections, "FEmusic_listen_again"),
+                                    quickPicks = findSectionSongs(hydratedPrimarySections, "FEmusic_quickpicks"),
+                                    keepListening = findSectionSongs(hydratedPrimarySections, "FEmusic_listen_again"),
                                     forgottenFavorites =
-                                        findSectionSongs(primarySections, "FEmusic_forgotten_favorites"),
-                                    newReleases = newReleasesFrom(primarySections),
+                                        findSectionSongs(hydratedPrimarySections, "FEmusic_forgotten_favorites"),
+                                    newReleases = newReleasesFrom(hydratedPrimarySections),
                                     communityPlaylist =
-                                        findSectionsByBrowseId(primarySections, "FEmusic_community")
+                                        findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_community")
                                             .flatMap { it.items.filterIsInstance<PlaylistItem>() },
-                                    moodsAndGenres = findMoodsAndGenresByBrowseId(primarySections),
+                                    moodsAndGenres = findMoodsAndGenresByBrowseId(hydratedPrimarySections),
                                     podcasts =
-                                        findSectionsByBrowseId(primarySections, "FEmusic_immersive")
+                                        findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_immersive")
                                             .flatMap { it.items.filterIsInstance<PodcastItem>() },
-                                    similarRecommendations = findSimilarRecommendations(primarySections),
+                                    similarRecommendations = findSimilarRecommendations(hydratedPrimarySections),
                                     recapPlaylists =
-                                        findSectionsByBrowseId(primarySections, "FEmusic_listening_review")
+                                        findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_listening_review")
                                             .flatMap { it.items.filterIsInstance<PlaylistItem>() },
-                                    sections = uncategorizedHomeSections(primarySections),
+                                    sections = uncategorizedHomeSections(hydratedPrimarySections),
                                 ).withoutBlockedContent()
                         }
                         Logger.d(
