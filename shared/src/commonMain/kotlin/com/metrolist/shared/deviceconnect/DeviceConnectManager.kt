@@ -83,6 +83,8 @@ class DeviceConnectManager
         private val localAddressProvider: () -> Set<String> = { getLocalIpV4Addresses().toSet() },
         private val pairingTimeSource: TimeSource = TimeSource.Monotonic,
         dispatcher: CoroutineDispatcher = Dispatchers.Default,
+        private val fallbackTransportFactory: (Any?, (String, Throwable?) -> Unit) -> LocalDeviceTransport? =
+            ::createBluetoothFallbackTransport,
     ) {
         constructor(
             serverPort: Int = 0,
@@ -143,6 +145,9 @@ class DeviceConnectManager
             val directConnectionFailed: Boolean = false,
             val serverPort: Int = 0,
             val localAddress: String = "",
+            val bluetoothFallbackEnabled: Boolean = false,
+            val bluetoothFallbackActive: Boolean = false,
+            val localBluetoothAddress: String = "",
             val requiresPermission: Boolean = false,
             val anonymous: Boolean = false,
             val peers: List<PeerDevice> = emptyList(),
@@ -159,6 +164,7 @@ class DeviceConnectManager
 
         private var server: LocalDeviceServer? = null
         private var discovery: DeviceDiscoveryController? = null
+        private var fallbackTransport: LocalDeviceTransport? = null
         private var httpClient: HttpClient? = null
 
         private val peerById = mutableMapOf<String, PeerDevice>()
@@ -183,6 +189,8 @@ class DeviceConnectManager
 
         @Volatile private var discoveryGeneration = 0L
 
+        @Volatile private var fallbackGeneration = 0L
+
         private val discoveryRetry = DeviceConnectDiscoveryRetry()
         private val discoveryFailed = MutableStateFlow(false)
 
@@ -194,6 +202,7 @@ class DeviceConnectManager
             _state.value =
                 _state.value.copy(
                     anonymous = identity.anonymous,
+                    bluetoothFallbackEnabled = settings.deviceConnectBluetoothFallbackEnabled,
                     pairedDevices =
                         pairStore
                             .pairsFor(identity)
@@ -301,14 +310,42 @@ class DeviceConnectManager
                             serverRunning = true,
                             serverPort = actualPort,
                             localAddress = localAddresses.sorted().firstOrNull().orEmpty(),
+                            bluetoothFallbackEnabled = settings.deviceConnectBluetoothFallbackEnabled,
                             requiresPermission = false,
                             pairedDevices = pairedDevices,
                         )
                 }
                 startDiscovery(local, actualPort)
+                if (settings.deviceConnectBluetoothFallbackEnabled) {
+                    startFallbackTransportLocked(local)
+                }
                 startHeartbeat()
                 logInfo("DeviceConnect enabled on port $actualPort (id=${local.deviceId}).")
             }
+
+        fun setBluetoothFallbackEnabled(
+            enabled: Boolean,
+            context: Any? = this.context,
+        ) {
+            settings.deviceConnectBluetoothFallbackEnabled = enabled
+            if (context != null) this.context = context
+            scope.launch {
+                lifecycleMutex.withLock {
+                    if (context != null) this@DeviceConnectManager.context = context
+                    val currentEnabled = settings.deviceConnectBluetoothFallbackEnabled
+                    stateMutex.withLock {
+                        _state.value = _state.value.copy(bluetoothFallbackEnabled = currentEnabled)
+                    }
+                    if (!_state.value.serverRunning) return@withLock
+                    if (currentEnabled) {
+                        val info = localInfo ?: localInfoProvider().also { localInfo = it }
+                        startFallbackTransportLocked(info)
+                    } else {
+                        stopFallbackTransportLocked()
+                    }
+                }
+            }
+        }
 
         fun disable() {
             settings.deviceConnectEnabled = false
@@ -342,12 +379,16 @@ class DeviceConnectManager
                             directConnectionFailed = false,
                             serverPort = 0,
                             localAddress = "",
+                            bluetoothFallbackEnabled = settings.deviceConnectBluetoothFallbackEnabled,
+                            bluetoothFallbackActive = false,
+                            localBluetoothAddress = "",
                             requiresPermission = false,
                             pairingRequests = emptyList(),
                         )
                     playbackPeers.clear()
                     connections.values.toList().also { connections.clear() }
                 }
+            stopFallbackTransportLocked()
             stopDiscovery()
             sessions.forEach { it.close(intentional = true) }
             withTimeoutOrNull(2_000.milliseconds) {
@@ -374,6 +415,9 @@ class DeviceConnectManager
                         serverRunning = false,
                         serverPort = 0,
                         localAddress = "",
+                        bluetoothFallbackEnabled = settings.deviceConnectBluetoothFallbackEnabled,
+                        bluetoothFallbackActive = false,
+                        localBluetoothAddress = "",
                         peers = emptyList(),
                         pairingRequests = emptyList(),
                     )
@@ -400,7 +444,7 @@ class DeviceConnectManager
         fun connectDirect(address: String) {
             val endpoint =
                 parseDeviceConnectEndpoint(address) ?: run {
-                    logWarn("Direct connection rejected: \"$address\" is not a LAN or VPN IPv4:port or [IPv6]:port endpoint.")
+                    logWarn("Direct connection rejected: \"$address\" is not a LAN, VPN, or Bluetooth (bt://MAC) endpoint.")
                     return
                 }
             scope.launch {
@@ -537,6 +581,9 @@ class DeviceConnectManager
                     logInfo("Rescanning for devices…")
                     stopDiscovery()
                     startDiscovery(info, port)
+                    if (fallbackTransport != null || settings.deviceConnectBluetoothFallbackEnabled) {
+                        restartFallbackDiscoveryLocked(info)
+                    }
                 }
             }
         }
@@ -692,14 +739,187 @@ class DeviceConnectManager
             }
         }
 
+        /** Caller must hold [lifecycleMutex]. */
+        private suspend fun startFallbackTransportLocked(info: DeviceInfoPayload): LocalDeviceTransport? {
+            fallbackTransport?.let { return it }
+            val transport =
+                fallbackTransportFactory(context) { message, throwable ->
+                    logWarn(message, throwable)
+                } ?: run {
+                    stateMutex.withLock {
+                        _state.value = _state.value.copy(bluetoothFallbackActive = false, localBluetoothAddress = "")
+                    }
+                    return null
+                }
+            val generation = ++fallbackGeneration
+            val serverStarted =
+                runCatching {
+                    transport.startServer(
+                        localInfo = info,
+                        onChannel = { channel -> handleIncomingChannel(channel) },
+                        onFailure = { error -> onFallbackTransportFailure(transport, error) },
+                    )
+                }.onFailure { error ->
+                    if (error is CancellationException) throw error
+                    logWarn("Bluetooth fallback server start failed: ${error.message}", error)
+                }.getOrDefault(false)
+            if (!serverStarted) {
+                withContext(NonCancellable) {
+                    runCatching { transport.close() }
+                }
+                stateMutex.withLock {
+                    _state.value = _state.value.copy(bluetoothFallbackActive = false, localBluetoothAddress = "")
+                }
+                return null
+            }
+            fallbackTransport = transport
+            runCatching {
+                transport.startDiscovery(
+                    localInfo = info,
+                    onFound = { device ->
+                        scope.launch { onDeviceDiscovered(device, generation, fromFallback = true) }
+                    },
+                    onLost = { device ->
+                        scope.launch { onDeviceLost(device, generation, fromFallback = true) }
+                    },
+                )
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                logWarn("Bluetooth fallback discovery start failed: ${error.message}", error)
+            }
+            val address = transport.localAddress.orEmpty()
+            stateMutex.withLock {
+                _state.value =
+                    _state.value.copy(
+                        bluetoothFallbackActive = true,
+                        localBluetoothAddress = address,
+                    )
+            }
+            logInfo("Bluetooth fallback transport started (address=${address.ifBlank { "unknown" }}).")
+            return transport
+        }
+
+        /** Caller must hold [lifecycleMutex]. */
+        private suspend fun restartFallbackDiscoveryLocked(info: DeviceInfoPayload) {
+            val existing = fallbackTransport
+            if (existing == null) {
+                if (settings.deviceConnectBluetoothFallbackEnabled) {
+                    startFallbackTransportLocked(info)
+                }
+                return
+            }
+            val generation = ++fallbackGeneration
+            withContext(NonCancellable) {
+                runCatching { existing.stopDiscovery() }
+                    .onFailure { logWarn("Bluetooth fallback discovery stop failed: ${it.message}", it) }
+            }
+            runCatching {
+                existing.startDiscovery(
+                    localInfo = info,
+                    onFound = { device ->
+                        scope.launch { onDeviceDiscovered(device, generation, fromFallback = true) }
+                    },
+                    onLost = { device ->
+                        scope.launch { onDeviceLost(device, generation, fromFallback = true) }
+                    },
+                )
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                logWarn("Bluetooth fallback discovery restart failed: ${error.message}", error)
+            }
+        }
+
+        private fun onFallbackTransportFailure(
+            failedTransport: LocalDeviceTransport,
+            error: Throwable,
+        ) {
+            scope.launch {
+                lifecycleMutex.withLock {
+                    if (fallbackTransport !== failedTransport) return@withLock
+                    logWarn("Bluetooth fallback transport stopped: ${error.message}", error)
+                    stopFallbackTransportLocked()
+                }
+            }
+        }
+
+        /** Caller must hold [lifecycleMutex]. */
+        private suspend fun stopFallbackTransportLocked() {
+            fallbackGeneration++
+            val transport = fallbackTransport.also { fallbackTransport = null }
+            if (transport != null) {
+                withContext(NonCancellable) {
+                    runCatching { transport.stopDiscovery() }
+                        .onFailure { logWarn("Bluetooth fallback discovery stop failed: ${it.message}", it) }
+                    runCatching { transport.stopServer() }
+                        .onFailure { logWarn("Bluetooth fallback server stop failed: ${it.message}", it) }
+                    runCatching { transport.close() }
+                        .onFailure { logWarn("Bluetooth fallback close failed: ${it.message}", it) }
+                }
+            }
+            stateMutex.withLock {
+                if (transport != null) {
+                    discoveredEndpoints.removeMatching { isDeviceConnectBluetoothHost(it.host) }
+                    val iterator = peerById.iterator()
+                    while (iterator.hasNext()) {
+                        val entry = iterator.next()
+                        val peer = entry.value
+                        if (peer.state.isLiveConnectionState() || !isDeviceConnectBluetoothHost(peer.host)) continue
+                        val alternative = discoveredEndpoints.first(entry.key)
+                        if (alternative != null) {
+                            entry.setValue(
+                                peer.copy(
+                                    host = alternative.host,
+                                    port = alternative.port,
+                                    serviceName = alternative.serviceName,
+                                    state = PeerState.DISCOVERED,
+                                ),
+                            )
+                        } else {
+                            iterator.remove()
+                        }
+                    }
+                    rebuildPeers()
+                }
+                _state.value =
+                    _state.value.copy(
+                        bluetoothFallbackActive = false,
+                        localBluetoothAddress = "",
+                    )
+            }
+        }
+
+        private suspend fun ensureFallbackTransportForClient(): LocalDeviceTransport? =
+            lifecycleMutex.withLock {
+                if (!_state.value.enabled || !_state.value.serverRunning) return@withLock null
+                fallbackTransport?.let { return@withLock it }
+                val info = localInfo ?: localInfoProvider().also { localInfo = it }
+                startFallbackTransportLocked(info)
+            }
+
+        private suspend fun activateFallbackDiscoveryAfterLanFailure(peerName: String) {
+            val started =
+                lifecycleMutex.withLock {
+                    if (!_state.value.enabled || !_state.value.serverRunning || context == null || fallbackTransport != null) {
+                        false
+                    } else {
+                        val info = localInfo ?: localInfoProvider().also { localInfo = it }
+                        startFallbackTransportLocked(info) != null
+                    }
+                }
+            if (started) {
+                logInfo("Activated off-router Bluetooth fallback discovery after LAN failure for $peerName.")
+            }
+        }
+
         private suspend fun onDeviceDiscovered(
             device: DiscoveredDevice,
             generation: Long,
+            fromFallback: Boolean = false,
         ): Boolean {
-            if (!isValidDeviceId(device.deviceId) || !isDeviceConnectLanHost(device.host) || device.port !in 1..65535) {
+            if (!isValidDeviceId(device.deviceId) || !isDeviceConnectPeerHost(device.host) || device.port !in 1..65535) {
                 logWarn(
                     "Ignored invalid discovery record from ${device.host}:${device.port} " +
-                        "(idValid=${isValidDeviceId(device.deviceId)}, lanHost=${isDeviceConnectLanHost(device.host)}).",
+                        "(idValid=${isValidDeviceId(device.deviceId)}, peerHost=${isDeviceConnectPeerHost(device.host)}).",
                 )
                 return false
             }
@@ -707,7 +927,8 @@ class DeviceConnectManager
             var shouldAutoConnect = false
             val safeName =
                 stateMutex.withLock {
-                    if (!_state.value.enabled || generation != discoveryGeneration) {
+                    val activeGeneration = if (fromFallback) fallbackGeneration else discoveryGeneration
+                    if (!_state.value.enabled || generation != activeGeneration) {
                         logDebug("Discovery result for $advertisedName ignored: discovery is stale or Device Connect is off.")
                         return false
                     }
@@ -764,9 +985,11 @@ class DeviceConnectManager
         private suspend fun onDeviceLost(
             device: DiscoveredDevice,
             generation: Long,
+            fromFallback: Boolean = false,
         ) {
             stateMutex.withLock {
-                if (!_state.value.enabled || generation != discoveryGeneration) return
+                val activeGeneration = if (fromFallback) fallbackGeneration else discoveryGeneration
+                if (!_state.value.enabled || generation != activeGeneration) return
                 discoveredEndpoints.lost(device)
                 val current = peerById[device.deviceId]
                 val updated = current?.let { peerAfterLostDeviceConnectEndpoint(it, device) }
@@ -923,13 +1146,21 @@ class DeviceConnectManager
             deviceName: String,
             serviceName: String,
             allowNewPairing: Boolean,
+            fallbackVisited: Set<Pair<String, Int>> = emptySet(),
         ) {
-            val deviceId = expectedDeviceId ?: "direct:$host:$port"
-            if (host.isBlank() || port !in 1..65535 || (expectedDeviceId != null && !isValidDeviceId(expectedDeviceId))) {
+            val isBluetoothTarget = isDeviceConnectBluetoothHost(host)
+            val effectivePort = if (isBluetoothTarget) DEVICE_CONNECT_BT_PORT else port
+            val deviceId = expectedDeviceId ?: "direct:$host:$effectivePort"
+            if (host.isBlank() ||
+                effectivePort !in 1..65535 ||
+                !isDeviceConnectPeerHost(host) ||
+                (expectedDeviceId != null && !isValidDeviceId(expectedDeviceId))
+            ) {
                 val idValid = expectedDeviceId == null || isValidDeviceId(expectedDeviceId)
                 logWarn(
-                    "Ignored invalid connection target $host:$port " +
-                        "(hostBlank=${host.isBlank()}, portValid=${port in 1..65535}, idValid=$idValid).",
+                    "Ignored invalid connection target $host:$effectivePort " +
+                        "(hostBlank=${host.isBlank()}, portValid=${effectivePort in 1..65535}, " +
+                        "peerHost=${isDeviceConnectPeerHost(host)}, idValid=$idValid).",
                 )
                 remote.onPeerDisconnected(deviceId, intentional = false)
                 return
@@ -941,26 +1172,26 @@ class DeviceConnectManager
                     val liveEndpoint =
                         expectedDeviceId == null &&
                             peerById.values.any {
-                                it.host == host && it.port == port && it.state.isLiveConnectionState()
+                                it.host == host && it.port == effectivePort && it.state.isLiveConnectionState()
                             }
                     val skip =
                         when {
                             !_state.value.enabled -> "Device Connect is off"
                             existing?.state?.isLiveConnectionState() == true -> "already ${existing.state}"
-                            liveEndpoint -> "endpoint $host:$port already has a live link"
+                            liveEndpoint -> "endpoint $host:$effectivePort already has a live link"
                             else -> null
                         }
                     if (skip != null) {
-                        logDebug("Connection to $safeName ($host:$port) skipped: $skip.")
+                        logDebug("Connection to $safeName ($host:$effectivePort) skipped: $skip.")
                         false
                     } else {
                         if (expectedDeviceId == null) _state.value = _state.value.copy(directConnectionFailed = false)
                         peerById[deviceId] =
-                            (existing ?: PeerDevice(deviceId, safeName, host, port, PeerState.CONNECTING))
+                            (existing ?: PeerDevice(deviceId, safeName, host, effectivePort, PeerState.CONNECTING))
                                 .copy(
                                     name = safeName,
                                     host = host,
-                                    port = port,
+                                    port = effectivePort,
                                     state = PeerState.CONNECTING,
                                     serviceName = serviceName,
                                 )
@@ -970,29 +1201,44 @@ class DeviceConnectManager
                 }
             if (!shouldConnect) return
             val identity = refreshAccountIdentity()
-            val client =
-                stateMutex.withLock {
-                    httpClient ?: createDeviceConnectHttpClient().also { httpClient = it }
-                }
             val connId = "out-${stateMutex.withLock { ++connectionCounter }}"
             if (!connectionSlots.tryAcquire()) {
                 logWarn("[$connId] rejecting outgoing connection: limit ($MAX_CONNECTIONS) reached.")
-                finishFailedConnectAttempt(deviceId, host, port, serviceName, if (expectedDeviceId == null) null else PeerState.ERROR)
+                finishFailedConnectAttempt(
+                    deviceId,
+                    host,
+                    effectivePort,
+                    serviceName,
+                    if (expectedDeviceId == null) null else PeerState.ERROR,
+                )
                 if (expectedDeviceId == null) reportDirectConnectionFailure()
                 return
             }
             var ownsSlot = true
             try {
-                logInfo("Connecting to $safeName ($host:$port)…")
-                val sessionWs: ClientWebSocketSession = client.webSocketSession { url(deviceConnectWebSocketUrl(host, port)) }
-                val channel = ClientDeviceChannel(sessionWs, host)
+                logInfo("Connecting to $safeName ($host:$effectivePort)…")
+                val channel =
+                    if (isBluetoothTarget) {
+                        val transport =
+                            ensureFallbackTransportForClient()
+                                ?: throw IllegalStateException("Bluetooth fallback transport is unavailable")
+                        transport.connect(host, effectivePort)
+                    } else {
+                        val client =
+                            stateMutex.withLock {
+                                httpClient ?: createDeviceConnectHttpClient().also { httpClient = it }
+                            }
+                        val sessionWs: ClientWebSocketSession =
+                            client.webSocketSession { url(deviceConnectWebSocketUrl(host, effectivePort)) }
+                        ClientDeviceChannel(sessionWs, host)
+                    }
                 val peer =
                     stateMutex.withLock {
                         peerById[deviceId] ?: PeerDevice(
                             id = deviceId,
                             name = safeName,
                             host = host,
-                            port = port,
+                            port = effectivePort,
                             state = PeerState.CONNECTING,
                             serviceName = serviceName,
                         )
@@ -1017,24 +1263,61 @@ class DeviceConnectManager
                         }
                     }
                 if (!registered) {
-                    logWarn("[$connId] connection to $safeName ($host:$port) dropped: Device Connect turned off while connecting.")
+                    logWarn("[$connId] connection to $safeName ($host:$effectivePort) dropped: Device Connect turned off while connecting.")
                     channel.close()
                     connectionSlots.release()
                     return
                 }
                 link.start()
                 ownsSlot = false
-                logInfo("Outgoing connection to $safeName ($host:$port) opened.")
+                logInfo("Outgoing connection to $safeName ($host:$effectivePort) opened.")
             } catch (e: Exception) {
                 if (ownsSlot) connectionSlots.release()
-                finishFailedConnectAttempt(deviceId, host, port, serviceName)
+                if (e is CancellationException) throw e
+                finishFailedConnectAttempt(deviceId, host, effectivePort, serviceName)
+                val visited = fallbackVisited + (host to effectivePort)
+                val alternative =
+                    if (expectedDeviceId != null) {
+                        findAlternativeFallbackEndpoint(expectedDeviceId, visited)
+                    } else {
+                        null
+                    }
+                if (alternative != null) {
+                    logWarn(
+                        "Connection to $safeName ($host:$effectivePort) failed (${e.message}); trying fallback endpoint " +
+                            "${alternative.host}:${alternative.port}.",
+                    )
+                    connectTo(
+                        host = alternative.host,
+                        port = alternative.port,
+                        expectedDeviceId = expectedDeviceId,
+                        deviceName = safeName,
+                        serviceName = alternative.serviceName,
+                        allowNewPairing = allowNewPairing,
+                        fallbackVisited = visited,
+                    )
+                    return
+                }
+                if (!isBluetoothTarget && expectedDeviceId != null) {
+                    activateFallbackDiscoveryAfterLanFailure(safeName)
+                }
                 if (expectedDeviceId == null) reportDirectConnectionFailure()
                 logWarn(
-                    "Connection endpoint for $safeName ($host:$port) is unavailable; discovery remains active: ${e.message}",
+                    "Connection endpoint for $safeName ($host:$effectivePort) is unavailable; discovery remains active: ${e.message}",
                     e,
                 )
             }
         }
+
+        private suspend fun findAlternativeFallbackEndpoint(
+            expectedDeviceId: String,
+            visited: Set<Pair<String, Int>>,
+        ): DiscoveredDevice? =
+            stateMutex.withLock {
+                if (!_state.value.enabled) return@withLock null
+                val alternative = discoveredEndpoints.first(expectedDeviceId) ?: return@withLock null
+                alternative.takeUnless { (it.host to it.port) in visited }
+            }
 
         private suspend fun reportDirectConnectionFailure() {
             stateMutex.withLock {
@@ -2684,6 +2967,9 @@ class DeviceConnectManager
                             logInfo("Rescanning for devices…")
                             stopDiscovery()
                             startDiscovery(info, state.serverPort)
+                            if (fallbackTransport != null || settings.deviceConnectBluetoothFallbackEnabled) {
+                                restartFallbackDiscoveryLocked(info)
+                            }
                         }
                         connected
                     }

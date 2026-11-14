@@ -11,17 +11,29 @@ internal class DeviceConnectEndpoints {
         if (index >= 0) {
             endpoints[index] = device
         } else if (endpoints.size < 8) {
-            // Prefer IPv4 on discovery: link-local IPv6 records can be unreachable without the right interface scope.
+            // Prefer direct P2P/Hotspot/Tether IPv4 -> standard LAN IPv4 -> IPv6 -> Bluetooth RFCOMM fallback.
             // An authenticated endpoint keeps the head; failed() still rotates candidates afterwards.
-            val firstIpv6 = endpoints.indexOfFirst { ':' in it.host }
+            val rank = endpointRank(device.host)
             val minIndex = if (device.deviceId in authenticatedIds) 1 else 0
-            if (':' !in device.host && firstIpv6 >= 0) {
-                endpoints.add(maxOf(firstIpv6, minIndex).coerceAtMost(endpoints.size), device)
+            val insertBefore =
+                (minIndex until endpoints.size).firstOrNull { idx ->
+                    endpointRank(endpoints[idx].host) > rank
+                }
+            if (insertBefore != null) {
+                endpoints.add(insertBefore, device)
             } else {
                 endpoints.add(device)
             }
         }
     }
+
+    private fun endpointRank(host: String): Int =
+        when {
+            isDeviceConnectBluetoothHost(host) -> 3
+            ':' in host -> 2
+            isDirectLocalSubnetworkIpv4(host) -> 0
+            else -> 1
+        }
 
     fun authenticated(peer: DeviceConnectManager.PeerDevice) {
         if (!hasAvailableDeviceConnectEndpoint(peer)) return
@@ -47,6 +59,15 @@ internal class DeviceConnectEndpoints {
     fun lost(device: DiscoveredDevice) {
         candidates[device.deviceId]?.removeAll {
             it.host == device.host && it.port == device.port && it.serviceName == device.serviceName
+        }
+    }
+
+    fun removeMatching(predicate: (DiscoveredDevice) -> Boolean) {
+        val iterator = candidates.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            entry.value.removeAll(predicate)
+            if (entry.value.isEmpty()) iterator.remove()
         }
     }
 

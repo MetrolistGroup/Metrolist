@@ -12,7 +12,9 @@ A failed start retains the enable preference and offers retry. Discovery failure
 
 ## Direct connections
 
-Connect by IP address accepts the listener's current ephemeral port with `IPv4:port` or `[IPv6]:port`. It supports private IPv4, shared IPv4 space `100.64.0.0/10` and local IPv6. Public addresses and hostnames are blocked. Multicast discovery is unnecessary, but the firewall/VPN must permit peer traffic. Re-enter the endpoint after losing a manual connection.
+Connect by IP address accepts the listener's current ephemeral port with `IPv4:port` or `[IPv6]:port`. It supports private IPv4, shared IPv4 space `100.64.0.0/10`, link-local IPv4 `169.254.0.0/16` (excluding network/broadcast bounds), direct Wi-Fi Direct / mobile hotspot / USB tethering interfaces (`192.168.49.x`, `192.168.137.x`, `192.168.43.x`, `192.168.42.x`), and local IPv6. Public addresses and hostnames are blocked. Candidate endpoints prioritize direct local P2P/tether subnets ahead of standard LAN IPs. Multicast discovery is unnecessary, but the firewall/VPN must permit peer traffic. Re-enter the endpoint after losing a manual connection.
+
+For enterprise or campus Wi-Fi networks enforcing AP/client isolation, an optional serverless Bluetooth fallback (`deviceConnectBluetoothFallbackEnabled`) and manual `bt://AA:BB:CC:DD:EE:FF` endpoint format run over local Bluetooth RFCOMM (plus BLE/SDP proximity discovery) using the same `DeviceChannel` handshake, SAS pairing verification, and AES-GCM encryption. LAN mDNS + WebSocket stays the default fast path, and Android runtime Bluetooth permissions are requested only when the user enables the fallback switch.
 
 The same identity handshake, pairing proofs and encryption apply. A default playback device is used only when its authenticated connection is available and there is no active session. Unavailable defaults and local-file queues play locally. Cast and room ownership take precedence. Discovery alone never moves playback.
 

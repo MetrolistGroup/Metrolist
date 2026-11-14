@@ -33,6 +33,7 @@ data class DeviceConnectSettingsHost(
     val playbackState: StateFlow<DcSyncState>,
     val permissionRequired: Boolean = false,
     val onEnabledChange: (Boolean) -> Unit,
+    val onBluetoothFallbackChange: (Boolean) -> Unit = {},
     val onRequestPermission: () -> Unit = {},
     val onUpdateName: (String) -> Unit,
     val onRescan: () -> Unit,
@@ -177,6 +178,14 @@ internal fun SettingsUiRegistryBuilder.deviceConnectPage(host: DeviceConnectSett
             }
         }
         group("deviceConnectAdvanced", stringResource(Res.string.advanced), enabled = enabled) {
+            switch(
+                id = "deviceConnectBluetoothFallback",
+                title = stringResource(Res.string.device_connect_bluetooth_fallback_title),
+                description = stringResource(Res.string.device_connect_bluetooth_fallback_summary),
+                checked = state.bluetoothFallbackEnabled,
+                enabled = enabled,
+                onCheckedChange = host.onBluetoothFallbackChange,
+            )
             custom("deviceConnectDirect", stringResource(Res.string.device_connect_direct_title), enabled = state.serverRunning) {
                 if (enabled) {
                     Column(Modifier.padding(16.dp)) {

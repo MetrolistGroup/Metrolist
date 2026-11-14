@@ -7,7 +7,9 @@ import java.net.NetworkInterface
 internal actual fun getLocalIpV4Addresses(): List<String> = deviceConnectLanIpv4Addresses().mapNotNull { it.hostAddress }
 
 internal fun isDeviceConnectLanIpv4(address: Inet4Address): Boolean =
-    !address.isLoopbackAddress && !address.isLinkLocalAddress && address.isSiteLocalAddress
+    !address.isLoopbackAddress &&
+        !address.isMulticastAddress &&
+        (address.isSiteLocalAddress || isDeviceConnectLanHost(address.hostAddress.orEmpty()))
 
 internal fun deviceConnectLanIpv4Addresses(): List<Inet4Address> = deviceConnectLanAddresses().filterIsInstance<Inet4Address>()
 
@@ -23,15 +25,31 @@ internal fun deviceConnectLanAddresses(): List<InetAddress> =
                 runCatching {
                     it.isUp &&
                         !it.isLoopback &&
-                        !it.isVirtual &&
-                        it.supportsMulticast() &&
-                        isDeviceConnectLanInterfaceName(it.name)
+                        isDeviceConnectLanInterfaceName(it.name) &&
+                        ((!it.isVirtual && it.supportsMulticast()) || isDirectLocalNetworkInterface(it.name, it.displayName.orEmpty()))
                 }.getOrDefault(false)
             }.flatMap { it.inetAddresses.toList() }
             .filter(::isDeviceConnectLanAddress)
             .distinct()
-            .sortedBy { it.hostAddress }
+            .sortedWith(
+                compareBy<InetAddress>(
+                    { if (isDirectLocalSubnetworkIpv4(it.hostAddress.orEmpty())) 0 else 1 },
+                    { it.hostAddress.orEmpty() },
+                ),
+            )
     }.getOrDefault(emptyList())
+
+internal fun isDirectLocalNetworkInterface(
+    name: String,
+    displayName: String = "",
+): Boolean {
+    if (!isDeviceConnectLanInterfaceName(name)) return false
+    val lowerName = name.lowercase()
+    val lowerDisplay = displayName.lowercase()
+    val prefixes = listOf("p2p", "ap", "swlan", "rndis", "ncm", "usb")
+    val displayMarkers = listOf("wi-fi direct", "local area connection*", "microsoft wi-fi direct", "rndis", "usb ethernet")
+    return prefixes.any(lowerName::startsWith) || displayMarkers.any(lowerDisplay::contains)
+}
 
 internal fun isDeviceConnectLanInterfaceName(name: String): Boolean =
     listOf("br-", "docker", "veth", "tun", "tap", "ppp", "vpn", "wg")

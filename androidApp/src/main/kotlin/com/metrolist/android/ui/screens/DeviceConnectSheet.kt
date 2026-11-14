@@ -114,6 +114,15 @@ fun rememberDeviceConnectSettingsHost(): DeviceConnectSettingsHost {
             permissionGranted = granted
             if (granted && !manager.state.value.enabled) scope.launch { manager.enable(context.applicationContext) }
         }
+    val bluetoothPermissions = AndroidDeviceConnect.requiredBluetoothFallbackPermissions()
+    val bluetoothPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
+            val granted =
+                bluetoothPermissions.all { results[it] == true } || AndroidDeviceConnect.canUseBluetoothFallback(context)
+            if (granted) {
+                manager.setBluetoothFallbackEnabled(true, context.applicationContext)
+            }
+        }
     LaunchedEffect(Settings.shared.deviceConnectEnabled) {
         if (Settings.shared.deviceConnectEnabled) manager.refreshPairingState()
     }
@@ -128,6 +137,15 @@ fun rememberDeviceConnectSettingsHost(): DeviceConnectSettingsHost {
                 scope.launch { manager.enable(context.applicationContext) }
             } else {
                 launcher.launch(requiredPermission)
+            }
+        },
+        onBluetoothFallbackChange = { enabled ->
+            if (!enabled) {
+                manager.setBluetoothFallbackEnabled(false, context.applicationContext)
+            } else if (AndroidDeviceConnect.canUseBluetoothFallback(context) || bluetoothPermissions.isEmpty()) {
+                manager.setBluetoothFallbackEnabled(true, context.applicationContext)
+            } else {
+                bluetoothPermissionLauncher.launch(bluetoothPermissions.toTypedArray())
             }
         },
         onRequestPermission = { requiredPermission?.let(launcher::launch) },

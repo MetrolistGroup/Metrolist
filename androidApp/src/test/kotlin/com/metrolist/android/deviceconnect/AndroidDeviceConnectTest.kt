@@ -26,6 +26,23 @@ class AndroidDeviceConnectTest {
     }
 
     @Test
+    fun requiresBluetoothFallbackPermissionsStartingAtApi31() {
+        for (sdkInt in listOf(28, 30)) {
+            assertEquals(emptyList<String>(), deviceConnectBluetoothFallbackPermissions(sdkInt))
+        }
+        for (sdkInt in listOf(31, 36)) {
+            assertEquals(
+                listOf(
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_ADVERTISE,
+                ),
+                deviceConnectBluetoothFallbackPermissions(sdkInt),
+            )
+        }
+    }
+
+    @Test
     fun syncQueueEditsKeepAudioButDuplicateSelectionAndRepeatReloadIt() {
         val song = SongItem("duplicate", "Track", null, emptyList(), null)
         val other = song.copy(id = "other")

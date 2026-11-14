@@ -22,6 +22,7 @@ import com.metrolist.shared.generated.resources.device_connect_direct_address
 import com.metrolist.shared.generated.resources.device_connect_direct_failed
 import com.metrolist.shared.generated.resources.device_connect_direct_hint
 import com.metrolist.shared.generated.resources.device_connect_direct_title
+import com.metrolist.shared.generated.resources.device_connect_local_bluetooth_address
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -47,6 +48,12 @@ fun DeviceConnectDirectConnection(
                 stringResource(Res.string.device_connect_direct_hint, state.serverPort),
                 style = MaterialTheme.typography.bodySmall,
             )
+            if (state.localBluetoothAddress.isNotBlank()) {
+                Text(
+                    stringResource(Res.string.device_connect_local_bluetooth_address, state.localBluetoothAddress),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
             OutlinedTextField(
                 value = address,
                 onValueChange = { address = it },

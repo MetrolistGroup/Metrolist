@@ -56,4 +56,26 @@ class DeviceConnectEndpointsTest {
         authenticated.discover(ipv4)
         assertEquals(linkLocal.host, authenticated.first("phone")?.host)
     }
+
+    @Test
+    fun ordersDirectLocalThenLanThenIpv6ThenBluetoothFallback() {
+        val bt = DiscoveredDevice("bt-svc", "phone", "Phone", "bt://AA:BB:CC:DD:EE:FF", DEVICE_CONNECT_BT_PORT)
+        val ipv6 = DiscoveredDevice("v6-svc", "phone", "Phone", "fe80::1%3", 4000)
+        val lan = DiscoveredDevice("lan-svc", "phone", "Phone", "192.168.1.5", 4000)
+        val direct = DiscoveredDevice("p2p-svc", "phone", "Phone", "192.168.49.2", 4000)
+
+        val endpoints = DeviceConnectEndpoints()
+        endpoints.discover(bt)
+        endpoints.discover(ipv6)
+        endpoints.discover(lan)
+        endpoints.discover(direct)
+
+        assertEquals(direct, endpoints.first("phone"))
+        endpoints.failed("phone", direct.host, direct.port)
+        assertEquals(lan, endpoints.first("phone"))
+        endpoints.failed("phone", lan.host, lan.port)
+        assertEquals(ipv6, endpoints.first("phone"))
+        endpoints.failed("phone", ipv6.host, ipv6.port)
+        assertEquals(bt, endpoints.first("phone"))
+    }
 }

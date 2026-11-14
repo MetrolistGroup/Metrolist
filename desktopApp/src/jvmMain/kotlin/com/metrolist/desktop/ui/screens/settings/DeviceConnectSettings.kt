@@ -26,6 +26,7 @@ internal fun rememberDeviceConnectSettingsHost(): DeviceConnectSettingsHost {
         onEnabledChange = { enabled ->
             if (enabled) scope.launch { manager.enable(Unit) } else manager.disable()
         },
+        onBluetoothFallbackChange = { enabled -> manager.setBluetoothFallbackEnabled(enabled, Unit) },
         onUpdateName = manager::updateDeviceName,
         onRescan = manager::rescan,
         onConnectDirect = manager::connectDirect,

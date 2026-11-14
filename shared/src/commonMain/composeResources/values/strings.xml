@@ -5230,8 +5230,11 @@
     <string name="queue_select_hint">Multi-select: press OK to select tracks. Press Right or hold OK to open actions.</string>
     <string name="device_connect_direct_title">Connect by IP address</string>
     <string name="device_connect_direct_address">IP address and port</string>
-    <string name="device_connect_direct_hint">This device listens on port %1$d. Enter the other device’s LAN or VPN IP and its listening port as IPv4:port or [IPv6]:port. Compare the pairing code on both devices.</string>
+    <string name="device_connect_direct_hint">This device listens on port %1$d. Enter the other device’s LAN, VPN, or local hotspot IP (IPv4:port or [IPv6]:port), or a paired Bluetooth address as bt://AA:BB:CC:DD:EE:FF. Compare the pairing code on both devices.</string>
     <string name="device_connect_direct_failed">Could not connect or complete pairing. Check the address, listening port, VPN access and pairing approval, then try again.</string>
+    <string name="device_connect_bluetooth_fallback_title">Bluetooth fallback for isolated Wi-Fi</string>
+    <string name="device_connect_bluetooth_fallback_summary">Use direct Bluetooth connections when enterprise or campus Wi-Fi blocks local device traffic</string>
+    <string name="device_connect_local_bluetooth_address">Local Bluetooth address: %1$s</string>
     <string name="device_connect_default_device">Default playback device</string>
     <string name="device_connect_default_device_description">Start playback on this paired device when it is connected. Choose None to clear the default.</string>
     <string name="listen_together_suggestion_auto_approved">Song suggestion auto-approved</string>

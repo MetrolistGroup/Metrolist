@@ -38,11 +38,30 @@ object AndroidDeviceConnect {
         requiredLocalNetworkPermission()?.let { permission ->
             ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
         } ?: true
+
+    internal fun requiredBluetoothFallbackPermissions(): List<String> = deviceConnectBluetoothFallbackPermissions(Build.VERSION.SDK_INT)
+
+    internal fun canUseBluetoothFallback(context: Context): Boolean =
+        requiredBluetoothFallbackPermissions().all { permission ->
+            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        }
 }
 
 @SuppressLint("InlinedApi")
 internal fun deviceConnectLocalNetworkPermission(sdkInt: Int): String? =
     if (sdkInt >= Build.VERSION_CODES.CINNAMON_BUN) Manifest.permission.ACCESS_LOCAL_NETWORK else null
+
+@SuppressLint("InlinedApi")
+internal fun deviceConnectBluetoothFallbackPermissions(sdkInt: Int): List<String> =
+    if (sdkInt >= Build.VERSION_CODES.S) {
+        listOf(
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_ADVERTISE,
+        )
+    } else {
+        emptyList()
+    }
 
 internal fun Int.toDeviceConnectRepeatMode(): DcRepeatMode =
     when (this) {

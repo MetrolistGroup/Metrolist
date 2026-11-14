@@ -53,6 +53,7 @@ import com.metrolist.shared.constants.DesktopRenderBackendKey
 import com.metrolist.shared.constants.DesktopStoppedDownloadIdsJsonKey
 import com.metrolist.shared.constants.DesktopWindowPlacementKey
 import com.metrolist.shared.constants.DesktopWindowPositionKey
+import com.metrolist.shared.constants.DeviceConnectBluetoothFallbackKey
 import com.metrolist.shared.constants.DeviceConnectDefaultDeviceIdKey
 import com.metrolist.shared.constants.DeviceConnectExperimentalEnabledKey
 import com.metrolist.shared.constants.DevtoolsBenchmarkClientsKey
@@ -644,6 +645,7 @@ class Settings(
     var deviceConnectDeviceName by preference("")
     var deviceConnectPairedDevices by preference("")
     var deviceConnectDefaultDeviceId by preference(DeviceConnectDefaultDeviceIdKey, "")
+    var deviceConnectBluetoothFallbackEnabled by preference(DeviceConnectBluetoothFallbackKey, false)
 
     var swipeThumbnail by preference(false)
     var swipeSensitivity by preference(73f)
