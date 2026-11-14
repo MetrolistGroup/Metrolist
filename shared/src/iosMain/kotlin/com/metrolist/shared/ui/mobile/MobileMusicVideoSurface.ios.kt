@@ -23,12 +23,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
+import com.metrolist.shared.generated.resources.Res
+import com.metrolist.shared.generated.resources.enter_fullscreen
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.playback.LocalPlaybackController
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import org.jetbrains.compose.resources.stringResource
 import platform.AVFoundation.AVLayerVideoGravityResizeAspect
 import platform.AVFoundation.AVPlayer
 import platform.AVFoundation.AVPlayerItem
@@ -165,7 +168,7 @@ internal actual fun MobileMusicVideoSurface(
                 onClick = onFullscreenClick,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
             ) {
-                Icon(MetrolistIcons.Default.Fullscreen, contentDescription = null)
+                Icon(MetrolistIcons.Default.Fullscreen, contentDescription = stringResource(Res.string.enter_fullscreen))
             }
         }
     }
