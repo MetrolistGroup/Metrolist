@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import plistlib
 import struct
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -39,6 +40,13 @@ def posix_executable(path, target):
     else:
         path.write_bytes(b'\x7fELF\x02\x01' + bytes(12) + struct.pack('<H', 62 if target == 'linux-x64' else 183) + bytes(44))
     path.chmod(0o755)
+
+
+def macos_jdk(graal):
+    for library in package.MACOS_JDK_DYLIBS:
+        posix_executable(graal/'lib'/library, 'macos-arm64')
+    (graal/'lib/fontconfig.bfc').write_bytes(b'font configuration')
+    (graal/'lib/unrelated.txt').write_text('not bundled')
 
 
 class PipelineTest(unittest.TestCase):
@@ -190,22 +198,37 @@ class PipelineTest(unittest.TestCase):
             for name in ['Metrolist', 'libjawt.dylib', 'lib/libjawt.dylib', 'resources/macos/libsidecar.dylib']:
                 posix_executable(image/name, 'macos-arm64')
             (image/'resources/config.txt').write_text('resource')
+            graal = root/'graal'; macos_jdk(graal)
+            (image/'libjvm.dylib').write_bytes((graal/'lib/server/libjvm.dylib').read_bytes() + b'generated shim')
+            (image/'libjawt.dylib').write_bytes((graal/'lib/libjawt.dylib').read_bytes() + b'generated jawt')
+            (graal/'lib/libmlib_image.dylib').unlink()
             signed = []
+            edited = []
             def sign(command, **kwargs):
                 self.assertTrue(kwargs['check'])
                 path = Path(command[-1])
                 app = root/'dist/metrolist-desktop-native-macos-arm64-14.0.0-test/Metrolist.app'
+                if command[0] == 'install_name_tool':
+                    self.assertEqual(command[1:4], ['-add_rpath', '@executable_path/.', str(app/'Contents/MacOS/Metrolist')])
+                    self.assertFalse(signed)
+                    edited.append(path)
+                    return
                 self.assertTrue((app/'Contents/Resources/logo.icns').is_file())
                 self.assertTrue((app/'Contents/Info.plist').is_file())
                 if '--sign' in command:
                     self.assertNotIn('--deep', command)
+                    self.assertEqual(edited, [app/'Contents/MacOS/Metrolist'])
+                    if path == app/'Contents/MacOS/Metrolist':
+                        self.assertIn(app/'Contents/MacOS/lib/libjawt.dylib', signed)
+                        self.assertIn(app/'Contents/MacOS/libawt.dylib', signed)
                     signed.append(path)
                 else:
                     self.assertEqual(command, ['codesign', '--verify', '--deep', '--strict', str(app)])
                     self.assertEqual(signed[-1], app)
             with patch('subprocess.run', side_effect=sign), patch('subprocess.check_output', return_value='Load command 1\n      cmd LC_BUILD_VERSION\n    minos 14.0\n'):
-                result = package.package(image, 'macos-arm64', root/'dist', '14.0.0-test')
-            self.assertEqual(len(signed), 5)
+                result = package.package(image, 'macos-arm64', root/'dist', '14.0.0-test', graal)
+            self.assertEqual(len(signed), len(package.MACOS_JDK_DYLIBS) + 3)
+            self.assertEqual(signed[-2].name, 'Metrolist')
             with zipfile.ZipFile(result) as archive:
                 info = plistlib.loads(archive.read('Metrolist.app/Contents/Info.plist'))
                 self.assertTrue(info['NSHighResolutionCapable'])
@@ -213,7 +236,81 @@ class PipelineTest(unittest.TestCase):
                 self.assertEqual(info['CFBundleURLTypes'][0]['CFBundleURLSchemes'], ['metrolist', 'metrolist-auth'])
                 self.assertEqual(info['NSBonjourServices'], ['_fcast._tcp', '_googlecast._tcp'])
                 self.assertEqual(archive.read('Metrolist.app/Contents/Resources/config.txt'), b'resource')
+                self.assertEqual(archive.read('Metrolist.app/Contents/Resources/fontconfig.bfc'), b'font configuration')
+                self.assertEqual(archive.read('Metrolist.app/Contents/MacOS/libjvm.dylib'), (image/'libjvm.dylib').read_bytes())
+                self.assertEqual(archive.read('Metrolist.app/Contents/MacOS/libjawt.dylib'), (image/'libjawt.dylib').read_bytes())
+                for library in package.MACOS_JDK_DYLIBS:
+                    if library != 'libmlib_image.dylib':
+                        self.assertIn('Metrolist.app/Contents/MacOS/' + Path(library).name, archive.namelist())
+                self.assertFalse(any(name.endswith(('unrelated.txt', 'libmlib_image.dylib')) for name in archive.namelist()))
+                self.assertEqual(archive.read('Metrolist.app/Contents/MacOS/lib/libjawt.dylib'), (graal/'lib/libjawt.dylib').read_bytes())
                 self.assertTrue(archive.getinfo('Metrolist.app/Contents/MacOS/Metrolist').external_attr >> 16 & 0o111)
+
+    def test_macos_rejects_missing_awt_foreign_libraries_and_data_before_signing(self):
+        for failure in ('no-graal', 'no-awt', 'foreign', 'data'):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory); image = root/'image'; graal = root/'graal'
+                posix_executable(image/'Metrolist', 'macos-arm64')
+                (image/'resources').mkdir()
+                macos_jdk(graal)
+                if failure == 'no-awt':
+                    (graal/'lib/libawt.dylib').unlink()
+                elif failure == 'foreign':
+                    posix_executable(graal/'lib/libawt.dylib', 'linux-arm64')
+                elif failure == 'data':
+                    (image/'fontconfig.bfc').write_text('data in code directory')
+                with patch('subprocess.run') as run, self.assertRaises(ValueError):
+                    package.package(image, 'macos-arm64', root/'dist', '14.0.0', None if failure == 'no-graal' else graal)
+                run.assert_not_called()
+                self.assertEqual(list((root/'dist').glob('*.zip')), [])
+
+    def test_macos_link_and_sign_failures_do_not_produce_an_archive(self):
+        for tool in ('install_name_tool', 'codesign'):
+            with self.subTest(tool=tool), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory); image = root/'image'; graal = root/'graal'
+                posix_executable(image/'Metrolist', 'macos-arm64')
+                (image/'resources').mkdir(); macos_jdk(graal)
+                def fail(command, **kwargs):
+                    if command[0] == tool:
+                        raise subprocess.CalledProcessError(1, command)
+                with patch('subprocess.run', side_effect=fail), patch('subprocess.check_output', return_value='Load command 1\n      cmd LC_BUILD_VERSION\n    minos 14.0\n'):
+                    with self.assertRaises(subprocess.CalledProcessError):
+                        package.package(image, 'macos-arm64', root/'dist', '14.0.0', graal)
+                self.assertEqual(list((root/'dist').glob('*.zip')), [])
+
+    def test_macos_existing_executable_rpath_is_not_added_twice(self):
+        for path in ('@executable_path/.', '@executable_path/'):
+            with self.subTest(path=path), patch('subprocess.run') as run, patch('subprocess.check_output', return_value=f'Load command 0\n      cmd LC_RPATH\n  cmdsize 48\n     path {path} (offset 12)\n'):
+                package.macos_rpath(Path('Metrolist'))
+                run.assert_not_called()
+
+    def test_packager_uses_ci_graalvm_home_and_allows_explicit_override(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for override in ([], ['--graalvm', str(root/'explicit')]):
+                argv = ['package.py', '--platform', 'macos-arm64', '--image', str(root/'image'), '--output', str(root/'dist'), *override]
+                with patch.dict(os.environ, {'GRAALVM_HOME': str(root/'ci-graal')}, clear=True), patch.object(sys, 'argv', argv), patch.object(package, 'package', return_value=root/'artifact.zip') as pack, patch('builtins.print'):
+                    package.main()
+                self.assertEqual(pack.call_args.args[-1], root/('explicit' if override else 'ci-graal'))
+
+    def test_macos_arguments_pin_link_target_and_keep_compatibility(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {}, clear=True):
+            work = Path(directory); (work/'classpath.txt').write_text('app.jar')
+            with patch('subprocess.check_output', return_value='Load command 1\n      cmd LC_BUILD_VERSION\n    minos 11.0\n') as otool:
+                command = native_image.arguments(work/'graal', work, work/'Metrolist', 'macos-arm64')
+                otool.assert_called_once_with(['otool', '-l', str(work/'graal/lib/libawt.dylib')], text=True)
+            self.assertIn('-march=compatibility', command)
+            self.assertIn('-H:NativeLinkerOption=-mmacosx-version-min=11.0', command)
+            self.assertIn(f'-H:NativeLinkerOption={work / "macos-awt.o"}', command)
+            self.assertIn('-J--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.jdk=ALL-UNNAMED', command)
+            self.assertIn('--features=com.metrolist.desktop.nativeimage.MacosAwtFeature', command)
+            with patch.dict(os.environ, MACOSX_DEPLOYMENT_TARGET='13.2'), patch('subprocess.check_output') as otool:
+                command = native_image.arguments(work/'graal', work, work/'Metrolist', 'macos-arm64')
+                self.assertIn('-H:NativeLinkerOption=-mmacosx-version-min=13.2', command)
+                otool.assert_not_called()
+            for target in ('linux-x64', 'linux-arm64', 'windows-x64'):
+                command = native_image.arguments(work/'graal', work, work/'Metrolist', target)
+                self.assertFalse(any('macos' in option or 'MacosAwt' in option for option in command))
 
     def test_macos_minimum_version_covers_legacy_and_current_load_commands(self):
         with patch('subprocess.check_output', side_effect=[

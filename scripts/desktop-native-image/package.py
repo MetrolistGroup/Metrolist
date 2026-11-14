@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import plistlib
 import re
@@ -11,6 +12,13 @@ import subprocess
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
+
+MACOS_JDK_DYLIBS = (
+    'libawt.dylib', 'libawt_lwawt.dylib', 'libfontmanager.dylib', 'libfreetype.dylib',
+    'libjava.dylib', 'libjavajpeg.dylib', 'libjawt.dylib', 'libjsound.dylib',
+    'liblcms.dylib', 'libmlib_image.dylib', 'libosxapp.dylib', 'libsplashscreen.dylib',
+    'server/libjvm.dylib',
+)
 
 
 def archive(directory, destination):
@@ -85,7 +93,33 @@ def macos_minimum_version(binaries):
     return '.'.join(str(part) for part in max(versions))
 
 
-def package(image, target, destination, version):
+def copy_macos_jdk(graal, macos, resources):
+    for library in MACOS_JDK_DYLIBS:
+        source = graal / 'lib' / library
+        target = macos / source.name
+        # Preserve any Native Image shims; some JDK versions omit optional AWT libraries.
+        if source.is_file() and not target.exists():
+            shutil.copy2(source, target)
+    for library in ('libawt.dylib', 'libawt_lwawt.dylib', 'libfontmanager.dylib',
+                    'libjava.dylib', 'libjawt.dylib', 'libosxapp.dylib', 'libjvm.dylib'):
+        if not (macos / library).is_file():
+            raise ValueError(f'macOS native image is missing {library}')
+    (macos / 'lib').mkdir(exist_ok=True)
+    shutil.copy2(graal / 'lib/libjawt.dylib', macos / 'lib/libjawt.dylib')
+    fontconfig = graal / 'lib/fontconfig.bfc'
+    if fontconfig.is_file():
+        shutil.copy2(fontconfig, resources / fontconfig.name)
+
+
+def macos_rpath(launcher):
+    commands = subprocess.check_output(['otool', '-l', str(launcher)], text=True)
+    for command in commands.split('Load command '):
+        if 'cmd LC_RPATH\n' in command and re.search(r'\bpath @executable_path/(?:\.)? \(offset ', command):
+            return
+    subprocess.run(['install_name_tool', '-add_rpath', '@executable_path/.', str(launcher)], check=True)
+
+
+def package(image, target, destination, version, graal=None):
     name = f'metrolist-desktop-native-{target}-{version}'
     destination.mkdir(parents=True, exist_ok=True)
     if target.startswith('linux-'):
@@ -121,6 +155,8 @@ def package(image, target, destination, version):
         output = destination / (name + '.zip')
         archive(image, output)
     elif target == 'macos-arm64':
+        if graal is None:
+            raise ValueError('macOS packaging requires --graalvm or GRAALVM_HOME')
         root = destination / name
         app = root / 'Metrolist.app/Contents'
         if root.exists():
@@ -128,7 +164,12 @@ def package(image, target, destination, version):
         shutil.copytree(image, app / 'MacOS', ignore=shutil.ignore_patterns('resources'))
         shutil.copytree(image / 'resources', app / 'Resources')
         shutil.copy2(ROOT / 'desktopApp/src/desktopMain/resources/logo.icns', app / 'Resources/logo.icns')
+        copy_macos_jdk(graal, app / 'MacOS', app / 'Resources')
         binaries = validate_posix(app, target, app / 'MacOS/Metrolist')
+        for path in (app / 'MacOS').rglob('*'):
+            if path.is_file() and path not in binaries:
+                raise ValueError(f'Non-Mach-O file in Contents/MacOS: {path.relative_to(app)}')
+        macos_rpath(app / 'MacOS/Metrolist')
         with (app / 'Info.plist').open('wb') as stream:
             plistlib.dump({
                 'CFBundleExecutable': 'Metrolist',
@@ -145,7 +186,7 @@ def package(image, target, destination, version):
                 'NSLocalNetworkUsageDescription': 'Metrolist uses the local network to find and control casting devices.',
                 'NSBonjourServices': ['_fcast._tcp', '_googlecast._tcp'],
             }, stream)
-        for path in binaries:
+        for path in sorted(binaries, key=lambda path: (path == app / 'MacOS/Metrolist', -len(path.parts), str(path))):
             subprocess.run(['codesign', '--force', '--sign', '-', str(path)], check=True)
         subprocess.run(['codesign', '--force', '--sign', '-', str(app.parent)], check=True)
         subprocess.run(['codesign', '--verify', '--deep', '--strict', str(app.parent)], check=True)
@@ -163,11 +204,11 @@ def main():
     parser.add_argument('--image', type=Path, required=True)
     parser.add_argument('--platform', required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--graalvm', type=Path, default=Path(os.environ['GRAALVM_HOME']) if os.environ.get('GRAALVM_HOME') else None)
     args = parser.parse_args()
     version = next(line.split('=',1)[1] for line in (ROOT/'gradle.properties').read_text().splitlines() if line.startswith('appVersion='))
-    output = package(args.image.resolve(), args.platform, args.output.resolve(), version)
+    output = package(args.image.resolve(), args.platform, args.output.resolve(), version, args.graalvm.resolve() if args.graalvm else None)
     print(output)
-    import os
     if os.environ.get('GITHUB_OUTPUT'):
         with open(os.environ['GITHUB_OUTPUT'],'a') as stream:
             stream.write(f'path={output}\n')

@@ -74,6 +74,66 @@ for name in ('libjava.so', 'libjvm.so'):
     def test_success_preserves_generated_shims(self):
         self.exercise(fail=False)
 
+    def test_macos_stubs_and_builder_share_deployment_target_and_preserve_failed_image(self):
+        for failure in (None, 'clang', 'native-image'):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory(prefix='macos build ') as directory:
+                work = Path(directory); graal = work/'graal'
+                (work/'image').mkdir(); (work/'image/Metrolist').write_text('previous')
+                (work/'classpath.txt').write_text('app.jar')
+                (graal/'lib').mkdir(parents=True); (graal/'lib/libjawt.dylib').write_text('jawt')
+                commands = []
+                def run(command, **kwargs):
+                    commands.append(command)
+                    if command[0] == 'clang':
+                        self.assertIn('-mmacosx-version-min=12.3', command)
+                        self.assertEqual(kwargs['env']['MACOSX_DEPLOYMENT_TARGET'], '12.3')
+                        if failure == 'clang':
+                            raise subprocess.CalledProcessError(1, command)
+                        Path(command[-1]).write_text('cursor and encoding stubs')
+                    elif str(command[0]).endswith('javac'):
+                        args = [json.loads(line) for line in Path(command[-1][1:]).read_text().splitlines()]
+                        self.assertTrue(any(arg.endswith('/macos/MacosAwtFeature.java') for arg in args))
+                        self.assertEqual(args[args.index('--add-exports') + 1], 'org.graalvm.nativeimage/org.graalvm.nativeimage.impl=ALL-UNNAMED')
+                    else:
+                        self.assertEqual(kwargs['env']['MACOSX_DEPLOYMENT_TARGET'], '12.3')
+                        args = [json.loads(line) for line in Path(command[-1][1:]).read_text().splitlines()]
+                        self.assertIn('-H:NativeLinkerOption=-mmacosx-version-min=12.3', args)
+                        self.assertIn('-H:NativeLinkerOption=' + str(work/'macos-awt.o'), args)
+                        self.assertTrue((work/'macos-awt.o').is_file())
+                        if failure == 'native-image':
+                            raise subprocess.CalledProcessError(2, command)
+                        Path(args[args.index('-o') + 1]).write_text('macOS native executable')
+                with patch.object(native_image, 'host_platform', return_value='macos-arm64'), patch.dict(os.environ, MACOSX_DEPLOYMENT_TARGET='12.3'), patch('subprocess.run', side_effect=run):
+                    if failure:
+                        with self.assertRaises(subprocess.CalledProcessError):
+                            native_image.build(graal, work, 'macos-arm64')
+                    else:
+                        native_image.build(graal, work, 'macos-arm64')
+                self.assertEqual((work/'image/Metrolist').read_text(), 'previous' if failure else 'macOS native executable')
+                self.assertEqual(list(work.glob('image-build.*')), [])
+                self.assertEqual(commands[0][0], 'clang')
+
+    def test_other_platforms_do_not_compile_or_register_macos_glue(self):
+        for target in ('linux-x64', 'linux-arm64', 'windows-x64'):
+            with self.subTest(target=target), tempfile.TemporaryDirectory() as directory:
+                work = Path(directory); (work/'classpath.txt').write_text('app.jar')
+                library = 'jawt.dll' if target == 'windows-x64' else 'libjawt.so'
+                graal = work/'graal'; source = graal/('bin' if target == 'windows-x64' else 'lib')/library
+                source.parent.mkdir(parents=True); source.write_text('jawt')
+                def run(command, **kwargs):
+                    self.assertNotEqual(command[0], 'clang')
+                    self.assertNotIn('env', kwargs)
+                    args = [json.loads(line) for line in Path(command[-1][1:]).read_text().splitlines()]
+                    self.assertFalse(any('MacosAwt' in arg or 'macos-awt' in arg or '-mmacosx' in arg or 'com.oracle.svm.core.jdk' in arg for arg in args))
+                    if '-o' in args:
+                        output = Path(args[args.index('-o') + 1])
+                        if target == 'windows-x64':
+                            output = output.with_suffix('.exe')
+                        output.write_text('executable')
+                with patch.object(native_image, 'host_platform', return_value=target), patch('subprocess.run', side_effect=run):
+                    native_image.build(graal, work, target)
+                self.assertFalse((work/'macos-awt.o').exists())
+
 
 if __name__ == "__main__":
     unittest.main()

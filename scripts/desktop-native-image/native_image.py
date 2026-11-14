@@ -10,6 +10,8 @@ import subprocess
 import sys
 import tempfile
 
+from package import macos_minimum_version
+
 ROOT = Path(__file__).resolve().parents[2]
 METADATA = Path(__file__).parent / 'resources/META-INF/native-image/com.metrolist/desktop-experiment'
 
@@ -51,7 +53,11 @@ def nucleus_natives(work, target):
     return directory
 
 
-def arguments(graal, work, output, target, experiment=False, agent=None):
+def macos_deployment_target(graal):
+    return os.environ.get('MACOSX_DEPLOYMENT_TARGET') or macos_minimum_version([graal / 'lib/libawt.dylib'])
+
+
+def arguments(graal, work, output, target, experiment=False, agent=None, macos_version=None):
     windows = target.startswith('windows-')
     compiler = graal / 'bin' / ('native-image.cmd' if windows else 'native-image')
     options = [str(compiler), '-J-Xmx12g', '-J-XX:ActiveProcessorCount=4',
@@ -70,6 +76,11 @@ def arguments(graal, work, output, target, experiment=False, agent=None):
         if windows:
             # Match Nucleus's GUI launcher while retaining Native Image's main entry point.
             options += ['-H:NativeLinkerOption=/SUBSYSTEM:WINDOWS', '-H:NativeLinkerOption=/ENTRY:mainCRTStartup']
+        if target == 'macos-arm64':
+            options += [f'-H:NativeLinkerOption=-mmacosx-version-min={macos_version or macos_deployment_target(graal)}',
+                        f'-H:NativeLinkerOption={work / "macos-awt.o"}',
+                        '-J--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.jdk=ALL-UNNAMED',
+                        '--features=com.metrolist.desktop.nativeimage.MacosAwtFeature']
     main = 'com.metrolist.desktop.experiment.NativeImageMainKt' if experiment else 'com.metrolist.desktop.nativeimage.NativeDesktopMainKt'
     classpath = (work / 'classpath.txt').read_text().strip()
     if not experiment:
@@ -82,6 +93,8 @@ def build(graal, work, target, experiment=False, agent=None):
     if target != host_platform() or target not in ('linux-x64', 'linux-arm64', 'windows-x64', 'macos-arm64'):
         raise ValueError('Native Image must build on its supported target OS and architecture')
     (work / 'native-tmp').mkdir(parents=True, exist_ok=True)
+    macos_version = macos_deployment_target(graal) if target == 'macos-arm64' and not experiment else None
+    run_options = {'env': dict(os.environ, MACOSX_DEPLOYMENT_TARGET=macos_version)} if macos_version else {}
     with tempfile.TemporaryDirectory(prefix='image-build.', dir=work) as directory:
         image = Path(directory)
         name = 'metrolist' if experiment else 'Metrolist'
@@ -97,17 +110,24 @@ def build(graal, work, target, experiment=False, agent=None):
                     str(graal / 'lib/svm/builder/svm.jar') + os.pathsep + (work / 'classpath.txt').read_text().strip(),
                     '-d', str(glue), str(sources / 'NativeCrashLog.java'),
                     str(sources / ('windows' if target.startswith('windows') else 'posix') / 'NativeErrorOutput.java')]
+            if macos_version:
+                java += ['--add-exports', 'org.graalvm.nativeimage/org.graalvm.nativeimage.impl=ALL-UNNAMED',
+                         str(sources / 'macos/MacosAwtFeature.java')]
+                with (work / 'macos-stubs.log').open('w') as log:
+                    subprocess.run(['clang', '-c', f'-mmacosx-version-min={macos_version}',
+                                    str(Path(__file__).parent / 'macos-awt.c'), '-o', str(work / 'macos-awt.o')],
+                                   check=True, stdout=log, stderr=subprocess.STDOUT, **run_options)
             java_args = work / 'native-javac.args'
             java_args.write_text('\n'.join(json.dumps(str(arg), ensure_ascii=False) for arg in java[1:]) + '\n', encoding='utf-8')
             with (work / 'java-glue.log').open('w') as log:
                 subprocess.run([str(java[0]), '-J-Xmx512m', '@' + str(java_args)], check=True, stdout=log, stderr=subprocess.STDOUT)
-        command = arguments(graal, work, output, target, experiment, agent)
+        command = arguments(graal, work, output, target, experiment, agent, macos_version)
         argfile = work / 'native-image.args'
         argfile.write_text('\n'.join(json.dumps(arg, ensure_ascii=False) for arg in command[1:]) + '\n', encoding='utf-8')
         command = [command[0], '@' + str(argfile)]
         with (work / 'build.log').open('w') as log:
             subprocess.run([sys.executable, str(Path(__file__).with_name('measure-build.py')),
-                            str(work / 'builder-time.json'), *command], check=True, stdout=log, stderr=subprocess.STDOUT)
+                            str(work / 'builder-time.json'), *command], check=True, stdout=log, stderr=subprocess.STDOUT, **run_options)
         if not output.is_file():
             raise RuntimeError('Native Image returned success without an executable')
         # Native Image emits small JVM shims. Full JDK libraries must never overwrite them.
