@@ -19,14 +19,15 @@ class ContentHintsTest {
     private val previousNetwork = PlaybackNetworkStateStore.current
 
     @Test
-    fun automaticAudioPrefersDirectAndManualOverridesKeepTheirSelection() {
+    fun automaticAudioPrefersSabrAndManualOverridesKeepTheirSelection() {
         val previousSettings = Settings.sharedOverrideForTest()
         Settings.replaceSharedForTest(Settings(MapSettings()))
         try {
             val song = SongItem(id = "song", title = "Song", thumbnail = null, artists = emptyList(), album = null)
+            Settings.shared.devtoolsPlaybackClient = PlaybackClientCatalog.AUTOMATIC_ID
             for (explicit in listOf(false, true)) {
                 val hints = song.copy(isExplicit = explicit).toContentHints(wantVideo = false)
-                assertFalse(hints.sabrFirst)
+                assertTrue(hints.sabrFirst)
                 assertFalse(hints.wantVideo)
                 assertTrue(hints.allowSabr)
                 assertEquals(explicit, hints.isExplicit)

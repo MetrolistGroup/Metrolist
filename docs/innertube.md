@@ -64,6 +64,8 @@ Token callbacks keep request-local results. A canceled Kotlin caller does not ca
 
 Playback validates overlapping ranges against emitted bytes. Identical repeats after seeks are valid; changed bytes fail. Forward and backward discontinuities are allowed. One response without media progress or safe readahead is allowed for initial server backoff; repeated lack of progress triggers recovery. Video and download streams have separate limits.
 
+Automatic audio resolution tries SABR first and falls back to another eligible client after playback failure. An explicit playback-client selection keeps its own client order.
+
 `shareCachedDataFrom` requires an unopened replacement with the same encoded representation. Reference-counted storage is shared, but each stream owns its cursor, producer and failure state. Gaps are incomplete streams, not EOF. Normal producer completion must cover the expected duration when timestamps are available.
 
 Android closes storage off the playback thread. Video hiding must wait until the initial container probe completes. Reattachment resumes from the audio clock with seek preroll and retained bytes. See [cache transfer rules](audio-cache.md#formats), [iOS preparation](ios-opus.md#capture-limits) and [error policy](playback.md#error-policy).

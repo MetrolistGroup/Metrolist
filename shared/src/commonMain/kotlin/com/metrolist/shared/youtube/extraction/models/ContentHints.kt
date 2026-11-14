@@ -44,7 +44,9 @@ fun SongItem.toContentHints(wantVideo: Boolean? = null): ContentHints {
                 .takeUnless { it == PlaybackClientCatalog.AUTOMATIC_ID || it == PlaybackClientCatalog.SABR_FIRST_ID }
                 ?.takeIf { PlaybackClientCatalog.findDevtoolsOverride(it) != null }
                 ?: if (liveHint == true) "ANDROID" else null,
-        sabrFirst = devtoolsPlaybackSelection == PlaybackClientCatalog.SABR_FIRST_ID,
+        sabrFirst =
+            devtoolsPlaybackSelection == PlaybackClientCatalog.AUTOMATIC_ID ||
+                devtoolsPlaybackSelection == PlaybackClientCatalog.SABR_FIRST_ID,
         wantVideo = !uploaded && (wantVideo ?: (isVideoSong || liveHint == true)),
         maxVideoHeight =
             when (quality) {
