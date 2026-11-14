@@ -52,6 +52,8 @@ def arguments(graal, work, output, target, experiment=False, agent=None):
     if not experiment:
         # Testers fall back like the JVM on a missing registration; CI smoke passes -XX:...=Exit to stay strict.
         options += ['-R:MaxHeapSize=384m', '-R:MinHeapSize=32m', '-R:MissingRegistrationReportingMode=Warn']
+        # The default x86-64-v3 / armv8.1-a target refuses to start on CPUs without AVX2 or on Raspberry Pi 4 class ARM.
+        options += ['-march=compatibility']
         if windows:
             # Match Nucleus's GUI launcher while retaining Native Image's main entry point.
             options += ['-H:NativeLinkerOption=/SUBSYSTEM:WINDOWS', '-H:NativeLinkerOption=/ENTRY:mainCRTStartup']

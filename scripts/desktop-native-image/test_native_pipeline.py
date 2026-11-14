@@ -142,6 +142,7 @@ class PipelineTest(unittest.TestCase):
                                              ('linux-x64', work/'image/Metrolist', work/'image/Metrolist')]:
                 command = native_image.arguments(work, work, output, target)
                 self.assertEqual(str(expected), command[command.index('-o') + 1])
+                self.assertIn('-march=compatibility', command)
 
     def test_posix_architecture_checks_launcher_libraries_and_sidecars(self):
         for target, foreign, library in [('linux-x64', 'linux-arm64', 'libshim.so'), ('linux-arm64', 'linux-x64', 'libavutil.so.60'), ('macos-arm64', 'linux-arm64', 'libjawt.dylib')]:
