@@ -151,9 +151,12 @@ DO NOT REMOVE THIS SECTION, I WANT TO ADD IT LATER!!!
       <p>
         <a href="docs/install/linux.md#nix"><img alt="Get the Nix flake" src="assets/badges/platform/linux-nix.svg"></a>
       </p>
-      <p><sub>ARM64 · AppImage only</sub></p>
+      <p><sub>ARM64 · AppImage or Nix</sub></p>
       <p>
         <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest"><img alt="Download the ARM64 Linux AppImage" src="assets/badges/platform/linux-appimage.svg"></a>
+      </p>
+      <p>
+        <a href="docs/install/linux.md#nix"><img alt="Get the Nix flake" src="assets/badges/platform/linux-nix.svg"></a>
       </p>
     </td>
     <td align="center" valign="top" width="33%">
