@@ -1137,4 +1137,6 @@
     <string name="downloads_empty_hint">Pesme koje sačuvate za slušanje van mreže biće ovde prikazane tokom preuzimanja.</string>
     <string name="remove_all_downloads">Ukloni sva preuzimanja</string>
     <string name="lyrics_song_artist">Izvođač pesme</string>
+    <string name="lyrics_capability_unsynced">Nesinhronizovano</string>
+    <string name="lyrics_youtube_captions">YouTube titlovi</string>
 </resources>
