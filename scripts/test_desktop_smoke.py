@@ -156,6 +156,7 @@ while True:
             self.assertEqual(1, smoke.smoke(Path("native.zip"), Path(directory), system="win32", native=True))
             backend.assert_called_once()
 
+    @unittest.skipIf(sys.platform == "win32", "The native Linux path lowers RLIMIT_CORE through the Unix resource module")
     def test_native_desktop_run_also_requires_the_backend_probe(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(smoke, "desktop_available", return_value=True), \
                 patch.object(smoke, "native_backend_smoke", return_value=1) as backend, \
@@ -163,6 +164,17 @@ while True:
             self.assertEqual(1, smoke.smoke(Path("native.AppImage"), Path(directory), system="linux", native=True))
             backend.assert_called_once()
             self.assertIn("Native backend smoke failed", (Path(directory) / "result.txt").read_text())
+
+    def test_backend_probe_timeout_keeps_native_logs_and_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output=Path(directory)/"evidence";output.mkdir()
+            def run(command, **options):
+                logs=Path(options["env"]["XDG_STATE_HOME"])/"metrolist/logs"
+                (logs/"native_err_pid7.log").write_text("hung")
+                raise smoke.subprocess.TimeoutExpired(command, 60)
+            with patch.object(smoke,"packaged_command",return_value=nullcontext(["Metrolist"])), patch.object(smoke.subprocess,"run",side_effect=run):
+                self.assertEqual(1,smoke.native_backend_smoke(Path("native.AppImage"),output,"linux"))
+            self.assertEqual("hung",(output/"native_err_pid7.log").read_text())
 
     def test_backend_probe_rejects_registration_errors_in_redirected_native_logs(self):
         for missing in (False, True):

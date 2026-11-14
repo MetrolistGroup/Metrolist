@@ -259,16 +259,21 @@ def native_backend_smoke(package, output, system):
         env = profile_environment(profile)
         env.pop("_JAVA_OPTIONS", None)
         env.update(HOME=str(profile), USERPROFILE=str(profile))
-        with (output / "stdout.log").open("wb") as log:
-            with packaged_command(package, work, system, log) as command:
-                result = subprocess.run([*command, f"-Duser.home={profile}", f"-Djava.io.tmpdir={work}",
-                    "-Djava.awt.headless=true", "-Dmetrolist.native.backendSmoke=true",
-                    "-XX:MissingRegistrationReportingMode=Exit"], env=env, cwd=work,
-                    stdout=log, stderr=subprocess.STDOUT, timeout=60)
-        for log in work.rglob("native_err_pid*.log"):
-            shutil.copy2(log, output / log.name)
+        result = None
+        try:
+            with (output / "stdout.log").open("wb") as log:
+                with packaged_command(package, work, system, log) as command:
+                    result = subprocess.run([*command, f"-Duser.home={profile}", f"-Djava.io.tmpdir={work}",
+                        "-Djava.awt.headless=true", "-Dmetrolist.native.backendSmoke=true",
+                        "-XX:MissingRegistrationReportingMode=Exit"], env=env, cwd=work,
+                        stdout=log, stderr=subprocess.STDOUT, timeout=60)
+        except subprocess.TimeoutExpired:
+            pass
+        finally:
+            for log in work.rglob("native_err_pid*.log"):
+                shutil.copy2(log, output / log.name)
         text = "\n".join(log.read_text(encoding="utf-8", errors="replace") for log in output.glob("*.log"))
-        passed = result.returncode == 0 and "[NativeBackendSmoke] passed" in text and "Unable to configure native crash log:" not in text and not re.search(r"Missing\w*RegistrationError", text)
+        passed = result is not None and result.returncode == 0 and "[NativeBackendSmoke] passed" in text and "Unable to configure native crash log:" not in text and not re.search(r"Missing\w*RegistrationError", text)
         message = "Native backend smoke " + ("passed" if passed else "failed") + "; GUI unavailable and unverified"
         (output / "result.txt").write_text(message + "\n")
         print(message)
