@@ -126,6 +126,7 @@ internal fun HomeViewModel.HomeUiState.asOfflineSnapshot(): HomeViewModel.HomeUi
         isRevalidating = false,
         isContentLoading = false,
         isLoadingMore = false,
+        isAllContentPending = false,
         error = null,
     )
 
@@ -867,8 +868,7 @@ class HomeViewModel(
                                 isRevalidating = false,
                                 isContentLoading = false,
                                 isLoadingMore = false,
-                                isAllContentPending =
-                                    if (!isFiltered && primaryContentPublished) false else currentState.isAllContentPending,
+                                isAllContentPending = if (!isFiltered) false else currentState.isAllContentPending,
                                 continuation =
                                     homeContinuationAfterAssemblyFailure(
                                         currentContinuation = currentState.continuation,
@@ -1650,10 +1650,10 @@ internal fun homeContentForCurrentSelection(
     cachedAllContent: HomeViewModel.HomeUiState?,
     cachedSelectedChipContent: HomeViewModel.HomeUiState?,
 ): HomeViewModel.HomeUiState =
-    if (currentState.selectedChip == null) {
-        cachedAllContent
-    } else {
-        cachedSelectedChipContent?.takeIf { it.selectedChip == currentState.selectedChip }
+    when {
+        currentState.selectedChip == null && currentState.isAllContentPending -> currentState
+        currentState.selectedChip == null -> cachedAllContent
+        else -> cachedSelectedChipContent?.takeIf { it.selectedChip == currentState.selectedChip }
     } ?: currentState
 
 internal fun pendingHomeChipContent(
