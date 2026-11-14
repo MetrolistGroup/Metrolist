@@ -132,6 +132,23 @@ internal fun HomeViewModel.HomeUiState.asOfflineSnapshot(): HomeViewModel.HomeUi
 internal fun HomeViewModel.HomeUiState.loadingChip(chip: Chip): HomeViewModel.HomeUiState =
     pendingHomeChipContent(this, chip).copy(isLoading = true)
 
+internal fun HomeViewModel.HomeUiState.primaryHomeContentLoaded(
+    sections: List<HomeSection>,
+    chips: List<Chip>,
+): HomeViewModel.HomeUiState =
+    copy(
+        data = sections,
+        discoverySections = emptyList(),
+        isLoading = false,
+        isRefreshing = false,
+        isRevalidating = false,
+        isContentLoading = false,
+        isLoadingMore = false,
+        error = null,
+        chips = chips,
+        continuation = null,
+    )
+
 internal fun List<ArtistTiny>.withFallbackMetadata(fallback: List<ArtistTiny>): List<ArtistTiny> {
     val fallbackArtists = fallback.associateBy { it.name }
     return ifEmpty { fallback }.map { artist ->
@@ -180,16 +197,25 @@ internal fun SongItem.withFallbackMetadata(fallback: SongItem?): SongItem {
     )
 }
 
-internal suspend fun <T> homeRequestResult(request: suspend () -> T): Result<T> =
-    withContext(Dispatchers.Default) {
+internal suspend fun <T> homeRequestResult(request: suspend () -> T): Result<T> = homeRequestResult("browse", request)
+
+internal suspend fun <T> homeRequestResult(
+    requestName: String,
+    request: suspend () -> T,
+): Result<T> {
+    val startedAt = TimeSource.Monotonic.markNow()
+    return withContext(Dispatchers.Default) {
         try {
             Result.success(request())
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
             Result.failure(error)
+        } finally {
+            Logger.d(HOME_LOG_TAG, "$requestName completed elapsedMs=${startedAt.elapsedNow().inWholeMilliseconds}")
         }
     }
+}
 
 class HomeViewModel(
     private val database: MusicDatabase,
@@ -539,6 +565,7 @@ class HomeViewModel(
         isRefresh: Boolean = false,
         onComplete: () -> Unit = {},
     ) {
+        val loadStartedAt = TimeSource.Monotonic.markNow()
         val generation = ++contentLoadGeneration
         val sessionKey = GlobalYouTube.innerTube.sessionSnapshot().homeCacheSessionKey()
         cancelPagination()
@@ -566,19 +593,23 @@ class HomeViewModel(
                     try {
                         val isFiltered = isFilteredHome(params, browseId)
                         val homePageDataDeferred =
-                            async { homeRequestResult { GlobalYouTubeRepository.instance.getHomePageData(params, browseId) } }
+                            async {
+                                homeRequestResult("primary home") {
+                                    GlobalYouTubeRepository.instance.getHomePageData(params, browseId)
+                                }
+                            }
                         val authenticatedSpeedDialSectionsDeferred =
                             async {
                                 if (isFiltered) {
                                     Result.success(emptyList<HomeSection>())
                                 } else {
-                                    homeRequestResult { authenticatedSpeedDialSections(params, browseId) }
+                                    homeRequestResult("authenticated speed dial") { authenticatedSpeedDialSections(params, browseId) }
                                 }
                             }
                         val signedIn = AuthManager().isLoggedIn
                         val exploreSectionsDeferred =
                             async {
-                                homeRequestResult {
+                                homeRequestResult("explore") {
                                     if (!isFiltered && !signedIn) {
                                         GlobalYouTubeRepository.instance
                                             .getHomePageData(browseId = "FEmusic_explore")
@@ -591,6 +622,7 @@ class HomeViewModel(
                         val quickPicksDeferred = async { if (isFiltered) emptyList() else database.dao().quickPicks().first() }
                         val forgottenFavoritesDeferred =
                             async { if (isFiltered) emptyList() else database.dao().forgottenFavorites().first() }
+                        val userPlaylistsDeferred = async { fetchUserPlaylists() }
                         val keepListeningDeferred =
                             async {
                                 if (isFiltered) {
@@ -605,6 +637,45 @@ class HomeViewModel(
                                 }
                             }
                         val homePageData = homePageDataDeferred.await().getOrThrow()
+                        val rawHomeSections = homePageData.sections.withoutRegionalCharts(signedIn)
+                        if (generation != contentLoadGeneration ||
+                            sessionKey != GlobalYouTube.innerTube.sessionSnapshot().homeCacheSessionKey()
+                        ) {
+                            return@supervisorScope
+                        }
+                        val primarySections = rawHomeSections.withoutNonMusicalVideos()
+                        val chartSections = findSectionsByBrowseId(primarySections, "FEmusic_charts")
+                        _uiState.update { state ->
+                            state
+                                .primaryHomeContentLoaded(
+                                    sections = primarySections,
+                                    chips = homeChipsForSelection(homePageData.chips, state.selectedChip),
+                                ).copy(
+                                    trending = chartSections.flatMap { it.items.filterIsInstance<SongItem>() },
+                                    albumCharts = chartSections.flatMap { it.items.filterIsInstance<AlbumItem>() },
+                                    quickPicks = findSectionSongs(primarySections, "FEmusic_quickpicks"),
+                                    keepListening = findSectionSongs(primarySections, "FEmusic_listen_again"),
+                                    forgottenFavorites =
+                                        findSectionSongs(primarySections, "FEmusic_forgotten_favorites"),
+                                    newReleases = newReleasesFrom(primarySections),
+                                    communityPlaylist =
+                                        findSectionsByBrowseId(primarySections, "FEmusic_community")
+                                            .flatMap { it.items.filterIsInstance<PlaylistItem>() },
+                                    moodsAndGenres = findMoodsAndGenresByBrowseId(primarySections),
+                                    podcasts =
+                                        findSectionsByBrowseId(primarySections, "FEmusic_immersive")
+                                            .flatMap { it.items.filterIsInstance<PodcastItem>() },
+                                    similarRecommendations = findSimilarRecommendations(primarySections),
+                                    recapPlaylists =
+                                        findSectionsByBrowseId(primarySections, "FEmusic_listening_review")
+                                            .flatMap { it.items.filterIsInstance<PlaylistItem>() },
+                                    sections = uncategorizedHomeSections(primarySections),
+                                ).withoutBlockedContent()
+                        }
+                        Logger.d(
+                            HOME_LOG_TAG,
+                            "primary home content published elapsedMs=${loadStartedAt.elapsedNow().inWholeMilliseconds}",
+                        )
                         val exploreSections = exploreSectionsDeferred.await().getOrDefault(emptyList())
                         val youtubeMusicEditorialPlaylists =
                             (
@@ -615,14 +686,13 @@ class HomeViewModel(
                                             .flatMap { it.items.filterIsInstance<PlaylistItem>() }
                                     }
                             ).distinctBy { it.id }
-                        val userPlaylists = fetchUserPlaylists()
+                        val userPlaylists = userPlaylistsDeferred.await()
                         val localQuickPicks = quickPicksDeferred.await().map { it.toSongItem() }
                         val localForgottenFavorites = forgottenFavoritesDeferred.await().map { it.toSongItem() }
                         val localKeepListening = keepListeningDeferred.await().map { it.toSongItem() }
                         initialSpeedDialPins.await()
                         val localSpeedDial = latestSpeedDialPins
 
-                        val rawHomeSections = homePageData.sections.withoutRegionalCharts(signedIn)
                         val rawSpeedDialSections =
                             authenticatedSpeedDialSectionsDeferred.await().getOrDefault(emptyList()).ifEmpty { rawHomeSections }
                         val localSongMetadata =
