@@ -278,7 +278,7 @@ fun FullscreenPlayerContent(
                         onToggleRepeat = viewModel::toggleRepeat,
                         onShowSleepTimer = onShowSleepTimer,
                         onShowPlayerMenu = onShowPlayerMenu,
-                        onToggleSubtitle = { viewModel.setSubtitleActive(!uiState.isSubtitleActive) },
+                        onToggleSubtitle = { viewModel.setSubtitleActive(!uiState.isSubtitleActive) }.takeIf { canShowLyrics },
                         onOpenCast = onOpenCast,
                         isCasting = isCasting,
                         canControlPlayback = canControlPlayback,
@@ -287,7 +287,7 @@ fun FullscreenPlayerContent(
                         viewModel = viewModel,
                     )
                 }
-                if (uiState.isSubtitleActive && !(canShowLyrics && uiState.isLyricsVisible)) {
+                if (canShowLyrics && uiState.isSubtitleActive && !uiState.isLyricsVisible) {
                     SubtitleOverlay(
                         uiState = uiState,
                         currentPositionFlow = viewModel.currentPosition,

@@ -564,7 +564,15 @@ class PlayerViewModel(
                 val currentSong = _uiState.value.currentSong
                 if (currentSong != null) {
                     syncLyricsOffsetForVideoMode(currentSong.id, isActive)
-                    retimeLyricsIfVideoModeActive(currentSong.id)
+                    if (isActive) {
+                        lyricsRequestId++
+                        lyricsFetchJob?.cancel()
+                        retimeLyricsJob?.cancel()
+                        lyricsRequestKey = null
+                        _uiState.value = _uiState.value.copy(isLyricsLoading = false)
+                    } else {
+                        retimeLyricsIfVideoModeActive(currentSong.id)
+                    }
                 }
             }.launchIn(viewModelScope)
 
