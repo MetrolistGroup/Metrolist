@@ -115,7 +115,7 @@ class SerializationMetadataTest(unittest.TestCase):
             (root / 'classpath.txt').write_text(str(jar))
             args = native_image.arguments(root, root, root / 'image', 'linux-x64')
             config = next(arg for arg in args if arg.startswith('-H:ConfigurationFileDirectories='))
-            self.assertIn(str(root / 'serialization-config'), config)
+            self.assertIn(str((root / 'serialization-config').resolve()), config)
             self.assertTrue(args[args.index('-cp') + 1].endswith(str(root / 'serialization-config') + os.pathsep + str(jar)))
             self.assertEqual(generate([jar], root / 'config')['reflection'], [])
             self.assertEqual((root / 'config' / MANIFEST).read_text(), '')

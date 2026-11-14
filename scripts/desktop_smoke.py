@@ -283,6 +283,12 @@ def smoke(package, output, system=sys.platform, native=False, trace_java=None, t
         print(f"::warning::{message}")
         return native_backend_smoke(package, output, system) if native else 0
     errors = []
+    if native:
+        # The GUI run only covers guest startup; the backend probe also resolves every generated serializer.
+        backend = output / "backend"
+        backend.mkdir(exist_ok=True)
+        if native_backend_smoke(package, backend, system):
+            errors.append("Native backend smoke failed")
     # A DMG that fails to detach must not hide the launch result behind a cleanup error.
     with tempfile.TemporaryDirectory(prefix="metrolist-smoke-", ignore_cleanup_errors=True) as temporary:
         work = Path(temporary)

@@ -156,6 +156,14 @@ while True:
             self.assertEqual(1, smoke.smoke(Path("native.zip"), Path(directory), system="win32", native=True))
             backend.assert_called_once()
 
+    def test_native_desktop_run_also_requires_the_backend_probe(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(smoke, "desktop_available", return_value=True), \
+                patch.object(smoke, "native_backend_smoke", return_value=1) as backend, \
+                patch.object(smoke, "packaged_command", side_effect=RuntimeError("stop after probe")):
+            self.assertEqual(1, smoke.smoke(Path("native.AppImage"), Path(directory), system="linux", native=True))
+            backend.assert_called_once()
+            self.assertIn("Native backend smoke failed", (Path(directory) / "result.txt").read_text())
+
     def test_backend_probe_rejects_registration_errors_in_redirected_native_logs(self):
         for missing in (False, True):
             with tempfile.TemporaryDirectory() as directory:
