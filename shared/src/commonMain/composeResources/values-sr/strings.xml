@@ -1169,4 +1169,11 @@
     <string name="credits_creator_section">Autor</string>
     <string name="devmode_already_active" translatable="true">Režim za programere je već uključen</string>
     <string name="discord_enable_rich_presence">Discord Rich Presence</string>
+    <string name="discord_listen_to_metrolist">Slušaj Metrolist</string>
+    <string name="discord_login_description">Poveži svoj Discord nalog</string>
+    <string name="discord_button1_text_default">Slušaj na YouTube Music-u</string>
+    <string name="discord_error_denied">Discord je odbio autorizaciju.</string>
+    <string name="discord_error_connection_failed">Povezivanje sa Discord-om nije uspelo. Metrolist će automatski pokušati ponovo.</string>
+    <string name="discord_error_no_browser">Nema dostupne aplikacije za otvaranje Discord autorizacije.</string>
+    <string name="discord_error_token_exchange_failed">Razmena tokena nije uspela. Pokušajte ponovo.</string>
 </resources>
