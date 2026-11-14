@@ -5,6 +5,10 @@ import kotlin.time.Instant
 
 object PlaybackEventLog {
     const val MAX_EVENTS = 500
+    private val sensitiveQueryRegex =
+        Regex("""(?i)([?&](?:pot|sig|signature|n|ns|spc|lsig|token|key|auth|cookie|authorization|access_token|refresh_token)=)[^&\s]+""")
+    private val sensitiveHeaderRegex = Regex("""(?i)\b(cookie|authorization|proxy-authorization)\s*[:=]\s*[^\r\n]+""")
+    private val urlCredentialsRegex = Regex("""(?i)(https?://)[^/@\s]+@""")
 
     val events = PlaybackEventBuffer(MAX_EVENTS)
 
@@ -83,6 +87,7 @@ object PlaybackEventLog {
         profileId: String? = null,
         details: Map<String, String> = emptyMap(),
         error: Throwable? = null,
+        describePlaybackError: Boolean = true,
     ) {
         val timestampMs = Clock.System.now().toEpochMilliseconds()
         events.append { id ->
@@ -91,11 +96,20 @@ object PlaybackEventLog {
                 timestampMs = timestampMs,
                 level = level,
                 kind = kind,
-                message = mergeMessage(message, error),
+                message =
+                    redactDiagnosticText(
+                        when {
+                            error == null -> message
+                            describePlaybackError -> mergeMessage(message, error)
+                            else -> "$message (${error::class.simpleName ?: "failure"})"
+                        },
+                    ),
                 videoId = videoId,
                 clientName = clientName,
                 profileId = profileId,
-                details = if (error == null) details else details + throwableDiagnostics(error),
+                details =
+                    (if (error == null) details else details + throwableDiagnostics(error))
+                        .mapValues { (_, value) -> redactDiagnosticText(value) },
             )
         }
     }
@@ -113,8 +127,8 @@ object PlaybackEventLog {
                 timestampMs = timestampMs,
                 level = PlaybackEventLevel.ERROR,
                 kind = kind,
-                message = "[$tag] $message (${error::class.simpleName ?: "failure"})",
-                details = throwableDiagnostics(error),
+                message = redactDiagnosticText("[$tag] $message (${error::class.simpleName ?: "failure"})"),
+                details = throwableDiagnostics(error).mapValues { (_, value) -> redactDiagnosticText(value) },
             )
         }
     }
@@ -147,9 +161,10 @@ object PlaybackEventLog {
         if (level != PlaybackEventLevel.WARN && level != PlaybackEventLevel.ERROR) return
         record(
             level = level,
-            kind = PlaybackEventKind.OTHER,
+            kind = kindForYtTag(tag).takeUnless { it == PlaybackEventKind.TRACE } ?: PlaybackEventKind.OTHER,
             message = "[$tag] $message",
             error = error,
+            describePlaybackError = false,
         )
     }
 
@@ -208,6 +223,12 @@ object PlaybackEventLog {
             "$message $described"
         }
     }
+
+    private fun redactDiagnosticText(value: String): String =
+        value
+            .replace(sensitiveQueryRegex, "$1<redacted>")
+            .replace(sensitiveHeaderRegex, "$1: <redacted>")
+            .replace(urlCredentialsRegex, "$1<redacted>@")
 
     private fun kindForYtTag(tag: String): PlaybackEventKind =
         when {
