@@ -237,6 +237,9 @@
     },
     {
       "glob": "windows/**"
+    },
+    {
+      "glob": "icudtl.dat"
     }
   ]
 }
