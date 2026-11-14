@@ -231,9 +231,11 @@ import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import sun.misc.Signal
 import sun.misc.SignalHandler
+import java.awt.Desktop
 import java.awt.EventQueue
 import java.awt.Frame
 import java.awt.GraphicsEnvironment
+import java.awt.desktop.AppReopenedListener
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.io.File
@@ -714,6 +716,27 @@ internal fun runBoundedShutdown(
     }
 }
 
+private fun installMacOsDesktopHandlers() {
+    runCatching {
+        if (!Desktop.isDesktopSupported()) return
+        val desktop = Desktop.getDesktop()
+        if (desktop.isSupported(Desktop.Action.APP_EVENT_REOPENED)) {
+            desktop.addAppEventListener(
+                AppReopenedListener {
+                    ComposeTrayManager.showWindow()
+                },
+            )
+        }
+        if (desktop.isSupported(Desktop.Action.APP_QUIT_HANDLER)) {
+            desktop.setQuitHandler { _, response ->
+                response.cancelQuit()
+                AppLogger.info("Main", "macOS quit handler requested shutdown")
+                shutdownApp { exitProcess(0) }
+            }
+        }
+    }
+}
+
 private fun installGracefulShutdownSignals() {
     val handler =
         SignalHandler { signal ->
@@ -796,6 +819,7 @@ private fun runDesktopApp(args: Array<String>) {
             System.setProperty("skiko.renderApi", "METAL")
         }
         DesktopUrlHandler.install()
+        installMacOsDesktopHandlers()
     }
     args.firstOrNull { DesktopUrlHandler.canHandle(it) }?.let { url ->
         DesktopUrlHandler.handleUrl(url)
@@ -1191,7 +1215,11 @@ private fun runDesktopApp(args: Array<String>) {
 
         Window(
             onCloseRequest = {
-                shutdownApp { exitProcess(0) }
+                if (OsUtil.isMac) {
+                    ComposeTrayManager.hideWindow()
+                } else {
+                    shutdownApp { exitProcess(0) }
+                }
             },
             title = if (BuildConfig.DEBUG) "Metrolist Debug" else "Metrolist",
             state = windowState,
@@ -1200,6 +1228,7 @@ private fun runDesktopApp(args: Array<String>) {
             icon = dynamicIcon,
         ) {
             LaunchedEffect(window) {
+                ComposeTrayManager.attachWindow(windowState, window)
                 while (!window.isShowing) delay(16L)
                 startup.windowShown.complete(Unit)
                 startup.firstFrame.await()
@@ -1275,6 +1304,9 @@ private fun runDesktopApp(args: Array<String>) {
                         }
                     },
                     onCloseWindow = {
+                        ComposeTrayManager.hideWindow()
+                    },
+                    onQuit = {
                         shutdownApp { exitProcess(0) }
                     },
                 )

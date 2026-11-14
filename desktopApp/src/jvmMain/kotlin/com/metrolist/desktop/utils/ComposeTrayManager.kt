@@ -60,13 +60,20 @@ object ComposeTrayManager {
     private var themeFgColor: Color? = null
     private var themeBorderColor: Color? = null
 
+    fun attachWindow(
+        mainWindowState: WindowState,
+        mainWindow: Window,
+    ) {
+        windowState = mainWindowState
+        this.mainWindow = mainWindow
+    }
+
     fun initialize(
         mainWindowState: WindowState,
         mainWindow: Window,
         onQuit: () -> Unit,
     ) {
-        windowState = mainWindowState
-        this.mainWindow = mainWindow
+        attachWindow(mainWindowState, mainWindow)
         this.onQuit = onQuit
         trayDisposed = CompletableDeferred()
         trayEnabled.value = true
@@ -89,14 +96,23 @@ object ComposeTrayManager {
     }
 
     fun toggleWindow() {
-        windowState?.let { state ->
-            if (state.isMinimized) {
-                state.isMinimized = false
-                isWindowVisible.value = true
-            } else {
+        if (!isWindowVisible.value || windowState?.isMinimized == true) {
+            showWindow()
+        } else if (OsUtil.isMac) {
+            hideWindow()
+        } else {
+            windowState?.let { state ->
                 state.isMinimized = true
                 isWindowVisible.value = false
             }
+        }
+    }
+
+    fun hideWindow() {
+        EventQueue.invokeLater {
+            val window = mainWindow?.takeIf { it.isDisplayable } ?: return@invokeLater
+            window.isVisible = false
+            isWindowVisible.value = false
         }
     }
 

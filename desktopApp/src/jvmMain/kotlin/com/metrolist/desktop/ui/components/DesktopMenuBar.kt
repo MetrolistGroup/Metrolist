@@ -45,6 +45,7 @@ import com.metrolist.shared.generated.resources.menu_add_to_playlist
 import com.metrolist.shared.generated.resources.menu_add_to_queue
 import com.metrolist.shared.generated.resources.menu_application_logs
 import com.metrolist.shared.generated.resources.menu_back
+import com.metrolist.shared.generated.resources.menu_close_window
 import com.metrolist.shared.generated.resources.menu_controls
 import com.metrolist.shared.generated.resources.menu_copy
 import com.metrolist.shared.generated.resources.menu_copy_link
@@ -154,6 +155,7 @@ fun FrameWindowScope.DesktopMenuBar(
     toggleWindowFullscreen: () -> Unit,
     onRefresh: () -> Unit,
     onCloseWindow: () -> Unit,
+    onQuit: () -> Unit,
 ) {
     val currentTrack = PlayerState.currentTrack
     val isTrackActive = currentTrack != null
@@ -265,8 +267,14 @@ fun FrameWindowScope.DesktopMenuBar(
             )
             Separator()
             Item(
-                text = stringResource(Res.string.tray_quit_metrolist),
+                text = stringResource(Res.string.menu_close_window),
                 onClick = onCloseWindow,
+                shortcut = KeyShortcut(Key.W, meta = true),
+            )
+            Separator()
+            Item(
+                text = stringResource(Res.string.tray_quit_metrolist),
+                onClick = onQuit,
                 shortcut = KeyShortcut(Key.Q, meta = true),
             )
         }
