@@ -595,6 +595,7 @@ class HomeViewModel(
                 }
 
                 var primaryContentPublished = false
+                var primaryContinuation: String? = null
                 supervisorScope {
                     try {
                         val homePageDataDeferred =
@@ -642,6 +643,7 @@ class HomeViewModel(
                                 }
                             }
                         val homePageData = homePageDataDeferred.await().getOrThrow()
+                        primaryContinuation = homePageData.continuation
                         val rawHomeSections = homePageData.sections.withoutRegionalCharts(signedIn)
                         if (generation != contentLoadGeneration ||
                             sessionKey != GlobalYouTube.innerTube.sessionSnapshot().homeCacheSessionKey()
@@ -864,6 +866,8 @@ class HomeViewModel(
                                 isRevalidating = false,
                                 isContentLoading = false,
                                 isLoadingMore = false,
+                                isAllContentPending = if (!isFiltered && primaryContentPublished) false else it.isAllContentPending,
+                                continuation = if (!isFiltered && primaryContentPublished) primaryContinuation else it.continuation,
                                 error = e.message,
                             )
                         }
