@@ -56,7 +56,24 @@ class PipelineTest(unittest.TestCase):
                                               ('windows-x64', 'win32-x64', 'windows-x86_64')]:
                 path = native_image.platform_natives(Path(directory), target) / 'reachability-metadata.json'
                 globs = [entry['glob'] for entry in json.loads(path.read_text())['resources']]
-                self.assertEqual([f'nucleus/native/{nucleus}/*', f'org/{javacpp}/*', f'org/{javacpp}-gpl/*', f'{javacpp}/*', f'{javacpp}-gpl/*'], globs)
+                self.assertEqual([f'nucleus/native/{nucleus}/*', f'org/{javacpp}/*', f'org/{javacpp}-gpl/*', f'{javacpp}/*', f'{javacpp}-gpl/*',
+                                  native_image.JAVACPP_INDEX], globs)
+
+    def test_javacpp_index_lists_bundled_native_names_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            jar = root / 'ffmpeg-windows.jar'
+            with zipfile.ZipFile(jar, 'w') as archive:
+                archive.writestr('org/bytedeco/ffmpeg/windows-x86_64-gpl/jniavutil.dll', b'')
+                archive.writestr('org/bytedeco/ffmpeg/global/avutil.class', b'')
+                archive.writestr('org/bytedeco/ffmpeg/windows-x86_64-gpl/', b'')
+                archive.writestr('com/example/windows-x86_64/other.dll', b'')
+            classes = root / 'classes/org/bytedeco/javacpp/windows-x86_64'
+            classes.mkdir(parents=True)
+            (classes / 'jnijavacpp.dll').write_bytes(b'')
+            native_image.javacpp_resource_index(os.pathsep.join([str(jar), str(root / 'classes'), str(root / 'missing.jar')]), root)
+            self.assertEqual(['jniavutil.dll', 'jnijavacpp.dll', 'windows-x86_64-gpl/jniavutil.dll', 'windows-x86_64/jnijavacpp.dll'],
+                             (root / native_image.JAVACPP_INDEX).read_text().splitlines())
 
     def test_windows_resources_declare_windows_10_and_link_into_the_image(self):
         with tempfile.TemporaryDirectory() as directory:

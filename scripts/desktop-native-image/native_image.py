@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
 
 from serialization_metadata import generate
 from package import macos_minimum_version
@@ -56,9 +57,30 @@ def platform_natives(work, target):
     directory.mkdir(parents=True, exist_ok=True)
     javacpp = JAVACPP_PLATFORMS[target]
     globs = [f'nucleus/native/{NUCLEUS_NATIVE_DIRECTORIES[target]}/*',
-             f'org/{javacpp}/*', f'org/{javacpp}-gpl/*', f'{javacpp}/*', f'{javacpp}-gpl/*']
+             f'org/{javacpp}/*', f'org/{javacpp}-gpl/*', f'{javacpp}/*', f'{javacpp}-gpl/*', JAVACPP_INDEX]
     (directory / 'reachability-metadata.json').write_text(json.dumps({'resources': [{'glob': g} for g in globs]}, indent=2) + '\n')
     return directory
+
+
+JAVACPP_INDEX = 'metrolist-javacpp-resources.txt'
+
+
+def javacpp_resource_index(classpath, output):
+    """Write each bundled JavaCPP resource's file name and parent/file name for JavaCppResources.java."""
+    names = set()
+    for entry in filter(None, classpath.split(os.pathsep)):
+        path = Path(entry)
+        if path.is_dir():
+            files = [file.relative_to(path).as_posix() for file in path.rglob('*') if file.is_file()]
+        elif zipfile.is_zipfile(path):
+            with zipfile.ZipFile(path) as archive:
+                files = [name for name in archive.namelist() if not name.endswith('/')]
+        else:
+            continue
+        for name in files:
+            if name.startswith('org/bytedeco/') and not name.endswith('.class'):
+                names.update(['/'.join(name.split('/')[-2:]), name.rsplit('/', 1)[-1]])
+    (output / JAVACPP_INDEX).write_text(''.join(name + '\n' for name in sorted(names)), encoding='utf-8')
 
 
 # Nucleus's GraalVM manifest plus supportedOS: without it GetVersion reports Windows 8 (build 9200) and the
@@ -169,7 +191,7 @@ def build(graal, work, target, experiment=False, agent=None):
             java = [graal / 'bin' / ('javac.exe' if target.startswith('windows') else 'javac'),
                     '--add-modules', 'org.graalvm.nativeimage', '-cp',
                     str(graal / 'lib/svm/builder/svm.jar') + os.pathsep + (work / 'classpath.txt').read_text().strip(),
-                    '-d', str(glue), str(sources / 'NativeCrashLog.java'),
+                    '-d', str(glue), str(sources / 'NativeCrashLog.java'), str(sources / 'JavaCppResources.java'),
                     str(sources / ('windows' if target.startswith('windows') else 'posix') / 'NativeErrorOutput.java')]
             if macos_version:
                 java += ['--add-exports', 'org.graalvm.nativeimage/org.graalvm.nativeimage.impl=ALL-UNNAMED',
@@ -178,6 +200,7 @@ def build(graal, work, target, experiment=False, agent=None):
                     subprocess.run(['clang', '-c', f'-mmacosx-version-min={macos_version}',
                                     str(Path(__file__).parent / 'macos-awt.c'), '-o', str(work / 'macos-awt.o')],
                                    check=True, stdout=log, stderr=subprocess.STDOUT, **run_options)
+            javacpp_resource_index((work / 'classpath.txt').read_text().strip(), glue)
             java_args = work / 'native-javac.args'
             java_args.write_text('\n'.join(json.dumps(str(arg), ensure_ascii=False) for arg in java[1:]) + '\n', encoding='utf-8')
             with (work / 'java-glue.log').open('w') as log:
