@@ -121,6 +121,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -631,11 +632,6 @@ fun PlayerScreen(
                 (isFullscreen && isPlayerContentVisible) ||
                     (bottomSheetState.isExpanded && (isImmersive || uiState.isLyricsExpanded))
             )
-    platform.PlayerWindowEffects(
-        hideSystemBars = shouldHideSystemBars,
-        lockLandscape =
-            !isTv && isFullscreen && !bottomSheetState.isCollapsed && !bottomSheetState.isDismissed && !isInPipMode,
-    )
 
     val playerType = Settings.shared.playerType
     val usesFullscreenThumbnail = playerThumbnailStyle == PlayerThumbnailStyle.FULLSCREEN
@@ -762,6 +758,12 @@ fun PlayerScreen(
             },
         animationSpec = if (!playerContentState.isActive) snap() else spring(),
         label = "TextBackgroundColor",
+    )
+    platform.PlayerWindowEffects(
+        hideSystemBars = shouldHideSystemBars,
+        lockLandscape =
+            !isTv && isFullscreen && !bottomSheetState.isCollapsed && !bottomSheetState.isDismissed && !isInPipMode,
+        lightStatusBars = (textBackgroundColor.luminance() < 0.5f).takeIf { playerContentState.isVisible },
     )
 
     var canvasMinimalUi by rememberSaveable { mutableStateOf(false) }

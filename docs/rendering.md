@@ -97,6 +97,8 @@ Player lyric captions have a separate alignment setting, centered by default. Th
 
 Android publishes system dark mode to shared settings before palette resolution. Check Auto mode after a system theme change. Player action groups use Screen blending over non-solid dark backgrounds and SrcOver in light mode or over solid backgrounds.
 
+Android status-bar icons follow the full player's foreground contrast while the player is visible. Collapsing the player, entering picture-in-picture or pausing the activity releases its override, so the app theme and artist header control the icons again.
+
 Artwork palettes request a fixed source and decode at 128 px with a separate memory-cache key. Google artwork uses 256 px sources; YouTube video thumbnails use the bar-free `mqdefault` source. Palette requests do not reuse larger display thumbnails, so artwork load order and URL size variants cannot change the sampled colors. Animated covers do not supply palette frames.
 
 Seeds use Material's Score over exact color counts from samples of up to 128 pixels per side. Keeping the sampled colors avoids merging sparse accents into neutrals. Grayscale artwork uses Material's blue fallback. Desktop samples the current track once, independently of displayed artwork. Track changes cancel the previous palette request and keep the current colors until the next palette loads. The main window, player controls, dialogs, snackbars and detached mini player share one animated scheme. Windows accent colors apply only when a system palette is requested and no artwork seed is active; they never replace a custom or artwork seed that happens to match the default color.
