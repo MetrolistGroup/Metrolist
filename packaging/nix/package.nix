@@ -16,8 +16,8 @@ appimageTools.wrapType2 {
     export GIO_EXTRA_MODULES="${glib-networking}/lib/gio/modules''${GIO_EXTRA_MODULES:+:$GIO_EXTRA_MODULES}"
   '';
   extraInstallCommands = ''
-    install -Dm644 ${contents}/Metrolist.desktop $out/share/applications/metrolist.desktop
-    substituteInPlace $out/share/applications/metrolist.desktop \
+    install -Dm644 ${contents}/Metrolist.desktop $out/share/applications/Metrolist.desktop
+    substituteInPlace $out/share/applications/Metrolist.desktop \
       --replace-fail 'Exec=bin/Metrolist' 'Exec=metrolist'
     install -Dm644 ${contents}/Metrolist.png $out/share/icons/hicolor/512x512/apps/Metrolist.png
   '';

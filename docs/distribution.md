@@ -42,6 +42,8 @@ The source recipe and verification live in `aur/`. The generator writes `aur/rel
 
 The sandbox includes `glib-networking` and adds its GIO modules to `GIO_EXTRA_MODULES` for WebKitGTK TLS. It preserves any existing module paths.
 
+Nix and Arch install `Metrolist.desktop`, matching the AppImage and native AppImage desktop files, `StartupWMClass=Metrolist` and the Linux window's `Metrolist` app ID.
+
 ```sh
 nix build path:./build/distribution/nix
 nix run path:./build/distribution/nix
