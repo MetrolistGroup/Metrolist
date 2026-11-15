@@ -10,7 +10,7 @@ Room guests and Device Connect followers do not change the host queue after a lo
 
 Android and desktop begin bounded SABR recovery when the producer fails, while buffered audio can still play. Replacements warm up muted and follow the current position before handoff. A token-backed session that remains attestation pending after its first response fails early and excludes that profile through the same recovery policy.
 
-On Android, an offload AudioTrack reported stalled by Media3 after entering offload sleep is switched to PCM after two seconds. The 12-second playback watchdog remains the fallback for other output stalls.
+On Android, an offload AudioTrack that stops advancing its playback head after entering offload sleep is switched to PCM after two seconds. The 12-second playback watchdog remains the fallback for other output stalls.
 
 ## Seek diagnostics
 

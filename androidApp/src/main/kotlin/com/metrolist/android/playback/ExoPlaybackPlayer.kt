@@ -3054,7 +3054,7 @@ class ExoPlaybackPlayer(
         val playbackProgressStalledMs = progressWatchdog.stalledForMs(now)
         if (offloadRequested() &&
             offloadSleepStallTracker.shouldDisableOffload(
-                outputStalled = silenceSupport[exo]?.playoutTracker?.isOutputStalled() == true,
+                outputPosition = silenceSupport[exo]?.playbackHeadPosition,
                 expectProgress = expectProgress,
                 nowMs = now,
             )

@@ -39,8 +39,6 @@ internal class AudioPlayoutTracker {
     private var processingParameters = PlaybackParameters.DEFAULT
     private var pendingCheckpoint: Checkpoint? = null
 
-    fun isOutputStalled(): Boolean = output?.audioOutput?.isStalled == true
-
     fun checkpoint(parameters: PlaybackParameters): Checkpoint {
         val current = output
         return Checkpoint(current).also { checkpoint ->

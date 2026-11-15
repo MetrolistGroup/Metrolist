@@ -18,6 +18,8 @@ internal class AudioPositionDiagnostics {
     @Volatile var details: Map<String, String> = emptyMap()
         private set
 
+    fun playbackHeadPosition(): Long? = details["audioPlaybackHeadFrames"]?.toLongOrNull()
+
     // Diagnostic only. Hidden APIs can be absent or blocked on the current Android release.
     @SuppressLint("PrivateApi")
     private val latencyMethod = runCatching { AudioTrack::class.java.getMethod("getLatency") }.getOrNull()

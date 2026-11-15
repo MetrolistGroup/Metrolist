@@ -76,10 +76,11 @@ class PlaybackPollingPolicyTest {
 
         assertFalse(watchdog.observe(1L, 59_000L, 60_000L, true, 2_999L))
         assertEquals(0L, watchdog.stalledForMs(2_999L))
-        assertFalse(tracker.shouldDisableOffload(outputStalled = true, expectProgress = true, nowMs = 2_999L))
+        assertFalse(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = true, nowMs = 2_999L))
         assertFalse(watchdog.observe(1L, 59_000L, 60_000L, true, 3_000L))
         assertEquals(0L, watchdog.stalledForMs(3_000L))
-        assertTrue(tracker.shouldDisableOffload(outputStalled = true, expectProgress = true, nowMs = 3_000L))
+        assertFalse(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = true, nowMs = 3_000L))
+        assertTrue(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = true, nowMs = 4_999L))
     }
 
     @Test
@@ -87,9 +88,9 @@ class PlaybackPollingPolicyTest {
         val tracker = OffloadSleepStallTracker()
         tracker.onSleepingForOffload(nowMs = 1_000L)
 
-        assertFalse(tracker.shouldDisableOffload(outputStalled = false, expectProgress = true, nowMs = 1_500L))
-        assertFalse(tracker.shouldDisableOffload(outputStalled = true, expectProgress = true, nowMs = 3_499L))
-        assertTrue(tracker.shouldDisableOffload(outputStalled = true, expectProgress = true, nowMs = 3_500L))
+        assertFalse(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = true, nowMs = 1_500L))
+        assertFalse(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = true, nowMs = 3_499L))
+        assertTrue(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = true, nowMs = 3_500L))
     }
 
     @Test
@@ -97,9 +98,9 @@ class PlaybackPollingPolicyTest {
         val tracker = OffloadSleepStallTracker()
         tracker.onSleepingForOffload(nowMs = 1_000L)
 
-        assertFalse(tracker.shouldDisableOffload(outputStalled = true, expectProgress = false, nowMs = 8_000L))
-        assertFalse(tracker.shouldDisableOffload(outputStalled = true, expectProgress = true, nowMs = 9_999L))
-        assertTrue(tracker.shouldDisableOffload(outputStalled = true, expectProgress = true, nowMs = 10_000L))
+        assertFalse(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = false, nowMs = 8_000L))
+        assertFalse(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = true, nowMs = 9_999L))
+        assertTrue(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = true, nowMs = 11_999L))
     }
 
     @Test
@@ -109,7 +110,7 @@ class PlaybackPollingPolicyTest {
 
         tracker.reset()
 
-        assertFalse(tracker.shouldDisableOffload(outputStalled = true, expectProgress = true, nowMs = 9_000L))
+        assertFalse(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = true, nowMs = 9_000L))
     }
 
     @Test
