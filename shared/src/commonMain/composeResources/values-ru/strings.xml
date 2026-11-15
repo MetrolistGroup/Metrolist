@@ -1063,10 +1063,10 @@
         <item quantity="other">Удалено %1$d песен из плейлиста</item>
     </plurals>
     <plurals name="seconds_short">
-        <item quantity="one">%1$d с</item>
-        <item quantity="few">%1$d с</item>
-        <item quantity="many">%1$d с</item>
-        <item quantity="other">%1$d с</item>
+        <item quantity="one">%1$d сек</item>
+        <item quantity="few">%1$d сек</item>
+        <item quantity="many">%1$d сек</item>
+        <item quantity="other">%1$d сек</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d песня</item>
@@ -2467,10 +2467,10 @@
         <item quantity="other">Импортировать плейлисты</item>
     </plurals>
     <plurals name="import_playlists_notice">
-        <item quantity="one">Импорт %1$s из %2$d плейлиста. Импорт будет выполняться в фоновом режиме, по завершении вы получите уведомление.</item>
-        <item quantity="few">Импорт %1$s из %2$d плейлистов. Импорт будет выполняться в фоновом режиме, по завершении вы получите уведомление.</item>
-        <item quantity="many">Импорт %1$s из %2$d плейлистов. Импорт будет выполняться в фоновом режиме, по завершении вы получите уведомление.</item>
-        <item quantity="other">Импорт %1$s из %2$d плейлистов. Импорт будет выполняться в фоновом режиме, по завершении вы получите уведомление.</item>
+        <item quantity="one">Импорт %1$s из одного плейлиста будет выполняться в фоновом режиме. По завершении вы получите уведомление.</item>
+        <item quantity="few">Импорт %1$s из %2$d плейлистов будет выполняться в фоновом режиме. По завершении вы получите уведомление.</item>
+        <item quantity="many">Импорт %1$s из %2$d плейлистов будет выполняться в фоновом режиме. По завершении вы получите уведомление.</item>
+        <item quantity="other">Импорт %1$s из %2$d плейлистов будет выполняться в фоновом режиме. По завершении вы получите уведомление.</item>
     </plurals>
     <string name="settings_storage_summary">%1$s использовано • %2$s свободно</string>
     <string name="live">Прямой эфир</string>
@@ -2535,7 +2535,7 @@
     <string name="auto_playlist_uploaded_subtitle">Ваши загруженные песни</string>
     <string name="import_status_matching_tracks">Сопоставляем трек %1$d из %2$d: %3$s…</string>
     <string name="canvas">Заставка Canvas</string>
-    <string name="library_grid_columns">Количество столбцов в сетке библиотеки</string>
+    <string name="library_grid_columns">Столбцы библиотеки</string>
     <string name="metroeq_profiles">Сохраненные профили</string>
     <string name="metroeq_preset_treble">Усиление высоких частот</string>
     <string name="metroeq_preset_flat">Плоский</string>
@@ -2652,4 +2652,10 @@
     <string name="desktop_minimize_to_tray_desc">При закрытии окна Metrolist будет сворачиваться в трей вместо завершения работы</string>
     <string name="desktop_tray_toggle_on_click">Показывать или скрывать при нажатии на значок в трее</string>
     <string name="desktop_tray_toggle_on_click_desc">Щелчок левой кнопкой мыши по значку в трее откроет или скроет окно Metrolist</string>
+    <string name="playlist_order_original">Порядок плейлиста</string>
+    <string name="album_order_original">Порядок альбома</string>
+    <string name="canvas_cache">Кэш Canvas</string>
+    <string name="chip_content_description">Чип: %1$s</string>
+    <string name="settings_library_grid_columns">Столбцы библиотеки</string>
+    <string name="playlist_picker_library_order">Порядок библиотеки</string>
 </resources>
