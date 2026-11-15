@@ -12,11 +12,42 @@ Android full-player artwork uses software bitmaps so Compose and image decoding 
 
 When skipping in the expanded player, keep the displayed track and decoded cover until the next cover or mini-player preview is ready. First open shows metadata immediately. Failed or missing covers advance to the new track without keeping old metadata. Keep the background fades and crossfade the title and artist together. Android's pause control follows playback intent between tracks, including a pause requested during loading.
 
+## Android artwork blur
+
+`supportsNativeBlur()` reports RenderEffect support from API 31. Compose blur modifiers do not blur on API 30 or lower, including Android 10, API 29. Artwork backgrounds use the expanded player's `BlurredArtworkBackground` fallback there. API 31 and 32 retain native blur; API 33 and newer retain the existing artwork shader and progressive blur shaders.
+
+`LegacyArtworkBlur.kt` copies and downsizes artwork to at most 128 pixels on its longest side, then calls the existing `blurArtworkPixels` on `Dispatchers.Default`. A four-entry cache shares results by source bitmap, generation and radius. Concurrent requests share the same calculation. Radius changes use the existing crop-based radius buckets. The reduced Coil request has a separate cache key and requests software pixels on old Android. Neither resizing nor pixel blur runs in a draw callback. The cache holds up to four source bitmaps as well as their small blurred copies.
+
+The following audit covers API 29 and 30. A missing or failed artwork request still leaves the container or loading state; it does not supply an image to blur.
+
+| Drawing | Before this fix | Current behavior |
+| --- | --- | --- |
+| Android standard and modern miniplayer, including its wide layout | Sharp artwork under the existing scrim | Expanded-player software blur with the same scrim and a 200 ms artwork fade |
+| Shared standard and modern miniplayer | Sharp artwork under the existing scrim | Same software fallback and fade |
+| Expressive miniplayer | Solid Material container and sharp artwork slot by design | Unchanged |
+| Expanded player and lyrics artwork backgrounds | Software-blurred artwork, with a stronger scrim while processing | Same blur, now cached across background instances |
+| Fullscreen player backdrop | Sharp artwork at 35 percent opacity | Software-blurred artwork at the same opacity, with an artwork fade |
+| Fullscreen thumbnail backdrop and bottom extension | Software blur and software-generated progressive artwork bleed | Unchanged rendering and motion |
+| Artist page and photo viewer backdrops | Software-blurred artwork | Same blur, now cached |
+| Search top-result card | Sharp artwork at 38 percent opacity under its surface tint | Software-blurred artwork with the same opacity and tint, with an artwork fade |
+| Liquid background | Animated layers with a downsampled software stack blur | Unchanged, including its existing per-frame renderer |
+| Lyrics-share preview and exported image | Precomputed software-blurred artwork | Unchanged |
+| Queue bottom and lyrics text edge modifiers | Sharp live content because the blur modifier has no effect | Unchanged; these are live-content effects, not artwork backgrounds |
+| Wide player artwork edge modifier | Sharp artwork with the existing edge fades | Unchanged; the fullscreen artwork bleed has its own software blur |
+| Seek feedback | White arrow without the optional blurred shadow icon; text keeps its shadow | Unchanged; the unsupported icon blur is explicitly gated |
+| Lyrics text shadows and glow masks | Text rasterizer shadows and cached glyph masks | Unchanged; these do not require RenderEffect |
+
+The background-style settings still select solid, gradient or blurred artwork. Expressive style still uses its own Material container. Lyrics progressive blur retains its existing setting and API 31+ behavior.
+
+History checks found the current fallback and radius buckets in the v14 import, `6f7351ca5`. Earlier Android blur fixes include `e9118160f` for rendering cost, `cf18e4b0c` for removing extra previous-background layers, `e3909bded` for smooth background transitions and `a197ca57c` for miniplayer foreground colors. This change preserves the full player's artwork handoff, scrims, foreground colors, swipe springs, press scaling and sheet morphing. This fix adds a fade to the legacy replacements for Coil's artwork fade and leaves the full player's existing track crossfade in place.
+
+Verify on API 29 and Android 12 or newer. Check standard and modern miniplayers in blurred, gradient and solid modes; Expressive must keep its solid container. Skip tracks rapidly, revisit tracks, expand and collapse the player, drag and reverse the sheet, pause and resume, rotate, and return from the background. Check the lyrics background, fullscreen artwork and video backdrop, artist photos and search top-result cards. Use square, portrait, landscape, transparent, missing and failed artwork in light and dark themes. Watch for sharp flashes, stale covers, blank backgrounds, edge seams and lost fades. Confirm settings persist, reduced motion still applies, and low-end API 29 devices remain responsive during skips and sheet motion. On API 31 and 32 compare native blur; on API 33 or newer also compare shader backgrounds, liquid motion, queue edges and lyrics progressive-blur toggles.
+
 ## Desktop artwork blur
 
 `ArtworkBlur.desktop.kt` keeps one viewport-sized raster snapshot per drawing node for expanded-player, lyrics-drawer and mini-player artwork blurs. A 1080 by 720 RGBA snapshot uses about 3 MB; a 4K snapshot about 32 MiB. Artwork, painter animation, crossfade, size, density and theme changes redraw the snapshot. Other redraws reuse it. Replacing the snapshot or detaching the node releases the previous image. The first blur and each invalidation still pay the full rasterization cost.
 
-The cache applies Compose's `BlurEffect` filter, including its radius-to-sigma conversion, and draws the scrim into the snapshot. It keeps the original crop, scale, saturation, source background and clip. Apply the modifier directly to artwork drawing; child graphics layers can update independently of their raster parent. The shared mini-player uses this cache on desktop and native blur on Android and iOS. Shared shader backgrounds use their own preblurred texture cache.
+The cache applies Compose's `BlurEffect` filter, including its radius-to-sigma conversion, and draws the scrim into the snapshot. It keeps the original crop, scale, saturation, source background and clip. Apply the modifier directly to artwork drawing; child graphics layers can update independently of their raster parent. The shared mini-player uses this cache on desktop, native blur on Android API 31+ and iOS, and the artwork bitmap fallback on older Android. Shared shader backgrounds use their own preblurred texture cache.
 
 On GPU backends the raster path can differ from the GPU filter by one channel step from rounding. `ArtworkBlurTest` compares the raster path with the Compose/Skia RenderNode pipeline across sizes, densities, edges, backdrops and scrims.
 

@@ -36,8 +36,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import coil3.BitmapImage
 import com.metrolist.shared.ui.utils.toImageBitmap
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -636,7 +634,15 @@ internal actual fun PlatformArtworkBackgroundCanvas(
     val renderer = remember { if (Build.VERSION.SDK_INT >= 33) ArtworkShaderRenderer() else null }
     val bitmap =
         remember(artwork) {
-            artwork.asAndroidBitmap().let { if (it.config == Bitmap.Config.HARDWARE) it.copy(Bitmap.Config.ARGB_8888, false) else it }
+            artwork.asAndroidBitmap().let {
+                if (Build.VERSION.SDK_INT >= 31 &&
+                    it.config == Bitmap.Config.HARDWARE
+                ) {
+                    it.copy(Bitmap.Config.ARGB_8888, false)
+                } else {
+                    it
+                }
+            }
         }
     if (Build.VERSION.SDK_INT >= 33 && renderer?.available == true) {
         Canvas(modifier.fillMaxSize()) { renderer.draw(this, bitmap, null, 1f, 0L, style) }
@@ -655,18 +661,7 @@ internal actual fun PlatformArtworkBackgroundCanvas(
             val radius = artworkLegacyBlurRadius(style.blurRadiusPx, cropHeight, scaledHeight)
             var blurred by remember(artwork) { mutableStateOf<ImageBitmap?>(null) }
             LaunchedEffect(artwork, radius) {
-                blurred =
-                    withContext(Dispatchers.Default) {
-                        val scale = ARTWORK_TEXTURE_SIZE.toFloat() / imageSide
-                        val width = (bitmap.width * scale).roundToInt().coerceAtLeast(1)
-                        val height = (bitmap.height * scale).roundToInt().coerceAtLeast(1)
-                        val scaled = Bitmap.createScaledBitmap(bitmap, width, height, true).copy(Bitmap.Config.ARGB_8888, true)
-                        val pixels = IntArray(width * height)
-                        scaled.getPixels(pixels, 0, width, 0, 0, width, height)
-                        blurArtworkPixels(pixels, width, height, radius)
-                        scaled.setPixels(pixels, 0, width, 0, 0, width, height)
-                        scaled.asImageBitmap()
-                    }
+                blurred = legacyArtworkBlur(bitmap, radius)
             }
             LegacyArtworkBackground(
                 blurred ?: artwork,

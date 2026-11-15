@@ -111,6 +111,7 @@ import com.metrolist.shared.playback.SleepTimerState
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.LocalIsInPipMode
 import com.metrolist.shared.ui.LocalIsTv
+import com.metrolist.shared.ui.components.BlurredArtworkBackground
 import com.metrolist.shared.ui.components.PlayerConnectedButtonGroup
 import com.metrolist.shared.ui.components.PlayerLikeShareButtons
 import com.metrolist.shared.ui.components.PlayerPrimaryControls
@@ -127,6 +128,7 @@ import com.metrolist.shared.ui.navigation.blockInput
 import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.theme.uiEnhanced
 import com.metrolist.shared.ui.utils.nativeBlurCompat
+import com.metrolist.shared.ui.utils.supportsNativeBlur
 import com.metrolist.shared.utils.formatDuration
 import com.metrolist.shared.viewmodels.PlayerViewModel
 import kotlinx.coroutines.delay
@@ -181,16 +183,25 @@ fun FullscreenPlayerContent(
         modifier = Modifier.fillMaxSize(),
     ) {
         if (currentSong?.displayThumbnail != null) {
-            AsyncImage(
-                url = currentSong.displayThumbnail,
-                contentDescription = null,
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .alpha(0.35f)
-                        .nativeBlurCompat(120f, enabled = true),
-                contentScale = ContentScale.Crop,
-            )
+            if (!supportsNativeBlur()) {
+                BlurredArtworkBackground(
+                    url = currentSong.displayThumbnail,
+                    modifier = Modifier.fillMaxSize().alpha(0.35f),
+                    blurRadiusPx = 120f,
+                    crossfade = true,
+                )
+            } else {
+                AsyncImage(
+                    url = currentSong.displayThumbnail,
+                    contentDescription = null,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .alpha(0.35f)
+                            .nativeBlurCompat(120f, enabled = true),
+                    contentScale = ContentScale.Crop,
+                )
+            }
         }
 
         Row(

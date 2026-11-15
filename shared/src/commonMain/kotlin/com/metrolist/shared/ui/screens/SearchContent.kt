@@ -82,6 +82,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -124,6 +125,7 @@ import com.metrolist.shared.settings.displayTitle
 import com.metrolist.shared.ui.components.AlbumPlayButton
 import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.ArtistSubtitle
+import com.metrolist.shared.ui.components.BlurredArtworkBackground
 import com.metrolist.shared.ui.components.ChipShelf
 import com.metrolist.shared.ui.components.CollectionPreviews
 import com.metrolist.shared.ui.components.ContainedLoadingIndicator
@@ -154,6 +156,7 @@ import com.metrolist.shared.ui.utils.DragScrollableColumn
 import com.metrolist.shared.ui.utils.artistArtworkShape
 import com.metrolist.shared.ui.utils.carouselScroll
 import com.metrolist.shared.ui.utils.desktopArrowScroll
+import com.metrolist.shared.ui.utils.supportsNativeBlur
 import com.metrolist.shared.utils.formatDuration
 import com.metrolist.shared.utils.monthlyAudienceText
 import com.metrolist.shared.utils.withoutPlaybackCountLabel
@@ -1211,15 +1214,24 @@ private fun TopResultCard(
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             if (mainItem.thumbnail != null) {
-                AsyncImage(
-                    url = mainItem.thumbnail,
-                    modifier =
-                        Modifier
-                            .matchParentSize()
-                            .blur(56.dp)
-                            .graphicsLayer(alpha = 0.38f),
-                    contentScale = ContentScale.Crop,
-                )
+                if (!supportsNativeBlur()) {
+                    BlurredArtworkBackground(
+                        url = mainItem.thumbnail,
+                        modifier = Modifier.matchParentSize().graphicsLayer(alpha = 0.38f),
+                        blurRadiusPx = with(LocalDensity.current) { 56.dp.toPx() },
+                        crossfade = true,
+                    )
+                } else {
+                    AsyncImage(
+                        url = mainItem.thumbnail,
+                        modifier =
+                            Modifier
+                                .matchParentSize()
+                                .blur(56.dp)
+                                .graphicsLayer(alpha = 0.38f),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
                 Box(
                     modifier =
                         Modifier
