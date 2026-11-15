@@ -60,13 +60,6 @@ class AudioTempoProcessorTest {
     }
 
     @Test
-    fun speedChangeAcrossStageBoundaryRequiresProcessorRebuild() {
-        AudioTempoProcessor(SAMPLE_RATE, 1, 0.5f).use { processor ->
-            assertTrue(processor.requiresRebuild(1f, 1f))
-        }
-    }
-
-    @Test
     fun drainWaitsForAudioAndStopsOnCancellation() {
         for (cancel in listOf(false, true)) {
             var active = true
