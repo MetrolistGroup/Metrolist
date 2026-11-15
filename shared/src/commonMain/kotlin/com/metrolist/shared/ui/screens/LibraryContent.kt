@@ -55,8 +55,12 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -197,6 +201,17 @@ fun rememberLibrarySearchScrollState(
 ): LazyGridState {
     val filteredState = rememberLazyGridState()
     return if (query.isBlank()) unfilteredState else filteredState
+}
+
+internal class LibraryReorderScrollConnection(
+    private val isDragging: () -> Boolean,
+) : NestedScrollConnection {
+    // Auto-scroll at the grid edge must not pull the enclosing refresh indicator.
+    override fun onPostScroll(
+        consumed: Offset,
+        available: Offset,
+        source: NestedScrollSource,
+    ): Offset = if (isDragging()) Offset(0f, available.y) else Offset.Zero
 }
 
 @Composable
@@ -359,6 +374,7 @@ fun LibraryContent(
             from: YTItem,
             to: YTItem,
         ) {
+            scrollState.requestScrollToItem(scrollState.firstVisibleItemIndex, scrollState.firstVisibleItemScrollOffset)
             reorderOrder =
                 moveLibraryItems(
                     orderableItems,
@@ -402,6 +418,7 @@ fun LibraryContent(
                             if (fromItem != null && toItem != null) moveItem(fromItem, toItem)
                         }
                     }
+                val reorderScrollConnection = remember(reorderState) { LibraryReorderScrollConnection { reorderState.isAnyItemDragging } }
                 DragScrollableGrid(
                     columns =
                         if (!isGridView) {
@@ -417,6 +434,7 @@ fun LibraryContent(
                     modifier =
                         Modifier
                             .fillMaxSize()
+                            .nestedScroll(reorderScrollConnection)
                             .blockInput(isGridView != currentGridView)
                             .desktopArrowScroll(scrollState)
                             .libraryGridPinch(isGridView && !useDesktopUi, useGridItemSize),
