@@ -583,6 +583,53 @@ class LyricsTranslationClientTest {
         }
 
     @Test
+    fun geminiRequestResolvesDefaultAndSelectedModelUrls() =
+        runBlocking {
+            val capturedUrls = mutableListOf<String>()
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        capturedUrls += request.url.toString()
+                        respond(
+                            """{"candidates":[{"content":{"parts":[{"text":"{\"lines\":[\"Hola\"]}"}]}}]}""",
+                            HttpStatusCode.OK,
+                            JSON_HEADERS,
+                        )
+                    },
+                )
+
+            val geminiPreset = AiProviderPresets.find("Gemini")!!
+            LyricsTranslationClient(client)
+                .translateLyricsLines(
+                    lines = listOf("Hello"),
+                    provider = "Gemini",
+                    targetLanguage = "es",
+                    mode = "Literal",
+                    apiKey = "test-key",
+                    baseUrl = "",
+                    model = "",
+                ).getOrThrow()
+            LyricsTranslationClient(client)
+                .translateLyricsLines(
+                    lines = listOf("Hello"),
+                    provider = "Gemini",
+                    targetLanguage = "es",
+                    mode = "Literal",
+                    apiKey = "test-key",
+                    baseUrl = geminiPreset.endpoint,
+                    model = "gemini-2.5-flash",
+                ).getOrThrow()
+
+            assertEquals(
+                listOf(
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+                ),
+                capturedUrls,
+            )
+        }
+
+    @Test
     fun anthropicRequestUsesToolSchemaAndAnthropicHeaders() =
         runBlocking {
             var capturedBody = ""

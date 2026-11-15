@@ -720,11 +720,16 @@ class LyricsTranslationClient(
         temperature: Double,
     ): Result<String> {
         val effectiveModel = model.ifBlank { "gemini-flash-latest" }
+        val resolvedBase =
+            baseUrl.ifBlank {
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent"
+            }
         val url =
-            baseUrl
-                .ifBlank {
-                    "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-                }.replace("{model}", effectiveModel)
+            when {
+                resolvedBase.contains("{model}") -> resolvedBase.replace("{model}", effectiveModel)
+                model.isNotBlank() -> resolvedBase.replace(Regex("/models/[^/:]+(:generateContent)"), "/models/$effectiveModel$1")
+                else -> resolvedBase
+            }
         val body = buildGeminiRequestBody(systemPrompt, userPrompt, temperature, maxTokens, schema)
         val response =
             httpClient.post(url) {

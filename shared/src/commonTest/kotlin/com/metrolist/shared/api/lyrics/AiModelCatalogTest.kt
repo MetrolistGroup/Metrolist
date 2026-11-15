@@ -337,6 +337,14 @@ class AiModelCatalogTest {
     fun presetsDeriveModelEndpointsAndRouteOpenCodePerModel() {
         assertEquals("https://openrouter.ai/api/v1/models", AiProviderPresets.find("OpenRouter")!!.modelsEndpoint)
         assertEquals("https://api.anthropic.com/v1/models", AiProviderPresets.find("Anthropic")!!.modelsEndpoint)
+        assertEquals(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+            AiProviderPresets.find("Gemini")!!.endpoint,
+        )
+        assertEquals(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+            AiProviderPresets.find("Gemini-compatible")!!.endpoint,
+        )
         assertEquals("https://generativelanguage.googleapis.com/v1beta/models", AiProviderPresets.find("Gemini")!!.modelsEndpoint)
         assertEquals("https://opencode.ai/zen/go/v1/models", AiProviderPresets.find("OpenCodeGo")!!.modelsEndpoint)
         assertEquals("OpenAI-compatible", AiProviderPresets.find("Custom")!!.id)
