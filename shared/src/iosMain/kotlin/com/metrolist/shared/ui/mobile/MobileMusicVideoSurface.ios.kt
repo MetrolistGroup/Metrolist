@@ -44,7 +44,6 @@ import platform.AVFoundation.currentItem
 import platform.AVFoundation.currentTime
 import platform.AVFoundation.muted
 import platform.AVFoundation.pause
-import platform.AVFoundation.play
 import platform.AVFoundation.rate
 import platform.AVFoundation.replaceCurrentItemWithPlayerItem
 import platform.AVFoundation.seekToTime
@@ -126,7 +125,7 @@ internal actual fun MobileMusicVideoSurface(
                 controller.reportVideoPlaybackFailure()
                 break
             }
-            video.applyPendingSeek()
+            if (foreground) video.applyPendingSeek()
             if (video.ready) firstFrameRendered = true
             delay(250)
         }

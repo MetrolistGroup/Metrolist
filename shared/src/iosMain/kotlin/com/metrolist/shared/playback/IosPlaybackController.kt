@@ -1067,7 +1067,12 @@ internal class IosPlaybackController(
                                     ?: repository().getSongMetadata(resolvedVideo.videoId)
                             }
                         } ?: return@launch
-                    val hints = videoSong.toContentHints(wantVideo = true).withIosAudioCapabilities(allowHls = true)
+                    val hints =
+                        videoSong.toContentHints(wantVideo = true).withIosAudioCapabilities(
+                            allowHls = true,
+                            allowSabr = false,
+                            allowBoundedRange = false,
+                        )
                     val resource =
                         withContext(videoPlaybackDispatcher) {
                             if (failedVideoResourceId == videoSong.id) {
