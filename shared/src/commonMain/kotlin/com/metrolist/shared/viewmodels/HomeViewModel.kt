@@ -832,6 +832,7 @@ class HomeViewModel(
                                 sections = uncategorizedHomeSections(sections),
                                 recentlyPlayed = emptyList(),
                             )
+                        if (isFiltered) cachedSelectedChipContent = null
                         if (loadingMoods) paginationInProgress.value = true
                         try {
                             _uiState.value = loadedState.withoutBlockedContent()
@@ -880,6 +881,7 @@ class HomeViewModel(
                             )
                         _uiState.value = failedState
                         if (!isFiltered) {
+                            if (primaryContentPublished) allContentReloadRequired = false
                             cachedAllContent =
                                 homeCacheAfterAssemblyFailure(cachedAllContent, failedState, primaryContentPublished)
                             if (primaryContentPublished) {
@@ -1606,8 +1608,9 @@ class HomeViewModel(
                 .distinctBy(SongItem::id)
 
         val showLoadingPlaceholder: Boolean
-            get() = (isRestoringCache || isLoading || isRefreshing || isContentLoading || isAllContentPending) &&
-                !hasHomeFeedContent()
+            get() =
+                (isRestoringCache || isLoading || isRefreshing || isContentLoading || isAllContentPending) &&
+                    !hasHomeFeedContent()
 
         fun hasNoHomeContent(): Boolean = chips.isEmpty() && !hasHomeFeedContent()
 
