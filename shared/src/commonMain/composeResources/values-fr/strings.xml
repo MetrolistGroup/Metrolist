@@ -264,7 +264,7 @@
     <string name="devmode_already_active" translatable="true">Mode développeur déjà actif</string>
     <string name="discord_enable_rich_presence">Discord Rich Presence</string>
     <string name="discord_listen_to_metrolist">Écoute Metrolist</string>
-    <string name="discord_login_description">Connectez vous à Discord</string>
+    <string name="discord_login_description">Connectez-vous à Discord</string>
     <string name="discord_rich_presence">Rich Presence</string>
     <string name="discord_state">État</string>
     <string name="discord_button1_text_default">Écouter sur YouTube Music</string>
@@ -524,12 +524,12 @@
     <string name="scrobble_max_delay">Délai maximum</string>
     <string name="scrobble_max_delay_description">Durée maximum en secondes avant de forcer le scrobble</string>
     <string name="lastfm_connect_account">Se connecter à Last.fm</string>
-    <string name="lastfm_enable_description">Scrobble les titres lus vers votre compte Last.fm</string>
+    <string name="lastfm_enable_description">Partagez vos écoutes sur Last.fm</string>
     <string name="lastfm_now_playing_description">Affiche le titre en cours de lecture sur Last.fm</string>
     <string name="lastfm_connect_title">Se connecter à Last.fm</string>
-    <string name="lastfm_connect_description">Connectez-vous avec vos identifiants Last.fm pour activer le scrobbling</string>
+    <string name="lastfm_connect_description">Connectez-vous à Last.fm pour activer le scrobbling</string>
     <string name="listenbrainz_connect_token">Se connecter avec un jeton de connexion ListenBrainz</string>
-    <string name="listenbrainz_enable_description">Partage les titres écoutés avec ListenBrainz</string>
+    <string name="listenbrainz_enable_description">Partagez vos écoutes sur ListenBrainz</string>
     <string name="listenbrainz_now_playing_description">Affiche le titre en cours de lecture sur ListenBrainz</string>
     <string name="listenbrainz_connect_title">Se connecter à ListenBrainz</string>
     <string name="listenbrainz_user_token">Jeton de connexion</string>
@@ -631,7 +631,7 @@
     <string name="device_connect_signed_out_pairing">Déconnecté : vérifiez que le code d'appairage correspond sur chacun des appareils avant d'approuver</string>
     <string name="copy_logs">Copier les journaux</string>
     <string name="device_connect_name_label">Nom de l\u0027appareil</string>
-    <string name="device_connect_name_hint">Sous quel nom apparaît cet appareil sur votre réseau</string>
+    <string name="device_connect_name_hint">Nom sous lequel cet appareil sera visible sur le réseau</string>
     <string name="device_connect_no_devices">Aucun appareil détecté sur ce réseau pour l\u0027instant.</string>
     <string name="device_connect_rescan">Rechercher</string>
     <string name="device_connect_account_mismatch">Comptes différents</string>
@@ -647,7 +647,7 @@
     <string name="device_connect_pair_code_accessibility">Code d\u0027appairage : %1$s</string>
     <string name="device_connect_waiting_peer">En attente de l\u0027autre appareil…</string>
     <string name="device_connect_forget">Oublier</string>
-    <string name="device_connect_forget_message">Cet appareil devra être appairé de nouveau avant de pouvoir se reconnecter.</string>
+    <string name="device_connect_forget_message">Vous devrez appairer de nouveau cet appareil pour vous y connecter.</string>
     <string name="device_connect_offline">Hors ligne</string>
     <string name="device_connect_device_type_android_phone">Appareil Android</string>
     <string name="device_connect_device_type_desktop">Ordinateur</string>
@@ -1338,7 +1338,7 @@
         <item quantity="other">%1$d profils</item>
     </plurals>
     <string name="history_playlist_weekly">Top de la semaine</string>
-    <string name="listenbrainz_description">Connectez-vous à ListenBrainz et ajustez les paramètres de scrobble</string>
+    <string name="listenbrainz_description">Connectez-vous à ListenBrainz pour activer le scrobbling</string>
     <string name="listenbrainz_connected_as">Connecté en tant que %1$s</string>
     <string name="listenbrainz_connect_failed">Échec de la connexion</string>
     <string name="connect">Se connecter</string>
@@ -2235,10 +2235,10 @@
     <string name="settings_discord_activity_name_summary">Nom affiché à côté du type d'activité sur Discord</string>
     <string name="settings_discord_link_button_summary">Affichez un bouton avec un lien sur votre profil Discord</string>
     <string name="settings_quick_add_summary">Playlist du bouton Ajouter à une playlist dans Android Auto</string>
-    <string name="settings_room_server_summary">Choisissez le serveur qui relie les membres du salon</string>
+    <string name="settings_room_server_summary">Choisissez le serveur utilisé pour héberger vos salons Listen Together</string>
     <string name="settings_room_blocks_summary">Les utilisateurs que vous avez bloqués ne peuvent pas rejoindre votre salon</string>
-    <string name="settings_room_help_summary">Codes de salon, commandes de l'hôte et suggestions de titres</string>
-    <string name="settings_room_address_summary">Ajoutez et gérez des serveurs de salon personnalisés</string>
+    <string name="settings_room_help_summary">Codes de salon, hôte et suggestions de titres</string>
+    <string name="settings_room_address_summary">Ajoutez et gérez d'autres serveurs</string>
     <string name="settings_download_folder_summary">Choisissez où enregistrer les titres téléchargés</string>
     <string name="settings_reset_download_folder_summary">Utilisez le dossier par défaut pour les titres téléchargés</string>
     <string name="settings_diagnostic_logs_summary">Consultez et copiez le journal de diagnostic de l'application</string>
