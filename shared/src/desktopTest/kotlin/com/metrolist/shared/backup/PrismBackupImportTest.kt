@@ -89,8 +89,14 @@ class PrismBackupImportTest {
     fun favoritePreferencesDecodeNumericEntitiesAndCdata() {
         val library = ForeignLibrary(ForeignLibraryFamily.PRISM, emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
 
-        val numeric = library.withPrismArtistPreferences("<map><string name=\"favorites\">&#91;{\"id\":\"UC&amp;1\",\"name\":\"Artist &#x1F3B5;\"}&#93;</string></map>")
-        val cdata = library.withPrismArtistPreferences("<map><string name=\"favorites\"><![CDATA[[{\"id\":\"UCartist\",\"name\":\"Artist &quot;\"}]]]></string></map>")
+        val numeric =
+            library.withPrismArtistPreferences(
+                "<map><string name=\"favorites\">&#91;{\"id\":\"UC&amp;1\",\"name\":\"Artist &#x1F3B5;\"}&#93;</string></map>",
+            )
+        val cdata =
+            library.withPrismArtistPreferences(
+                "<map><string name=\"favorites\"><![CDATA[[{\"id\":\"UCartist\",\"name\":\"Artist &quot;\"}]]]></string></map>",
+            )
 
         assertEquals("UC&1" to "Artist 🎵", numeric.artists.single().let { it.id to it.name })
         assertEquals("UCartist" to "Artist &quot;", cdata.artists.single().let { it.id to it.name })
@@ -98,11 +104,12 @@ class PrismBackupImportTest {
 
     @Test
     fun malformedPreferencesWithManyUnclosedStringTagsAreIgnored() {
-        val xml = buildString {
-            append("<map>")
-            repeat(3_000) { append("<string name=\"entry$it\">value") }
-            append("</map>")
-        }
+        val xml =
+            buildString {
+                append("<map>")
+                repeat(3_000) { append("<string name=\"entry$it\">value") }
+                append("</map>")
+            }
         val library = ForeignLibrary(ForeignLibraryFamily.PRISM, emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
 
         assertTrue(library.withPrismArtistPreferences(xml).artists.isEmpty())

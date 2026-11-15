@@ -91,11 +91,26 @@ private val PRISM_XML_ENTITY = Regex("""&(#x[0-9a-fA-F]+|#[0-9]+|lt|gt|quot|apos
 private fun decodePrismXmlEntities(value: String): String =
     PRISM_XML_ENTITY.replace(value) { match ->
         when (val entity = match.groupValues[1]) {
-            "lt" -> "<"
-            "gt" -> ">"
-            "quot" -> "\""
-            "apos" -> "'"
-            "amp" -> "&"
+            "lt" -> {
+                "<"
+            }
+
+            "gt" -> {
+                ">"
+            }
+
+            "quot" -> {
+                "\""
+            }
+
+            "apos" -> {
+                "'"
+            }
+
+            "amp" -> {
+                "&"
+            }
+
             else -> {
                 val codePoint = if (entity.startsWith("#x")) entity.substring(2).toIntOrNull(16) else entity.substring(1).toIntOrNull()
                 if (codePoint == null || codePoint !in 0..0x10ffff || codePoint in 0xd800..0xdfff) {
