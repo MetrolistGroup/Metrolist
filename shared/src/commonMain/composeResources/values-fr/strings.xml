@@ -2416,7 +2416,7 @@
         <item quantity="other">Importation de %1$s depuis %2$d playlists. L'importation continue en arrière-plan.</item>
     </plurals>
     <string name="settings_storage_summary">%1$s utilisés • %2$s disponibles</string>
-    <string name="live">DIRECT</string>
+    <string name="live">EN DIRECT</string>
     <string name="audio_boost">Préampli</string>
     <string name="equalizer_usage_warning">L'équipe de Metrolist décline toute responsabilité quant à votre utilisation de MetroEQ.</string>
     <string name="login">Se connecter</string>
@@ -2579,10 +2579,10 @@
     <string name="devtools_render_backend_metal">Métal</string>
     <string name="device_connect_account_unresolved">Identité du compte indisponible. Connectez-vous à nouveau sur les deux appareils et sélectionnez la même chaîne YouTube.</string>
     <string name="remove_from_recent_question">Supprimer des éléments récents ?</string>
-    <string name="cast_playback_failed">Le périphérique de diffusion n'a pas pu effectuer cette action.</string>
+    <string name="cast_playback_failed">Le périphérique de diffusion n'a pas pu effectuer cette opération.</string>
     <string name="desktop_tray_toggle_on_click">Afficher ou réduire en cliquant sur l'icone</string>
     <string name="desktop_tray_toggle_on_click_desc">Un clic gauche sur l'icône de la barre d'état affiche ou réduit l'application</string>
-    <string name="import_error_no_library_matches">Aucun morceau n'a pu être associé à la bibliothèque musicale</string>
+    <string name="import_error_no_library_matches">Impossible de faire correspondre les titres</string>
     <string name="playback_event_log_raw_empty">Aucun événement lié à la lecture n'a encore été enregistré. Lancez la lecture d'un titre pour recueillir des données de diagnostic.</string>
     <string name="ai_setup_credit_hint">Vérifiez le solde de votre compte et la limite de crédits associée à votre clé OpenRouter. Une clé OAuth peut avoir sa propre limite. Réessayez après avoir ajusté cette limite.</string>
     <string name="ai_setup_busy_hint">Les modèles gratuits disponibles sont temporairement surchargés. Veuillez réessayez plus tard.</string>
