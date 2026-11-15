@@ -86,6 +86,17 @@ class PrismBackupImportTest {
     }
 
     @Test
+    fun favoritePreferencesDecodeNumericEntitiesAndCdata() {
+        val library = ForeignLibrary(ForeignLibraryFamily.PRISM, emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+
+        val numeric = library.withPrismArtistPreferences("<map><string name=\"favorites\">&#91;{\"id\":\"UC&amp;1\",\"name\":\"Artist &#x1F3B5;\"}&#93;</string></map>")
+        val cdata = library.withPrismArtistPreferences("<map><string name=\"favorites\"><![CDATA[[{\"id\":\"UCartist\",\"name\":\"Artist\"}]]></string></map>")
+
+        assertEquals(ForeignArtist("UC&1", "Artist 🎵"), numeric.artists.single())
+        assertEquals(ForeignArtist("UCartist", "Artist"), cdata.artists.single())
+    }
+
+    @Test
     fun malformedOptionalFavoritesDoNotDiscardValidLibraryCollections() =
         runBlocking {
             val source = sourceDatabase()

@@ -835,6 +835,7 @@ class IosBackupRestoreManager(
                     tail.readLeInt(offset) == 0x06054b50L &&
                         offset + 22 + tail.readLeShort(offset + 20) == tail.size
                 } ?: error("Backup archive is corrupt")
+            check(eocd < 20 || tail.readLeInt(eocd - 20) != 0x07064b50L) { "ZIP64 backup archives are not supported" }
             check(tail.readLeShort(eocd + 4) == 0 && tail.readLeShort(eocd + 6) == 0) { "Split archives are not supported" }
             val count = tail.readLeShort(eocd + 10)
             requireBackupSize(count.toLong(), maximumEntries.toLong())
