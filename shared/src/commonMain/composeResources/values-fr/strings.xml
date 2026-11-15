@@ -1356,12 +1356,12 @@
     <string name="discord_sign_in_unavailable">Connexion à Discord indisponible</string>
     <string name="display_density">Mise à l\u0027échelle</string>
     <string name="density_large">125 % – Très élevée</string>
-    <string name="density_slightly_large">115 \u0025, élevée</string>
-    <string name="density_native">100 \u0025, native</string>
-    <string name="density_slightly_compact">85 \u0025, légèrement plus faible</string>
-    <string name="density_compact">75 \u0025, faible</string>
-    <string name="density_very_compact">65 \u0025, très faible</string>
-    <string name="density_ultra_compact">55 \u0025, ultra faible</string>
+    <string name="density_slightly_large">115 % – Élevée</string>
+    <string name="density_native">100 % – Native</string>
+    <string name="density_slightly_compact">85 % – plus faible</string>
+    <string name="density_compact">75 % – Faible</string>
+    <string name="density_very_compact">65 % – Très faible</string>
+    <string name="density_ultra_compact">55 % – Ultra faible</string>
     <string name="enable_landscape_scaling">Mise à l'échelle paysage</string>
     <string name="enable_landscape_scaling_desc">Met à l'échelle l'interface en position paysage pour les écrans plus larges</string>
     <string name="force_bottom_navbar">Forcer la barre de navigation inférieure</string>
@@ -2212,7 +2212,7 @@
     <string name="settings_auto_playlist_summary">Sélectionnez les playlists automatiques à afficher dans la bibliothèque</string>
     <string name="settings_palette_style_summary">Modifiez la combinaison des couleurs générées pour le thème</string>
     <string name="settings_library_density_summary">Nombre de colonnes de la grille de la bibliothèque</string>
-    <string name="settings_interface_density_summary">Taille du texte, des icônes et des commandes dans toute l'application</string>
+    <string name="settings_interface_density_summary">Taille du texte, des icônes et des boutons dans toute l'application</string>
     <string name="settings_initial_tab_summary">Choisissez l'onglet qui s'ouvre au démarrage de l'application</string>
     <string name="settings_bottom_navigation_summary">Gardez la navigation en bas sur les écrans larges</string>
     <string name="settings_app_layout_summary">Choisissez la répartition du contenu et du lecteur dans la fenêtre</string>
