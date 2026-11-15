@@ -29,6 +29,12 @@ class DesktopLauncherTest(unittest.TestCase):
             'printf "%s\\n" "$XCURSOR_THEME" "$XCURSOR_SIZE" '
             '"$METROLIST_CURSOR_CONFIGURED" "$METROLIST_CDS_CACHE" "$@"',
         )
+        self.native_launcher = self.bin / "Metrolist.native-wrapper"
+        native = Path(__file__).resolve().parents[2] / "scripts/desktop-native-image/linux-launcher.sh"
+        self.executable(self.native_launcher, native.read_text())
+        native_binary = self.bin.parent / "lib/native/Metrolist"
+        native_binary.parent.mkdir(parents=True)
+        self.executable(native_binary, (self.bin / "Metrolist.bin").read_text())
         self.environment = {
             "PATH": f"{self.tools}:/usr/bin:/bin",
             "HOME": str(self.root / "user home"),
@@ -40,9 +46,9 @@ class DesktopLauncherTest(unittest.TestCase):
         path.write_text("#!/bin/sh\n" + body + "\n")
         path.chmod(0o755)
 
-    def launch(self):
+    def launch(self, native=False):
         result = subprocess.run(
-            [self.launcher, "argument with spaces"],
+            [self.native_launcher if native else self.launcher, "argument with spaces"],
             env=self.environment,
             capture_output=True,
             text=True,
@@ -118,6 +124,40 @@ class DesktopLauncherTest(unittest.TestCase):
         start = time.monotonic()
         self.assertEqual(["FallbackTheme", "24", "1"], self.launch()[:3])
         self.assertLess(time.monotonic() - start, 5)
+
+    def test_kde_cursor_settings_take_precedence_in_both_launchers(self):
+        self.environment["XDG_CURRENT_DESKTOP"] = "KDE"
+        self.executable(self.tools / "gsettings", 'echo called >> "$PROBE_LOG"\necho 24')
+        self.executable(
+            self.tools / "kreadconfig6",
+            'case "$6" in cursorTheme) echo Oxygen_White;; cursorSize) echo 48;; esac',
+        )
+        for native in (False, True):
+            with self.subTest(native=native):
+                self.assertEqual(["Oxygen_White", "48", "1"], self.launch(native)[:3])
+        self.assertFalse(Path(self.environment["PROBE_LOG"]).exists())
+
+    def test_kde5_and_explicit_cursor_overrides(self):
+        self.environment.update(KDE_FULL_SESSION="true", XCURSOR_SIZE="64")
+        self.executable(self.tools / "kreadconfig6", 'exit 1')
+        self.executable(self.tools / "kreadconfig5", 'echo KDE5Theme')
+        for native in (False, True):
+            with self.subTest(native=native):
+                self.assertEqual(["KDE5Theme", "64", "1"], self.launch(native)[:3])
+                self.environment["XCURSOR_THEME"] = "UserTheme"
+                self.assertEqual(["UserTheme", "64", "1"], self.launch(native)[:3])
+                del self.environment["XCURSOR_THEME"]
+
+    def test_missing_or_auto_kde_cursor_settings_leave_size_unset(self):
+        self.environment["XDG_CURRENT_DESKTOP"] = "KDE"
+        self.executable(self.tools / "gsettings", 'echo called >> "$PROBE_LOG"\necho 24')
+        self.executable(self.tools / "kreadconfig5", 'exit 1')
+        for value in ("", "0", "-1", "invalid"):
+            self.executable(self.tools / "kreadconfig6", f"printf '%s' '{value}'")
+            for native in (False, True):
+                with self.subTest(value=value, native=native):
+                    self.assertEqual("", self.launch(native)[1])
+        self.assertFalse(Path(self.environment["PROBE_LOG"]).exists())
 
     def test_relative_xdg_cache_uses_home(self):
         self.environment.update(
