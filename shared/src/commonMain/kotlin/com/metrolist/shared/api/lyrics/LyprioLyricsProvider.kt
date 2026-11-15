@@ -211,6 +211,11 @@ class LyprioLyricsProvider internal constructor(
 
                 HttpStatusCode.Accepted, HttpStatusCode.TooManyRequests, HttpStatusCode.ServiceUnavailable -> {
                     val pending = response.status == HttpStatusCode.Accepted
+                    if (response.status == HttpStatusCode.ServiceUnavailable && payload.complete) {
+                        check(responseStatus == "unavailable") { "Lyprio returned an invalid unavailable response" }
+                        // Every source failed or was skipped: not a confirmed miss, so skip the all-sources retry.
+                        return accumulated(complete = false)
+                    }
                     check(
                         if (pending) {
                             responseStatus == "pending" && !payload.complete
