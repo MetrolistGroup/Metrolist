@@ -719,14 +719,13 @@ class LyricsTranslationClient(
         maxTokens: Int,
         temperature: Double,
     ): Result<String> {
-        val geminiPreset = AiProviderPresets.find("Gemini")
-        val fallbackModel = geminiPreset?.defaultModel?.ifBlank { null } ?: "gemini-flash-lite-latest"
-        val effectiveModel = model.ifBlank { fallbackModel }
-        val resolvedBase =
-            baseUrl.ifBlank {
-                geminiPreset?.endpoint?.ifBlank { null }
-                    ?: "https://generativelanguage.googleapis.com/v1beta/models/$fallbackModel:generateContent"
-            }
+        val geminiPreset =
+            AiProviderPresets.find("Gemini")
+                ?: return Result.failure(IllegalStateException("Gemini preset is not configured"))
+        val effectiveModel = model.ifBlank { geminiPreset.defaultModel }
+        if (effectiveModel.isBlank()) return Result.failure(IllegalArgumentException("Gemini model is required"))
+        val resolvedBase = baseUrl.ifBlank { geminiPreset.endpoint }
+        if (resolvedBase.isBlank()) return Result.failure(IllegalArgumentException("Gemini endpoint is required"))
         val url =
             when {
                 resolvedBase.contains("{model}") -> {
