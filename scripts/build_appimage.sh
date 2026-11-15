@@ -56,7 +56,7 @@ if [[ "${1:-}" == "--native-appdir" ]]; then
     exit 0
 fi
 
-"$gradle" :desktopApp:createAppImageLocal --no-daemon --no-configuration-cache "$@"
+"$gradle" :desktopApp:createAppImageLocal -Pmetrolist.debug=false --no-daemon --no-configuration-cache "$@"
 
 test -s "$app_image" || { echo "AppImage build produced no output: $app_image" >&2; exit 1; }
 chmod +x "$app_image"

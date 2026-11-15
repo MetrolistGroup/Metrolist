@@ -125,6 +125,7 @@ jobs:
           set -euo pipefail
           args=(
             :desktopApp:packageReleaseDmg
+            -Pmetrolist.debug=false
             -Pmetrolist.verifyPackaging=${{ inputs.run-verification }}
             --no-daemon
             --no-configuration-cache

@@ -30,6 +30,7 @@ class AppImageBuildTest(unittest.TestCase):
             self.assertNotIn(":desktopApp:clean", package)
             self.assertNotIn("--no-build-cache", package)
             self.assertIn("--no-configuration-cache", package)
+            self.assertIn("-Pmetrolist.debug=false", package)
             self.assertIn("persist-configuration-cache: 'false'", package)
 
     def test_webview_cache_is_shared_but_pull_requests_cannot_write(self):
@@ -127,6 +128,7 @@ Path(sys.argv[sys.argv.index("--output") + 1]).write_bytes(b"corrupted download"
                 self.assertEqual(result.returncode == 0, produces_output, result.stderr)
                 self.assertEqual((root / "gradle-cwd").read_text().strip(), str(root))
                 self.assertIn("--offline", (root / "gradle-args").read_text().splitlines())
+                self.assertIn("-Pmetrolist.debug=false", (root / "gradle-args").read_text().splitlines())
                 self.assertTrue(os.access(tool, os.X_OK))
                 if produces_output:
                     self.assertTrue(os.access(root / "dist/Metrolist.AppImage", os.X_OK))

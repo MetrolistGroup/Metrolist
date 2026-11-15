@@ -115,6 +115,8 @@ Bytedeco publishes no `windows-arm64` FFmpeg natives. `scripts/build_windows_arm
 
 The AppImage script writes `dist/Metrolist.AppImage` and accepts `GRADLE` to select the Gradle command. The DMG task requires macOS and writes under `desktopApp/build/compose/binaries/main-release/dmg/`. Packages include their own runtime.
 
+The AppImage script and Windows and macOS release workflows pass `-Pmetrolist.debug=false` so release packages use the release title and settings.
+
 The Arch recipe is in [`aur/`](../aur/). `make aur-install` builds from the local tree. Standalone recipes fetch remote source. `bash aur/test-recipe.sh` checks recipe behavior without building the app.
 
 Windows login uses `metro-wv2-helper`. With the .NET SDK selected by `metro-wv2-helper/global.json`, run `metro-wv2-helper/build_helper.bat`. It copies the self-contained x64 helper into desktop resources. Run `dotnet run --project metro-wv2-helper/tests/LoginCompletion.Tests.csproj` for backend checks.
