@@ -95,6 +95,7 @@ import com.metrolist.shared.ui.settings.SettingsPageId
 import com.metrolist.shared.ui.settings.SettingsPlatform
 import com.metrolist.shared.ui.settings.SharedSettingsHost
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
+import com.metrolist.shared.utils.isCrashReportingAvailable
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.FileKitDialogSettings
 import io.github.vinceglb.filekit.dialogs.FileKitType
@@ -111,13 +112,13 @@ import org.jetbrains.compose.resources.stringResource
 fun DesktopOnboarding(onComplete: (sendCrashReports: Boolean, openLogin: Boolean) -> Unit) {
     val pages =
         remember {
-            listOf(
-                OnboardingPage.WELCOME,
-                OnboardingPage.CRASH_REPORTS,
-                OnboardingPage.LANGUAGE_LYRICS,
-                OnboardingPage.PLAYBACK,
-                OnboardingPage.FINISH,
-            )
+            buildList {
+                add(OnboardingPage.WELCOME)
+                if (isCrashReportingAvailable()) add(OnboardingPage.CRASH_REPORTS)
+                add(OnboardingPage.LANGUAGE_LYRICS)
+                add(OnboardingPage.PLAYBACK)
+                add(OnboardingPage.FINISH)
+            }
         }
     val languages = appLanguageChoices()
     var pageIndex by rememberSaveable { mutableStateOf(0) }
@@ -158,7 +159,9 @@ fun DesktopOnboarding(onComplete: (sendCrashReports: Boolean, openLogin: Boolean
                 withContext(Dispatchers.IO) {
                     DesktopBackupRestoreManager.stageRestoreAndRestart(selected.file) {
                         Settings.shared.desktopOnboardingComplete = true
-                        Settings.shared.desktopPendingOnboardingSentryConsent = sendCrashReports.toString()
+                        if (isCrashReportingAvailable()) {
+                            Settings.shared.desktopPendingOnboardingSentryConsent = sendCrashReports.toString()
+                        }
                     }
                 }.onFailure {
                     Settings.shared.desktopOnboardingComplete = false

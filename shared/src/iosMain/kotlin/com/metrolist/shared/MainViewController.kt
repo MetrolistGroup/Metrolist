@@ -100,6 +100,7 @@ import com.metrolist.shared.update.IosUpdateNotice
 import com.metrolist.shared.utils.ArtworkSizingInterceptor
 import com.metrolist.shared.utils.Logger
 import com.metrolist.shared.utils.formatHistoryMonth
+import com.metrolist.shared.utils.isCrashReportingAvailable
 import com.metrolist.shared.youtube.playback.IosPageBoundTokenHost
 import com.metrolist.shared.youtube.playback.IosPlaybackNetworkMonitor
 import com.metrolist.shared.youtube.playback.StreamResolver
@@ -418,7 +419,7 @@ fun MetrolistIOSApp() {
                 pureBlack = Settings.shared.isPureBlackTheme(),
             ) {
                 IosOnboarding { consent, login, restore ->
-                    Settings.shared.sentryEnabled = consent
+                    if (isCrashReportingAvailable()) Settings.shared.sentryEnabled = consent
                     Settings.shared.iosOnboardingComplete = true
                     showOnboarding = false
                     if (login) handleOpenUrl("metrolist://login")

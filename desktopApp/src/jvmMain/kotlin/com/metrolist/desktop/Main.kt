@@ -215,6 +215,7 @@ import com.metrolist.shared.ui.utils.desktopMouseScrollFactors
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.OsUtil
 import com.metrolist.shared.utils.XdgUtils
+import com.metrolist.shared.utils.isCrashReportingAvailable
 import com.metrolist.shared.youtube.di.sharedModule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -301,10 +302,12 @@ private fun WindowScope.AppContent(
         var onboardingComplete by remember { mutableStateOf(Settings.shared.desktopOnboardingComplete) }
         if (!onboardingComplete) {
             DesktopOnboarding { sendCrashReports, openLogin ->
-                if (Settings.shared.desktopPendingOnboardingSentryConsent.isNotBlank()) {
-                    Settings.shared.desktopPendingOnboardingSentryConsent = sendCrashReports.toString()
+                if (isCrashReportingAvailable()) {
+                    if (Settings.shared.desktopPendingOnboardingSentryConsent.isNotBlank()) {
+                        Settings.shared.desktopPendingOnboardingSentryConsent = sendCrashReports.toString()
+                    }
+                    Settings.shared.sentryEnabled = sendCrashReports
                 }
-                Settings.shared.sentryEnabled = sendCrashReports
                 Settings.shared.desktopOnboardingComplete = true
                 applicationScope.launch(Dispatchers.IO) { SentryManager.initialize() }
                 if (openLogin) {
@@ -827,9 +830,11 @@ private fun runDesktopApp(args: Array<String>) {
         settings.desktopOnboardingComplete = File(XdgUtils.getXdgDataHome(), "metrolist/metrolist.db").isFile
         settings.desktopOnboardingInitialized = true
     }
-    settings.desktopPendingOnboardingSentryConsent.takeIf(String::isNotBlank)?.let { consent ->
-        settings.sentryEnabled = consent.toBooleanStrict()
-        settings.desktopPendingOnboardingSentryConsent = ""
+    if (isCrashReportingAvailable()) {
+        settings.desktopPendingOnboardingSentryConsent.takeIf(String::isNotBlank)?.let { consent ->
+            settings.sentryEnabled = consent.toBooleanStrict()
+            settings.desktopPendingOnboardingSentryConsent = ""
+        }
     }
     DesktopLocaleManager.apply(settings.appLanguage)
 
