@@ -1534,6 +1534,11 @@ private fun runDesktopApp(args: Array<String>) {
             if (integrationsReady) MiniplayerWindow()
         }
 
-        if (integrationsReady) ComposeTrayManager.TrayIcon()
+        // System tray icon (stock Compose Tray on macOS, ComposeNativeTray on Linux/Windows)
+        if (integrationsReady) {
+            with(ComposeTrayManager) {
+                TrayIcon()
+            }
+        }
     }
 }
