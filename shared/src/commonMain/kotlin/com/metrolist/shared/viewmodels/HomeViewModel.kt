@@ -84,6 +84,8 @@ private const val HOME_LOG_TAG = "HomeViewModel"
 private const val HOME_SNAPSHOT_SECTIONS = 8
 private const val HOME_SNAPSHOT_ITEMS = 24
 
+private class HomeLibraryRevisionChangedException : Exception()
+
 internal data class HomeUserPlaylistSnapshot(
     val revision: Long,
     val playlists: List<UserPlaylist>,
@@ -459,12 +461,17 @@ class HomeViewModel(
                     initialSpeedDialPins.await()
                     database.refreshSpeedDialArtwork(known, artworkRefreshTimes) { id ->
                         if (attemptedArtwork.add(id)) {
-                            GlobalYouTubeRepository.instance
-                                .getPlaylistPages(id)
-                                .first()
-                                .sections["header"]
-                                ?.filterIsInstance<PlaylistItem>()
-                                ?.firstOrNull()
+                            try {
+                                GlobalYouTubeRepository.instance
+                                    .getPlaylistPages(id)
+                                    .first()
+                                    .sections["header"]
+                                    ?.filterIsInstance<PlaylistItem>()
+                                    ?.firstOrNull()
+                            } catch (error: CancellationException) {
+                                attemptedArtwork.remove(id)
+                                throw error
+                            }
                         } else {
                             null
                         }
@@ -809,7 +816,7 @@ class HomeViewModel(
                             return@supervisorScope
                         }
                         if (!isCurrentHomeLibraryRevision(userPlaylistsSnapshot.revision, librarySnapshotRevision)) {
-                            return@supervisorScope
+                            throw HomeLibraryRevisionChangedException()
                         }
                         if (!isFiltered) speedDialRecommendationItems = speedDialRecommendations
 
