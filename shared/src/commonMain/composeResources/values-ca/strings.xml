@@ -1159,8 +1159,8 @@
     <string name="approve">Aprovar</string>
     <string name="reject">Rebutjar</string>
     <string name="clear">Esborrar</string>
-    <string name="copy">Copiar</string>
-    <string name="not_set">No establert</string>
+    <string name="copy">Copia</string>
+    <string name="not_set">No configurat</string>
     <string name="suggest_to_host">Suggereix a l’amfitrió</string>
     <string name="kick_user">Expulsar</string>
     <string name="listen_together_blocked_users">Usuaris bloquejats</string>
@@ -1338,7 +1338,7 @@
     <string name="menu_undo">Desfés</string>
     <string name="menu_redo">Refés</string>
     <string name="menu_cut">Retalla</string>
-    <string name="menu_copy">Copiar</string>
+    <string name="menu_copy">Copia</string>
     <string name="menu_paste">Enganxa</string>
     <string name="menu_select_all">Selecciona tot</string>
     <string name="menu_play">Reprodueix</string>
@@ -1386,7 +1386,7 @@
     <string name="menu_new_playlist">Nova llista</string>
     <string name="menu_add_to_playlist">Afegeix a la llista</string>
     <string name="menu_share">Comparteix</string>
-    <string name="menu_copy_link">Copiar enllaç</string>
+    <string name="menu_copy_link">Copia enllaç</string>
     <string name="menu_create_station">Crear estació</string>
     <string name="menu_play_next">Reprodueix a continuació</string>
     <string name="menu_add_to_queue">Afegir a la cua</string>
@@ -2602,4 +2602,5 @@
     <string name="ai_setup_privacy_settings">Obre els ajustos de privadesa</string>
     <string name="ai_setup_sign_in_again">Torna a iniciar la sessió</string>
     <string name="ai_setup_key_limits">Revisa els límits de la clau</string>
+    <string name="blocked_songs">Cançons bloquejats</string>
 </resources>
