@@ -616,6 +616,7 @@ fun LoginScreen(
             PopupVisibility(visible = !tvWarningAccepted) {
                 AlertDialog(
                     onDismissRequest = onNavigateBack,
+                    outlineActions = false,
                     title = { Text(stringResource(Res.string.sign_in_on_tv)) },
                     text = { Text(stringResource(Res.string.tv_sign_in_warning)) },
                     dismissButton = {
