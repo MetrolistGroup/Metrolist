@@ -1058,6 +1058,7 @@ internal class IosPlaybackController(
                         } else {
                             withContext(videoPlaybackDispatcher) { musicVideoResolver.resolveMusicVideo(song) }
                         } as? MusicVideoResult.Found ?: return@launch
+                    if (resolvedVideo.videoId != song.id && resolvedVideo.positionMap == null) return@launch
                     val videoSong =
                         if (resolvedVideo.videoId == song.id) {
                             song
