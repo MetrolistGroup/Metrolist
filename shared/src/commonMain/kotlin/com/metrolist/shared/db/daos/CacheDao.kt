@@ -278,6 +278,16 @@ interface CacheDao {
     @Query("SELECT * FROM cached_audio WHERE kind = :kind ORDER BY cachedAt DESC")
     fun cachedAudioByKind(kind: String): Flow<List<CachedAudioEntity>>
 
+    @Query(
+        """
+        UPDATE cached_audio SET cachedAt = (SELECT dateDownload FROM song WHERE id = cached_audio.songId)
+        WHERE kind = 'DOWNLOAD' AND EXISTS (
+            SELECT 1 FROM song WHERE id = cached_audio.songId AND dateDownload < cached_audio.cachedAt
+        )
+        """,
+    )
+    suspend fun restoreDownloadDates()
+
     @Query("SELECT songId, filePath FROM cached_audio WHERE kind = :kind AND songId IN (:songIds)")
     suspend fun cachedAudioCandidates(
         songIds: List<String>,

@@ -61,6 +61,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import okhttp3.Call
 import okhttp3.OkHttpClient
@@ -623,6 +624,7 @@ class AudioCacheManager(
      */
     internal suspend fun importLegacyDownloads(directory: File = File(context.filesDir, LEGACY_DOWNLOAD_DIRECTORY)) =
         withContext(Dispatchers.IO) {
+            database.dao().restoreDownloadDates()
             if (!directory.isDirectory) return@withContext
             // The legacy app indexed this cache in StandaloneDatabaseProvider's database; SimpleCache deletes spans it cannot index.
             val databaseProvider = StandaloneDatabaseProvider(context)
@@ -688,7 +690,10 @@ class AudioCacheManager(
                             filePath = path,
                             mimeType = mimeType,
                             fileSize = length,
-                            cachedAt = now,
+                            cachedAt =
+                                song.song.dateDownload
+                                    ?.toInstant(TimeZone.UTC)
+                                    ?.toEpochMilliseconds() ?: now,
                             lastAccessedAt = now,
                             cacheLocation = "DOWNLOAD_$LOCATION_INTERNAL",
                             kind = KIND_DOWNLOAD,
