@@ -1,6 +1,16 @@
 package com.metrolist.shared.listentogether
 
+import androidx.compose.runtime.AbstractApplier
+import androidx.compose.runtime.BroadcastFrameClock
+import androidx.compose.runtime.Composition
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Recomposer
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import com.metrolist.listentogether.codec.MessageCodec
 import com.metrolist.shared.listentogether.network.ApproveSuggestionPayload
 import com.metrolist.shared.listentogether.network.ErrorPayload
@@ -24,6 +34,8 @@ import com.metrolist.shared.listentogether.network.TrackInfo
 import com.metrolist.shared.listentogether.network.UserInfo
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.ui.listentogether.listenTogetherSettingsPage
+import com.metrolist.shared.ui.settings.SettingsPageRegistration
 import com.russhwolf.settings.MapSettings
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -54,6 +66,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -601,6 +614,84 @@ class ListenTogetherManagerLifecycleTest {
     fun tearDown() {
         Settings.replaceSharedForTest(null)
     }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun settingsRegistryRebuildsAfterEachSwitchChangeWithoutReopening() =
+        runTest {
+            val client = HttpClient(MockEngine { error("Preference changes must not connect") })
+            val manager = handoffManager(backgroundScope, client, sessionPersistenceEnabled = false)
+            val clock = BroadcastFrameClock()
+            val recomposer = Recomposer(coroutineContext + clock)
+            val composition =
+                Composition(
+                    object : AbstractApplier<Unit>(Unit) {
+                        override fun insertBottomUp(
+                            index: Int,
+                            instance: Unit,
+                        ) = error("No UI nodes expected")
+
+                        override fun insertTopDown(
+                            index: Int,
+                            instance: Unit,
+                        ) = error("No UI nodes expected")
+
+                        override fun move(
+                            from: Int,
+                            to: Int,
+                            count: Int,
+                        ) = error("No UI nodes expected")
+
+                        override fun remove(
+                            index: Int,
+                            count: Int,
+                        ) = error("No UI nodes expected")
+
+                        override fun onClear() {}
+                    },
+                    recomposer,
+                )
+            var page: SettingsPageRegistration? = null
+            backgroundScope.launch(clock) { recomposer.runRecomposeAndApplyChanges() }
+            try {
+                composition.setContent {
+                    CompositionLocalProvider(
+                        LocalDensity provides Density(1f),
+                        LocalLayoutDirection provides LayoutDirection.Ltr,
+                    ) {
+                        page = listenTogetherSettingsPage(manager)
+                    }
+                }
+                runCurrent()
+                var frame = 0L
+                for (id in listOf("listenTogetherAutoApproveJoins", "listenTogetherAutoApproveSuggestions", "listenTogetherSyncVolume")) {
+                    repeat(2) {
+                        val item = page!!.groups.flatMap { it.items }.single { it.id == id }
+                        val expected = item.checked != true
+                        item.onCheckedChange!!(expected)
+                        runCurrent()
+                        Snapshot.sendApplyNotifications()
+                        runCurrent()
+                        clock.sendFrame(++frame)
+                        runCurrent()
+                        assertEquals(
+                            expected,
+                            page!!
+                                .groups
+                                .flatMap { it.items }
+                                .single { it.id == id }
+                                .checked,
+                            "$id should update without reopening",
+                        )
+                    }
+                }
+            } finally {
+                composition.dispose()
+                recomposer.close()
+                manager.close()
+                client.close()
+            }
+        }
 
     @Test
     fun localPreferencesPublishAndPersistForHostsAndGuestsWithABlankUsername() =
