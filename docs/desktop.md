@@ -66,7 +66,7 @@ The embedded login is used when registration fails, when a macOS launch lacks a 
 
 Linux JVM and native launchers preserve `XCURSOR_THEME` and `XCURSOR_SIZE`. In KDE sessions they read Plasma's `kcminputrc` through `kreadconfig6` or `kreadconfig5`, without applying GNOME cursor defaults. Missing or automatic cursor sizes stay unset for the toolkit to resolve.
 
-Appearance's Display density scales text, icons and controls on top of the system scale. Desktop uses the same 55% to 125% presets and saved preference as Android. Changes apply live to the main window, mini player, Compose dialogs and popups. Library grid columns controls only the library column count.
+Appearance's Display density scales text, icons and controls on top of the system scale. Desktop uses the same 55% to 200% presets and saved preference as Android. Changes apply live to the main window, mini player, Compose dialogs and popups. Library grid columns controls only the library column count.
 
 Linux uses X11 or Xwayland by default. Scale setup runs before AWT window identity, URL-handler registration and Swing dispatcher initialization. In Wayland sessions, scale detection checks the compositor before toolkit environment variables, so a neutral `GDK_SCALE=1` cannot hide KDE's fractional output scale. Without compositor tools, detection uses `QT_SCALE_FACTOR`, the product of `GDK_SCALE` and `GDK_DPI_SCALE`, `XDG_SCALE`, Xft DPI from `xrdb -query`, or `[KScreen] ScaleFactor` in `kdeglobals`. Configuration follows `XDG_CONFIG_HOME`. X11 sessions also use these fallbacks.
 
