@@ -51,6 +51,7 @@ interface PlayerPlatform {
     fun PlayerWindowEffects(
         hideSystemBars: Boolean,
         lockLandscape: Boolean,
+        lightStatusBars: Boolean?,
     )
 
     fun enterPictureInPicture(
