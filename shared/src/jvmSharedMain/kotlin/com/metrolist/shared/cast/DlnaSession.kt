@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.w3c.dom.Document
 import org.w3c.dom.Element
+import org.xml.sax.SAXException
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.ByteArrayInputStream
@@ -494,16 +495,23 @@ private fun readHttpLine(input: BufferedInputStream): String? {
     error("HTTP line too long")
 }
 
+internal expect fun disallowDlnaDoctype(
+    factory: DocumentBuilderFactory,
+    bytes: ByteArray,
+)
+
 private fun parseXml(bytes: ByteArray): Document {
     require(!bytes.toString(Charsets.UTF_8).contains("<!DOCTYPE", ignoreCase = true))
     val factory = DocumentBuilderFactory.newInstance()
     factory.isNamespaceAware = true
     factory.isXIncludeAware = false
     factory.isExpandEntityReferences = false
-    factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-    factory.setFeature("http://xml.org/sax/features/external-general-entities", false)
-    factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false)
-    return factory.newDocumentBuilder().parse(ByteArrayInputStream(bytes))
+    disallowDlnaDoctype(factory, bytes)
+    return factory
+        .newDocumentBuilder()
+        .apply {
+            setEntityResolver { _, _ -> throw SAXException("External entities are not allowed") }
+        }.parse(ByteArrayInputStream(bytes))
 }
 
 private fun Document.elements(localName: String): List<Element> {
