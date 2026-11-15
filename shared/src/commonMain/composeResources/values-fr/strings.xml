@@ -197,7 +197,7 @@
     <string name="clear_song_cache">Vider le cache des titres</string>
     <string name="song_cache_location">Emplacement du cache des titres</string>
     <string name="song_cache_location_internal">Stockage interne de l\u0027application</string>
-    <string name="song_cache_location_internal_desc">Dans le stockage de l'application</string>
+    <string name="song_cache_location_internal_desc">Caché dans l'espace de stockage de l'application</string>
     <string name="song_cache_location_shared_media">Dossier multimédia partagé</string>
     <string name="song_cache_location_shared_media_desc">Accessible dans le dossier Android/media pour les gestionnaires de fichiers et les lecteurs multimédia</string>
     <string name="song_cache_location_custom">Autre dossier</string>
@@ -365,7 +365,7 @@
     <string name="privacy_settings_title">Confidentialité</string>
     <string name="sentry_reporting">Rapports de plantage et de performances</string>
     <string name="sentry_reporting_desc">Envoie les plantages, les erreurs, les données de performances et des détails de lecture comme les informations du titre à Sentry. Les identifiants sont supprimés.</string>
-    <string name="import_playlist">Importer</string>
+    <string name="import_playlist">Importer une playlist</string>
     <string name="playlist_name">Nom de la playlist</string>
     <string name="equalizer">Égaliseur</string>
     <string name="lyrics_timing_unsynced">Non-synchronisées</string>
@@ -398,7 +398,7 @@
     <string name="appearance_navigation_tabs">Barre de navigation</string>
     <string name="appearance_show_home_tab">Onglet Accueil</string>
     <string name="appearance_show_uploaded_playlist">Playlist Importés</string>
-    <string name="appearance_show_cached_playlist">Playlist Mis en cache</string>
+    <string name="appearance_show_cached_playlist">Playlist mise en cache</string>
     <string name="appearance_show_search_tab">Onglet Recherche</string>
     <string name="appearance_show_library_tab">Onglet Bibliothèque</string>
     <string name="mysterious_fourth_tab">Aucun onglet visible</string>
@@ -508,7 +508,7 @@
         <item quantity="many">%1$d titres importés</item>
         <item quantity="other">%1$d titres importés</item>
     </plurals>
-    <string name="backup_restore_export_desc">Exporter les paramètres, la bibliothèque, les playlists, les titres favoris et l'historique dans un fichier ZIP</string>
+    <string name="backup_restore_export_desc">Exporter les paramètres, la base de données de la bibliothèque, les playlists, les favoris et l'historique dans un fichier ZIP</string>
     <string name="backup_restore_import_desc">Restaurer une sauvegarde Metrolist. L'application redémarrera automatiquement.</string>
     <string name="backup_restore_busy">Restauration en cours…</string>
     <string name="backup_sensitive_title">Données sensibles</string>
@@ -698,7 +698,7 @@
     <string name="blurred_artwork">Pochette floue</string>
     <string name="liquid">Fluide</string>
     <string name="browse">Parcourir</string>
-    <string name="cached_audio">Audio mis en cache</string>
+    <string name="cached_audio">Fichier audio mis en cache</string>
     <string name="choose_lyrics">Sélectionner des paroles</string>
     <string name="clear_recent_from_searches_question">Effacer les titres recherchés récemment ?</string>
     <string name="clear_recent_searches_question">Effacer les recherches récentes ?</string>
@@ -1045,7 +1045,7 @@
     <string name="import_connect_amazon_music_account">Se connecter à Amazon Music</string>
     <string name="import_amazon_music_session_sign_in">Connectez-vous à Amazon dans la fenêtre ci-dessus pour continuer.</string>
     <string name="import_paste_apple_music_link">Collez un lien Apple Music</string>
-    <string name="import_paste_youtube_link">Collez un lien YouTube Music</string>
+    <string name="import_paste_youtube_link">Coller le lien YouTube Music</string>
     <string name="import_paste_deezer_link">Collez un lien Deezer</string>
     <string name="import_paste_tidal_prompt">Collez un lien Tidal</string>
     <string name="import_paste_amazon_prompt">Collez un lien Amazon Music</string>
@@ -1152,7 +1152,7 @@
     <string name="saved_to_library">Ajouté à la bibliothèque</string>
     <string name="save_episode">Sauvegarder l\u0027épisode</string>
     <string name="search_recognized_songs">Rechercher dans l'historique</string>
-    <string name="search_songs">Rechercher un titre</string>
+    <string name="search_songs">Rechercher des morceaux</string>
     <string name="see_all">Voir tout</string>
     <string name="select_track_by_artist">Sélectionner %1$s de %2$s</string>
     <string name="share_album">Partager l\u0027album</string>
@@ -1254,7 +1254,7 @@
         <item quantity="other">%1$d titres supprimés de la playlist</item>
     </plurals>
     <string name="my_top">Mon top</string>
-    <string name="cached_playlist">Mis en cache</string>
+    <string name="cached_playlist">En cache</string>
     <string name="show_more">Voir plus</string>
     <string name="show_less">Voir moins</string>
     <plurals name="n_time">
@@ -1653,7 +1653,7 @@
     <string name="restore_from_backup">Restaurer à partir d\u0027une sauvegarde</string>
     <string name="edit_sidebar">Modifier le menu latéral</string>
     <string name="exit_fullscreen">Quitter le mode plein écran</string>
-    <string name="search_music">Rechercher un titre</string>
+    <string name="search_music">Rechercher de la musique</string>
     <string name="remove_from_search_history">Supprimer %1$s de l\u0027historique de recherche</string>
     <string name="downloading_count">Téléchargement (%1$d)</string>
     <string name="queued">Dans la file d\u0027attente</string>
@@ -1791,7 +1791,7 @@
     <string name="uploaded_songs_subtitle">Titres importés vers YouTube Music</string>
     <string name="uploaded_songs_empty">Aucun titre importé</string>
     <string name="import_spotify_account_playlists">Choisir depuis ma bibliothèque Spotify</string>
-    <string name="import_action_start">Importer</string>
+    <string name="import_action_start">Lancer l'importation</string>
     <string name="import_status_fetching_metadata">Récupération des playlists…</string>
     <string name="import_status_fetching_tracks">Chargement des titres : %1$d / %2$s…</string>
     <string name="import_destination_favorites">Favoris</string>
@@ -1871,7 +1871,7 @@
     <string name="logs_exported_to">Journaux exportés vers : %1$s</string>
     <string name="failed_to_export_logs">Échec de l\u0027exportation des journaux</string>
     <string name="expand_sidebar">Afficher la barre latérale</string>
-    <string name="apple_music_sign_in">Se connecter à Apple Music</string>
+    <string name="apple_music_sign_in">Connexion à Apple Music</string>
     <string name="apple_music_login_failed">Échec de la connexion à Apple Music</string>
     <string name="import_deezer_picker_description">Sélectionnez les playlists que vous souhaitez importer</string>
     <string name="import_deezer_selected_count">%1$d sélectionnées</string>
@@ -2247,7 +2247,7 @@
     <string name="settings_share_apk_summary">Partagez le paquet de l'application installée sous forme de fichier</string>
     <string name="settings_system_font_summary">Utilisez la police fournie par votre système d'exploitation</string>
     <string name="settings_thumbnail_shape_summary">Choisissez la forme des images dans le lecteur agrandi</string>
-    <string name="settings_audio_quality_summary">Une qualité supérieure consomme plus de données et de stockage</string>
+    <string name="settings_audio_quality_summary">Une meilleure qualité nécessite davantage de données et d'espace de stockage</string>
     <string name="settings_resume_prompt_summary">Demandez confirmation avant de reprendre la file enregistrée au démarrage de l'application</string>
     <string name="settings_player_layout_summary">Modifiez la disposition des images et des commandes de lecture</string>
     <string name="settings_filter_q_summary">Q règle la largeur ou la résonance du filtre sélectionné</string>
@@ -2480,7 +2480,7 @@
     <string name="tempo_pitch_input_range">Entrez un nombre entre %1$s et %2$s.</string>
     <string name="settings_more_options">Autres</string>
     <string name="settings_navigation_gestures">Navigation et gestes</string>
-    <string name="settings_navigation_gestures_description">Onglet au démarrage, barre de navigation et gestes</string>
+    <string name="settings_navigation_gestures_description">Page d'accueil, onglets de navigation et gestes de balayage</string>
     <string name="settings_queue_description">File d'attente persistante, lecture aléatoire et téléchargements automatiques</string>
     <string name="settings_home_library">Accueil et bibliothèque</string>
     <string name="settings_home_library_description">Sections de la page d'accueil et playlists automatiques</string>
