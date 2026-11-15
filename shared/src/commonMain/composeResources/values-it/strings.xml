@@ -1269,17 +1269,17 @@
     <string name="discord_button_2">Pulsante 2</string>
     <string name="discord_activity_type">Tipo di attività</string>
     <string name="discord_activity_playing">In riproduzione</string>
-    <string name="discord_activity_listening">Ascoltando</string>
+    <string name="discord_activity_listening">In ascolto</string>
     <string name="discord_activity_watching">Guardando</string>
     <string name="discord_activity_name">Nome attività</string>
     <string name="discord_advanced_mode">Modalità avanzata</string>
     <string name="view_podcast">Vedi podcast</string>
     <string name="auto_playlist">Playlist automatica</string>
     <string name="restore_confirm_title">Ripristinare il backup?</string>
-    <string name="restore_confirm_message">Quest\u0027azione ripristinerà i tuoi dati dell\u0027app presenti nel backup.</string>
+    <string name="restore_confirm_message">Questo ripristinerà i tuoi dati dell'app dal backup.</string>
     <string name="uploading">Caricamento in corso…</string>
     <string name="upload_failed">Caricamento non riuscito</string>
-    <string name="discord_activity_competing">In gara</string>
+    <string name="discord_activity_competing">Competendo su</string>
     <string name="onboarding_welcome_description">Imposta i permessi di sistema e di privacy prima dell\u0027ascolto.</string>
     <string name="onboarding_migration_title">La tua libreria v13 è qui</string>
     <string name="onboarding_crash_reports_title">Aiutaci a migliorare Metrolist</string>
@@ -1305,7 +1305,7 @@
     <string name="new_episodes">Nuovi episodi</string>
     <string name="episodes_for_later">Episodi per dopo</string>
     <string name="downloaded_episodes">Episodi scaricati</string>
-    <string name="no_subscribed_channels">Nessun canale a cui sei iscritto</string>
+    <string name="no_subscribed_channels">Nessun canale iscritto</string>
     <string name="no_downloaded_episodes">Nessun episodio scaricato</string>
     <string name="filter_episodes">Episodi</string>
     <string name="filter_channels">Canali</string>
@@ -1365,7 +1365,7 @@
     <string name="settings_system_window_frame_description">Usa il bordo della finestra di sistema invece di quello personalizzato. Richiede il riavvio.</string>
     <string name="clear_collection_confirm">Cancellare %1$s?</string>
     <string name="confirm_clear_collection">Tutti i file audio di questa collezione verranno eliminati.</string>
-    <string name="clear_search">Cancella ricerca</string>
+    <string name="clear_search">Pulisci ricerca</string>
     <string name="clearing_signin_session">Annullando la sessione d\u0027accesso non terminata…</string>
     <string name="settings_disable_wayland_fix">Disattiva correzione ridimensionamento Wayland</string>
     <string name="settings_disable_wayland_fix_description">Disabilita il ridimensionamento automatico per le sessioni Wayland. Richiede il riavvio.</string>
@@ -1490,8 +1490,8 @@
     <string name="server_logs">Registri dei server</string>
     <string name="server_logs_desc">Logs di debug e connessione</string>
     <string name="username_to_block">Username da bloccare</string>
-    <string name="enable_song_cache">Abilita la cache dei brani</string>
-    <string name="enable_song_cache_desc">Crea automaticamente una cache dei brani durante la riproduzione</string>
+    <string name="enable_song_cache">Cache dei brani</string>
+    <string name="enable_song_cache_desc">Salva automaticamente i brani nella cache durante la riproduzione</string>
     <string name="app_logs">Log dell'applicazione</string>
     <string name="no_logs_available">Nessun log disponibile</string>
     <string name="export_logs">Esporta log</string>
@@ -2010,7 +2010,7 @@
     <string name="delete_upload">Elimina caricamento</string>
     <string name="delete_upload_question">Eliminare questo caricamento da YouTube Music?</string>
     <string name="like_all">Mi piace tutto</string>
-    <string name="dislike_all">Togli Mi piace a tutto</string>
+    <string name="dislike_all">Metti “Non mi piace” a tutto</string>
     <string name="credits_collaborators_section">Collaboratori</string>
     <string name="credits_leads_section">Lead</string>
     <string name="credits_creator_section">Creatore</string>
@@ -2600,4 +2600,14 @@
     <string name="ai_setup_privacy_settings">Apri le impostazioni di privacy</string>
     <string name="ai_setup_sign_in_again">Accedi di nuovo</string>
     <string name="ai_setup_key_limits">Controlla limiti chiave</string>
+    <string name="blocked_songs">Brani bloccati</string>
+    <string name="blocked_songs_desc">Ripristina I brani che hai bloccato o messo “Non mi piace”</string>
+    <string name="blocked_songs_empty">Nessun brano bloccato</string>
+    <string name="content_undo_hint">Puoi annullare su %1$s.</string>
+    <string name="content_undo_path">%1$s &gt; %2$s &gt; %3$s</string>
+    <string name="account_keyring_required">Metrolist richiede l'accesso al portachiavi per ripristinare il tuo account. Sblocca il portachiavi. Metrolist riproverà automaticamente.</string>
+    <string name="account_linux_keyring_required">Metrolist ha bisogno del portachiavi di sistema per ripristinare il tuo account. Installa libsecret-tools o il pacchetto della tua distribuzione che fornisce secret-tool, quindi assicurati che il portachiavi sia in esecuzione e sbloccato. Metrolist riproverà automaticamente.</string>
+    <string name="density_massive">Gigante (200%)</string>
+    <string name="density_huge">Enorme (175%)</string>
+    <string name="density_extra_large">Molto grande (150%)</string>
 </resources>
