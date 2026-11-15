@@ -60,6 +60,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
@@ -96,10 +97,8 @@ import com.metrolist.shared.ui.navigation.rememberNavigationMotion
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.viewmodels.SearchPresentation
 import com.metrolist.shared.viewmodels.searchPresentation
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.drop
 import org.jetbrains.compose.resources.stringResource
-import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun FloatingSearchOverlay(
@@ -122,6 +121,7 @@ fun FloatingSearchOverlay(
     var isVisible by remember { mutableStateOf(false) }
     // Do not dismiss on the initial frame before the entry effect makes the overlay visible.
     var hasBeenVisible by remember { mutableStateOf(false) }
+    var searchFieldPlaced by remember { mutableStateOf(false) }
     val motion = rememberNavigationMotion()
     val transition = updateTransition(targetState = isVisible, label = "floatingSearch")
 
@@ -178,11 +178,8 @@ fun FloatingSearchOverlay(
         SearchState.refreshSearchHistory()
     }
 
-    LaunchedEffect(isVisible) {
-        if (isVisible) {
-            delay(100.milliseconds)
-            focusRequester.requestFocus()
-        }
+    LaunchedEffect(isVisible, searchFieldPlaced) {
+        if (isVisible && searchFieldPlaced) focusRequester.requestFocus()
     }
     LaunchedEffect(transition.currentState, transition.targetState, transition.isRunning) {
         if (hasBeenVisible && !transition.currentState && !transition.targetState && !transition.isRunning) onDismiss()
@@ -373,7 +370,8 @@ fun FloatingSearchOverlay(
                                         .fillMaxWidth()
                                         .semantics { contentDescription = searchMusicDesc }
                                         .onFocusChanged { queryFocused = it.isFocused }
-                                        .focusRequester(focusRequester),
+                                        .focusRequester(focusRequester)
+                                        .onGloballyPositioned { searchFieldPlaced = true },
                                 lineLimits = TextFieldLineLimits.SingleLine,
                                 cursorBrush = SolidColor(colorScheme.primary),
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
