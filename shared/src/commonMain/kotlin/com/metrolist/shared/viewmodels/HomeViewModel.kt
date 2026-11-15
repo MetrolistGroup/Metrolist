@@ -84,6 +84,11 @@ private const val HOME_LOG_TAG = "HomeViewModel"
 private const val HOME_SNAPSHOT_SECTIONS = 8
 private const val HOME_SNAPSHOT_ITEMS = 24
 
+internal data class HomeUserPlaylistSnapshot(
+    val revision: Long,
+    val playlists: List<UserPlaylist>,
+)
+
 internal fun HomeViewModel.HomeUiState.startupSnapshot(): HomeViewModel.HomeUiState {
     fun List<HomeSection>.bounded() = take(HOME_SNAPSHOT_SECTIONS).map { it.copy(items = it.items.take(HOME_SNAPSHOT_ITEMS)) }
     return copy(
@@ -145,7 +150,7 @@ internal fun HomeViewModel.HomeUiState.primaryHomeContentLoaded(
         isLoading = false,
         isRefreshing = false,
         isRevalidating = false,
-        isContentLoading = false,
+        isContentLoading = selectedChip != null,
         isLoadingMore = false,
         error = null,
         isAllContentPending = selectedChip == null,
@@ -269,6 +274,8 @@ class HomeViewModel(
     private var loadJob: Job? = null
 
     @Volatile private var contentLoadGeneration = 0L
+
+    @Volatile private var librarySnapshotRevision = 0L
 
     @Volatile private var latestSpeedDialPins: List<SpeedDialItem> = emptyList()
 
@@ -419,8 +426,13 @@ class HomeViewModel(
                 combine(
                     database.dao().allPlaylists(),
                     snapshotFlow { Settings.shared.lastLibraryRefreshAccount },
-                ) { _, _ -> Unit }.collect {
-                    val playlists = fetchUserPlaylists()
+                ) { _, _ -> Unit }.collectLatest {
+                    val revision = ++librarySnapshotRevision
+                    val snapshot = fetchUserPlaylists()
+                    if (!isCurrentHomeLibraryRevision(snapshot.revision, librarySnapshotRevision) || snapshot.revision != revision) {
+                        return@collectLatest
+                    }
+                    val playlists = snapshot.playlists
 
                     fun HomeUiState.withLibrarySnapshot(): HomeUiState {
                         val ids = playlists.mapTo(mutableSetOf()) { it.id.removePrefix("VL") }
@@ -598,6 +610,7 @@ class HomeViewModel(
 
                 var primaryContentPublished = false
                 var primaryContinuation: String? = null
+                var primaryContentSnapshot: HomeUiState? = null
                 supervisorScope {
                     try {
                         val homePageDataDeferred =
@@ -660,35 +673,40 @@ class HomeViewModel(
                         }
                         val hydratedPrimarySections =
                             rawHomeSections.withLocalSongMetadata(primaryLocalSongMetadata).withoutNonMusicalVideos()
-                        val userPlaylists = userPlaylistsDeferred.await()
+                        var userPlaylistsSnapshot = userPlaylistsDeferred.await()
+                        var userPlaylists = userPlaylistsSnapshot.playlists
                         val chartSections = findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_charts")
                         _uiState.update { state ->
-                            state
-                                .primaryHomeContentLoaded(
-                                    sections = hydratedPrimarySections,
-                                    chips = homeChipsForSelection(homePageData.chips, state.selectedChip),
-                                    userPlaylists = userPlaylists,
-                                ).copy(
-                                    trending = chartSections.flatMap { it.items.filterIsInstance<SongItem>() },
-                                    albumCharts = chartSections.flatMap { it.items.filterIsInstance<AlbumItem>() },
-                                    quickPicks = findSectionSongs(hydratedPrimarySections, "FEmusic_quickpicks"),
-                                    keepListening = findSectionSongs(hydratedPrimarySections, "FEmusic_listen_again"),
-                                    forgottenFavorites =
-                                        findSectionSongs(hydratedPrimarySections, "FEmusic_forgotten_favorites"),
-                                    newReleases = newReleasesFrom(hydratedPrimarySections),
-                                    communityPlaylist =
-                                        findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_community")
-                                            .flatMap { it.items.filterIsInstance<PlaylistItem>() },
-                                    moodsAndGenres = findMoodsAndGenresByBrowseId(hydratedPrimarySections),
-                                    podcasts =
-                                        findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_immersive")
-                                            .flatMap { it.items.filterIsInstance<PodcastItem>() },
-                                    similarRecommendations = findSimilarRecommendations(hydratedPrimarySections),
-                                    recapPlaylists =
-                                        findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_listening_review")
-                                            .flatMap { it.items.filterIsInstance<PlaylistItem>() },
-                                    sections = uncategorizedHomeSections(hydratedPrimarySections),
-                                ).withoutBlockedContent()
+                            val primaryState =
+                                state
+                                    .primaryHomeContentLoaded(
+                                        sections = hydratedPrimarySections,
+                                        chips = homeChipsForSelection(homePageData.chips, state.selectedChip),
+                                        userPlaylists = userPlaylists,
+                                    ).copy(
+                                        trending = chartSections.flatMap { it.items.filterIsInstance<SongItem>() },
+                                        albumCharts = chartSections.flatMap { it.items.filterIsInstance<AlbumItem>() },
+                                        quickPicks = findSectionSongs(hydratedPrimarySections, "FEmusic_quickpicks"),
+                                        keepListening = findSectionSongs(hydratedPrimarySections, "FEmusic_listen_again"),
+                                        forgottenFavorites =
+                                            findSectionSongs(hydratedPrimarySections, "FEmusic_forgotten_favorites"),
+                                        newReleases = newReleasesFrom(hydratedPrimarySections),
+                                        communityPlaylist =
+                                            findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_community")
+                                                .flatMap { it.items.filterIsInstance<PlaylistItem>() },
+                                        moodsAndGenres = findMoodsAndGenresByBrowseId(hydratedPrimarySections),
+                                        podcasts =
+                                            findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_immersive")
+                                                .flatMap { it.items.filterIsInstance<PodcastItem>() },
+                                        similarRecommendations = findSimilarRecommendations(hydratedPrimarySections),
+                                        recapPlaylists =
+                                            findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_listening_review")
+                                                .flatMap { it.items.filterIsInstance<PlaylistItem>() },
+                                        sections = uncategorizedHomeSections(hydratedPrimarySections),
+                                    )
+                            primaryContentSnapshot = primaryState
+                            if (isFiltered) cachedSelectedChipContent = primaryState
+                            primaryState.withoutBlockedContent()
                         }
                         primaryContentPublished = true
                         Logger.d(
@@ -708,6 +726,10 @@ class HomeViewModel(
                         val localQuickPicks = quickPicksDeferred.await().map { it.toSongItem() }
                         val localForgottenFavorites = forgottenFavoritesDeferred.await().map { it.toSongItem() }
                         val localKeepListening = keepListeningDeferred.await().map { it.toSongItem() }
+                        if (!isCurrentHomeLibraryRevision(userPlaylistsSnapshot.revision, librarySnapshotRevision)) {
+                            userPlaylistsSnapshot = fetchUserPlaylists()
+                            userPlaylists = userPlaylistsSnapshot.playlists
+                        }
                         initialSpeedDialPins.await()
                         val localSpeedDial = latestSpeedDialPins
 
@@ -786,6 +808,9 @@ class HomeViewModel(
                         ) {
                             return@supervisorScope
                         }
+                        if (!isCurrentHomeLibraryRevision(userPlaylistsSnapshot.revision, librarySnapshotRevision)) {
+                            return@supervisorScope
+                        }
                         if (!isFiltered) speedDialRecommendationItems = speedDialRecommendations
 
                         val loadingMoods = sections.needsHomeMoodsFallback(signedIn, isFiltered, homePageData.continuation)
@@ -836,6 +861,7 @@ class HomeViewModel(
                         if (loadingMoods) paginationInProgress.value = true
                         try {
                             _uiState.value = loadedState.withoutBlockedContent()
+                            primaryContentSnapshot = loadedState
                             if (isFiltered) {
                                 cachedSelectedChipContent = loadedState
                                 loadedState.selectedChip?.let { chip ->
@@ -863,6 +889,22 @@ class HomeViewModel(
                             return@supervisorScope
                         }
                         val currentState = _uiState.value
+                        val primaryFailureSnapshot =
+                            primaryContentSnapshot?.copy(
+                                isLoading = false,
+                                isRefreshing = false,
+                                isRevalidating = false,
+                                isContentLoading = false,
+                                isLoadingMore = false,
+                                isAllContentPending = false,
+                                continuation =
+                                    homeContinuationAfterAssemblyFailure(
+                                        currentContinuation = currentState.continuation,
+                                        primaryContinuation = primaryContinuation,
+                                        primaryContentPublished = true,
+                                    ),
+                                error = e.message,
+                            )
                         val failedState =
                             currentState.copy(
                                 isLoading = false,
@@ -883,14 +925,23 @@ class HomeViewModel(
                         if (!isFiltered) {
                             if (primaryContentPublished) allContentReloadRequired = false
                             cachedAllContent =
-                                homeCacheAfterAssemblyFailure(cachedAllContent, failedState, primaryContentPublished)
+                                homeCacheAfterAssemblyFailure(
+                                    cachedAllContent,
+                                    primaryFailureSnapshot ?: failedState,
+                                    primaryContentPublished,
+                                )
                             if (primaryContentPublished) {
                                 val locale = GlobalYouTube.innerTube.locale
                                 lastKnownLocaleSignature = "${locale.hl}:${locale.gl}"
                             }
                         } else if (primaryContentPublished) {
-                            cachedSelectedChipContent = failedState
-                            failedState.selectedChip?.let { chip -> cacheChipContent(chip, failedState) }
+                            cachedSelectedChipContent =
+                                homeSelectedChipCacheAfterAssemblyFailure(
+                                    cachedSelectedChipContent,
+                                    primaryFailureSnapshot,
+                                    failedState,
+                                    primaryContentPublished,
+                                )
                         }
                     } finally {
                         if (generation == contentLoadGeneration) {
@@ -914,9 +965,7 @@ class HomeViewModel(
         if (!paginationInProgress.compareAndSet(false, true)) return
         if (continuation == null) {
             val state = _uiState.value
-            if (!state.isLoading && !state.isRefreshing && !state.isRestoringCache && !state.isAllContentPending &&
-                !state.isRevalidating && !state.isContentLoading
-            ) {
+            if (shouldLoadMoreHomeContent(state)) {
                 loadMoreChipSections()
             } else {
                 paginationInProgress.value = false
@@ -1109,7 +1158,12 @@ class HomeViewModel(
     }
 
     private fun cacheAllContentState(state: HomeUiState = _uiState.value) {
-        val cacheSnapshot = cacheableAllContentSnapshot(state, allContentReloadRequired) ?: return
+        val cacheSnapshot =
+            cacheableAllContentSnapshot(
+                state,
+                allContentReloadRequired,
+                hasCachedAllContent = cachedAllContent != null,
+            ) ?: return
         val locale = GlobalYouTube.innerTube.locale
         lastKnownLocaleSignature = "${locale.hl}:${locale.gl}"
         cachedAllContent = cacheSnapshot
@@ -1170,12 +1224,22 @@ class HomeViewModel(
             section.copy(items = filtered).takeIf { filtered.isNotEmpty() }
         }
 
-    private suspend fun fetchUserPlaylists(): List<UserPlaylist> {
+    private suspend fun fetchUserPlaylists(): HomeUserPlaylistSnapshot {
+        while (true) {
+            val revision = librarySnapshotRevision
+            val playlists = readUserPlaylists()
+            if (revision == librarySnapshotRevision) return HomeUserPlaylistSnapshot(revision, playlists)
+        }
+    }
+
+    private suspend fun readUserPlaylists(): List<UserPlaylist> {
         val playlists = mutableListOf<UserPlaylist>()
         val likedSongsCount = database.dao().likedSongsCount().first()
         val localPlaylists =
             try {
                 database.dao().allPlaylists().first()
+            } catch (error: CancellationException) {
+                throw error
             } catch (_: Exception) {
                 emptyList()
             }
@@ -1656,8 +1720,11 @@ internal fun homeContentForCurrentSelection(
     cachedSelectedChipContent: HomeViewModel.HomeUiState?,
 ): HomeViewModel.HomeUiState =
     when {
-        currentState.selectedChip == null && currentState.isAllContentPending -> currentState
+        currentState.isLoading || currentState.isRefreshing || currentState.isRevalidating ||
+            currentState.isContentLoading || currentState.isAllContentPending -> currentState
+
         currentState.selectedChip == null -> cachedAllContent
+
         else -> cachedSelectedChipContent?.takeIf { it.selectedChip == currentState.selectedChip }
     } ?: currentState
 
@@ -1685,8 +1752,9 @@ internal fun homeContentForAllSelection(
 internal fun isCacheableAllContent(
     state: HomeViewModel.HomeUiState,
     reloadRequired: Boolean = false,
+    hasCachedAllContent: Boolean = false,
 ): Boolean =
-    !reloadRequired &&
+    (!reloadRequired || hasCachedAllContent) &&
         !state.isAllContentPending &&
         !isFilteredHome(state.selectedChip?.params, state.selectedChip?.browseId ?: "FEmusic_home")
 
@@ -1696,11 +1764,25 @@ internal fun shouldReloadIncompleteAllContent(
     hasCachedAllContent: Boolean,
 ): Boolean = state.isAllContentPending || (reloadRequired && !hasCachedAllContent)
 
+internal fun isCurrentHomeLibraryRevision(
+    snapshotRevision: Long,
+    publishedRevision: Long,
+): Boolean = snapshotRevision == publishedRevision
+
+internal fun shouldLoadMoreHomeContent(state: HomeViewModel.HomeUiState): Boolean =
+    !state.isLoading &&
+        !state.isRefreshing &&
+        !state.isRestoringCache &&
+        !state.isAllContentPending &&
+        !state.isRevalidating &&
+        !state.isContentLoading
+
 internal fun cacheableAllContentSnapshot(
     state: HomeViewModel.HomeUiState,
     reloadRequired: Boolean = false,
+    hasCachedAllContent: Boolean = false,
 ): HomeViewModel.HomeUiState? =
-    if (!isCacheableAllContent(state, reloadRequired)) {
+    if (!isCacheableAllContent(state, reloadRequired, hasCachedAllContent)) {
         null
     } else {
         state.copy(
@@ -1720,6 +1802,24 @@ internal fun homeCacheAfterAssemblyFailure(
     primaryContentPublished: Boolean,
 ): HomeViewModel.HomeUiState? =
     if (primaryContentPublished) cacheableAllContentSnapshot(failedState) ?: cachedAllContent else cachedAllContent
+
+internal fun homeSelectedChipCacheAfterAssemblyFailure(
+    cachedSelectedChipContent: HomeViewModel.HomeUiState?,
+    primaryContentSnapshot: HomeViewModel.HomeUiState?,
+    failedState: HomeViewModel.HomeUiState,
+    primaryContentPublished: Boolean,
+): HomeViewModel.HomeUiState? =
+    if (primaryContentPublished) {
+        (primaryContentSnapshot ?: failedState).copy(
+            isLoading = false,
+            isRefreshing = false,
+            isRevalidating = false,
+            isContentLoading = false,
+            isLoadingMore = false,
+        )
+    } else {
+        cachedSelectedChipContent
+    }
 
 internal fun homeContinuationAfterAssemblyFailure(
     currentContinuation: String?,
