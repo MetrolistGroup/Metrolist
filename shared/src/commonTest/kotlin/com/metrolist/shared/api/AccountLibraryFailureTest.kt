@@ -1,6 +1,7 @@
 package com.metrolist.shared.api
 
 import com.metrolist.innertubex.InnerTube
+import com.metrolist.innertubex.models.response.BrowseResponse
 import com.metrolist.shared.auth.YouTubeSessionState
 import com.metrolist.shared.auth.YouTubeSyncState
 import com.metrolist.shared.settings.Settings
@@ -108,6 +109,86 @@ class AccountLibraryFailureTest {
                 assertTrue(result.items.isEmpty())
             }
         }
+
+    @Test
+    fun libraryRefreshKeepsMembershipPagesAndExcludesRecommendationShelvesAndCursors() =
+        runBlocking {
+            client { body ->
+                val response =
+                    when {
+                        "recommendations-next" in body -> {
+                            error("A recommendation cursor is not a library cursor")
+                        }
+
+                        "library-next" in body -> {
+                            """{"continuationContents":{"sectionListContinuation":{"contents":[
+                                {"musicShelfRenderer":{"contents":[${songRow("saved-next")}] }},
+                                {"itemSectionRenderer":{"contents":[${recommendationShelf()}]}}
+                            ]}}}"""
+                        }
+
+                        "FEmusic_liked_videos" in body -> {
+                            """{"contents":{"sectionListRenderer":{"contents":[
+                                {"musicShelfRenderer":{"title":{"runs":[{"text":"Songs"}]},
+                                    "contents":[${songRow("saved")}],
+                                    "continuations":[{"nextContinuationData":{"continuation":"library-next"}}]}},
+                                ${recommendationShelf()}
+                            ]}}}"""
+                        }
+
+                        else -> {
+                            EMPTY_LIBRARY
+                        }
+                    }
+                response to HttpStatusCode.OK
+            }.use { client ->
+                val result = YouTubeRepository(InnerTube(client).apply { cookie = "SAPISID=test" }).getCompleteLibraryItemsResult()
+                assertTrue(result.complete)
+                assertEquals(listOf("saved", "saved-next"), result.items.map { it.id })
+            }
+        }
+
+    @Test
+    fun filteringLibraryShelvesLeavesGeneralBrowseRecommendationsIntact() {
+        val response =
+            Json.decodeFromString<BrowseResponse>(
+                """{"contents":{"twoColumnBrowseResultsRenderer":{
+                    "secondaryContents":{"sectionListRenderer":{"contents":[
+                        {"gridRenderer":{"items":[${songRow("saved")}] }},
+                        ${recommendationShelf()}
+                    ]}}
+                }}}""",
+            )
+        val library = YouTubeResponseParser.parseBrowseResponse(response, includeRecommendations = false)
+        assertEquals(
+            listOf("saved"),
+            library.sections.values
+                .flatten()
+                .map { it.id },
+        )
+        assertEquals(null, library.continuation)
+        val browse = YouTubeResponseParser.parseBrowseResponse(response)
+        assertEquals(
+            listOf("saved", "never-saved"),
+            browse.sections.values
+                .flatten()
+                .map { it.id },
+        )
+        assertEquals("recommendations-next", browse.continuation)
+    }
+
+    private fun songRow(id: String): String =
+        """{"musicResponsiveListItemRenderer":{
+            "flexColumns":[{"musicResponsiveListItemFlexColumnRenderer":{"text":{"runs":[{"text":"Song"}]}}}],
+            "playlistItemData":{"videoId":"$id"}
+        }}"""
+
+    private fun recommendationShelf(): String =
+        """{"musicCarouselShelfRenderer":{
+            "title":{"runs":[{"text":"Songs"}]},
+            "contents":[${songRow("never-saved")}],
+            "continuations":[{"nextContinuationData":{"continuation":"recommendations-next"}}]
+        }}"""
 
     private fun client(response: (String) -> Pair<String, HttpStatusCode>): HttpClient =
         HttpClient(
