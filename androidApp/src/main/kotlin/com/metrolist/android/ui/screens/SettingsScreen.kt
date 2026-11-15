@@ -124,6 +124,7 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToDownloads: () -> Unit,
     onNavigateToArtist: (String) -> Unit = {},
+    initialPage: SettingsPageId? = null,
 ) {
     val pageViewModels = rememberViewModelStoreProvider()
     var currentPage by remember { mutableStateOf<SettingsPageId?>(null) }
@@ -337,6 +338,7 @@ fun SettingsScreen(
             add(SettingsPageId.HIDDEN_HOME_ITEMS)
             add(SettingsPageId.HIDDEN_LIBRARY_ITEMS)
             add(SettingsPageId.BLOCKED_ARTISTS)
+            add(SettingsPageId.BLOCKED_SONGS)
             add(SettingsPageId.STORAGE)
             add(SettingsPageId.BACKUP_RESTORE)
             add(SettingsPageId.UPDATES)
@@ -410,6 +412,7 @@ fun SettingsScreen(
                             stringResource(Res.string.updates_no_updates)
                         },
                     availablePages = availablePages,
+                    initialPage = initialPage,
                     externalPages = setOf(SettingsPageId.SUPPORTED_LINKS),
                     onPageChanged = { page ->
                         if (page != currentPage) {

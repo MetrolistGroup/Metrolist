@@ -1237,6 +1237,16 @@
     <string name="history_duration_desc">Minimum playback time before saving to history</string>
     <!-- Translators: Option or section label for blocklists in the Privacy settings. -->
     <string name="privacy_blocklists">Blocklists</string>
+    <!-- Translators: Option or section label for blocked songs in the Privacy settings. -->
+    <string name="blocked_songs">Blocked songs</string>
+    <!-- Translators: Supporting text beneath the blocked songs option in the settings. -->
+    <string name="blocked_songs_desc">Restore songs you disliked or blocked</string>
+    <!-- Translators: Empty state shown when no songs are blocked. -->
+    <string name="blocked_songs_empty">No blocked songs</string>
+    <!-- Translators: One-time message after hiding or blocking something. %1$s is a settings path such as "Settings > Privacy > Blocked artists". -->
+    <string name="content_undo_hint">You can undo this in %1$s.</string>
+    <!-- Translators: Settings navigation path; keep the separators. %1$s, %2$s and %3$s are page names. -->
+    <string name="content_undo_path">%1$s > %2$s > %3$s</string>
     <!-- Translators: Option or section label for blocked artists in the settings. -->
     <string name="blocked_artists">Blocked artists</string>
     <!-- Translators: Supporting text beneath the blocked artists option in the settings. -->

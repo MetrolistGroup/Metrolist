@@ -50,6 +50,8 @@ import com.metrolist.shared.listentogether.network.createListenTogetherMessageCo
 import com.metrolist.shared.listentogether.network.isAllowedListenTogetherServerUrl
 import com.metrolist.shared.listentogether.network.roomStateHash
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.settings.ContentUndoHints
+import com.metrolist.shared.settings.ContentUndoPage
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.ShareUrls
 import com.metrolist.shared.youtube.playback.PlaybackEventKind
@@ -794,12 +796,15 @@ class ListenTogetherManager(
     }
 
     fun blockUser(username: String) {
-        _blockedUsernames.value = ListenTogetherModeration.add(username, _blockedUsernames.value)
+        val updated = ListenTogetherModeration.add(username, _blockedUsernames.value)
+        val added = updated != _blockedUsernames.value
+        _blockedUsernames.value = updated
         Settings.shared.listenTogetherBlockedUsers = persistSet(_blockedUsernames.value)
         _pendingJoinRequests.value =
             _pendingJoinRequests.value.filterNot {
                 ListenTogetherModeration.isBlocked(it.username, _blockedUsernames.value)
             }
+        if (added) ContentUndoHints.request(ContentUndoPage.BLOCKED_USERS)
     }
 
     fun blockUser(user: UserInfo) {

@@ -26,13 +26,20 @@ internal fun MobileListenTogetherScreen(
     bottomInset: Dp,
     initialRoomCode: String? = null,
     initialSettings: Boolean = false,
+    initialBlockedUsers: Boolean = false,
 ) {
-    val rootPage = if (initialSettings) ListenTogetherPage.SETTINGS else ListenTogetherPage.ROOM
-    var page by remember(manager, initialRoomCode, initialSettings) { mutableStateOf(rootPage) }
+    val rootPage =
+        when {
+            initialBlockedUsers -> ListenTogetherPage.BLOCKED_USERS
+            initialSettings -> ListenTogetherPage.SETTINGS
+            else -> ListenTogetherPage.ROOM
+        }
+    var page by remember(manager, initialRoomCode, initialSettings, initialBlockedUsers) { mutableStateOf(rootPage) }
     val back = {
-        when (page) {
-            ListenTogetherPage.ROOM -> onBack()
-            ListenTogetherPage.SETTINGS -> if (initialSettings) onBack() else page = ListenTogetherPage.ROOM
+        when {
+            initialBlockedUsers && page == ListenTogetherPage.BLOCKED_USERS -> onBack()
+            page == ListenTogetherPage.ROOM -> onBack()
+            page == ListenTogetherPage.SETTINGS -> if (initialSettings) onBack() else page = ListenTogetherPage.ROOM
             else -> page = ListenTogetherPage.SETTINGS
         }
     }

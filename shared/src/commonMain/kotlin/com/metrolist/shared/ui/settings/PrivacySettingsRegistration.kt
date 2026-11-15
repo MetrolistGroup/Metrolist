@@ -42,6 +42,7 @@ import com.metrolist.shared.settings.HiddenLibraryItemKey
 import com.metrolist.shared.settings.HiddenLibraryItemType
 import com.metrolist.shared.settings.HiddenLibraryItems
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.ui.components.CollectionPreviews
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import org.jetbrains.compose.resources.stringResource
@@ -163,6 +164,14 @@ internal fun SettingsUiRegistryBuilder.registerPrivacySettings(host: SharedSetti
             }
         }
         group("blocklists", stringResource(Res.string.privacy_blocklists)) {
+            if (SettingsPageId.BLOCKED_SONGS in host.availablePages) {
+                navigation(
+                    id = "blockedSongs",
+                    title = stringResource(Res.string.blocked_songs),
+                    destination = SettingsPageId.BLOCKED_SONGS,
+                    description = stringResource(Res.string.blocked_songs_desc),
+                )
+            }
             if (SettingsPageId.BLOCKED_ARTISTS in host.availablePages) {
                 navigation(
                     id = "blockedArtists",
@@ -344,6 +353,39 @@ internal fun SettingsUiRegistryBuilder.registerPrivacySettings(host: SharedSetti
         }
     }
 
+    if (SettingsPageId.BLOCKED_SONGS in host.availablePages) {
+        val blockedSongs = BlockedContent.songs()
+        page(
+            id = SettingsPageId.BLOCKED_SONGS,
+            title = stringResource(Res.string.blocked_songs),
+            subtitle = stringResource(Res.string.blocked_songs_desc),
+            icon = MetrolistIcons.Outlined.Block,
+            tone = SettingsTone.CYAN,
+        ) {
+            group("blockedSongs", stringResource(Res.string.blocked_songs)) {
+                if (blockedSongs.isEmpty()) {
+                    action("empty", stringResource(Res.string.blocked_songs_empty), enabled = false, onClick = {})
+                } else {
+                    blockedSongs.forEach { song ->
+                        custom(
+                            id = "blockedSong:${song.id}",
+                            title = song.title,
+                            description = song.artistNames.joinToString(),
+                        ) { onSettingValueChanged ->
+                            HiddenItemRow(
+                                title = song.title,
+                                description = song.artistNames.joinToString(),
+                                onRemove = {
+                                    pendingRestore = RestoreRequest.BlockedSong(song.id, song.title, onSettingValueChanged)
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     pendingRestore?.let { request ->
         RestoreRequestDialog(request) { pendingRestore = null }
     }
@@ -361,6 +403,12 @@ private sealed interface RestoreRequest {
 
     data class HiddenLibrary(
         val key: HiddenLibraryItemKey,
+        override val label: String,
+        override val onRestored: () -> Unit,
+    ) : RestoreRequest
+
+    data class BlockedSong(
+        val id: String,
         override val label: String,
         override val onRestored: () -> Unit,
     ) : RestoreRequest
@@ -430,6 +478,19 @@ private fun RestoreRequestDialog(
                 confirmLabel = stringResource(Res.string.show_again),
                 onConfirm = {
                     HiddenLibraryItems.restore(request.key)
+                    request.onRestored()
+                },
+                onDismiss = onDismiss,
+            )
+        }
+
+        is RestoreRequest.BlockedSong -> {
+            SettingsConfirmDialog(
+                title = stringResource(Res.string.restore_hidden_item_title),
+                message = stringResource(Res.string.restore_hidden_item_message, request.label),
+                confirmLabel = stringResource(Res.string.show_again),
+                onConfirm = {
+                    if (!SongLikeState.removeDislike(request.id)) BlockedContent.unblockSong(request.id)
                     request.onRestored()
                 },
                 onDismiss = onDismiss,

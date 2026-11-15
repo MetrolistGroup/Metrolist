@@ -24,6 +24,11 @@ val ShowPlayerCastButtonKey = "showPlayerCastButton"
 val ShowPlayerVideoButtonKey = "showPlayerVideoButton"
 
 val HiddenHomeItemsJsonKey = "hiddenHomeItemsJson"
+val HiddenLibraryUndoHintShownKey = "hiddenLibraryUndoHintShown"
+val HiddenHomeUndoHintShownKey = "hiddenHomeUndoHintShown"
+val BlockedArtistsUndoHintShownKey = "blockedArtistsUndoHintShown"
+val BlockedSongsUndoHintShownKey = "blockedSongsUndoHintShown"
+val BlockedUsersUndoHintShownKey = "blockedUsersUndoHintShown"
 
 val ArtistNameAliasesJsonKey = "artistNameAliasesJson"
 val PreferWordSyncedLyricsKey = "preferWordSyncedLyrics"

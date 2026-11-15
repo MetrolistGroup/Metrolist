@@ -22,6 +22,8 @@ import com.metrolist.shared.deviceconnect.toBase64
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.moveSelection
 import com.metrolist.shared.settings.BlockedContent
+import com.metrolist.shared.settings.ContentUndoHints
+import com.metrolist.shared.settings.ContentUndoPage
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.viewmodels.LIBRARY_REFRESH_TTL_MILLIS
 import com.metrolist.shared.youtube.logging.YtLogger
@@ -681,6 +683,7 @@ object SongLikeState {
             saveDislikedSongIds()
             BlockedContent.rememberDislikedSong(song)
             syncDislike(song.id, disliked = true)
+            ContentUndoHints.request(ContentUndoPage.BLOCKED_SONGS)
             return true
         }
 

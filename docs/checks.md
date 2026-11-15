@@ -47,6 +47,8 @@ For Android lookahead crashes, repeat portrait/landscape rotation, background/re
 
 ### Collections and pages
 
+On Android, desktop and iOS, hide a library item, hide an artist or podcast from Home, block an artist, dislike a song and block a Listen Together user. Each restore page gets one hint with an Open settings action. Use the action to open the named list, then restore the item. Check the existing player and navigation transitions. Hide or block another item for the same page, then relaunch and repeat. The hint must not return. Repeat with existing hidden or blocked items and unset hint flags, and check that the next action shows the hint. Hide from Home must keep its Undo snackbar.
+
 Open community playlists and YouTube mixes from Home on a slow connection. Edit appears only for owned or editable local playlists, including in the overflow menu. The playlist page keeps the tapped cover through loading, pagination, refresh and Back, while custom covers and local mosaics keep priority. Check that the description and track-count line expand and fade as album descriptions do, including when no preview is cached and with system animations disabled.
 
 On iOS, open an owned YouTube Music playlist and use Edit in its header. Change its name and description, clear the description, and verify the result in YouTube Music. A failed description update after a successful rename keeps the dialog open for retry with the saved name. Signed-out and read-only playlists have no editing controls. Upload and remove a cover, including before bookmarking the playlist. A failed cover upload keeps the selected image and saved metadata for retry. Check local cover save and cancel.

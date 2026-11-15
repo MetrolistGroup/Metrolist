@@ -142,6 +142,7 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
                 SettingsPageId.HIDDEN_HOME_ITEMS,
                 SettingsPageId.HIDDEN_LIBRARY_ITEMS,
                 SettingsPageId.BLOCKED_ARTISTS,
+                SettingsPageId.BLOCKED_SONGS,
                 SettingsPageId.LYRICS_SOURCES,
                 SettingsPageId.LYRICS_AI_TRANSLATION,
                 SettingsPageId.LYRICS_ROMANIZATION,

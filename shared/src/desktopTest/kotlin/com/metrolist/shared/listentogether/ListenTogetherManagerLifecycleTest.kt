@@ -33,6 +33,8 @@ import com.metrolist.shared.listentogether.network.SuggestionSubmittedPayload
 import com.metrolist.shared.listentogether.network.TrackInfo
 import com.metrolist.shared.listentogether.network.UserInfo
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.settings.ContentUndoHints
+import com.metrolist.shared.settings.ContentUndoPage
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.listentogether.listenTogetherSettingsPage
 import com.metrolist.shared.ui.settings.SettingsPageRegistration
@@ -90,6 +92,30 @@ import io.ktor.server.cio.CIO as ServerCIO
 import io.ktor.server.websocket.WebSockets as ServerWebSockets
 
 class ListenTogetherManagerLifecycleTest {
+    @Test
+    fun blockingUsersHintsOnceAfterAValidBlockAndKeepsTheFlagAfterUnblocking() =
+        runTest {
+            ContentUndoHints.pending.value.forEach(ContentUndoHints::markShown)
+            Settings.shared.blockedUsersUndoHintShown = false
+            val client = HttpClient(MockEngine { error("No request expected") })
+            val manager = handoffManager(backgroundScope, client, sessionPersistenceEnabled = false)
+            try {
+                manager.blockUser(" ")
+                assertTrue(ContentUndoHints.pending.value.isEmpty())
+                manager.blockUser("Listener")
+                assertEquals(listOf(ContentUndoPage.BLOCKED_USERS), ContentUndoHints.pending.value)
+                assertEquals(setOf("Listener"), manager.blockedUsernames.value)
+                ContentUndoHints.markShown(ContentUndoPage.BLOCKED_USERS)
+                manager.unblockUser("Listener")
+                manager.blockUser("Another listener")
+                assertTrue(ContentUndoHints.pending.value.isEmpty())
+                assertTrue(Settings.shared.blockedUsersUndoHintShown)
+            } finally {
+                manager.close()
+                client.close()
+            }
+        }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun pausedGuestsWaitForReadinessChangesAndStopAfterThreeRecoveryAttempts() =
