@@ -2881,7 +2881,7 @@ object PlayerState {
                     if (resource != null && isCurrentPlaybackTransition(generation)) {
                         val liveTrack =
                             if (resource.isLive && !playableTrack.isLive) {
-                                val updated = playableTrack.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE)
+                                val updated = playableTrack.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE, duration = null)
                                 queue.replaceCurrent(updated)
                                 withContext(Dispatchers.Main) {
                                     updateCurrentTrack(updated, startArtworkFetch = false)
@@ -3032,7 +3032,7 @@ object PlayerState {
                 if (resource != null && isCurrent()) {
                     val liveTrack =
                         if (resource.isLive && !playableTrack.isLive) {
-                            val updated = playableTrack.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE)
+                            val updated = playableTrack.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE, duration = null)
                             (stagedQueue ?: queue).replaceCurrent(updated)
                             updated
                         } else {

@@ -66,6 +66,7 @@ import com.metrolist.shared.model.EpisodeItem
 import com.metrolist.shared.model.HomePageData
 import com.metrolist.shared.model.HomeSection
 import com.metrolist.shared.model.MUSIC_VIDEO_TYPE_LIVE
+import com.metrolist.shared.model.MUSIC_VIDEO_TYPE_VIDEO
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.PodcastItem
 import com.metrolist.shared.model.PodcastPage
@@ -78,6 +79,7 @@ import com.metrolist.shared.model.SearchSummaryPage
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.model.isEditablePlaylistId
+import com.metrolist.shared.model.isLiveType
 import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.model.isVideoSong
 import com.metrolist.shared.model.parseDisplayCount
@@ -1685,20 +1687,41 @@ class YouTubeRepository(
 
     suspend fun getSongPlayerInformation(videoId: String): SongPlayerInformation? =
         try {
-            // WEB can omit live-video details; ANDROID exposes isLiveContent for those responses.
+            // WEB can omit video details, so retain the ANDROID metadata fallback.
             val webResponse =
-                innerTube.player(YouTubeClient.WEB, videoId).bodyLimited<PlayerResponse>(PLAYER_NEXT_RESPONSE_LIMIT)
-            val details =
-                webResponse.videoDetails?.takeIf {
-                    it.title?.isNotBlank() == true && webResponse.playabilityStatus.status == "OK"
+                innerTube.player(YouTubeClient.WEB, videoId).bodyLimited<JsonObject>(PLAYER_NEXT_RESPONSE_LIMIT)
+            val response =
+                webResponse.takeIf {
+                    it["videoDetails"]
+                        .asObject()
+                        ?.get("title")
+                        .primitiveText()
+                        ?.isNotBlank() == true &&
+                        it["playabilityStatus"].asObject()?.get("status").primitiveText() == "OK"
                 } ?: run {
-                    val androidResponse =
-                        innerTube
-                            .player(YouTubeClient.ANDROID, videoId)
-                            .bodyLimited<PlayerResponse>(PLAYER_NEXT_RESPONSE_LIMIT)
-                    androidResponse.videoDetails
+                    innerTube
+                        .player(YouTubeClient.ANDROID, videoId)
+                        .bodyLimited<JsonObject>(PLAYER_NEXT_RESPONSE_LIMIT)
+                }
+            val details =
+                withContext(responseDecodeDispatcher) {
+                    repositoryJson.decodeFromJsonElement<PlayerResponse>(response).videoDetails
                 } ?: return null
-            val isLive = details.isLiveContent == true
+            val duration = details.lengthSeconds?.toLongOrNull()?.takeIf { it > 0L }
+            val rawDetails = response["videoDetails"].asObject()
+            val liveFlags =
+                listOf(
+                    rawDetails?.get("isLive"),
+                    rawDetails?.get("isLiveNow"),
+                    response.findFirstObject("liveBroadcastDetails")?.get("isLiveNow"),
+                ).mapNotNull { it?.jsonPrimitive?.booleanOrNull }
+            val streamingData = response["streamingData"].asObject()
+            val hlsOnly =
+                streamingData?.get("hlsManifestUrl").primitiveText()?.isNotBlank() == true &&
+                    streamingData?.get("formats").asArray().isNullOrEmpty() &&
+                    streamingData?.get("adaptiveFormats").asArray().isNullOrEmpty()
+            // isLiveContent also marks recordings and premieres; only current stream evidence counts.
+            val isLive = true in liveFlags || (false !in liveFlags && duration == null && hlsOnly)
             SongPlayerInformation(
                 title = details.title?.takeIf { it.isNotBlank() },
                 artist = details.author?.takeIf { it.isNotBlank() },
@@ -1707,9 +1730,14 @@ class YouTubeRepository(
                         ?.thumbnails
                         ?.lastOrNull()
                         ?.url,
-                durationSeconds = details.lengthSeconds?.toLongOrNull(),
+                durationSeconds = duration.takeUnless { isLive },
                 viewCount = details.viewCount?.toLongOrNull(),
-                musicVideoType = if (isLive) MUSIC_VIDEO_TYPE_LIVE else details.musicVideoType,
+                musicVideoType =
+                    when {
+                        isLive -> MUSIC_VIDEO_TYPE_LIVE
+                        isLiveType(details.musicVideoType) -> MUSIC_VIDEO_TYPE_VIDEO
+                        else -> details.musicVideoType
+                    },
                 isLive = isLive,
             )
         } catch (e: CancellationException) {

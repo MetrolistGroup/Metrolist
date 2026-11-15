@@ -3,6 +3,7 @@ package com.metrolist.shared.youtube.extraction.models
 import com.metrolist.innertubex.extraction.ContentHints
 import com.metrolist.innertubex.extraction.strategy.PlaybackClientCatalog
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.isLive
 import com.metrolist.shared.model.isUploadedType
 import com.metrolist.shared.model.isVideoSong
 import com.metrolist.shared.settings.MusicVideoQuality
@@ -25,11 +26,7 @@ fun SongItem.toContentHints(wantVideo: Boolean? = null): ContentHints {
             else -> null
         }
 
-    val liveHint =
-        when {
-            normalizedType?.contains("LIVE") == true -> true
-            else -> null
-        }
+    val liveHint = true.takeIf { isLive }
 
     val quality = Settings.shared.musicVideoQuality
     return ContentHints(

@@ -1831,7 +1831,7 @@ class MusicService :
                     val mergedSong = mergeSelectedQueueSong(playbackSong, sourceSong, currentQueueSong)
                     playbackSong =
                         if (resource.isLive && !mergedSong.isLive) {
-                            mergedSong.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE)
+                            mergedSong.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE, duration = null)
                         } else {
                             mergedSong
                         }
