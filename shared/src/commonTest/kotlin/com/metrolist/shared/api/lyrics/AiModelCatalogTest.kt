@@ -263,7 +263,7 @@ class AiModelCatalogTest {
         assertEquals(AiProviderPresets.DEFAULT_LYRICS_AI_MODEL, AiModelCatalog.defaultModel(preset, offline))
         assertNull(AiModelCatalog.defaultModel(preset, offline.filterNot { it.free }, freeOnly = true))
         assertEquals("claude-haiku-5-5", AiProviderPresets.find("Anthropic")!!.defaultModel)
-        assertEquals("gemini-2.5-flash-lite", AiProviderPresets.find("Gemini")!!.defaultModel)
+        assertEquals("gemini-flash-lite-latest", AiProviderPresets.find("Gemini")!!.defaultModel)
     }
 
     @Test
@@ -337,6 +337,14 @@ class AiModelCatalogTest {
     fun presetsDeriveModelEndpointsAndRouteOpenCodePerModel() {
         assertEquals("https://openrouter.ai/api/v1/models", AiProviderPresets.find("OpenRouter")!!.modelsEndpoint)
         assertEquals("https://api.anthropic.com/v1/models", AiProviderPresets.find("Anthropic")!!.modelsEndpoint)
+        assertEquals(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+            AiProviderPresets.find("Gemini")!!.endpoint,
+        )
+        assertEquals(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+            AiProviderPresets.find("Gemini-compatible")!!.endpoint,
+        )
         assertEquals("https://generativelanguage.googleapis.com/v1beta/models", AiProviderPresets.find("Gemini")!!.modelsEndpoint)
         assertEquals("https://opencode.ai/zen/go/v1/models", AiProviderPresets.find("OpenCodeGo")!!.modelsEndpoint)
         assertEquals("OpenAI-compatible", AiProviderPresets.find("Custom")!!.id)
@@ -348,4 +356,32 @@ class AiModelCatalogTest {
         assertEquals(zen, AiProviderPresets.requestUrl("OpenCodeZen", zen, "kimi-k2.5"))
         assertEquals(AiProtocol.GEMINI, AiProviderPresets.protocolFor("Gemini-compatible", "https://x/y", "m"))
     }
+
+    @Test
+    fun legacyGeminiEndpointStillValidatesSavedModels() =
+        runBlocking {
+            val gemini = AiProviderPresets.find("Gemini")!!
+            val compatible = AiProviderPresets.find("Gemini-compatible")!!
+            HttpClient(
+                MockEngine { request ->
+                    if (request.url.encodedPath == "/v1beta/models") {
+                        respond(
+                            """{"models":[{"name":"models/gemini-flash-lite-latest","displayName":"Gemini Flash Lite","supportedGenerationMethods":["generateContent"],"inputTokenLimit":10}]}""",
+                        )
+                    } else {
+                        respond("", HttpStatusCode.NotFound)
+                    }
+                },
+            ).use { client ->
+                val catalog = AiModelCatalog(client)
+                assertEquals(
+                    "gemini-flash-lite-latest",
+                    catalog.validatedModel(gemini, "key", AiProviderPresets.LEGACY_GEMINI_ENDPOINT, "retired-model"),
+                )
+                assertEquals(
+                    "retired-model",
+                    catalog.validatedModel(compatible, "key", AiProviderPresets.LEGACY_GEMINI_ENDPOINT, "retired-model"),
+                )
+            }
+        }
 }

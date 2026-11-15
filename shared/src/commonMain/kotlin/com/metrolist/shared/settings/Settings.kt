@@ -508,7 +508,13 @@ class Settings(
             lyricsOpenRouterOAuthKey.takeIf(String::isNotBlank)?.let { it to "https://openrouter.ai/api/v1/chat/completions" }
                 ?: (lyricsAiApiKeyFor(provider) to lyricsAiBaseUrl)
         } else {
-            lyricsAiApiKeyFor(provider) to lyricsAiBaseUrl
+            val baseUrl =
+                if (provider == "Gemini" && lyricsAiBaseUrl == AiProviderPresets.LEGACY_GEMINI_ENDPOINT) {
+                    AiProviderPresets.find("Gemini")?.endpoint ?: lyricsAiBaseUrl
+                } else {
+                    lyricsAiBaseUrl
+                }
+            lyricsAiApiKeyFor(provider) to baseUrl
         }
 
     var lyricsAiBaseUrl by preference("https://openrouter.ai/api/v1/chat/completions")
