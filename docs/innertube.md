@@ -26,6 +26,8 @@ Artist failures retain available offline data. Without it, propagate the origina
 
 ## Search
 
+Spotify account imports first search with the source album in the query, then retry without it if no exact title, artist and duration match is found. This handles YouTube Music catalog entries whose album metadata differs while keeping the match checks unchanged.
+
 Android, desktop and iOS request suggestions after a 300 ms typing debounce and load results on submit. Only an empty field shows the search start page. Nonempty input keeps the suggestions page, with the typed query available as a search action while suggestions are unavailable. Existing suggestions stay visible while their replacement loads or fails. Clearing, submission and edits shorter than two characters discard remote suggestions; cancelled requests cannot publish old suggestions.
 
 Verify typing after submitted results, rapid edits, deletion to one character, clearing, failed requests, submission and Back. Desktop inline search uses the shared debounce and does not start a separate preview search.

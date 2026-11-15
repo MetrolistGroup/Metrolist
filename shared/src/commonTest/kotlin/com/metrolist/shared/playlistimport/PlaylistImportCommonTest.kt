@@ -3,6 +3,7 @@ package com.metrolist.shared.playlistimport
 import com.metrolist.shared.model.AlbumTiny
 import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.SongItem
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
@@ -11,6 +12,26 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PlaylistImportCommonTest {
+    @Test
+    fun unresolvedVideoIdFallsBackToTrackSearch() =
+        runTest {
+            val searchedSong = SongItem("search-result", "Song", null, emptyList(), null)
+            var fallbackUsed = false
+
+            val resolved =
+                resolveSongByVideoIdOrFallback(
+                    videoId = "stale-video-id",
+                    metadataLookup = { null },
+                    fallback = {
+                        fallbackUsed = true
+                        searchedSong
+                    },
+                )
+
+            assertEquals(searchedSong, resolved)
+            assertTrue(fallbackUsed)
+        }
+
     @Test
     fun matchingRejectsDifferentRecordingsAndUsesAlbumAndDurationToRankCandidates() {
         val track = PlaylistImportManager.CsvTrack("Song!", "Artist", null, album = "Album", durationSeconds = 180)
@@ -40,6 +61,20 @@ class PlaylistImportCommonTest {
                 track,
                 listOf(destinationSong.copy(artists = listOf(ArtistTiny(null, "Different artist")))),
             ),
+        )
+    }
+
+    @Test
+    fun spotifyResolutionRetriesWithoutAlbumMetadataButKeepsOtherProvidersSinglePass() {
+        val track = PlaylistImportManager.CsvTrack("Song", "Artist", null, album = "Spotify Album")
+
+        assertEquals(
+            listOf("Song Artist Spotify Album", "Song Artist"),
+            PlaylistImportManager.resolutionSearchQueries(track, ImportSourceType.SPOTIFY),
+        )
+        assertEquals(
+            listOf("Song Artist Spotify Album"),
+            PlaylistImportManager.resolutionSearchQueries(track, ImportSourceType.APPLE_MUSIC),
         )
     }
 
