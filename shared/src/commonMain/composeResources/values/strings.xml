@@ -4666,9 +4666,7 @@
     <!-- Translators: Supporting text beneath the provider file option in the playlist import. -->
     <string name="import_provider_file_desc">Import playlist files (CSV, TSV, M3U, M3U8, JSON)</string>
     <!-- Translators: Supporting text beneath a streaming provider option in the iOS playlist import. -->
-    <string name="import_provider_public_link_desc">Paste a public playlist link to load its tracks</string>
     <!-- Translators: Label for free text input in the playlist import page. -->
-    <string name="playlist_text_or_link">Playlist link or track list</string>
     <!-- Translators: Imperative action label for connect spotify account in the playlist import. -->
     <string name="import_connect_spotify_account">Sign in with Spotify account</string>
     <!-- Translators: Imperative action label for spotify account playlists in the playlist import. -->
