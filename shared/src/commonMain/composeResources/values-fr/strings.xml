@@ -197,7 +197,7 @@
     <string name="clear_song_cache">Vider le cache des titres</string>
     <string name="song_cache_location">Emplacement du cache des titres</string>
     <string name="song_cache_location_internal">Stockage interne de l\u0027application</string>
-    <string name="song_cache_location_internal_desc">Caché dans l'espace de stockage de l'application</string>
+    <string name="song_cache_location_internal_desc">Masqué dans l'espace de stockage de l'application</string>
     <string name="song_cache_location_shared_media">Dossier multimédia partagé</string>
     <string name="song_cache_location_shared_media_desc">Accessible dans le dossier Android/media pour les gestionnaires de fichiers et les lecteurs multimédia</string>
     <string name="song_cache_location_custom">Autre dossier</string>
@@ -268,7 +268,7 @@
     <string name="discord_rich_presence">Rich Presence</string>
     <string name="discord_state">État</string>
     <string name="discord_button1_text_default">Écouter sur YouTube Music</string>
-    <string name="discord_button2_text_default">Visiter le site web Metrolist</string>
+    <string name="discord_button2_text_default">Accéder à Metrolist</string>
     <string name="discord_status_authorizing">Autorisation en cours…</string>
     <string name="discord_status_not_initialized">Non connecté</string>
     <string name="discord_status_authorized">Autorisé</string>
@@ -285,7 +285,7 @@
     <string name="discord_button2_label">Libellé du bouton 2</string>
     <string name="discord_button2_url">URL du bouton 2</string>
     <string name="discord_refresh_rpc">Rafraîchir la présence</string>
-    <string name="discord_refresh_rpc_description">Renvoie votre activité actuelle vers Discord</string>
+    <string name="discord_refresh_rpc_description">Renvoie votre activité actuelle à Discord</string>
     <string name="discord_refresh_rate_limited">Patientez un instant avant de rafraîchir à nouveau</string>
     <string name="discord_refresh_error">Échec du rafraîchissement de l\u0027activité</string>
     <string name="integrations">Intégrations</string>
@@ -317,7 +317,7 @@
     <string name="appearance_app_icon_credit">Icônes alternatives par Kayé (@thy_k sur Discord)</string>
     <string name="material_you_description">Utilise la palette de couleurs Material You</string>
     <string name="song_artwork_colors">Couleurs tirées des pochettes</string>
-    <string name="song_artwork_colors_description">Utilise si possible les couleurs de la pochette du titre en cours au lieu des couleurs par défaut</string>
+    <string name="song_artwork_colors_description">Utilise les couleurs de la pochette du titre en cours au lieu des couleurs par défaut</string>
     <string name="theme_palette_style">Style de palette</string>
     <string name="theme_palette_tonal_spot">Nuancée</string>
     <string name="theme_palette_vibrant">Vibrante</string>
@@ -398,7 +398,7 @@
     <string name="appearance_navigation_tabs">Barre de navigation</string>
     <string name="appearance_show_home_tab">Onglet Accueil</string>
     <string name="appearance_show_uploaded_playlist">Playlist Importés</string>
-    <string name="appearance_show_cached_playlist">Playlist mise en cache</string>
+    <string name="appearance_show_cached_playlist">Playlist Mis en cache</string>
     <string name="appearance_show_search_tab">Onglet Recherche</string>
     <string name="appearance_show_library_tab">Onglet Bibliothèque</string>
     <string name="mysterious_fourth_tab">Aucun onglet visible</string>
@@ -1045,7 +1045,7 @@
     <string name="import_connect_amazon_music_account">Se connecter à Amazon Music</string>
     <string name="import_amazon_music_session_sign_in">Connectez-vous à Amazon dans la fenêtre ci-dessus pour continuer.</string>
     <string name="import_paste_apple_music_link">Collez un lien Apple Music</string>
-    <string name="import_paste_youtube_link">Coller le lien YouTube Music</string>
+    <string name="import_paste_youtube_link">Coller un lien YouTube Music</string>
     <string name="import_paste_deezer_link">Collez un lien Deezer</string>
     <string name="import_paste_tidal_prompt">Collez un lien Tidal</string>
     <string name="import_paste_amazon_prompt">Collez un lien Amazon Music</string>
@@ -1152,7 +1152,7 @@
     <string name="saved_to_library">Ajouté à la bibliothèque</string>
     <string name="save_episode">Sauvegarder l\u0027épisode</string>
     <string name="search_recognized_songs">Rechercher dans l'historique</string>
-    <string name="search_songs">Rechercher des morceaux</string>
+    <string name="search_songs">Rechercher des titres</string>
     <string name="see_all">Voir tout</string>
     <string name="select_track_by_artist">Sélectionner %1$s de %2$s</string>
     <string name="share_album">Partager l\u0027album</string>
@@ -1653,7 +1653,7 @@
     <string name="restore_from_backup">Restaurer à partir d\u0027une sauvegarde</string>
     <string name="edit_sidebar">Modifier le menu latéral</string>
     <string name="exit_fullscreen">Quitter le mode plein écran</string>
-    <string name="search_music">Rechercher de la musique</string>
+    <string name="search_music">Rechercher un titre</string>
     <string name="remove_from_search_history">Supprimer %1$s de l\u0027historique de recherche</string>
     <string name="downloading_count">Téléchargement (%1$d)</string>
     <string name="queued">Dans la file d\u0027attente</string>
@@ -1871,7 +1871,7 @@
     <string name="logs_exported_to">Journaux exportés vers : %1$s</string>
     <string name="failed_to_export_logs">Échec de l\u0027exportation des journaux</string>
     <string name="expand_sidebar">Afficher la barre latérale</string>
-    <string name="apple_music_sign_in">Connexion à Apple Music</string>
+    <string name="apple_music_sign_in">Se connecter à Apple Music</string>
     <string name="apple_music_login_failed">Échec de la connexion à Apple Music</string>
     <string name="import_deezer_picker_description">Sélectionnez les playlists que vous souhaitez importer</string>
     <string name="import_deezer_selected_count">%1$d sélectionnées</string>
@@ -2082,7 +2082,7 @@
     <string name="search_load_more_failed">Impossible de charger plus de résultats.</string>
     <string name="discord_error_gateway_configuration">Discord a rejeté la configuration de connexion. Mettez à jour Metrolist avant de réessayer.</string>
     <string name="discord_preview_buttons_adjusted">Discord raccourcit les libellés de boutons trop longs et omet les boutons dont les liens sont trop longs. Cet aperçu montre les boutons qui seront envoyés.</string>
-    <string name="discord_presence_status_warning">Activer la présence enrichie envoie le statut En ligne à Discord et peut remplacer les statuts Invisible ou Ne pas déranger, même à l'arrêt de la lecture.</string>
+    <string name="discord_presence_status_warning">Activer Discord Rich Presence envoie votre activité à Discord et peut remplacer les statuts En ligne, Invisible ou Ne pas déranger, même lorsque la lecture est arrêtée.</string>
     <string name="discord_refresh_queued">Actualisation de la présence mise en attente.</string>
     <string name="metroeq_delete_profile_confirm">Supprimer le profil enregistré « %1$s » ?</string>
     <string name="metroeq_switch_profile_confirm">Enregistrer vos modifications avant de changer de profil ?</string>
@@ -2210,7 +2210,7 @@
     <string name="settings_artist_icon_summary">Choisissez des images de profil YouTube, Apple Music, Last.fm ou personnalisées</string>
     <string name="settings_artist_banner_summary">Choisissez des bannières YouTube, Apple Music, Last.fm ou personnalisées</string>
     <string name="settings_auto_playlist_summary">Sélectionnez les playlists automatiques à afficher dans la bibliothèque</string>
-    <string name="settings_palette_style_summary">Modifiez la combinaison des couleurs générées pour le thème</string>
+    <string name="settings_palette_style_summary">Choisissez la combinaison de couleurs utilisée pour le thème</string>
     <string name="settings_library_density_summary">Nombre de colonnes de la grille de la bibliothèque</string>
     <string name="settings_interface_density_summary">Taille du texte, des icônes et des boutons dans toute l'application</string>
     <string name="settings_initial_tab_summary">Choisissez l'onglet qui s'ouvre au démarrage de l'application</string>
@@ -2230,7 +2230,7 @@
     <string name="settings_translation_model_summary">Modèle de traduction ou de transcription des paroles</string>
     <string name="settings_detector_model_summary">Modèle qui détermine si les paroles doivent être traduites</string>
     <string name="settings_translation_formality_summary">Choisissez un langage formel ou informel pour les traductions DeepL</string>
-    <string name="settings_discord_advanced_summary">Affichez les modèles d'activité et les boutons avec liens personnalisés</string>
+    <string name="settings_discord_advanced_summary">Modifiez le type d'activité et personnalisez les boutons</string>
     <string name="settings_discord_activity_type_summary">Choisissez comment Discord décrit votre activité musicale</string>
     <string name="settings_discord_activity_name_summary">Nom affiché à côté du type d'activité sur Discord</string>
     <string name="settings_discord_link_button_summary">Affichez un bouton avec un lien sur votre profil Discord</string>
