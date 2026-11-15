@@ -178,8 +178,9 @@ class DeviceConnectManager
         private var heartbeatJob: Job? = null
         private var localAddresses = emptySet<String>()
 
-        // Guarded by [stateMutex]; earliest time an automatic connection to a paired peer may be retried.
-        private val autoConnectNotBeforeMs = mutableMapOf<String, Long>()
+        // Guarded by [stateMutex].
+        private val autoConnectRetry = DeviceConnectAutoConnectRetry()
+        private val autoConnectTimeSource = TimeSource.Monotonic.markNow()
 
         @Volatile private var discoveryGeneration = 0L
 
@@ -269,7 +270,7 @@ class DeviceConnectManager
                 if (!settings.deviceConnectEnabled) return@withLock
                 if (_state.value.enabled) return@withLock
                 stateMutex.withLock {
-                    autoConnectNotBeforeMs.clear()
+                    autoConnectRetry.clear()
                     _state.value = _state.value.copy(requiresPermission = false, serverFailed = false)
                 }
                 this.context = context
@@ -366,7 +367,7 @@ class DeviceConnectManager
                 accountIdentity = null
                 peerById.clear()
                 discoveredEndpoints.clear()
-                autoConnectNotBeforeMs.clear()
+                autoConnectRetry.clear()
                 _state.value =
                     _state.value.copy(
                         enabled = false,
@@ -390,7 +391,7 @@ class DeviceConnectManager
                             logWarn("Pair with $deviceId skipped (state=${current?.state}, endpoint=$hasEndpoint).")
                             return@launch
                         }
-                        autoConnectNotBeforeMs.remove(deviceId)
+                        autoConnectRetry.reset(deviceId)
                         current
                     }
                 connectTo(peer.host, peer.port, deviceId, peer.name, peer.serviceName, allowNewPairing = true)
@@ -417,7 +418,7 @@ class DeviceConnectManager
                             current.state == PeerState.DISCOVERED || current.state == PeerState.DISCONNECTED ||
                                 current.state == PeerState.ERROR
                         val paired = _state.value.pairedDevices.any { it.deviceId == deviceId }
-                        val due = (autoConnectNotBeforeMs[deviceId] ?: 0L) <= nowMs()
+                        val due = autoConnectRetry.isDue(deviceId, autoConnectNowMs())
                         current.takeIf { retryable && paired && due && _state.value.enabled }?.let { peer ->
                             val endpoint = discoveredEndpoints.first(deviceId)
                             if (endpoint != null) {
@@ -433,8 +434,7 @@ class DeviceConnectManager
                     delay(AUTO_CONNECT_YIELD.milliseconds)
                     peer = candidate() ?: return@launch
                 }
-                stateMutex.withLock { autoConnectNotBeforeMs[deviceId] = nowMs() + AUTO_CONNECT_RETRY }
-                logInfo("Auto-connecting to paired device ${peer.name}.")
+                logDebug("Auto-connecting to paired device ${peer.name}.")
                 connectTo(peer.host, peer.port, deviceId, peer.name, peer.serviceName, allowNewPairing = false)
             }
         }
@@ -514,6 +514,7 @@ class DeviceConnectManager
                     logWarn("Initial local grant deletion failed but the post-close retry succeeded.")
                 }
                 if (settings.deviceConnectDefaultDeviceId == deviceId) settings.deviceConnectDefaultDeviceId = ""
+                stateMutex.withLock { autoConnectRetry.reset(deviceId) }
                 refreshPairedDevices()
                 logInfo("Forgot local Device Connect grant for $deviceId.")
             }
@@ -953,6 +954,8 @@ class DeviceConnectManager
                     if (skip != null) {
                         logDebug("Connection to $safeName ($host:$port) skipped: $skip.")
                         false
+                    } else if (!allowNewPairing && !autoConnectRetry.begin(deviceId, autoConnectNowMs())) {
+                        false
                     } else {
                         if (expectedDeviceId == null) _state.value = _state.value.copy(directConnectionFailed = false)
                         peerById[deviceId] =
@@ -976,14 +979,20 @@ class DeviceConnectManager
                 }
             val connId = "out-${stateMutex.withLock { ++connectionCounter }}"
             if (!connectionSlots.tryAcquire()) {
-                logWarn("[$connId] rejecting outgoing connection: limit ($MAX_CONNECTIONS) reached.")
+                if (!allowNewPairing) stateMutex.withLock { autoConnectRetry.failed(deviceId, autoConnectNowMs()) }
+                val message = "[$connId] rejecting outgoing connection: limit ($MAX_CONNECTIONS) reached."
+                if (allowNewPairing) logWarn(message) else logDebug(message)
                 finishFailedConnectAttempt(deviceId, host, port, serviceName, if (expectedDeviceId == null) null else PeerState.ERROR)
                 if (expectedDeviceId == null) reportDirectConnectionFailure()
                 return
             }
             var ownsSlot = true
             try {
-                logInfo("Connecting to $safeName ($host:$port)…")
+                if (allowNewPairing) {
+                    logInfo("Connecting to $safeName ($host:$port)…")
+                } else {
+                    logDebug("Connecting to $safeName ($host:$port)…")
+                }
                 val sessionWs: ClientWebSocketSession = client.webSocketSession { url(deviceConnectWebSocketUrl(host, port)) }
                 val channel = ClientDeviceChannel(sessionWs, host)
                 val peer =
@@ -1027,12 +1036,22 @@ class DeviceConnectManager
                 logInfo("Outgoing connection to $safeName ($host:$port) opened.")
             } catch (e: Exception) {
                 if (ownsSlot) connectionSlots.release()
+                if (e is CancellationException) {
+                    withContext(NonCancellable) {
+                        stateMutex.withLock { autoConnectRetry.cancel(deviceId) }
+                        finishFailedConnectAttempt(deviceId, host, port, serviceName)
+                    }
+                    throw e
+                }
+                val firstFailure =
+                    stateMutex.withLock {
+                        allowNewPairing || autoConnectRetry.failed(deviceId, autoConnectNowMs())
+                    }
                 finishFailedConnectAttempt(deviceId, host, port, serviceName)
                 if (expectedDeviceId == null) reportDirectConnectionFailure()
-                logWarn(
-                    "Connection endpoint for $safeName ($host:$port) is unavailable; discovery remains active: ${e.message}",
-                    e,
-                )
+                val message =
+                    "Connection endpoint for $safeName ($host:$port) is unavailable; discovery remains active: ${e.message}"
+                if (firstFailure) logWarn(message, e) else logDebug(message)
             }
         }
 
@@ -1075,7 +1094,9 @@ class DeviceConnectManager
                         } else {
                             awaitMaintenanceChange()
                         }
-                        network = PlaybackNetworkStateStore.current
+                        val currentNetwork = PlaybackNetworkStateStore.current
+                        if (currentNetwork != network) stateMutex.withLock { autoConnectRetry.clear() }
+                        network = currentNetwork
                         pairs = settings.deviceConnectPairedDevices
                         refreshDiscoveryAfterNetworkChange()
                         if (!_state.value.serverRunning) break
@@ -1122,6 +1143,7 @@ class DeviceConnectManager
                 localAddresses = addresses
                 stateMutex.withLock {
                     discoveryRetry.reset(nowMs())
+                    autoConnectRetry.clear()
                     _state.value = _state.value.copy(localAddress = addresses.sorted().firstOrNull().orEmpty())
                 }
                 logInfo("Local network changed; restarting service discovery.")
@@ -2345,13 +2367,22 @@ class DeviceConnectManager
                 connectionSlots.release()
                 stateMutex.withLock {
                     releaseIncomingAdmission()
-                    if (device.state != PeerState.CONNECTED) discoveredEndpoints.failed(id, device.host, device.port)
+                    if (device.state != PeerState.CONNECTED) {
+                        discoveredEndpoints.failed(id, device.host, device.port)
+                    }
                     connections.remove(connectionId)
                     val connectedSession =
                         connections.values.firstOrNull {
                             it.device.id == id && it.device.state == PeerState.CONNECTED && !it.closing
                         }
                     if (connectedSession == null) {
+                        if (device.state != PeerState.CONNECTED && !isIncoming && !allowNewPairing) {
+                            if (intentionalClosure) {
+                                autoConnectRetry.cancel(id)
+                            } else {
+                                autoConnectRetry.failed(id, autoConnectNowMs())
+                            }
+                        }
                         val wasPlaybackPeer = playbackPeers.remove(id)
                         if (wasPlaybackPeer || connections.values.none { it.device.id == id && !it.closing }) {
                             remote.onPeerDisconnected(id, intentionalClosure)
@@ -2461,7 +2492,10 @@ class DeviceConnectManager
                                 serviceName = serviceName,
                                 deviceType = safeType,
                             )
-                        if (state == PeerState.CONNECTED) discoveredEndpoints.authenticated(device)
+                        if (state == PeerState.CONNECTED) {
+                            discoveredEndpoints.authenticated(device)
+                            autoConnectRetry.reset(id)
+                        }
                         // Merge endpoint and authenticated IDs so one physical device does not appear twice.
                         val dup =
                             peerById.entries.firstOrNull {
@@ -2583,6 +2617,7 @@ class DeviceConnectManager
                     _state.value = _state.value.copy(anonymous = current.anonymous, pairedDevices = pairedDevices)
                     if (current == previous || previous == null) return@withLock emptyList()
                     changed = true
+                    autoConnectRetry.clear()
                     playbackPeers.clear()
 
                     peerById.entries
@@ -2602,6 +2637,8 @@ class DeviceConnectManager
         private fun rebuildPeers() {
             _state.value = _state.value.copy(peers = peerById.values.toList())
         }
+
+        private fun autoConnectNowMs(): Long = autoConnectTimeSource.elapsedNow().inWholeMilliseconds
 
         private fun logDebug(msg: String) = log(LogLevel.DEBUG, msg, null)
 
@@ -2703,7 +2740,6 @@ class DeviceConnectManager
             const val SERVICE_TYPE = "_metrolist-connect._tcp."
             private const val PING_INTERVAL = 5_000L
             private const val AUTO_CONNECT_YIELD = 2_000L
-            private const val AUTO_CONNECT_RETRY = 15_000L
             private const val HEARTBEAT_TIMEOUT = 20_000L
             private const val HANDSHAKE_TIMEOUT = 10_000L
             private const val PROOF_IDENTITY = "identity"

@@ -8,7 +8,9 @@ Android and desktop expose it in Integrations and the player device picker. It d
 
 Connection and pairing changes update the open settings page. Activate a paired device's row to forget it, including with a TV remote. Choose the playback target in the player device picker; pairing alone does not move audio.
 
-A failed start retains the enable preference and offers retry. Discovery failures remain distinct from empty results. Retries back off from 30 seconds to 10 minutes. Desktop uses the system hostname unless a custom device name is set.
+A failed start retains the enable preference and offers retry. Discovery failures remain distinct from empty results. Discovery retries and automatic connections to offline paired devices back off from 30 seconds to 10 minutes. Each peer has its own connection delay, which resets after authentication or a network change. The first endpoint failure logs a warning; repeats log at debug level. Desktop uses the system hostname unless a custom device name is set.
+
+Desktop renews mDNS sessions every 10 minutes, closing the old sockets and listeners before opening replacements. TXT lookups use a bounded worker queue and temporary resolvers. Discovery thread failures stop the session and report an error for retry.
 
 ## Direct connections
 
