@@ -3,6 +3,7 @@ package com.metrolist.shared.state
 import com.metrolist.shared.backup.LIKED_SONGS_SETTING_KEY
 import com.metrolist.shared.constants.DatabaseLikesRecoveryVersionKey
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.settings.DeferredSecretMigrationSettings
 import com.metrolist.shared.settings.FlushableSettings
 import com.metrolist.shared.settings.PortableSetting
 import com.metrolist.shared.settings.PortableSettings
@@ -109,14 +110,30 @@ class DatabaseLikesRecoveryTest {
     }
 
     @Test
-    fun signedInAndPreviouslySignedInCatalogsStayUnchanged() {
-        for (identity in listOf("cookie", "data-sync", "previous-account")) {
+    fun signedInUpgradeRecoversBeforeAccountActivationIncludingTheOldSkippedVersion() {
+        for (version in listOf(0, 1)) {
             val settings = Settings(MapSettings())
-            when (identity) {
-                "cookie" -> settings.innerTubeCookie = "SAPISID=test"
-                "data-sync" -> settings.dataSyncId = "account"
-                else -> settings.likedSongsOrderAccount = "account|0"
-            }
+            settings.innerTubeCookie = "SAPISID=test"
+            settings.dataSyncId = "account"
+            settings.innerTubeAuthUser = "2"
+            settings.databaseLikesRecoveryVersion = version
+            settings.likedSongsJson = Json.encodeToString(listOf(song))
+            settings.pendingSongVotesJson = """{"middle":"INDIFFERENT"}"""
+            settings.dislikedSongIds = "new"
+            val missing = song.copy(id = "missing")
+            assertTrue(settings.recoverDatabaseLikes(databaseLikes + missing))
+            assertEquals(listOf(song, missing), Json.decodeFromString(settings.likedSongsJson))
+            assertEquals("""{"middle":"INDIFFERENT"}""", settings.pendingSongVotesJson)
+            assertEquals(DATABASE_LIKES_RECOVERY_VERSION, settings.databaseLikesRecoveryVersion)
+        }
+    }
+
+    @Test
+    fun activatedAndPreviouslySignedInCatalogsKeepAcknowledgedRemovals() {
+        for (version in listOf(0, 1)) {
+            val settings = Settings(MapSettings())
+            settings.databaseLikesRecoveryVersion = version
+            settings.likedSongsOrderAccount = "account|0"
             settings.likedSongsJson = Json.encodeToString(listOf(song))
             val before = settings.likedSongsJson
             assertFalse(settings.recoverDatabaseLikes(databaseLikes))
@@ -127,6 +144,31 @@ class DatabaseLikesRecoveryTest {
             assertFalse(settings.recoverDatabaseLikes(databaseLikes))
             assertEquals(before, settings.likedSongsJson)
         }
+    }
+
+    @Test
+    fun completedSignedOutRecoveryDoesNotRunAgainAfterVersionBump() {
+        val settings = Settings(MapSettings())
+        settings.databaseLikesRecoveryVersion = 1
+        assertFalse(settings.recoverDatabaseLikes(databaseLikes))
+        assertEquals("[]", settings.likedSongsJson)
+        assertEquals(DATABASE_LIKES_RECOVERY_VERSION, settings.databaseLikesRecoveryVersion)
+    }
+
+    @Test
+    fun pendingCredentialsDeferRecoveryUntilTheAccountIsKnown() {
+        val storage =
+            object : KmpSettings by MapSettings(), DeferredSecretMigrationSettings {
+                override var secretRecoveryPending = true
+            }
+        val settings = Settings(storage)
+        assertFalse(settings.recoverDatabaseLikes(databaseLikes))
+        assertEquals(0, settings.databaseLikesRecoveryVersion)
+        storage.secretRecoveryPending = false
+        settings.refreshStoredValues()
+        settings.innerTubeCookie = "SAPISID=test"
+        assertTrue(settings.recoverDatabaseLikes(databaseLikes))
+        assertEquals(listOf("new", "middle", "old"), Json.decodeFromString<List<SongItem>>(settings.likedSongsJson).map(SongItem::id))
     }
 
     @Test

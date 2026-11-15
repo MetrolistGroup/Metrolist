@@ -19,6 +19,46 @@ import kotlin.test.assertTrue
 
 class DatabaseLikesUpgradeTest {
     @Test
+    fun signedInVersion38UpgradeSeedsTheCacheWithoutReplayingLikesToYouTube() =
+        runBlocking {
+            val directory = createTempDirectory("signed-in-likes-upgrade").toFile()
+            val previousSettings = Settings.sharedOverrideForTest()
+            SongLikeState.awaitPersistence()
+            val settings = Settings(MapSettings())
+            settings.innerTubeCookie = "SAPISID=test"
+            settings.dataSyncId = "account"
+            settings.innerTubeAuthUser = "2"
+            Settings.replaceSharedForTest(settings)
+            val file = File(directory, "library.db")
+            createHistoricalLibrary(file.path, 38, JdbcSQLiteDriver())
+            val database = getDesktopDatabaseBuilder(file).build()
+            try {
+                SongLikeState.refreshFromSettings()
+                SongLikeState.recoverDatabaseLikes(database)
+                assertEquals(listOf("song"), SongLikeState.likedSongs.map { it.id })
+                assertEquals("{}", settings.pendingSongVotesJson)
+                SongLikeState.activateCurrentAccount()
+                assertEquals("account|2", settings.likedSongsOrderAccount)
+                assertTrue(SongLikeState.isLiked("song"))
+
+                SongLikeState.replaceLikesFromRemote(emptyList())
+                SongLikeState.awaitPersistence()
+                assertFalse(SongLikeState.isLiked("song"))
+                assertEquals(1, database.dao().likedSongsCount().first())
+                settings.databaseLikesRecoveryVersion = 1
+                SongLikeState.refreshFromSettings()
+                SongLikeState.recoverDatabaseLikes(database)
+                assertFalse(SongLikeState.isLiked("song"))
+            } finally {
+                database.close()
+                SongLikeState.awaitPersistence()
+                Settings.replaceSharedForTest(previousSettings)
+                if (previousSettings != null) SongLikeState.refreshFromSettings()
+                directory.deleteRecursively()
+            }
+        }
+
+    @Test
     fun version38UpgradeRecoversEmptyAndPartialCatalogsWithoutChangingRoomLikes() =
         runBlocking {
             val directory = createTempDirectory("likes-upgrade").toFile()

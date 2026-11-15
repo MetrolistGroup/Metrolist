@@ -7,7 +7,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.Settings
 import kotlinx.serialization.json.Json
 
-internal const val DATABASE_LIKES_RECOVERY_VERSION = 1
+internal const val DATABASE_LIKES_RECOVERY_VERSION = 2
 
 private fun Settings.hasAccountLikes(): Boolean =
     credentialsPending || innerTubeCookie.isNotBlank() || dataSyncId.isNotBlank() ||
@@ -19,13 +19,16 @@ internal fun Settings.recoverDatabaseLikes(
     currentRecency: List<String>? = null,
 ): Boolean {
     if (databaseLikesRecoveryVersion >= DATABASE_LIKES_RECOVERY_VERSION) return false
-    if (hasAccountLikes()) {
+    if (credentialsPending) return false
+    val accountLikes = hasAccountLikes()
+    // An activated v14 account may have acknowledged unlikes that no longer have pending votes.
+    if ((accountLikes && likedSongsOrderAccount.isNotBlank()) || (!accountLikes && databaseLikesRecoveryVersion == 1)) {
         databaseLikesRecoveryVersion = DATABASE_LIKES_RECOVERY_VERSION
         flush()
         return false
     }
 
-    // Signed-out v14 votes remain pending, including deliberate unlikes of stale Room rows.
+    // Recovery seeds the local cache only; a complete YouTube refresh remains authoritative.
     val votes = Json.decodeFromString<Map<String, SongVote>>(pendingSongVotesJson)
     val excluded = votes.filterValues { it != SongVote.LIKE }.keys + dislikedSongIds.split(",")
     val existing = currentSongs ?: Json.decodeFromString<List<SongItem>>(likedSongsJson)
@@ -56,6 +59,11 @@ fun Settings.restoreDatabaseLikes(
         }
         likedSongsJson = Json.encodeToString(databaseLikesOldestFirst)
         likedSongIds = databaseLikesOldestFirst.joinToString(",", transform = SongItem::id)
+    } else if (hasAccountLikes()) {
+        // A v14 backup catalog already includes the user's removals from the legacy database.
+        databaseLikesRecoveryVersion = DATABASE_LIKES_RECOVERY_VERSION
+        flush()
+        return
     }
     recoverDatabaseLikes(databaseLikesOldestFirst)
 }
