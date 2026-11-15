@@ -26,6 +26,8 @@ data class LyricsEntry(
     val songPart: String? = null,
     val backgroundText: String? = null,
     val backgroundTranslatedText: String? = null,
+    val translationLanguage: String? = null,
+    val translationMode: String = "Literal",
 ) : Comparable<LyricsEntry> {
     override fun compareTo(other: LyricsEntry): Int = (time - other.time).toInt()
 

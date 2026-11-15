@@ -392,7 +392,12 @@ class PlayerLyricsRetryTest {
         val releaseProvider = CompletableDeferred<Unit>()
         val preparing = CompletableDeferred<Unit>()
         val releaseDictionary = CompletableDeferred<Unit>()
-        val fallback = MlxBuilder().line(1_000, "Original lyrics").build() + "\n[translatedLyrics]\n[00:01.000]Traduction"
+        val fallback =
+            MlxBuilder()
+                .song(translationLanguage = "fr")
+                .line(1_000, "Original lyrics")
+                .translatedLine(1_000, "Traduction")
+                .build()
         val replacement = "[00:03]あい"
         withLyricsPlayer(
             audioResponse = {
@@ -409,6 +414,7 @@ class PlayerLyricsRetryTest {
             try {
                 Settings.shared.lyricsRomanizationEnabled = true
                 Settings.shared.lyricsRomanizeLanguages = "Japanese:true"
+                Settings.shared.lyricsAiTargetLanguage = "fr"
                 val song = requireNotNull(controller.state.value.currentSong)
                 database.dao().saveLyrics(LyricsEntity(song.id, fallback, "PAXSENIX"))
                 vm.loadLyrics(song.id, song.title)

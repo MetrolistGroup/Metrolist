@@ -164,6 +164,7 @@ object MlxParser {
                     mainEntry.copy(
                         translatedText = matchingTranslation?.text?.takeIf { it.isNotBlank() },
                         backgroundTranslatedText = matchingTranslation?.backgroundText?.takeIf { it.isNotBlank() },
+                        translationLanguage = song.translationLanguage,
                     )
                 }
             } else {

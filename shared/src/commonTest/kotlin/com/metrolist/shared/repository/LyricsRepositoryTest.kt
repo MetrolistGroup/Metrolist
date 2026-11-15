@@ -10,6 +10,7 @@ import com.metrolist.shared.api.lyrics.LyricsTranslationFailure
 import com.metrolist.shared.api.lyrics.LyricsUtils
 import com.metrolist.shared.api.lyrics.MlxBuilder
 import com.metrolist.shared.api.lyrics.MlxWord
+import com.metrolist.shared.api.lyrics.parseTtmlToMlx
 import com.metrolist.shared.api.lyrics.romanizer.LyricsRomanizer
 import com.metrolist.shared.db.entities.LyricsEntity
 import com.metrolist.shared.model.LyricsEntry
@@ -399,6 +400,136 @@ class LyricsRepositoryTest {
     }
 
     @Test
+    fun bundledTranslationsRequireMatchingLanguageAndMode() =
+        runBlocking {
+            Settings.shared.lyricsAiTargetLanguage = "zh-CN"
+            Settings.shared.lyricsRomanizationEnabled = false
+            HttpClient(MockEngine { error("No translation request expected") }).use { client ->
+                val repository = LyricsRepository(FakeLyricsFetcher(emptyMap()), LyricsTranslationClient(client))
+                for (language in listOf(null, "en", "zh_CN")) {
+                    val mlx =
+                        MlxBuilder()
+                            .song(translationLanguage = language)
+                            .line(1_000, 2_000, "안녕", background = "메아리")
+                            .translatedLine(1_000, "你好", background = "回声")
+                            .build()
+                    val json =
+                        """{"version":2,"song":{"translationLanguage":${language?.let(::JsonPrimitive)}},
+                            "lines":[{"startMs":1000,"endMs":2000,"text":"안녕","backgroundText":"메아리",
+                            "translatedText":"你好","backgroundTranslatedText":"回声"}]}"""
+                    for (raw in listOf(mlx, json)) {
+                        val entries = assertNotNull(LyricsUtils.parseMlxDocument(raw)).lines
+                        for (mode in listOf("Literal", "Transcribed", "Romanized")) {
+                            Settings.shared.lyricsAiTranslationMode = mode
+                            val result = repository.enrichLyricsEntries("song", entries, allowRemoteTranslation = false).single()
+                            val matches = language == "zh_CN" && mode == "Literal"
+                            assertEquals(if (matches) "你好" else null, result.translatedText, "$language $mode")
+                            assertEquals(if (matches) "回声" else null, result.backgroundTranslatedText, "$language $mode")
+                            assertEquals(entries.single().text, result.text)
+                            assertEquals(entries.single().words, result.words)
+                            assertEquals(entries.single().time, result.time)
+                        }
+                    }
+                }
+                val ttml =
+                    """<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body><div>
+                        <p begin="1s" end="2s">안녕<span ttm:role="x-translation" xml:lang="zh">你好</span></p>
+                        </div></body></tt>"""
+                Settings.shared.lyricsAiTranslationMode = "Literal"
+                val entries = assertNotNull(LyricsUtils.parseMlxDocument(parseTtmlToMlx(ttml, "Song", "Artist", "Unison"))).lines
+                assertEquals("你好", repository.enrichLyricsEntries("ttml", entries).single().translatedText)
+                Settings.shared.lyricsAiTargetLanguage = "en"
+                assertNull(repository.enrichLyricsEntries("ttml", entries).single().translatedText)
+            }
+        }
+
+    @Test
+    fun selectedAiOutputOverridesBundledTranslations() =
+        runBlocking {
+            Settings.shared.lyricsAiTranslationEnabled = true
+            Settings.shared.lyricsAiTargetLanguage = "zh-CN"
+            Settings.shared.lyricsAiApiKey = "test-key"
+            Settings.shared.lyricsRomanizationEnabled = false
+            HttpClient(
+                MockEngine {
+                    respond("""{"choices":[{"message":{"content":"{\"lines\":[\"你好\",\"回声\"]}"}}]}""")
+                },
+            ).use { client ->
+                val repository = LyricsRepository(FakeLyricsFetcher(emptyMap()), LyricsTranslationClient(client))
+                for (language in listOf(null, "en", "zh")) {
+                    val entry =
+                        LyricsEntry(
+                            1_000,
+                            "안녕",
+                            backgroundText = "메아리",
+                            translatedText = "Bundled translation",
+                            backgroundTranslatedText = "Bundled background",
+                            translationLanguage = language,
+                        )
+                    for (mode in listOf("Literal", "Transcribed")) {
+                        Settings.shared.lyricsAiTranslationMode = mode
+                        val result =
+                            repository
+                                .enrichLyricsEntries(
+                                    "song-$language-$mode",
+                                    listOf(entry),
+                                    forceAiTranslation = true,
+                                ).single()
+                        assertEquals("你好", result.translatedText)
+                        assertEquals("回声", result.backgroundTranslatedText)
+                        assertEquals(entry.text, result.text)
+                        assertEquals(entry.backgroundText, result.backgroundText)
+                        assertEquals("zh-CN", result.translationLanguage)
+                        assertEquals(mode, result.translationMode)
+                        Settings.shared.lyricsAiTranslationMode = if (mode == "Literal") "Transcribed" else "Literal"
+                        val changedMode =
+                            repository.enrichLyricsEntries("song-$language-$mode", listOf(result), allowRemoteTranslation = false).single()
+                        assertNull(changedMode.translatedText)
+                        assertNull(changedMode.backgroundTranslatedText)
+                    }
+                }
+            }
+        }
+
+    @Test
+    fun missingAiOutputKeepsMatchingBundledTranslationsOrSourceLyrics() =
+        runBlocking {
+            Settings.shared.lyricsAiTranslationEnabled = true
+            Settings.shared.lyricsAiTargetLanguage = "zh-CN"
+            Settings.shared.lyricsAiApiKey = "test-key"
+            Settings.shared.lyricsRomanizationEnabled = false
+            for (output in listOf("", "안녕", null)) {
+                HttpClient(
+                    MockEngine {
+                        if (output == null) {
+                            respond("Unauthorized", HttpStatusCode.Unauthorized)
+                        } else {
+                            val payload = "{\"lines\":[${JsonPrimitive(output)}]}"
+                            respond("{\"choices\":[{\"message\":{\"content\":${JsonPrimitive(payload)}}}]}")
+                        }
+                    },
+                ).use { client ->
+                    val repository = LyricsRepository(FakeLyricsFetcher(emptyMap()), LyricsTranslationClient(client))
+                    for (language in listOf(null, "en", "zh")) {
+                        val entry = LyricsEntry(1_000, "안녕", translatedText = "你好", translationLanguage = language)
+                        for (mode in listOf("Literal", "Transcribed")) {
+                            Settings.shared.lyricsAiTranslationMode = mode
+                            val result =
+                                repository
+                                    .enrichLyricsEntries(
+                                        "song-$language-$mode",
+                                        listOf(entry),
+                                        forceAiTranslation = true,
+                                    ).single()
+                            assertEquals("안녕", result.text)
+                            assertEquals(if (language == "zh" && mode == "Literal") "你好" else null, result.translatedText)
+                        }
+                    }
+                }
+            }
+        }
+
+    @Test
     fun localPreparationRomanizesWithoutRequestingMissingTranslations() =
         runBlocking {
             Settings.shared.lyricsRomanizationEnabled = true
@@ -421,7 +552,7 @@ class LyricsRepositoryTest {
                         LyricsTranslationClient(client),
                         aiModelCatalog = AiModelCatalog(client),
                     )
-                val original = listOf(LyricsEntry(10_000, "안녕", translatedText = "Bonjour"))
+                val original = listOf(LyricsEntry(10_000, "안녕", translatedText = "Bonjour", translationLanguage = "fr"))
                 var failures = 0
                 val prepared = repository.enrichLyricsEntries("song", original, allowRemoteTranslation = false) { failures++ }
                 assertEquals("annyeong", prepared.single().romanizedText)

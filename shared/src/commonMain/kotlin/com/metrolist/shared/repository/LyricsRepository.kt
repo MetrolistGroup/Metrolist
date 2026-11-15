@@ -15,6 +15,7 @@ import com.metrolist.shared.api.lyrics.YouTubeSubtitleLyricsProvider
 import com.metrolist.shared.api.lyrics.YouTubeTranscriptCue
 import com.metrolist.shared.api.lyrics.lyricsTimingKind
 import com.metrolist.shared.api.lyrics.lyricsTranslationFailure
+import com.metrolist.shared.api.lyrics.lyricsTranslationLanguageMatches
 import com.metrolist.shared.api.lyrics.lyricsTranslationTargetLanguage
 import com.metrolist.shared.api.lyrics.retryLyricsTranslation
 import com.metrolist.shared.api.lyrics.romanizer.LyricsRomanizer
@@ -870,8 +871,26 @@ class LyricsRepository(
         onTranslationFailure: suspend (LyricsTranslationFailure) -> Unit = {},
     ): List<LyricsEntry> {
         if (entries.isEmpty()) return entries
+        val targetLanguage = lyricsTranslationTargetLanguage()
+        val translationStyle = Settings.shared.lyricsAiTranslationMode
+        val preserveUserTranslations =
+            entries.any { !it.translatedText.isNullOrBlank() || !it.backgroundTranslatedText.isNullOrBlank() } &&
+                getUserLyrics(videoId) != null
+        var enriched =
+            entries.map { entry ->
+                if (preserveUserTranslations ||
+                    (
+                        entry.translationMode == translationStyle &&
+                            lyricsTranslationLanguageMatches(entry.translationLanguage.orEmpty(), targetLanguage)
+                    )
+                ) {
+                    entry
+                } else {
+                    entry.copy(translatedText = null, backgroundTranslatedText = null)
+                }
+            }
         val nonEmpty =
-            entries.mapIndexedNotNull { index, entry ->
+            enriched.mapIndexedNotNull { index, entry ->
                 if (entry.text.isNotBlank() ||
                     !entry.words.isNullOrEmpty() || !entry.backgroundText.isNullOrBlank()
                 ) {
@@ -880,9 +899,8 @@ class LyricsRepository(
                     null
                 }
             }
-        if (nonEmpty.isEmpty()) return entries
+        if (nonEmpty.isEmpty()) return enriched
 
-        var enriched = entries
         val sourceLines = nonEmpty.map { (_, entry) -> translationSourceLine(entry) }
         val dictionaryDetectionText = romanizationDetectionText(entries)
         val prepareDictionary: suspend () -> Boolean = {
@@ -897,8 +915,6 @@ class LyricsRepository(
                     pieces.getOrNull(0)?.takeIf { pieces.getOrNull(1)?.toBooleanStrictOrNull() ?: false }
                 }.toSet()
         val romanizationEnabled = Settings.shared.lyricsRomanizationEnabled
-        val targetLanguage = lyricsTranslationTargetLanguage()
-        val translationStyle = Settings.shared.lyricsAiTranslationMode
         val backgroundSources =
             if (translationStyle == "Romanized") {
                 emptyList()
@@ -980,13 +996,13 @@ class LyricsRepository(
                                                             if (translationStyle == "Romanized") {
                                                                 entries[it].romanizedText.isNullOrBlank()
                                                             } else {
-                                                                entries[it].translatedText.isNullOrBlank()
+                                                                enriched[it].translatedText.isNullOrBlank()
                                                             }
                                                         }.toSet(),
                                                 backgroundLines =
                                                     selected
                                                         .mapNotNull { backgroundSources.getOrNull(it - nonEmpty.size)?.first }
-                                                        .filter { entries[it].backgroundTranslatedText.isNullOrBlank() }
+                                                        .filter { enriched[it].backgroundTranslatedText.isNullOrBlank() }
                                                         .toSet(),
                                             ),
                                         )
@@ -1018,7 +1034,8 @@ class LyricsRepository(
                                 coroutineContext.ensureActive()
                                 val translated =
                                     aiResult.translatedLines?.getOrNull(translationIndex)?.takeIf {
-                                        it.isNotBlank() && it != translationLines[translationIndex]
+                                        it.isNotBlank() && it != translationLines[translationIndex] &&
+                                            (!preserveUserTranslations || entry.translatedText.isNullOrBlank())
                                     }
                                 val romanized = aiResult.romanizedLines?.getOrNull(translationIndex)?.takeIf { it.isNotBlank() }
                                 val aiWords = aiResult.romanizedWordsPerLine?.getOrNull(translationIndex)
@@ -1037,7 +1054,9 @@ class LyricsRepository(
                                     }
                                 mutable[entryIndex] =
                                     entry.copy(
-                                        translatedText = entry.translatedText?.takeIf { it.isNotBlank() } ?: translated,
+                                        translatedText = translated ?: entry.translatedText,
+                                        translationLanguage = if (translated != null) targetLanguage else entry.translationLanguage,
+                                        translationMode = if (translated != null) translationStyle else entry.translationMode,
                                         romanizedText =
                                             if (!entry.romanizedText.isNullOrBlank()) {
                                                 entry.romanizedText
@@ -1057,13 +1076,19 @@ class LyricsRepository(
                                     )
                             }
                             backgroundSources.forEachIndexed { index, (entryIndex, source) ->
+                                val entry = mutable[entryIndex]
                                 val translated =
                                     aiResult.translatedLines
                                         ?.getOrNull(nonEmpty.size + index)
-                                        ?.takeIf { it.isNotBlank() && it != source }
+                                        ?.takeIf {
+                                            it.isNotBlank() && it != source &&
+                                                (!preserveUserTranslations || entry.backgroundTranslatedText.isNullOrBlank())
+                                        }
                                 mutable[entryIndex] =
-                                    mutable[entryIndex].copy(
-                                        backgroundTranslatedText = translated ?: mutable[entryIndex].backgroundTranslatedText,
+                                    entry.copy(
+                                        backgroundTranslatedText = translated ?: entry.backgroundTranslatedText,
+                                        translationLanguage = if (translated != null) targetLanguage else entry.translationLanguage,
+                                        translationMode = if (translated != null) translationStyle else entry.translationMode,
                                     )
                             }
                         }
