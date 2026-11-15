@@ -459,22 +459,29 @@ class HomeViewModel(
                                 playlist.thumbnailUrl?.let { playlist.id.removePrefix("VL") to it }
                             }.toMap()
                     initialSpeedDialPins.await()
-                    database.refreshSpeedDialArtwork(known, artworkRefreshTimes) { id ->
-                        if (attemptedArtwork.add(id)) {
-                            try {
-                                GlobalYouTubeRepository.instance
-                                    .getPlaylistPages(id)
-                                    .first()
-                                    .sections["header"]
-                                    ?.filterIsInstance<PlaylistItem>()
-                                    ?.firstOrNull()
-                            } catch (error: CancellationException) {
-                                attemptedArtwork.remove(id)
-                                throw error
+                    val attemptedThisRefresh = mutableSetOf<String>()
+                    try {
+                        database.refreshSpeedDialArtwork(known, artworkRefreshTimes) { id ->
+                            if (attemptedArtwork.add(id)) {
+                                attemptedThisRefresh.add(id)
+                                try {
+                                    GlobalYouTubeRepository.instance
+                                        .getPlaylistPages(id)
+                                        .first()
+                                        .sections["header"]
+                                        ?.filterIsInstance<PlaylistItem>()
+                                        ?.firstOrNull()
+                                } catch (error: CancellationException) {
+                                    attemptedArtwork.remove(id)
+                                    throw error
+                                }
+                            } else {
+                                null
                             }
-                        } else {
-                            null
                         }
+                    } catch (error: CancellationException) {
+                        attemptedArtwork.removeAll(attemptedThisRefresh)
+                        throw error
                     }
                     Settings.shared.speedDialArtworkRefreshTimes = Json.encodeToString(artworkRefreshTimes)
                 }
