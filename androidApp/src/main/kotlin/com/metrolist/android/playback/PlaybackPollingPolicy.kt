@@ -53,6 +53,7 @@ internal class OffloadSleepStallTracker(
     private val timeoutMs: Long = 2_000L,
 ) {
     private var sleepingForOffload = false
+    private var wasExpectingProgress = true
     private var lastProgressAtMs = 0L
     private var lastOutputPosition: Long? = null
 
@@ -73,10 +74,15 @@ internal class OffloadSleepStallTracker(
     ): Boolean {
         if (!sleepingForOffload) return false
         if (!expectProgress) {
+            wasExpectingProgress = false
             lastProgressAtMs = nowMs
             return false
         }
-        if (outputPosition != lastOutputPosition) {
+        if (!wasExpectingProgress) {
+            wasExpectingProgress = true
+            lastProgressAtMs = nowMs
+        }
+        if (outputPosition == null || outputPosition != lastOutputPosition) {
             lastOutputPosition = outputPosition
             if (outputPosition != null) lastProgressAtMs = nowMs
             return false
@@ -88,6 +94,7 @@ internal class OffloadSleepStallTracker(
 
     fun reset() {
         sleepingForOffload = false
+        wasExpectingProgress = true
         lastProgressAtMs = 0L
         lastOutputPosition = null
     }

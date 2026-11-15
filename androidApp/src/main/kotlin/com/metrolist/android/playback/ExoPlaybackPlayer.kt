@@ -3067,8 +3067,7 @@ class ExoPlaybackPlayer(
                 "Android audio offload disabled after playback stalled.",
                 mapOf("progressStalledMs" to playbackProgressStalledMs.toString()),
             )
-        }
-        if (playbackProgressTimedOut) {
+        } else if (playbackProgressTimedOut) {
             reportPlaybackFailure(
                 PlaybackException(
                     "Playback output stopped advancing",
