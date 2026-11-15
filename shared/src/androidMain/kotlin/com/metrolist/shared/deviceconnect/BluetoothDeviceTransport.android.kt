@@ -34,13 +34,15 @@ import android.os.Build
 import android.os.ParcelUuid
 import androidx.core.content.ContextCompat
 import com.metrolist.shared.utils.Logger
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -498,18 +500,32 @@ private class AndroidBluetoothFallbackTransport(
                         .recoverCatching { remote.createRfcommSocketToServiceRecord(RFCOMM_SERVICE_UUID) }
                         .getOrThrow()
                 }
+            val cancellationHandle =
+                coroutineContext.job.invokeOnCompletion { cause ->
+                    if (cause != null) {
+                        runCatching { socket.close() }
+                    }
+                }
             try {
                 socket.connect()
-                createJvmStreamDeviceChannel(
-                    remoteHost = "$DEVICE_CONNECT_BT_PREFIX$mac",
-                    input = socket.inputStream,
-                    output = socket.outputStream,
-                    onClose = { runCatching { socket.close() } },
-                )
+                coroutineContext.ensureActive()
+                val channel =
+                    createJvmStreamDeviceChannel(
+                        remoteHost = "$DEVICE_CONNECT_BT_PREFIX$mac",
+                        input = socket.inputStream,
+                        output = socket.outputStream,
+                        onClose = { runCatching { socket.close() } },
+                    )
+                if (!isActive) {
+                    withContext(NonCancellable) { runCatching { channel.close() } }
+                    coroutineContext.ensureActive()
+                }
+                channel
             } catch (error: Throwable) {
                 runCatching { socket.close() }
-                if (error is CancellationException) throw error
                 throw error
+            } finally {
+                cancellationHandle.dispose()
             }
         }
 

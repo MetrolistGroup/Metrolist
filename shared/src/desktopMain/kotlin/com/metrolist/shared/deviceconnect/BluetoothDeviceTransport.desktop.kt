@@ -34,6 +34,7 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.lang.ref.Reference
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.Volatile
@@ -112,7 +113,7 @@ private class WindowsBluetoothFallbackTransport(
     private var acceptJob: Job? = null
 
     @Volatile
-    private var registeredQuerySet: WsaQuerySetW? = null
+    private var sdpRegistration: SdpRegistration? = null
 
     override val localAddress: String?
         get() = readLocalWindowsBluetoothAddress()
@@ -159,8 +160,8 @@ private class WindowsBluetoothFallbackTransport(
             return false
         }
 
-        val querySet = registerSdpService(boundAddr, addrLen.value, localInfo.deviceId)
-        if (querySet == null) {
+        val registration = registerSdpService(boundAddr, addrLen.value, localInfo.deviceId)
+        if (registration == null) {
             val err = ws2.WSAGetLastError()
             ws2.closesocket(sock)
             onError("Could not register Windows Bluetooth SDP service (WSA=$err).", null)
@@ -169,7 +170,7 @@ private class WindowsBluetoothFallbackTransport(
 
         synchronized(lock) {
             listeningSocket = sock
-            registeredQuerySet = querySet
+            sdpRegistration = registration
             acceptJob =
                 scope.launch {
                     while (isActive) {
@@ -201,7 +202,7 @@ private class WindowsBluetoothFallbackTransport(
         boundAddr: SockAddrBth,
         addrLength: Int,
         deviceId: String,
-    ): WsaQuerySetW? {
+    ): SdpRegistration? {
         val guid = uuidToWinGuid(serviceUuid)
         guid.write()
         val csAddr =
@@ -224,25 +225,59 @@ private class WindowsBluetoothFallbackTransport(
                 lpcsaBuffer = csAddr.pointer
             }
         querySet.write()
-        val status = ws2.WSASetServiceW(querySet.pointer, RNRSERVICE_REGISTER, 0)
-        return if (status == 0) querySet else null
+        val registration =
+            SdpRegistration(
+                querySet = querySet,
+                guid = guid,
+                csAddr = csAddr,
+                boundAddr = boundAddr,
+            )
+        val status = ws2.WSASetServiceW(registration.querySet.pointer, RNRSERVICE_REGISTER, 0)
+        if (status != 0) {
+            registration.release()
+            return null
+        }
+        return registration
     }
 
     override fun stopServer() {
-        val (sock, job, query) =
+        val (sock, job, registration) =
             synchronized(lock) {
                 Triple(
                     listeningSocket.also { listeningSocket = null },
                     acceptJob.also { acceptJob = null },
-                    registeredQuerySet.also { registeredQuerySet = null },
+                    sdpRegistration.also { sdpRegistration = null },
                 )
             }
         job?.cancel()
-        if (query != null) {
-            runCatching { ws2.WSASetServiceW(query.pointer, RNRSERVICE_DELETE, 0) }
+        if (registration != null) {
+            try {
+                runCatching { ws2.WSASetServiceW(registration.querySet.pointer, RNRSERVICE_DELETE, 0) }
+            } finally {
+                registration.release()
+            }
         }
         if (sock != null && !isInvalidSocket(sock)) {
             runCatching { ws2.closesocket(sock) }
+        }
+    }
+
+    private class SdpRegistration(
+        val querySet: WsaQuerySetW,
+        private val guid: Guid.GUID,
+        private val csAddr: CsAddrInfo,
+        private val boundAddr: SockAddrBth,
+    ) {
+        fun release() {
+            Reference.reachabilityFence(querySet)
+            Reference.reachabilityFence(guid)
+            Reference.reachabilityFence(csAddr)
+            Reference.reachabilityFence(boundAddr)
+            querySet.lpszServiceInstanceName = null
+            querySet.lpServiceClassId = null
+            querySet.lpcsaBuffer = null
+            csAddr.localAddr.lpSockaddr = null
+            csAddr.remoteAddr.lpSockaddr = null
         }
     }
 

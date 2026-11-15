@@ -890,7 +890,9 @@ class DeviceConnectManager
 
         private suspend fun ensureFallbackTransportForClient(): LocalDeviceTransport? =
             lifecycleMutex.withLock {
-                if (!_state.value.enabled || !_state.value.serverRunning) return@withLock null
+                if (!settings.deviceConnectBluetoothFallbackEnabled || !_state.value.enabled || !_state.value.serverRunning) {
+                    return@withLock null
+                }
                 fallbackTransport?.let { return@withLock it }
                 val info = localInfo ?: localInfoProvider().also { localInfo = it }
                 startFallbackTransportLocked(info)
@@ -899,7 +901,13 @@ class DeviceConnectManager
         private suspend fun activateFallbackDiscoveryAfterLanFailure(peerName: String) {
             val started =
                 lifecycleMutex.withLock {
-                    if (!_state.value.enabled || !_state.value.serverRunning || context == null || fallbackTransport != null) {
+                    if (
+                        !settings.deviceConnectBluetoothFallbackEnabled ||
+                        !_state.value.enabled ||
+                        !_state.value.serverRunning ||
+                        context == null ||
+                        fallbackTransport != null
+                    ) {
                         false
                     } else {
                         val info = localInfo ?: localInfoProvider().also { localInfo = it }

@@ -5,6 +5,7 @@
 
 package com.metrolist.shared.deviceconnect
 
+import com.metrolist.shared.constants.DeviceConnectBluetoothFallbackKey
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playback.MusicQueueSnapshot
 import com.metrolist.shared.settings.Settings
@@ -341,6 +342,67 @@ class DeviceConnectFallbackTransportTest {
                 bus.closeAll()
             }
         }
+
+    @Test
+    fun disabledBluetoothFallbackDoesNotActivateOnDirectBtOrLanFailure() =
+        runBlocking<Unit> {
+            val bus = FakeBluetoothBus()
+            val settings = Settings(MapSettings())
+            var factoryInvocations = 0
+            val manager =
+                DeviceConnectManager(
+                    settings = settings,
+                    identityProvider = ::anonymousIdentity,
+                    localInfoProvider = { LEFT_INFO },
+                    fallbackTransportFactory = { _, _ ->
+                        factoryInvocations++
+                        bus.transportFor(LEFT_MAC)
+                    },
+                )
+            try {
+                manager.enable(Unit)
+                withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                    manager.state.first { it.enabled && it.serverRunning }
+                }
+
+                manager.connectDirect("$DEVICE_CONNECT_BT_PREFIX$RIGHT_MAC")
+                val directFailedState =
+                    withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                        manager.state.first { it.directConnectionFailed }
+                    }
+                assertEquals(0, factoryInvocations)
+                assertFalse(directFailedState.bluetoothFallbackActive)
+
+                val localLanIp = getLocalIpV4Addresses().firstOrNull()
+                if (localLanIp != null) {
+                    val deadPort = ServerSocket(0, 1, InetAddress.getByName(localLanIp)).use { it.localPort }
+                    manager.reportDiscoveredDeviceForTest(
+                        DiscoveredDevice("lan-right", RIGHT_ID, "Right", localLanIp, deadPort),
+                    )
+                    manager.pair(RIGHT_ID)
+                    val failedPeerState =
+                        withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                            manager.state.first { state ->
+                                state.log.any { entry ->
+                                    entry.message.contains("Connection endpoint for Right ($localLanIp:$deadPort) is unavailable")
+                                }
+                            }
+                        }
+                    assertEquals(0, factoryInvocations)
+                    assertFalse(failedPeerState.bluetoothFallbackActive)
+                }
+            } finally {
+                runCatching { manager.release() }
+                bus.closeAll()
+            }
+        }
+
+    @Test
+    fun exportBackupSettingsExcludesBluetoothFallbackKey() {
+        val settings = Settings(MapSettings()).apply { deviceConnectBluetoothFallbackEnabled = true }
+        val backup = settings.exportBackupSettings()
+        assertTrue(backup.entries.none { it.key == DeviceConnectBluetoothFallbackKey })
+    }
 
     private class FakeBluetoothBus {
         private val transports = mutableMapOf<String, FakeBluetoothTransport>()

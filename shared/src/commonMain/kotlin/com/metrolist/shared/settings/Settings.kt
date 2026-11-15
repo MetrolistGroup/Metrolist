@@ -1299,6 +1299,7 @@ class Settings(
                     IosCustomFontRevisionKey,
                     "deviceConnectEnabled",
                     DeviceConnectExperimentalEnabledKey,
+                    DeviceConnectBluetoothFallbackKey,
                     "deviceConnectDeviceId",
                     "deviceConnectLastUsedDeviceId",
                     "listenTogetherAutoJoinPairedRoom",
