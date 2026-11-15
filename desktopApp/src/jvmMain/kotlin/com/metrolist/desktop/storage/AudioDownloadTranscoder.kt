@@ -267,7 +267,8 @@ internal object AudioDownloadTranscoder {
             closed = true
             av_packet_free(packet)
             av_frame_free(frame)
-            avcodec_free_context(codec)
+            // Unlike av_frame_free and av_packet_free, avcodec_free_context dereferences a null argument.
+            codec?.let { avcodec_free_context(it) }
             if (!format.isNull) {
                 format.pb()?.takeUnless { it.isNull }?.let { avio_closep(it) }
                 avformat_free_context(format)

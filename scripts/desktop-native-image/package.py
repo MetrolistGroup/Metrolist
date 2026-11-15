@@ -106,9 +106,11 @@ def copy_macos_jdk(graal, macos, resources):
             raise ValueError(f'macOS native image is missing {library}')
     (macos / 'lib').mkdir(exist_ok=True)
     shutil.copy2(graal / 'lib/libjawt.dylib', macos / 'lib/libjawt.dylib')
-    fontconfig = graal / 'lib/fontconfig.bfc'
-    if fontconfig.is_file():
-        shutil.copy2(fontconfig, resources / fontconfig.name)
+    # Explicit sun.awt.fontconfig paths use the JDK's properties reader, even for .bfc files.
+    fontconfig = graal / 'lib/fontconfig.properties.src'
+    if not fontconfig.is_file():
+        raise ValueError('macOS JDK is missing lib/fontconfig.properties.src')
+    shutil.copy2(fontconfig, resources / 'fontconfig.properties')
 
 
 def macos_rpath(launcher):

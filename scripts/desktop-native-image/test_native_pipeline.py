@@ -46,6 +46,7 @@ def macos_jdk(graal):
     for library in package.MACOS_JDK_DYLIBS:
         posix_executable(graal/'lib'/library, 'macos-arm64')
     (graal/'lib/fontconfig.bfc').write_bytes(b'font configuration')
+    (graal/'lib/fontconfig.properties.src').write_text('# JDK font configuration\nversion=1\n')
     (graal/'lib/unrelated.txt').write_text('not bundled')
 
 
@@ -275,7 +276,9 @@ class PipelineTest(unittest.TestCase):
                 self.assertEqual(info['CFBundleURLTypes'][0]['CFBundleURLSchemes'], ['metrolist', 'metrolist-auth'])
                 self.assertEqual(info['NSBonjourServices'], ['_fcast._tcp', '_googlecast._tcp'])
                 self.assertEqual(archive.read('Metrolist.app/Contents/Resources/config.txt'), b'resource')
-                self.assertEqual(archive.read('Metrolist.app/Contents/Resources/fontconfig.bfc'), b'font configuration')
+                self.assertEqual(archive.read('Metrolist.app/Contents/Resources/fontconfig.properties'),
+                                 (graal/'lib/fontconfig.properties.src').read_bytes())
+                self.assertFalse(any(name.endswith(('fontconfig.bfc', 'fontconfig.properties.src')) for name in archive.namelist()))
                 self.assertEqual(archive.read('Metrolist.app/Contents/MacOS/libjvm.dylib'), (image/'libjvm.dylib').read_bytes())
                 self.assertEqual(archive.read('Metrolist.app/Contents/MacOS/libjawt.dylib'), (image/'libjawt.dylib').read_bytes())
                 for library in package.MACOS_JDK_DYLIBS:
@@ -286,7 +289,7 @@ class PipelineTest(unittest.TestCase):
                 self.assertTrue(archive.getinfo('Metrolist.app/Contents/MacOS/Metrolist').external_attr >> 16 & 0o111)
 
     def test_macos_rejects_missing_awt_foreign_libraries_and_data_before_signing(self):
-        for failure in ('no-graal', 'no-awt', 'foreign', 'data'):
+        for failure in ('no-graal', 'no-awt', 'no-fontconfig-properties', 'foreign', 'data'):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory); image = root/'image'; graal = root/'graal'
                 posix_executable(image/'Metrolist', 'macos-arm64')
@@ -294,6 +297,8 @@ class PipelineTest(unittest.TestCase):
                 macos_jdk(graal)
                 if failure == 'no-awt':
                     (graal/'lib/libawt.dylib').unlink()
+                elif failure == 'no-fontconfig-properties':
+                    (graal/'lib/fontconfig.properties.src').unlink()
                 elif failure == 'foreign':
                     posix_executable(graal/'lib/libawt.dylib', 'linux-arm64')
                 elif failure == 'data':

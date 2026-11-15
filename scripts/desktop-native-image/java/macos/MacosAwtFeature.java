@@ -35,7 +35,7 @@ final class MacosAwtStartup implements RuntimeSupport.Hook {
         Path home = Path.of(ProcessHandle.current().info().command().orElseThrow()).toAbsolutePath().getParent();
         System.setProperty("java.library.path", home.toString());
         System.setProperty("sun.boot.library.path", home.toString());
-        Path fontConfig = home.resolve("../Resources/fontconfig.bfc").normalize();
+        Path fontConfig = home.resolve("../Resources/fontconfig.properties").normalize();
         if (System.getProperty("sun.awt.fontconfig", "").isBlank() && Files.isRegularFile(fontConfig)) {
             System.setProperty("sun.awt.fontconfig", fontConfig.toString());
         }
