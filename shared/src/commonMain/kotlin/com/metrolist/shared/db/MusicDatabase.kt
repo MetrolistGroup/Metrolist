@@ -43,7 +43,13 @@ import com.metrolist.shared.db.entities.SortedSongArtistMap
 import com.metrolist.shared.db.entities.SpeedDialItem
 import com.metrolist.shared.scrobble.PendingScrobble
 
-const val DATABASE_VERSION = 65
+const val DATABASE_VERSION = 66
+
+internal val MIGRATION_65_66_SQL =
+    listOf(
+        "ALTER TABLE lyrics ADD COLUMN isLegacyProtected INTEGER NOT NULL DEFAULT 0",
+        PROTECT_LEGACY_LYRICS_SQL,
+    )
 
 internal val MIGRATION_64_65_SQL =
     listOf(

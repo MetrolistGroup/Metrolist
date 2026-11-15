@@ -329,7 +329,11 @@ The first change creates a User fork in the song lyrics row, separate from the p
 
 Database open and legacy backup conversion recover rows marked `Manual`, `METROLIST_LOCAL` or `Local` into the User fork, including existing schema 65 installs. Recovery preserves offsets, translations and drafts, leaves active and stashed User forks intact, and clears the old source so Revert stays reverted after a restart.
 
-The v13 editor kept the original provider name when editing existing lyrics. Those edits have no marker that distinguishes them from fetched lyrics. Since v14.0.0, `LyricsRepository.getLyrics` can replace these unmarked edits or unrecognized `Manual` rows through `CacheDao.cacheLyricsIfUnchanged` when it saves a fetched result or confirmed miss. The migration itself copies the lyrics rows. An overwritten value requires an older database or backup to recover; the current row cannot reconstruct it.
+The v13 editor kept the original provider name when editing existing lyrics. Neither v13 nor v14 recorded each row's origin. LRC, plain text and optional cache fields cannot identify every surviving v13 edit. Schema 66 therefore protects every existing nonempty lyrics cache entry once, including v14 fetched entries. Confirmed misses and offset-only rows remain eligible for automatic lookup. Legacy backup conversion applies the same protection to backups from schemas before 66.
+
+Protected entries stay in the provider cache with their original text, provider and offset. Automatic lookup shows them even if their provider is disabled, and timing preferences, fetched results and confirmed misses cannot replace them. Translation cache updates preserve protection. A successful manual refetch or explicit provider selection ends protection for that song; restarting or restoring a schema 66 backup does not enable it again. Rows fetched after the migration follow normal cache rules.
+
+Since v14.0.0, `LyricsRepository.getLyrics` could replace unmarked edits or unrecognized `Manual` rows through `CacheDao.cacheLyricsIfUnchanged` when saving fetched lyrics or a confirmed miss. The older migrations copied the lyrics rows. An overwritten value requires an older database or backup to recover; the current row cannot reconstruct it.
 
 The lyrics settings preview uses the current song's lyrics only during active playback and otherwise shows the bundled sample without starting a lookup. Source rows reorder by a drag handle or its move menu.
 

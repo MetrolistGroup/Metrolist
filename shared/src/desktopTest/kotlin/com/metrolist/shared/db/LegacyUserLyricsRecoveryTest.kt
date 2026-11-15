@@ -188,10 +188,11 @@ class LegacyUserLyricsRecoveryTest {
                         assertEquals("[00:01.25] My timing", it.getText(0))
                         assertEquals("", it.getText(1))
                     }
-                    connection.prepare("SELECT userLyrics, provider FROM lyrics WHERE id = 'song'").use {
+                    connection.prepare("SELECT userLyrics, provider, isLegacyProtected FROM lyrics WHERE id = 'song'").use {
                         assertTrue(it.step())
                         assertTrue(it.isNull(0))
                         assertEquals("SimpMusic", it.getText(1))
+                        assertEquals(1L, it.getLong(2))
                     }
                 }
             } finally {

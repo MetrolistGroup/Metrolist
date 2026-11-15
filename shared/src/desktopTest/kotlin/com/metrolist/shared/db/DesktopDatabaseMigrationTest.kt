@@ -58,6 +58,7 @@ class DesktopDatabaseMigrationTest {
                         assertEquals(425, cached.offsetMs)
                         assertEquals("Saved translation", cached.translatedLyrics)
                         assertFalse(cached.isUserSelected)
+                        assertEquals(version < 66, cached.isLegacyProtected)
                         assertNull(cached.missLookupKey)
                         assertNull(cached.missExpiresAt)
                         assertTrue(requireNotNull(database.dao().cachedLyrics("local")).let { it.isUserSelected || it.userLyrics != null })

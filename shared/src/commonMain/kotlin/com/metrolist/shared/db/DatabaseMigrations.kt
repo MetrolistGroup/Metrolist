@@ -9,6 +9,13 @@ import androidx.room3.migration.Migration
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
 
+val MIGRATION_65_66 =
+    object : Migration(65, 66) {
+        override suspend fun migrate(connection: SQLiteConnection) {
+            MIGRATION_65_66_SQL.forEach { connection.execSQL(it) }
+        }
+    }
+
 val MIGRATION_64_65 =
     object : Migration(64, 65) {
         override suspend fun migrate(connection: SQLiteConnection) {
