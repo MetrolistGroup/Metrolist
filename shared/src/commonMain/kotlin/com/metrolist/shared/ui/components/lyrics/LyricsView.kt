@@ -729,6 +729,9 @@ fun LyricsView(
             isAutoScrollEnabled,
             isSelectionMode,
             isVisible,
+            isWordByWord,
+            lyricsPositionState,
+            scrollTargetState,
         ) {
             if (!isVisible) return@LaunchedEffect
             var lastTargetIndex = -1
