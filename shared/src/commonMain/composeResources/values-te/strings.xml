@@ -749,4 +749,7 @@
     <string name="lyrics_show_on_player_desc">పాటకు ప్రస్తుత సాహిత్యం ప్లేయర్ లో చుపించంశడి</string>
     <string name="lyrics_display">చూపించడం</string>
     <string name="lyrics_accessibility">సులభత</string>
+    <string name="lyrics_provider_kugou_description">సమయానుగుణంగా పంక్తి-సమకాలీకరించే ఎల్.ఆర్.సీ (LRC), ముఖ్యంగా చైనీస్ మరియు ఆసియా పాటలు కోసం బాగుంటుండి</string>
+    <string name="lyrics_respect_agent_positioning_desc">పాట సాహిత్యాన్ని మరియు వెనుక ఉన్న గాత్రాలను సమకాలీకరించడానికి, గాయకుడి పాత్రలను వాడండి.</string>
+    <string name="lyrics_active_by_real_timing">పాట సాహిత్యానికి సమయం వచ్చినప్పుడు ప్రధానంగా చూపించండి</string>
 </resources>
