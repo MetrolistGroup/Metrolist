@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.combine
 
 @Composable
 fun AnimatedCover(
-    url: String,
+    url: String?,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
     active: Boolean = true,
@@ -34,6 +34,10 @@ fun AnimatedCover(
     val player = remember { AnimatedCoverPlayer() }
 
     LaunchedEffect(player, url, visible) {
+        if (url == null) {
+            latestOnFrameAvailabilityChanged(false)
+            return@LaunchedEffect
+        }
         player.play(
             url = url,
             active = combine(snapshotFlow { latestActive }, visible) { playing, shown -> playing && shown },

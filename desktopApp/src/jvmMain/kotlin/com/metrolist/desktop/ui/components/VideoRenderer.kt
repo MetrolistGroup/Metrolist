@@ -2,8 +2,6 @@ package com.metrolist.desktop.ui.components
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -15,6 +13,10 @@ import com.metrolist.shared.playback.VideoColorRange
 import com.metrolist.shared.playback.VideoColorSpace
 import com.metrolist.shared.playback.VideoFrame
 import com.metrolist.shared.playback.VideoPixelFormat
+import com.metrolist.shared.youtube.playback.PlaybackEventKind
+import com.metrolist.shared.youtube.playback.PlaybackEventLog
+import org.jetbrains.skia.Bitmap
+import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.FilterTileMode
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.Paint
@@ -22,6 +24,7 @@ import org.jetbrains.skia.Rect
 import org.jetbrains.skia.RuntimeEffect
 import org.jetbrains.skia.RuntimeShaderBuilder
 import org.jetbrains.skia.SamplingMode
+import org.jetbrains.skia.Shader
 import kotlin.math.roundToInt
 
 private const val YUV420P_SKSL = """
@@ -122,125 +125,139 @@ fun VideoRenderer(
     frameProvider: () -> VideoFrame? = { PlayerState.videoFrame },
     onViewportSizeChanged: (width: Int, height: Int) -> Unit = { _, _ -> },
 ) {
-    val renderPaint = remember { Paint() }
-    val yuvBuilder = remember { RuntimeShaderBuilder(yuv420pEffect) }
-    val nv12Builder = remember { RuntimeShaderBuilder(nv12Effect) }
-
-    DisposableEffect(renderPaint, yuvBuilder, nv12Builder) {
-        onDispose {
-            renderPaint.close()
-            yuvBuilder.close()
-            nv12Builder.close()
-        }
-    }
-
     Spacer(
         modifier =
             modifier
                 .onSizeChanged { onViewportSizeChanged(it.width, it.height) }
                 .drawBehind {
                     val frame = frameProvider() ?: return@drawBehind
-                    frame.drawSafely frameScope@{
-                        val srcW = frame.width.toFloat()
-                        val srcH = frame.height.toFloat()
-                        if (srcW <= 0f || srcH <= 0f) return@frameScope
-
-                        val scale =
-                            if (contentScale == ContentScale.Crop) {
-                                maxOf(size.width / srcW, size.height / srcH)
-                            } else {
-                                minOf(size.width / srcW, size.height / srcH)
-                            }
-
-                        val dstW = (srcW * scale).roundToInt()
-                        val dstH = (srcH * scale).roundToInt()
-                        val offsetX = ((size.width - dstW) / 2f).roundToInt()
-                        val offsetY = ((size.height - dstH) / 2f).roundToInt()
-
-                        drawIntoCanvas { canvas ->
-                            val skia = canvas.skiaCanvas
-                            val csUniform =
-                                when (frame.colorSpace) {
-                                    VideoColorSpace.BT601 -> 1
-                                    VideoColorSpace.BT2020 -> 2
-                                    VideoColorSpace.BT709 -> 0
-                                }
-                            val crUniform = if (frame.colorRange == VideoColorRange.FULL) 1 else 0
-
-                            try {
-                                when (frame.format) {
-                                    VideoPixelFormat.NV12 -> {
-                                        val yImage = frame.planeY ?: return@drawIntoCanvas
-                                        val uvImage = frame.planeUV ?: return@drawIntoCanvas
-                                        yImage.makeShader(filterClamp, filterClamp, linearSampling).use { yShader ->
-                                            uvImage.makeShader(filterClamp, filterClamp, linearSampling).use { uvShader ->
-                                                nv12Builder.child("yTex", yShader)
-                                                nv12Builder.child("uvTex", uvShader)
-                                                nv12Builder.uniform("colorSpace", csUniform)
-                                                nv12Builder.uniform("colorRange", crUniform)
-                                                nv12Builder.makeShader().use { shader ->
-                                                    renderPaint.shader = shader
-                                                    val count = skia.save()
-                                                    try {
-                                                        skia.translate(offsetX.toFloat(), offsetY.toFloat())
-                                                        skia.scale(scale, scale)
-                                                        skia.drawRect(Rect.makeWH(srcW, srcH), renderPaint)
-                                                    } finally {
-                                                        skia.restoreToCount(count)
-                                                        renderPaint.shader = null
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    VideoPixelFormat.YUV420P -> {
-                                        val yImage = frame.planeY ?: return@drawIntoCanvas
-                                        val uImage = frame.planeU ?: return@drawIntoCanvas
-                                        val vImage = frame.planeV ?: return@drawIntoCanvas
-                                        yImage.makeShader(filterClamp, filterClamp, linearSampling).use { yShader ->
-                                            uImage.makeShader(filterClamp, filterClamp, linearSampling).use { uShader ->
-                                                vImage.makeShader(filterClamp, filterClamp, linearSampling).use { vShader ->
-                                                    yuvBuilder.child("yTex", yShader)
-                                                    yuvBuilder.child("uTex", uShader)
-                                                    yuvBuilder.child("vTex", vShader)
-                                                    yuvBuilder.uniform("colorSpace", csUniform)
-                                                    yuvBuilder.uniform("colorRange", crUniform)
-                                                    yuvBuilder.makeShader().use { shader ->
-                                                        renderPaint.shader = shader
-                                                        val count = skia.save()
-                                                        try {
-                                                            skia.translate(offsetX.toFloat(), offsetY.toFloat())
-                                                            skia.scale(scale, scale)
-                                                            skia.drawRect(Rect.makeWH(srcW, srcH), renderPaint)
-                                                        } finally {
-                                                            skia.restoreToCount(count)
-                                                            renderPaint.shader = null
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    VideoPixelFormat.BGRA -> {
-                                        val bitmap = frame.bgraBitmap ?: return@drawIntoCanvas
-                                        Image.makeFromBitmap(bitmap).use { image ->
-                                            skia.drawImageRect(
-                                                image,
-                                                Rect.makeWH(srcW, srcH),
-                                                Rect.makeXYWH(offsetX.toFloat(), offsetY.toFloat(), dstW.toFloat(), dstH.toFloat()),
-                                                SamplingMode.LINEAR,
-                                                null,
-                                                true,
-                                            )
-                                        }
-                                    }
-                                }
-                            } catch (_: Throwable) {
-                            }
-                        }
+                    drawIntoCanvas { canvas ->
+                        drawVideoFrame(frame, canvas.skiaCanvas, size.width, size.height, contentScale)
                     }
                 },
     )
+}
+
+internal fun drawVideoFrame(
+    frame: VideoFrame,
+    canvas: Canvas,
+    width: Float,
+    height: Float,
+    contentScale: ContentScale,
+): Boolean {
+    if (frame.width <= 0 || frame.height <= 0 || width <= 0f || height <= 0f) return false
+    return try {
+        frame.drawSafely {
+            val srcW = frame.width.toFloat()
+            val srcH = frame.height.toFloat()
+            val scale =
+                if (contentScale == ContentScale.Crop) {
+                    maxOf(width / srcW, height / srcH)
+                } else {
+                    minOf(width / srcW, height / srcH)
+                }
+            val dstW = (srcW * scale).roundToInt()
+            val dstH = (srcH * scale).roundToInt()
+            val offsetX = ((width - dstW) / 2f).roundToInt()
+            val offsetY = ((height - dstH) / 2f).roundToInt()
+            val csUniform =
+                when (frame.colorSpace) {
+                    VideoColorSpace.BT601 -> 1
+                    VideoColorSpace.BT2020 -> 2
+                    VideoColorSpace.BT709 -> 0
+                }
+            val crUniform = if (frame.colorRange == VideoColorRange.FULL) 1 else 0
+
+            // A queued draw can outlive composition. Native drawing resources belong to this draw.
+            Paint().use { paint ->
+                when (frame.format) {
+                    VideoPixelFormat.NV12 -> {
+                        val y = requireNotNull(frame.planeY)
+                        val uv = requireNotNull(frame.planeUV)
+                        RuntimeShaderBuilder(nv12Effect).use { builder ->
+                            y.withVideoShader { yShader ->
+                                uv.withVideoShader { uvShader ->
+                                    builder.child("yTex", yShader)
+                                    builder.child("uvTex", uvShader)
+                                    builder.uniform("colorSpace", csUniform)
+                                    builder.uniform("colorRange", crUniform)
+                                    builder.makeShader().use { shader ->
+                                        paint.shader = shader
+                                        canvas.withVideoTransform(offsetX, offsetY, scale) {
+                                            drawRect(Rect.makeWH(srcW, srcH), paint)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    VideoPixelFormat.YUV420P -> {
+                        val y = requireNotNull(frame.planeY)
+                        val u = requireNotNull(frame.planeU)
+                        val v = requireNotNull(frame.planeV)
+                        RuntimeShaderBuilder(yuv420pEffect).use { builder ->
+                            y.withVideoShader { yShader ->
+                                u.withVideoShader { uShader ->
+                                    v.withVideoShader { vShader ->
+                                        builder.child("yTex", yShader)
+                                        builder.child("uTex", uShader)
+                                        builder.child("vTex", vShader)
+                                        builder.uniform("colorSpace", csUniform)
+                                        builder.uniform("colorRange", crUniform)
+                                        builder.makeShader().use { shader ->
+                                            paint.shader = shader
+                                            canvas.withVideoTransform(offsetX, offsetY, scale) {
+                                                drawRect(Rect.makeWH(srcW, srcH), paint)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    VideoPixelFormat.BGRA -> {
+                        val bitmap = requireNotNull(frame.bgraBitmap)
+                        Image.makeFromBitmap(bitmap).use { image ->
+                            canvas.drawImageRect(
+                                image,
+                                Rect.makeWH(srcW, srcH),
+                                Rect.makeXYWH(offsetX.toFloat(), offsetY.toFloat(), dstW.toFloat(), dstH.toFloat()),
+                                linearSampling,
+                                null,
+                                true,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    } catch (error: Throwable) {
+        PlaybackEventLog.error(PlaybackEventKind.PLAYER, "VideoRenderer", "Video frame draw failed", error)
+        false
+    }
+}
+
+private inline fun Bitmap.withVideoShader(block: (Shader) -> Unit) {
+    // Copy mutable decoder pixels while drawSafely holds the frame lock. Recorded draws retain the image.
+    Image.makeFromBitmap(this).use { image ->
+        image.makeShader(filterClamp, filterClamp, linearSampling).use(block)
+    }
+}
+
+private inline fun Canvas.withVideoTransform(
+    offsetX: Int,
+    offsetY: Int,
+    scale: Float,
+    block: Canvas.() -> Unit,
+) {
+    val count = save()
+    try {
+        translate(offsetX.toFloat(), offsetY.toFloat())
+        scale(scale, scale)
+        block()
+    } finally {
+        restoreToCount(count)
+    }
 }
