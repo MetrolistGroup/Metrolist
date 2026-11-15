@@ -16,7 +16,10 @@ import javax.sound.sampled.FloatControl
 import javax.sound.sampled.SourceDataLine
 import kotlin.math.log10
 
-private data class RenderedAudioChunk(val data: ByteArray, val playbackSpeed: Float)
+private data class RenderedAudioChunk(
+    val data: ByteArray,
+    val playbackSpeed: Float,
+)
 
 class AudioRenderer private constructor(
     private val sampleRate: Int,
@@ -141,6 +144,10 @@ class AudioRenderer private constructor(
                             tempoProcessor = AudioTempoProcessor(sampleRate, channelCount, playbackSpeed, playbackPitch)
                             processorSpeed = playbackSpeed
                             processorPitch = playbackPitch
+                        }
+                        if (tempoProcessor != null && processorSpeed != playbackSpeed) {
+                            tempoProcessor?.setSpeed(playbackSpeed)
+                            processorSpeed = playbackSpeed
                         }
                         if (input.isNotEmpty()) {
                             tempoProcessor?.process(input) { add(RenderedAudioChunk(it, processorSpeed)) }
