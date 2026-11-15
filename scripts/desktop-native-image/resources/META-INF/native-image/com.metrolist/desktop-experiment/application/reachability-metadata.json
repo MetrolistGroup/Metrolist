@@ -79,6 +79,16 @@
       ]
     },
     {
+      "type": "java.rmi.MarshalledObject",
+      "allDeclaredConstructors": true,
+      "methods": [
+        {
+          "name": "get",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "androidx.compose.material3.TooltipStateImpl$show$cancellableShow$1",
       "fields": [
         {
