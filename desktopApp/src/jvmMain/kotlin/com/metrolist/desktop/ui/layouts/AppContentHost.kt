@@ -158,6 +158,10 @@ fun AppContentHost(
                         AlbumScreen(destination.id, colorScheme)
                     }
 
+                    is Screen.HomeSection -> {
+                        BrowseScreen(colorScheme, destination)
+                    }
+
                     is Screen.Browse -> {
                         if (
                             BrowseState.selectedBrowseId == destination.browseId &&

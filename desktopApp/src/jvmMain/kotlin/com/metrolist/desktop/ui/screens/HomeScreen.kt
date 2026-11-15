@@ -69,6 +69,8 @@ import com.metrolist.shared.ui.menu.rememberCursorContextMenuState
 import com.metrolist.shared.ui.navigation.Screen
 import com.metrolist.shared.ui.screens.HomeContent
 import com.metrolist.shared.ui.screens.homeContentText
+import com.metrolist.shared.ui.screens.pageKey
+import com.metrolist.shared.ui.screens.toHomeSection
 import com.metrolist.shared.ui.theme.MdSpacing
 import org.jetbrains.compose.resources.stringResource
 
@@ -113,6 +115,9 @@ fun HomeScreen() {
             uiState = uiState,
             text = homeContentText(),
             onItemClick = ::openHomeItem,
+            onLocalShelfClick = { shelf ->
+                DesktopNavigation.navigate(Screen.HomeSection(shelf.pageKey, shelf.title, shelf.toHomeSection()))
+            },
             onItemLongClick = { item ->
                 if (item !is BrowseItem) {
                     selectedMenuItem = item
