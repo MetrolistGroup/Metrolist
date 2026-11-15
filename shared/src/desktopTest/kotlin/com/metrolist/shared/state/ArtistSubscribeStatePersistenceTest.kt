@@ -3,6 +3,7 @@ package com.metrolist.shared.state
 import com.metrolist.innertubex.InnerTube
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.db.getDesktopDatabaseBuilder
+import com.metrolist.shared.viewmodels.ArtistSubscriptionState
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -25,6 +26,70 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ArtistSubscribeStatePersistenceTest {
+    @Test
+    fun artistPageTogglesPersistBookmarksAndSeedStateForTheCurrentSession() =
+        runBlocking {
+            for (authenticated in listOf(false, true)) {
+                val path = Files.createTempFile("artist-page-subscription", ".db")
+                Files.delete(path)
+                val database = getDesktopDatabaseBuilder(path.toFile()).build()
+                var requests = 0
+                val client =
+                    HttpClient(
+                        MockEngine {
+                            requests++
+                            respond("{}", if (authenticated) HttpStatusCode.OK else HttpStatusCode.Forbidden)
+                        },
+                    ) {
+                        install(ContentNegotiation) { json() }
+                    }
+                val innerTube = InnerTube(client).apply { if (authenticated) cookie = "SAPISID=session" }
+                try {
+                    val repository = YouTubeRepository(innerTube)
+                    assertEquals(authenticated, database.resolveArtistSubscribed(repository, "artist", browseSubscribed = true))
+                    val state = ArtistSubscriptionState()
+                    state.applyBrowse(database.resolveArtistSubscribed(repository, "artist", browseSubscribed = false), state.revision)
+                    assertNotNull(
+                        state.toggle(
+                            this,
+                            request = { database.setArtistSubscribed(repository, "artist", "Artist", it) },
+                            onError = { error("Subscription should succeed") },
+                        ),
+                    ).join()
+                    assertTrue(state.isSubscribed)
+                    assertEquals(1, state.subscribeSuccessCount)
+                    val saved = assertNotNull(database.dao().getArtistById("artist"))
+                    assertEquals("Artist", saved.name)
+                    assertNotNull(saved.bookmarkedAt)
+                    val complete = saved.copy(thumbnailUrl = "cover.jpg")
+                    database.dao().upsert(complete)
+
+                    val reloaded = ArtistSubscriptionState()
+                    reloaded.applyBrowse(
+                        database.resolveArtistSubscribed(repository, "artist", browseSubscribed = authenticated),
+                        reloaded.revision,
+                    )
+                    assertTrue(reloaded.isSubscribed)
+                    assertNotNull(
+                        reloaded.toggle(
+                            this,
+                            request = { database.setArtistSubscribed(repository, "artist", "Different song artist", it) },
+                            onError = { error("Unsubscription should succeed") },
+                        ),
+                    ).join()
+                    assertFalse(reloaded.isSubscribed)
+                    assertEquals(complete.copy(bookmarkedAt = null), database.dao().getArtistById("artist"))
+                    assertFalse(database.resolveArtistSubscribed(repository, "artist", browseSubscribed = !authenticated))
+                    assertEquals(if (authenticated) 2 else 0, requests)
+                } finally {
+                    innerTube.close()
+                    client.close()
+                    database.close()
+                    Files.deleteIfExists(path)
+                }
+            }
+        }
+
     @Test
     fun rapidTogglesWaitForRemoteUpdatesAndConfirmCommittedState(): Unit =
         runBlocking {

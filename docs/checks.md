@@ -95,6 +95,8 @@ On desktop, open an artist page during playback, then open Queue and fully expan
 
 Check immediate Subscribe/Subscribed changes on a slow connection, repeated taps, failed requests and refreshes during a request. Only a successful subscribe produces confetti; repeat with the animator duration scale set to zero.
 
+While signed out, subscribe to an artist, reopen the page and restart the app. The artist stays subscribed and appears in the local library. Unsubscribe and check that the bookmark clears. While signed in, successful subscription changes also update the local bookmark; failed requests preserve it.
+
 For About Artist on Android and desktop, sign out of Last.fm and open the artist's About card with cached and uncached photos, then return. Check the photo morph in both directions with normal and reduced animations. Open the hero and a peeking neighbor, swipe several viewer pages, zoom, and close with the button and Back. The return morph lands on the displayed photo without moving the gallery underneath it. Repeat mouse drag, Shift+wheel, narrow/wide resizing, slow images, missing Last.fm data, sharing, downloads and failed detail requests. Last.fm metadata and separate YouTube text stay visible. On the shared iOS host, check gallery scrolling and the About details. Carousel captions on other screens stay inside their masks.
 
 ### Mini player and player transitions

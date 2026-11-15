@@ -50,6 +50,28 @@ internal suspend fun MusicDatabase.updateArtistSubscribed(
         nextSubscribed
     }
 
+suspend fun MusicDatabase.resolveArtistSubscribed(
+    repository: YouTubeRepository,
+    artistId: String,
+    browseSubscribed: Boolean,
+): Boolean =
+    if (repository.hasAuthenticatedSession) {
+        browseSubscribed
+    } else {
+        dao().getArtistById(artistId)?.bookmarkedAt != null
+    }
+
+suspend fun MusicDatabase.setArtistSubscribed(
+    repository: YouTubeRepository,
+    artistId: String,
+    artistName: String,
+    subscribed: Boolean,
+): Boolean {
+    if (repository.hasAuthenticatedSession && !repository.subscribeChannel(artistId, subscribed)) return false
+    updateArtistSubscribed(artistId, artistName, subscribed)
+    return true
+}
+
 private val artistSubscriptionMutex = Mutex()
 
 fun toggleArtistSubscription(
@@ -65,11 +87,11 @@ fun toggleArtistSubscription(
         val subscribed =
             try {
                 val nextSubscribed = database.dao().getArtistById(artistId)?.bookmarkedAt == null
-                if (repository.hasAuthenticatedSession && !repository.subscribeChannel(artistId, nextSubscribed)) {
+                if (!database.setArtistSubscribed(repository, artistId, artistName, nextSubscribed)) {
                     onError()
                     return@withLock
                 }
-                database.updateArtistSubscribed(artistId, artistName, nextSubscribed)
+                nextSubscribed
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {

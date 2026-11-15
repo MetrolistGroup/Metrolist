@@ -1685,7 +1685,8 @@ fun MobileApp(
                             is MobileRoute.Artist -> {
                                 val detail = remember(detailStates, entry) { detailStates.entry(checkNotNull(entry)) }
                                 MobileArtistScreen(
-                                    loader = remember(detail) { detail.artist(route.id) },
+                                    loader = remember(detail) { detail.artist(route.id, database) },
+                                    database = database,
                                     subscription = detail.subscription,
                                     onError = onSwipeFeedback,
                                     onAbout = { artist, titles -> open(MobileRoute.AboutArtist(artist, titles)) },
