@@ -9,6 +9,8 @@ internal actual val platformContentLanguageCodes: Set<String> by lazy {
     Locale.getISOLanguages().toSet() + Locale.getAvailableLocales().map(Locale::toLanguageTag)
 }
 
+internal actual fun canonicalLanguageTag(tag: String): String = Locale.forLanguageTag(tag).toLanguageTag()
+
 fun GlobalYouTube.applyContentRegion(
     contentCountry: String,
     contentLanguage: String,

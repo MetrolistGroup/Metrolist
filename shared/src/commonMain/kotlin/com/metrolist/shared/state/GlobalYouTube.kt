@@ -26,6 +26,18 @@ private val contentLanguageCodes: Set<String> by lazy {
         .filterTo(mutableSetOf()) { it.isNotBlank() && it != "und" }
 }
 
+// Language, optional script and optional region; platforms list different combinations (iOS has zh-Hant-HK, not zh-HK).
+private val contentLanguageTag = Regex("([a-zA-Z]{2,3})(?:-([A-Z][a-z]{3}))?(?:-([A-Z]{2}|[0-9]{3}))?")
+
+private fun isContentLanguage(tag: String): Boolean {
+    if (tag in contentLanguageCodes) return true
+    val match = contentLanguageTag.matchEntire(tag) ?: return false
+    val language = match.groupValues[1]
+    val region = match.groupValues[3]
+    return (language in contentLanguageCodes || canonicalLanguageTag(language) in contentLanguageCodes) &&
+        (region.isEmpty() || region.first().isDigit() || region in contentCountryCodes)
+}
+
 val coreModule =
     module {
         single { GlobalYouTube.client }
@@ -76,7 +88,7 @@ object GlobalYouTube {
         systemLanguage: String,
         settings: Settings = Settings.shared,
     ) {
-        val validContentLanguage = contentLanguage in contentLanguageCodes
+        val validContentLanguage = isContentLanguage(contentLanguage)
         if (contentLanguage != SYSTEM && !validContentLanguage) {
             settings.contentLanguage = SYSTEM
         }
