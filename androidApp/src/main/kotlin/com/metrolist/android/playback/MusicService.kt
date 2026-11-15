@@ -21,6 +21,7 @@ import android.widget.Toast
 import androidx.compose.runtime.snapshotFlow
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.ServiceCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.media3.common.C
@@ -267,6 +268,8 @@ class MusicService :
     private val binder = MusicBinder()
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val taskRemoved = MutableStateFlow(false)
+    private var mediaNotificationProvider: PromotedMediaNotificationProvider? = null
+    private var foregroundStartCleanupJob: Job? = null
     private val playbackBenchmark: PlaybackBenchmarkRunner by inject()
     private val streamResolver: StreamResolver by inject()
     private val tokenProvider: TokenProvider by inject()
@@ -404,18 +407,18 @@ class MusicService :
         // An idle session with a restored queue but no current song renders as a blank "is running" card.
         setShowNotificationForIdlePlayer(SHOW_NOTIFICATION_FOR_IDLE_PLAYER_NEVER)
 
-        val mediaNotificationProvider =
+        mediaNotificationProvider =
             PromotedMediaNotificationProvider(
                 DefaultMediaNotificationProvider
                     .Builder(this)
-                    .setChannelId("playback")
+                    .setChannelId(PLAYBACK_NOTIFICATION_CHANNEL_ID)
                     .setChannelName(R.string.playback_notification_channel_name)
                     .build()
                     .apply {
                         setSmallIcon(R.drawable.ic_notification)
                     },
             )
-        setMediaNotificationProvider(mediaNotificationProvider)
+        setMediaNotificationProvider(checkNotNull(mediaNotificationProvider))
 
         castManager =
             JvmCastManager(
@@ -871,7 +874,7 @@ class MusicService :
     private fun setupNotificationChannel() {
         NotificationManagerCompat.from(this).createNotificationChannel(
             NotificationChannelCompat
-                .Builder("playback", NotificationManagerCompat.IMPORTANCE_LOW)
+                .Builder(PLAYBACK_NOTIFICATION_CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_LOW)
                 .setName(getString(R.string.playback_notification_channel_name))
                 .build(),
         )
@@ -2188,7 +2191,34 @@ class MusicService :
         flags: Int,
         startId: Int,
     ): Int {
-        if (!::player.isInitialized) return START_NOT_STICKY
+        val foregroundStart = requiresPlaybackForegroundStart(intent)
+        if (foregroundStart) {
+            try {
+                setupNotificationChannel()
+                // Media buttons and paused notification actions can arrive before a queue is restored.
+                promotePlaybackServiceStart(mediaNotificationProvider?.latestNotification)
+            } catch (error: RuntimeException) {
+                Timber.w(error, "Playback service foreground start failed")
+                stopSelf(startId)
+                return START_NOT_STICKY
+            }
+        }
+        if (!::player.isInitialized) {
+            if (foregroundStart) ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
+        if (foregroundStart) {
+            foregroundStartCleanupJob?.cancel()
+            foregroundStartCleanupJob =
+                serviceScope.launch {
+                    delay(10_000L)
+                    // A late self-start must not restore a dismissed or empty notification.
+                    if (shouldReconcilePlaybackServiceStart(intent, media3Player)) {
+                        triggerNotificationUpdate()
+                    }
+                }
+        }
         super.onStartCommand(intent, flags, startId)
         if (intent?.action == MusicWidgetReceiver.ACTION_UPDATE_WIDGET) updateWidgetsNow()
         if (intent?.action == ACTION_REFRESH_AUTOMOTIVE_LIBRARY) {

@@ -27,6 +27,7 @@ internal class PromotedMediaNotificationProvider(
 
     private var cachedKey: List<Any?>? = null
     private var cachedNotification: MediaNotification? = null
+    internal val latestNotification: MediaNotification? get() = cachedNotification
     private var cachedStartTimeMs: Long? = null
     private var generation = 0L
     private var latestCallback: MediaNotification.Provider.Callback? = null
