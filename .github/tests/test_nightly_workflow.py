@@ -102,7 +102,7 @@ class NightlyWorkflowTest(unittest.TestCase):
                     self.assertEqual(0, result.returncode, result.stderr)
                     self.assertEqual({
                         'Metrolist.apk': b'signed apk',
-                        'metrolist-desktop-linux-x64-14.0.0+abcdef0.AppImage': b'linux',
+                        'Metrolist-Desktop-linux-x64.AppImage': b'linux',
                         'Metrolist-Desktop-windows.zip': b'windows',
                     }, {p.name: p.read_bytes() for p in (root / 'nightly-assets').iterdir()})
 
@@ -150,7 +150,7 @@ class NightlyWorkflowTest(unittest.TestCase):
                 if existing:
                     self.git(root, 'tag', 'nightly')
                 assets = ['Metrolist.apk',
-                          'metrolist-desktop-linux-x64-14.0.0+abcdef0.AppImage',
+                          'Metrolist-Desktop-linux-x64.AppImage',
                           'Metrolist-Desktop-windows.zip']
                 (root / 'nightly-assets').mkdir()
                 for name in assets:

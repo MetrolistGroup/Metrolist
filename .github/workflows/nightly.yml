@@ -124,8 +124,6 @@ jobs:
 
       - name: Prepare nightly assets
         shell: bash
-        env:
-          APP_VERSION: ${{ needs.version.outputs.value }}
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -139,10 +137,10 @@ jobs:
           for file in "${apks[0]}" "${appimages[0]}" "${zips[0]}"; do
             test -s "$file" || { echo "Empty nightly asset: $file" >&2; exit 1; }
           done
-          # Same names as the stable release assets; the version carries the commit.
+          # Fixed names, so latest-nightly download links never change; the release notes carry the version.
           mkdir nightly-assets
           cp "${apks[0]}" nightly-assets/Metrolist.apk
-          cp "${appimages[0]}" "nightly-assets/metrolist-desktop-linux-x64-${APP_VERSION}.AppImage"
+          cp "${appimages[0]}" nightly-assets/Metrolist-Desktop-linux-x64.AppImage
           cp "${zips[0]}" nightly-assets/Metrolist-Desktop-windows.zip
 
       - name: Write nightly notes
