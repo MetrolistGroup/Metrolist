@@ -633,8 +633,6 @@ fun ExpressiveMenuActionGroup(
                             Text(
                                 description,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                     },
