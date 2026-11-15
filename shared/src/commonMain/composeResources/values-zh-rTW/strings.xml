@@ -759,4 +759,10 @@
     <string name="hidden_from_home">%1$s 以從首頁隱藏</string>
     <string name="hidden_home_items">從首頁隱藏</string>
     <string name="speed_dial">快速存取</string>
+    <string name="hidden_home_items_desc">顯示先前從首頁隱藏的藝人與播客。已儲存至「快速存取」的兒童不宜歌曲仍會顯示。</string>
+    <string name="hidden_home_items_empty">沒有從首頁隱藏的歌曲</string>
+    <string name="show_on_home">在首頁上顯示</string>
+    <string name="show_again">再次顯示</string>
+    <string name="restore_hidden_item_title">再次顯示？</string>
+    <string name="restore_hidden_item_message">再次顯示「%1$s」？</string>
 </resources>
