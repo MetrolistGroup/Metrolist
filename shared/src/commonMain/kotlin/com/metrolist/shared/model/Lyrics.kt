@@ -133,10 +133,11 @@ fun lyricsProviderLabel(
 fun lyricsProviderUrl(
     provider: String?,
     sourceId: String?,
+    lyricSource: String? = null,
 ): String? {
     val id = sourceId?.takeIf { it.isNotBlank() } ?: return null
     return when {
-        provider.equals("Unison", ignoreCase = true) && UNISON_VIDEO_ID.matches(id) -> {
+        isUnisonLyrics(provider, lyricSource) && UNISON_VIDEO_ID.matches(id) -> {
             "https://unison.betterlyrics.org/song/$id"
         }
 
@@ -157,11 +158,20 @@ fun lyricsProviderUrl(
 fun lyricsCuratorUrl(
     provider: String?,
     curatorId: String?,
+    lyricSource: String? = null,
 ): String? {
-    if (!provider.equals("Unison", ignoreCase = true)) return null
+    if (!isUnisonLyrics(provider, lyricSource)) return null
     val id = curatorId?.takeIf { UNISON_CURATOR_ID.matches(it) } ?: return null
     return "https://unison.betterlyrics.org/curator/$id"
 }
+
+private fun isUnisonLyrics(
+    provider: String?,
+    lyricSource: String?,
+): Boolean =
+    provider.equals("Unison", ignoreCase = true) ||
+        provider.equals("Lyprio/UNISON", ignoreCase = true) ||
+        (provider?.substringBefore('/').equals("Lyprio", ignoreCase = true) && lyricSource.equals("Unison", ignoreCase = true))
 
 private val UNISON_VIDEO_ID = Regex("[A-Za-z0-9_-]{11}")
 private val UNISON_CURATOR_ID = Regex("[A-Za-z0-9][A-Za-z0-9._~-]*")

@@ -301,6 +301,8 @@ Shared lyrics HTTP reads retry a 503 twice with 500 ms and 1 s backoff, honoring
 
 Lyprio fetches remove a leading title-and-artist header only when the whole line matches the requested metadata, separated by a spaced hyphen, en dash or em dash in either order, and another nonblank line follows. Matching ignores case and repeated whitespace.
 
+Unison song and curator attribution links also apply to Lyprio results labeled `Lyprio/UNISON` or whose MLX `source.name` is `Unison`. Other Lyprio sources do not get Unison links.
+
 Shared MLX parsing rejects Han text in Lyprio/KUGOU romanization fields, because older KRC responses labeled Chinese translations as romanization. This applies to cached lyrics too; missing romanization is then generated locally.
 
 LyricsPlus and Zemer are not lookup providers. Stored provider settings drop them, and saved lyrics from either remain readable.
