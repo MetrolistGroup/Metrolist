@@ -1136,7 +1136,7 @@
         <item quantity="other">Rimuovere %1$d brani da questo dispositivo?</item>
     </plurals>
     <string name="fonts">Font</string>
-    <string name="my_top">La mia top</string>
+    <string name="my_top">La mia classifica</string>
     <string name="cached_playlist">Cache</string>
     <string name="cancel">Annulla</string>
     <string name="show_more">Mostra di più</string>
@@ -1149,10 +1149,10 @@
     </plurals>
     <string name="seek_duration_description">Secondi da saltare con i tasti freccia</string>
     <string name="gradient">Gradiente</string>
-    <string name="prevent_duplicate_tracks_in_queue">Evita tracce duplicate nella coda</string>
+    <string name="prevent_duplicate_tracks_in_queue">Evita tracce duplicate in coda</string>
     <string name="prevent_duplicate_tracks_in_queue_desc">Se un brano è già in coda, rimuovi la vecchia voce quando lo aggiungi di nuovo</string>
     <string name="seek_duration">Intervallo di scorrimento</string>
-    <string name="skip_silence_desc">Salta i silenzi dei brani</string>
+    <string name="skip_silence_desc">Avanza rapidamente attraverso le parti silenziose dei brani</string>
     <string name="token_login_title">Token di accesso</string>
     <string name="token_login_show_token">Mostra token</string>
     <string name="token_login_sensitive_warning_title">Questo token contiene dati sensibili.</string>
@@ -1167,7 +1167,7 @@
     <string name="remember_shuffle_and_repeat_desc">Memorizza le impostazioni di riproduzione casuale e ripetizione quando riapri l\u0027app</string>
     <string name="export_playlist">Esporta playlist</string>
     <string name="export_failed">Impossibile esportare la playlist</string>
-    <string name="auto_download_on_like">Scarica in automatico al Mi piace</string>
+    <string name="auto_download_on_like">Scarica automaticamente quando metti Mi piace</string>
     <string name="clear_song_cache_dialog">Eliminare tutti i brani nella cache?</string>
     <string name="clear_image_cache_dialog">Eliminare tutte le immagini nella cache?</string>
     <string name="clear_music_video_cache_dialog" tools:ignore="MissingTranslation">Eliminare tutti i video musicali nella cache?</string>
@@ -1187,9 +1187,9 @@
     <string name="crossfade">Dissolvenza</string>
     <string name="crossfade_duration">Durata dissolvenza</string>
     <string name="crossfade_gapless">Disabilita per gli album ad ascolto continuo</string>
-    <string name="crossfade_gapless_desc">Non applicare la dissolvenza se l\u0027album è ad ascolto continuo</string>
+    <string name="crossfade_gapless_desc">Disabilita la dissolvenza incrociata per gli album senza interruzioni</string>
     <string name="lyrics_romanize_title">Romanizzazione</string>
-    <string name="lyrics_offset">Sincronizzazione testo</string>
+    <string name="lyrics_offset">Offset del testo</string>
     <string name="settings_ai_lyrics_translation">Traduzione testi con IA</string>
     <string name="update_available_title">Aggiornamento disponibile</string>
     <string name="cast">Ascolta su TV e altoparlanti</string>
@@ -1202,7 +1202,7 @@
     <string name="lyrics_romanization_syllable_description">Mostra il testo romanizzato sotto ogni parola nei testi sincronizzati per parola (come Apple Music)</string>
     <string name="username">Nome utente</string>
     <string name="password">Password</string>
-    <string name="play_next_desc">Aggiungi in cima alla coda</string>
+    <string name="play_next_desc">Riproduci il prossimo in coda</string>
     <string name="add_to_queue_desc">Aggiungi in fondo alla coda</string>
     <string name="download_desc">Rendilo disponibile per la riproduzione offline</string>
     <string name="refetch_desc">Scarica i metadati più recenti da YouTube Music</string>
@@ -1240,14 +1240,14 @@
     <string name="listen_together_auto_approval_suggestions">Approva automaticamente i suggerimenti dei brani</string>
     <string name="listen_together_auto_approval_suggestions_desc">Approva e inserisce in coda automaticamente le richieste dei brani dagli ospiti</string>
     <string name="listen_together_sync_volume">Sincronizza il volume dell\u0027host</string>
-    <string name="listen_together_sync_volume_desc">Gli ospiti seguiranno il livello di volume dell\u0027host</string>
+    <string name="listen_together_sync_volume_desc">Gli ospiti seguono il livello del volume dell'host</string>
     <string name="listen_together_not_configured">Listen Together non è configurato. Impostare l'URL del server in Impostazioni, Integrazioni, quindi Listen Together.</string>
     <string name="listen_together_room_created">Stanza creata: %1$s</string>
     <string name="invalid_room_code">Codice stanza non valido</string>
     <string name="connect">Connettiti</string>
     <string name="approve">Approva</string>
     <string name="reject">Rifiuta</string>
-    <string name="clear">Cancella</string>
+    <string name="clear">Pulisci</string>
     <string name="copy">Copia</string>
     <string name="not_set">Non impostato</string>
     <string name="suggest_to_host">Suggerisci all\u0027host</string>
@@ -1601,10 +1601,10 @@
     </plurals>
     <string name="app_data">Dati app</string>
     <string name="backup_picker_title">Ripristina backup Metrolist</string>
-    <string name="create_backup_dialog_title">Crea backup di Metrolist</string>
+    <string name="create_backup_dialog_title">Crea backup Metrolist</string>
     <string name="backup_created">Backup creato</string>
     <string name="backup_failed">Backup fallito: %1$s</string>
-    <string name="could_not_open_file_picker">Impossibile aprire il selettore dei file: %1$s</string>
+    <string name="could_not_open_file_picker">Impossibile aprire selettore file: %1$s</string>
     <string name="listen_together_how_it_works">Come funziona</string>
     <string name="listen_together_how_it_works_body">Ascolta la musica in contemporanea con i tuoi amici. L'host controlla la riproduzione e gli ospiti la seguono automaticamente.</string>
     <string name="listen_together_how_it_works_bullets">• Crea una stanza per diventare l\u0027host\n• Condividi il codice stanza con i tuoi amici\n• Gli ospiti possono unirsi con il codice stanza\n• Solo l\u0027host può controllare la riproduzione</string>
@@ -1885,7 +1885,7 @@
     <string name="wizard_multiple_variants">Più varianti trovate</string>
     <string name="equalizer_invalid_profile">Questo file non è un profilo EQ parametrico</string>
     <string name="equalizer_autoeq_unavailable">Impossibile caricare profili AutoEQ</string>
-    <string name="skip_silence_instant">Salto istantaneo del silenzio</string>
+    <string name="skip_silence_instant">Salta immediatamente i silenzi</string>
     <string name="skip_silence_instant_desc">Dopo 2 secondi di silenzio, salta fino a 15 secondi. Potrebbe saltare l\u0027audio a basso volume.</string>
     <string name="share_lyrics">Condividi testo</string>
     <string name="share_as_text">Condividi come testo</string>
@@ -2029,7 +2029,7 @@
     <string name="foreign_import_success">Importati %1$d brani, %2$d Mi Piace, %3$d playlist e %4$d riproduzioni</string>
     <string name="foreign_import_unsupported">Il file non è un backup proveniente da un servizio musicale supportato</string>
     <string name="foreign_import_failed">Importazione non riuscita: %1$s</string>
-    <string name="listen_together_description">Ascolta la musica con i tuoi amici in tempo reale. Crea una stanza dove ospitare, o unisciti ad una esistente con un codice</string>
+    <string name="listen_together_description">Ascolta la musica con i tuoi amici in tempo reale. Crea una stanza per ospitare, o unisciti ad una esistente con un codice</string>
     <string name="listen_together_host_card_title">Ospita una stanza</string>
     <string name="listen_together_host_card_desc">Inizia la sessione e condividi il codice. I tuoi amici ascolteranno cosa riproduci, dal vivo.</string>
     <string name="listen_together_join_tab">Unisciti</string>
@@ -2040,7 +2040,7 @@
     <string name="recognition_network_error">Impossibile collegarsi al servizio di riconoscimento. Controlla la tua connessione e riprova.</string>
     <string name="seek_seconds_addup">Avanzamento progressivo</string>
     <string name="seek_seconds_addup_desc">Incrementa il tempo di salto ad ogni tocco consecutivo</string>
-    <string name="pause_music_when_media_is_muted">Sospendi quando l\u0027audio è disattivato</string>
+    <string name="pause_music_when_media_is_muted">Metti in pausa quando l'audio è disattivato</string>
     <string name="pause_music_when_media_is_muted_desc">Metti in pausa la riproduzione quando il volume è azzerato e riprendi quando è attivato.</string>
     <string name="no_episode_description">Nessuna descrizione disponibile per questo episodio.</string>
     <plurals name="episode_duration_hours">
@@ -2346,7 +2346,7 @@
     <string name="device_connect_direct_failed">Impossibile connettersi o completare l'abbinamento. Controlla l'indirizzo, porta di ascolto, accesso alla VPN e l'approvazione dell'abbinamento, quindi prova di nuovo.</string>
     <string name="device_connect_default_device">Dispositivo di riproduzione predefinito</string>
     <string name="device_connect_default_device_description">Inizia la riproduzione su questo dispositivo abbinato quando connesso. Scegli Nessuno per cancellare il predefinito.</string>
-    <string name="player_type_expressive">Espressivo</string>
+    <string name="player_type_expressive">Expressive</string>
     <string name="listen_together_suggestion_auto_approved">Suggerimento brano approvato automaticamente</string>
     <string name="album_save_to_account">Salva in YouTube Music</string>
     <string name="album_saved_to_account">L'album è stato salvato sull'account YouTube Music selezionato.</string>
@@ -2529,7 +2529,7 @@
     <string name="unblock_artist_message">Vuoi consentire di nuovo "%1$s" nelle code, raccomandazioni e statistiche?</string>
     <string name="theme_palette_content">Contenuto</string>
     <string name="appearance_floating_top_bar">Barra superiore fluttuante</string>
-    <string name="appearance_floating_top_bar_description">Mostra la barra superiore bottoni fluttuanti separati invece de una barra ancorata alla parte superiore dello schermo.</string>
+    <string name="appearance_floating_top_bar_description">Mostra nella barra superiore bottoni fluttuanti e separati invece di una ancorata nella parte superiore dello schermo.</string>
     <string name="active_lyrics_alignment">Allineamento verso attivo</string>
     <string name="listen_together_host_action">Host</string>
     <string name="play_oldest_first">Riproduci dal più vecchio</string>
@@ -2585,4 +2585,19 @@
     <string name="desktop_minimize_to_tray_desc">Chiudendo la finestra Metrolist verrà ridotto a icona</string>
     <string name="desktop_tray_toggle_on_click_desc">Premendo l'icona con il tasto destro verrà aperta o chiusa la finestra di Metrolist</string>
     <string name="ai_setup_verifying">Prova di traduzione in corso…</string>
+    <string name="desktop_tray_toggle_on_click">Nascondi o mostra al click sulla barra di sistema</string>
+    <string name="ai_setup_verify_description">Premendo su Fatto manderai un test al modello gratuito scelto. La traduzione verrà abilitata una volta avuto successo.</string>
+    <string name="ai_setup_privacy_hint">Le tue impostazioni di privacy di OpenRouter bloccano gli endpoint di questo modello. Controlla le opzioni del modello e del provider nelle impostazioni di privacy di OpenRouter, quindi riprova.</string>
+    <string name="ai_setup_key_hint">Accedi di nuovo a OpenRouter per sostituire la chiave non valida o scaduta, quindi riprova.</string>
+    <string name="ai_setup_credit_hint">Controlla il saldo e I'm limite dei crediti della tua chiave OpenRouter. Una chiave OAuth può avere un proprio limite. Riprova dopo aver risolto il problema.</string>
+    <string name="ai_setup_rate_hint">Attendi e riprova, o scegli un altro modello gratuito. OpenRouter limita le richieste gratuite al minuto e al giorno. Cambiare il modello potrebbe non raggirare il limite dell'account.</string>
+    <string name="ai_setup_daily_hint">Riprova domani o aggiungi crediti su OpenRouter per aumentare il limite giornaliero gratuito. Cambiare modelli potrebbe non aggirare questo limite.</string>
+    <string name="ai_setup_minute_hint">Attendi che il limite al minuto di OpenRouter si reimposti, quindi riprova. Cambiare modelli potrebbe non aggirare questo limite.</string>
+    <string name="ai_setup_busy_hint">I modelli gratuiti disponibili sono temporaneamente occupati. Riprova più tardi.</string>
+    <string name="ai_setup_model_hint">Scegli un altro modello gratuito, o riprova una volta disponibile.</string>
+    <string name="ai_setup_network_hint">Controlla la connessione internet, quindi riprova.</string>
+    <string name="ai_setup_response_hint">Il modello ha fornito una traduzione non utilizzabile. Riprova o scegli un altro modello gratuito.</string>
+    <string name="ai_setup_privacy_settings">Apri le impostazioni di privacy</string>
+    <string name="ai_setup_sign_in_again">Accedi di nuovo</string>
+    <string name="ai_setup_key_limits">Controlla limiti chiave</string>
 </resources>
