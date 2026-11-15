@@ -1621,6 +1621,7 @@ class PlayerViewModel(
     ) {
         if (lyricsRequestCacheOnly || !isCurrentLyricsRequest(songId, requestId)) return
         val currentSong = _uiState.value.currentSong ?: return
+        if (_uiState.value.isVideoModeActive && !currentSong.isVideoSong) return
         val rawLyrics = _uiState.value.rawLyrics ?: return
         val isVideoContext = (_uiState.value.isVideoModeActive && playerConnection.retimeLyricsOnVideoMode) || currentSong.isVideoSong
         val isUserSelected = _uiState.value.lyricsUserSelected
