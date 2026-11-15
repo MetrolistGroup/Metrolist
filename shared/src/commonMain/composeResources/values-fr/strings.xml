@@ -2596,11 +2596,11 @@
     <string name="chip_content_description">%1$s, puce</string>
     <string name="settings_library_grid_columns">Colonnes de la grille de la bibliothèque</string>
     <string name="playlist_picker_library_order">Ordre de la bibliothèque</string>
-    <string name="ai_setup_privacy_hint">La politique de confidentialité d'OpenRouter exclut les points de terminaison de ce modèle. Vérifiez les options relatives aux modèles gratuits et aux fournisseurs dans les paramètres de confidentialité d'OpenRouter, puis réessayez.</string>
+    <string name="ai_setup_privacy_hint">Votre politique de données OpenRouter exclut les terminaux de ce modèle. Vérifiez les options « modèle gratuit » et « fournisseur » dans les paramètres de confidentialité d'OpenRouter, puis réessayez.</string>
     <string name="ai_setup_rate_hint">Réessayez dans quelques instants ou choisissez un autre modèle gratuit. OpenRouter limite le nombre de requêtes gratuites par minute et par jour. Changer de modèle ne permet pas toujours de contourner la limite de votre compte.</string>
-    <string name="ai_setup_daily_hint">Réessayez demain ou ajoutez des crédits à votre compte OpenRouter pour augmenter votre limite quotidienne gratuite. Changer de modèle ne vous permettra pas de contourner cette limite.</string>
+    <string name="ai_setup_daily_hint">Essayez demain ou ajoutez des crédits dans OpenRouter pour augmenter votre limite quotidienne gratuite. Changer de forfait ne vous permettra pas de contourner cette limite.</string>
     <string name="ai_setup_minute_hint">Attendez que la limite de requêtes par minute d'OpenRouter soit réinitialisée, puis réessayez. Changer de modèle ne permettra pas de contourner cette limite.</string>
     <string name="ai_setup_verify_description">Envoie un court échantillon à traduire au modèle sélectionné. La traduction n'est activée que si le test est réussi.</string>
-    <string name="account_keyring_required">Metrolist a besoin d’accéder au trousseau de clés de votre système pour restaurer votre compte. Déverrouillez le trousseau de clés. Metrolist effectuera une nouvelle tentative automatiquement.</string>
-    <string name="account_linux_keyring_required">Metrolist a besoin d'un trousseau de clés système pour restaurer votre compte. Installez libsecret-tools ou le paquet correspondant à votre distribution, et assurez-vous que votre trousseau de clés est actif et déverrouillé. Metrolist effectuera une nouvelle tentative automatiquement.</string>
+    <string name="account_keyring_required">Metrolist a besoin d'accéder à votre trousseau système pour restaurer votre compte. Déverrouillez le trousseau. Metrolist réessaiera automatiquement.</string>
+    <string name="account_linux_keyring_required">Metrolist a besoin d'un trousseau de clés système pour restaurer votre compte. Installez libsecret-tools ou le paquet de votre distribution fournissant secret-tool, puis assurez-vous que votre trousseau de clés est actif et déverrouillé. Metrolist réessaiera automatiquement.</string>
 </resources>
