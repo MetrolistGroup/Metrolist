@@ -408,6 +408,7 @@ private fun WelcomeBackdrop(
     val path = remember { Path() }
     val outline = MaterialTheme.colorScheme.outlineVariant
     val accent = MaterialTheme.colorScheme.primary
+    val surface = MaterialTheme.colorScheme.surface
     LaunchedEffect(motionEnabled, paused) {
         if (motionEnabled) {
             motion.animateTo(0f, tween((9000 * motion.value).toInt(), easing = FastOutSlowInEasing))
@@ -418,15 +419,6 @@ private fun WelcomeBackdrop(
     Canvas(Modifier.fillMaxSize()) {
         val progress = motion.value
         val diameter = minOf(size.width * 1.15f, size.height * 0.9f)
-        morph.toPath(progress, path)
-        withTransform({
-            translate(size.width * 0.8f - diameter / 2, -diameter * (0.48f - progress * 0.12f))
-            scale(diameter, diameter, pivot = Offset.Zero)
-            rotate(progress * 45f, pivot = Offset(0.5f, 0.5f))
-        }) {
-            drawPath(path, accent.copy(alpha = 0.06f))
-            drawPath(path, outline, style = Stroke(1.5.dp.toPx() / diameter))
-        }
         rotate(-24f + progress * 8f, pivot = Offset(size.width * 0.2f, size.height * 0.85f)) {
             drawOval(
                 outline,
@@ -434,6 +426,16 @@ private fun WelcomeBackdrop(
                 size = Size(size.width * 2.3f, size.height * 1.3f),
                 style = Stroke(1.5.dp.toPx()),
             )
+        }
+        morph.toPath(progress, path)
+        withTransform({
+            translate(size.width * 0.8f - diameter / 2, -diameter * (0.48f - progress * 0.12f))
+            scale(diameter, diameter, pivot = Offset.Zero)
+            rotate(progress * 45f, pivot = Offset(0.5f, 0.5f))
+        }) {
+            drawPath(path, surface)
+            drawPath(path, accent.copy(alpha = 0.06f))
+            drawPath(path, outline, style = Stroke(1.5.dp.toPx() / diameter))
         }
     }
 }
