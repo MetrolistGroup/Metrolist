@@ -204,8 +204,11 @@ private fun rememberStatisticsQueuePlayback(viewModel: StatsViewModel): (Boolean
             scope.launch {
                 try {
                     val songs = viewModel.rankedSongs()
-                    val queue = if (shuffle) songs.shuffled() else songs
-                    if (queue.isNotEmpty()) player?.playQueue(queue, 0)
+                    if (shuffle) {
+                        player?.shuffleQueue(songs)
+                    } else if (songs.isNotEmpty()) {
+                        player?.playQueue(songs, 0)
+                    }
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {

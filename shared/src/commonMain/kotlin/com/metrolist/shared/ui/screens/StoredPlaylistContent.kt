@@ -220,9 +220,12 @@ fun StoredPlaylistContent(
                     orderedSongs
                 }
             val playable = (if (song == null) complete.filterForPlaylistSearch(query) else complete).filterNot { it.isUnavailable }
-            val queue = if (shuffle) playable.shuffled() else playable
-            val target = song?.let { queue.indexOfPlaylistOccurrence(it) } ?: 0
-            if (target in queue.indices) playback.playQueue(queue, target)
+            if (shuffle) {
+                playback.shuffleQueue(playable)
+            } else {
+                val target = song?.let { playable.indexOfPlaylistOccurrence(it) } ?: 0
+                if (target in playable.indices) playback.playQueue(playable, target)
+            }
         }
     }
 
@@ -269,7 +272,7 @@ fun StoredPlaylistContent(
                 selectedCount = selectedSongs.size,
                 selectedSongs = selectedSongs,
                 onPlay = { selectedSongs.firstOrNull { !it.isUnavailable }?.let { playback.play(it, selectedSongs) } },
-                onShuffle = { selectedSongs.shuffled().let { s -> s.firstOrNull { !it.isUnavailable }?.let { playback.play(it, s) } } },
+                onShuffle = { playback.shuffleQueue(selectedSongs) },
                 allSelected = selection.allSelected(displayedIds),
                 onDone = selection::exit,
                 onSelectAll = { selection.toggleAll(displayedIds) },

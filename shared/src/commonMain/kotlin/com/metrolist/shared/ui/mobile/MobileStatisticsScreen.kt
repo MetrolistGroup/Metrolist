@@ -153,7 +153,7 @@ internal fun MobileStatisticsScreen(
                 scope.launch {
                     try {
                         val songs = database.statisticsSongs(ranking)
-                        playbackController.playQueue(if (shuffle) songs.shuffled() else songs)
+                        if (shuffle) playbackController.shuffleQueue(songs) else playbackController.playQueue(songs)
                     } catch (error: CancellationException) {
                         throw error
                     } catch (_: Exception) {

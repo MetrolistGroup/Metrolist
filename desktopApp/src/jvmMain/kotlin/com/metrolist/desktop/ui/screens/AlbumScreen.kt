@@ -189,10 +189,7 @@ fun AlbumScreen(
             onFavorite = onFavorite.takeIf { loaded != null },
             onPlayAll = { queue -> queue.firstOrNull { !it.isUnavailable }?.let { PlayerState.playTrack(it, queue) } },
             onShuffle = { queue ->
-                if (queue.isNotEmpty()) {
-                    val shuffled = queue.shuffled()
-                    shuffled.firstOrNull { !it.isUnavailable }?.let { PlayerState.playTrack(it, shuffled) }
-                }
+                PlayerState.shuffleQueue(queue)
             },
             onArtistClick = { ArtistState.fetchArtistData(it) },
             onTrackClick = { song, queue, _ ->
@@ -208,7 +205,7 @@ fun AlbumScreen(
                     selectedSongs = selectedSongs,
                     onPlay = { selectedSongs.firstOrNull { !it.isUnavailable }?.let { PlayerState.playTrack(it, selectedSongs) } },
                     onShuffle = {
-                        selectedSongs.shuffled().let { s -> s.firstOrNull { !it.isUnavailable }?.let { PlayerState.playTrack(it, s) } }
+                        PlayerState.shuffleQueue(selectedSongs)
                     },
                     allSelected = selection.allSelected(displayedIds),
                     onDone = selection::exit,

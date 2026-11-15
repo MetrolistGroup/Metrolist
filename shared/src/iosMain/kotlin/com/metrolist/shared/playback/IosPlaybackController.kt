@@ -925,6 +925,7 @@ internal class IosPlaybackController(
         queue: List<SongItem>,
         songsOnly: Boolean,
         index: Int,
+        shuffle: Boolean = false,
     ) {
         if (guestLocked) return
         val songs = queue.ifEmpty { listOf(song) }
@@ -932,7 +933,7 @@ internal class IosPlaybackController(
         clearRadioState()
         recommendationsSongsOnly = songsOnly
         isFiniteQueue = queue.isNotEmpty()
-        val selectedSong = requestPlayback(song, songs, index, startPlaying = localSongChangeStartsPlayback()) ?: return
+        val selectedSong = requestPlayback(song, songs, index, startPlaying = localSongChangeStartsPlayback(), shuffle = shuffle) ?: return
         if (queue.size <= 1) bootstrapRecommendations(selectedSong.id)
     }
 
@@ -948,6 +949,18 @@ internal class IosPlaybackController(
         play(seed, songs, songsOnly = false, index = adjustedIndex)
         this.queueTitle.value = queueTitle
         if (songs.size > 1) activeSong?.let { bootstrapRecommendations(it.id) }
+    }
+
+    override fun shuffleQueue(
+        songs: List<SongItem>,
+        queueTitle: String?,
+        songsOnly: Boolean,
+    ) {
+        val playable = songs.filterNot { it.isUnavailable }
+        val index = playable.indices.randomOrNull() ?: return
+        play(playable[index], playable, songsOnly, index, shuffle = true)
+        this.queueTitle.value = queueTitle
+        if (playable.size > 1) activeSong?.let { bootstrapRecommendations(it.id) }
     }
 
     override fun togglePlayPause() {
@@ -1536,12 +1549,16 @@ internal class IosPlaybackController(
         startPositionMs: Long? = null,
         startPlaying: Boolean = true,
         preserveShuffle: Boolean = true,
+        shuffle: Boolean = false,
     ): SongItem? {
         val pendingQueue =
             MusicQueue().apply {
                 restore(pendingPlayback.value?.queueSnapshot ?: player.queueSnapshot())
                 val songs = queue.ifEmpty { listOf(requestedSong) }
-                if (preserveShuffle) {
+                if (shuffle) {
+                    setQueue(songs, index)
+                    toggleShuffle(preserveHistory = false, legacyShuffle = Settings.shared.useLegacyShuffle)
+                } else if (preserveShuffle) {
                     syncQueue(songs, index, Settings.shared.persistentShuffleAcrossQueues, Settings.shared.useLegacyShuffle)
                 } else {
                     setQueue(songs, index)

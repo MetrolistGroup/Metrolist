@@ -120,7 +120,7 @@ fun HomeScreen() {
                     contextMenu.open()
                 }
             },
-            onShuffleSongs = { songs -> songs.firstOrNull()?.let { PlayerState.playTrack(it, songs) } },
+            onShuffleSongs = { songs -> PlayerState.shuffleQueue(songs) },
             onPlaySongs = { songs -> songs.firstOrNull()?.let { PlayerState.playTrack(it, songs) } },
             onSpeedDialItemSecondaryClick = { item ->
                 if (item !is BrowseItem) {

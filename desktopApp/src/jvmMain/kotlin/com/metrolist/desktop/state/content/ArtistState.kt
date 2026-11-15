@@ -407,10 +407,13 @@ object ArtistState {
                 GlobalYouTubeRepository.instance.getArtistSongs(artist.id, page) {
                     AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
                 }
-            val queue = if (shuffle) songs.shuffled() else songs
-            queue.firstOrNull()?.let {
-                if (!shuffle && PlayerState.shuffleEnabled) PlayerState.toggleShuffle()
-                PlayerState.playTrack(it, queue, songsOnly = true)
+            if (shuffle) {
+                PlayerState.shuffleQueue(songs, songsOnly = true)
+            } else {
+                songs.firstOrNull()?.let {
+                    if (PlayerState.shuffleEnabled) PlayerState.toggleShuffle()
+                    PlayerState.playTrack(it, songs, songsOnly = true)
+                }
             }
         }
     }

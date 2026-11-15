@@ -803,10 +803,7 @@ internal fun MobileSongCollectionScreen(
                     if (songs.isNotEmpty()) playbackController.play(songs.first(), songs)
                 },
                 onShuffle = {
-                    if (songs.isNotEmpty()) {
-                        val shuffled = songs.shuffled()
-                        playbackController.play(shuffled.first(), shuffled)
-                    }
+                    playbackController.shuffleQueue(songs)
                 },
                 onMoreOptions =
                     when {
@@ -833,7 +830,7 @@ internal fun MobileSongCollectionScreen(
                         selectedCount = selectedSongs.size,
                         selectedSongs = selectedSongs,
                         onPlay = { selectedSongs.firstOrNull()?.let { playbackController.play(it, selectedSongs) } },
-                        onShuffle = { selectedSongs.shuffled().let { s -> s.firstOrNull()?.let { playbackController.play(it, s) } } },
+                        onShuffle = { playbackController.shuffleQueue(selectedSongs) },
                         allSelected = selection.allSelected(displayedKeys),
                         onDone = selection::exit,
                         onSelectAll = { selection.toggleAll(displayedKeys) },

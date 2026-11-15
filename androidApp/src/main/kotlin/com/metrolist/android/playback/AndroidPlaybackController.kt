@@ -66,6 +66,12 @@ class AndroidPlaybackController(
         connection.playQueue(songs, songs.indexOfFirst { it.id == song.id }.coerceAtLeast(0), songsOnly = songsOnly)
     }
 
+    override fun shuffleQueue(
+        songs: List<SongItem>,
+        queueTitle: String?,
+        songsOnly: Boolean,
+    ) = connection.shuffleQueue(songs, queueTitle, songsOnly = songsOnly)
+
     override fun currentPositionMs(): Long = connection.currentPositionMs()
 
     override fun togglePlayPause() = connection.togglePlayPause()

@@ -1056,7 +1056,7 @@ fun MobileApp(
                                                 },
                                                 onItemLongClick = { menuItem = it to null },
                                                 onShuffleSongs = { songs ->
-                                                    songs.firstOrNull()?.let { playbackController.play(it, songs) }
+                                                    playbackController.shuffleQueue(songs)
                                                 },
                                                 onPlaySongs = { songs ->
                                                     songs.firstOrNull()?.let { playbackController.play(it, songs) }
@@ -1124,10 +1124,8 @@ fun MobileApp(
                                         ) {
                                             FloatingActionButton(
                                                 onClick = {
-                                                    val songs = homeState.loadedHomeSongs().filter(isHomeItemEnabled).shuffled()
-                                                    if (songs.isNotEmpty()) {
-                                                        playbackController.play(songs.first(), songs)
-                                                    }
+                                                    val songs = homeState.loadedHomeSongs().filter(isHomeItemEnabled)
+                                                    playbackController.shuffleQueue(songs)
                                                 },
                                                 shape = RoundedCornerShape(16.dp),
                                             ) {

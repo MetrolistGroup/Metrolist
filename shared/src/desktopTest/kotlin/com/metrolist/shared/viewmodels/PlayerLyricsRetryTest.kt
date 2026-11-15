@@ -1517,6 +1517,12 @@ class PlayerLyricsRetryTest {
             state.value = PlaybackUiState(currentSong = song, queue = queue, currentQueueIndex = queue.indexOf(song), isPlaying = true)
         }
 
+        override fun shuffleQueue(
+            songs: List<SongItem>,
+            queueTitle: String?,
+            songsOnly: Boolean,
+        ) = Unit
+
         override fun togglePlayPause() = Unit
 
         val seekPositions = mutableListOf<Long>()

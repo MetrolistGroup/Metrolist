@@ -425,8 +425,7 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
             },
             onShuffle = {
                 PlaylistAlbumState.withCompletePlaylist { all ->
-                    val shuffled = all.filterForPlaylistSearch(searchQuery).shuffled()
-                    shuffled.firstOrNull { !it.isUnavailable }?.let { PlayerState.playTrack(it, shuffled) }
+                    PlayerState.shuffleQueue(all.sortedForPlaylist(sortMode, sortDirection).filterForPlaylistSearch(searchQuery))
                 }
             },
             isFavorite = PlaylistAlbumState.isPlaylistBookmarked,
@@ -517,9 +516,7 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
                     selectedSongs = selectedSongs,
                     onPlay = { selectedSongs.firstOrNull { !it.isUnavailable }?.let { PlayerState.playTrack(it, selectedSongs) } },
                     onShuffle = {
-                        selectedSongs.shuffled().let { s ->
-                            s.firstOrNull { !it.isUnavailable }?.let { PlayerState.playTrack(it, s) }
-                        }
+                        PlayerState.shuffleQueue(selectedSongs)
                     },
                     allSelected = selection.allSelected(displayedKeys),
                     onDone = selection::exit,

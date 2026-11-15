@@ -112,10 +112,9 @@ fun SearchResultsList(
                         GlobalYouTubeRepository.instance
                             .getArtistSongs(
                                 item.id,
-                            ).shuffled()
-                            .takeIf { it.isNotEmpty() }
+                            ).takeIf { it.isNotEmpty() }
                             ?.let {
-                                PlayerState.playTrack(it.first(), it, songsOnly = true)
+                                PlayerState.shuffleQueue(it, songsOnly = true)
                             }
                     }
                 }
