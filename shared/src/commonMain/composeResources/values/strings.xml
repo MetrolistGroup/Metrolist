@@ -2300,6 +2300,18 @@
     <string name="lyrics_romanization_enable_description">Show how lyrics sound in Latin letters, for languages such as Japanese, Korean or Russian</string>
     <!-- Translators: Supporting text beneath the languages option in the lyrics romanization settings. -->
     <string name="lyrics_romanization_languages_description">Chinese hanzi-only lines need AI romanization mode for accurate pinyin</string>
+    <!-- Translators: Option label for choosing whether lyrics or romanization appears larger. -->
+    <string name="lyrics_romanization_larger_text">Larger Text: Romanization Or Lyrics</string>
+    <!-- Translators: Supporting text beneath the larger text option in the lyrics romanization settings. -->
+    <string name="lyrics_romanization_larger_text_description">Choose whether lyrics or romanization appears larger when both are displayed.</string>
+    <!-- Translators: Option label for showing original lyrics below romanized lyrics. -->
+    <string name="lyrics_romanization_show_original">Show Original</string>
+    <!-- Translators: Supporting text beneath the show original option in the lyrics romanization settings. -->
+    <string name="lyrics_romanization_show_original_description">Show the original lyrics under the romanization</string>
+    <!-- Translators: Option label for showing romanization below original lyrics. -->
+    <string name="lyrics_romanization_show_romanization">Show Romanization</string>
+    <!-- Translators: Supporting text beneath the show romanization option in the lyrics romanization settings. -->
+    <string name="lyrics_romanization_show_romanization_description">Show the romanization under the lyrics</string>
     <!-- Translators: Option or section label for manual in the Home and browse screens and settings. -->
     <string name="manual">Manual</string>
     <!-- Translators: Label for metadata refreshed in the Home screen. -->

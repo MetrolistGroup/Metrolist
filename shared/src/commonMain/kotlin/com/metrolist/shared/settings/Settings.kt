@@ -124,6 +124,7 @@ import com.metrolist.shared.constants.LyricsOpenRouterOAuthSessionKey
 import com.metrolist.shared.constants.LyricsPlusLighterKey
 import com.metrolist.shared.constants.LyricsProgressiveBlurKey
 import com.metrolist.shared.constants.LyricsShareImageStyleKey
+import com.metrolist.shared.constants.LyricsShowOriginalLyricsKey
 import com.metrolist.shared.constants.MinimumSongDurationSecondsKey
 import com.metrolist.shared.constants.MusicVideoCacheJsonKey
 import com.metrolist.shared.constants.MusicVideoPlaybackEnabledKey
@@ -529,6 +530,9 @@ class Settings(
     var lyricsDeepLFormality by preference("default")
     var lyricsRomanizationEnabled by preference(false)
     var lyricsRomanizeAsMain by preference(false)
+    var lyricsShowOriginalLyrics by preference(LyricsShowOriginalLyricsKey, true)
+    val isLyricsRomanizationActive: Boolean
+        get() = lyricsRomanizationEnabled || lyricsRomanizeAsMain
     var lyricsSyllableRomanizationEnabled by preference(true)
     var lyricsRomanizeCyrillicByLine by preference(false)
     var lyricsRomanizeLanguages by preference(

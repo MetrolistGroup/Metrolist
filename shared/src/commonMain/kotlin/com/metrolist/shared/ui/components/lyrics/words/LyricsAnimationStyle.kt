@@ -58,8 +58,9 @@ fun WordLevelLyrics(
     romanizedWords: List<WordTimestamp>? = null,
     romanizedText: String? = null,
     showSyllableRomanization: Boolean =
-        Settings.shared.lyricsRomanizationEnabled &&
-            Settings.shared.lyricsSyllableRomanizationEnabled,
+        Settings.shared.isLyricsRomanizationActive &&
+            Settings.shared.lyricsSyllableRomanizationEnabled &&
+            (!Settings.shared.lyricsRomanizeAsMain || Settings.shared.lyricsShowOriginalLyrics),
     prewarmMasks: Boolean = isActiveLine,
     useFixedTone: Boolean = true,
 ) {

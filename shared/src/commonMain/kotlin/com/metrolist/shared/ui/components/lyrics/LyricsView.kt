@@ -360,10 +360,10 @@ fun LyricsView(
             LyricsAnimationStyle.fromString(Settings.shared.lyricsAnimationStyle)
         }
     val isWordByWord =
-        remember(lyrics, isLrcSynced, animStyle, Settings.shared.lyricsRomanizationEnabled) {
+        remember(lyrics, isLrcSynced, animStyle, Settings.shared.isLyricsRomanizationActive) {
             isLrcSynced &&
                 animStyle != LyricsAnimationStyle.NONE &&
-                lyrics.any { it.hasAnimatedWordTiming(Settings.shared.lyricsRomanizationEnabled) }
+                lyrics.any { it.hasAnimatedWordTiming(Settings.shared.isLyricsRomanizationActive) }
         }
 
     val clockEnabled = isVisible && lyrics.isNotEmpty() && isLrcSynced

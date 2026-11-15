@@ -919,7 +919,7 @@ class LyricsRepository(
                     val pieces = part.split(':', limit = 2)
                     pieces.getOrNull(0)?.takeIf { pieces.getOrNull(1)?.toBooleanStrictOrNull() ?: false }
                 }.toSet()
-        val romanizationEnabled = Settings.shared.lyricsRomanizationEnabled
+        val romanizationEnabled = Settings.shared.isLyricsRomanizationActive
         val backgroundSources =
             if (translationStyle == "Romanized") {
                 emptyList()
