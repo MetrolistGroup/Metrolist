@@ -173,7 +173,6 @@ fun PlayerCoreContent(
                         .alpha(if (hasAnimatedFrame) 0f else 1f)
                         .clip(RoundedCornerShape(28.dp))
                         .shadow(24.dp, RoundedCornerShape(28.dp)),
-                extractColor = true,
                 contentScale = if (Settings.shared.cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
             )
             AnimatedCover(

@@ -82,7 +82,6 @@ import com.metrolist.desktop.state.content.PlaylistAlbumState
 import com.metrolist.desktop.state.playback.ListenTogetherState
 import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.desktop.ui.DesktopDensityProvider
-import com.metrolist.desktop.ui.theme.MetrolistTheme
 import com.metrolist.desktop.utils.ComposeTrayManager
 import com.metrolist.desktop.utils.WindowDragHandle
 import com.metrolist.desktop.window.WindowVisibility
@@ -127,7 +126,6 @@ fun MiniplayerWindow() {
             )
         }
 
-    val seedColor = UiState.seedColor
     val isNightMode = Settings.shared.isPureBlackTheme()
     // Linux backends can consume the render loop without drawing transparent undecorated windows.
     val transparentWindow = !(OsUtil.isLinux || OsUtil.isWindows)
@@ -154,15 +152,13 @@ fun MiniplayerWindow() {
                     WindowsMiniPlayerWindowFrame(
                         onCloseRequest = { PlayerState.showMiniplayer = false },
                         content = {
-                            MetrolistTheme(seedColor = seedColor, pureBlack = isNightMode) {
-                                val colorScheme = MaterialTheme.colorScheme
-                                areWeInDarkMode.value = !MaterialTheme.colorScheme.background.isLight()
-                                WindowDraggableArea {
-                                    if (isFocusMode) {
-                                        FocusModeMiniplayer(colorScheme, isNightMode, transparentWindow)
-                                    } else {
-                                        StandardMiniplayer(colorScheme, isNightMode, transparentWindow)
-                                    }
+                            val colorScheme = MaterialTheme.colorScheme
+                            areWeInDarkMode.value = !MaterialTheme.colorScheme.background.isLight()
+                            WindowDraggableArea {
+                                if (isFocusMode) {
+                                    FocusModeMiniplayer(colorScheme, isNightMode, transparentWindow)
+                                } else {
+                                    StandardMiniplayer(colorScheme, isNightMode, transparentWindow)
                                 }
                             }
                         },
@@ -170,15 +166,13 @@ fun MiniplayerWindow() {
                         darkTheme = areWeInDarkMode.value,
                     )
                 } else {
-                    MetrolistTheme(seedColor = seedColor, pureBlack = isNightMode) {
-                        val colorScheme = MaterialTheme.colorScheme
+                    val colorScheme = MaterialTheme.colorScheme
 
-                        WindowDragHandle(isMaximized = false, onRestoreFromMaximized = {}) {
-                            if (isFocusMode) {
-                                FocusModeMiniplayer(colorScheme, isNightMode, transparentWindow)
-                            } else {
-                                StandardMiniplayer(colorScheme, isNightMode, transparentWindow)
-                            }
+                    WindowDragHandle(isMaximized = false, onRestoreFromMaximized = {}) {
+                        if (isFocusMode) {
+                            FocusModeMiniplayer(colorScheme, isNightMode, transparentWindow)
+                        } else {
+                            StandardMiniplayer(colorScheme, isNightMode, transparentWindow)
                         }
                     }
                 }
