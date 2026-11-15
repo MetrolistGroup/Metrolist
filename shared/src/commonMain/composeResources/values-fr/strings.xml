@@ -508,7 +508,7 @@
         <item quantity="many">%1$d titres importés</item>
         <item quantity="other">%1$d titres importés</item>
     </plurals>
-    <string name="backup_restore_export_desc">Exporte les paramètres, la bibliothèque, les playlists, les titres favoris et l\u0027historique vers un fichier ZIP</string>
+    <string name="backup_restore_export_desc">Exporte les paramètres, la bibliothèque, les playlists, les titres favoris et l'historique dans un fichier ZIP</string>
     <string name="backup_restore_import_desc">Restaure une sauvegarde Metrolist puis redémarre l\u0027application</string>
     <string name="backup_restore_busy">Restauration en cours…</string>
     <string name="backup_sensitive_title">Données sensibles</string>
@@ -702,8 +702,8 @@
     <string name="choose_lyrics">Sélectionner des paroles</string>
     <string name="clear_recent_from_searches_question">Effacer les titres recherchés récemment ?</string>
     <string name="clear_recent_searches_question">Effacer les recherches récentes ?</string>
-    <string name="clear_recognition_history_description">Tous les titres identifiés vont être effacés de l\u0027appareil.</string>
-    <string name="clear_recognition_history_question">Effacer l\u0027historique des titres identifiés?</string>
+    <string name="clear_recognition_history_description">Ceci va effacer tous les titres précédemment identifiés par la fonction de reconnaissance musicale.</string>
+    <string name="clear_recognition_history_question">Effacer l'historique des titres identifiés ?</string>
     <string name="clear_section">Nettoyer %1$s</string>
     <string name="clear_selection">Effacer la sélection</string>
     <string name="client">Client</string>
@@ -717,7 +717,7 @@
     <string name="could_not_queue_download">Impossible d\u0027ajouter le téléchargement à la file d\u0027attente</string>
     <string name="deepl_api_key">Clé API DeepL</string>
     <string name="delete_all_recent_from_searches_question">Effacer tous les titres recherchés récemment ?</string>
-    <string name="delete_all_recent_searches_question">Ceci effacera toutes les recherches récentes</string>
+    <string name="delete_all_recent_searches_question">Ceci va effacer toutes les recherches récentes</string>
     <string name="delete_downloaded_audio">Supprime le fichier audio téléchargé</string>
     <string name="delete_downloaded_episodes">Supprimer les épisodes téléchargés</string>
     <string name="youtube_canvas_quality">Qualité des canvas YouTube</string>
@@ -807,7 +807,7 @@
     <string name="search_songs_artists_podcasts">Rechercher des titres, artistes, podcasts</string>
     <string name="account_login_with_token">Se connecter avec un jeton</string>
     <string name="token_login_title">Jeton de connexion</string>
-    <string name="token_adv_login_description">Utilisez cette méthode uniquement si la connexion standard à YouTube ne fonctionne pas. Collez un jeton InnerTube complet pour vous connecter ou remplacez le jeton sauvegardé sur cet appareil.</string>
+    <string name="token_adv_login_description"></string>
     <string name="token_login_sensitive_warning_title">Ce jeton contient des données sensibles.</string>
     <string name="account_sign_in">Se connecter</string>
     <string name="menu_sign_in">Connexion…</string>
@@ -892,9 +892,9 @@
     <string name="song_mix_title">Mix de %1$s</string>
     <string name="title">Titre</string>
     <plurals name="history_delete_items_title">
-        <item quantity="one">Effacer %1$d élément de l\u0027historique?</item>
-        <item quantity="many">Effacer %1$d éléments de l\u0027historique?</item>
-        <item quantity="other">Effacer %1$d éléments de l\u0027historique?</item>
+        <item quantity="one">Effacer %1$d élément de l'historique ?</item>
+        <item quantity="many">Effacer %1$d éléments de l'historique ?</item>
+        <item quantity="other">Effacer %1$d éléments de l'historique ?</item>
     </plurals>
     <plurals name="stored_remove_selected_title">
         <item quantity="one">Supprimer %1$d titre de cet appareil ?</item>
@@ -1075,8 +1075,8 @@
     <string name="hidden_item_type_auto">Playlist automatique</string>
     <string name="hidden_item_type_other">Autre</string>
     <string name="history_also_delete_from_youtube">Supprimer aussi de YouTube</string>
-    <string name="history_delete_item_title">Supprimer de l\u0027historique?</string>
-    <string name="history_deleting_message">Suppression de l\u0027élément de l\u0027historique en cours.</string>
+    <string name="history_delete_item_title">Supprimer de l'historique ?</string>
+    <string name="history_deleting_message">Suppression de l'élément de l'historique en cours…</string>
     <string name="itag">Format ID (itag)</string>
     <string name="languages">Langues</string>
     <string name="less_than_one_minute">Moins d\u0027une minute</string>
@@ -1488,7 +1488,7 @@
     <string name="spotify_session_read_failed">Impossible d\u0027accéder à la session Spotify.</string>
     <string name="spotify_session_sign_in">Connectez-vous à Spotify pour continuer</string>
     <string name="spotify_login_sign_in">Connexion à Spotify</string>
-    <string name="spotify_login_waiting">En attente de la connexion à Spotify</string>
+    <string name="spotify_login_waiting">En attente de la connexion à Spotify…</string>
     <string name="spotify_import_review">Vérifier (%1$d)</string>
     <string name="spotify_import_error_no_matched_songs">Aucune correspondance trouvée pour les titres de cette playlist.</string>
     <string name="settings_layouts">Dispositions</string>
@@ -1643,7 +1643,7 @@
     <string name="sensitive_backup">Données sensibles</string>
     <string name="restore_backup_confirm">Restaurer la sauvegarde ?</string>
     <string name="restore">Restaurer</string>
-    <string name="restoring_backup">Restauration de votre sauvegarde…\n\nMetrolist va redémarrer automatiquement.</string>
+    <string name="restoring_backup">Restauration de votre sauvegarde…\nMetrolist va redémarrer automatiquement.</string>
     <string name="hidden_items_count">Éléments masqués (%1$d)</string>
     <string name="hidden_library_items">Éléments masqués de la bibliothèque</string>
     <string name="delete_playlist_confirm">Supprimer la playlist ?</string>
@@ -2341,7 +2341,7 @@
     <string name="statistics_period_summary_no_time">%1$s : %2$s.</string>
     <string name="seek_seconds_addup">Avance rapide progressive</string>
     <string name="seek_seconds_addup_desc">Augmente la valeur du saut de l'avance rapide à chaque double appui</string>
-    <string name="token_login_sensitive_warning_generic">NE PARTAGEZ PAS le jeton</string>
+    <string name="token_login_sensitive_warning_generic">NE PARTAGEZ PAS le jeton.</string>
     <string name="legacy_shuffle">Lecture aléatoire alternative</string>
     <string name="legacy_shuffle_desc">Mélange tous les titres dont ceux déjà lus, celui en cours de lecture reste en première position. Désactiver pour utiliser la lecture aléatoire KMP : les titres déjà lus restent en place, seuls les titres suivants sont mélangés.</string>
     <string name="artist_subscriber_count">%1$s abonnés</string>
@@ -2531,7 +2531,7 @@
     <string name="lyrics_editor_shift_all_later">Décaler toute les lignes de +0,5 s</string>
     <string name="lyrics_editor_sync">Insérer l'horodatage de la position de lecture actuelle</string>
     <string name="lyrics_editor_revert">Rétablir les paroles d'origine</string>
-    <string name="lyrics_editor_revert_message">Ceci effacera vos modifications pour ce titre et rétablira les paroles d'origines du fournisseur.</string>
+    <string name="lyrics_editor_revert_message">Ceci va effacer vos modifications pour ce titre et rétablir les paroles d'origines du fournisseur.</string>
     <string name="lyrics_editor_export">Exporter au format JSON MLX</string>
     <string name="lyrics_editor_import">Importer des paroles au format JSON ou LRC</string>
     <string name="recognition_history_earlier">Plus tôt</string>
