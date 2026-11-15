@@ -123,7 +123,7 @@ internal fun FullscreenArtworkBleed(
     val key = BleedKey(url, container)
     val artHeight = (container.width * artwork.height / artwork.width.toFloat()).roundToInt().coerceAtLeast(1)
     // Both bitmaps start on a multiple of SOFT_DIVISOR so the quarter-width part lines up with the detail part.
-    val detailTop = (BLUR_START * container.width / SOFT_DIVISOR).toInt() * SOFT_DIVISOR
+    val detailTop = fullscreenArtworkDetailTop(container.width, artHeight)
     val softTop = detailTop + ceil(DETAIL_HEIGHT * container.width / SOFT_DIVISOR).toInt() * SOFT_DIVISOR
     var bleed by remember(key) { mutableStateOf(bleedCache[key]) }
     LaunchedEffect(key, artwork) {
@@ -151,6 +151,15 @@ internal fun FullscreenArtworkBleed(
             drawBleed(artwork, container.width, artHeight, detailTop, softTop, bleed, previewAlpha, bleedAlpha)
         }
     }
+}
+
+internal fun fullscreenArtworkDetailTop(
+    width: Int,
+    artHeight: Int,
+): Int {
+    // Wide video thumbnails can end before the usual blur start; overlap the fade with their bottom edge.
+    val start = min(BLUR_START * width, (artHeight - CROSSFADE_ROWS).coerceAtLeast(0).toFloat())
+    return (start / SOFT_DIVISOR).toInt() * SOFT_DIVISOR
 }
 
 private fun DrawScope.drawBleed(
