@@ -315,6 +315,16 @@ private val floatKeys =
     )
 
 internal fun migrateLegacySettings(settings: KmpSettings) {
+    // Earlier migrations could mark the store complete with legacy enum names still present.
+    enumTypes.keys.forEach { key ->
+        val raw = settings.readStringOrNull(key) ?: return@forEach
+        val converted = convertLegacyValue(key, raw)
+        if (converted != null) {
+            writeValue(settings, key, converted)
+        } else if (settings.readIntOrNull(key) == null) {
+            settings.remove(key)
+        }
+    }
     // Earlier v14 migrations could leave these legacy values in otherwise migrated stores.
     (localeSettingKeys + "visitorData").forEach { key ->
         normalizeStringSetting(settings, key) { normalizeLegacyStringSetting(key, it).takeIf { normalized -> normalized != it } }
@@ -342,26 +352,11 @@ internal fun migrateLegacySettings(settings: KmpSettings) {
     }
     settings.remove("pureBlack")
     if (migrationVersion >= LEGACY_VALUE_MIGRATION_VERSION) {
-        listOf(
-            LoudnessLevelKey,
-            AnimatedCoverResolutionKey,
-            AppleMusicArtistVideoResolutionKey,
-            YouTubeCanvasQualityKey,
-            YouTubeCanvasModeKey,
-        ).forEach { key ->
-            settings.readStringOrNull(key)?.let { value ->
-                convertLegacyValue(key, value)?.let { writeValue(settings, key, it) }
-            }
-        }
         (removedPlayerSettingsKeys + removedArtworkSettingsKeys + removedUnusedSettingsKeys).forEach(settings::remove)
         settings.putInt(LEGACY_MIGRATION_VERSION_KEY, LEGACY_MIGRATION_VERSION)
         return
     }
 
-    enumTypes.forEach { (key, _) ->
-        val raw = settings.readStringOrNull(key) ?: return@forEach
-        convertLegacyValue(key, raw)?.let { writeValue(settings, key, it) }
-    }
     normalizeStringSetting(settings, "miniPlayerBackgroundStyle", ::legacyMiniPlayerBackground)
     if (settings.readLongOrNull("selectedThemeColor") == null) {
         settings.readIntOrNull("selectedThemeColor")?.toLong()?.let { settings.putLong("selectedThemeColor", it) }

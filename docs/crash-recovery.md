@@ -30,6 +30,8 @@ Headless operation or prompt failure takes the recovery path. The damaged proces
 
 ## Settings recovery
 
+Startup repairs legacy enum names even when the settings migration marker is current. Valid ordinals stay unchanged. Unreadable names use the preference's declared default.
+
 Desktop validates main and pending properties snapshots. It preserves corrupt bytes in unique `.corrupt-<timestamp>-<unique>.bak` files, then uses a valid pending snapshot, a valid main file or defaults. It never accepts partial parser output.
 
 If preserving or reading an original fails, keep it and block replacement for that process. Skip migrations that would overwrite an unpreserved file. Encrypted backups retain encrypted bytes. POSIX files use owner-only permissions; Windows retains profile access controls.

@@ -83,6 +83,37 @@ class AndroidBatchSettingsTest {
     }
 
     @Test
+    fun upgradeRepairsEnumStringsInThePersistedAndroidStore() {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val store = PreferenceDataStoreFactory.create(scope = scope) { temporary.root.resolve("settings.preferences_pb") }
+        runBlocking {
+            store.updateData {
+                it.toMutablePreferences().apply {
+                    this[intPreferencesKey("settingsMigrationVersion")] = 14
+                    this[stringPreferencesKey("playerBackgroundStyle")] = "BLUR"
+                    this[stringPreferencesKey("themeMode")] = "invalid"
+                }
+            }
+        }
+        try {
+            val context = RuntimeEnvironment.getApplication()
+            val settings = Settings(AndroidFileSettings(context, AndroidBatchSettings(store)))
+            assertEquals(PlayerBackgroundStyle.BLURRED_ARTWORK, settings.playerBackgroundStyle)
+            assertEquals(ThemeMode.AUTO, settings.themeMode)
+            settings.flush()
+
+            val persisted = runBlocking { store.data.first() }
+            assertEquals(PlayerBackgroundStyle.BLURRED_ARTWORK.ordinal, persisted[intPreferencesKey("playerBackgroundStyle")])
+            assertFalse(persisted.contains(stringPreferencesKey("themeMode")))
+            val reopened = Settings(AndroidFileSettings(context, AndroidBatchSettings(store)))
+            assertEquals(PlayerBackgroundStyle.BLURRED_ARTWORK, reopened.playerBackgroundStyle)
+            assertEquals(ThemeMode.AUTO, reopened.themeMode)
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
     fun migratedLikedSongsStayOutOfOrdinaryPreferenceCommits() {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val store = PreferenceDataStoreFactory.create(scope = scope) { temporary.root.resolve("settings.preferences_pb") }

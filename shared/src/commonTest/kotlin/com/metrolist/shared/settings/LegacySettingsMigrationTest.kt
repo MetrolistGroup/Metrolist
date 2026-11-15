@@ -264,6 +264,49 @@ class LegacySettingsMigrationTest {
     }
 
     @Test
+    fun repairsPlayerBackgroundNamesEvenAfterMigrationWasMarkedComplete() {
+        val backgrounds =
+            PlayerBackgroundStyle.entries.associateBy { it.name } +
+                mapOf("DEFAULT" to PlayerBackgroundStyle.SOLID, "BLUR" to PlayerBackgroundStyle.BLURRED_ARTWORK)
+        for (version in listOf(0, 2, 11, 14)) {
+            for ((name, expected) in backgrounds) {
+                val backing = MapSettings("settingsMigrationVersion" to version, "playerBackgroundStyle" to name)
+                repeat(2) {
+                    val settings = Settings(StrictTypedSettings(backing))
+                    assertEquals(expected, settings.playerBackgroundStyle)
+                    assertEquals(expected.ordinal, backing.getInt("playerBackgroundStyle", -1))
+                    val exported = settings.exportBackupSettings().entries.single { it.key == "playerBackgroundStyle" }
+                    assertEquals(expected.ordinal.toString(), exported.value)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun repairsOtherEnumNamesAndDropsUnreadableNamesWithoutChangingCurrentChoices() {
+        val backing =
+            MapSettings(
+                "settingsMigrationVersion" to 14,
+                "playerBackgroundStyle" to "unknown-background",
+                "themeMode" to "DARK",
+                "libraryFilter" to "OWNED",
+                "playerThumbnailStyle" to PlayerThumbnailStyle.FULLSCREEN.ordinal,
+                "sliderStyle" to SliderStyle.WAVY.ordinal,
+                "likedSongsJson" to "[\"saved-song\"]",
+            )
+        repeat(2) {
+            val settings = Settings(StrictTypedSettings(backing))
+            assertEquals(PlayerBackgroundStyle.SOLID, settings.playerBackgroundStyle)
+            assertFalse(backing.hasKey("playerBackgroundStyle"))
+            assertEquals(ThemeMode.DARK, settings.themeMode)
+            assertEquals(LibraryFilterType.PLAYLISTS, settings.libraryFilter)
+            assertEquals(PlayerThumbnailStyle.FULLSCREEN, settings.playerThumbnailStyle)
+            assertEquals(SliderStyle.WAVY, settings.sliderStyle)
+            assertEquals("[\"saved-song\"]", settings.likedSongsJson)
+        }
+    }
+
+    @Test
     fun acceptsCurrentOrdinalEnumsWithoutMigrationMarker() {
         val backing =
             MapSettings(
