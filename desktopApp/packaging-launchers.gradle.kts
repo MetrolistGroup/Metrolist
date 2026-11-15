@@ -46,7 +46,7 @@ tasks.register("createAppImageLocal") {
 [Desktop Entry]
 Type=Application
 Name=Metrolist
-Exec=bin/Metrolist %u
+Exec=Metrolist %u
 Icon=Metrolist
 StartupWMClass=Metrolist
 Comment=Metrolist music client
@@ -57,14 +57,7 @@ MimeType=x-scheme-handler/metrolist;x-scheme-handler/metrolist-auth;
         )
 
         val appRunFile = file("${appDir.absolutePath}/AppRun")
-        appRunFile.writeText(
-            "#!/bin/sh\n" +
-                $$"""
-export MALLOC_ARENA_MAX=4
-export MALLOC_MMAP_THRESHOLD_="${MALLOC_MMAP_THRESHOLD_:-131072}"
-exec "$APPDIR/bin/Metrolist" "$@"
-                """.trimIndent(),
-        )
+        rootProject.file("scripts/linux-appimage-apprun.sh").copyTo(appRunFile, overwrite = true)
         appRunFile.setExecutable(true, false)
 
         val appIconFile = file("${appDir.absolutePath}/Metrolist.png")

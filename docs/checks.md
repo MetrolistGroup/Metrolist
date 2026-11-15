@@ -219,6 +219,7 @@ python3 scripts/test_translation_mechanics.py
 python3 scripts/test_hooks.py
 python3 scripts/test_build_ios.py
 python3 scripts/test_build_appimage.py
+python3 scripts/test_linux_appimage_apprun.py
 python3 scripts/test_desktop_smoke.py
 python3 scripts/test_dmg_packaging.py
 python3 scripts/test_distribution.py

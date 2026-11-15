@@ -17,8 +17,7 @@ appimageTools.wrapType2 {
   '';
   extraInstallCommands = ''
     install -Dm644 ${contents}/Metrolist.desktop $out/share/applications/Metrolist.desktop
-    substituteInPlace $out/share/applications/Metrolist.desktop \
-      --replace-fail 'Exec=bin/Metrolist' 'Exec=metrolist'
+    sed -i "s|^Exec=.*|Exec=$out/bin/metrolist %u|" $out/share/applications/Metrolist.desktop
     install -Dm644 ${contents}/Metrolist.png $out/share/icons/hicolor/512x512/apps/Metrolist.png
   '';
   meta = {

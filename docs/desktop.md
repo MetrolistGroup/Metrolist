@@ -117,6 +117,8 @@ The AppImage script writes `dist/Metrolist.AppImage` and accepts `GRADLE` to sel
 
 The AppImage script and Windows and macOS release workflows pass `-Pmetrolist.debug=false` so release packages use the release title and settings.
 
+On launch, JVM and native AppImages install a per-user `Metrolist.desktop` with the persistent AppImage path and a copied icon. Pinned launchers can reopen it after the temporary mount disappears. An installed system `Metrolist.desktop` takes precedence. Moving the AppImage requires launching it once from its new location to update the entry.
+
 The Arch recipe is in [`aur/`](../aur/). `make aur-install` builds from the local tree. Standalone recipes fetch remote source. `bash aur/test-recipe.sh` checks recipe behavior without building the app.
 
 Windows login uses `metro-wv2-helper`. With the .NET SDK selected by `metro-wv2-helper/global.json`, run `metro-wv2-helper/build_helper.bat`. It copies the self-contained x64 helper into desktop resources. Run `dotnet run --project metro-wv2-helper/tests/LoginCompletion.Tests.csproj` for backend checks.

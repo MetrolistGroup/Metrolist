@@ -200,6 +200,7 @@ class PipelineTest(unittest.TestCase):
             self.assertNotEqual(result,previous)
             app=root/'dist/metrolist-desktop-native-linux-x64-14.0.0-test.AppDir'
             self.assertTrue(os.access(app/'AppRun',os.X_OK))
+            self.assertEqual((package.ROOT/'scripts/linux-appimage-apprun.sh').read_text(), (app/'AppRun').read_text())
             self.assertTrue((app/'resources').is_symlink())
 
     def test_linux_packages_reject_host_audio_libraries(self):

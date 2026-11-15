@@ -2,7 +2,7 @@
 Type=Application
 Name=Metrolist
 Comment=YouTube Music desktop client
-Exec=metrolist %u
+Exec=/usr/bin/metrolist %u
 Icon=metrolist
 Terminal=false
 StartupWMClass=Metrolist

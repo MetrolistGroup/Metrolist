@@ -47,6 +47,7 @@ jobs:
           python3 -m unittest discover -s .github/tests
           python3 -m unittest discover -s scripts/desktop-native-image -p test_native_pipeline.py
           python3 scripts/test_build_appimage.py
+          python3 scripts/test_linux_appimage_apprun.py
           python3 scripts/test_distribution.py
           python3 scripts/test_generate_altstore_source.py
           python3 .github/actions/upload-desktop-sentry/test_verify_metadata.py
