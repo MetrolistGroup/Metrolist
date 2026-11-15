@@ -429,7 +429,7 @@
     <string name="lyrics_provider_paxsenix_description">Recherche dans Apple Music et récupère les paroles synchronisées mot par mot, les voix de fond, et les transcriptions</string>
     <string name="lyrics_provider_lyrics_plus_description">Source multi-backend avec des paroles synchronisées mot par mot ou ligne par ligne, les rôles des chanteurs, les voix de fond, et les transcriptions</string>
     <string name="lyrics_show_on_player">Afficher dans le lecteur</string>
-    <string name="lyrics_respect_agent_positioning_desc">Aligne les paroles selon le rôle (ex. voix de fond)</string>
+    <string name="lyrics_respect_agent_positioning_desc">Aligne les paroles selon le rôle du chanteur (ex. voix de fond)</string>
     <string name="lyrics_behavior">Comportement des paroles</string>
     <string name="lyrics_hide_status_bar_fullscreen">Masquer les commandes multimédias en plein écran</string>
     <string name="lyrics_hide_status_bar_fullscreen_desc">Masque les commandes multimédias lorsque les paroles sont affichées en plein écran</string>
@@ -1838,7 +1838,7 @@
     <string name="tray_previous_track">Titre précédent</string>
     <string name="tray_hide_window">Réduire la fenêtre</string>
     <string name="tray_show_window">Afficher la fenêtre</string>
-    <string name="tray_show_miniplayer">Afficher le mini-lecteur</string>
+    <string name="tray_show_miniplayer">Mini-lecteur</string>
     <string name="tray_settings">Paramètres</string>
     <string name="tray_quit_metrolist">Quitter Metrolist</string>
     <string name="webview_cleanup_failed">Le profil d\u0027authentification WebView n\u0027a pas pu être supprimé.</string>
@@ -2221,8 +2221,8 @@
     <string name="settings_mini_player_control_summary">Affichez cette commande dans le mini-lecteur</string>
     <string name="settings_mini_player_progress_summary">Affiche la barre de progression sous forme de cercle autour de la pochette du mini-lecteur</string>
     <string name="settings_canvas_playback_summary">Lisez de courts extraits ou le clip musical complet derrière le lecteur</string>
-    <string name="settings_normalization_summary">Équilibrez le volume entre les titres pour éviter de grands écarts</string>
-    <string name="settings_loudness_target_summary">Réglez le volume cible lorsque la normalisation audio est activée</string>
+    <string name="settings_normalization_summary">Équilibre le volume entre chaque titre pour éviter de trop grands écarts</string>
+    <string name="settings_loudness_target_summary">Volume cible pour la normalisation audio</string>
     <string name="settings_stop_on_close_summary">Arrêtez la lecture quand Metrolist est retiré des applications récentes</string>
     <string name="settings_screen_awake_summary">Choisissez si le lecteur ou les paroles gardent l'écran allumé</string>
     <string name="settings_translation_mode_summary">Traduisez les mots ou transcrivez leur prononciation dans l'écriture cible</string>
@@ -2326,7 +2326,7 @@
     <string name="unblock_artist_message">Débloquer "%1$s" ?</string>
     <string name="appearance_floating_top_bar">Barre supérieur flottante</string>
     <string name="appearance_floating_top_bar_description">Affiche une barre supérieure flottante plutôt qu'ancrée en haut de l'écran</string>
-    <string name="active_lyrics_alignment">Alignement actuel des paroles</string>
+    <string name="active_lyrics_alignment">Alignement de la ligne de paroles active</string>
     <string name="listen_together_host_action">Créer</string>
     <string name="updates_share_app">Partager l'application</string>
     <string name="updates_share_apk">Partager le fichier APK</string>
@@ -2384,7 +2384,7 @@
     <string name="varispeed">Vari-speed</string>
     <string name="varispeed_description">Associe hauteur et vitesse de lecture pour donner un effet bande magnétique aux accélérés et ralentis</string>
     <string name="audio_track_playback_params">Traitement audio matériel</string>
-    <string name="audio_track_playback_params_description">Utilise</string>
+    <string name="audio_track_playback_params_description">Utilise AudioTrack (intégré à Android) pour gérer la vitesse de lecture. Pour modifier la hauteur, l'application bascule automatique vers un traitement logiciel. Ce paramètre nécessite un redémarrage de l'application.</string>
     <string name="theme_palette_content">Joyeuse</string>
     <string name="lyrics_progressive_blur">Flou progressif des paroles</string>
     <string name="lyrics_progressive_blur_description">Ajoute un effet de flou progressif aux paroles suivant et précédent la ligne en cours de lecture</string>
@@ -2411,9 +2411,9 @@
         <item quantity="other">Importez vos playlists</item>
     </plurals>
     <plurals name="import_playlists_notice">
-        <item quantity="one">Importation de %1$s depuis une playlist. L'importation va continuer en arrière-plan.</item>
-        <item quantity="many">Importation de %1$s depuis %2$d playlists. L'importation va continuer en arrière-plan.</item>
-        <item quantity="other">Importation de %1$s depuis %2$d playlists. L'importation va continuer en arrière-plan.</item>
+        <item quantity="one">Importation de %1$s depuis une playlist. L'importation continue en arrière-plan.</item>
+        <item quantity="many">Importation de %1$s depuis %2$d playlists. L'importation continue en arrière-plan.</item>
+        <item quantity="other">Importation de %1$s depuis %2$d playlists. L'importation continue en arrière-plan.</item>
     </plurals>
     <string name="settings_storage_summary">%1$s utilisés • %2$s disponibles</string>
     <string name="live">DIRECT</string>
@@ -2434,7 +2434,7 @@
     <string name="metroeq">MetroEQ</string>
     <string name="metroeq_preset_rock">Rock</string>
     <string name="metroeq_save_as">Sauvegarde</string>
-    <string name="metroeq_peak_reduction">Protection: %1$s dB</string>
+    <string name="metroeq_peak_reduction">Protection contre les pics : %1$s dB</string>
     <string name="metroeq_preset_bass">Boost des basses</string>
     <string name="metroeq_presets">Préréglages</string>
     <string name="download_error_incomplete">YouTube n'a pas fourni le fichier audio complet. Veuillez réessayer plus tard ou utilisez un autre réseau.</string>
@@ -2454,7 +2454,7 @@
     <string name="queue_move">Déplacer</string>
     <string name="queue_multi_select">Sélection multiple</string>
     <string name="queue_move_hint">Déplacer : appuyez sur OK pour sélectionner ou placer un titre, Haut/Bas pour le déplacer et retour pour terminer.</string>
-    <string name="queue_select_hint">Sélection multiple: appuyez sur OK pour sélectionner plusieurs titres. Appuyez sur la touche droite ou maintenez OK pour afficher plus d'options.</string>
+    <string name="queue_select_hint">Sélection multiple : appuyez sur OK pour sélectionner plusieurs titres. Appuyez sur la touche Droite ou maintenez OK pour accéder aux options.</string>
     <string name="device_connect_direct_title">Se connecter à l'aide d'une adresse IP</string>
     <string name="device_connect_direct_address">Adresse IP et port</string>
     <string name="device_connect_direct_hint">Cet appareil écoute sur le port %1$d. Entrez l'adresse LAN ou IP VPN et son port d'écoute (IPv4:port ou [IPv6]:port). Comparez le code d'appairage sur les deux appareils.</string>
@@ -2576,12 +2576,12 @@
     <string name="devtools_render_backend_auto">Automatique</string>
     <string name="devtools_render_backend_opengl">OpenGL</string>
     <string name="devtools_render_backend_software">Logiciel</string>
-    <string name="devtools_render_backend_metal">Metal</string>
+    <string name="devtools_render_backend_metal">Métal</string>
     <string name="device_connect_account_unresolved">Identité du compte indisponible. Connectez-vous à nouveau sur les deux appareils et sélectionnez la même chaîne YouTube.</string>
-    <string name="remove_from_recent_question">Supprimer les éléments récents ?</string>
+    <string name="remove_from_recent_question">Supprimer des éléments récents ?</string>
     <string name="cast_playback_failed">Le périphérique de diffusion n'a pas pu effectuer cette lecture.</string>
-    <string name="desktop_tray_toggle_on_click">Afficher ou masquer en cliquant sur la barre d'état système</string>
-    <string name="desktop_tray_toggle_on_click_desc">Un clic gauche sur l'icône de la zone de notification permet d'ouvrir ou de fermer la fenêtre de Metrolist</string>
+    <string name="desktop_tray_toggle_on_click">Afficher ou réduire en cliquant sur l'icone</string>
+    <string name="desktop_tray_toggle_on_click_desc">Un clic gauche sur l'icône de la barre d'état affiche ou réduit l'application</string>
     <string name="import_error_no_library_matches">Aucun morceau n'a pu être associé à la bibliothèque musicale</string>
     <string name="playback_event_log_raw_empty">Aucun événement de lecture n'a encore été enregistré. Lancez la lecture d'un morceau pour obtenir des informations de diagnostic.</string>
     <string name="ai_setup_credit_hint">Vérifiez le solde de votre compte ainsi que la limite de crédit associée à votre clé OpenRouter. Une clé OAuth peut disposer de sa propre limite. Réessayez une fois cette limite ajustée.</string>
@@ -2590,14 +2590,15 @@
     <string name="ai_setup_key_limits">Vérifier les limites de la clés</string>
     <string name="devtools_render_backend_direct3d">Direct3D</string>
     <string name="lyrics_active_by_real_timing">Mettre en surbrillance les paroles en fonction de leurs horodatages</string>
-    <string name="lyrics_active_by_real_timing_description">Met en surbrillance chaque ligne uniquement pendant la durée qui lui est propre, même lorsque les lignes se chevauchent.</string>
+    <string name="lyrics_active_by_real_timing_description">Met en surbrillance chaque ligne uniquement pendant sa propre durée, même lorsque les lignes se chevauchent</string>
     <string name="playback_event_log_raw_description">Diagnostics de lecture en continu. Copiez ou exportez ce journal brut en cas de problème lors de la lecture.</string>
     <string name="library_grid_columns">Colonnes de la grille de la bibliothèque</string>
     <string name="chip_content_description">%1$s, puce</string>
     <string name="settings_library_grid_columns">Colonnes de la grille de la bibliothèque</string>
-    <string name="playlist_picker_library_order">Commande de bibliothèque</string>
-    <string name="ai_setup_privacy_hint">La politique de données d'OpenRouter exclut les points de terminaison de ce modèle. Vérifiez les options relatives aux modèles gratuits et aux fournisseurs dans les paramètres de confidentialité d'OpenRouter, puis réessayez.</string>
-    <string name="ai_setup_rate_hint">Veuillez patienter et réessayer, ou choisissez un autre modèle gratuit. OpenRouter limite le nombre de requêtes gratuites par minute et par jour. Changer de modèle ne permet pas de contourner la limite de votre compte.</string>
+    <string name="playlist_picker_library_order">Ordre de la bibliothèque</string>
+    <string name="ai_setup_privacy_hint">La politique de confidentialité d'OpenRouter exclut les points de terminaison de ce modèle. Vérifiez les options relatives aux modèles gratuits et aux fournisseurs dans les paramètres de confidentialité d'OpenRouter, puis réessayez.</string>
+    <string name="ai_setup_rate_hint">Réessayez dans quelques instants ou choisissez un autre modèle gratuit. OpenRouter limite le nombre de requêtes gratuites par minute et par jour. Changer de modèle ne permet pas toujours de contourner la limite de votre compte.</string>
     <string name="ai_setup_daily_hint">Réessayez demain ou ajoutez des crédits à votre compte OpenRouter pour augmenter votre limite quotidienne gratuite. Changer de modèle ne vous permettra pas de contourner cette limite.</string>
     <string name="ai_setup_minute_hint">Attendez que la limite de requêtes par minute d'OpenRouter soit réinitialisée, puis réessayez. Changer de modèle ne permettra pas de contourner cette limite.</string>
+    <string name="ai_setup_verify_description">Envoie un court échantillon à traduire au modèle sélectionné. La traduction n'est activée que si le test est réussi.</string>
 </resources>
