@@ -677,7 +677,7 @@ class PlayerViewModel(
                             syncLyricsOffsetForVideoMode(song.id, false)
                         }
                     }
-                    retimeLyricsIfVideoModeActive(song.id)
+                    if (!_uiState.value.isVideoModeActive) retimeLyricsIfVideoModeActive(song.id)
                 }
             }
     }
