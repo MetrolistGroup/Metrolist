@@ -121,7 +121,14 @@ class AudioRenderer private constructor(
                 val input = silenceSkipper.process(equalized, enabled, instant, positionClock::skipSilence)
                 val chunks =
                     buildList {
-                        if (tempoProcessor != null && (processorPitch != playbackPitch || (playbackSpeed == 1f && playbackPitch == 1f))) {
+                        if (
+                            tempoProcessor != null &&
+                            (
+                                processorPitch != playbackPitch ||
+                                    (playbackSpeed == 1f && playbackPitch == 1f) ||
+                                    tempoProcessor?.requiresRebuild(playbackSpeed, playbackPitch) == true
+                            )
+                        ) {
                             tempoProcessor?.process(null, ::add)
                             tempoProcessor?.close()
                             tempoProcessor = null
