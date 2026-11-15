@@ -1321,7 +1321,10 @@ class MediaSessionPlayer(
             musicPlayer.removeQueueItems((fromIndex until toIndex).toSet())
             val replacedEmptyQueue = replacements.isNotEmpty() && insertResolvedMediaItems(fromIndex, replacements, wantsPlayback)
             if (replacesCurrent && replacements.isNotEmpty() && !replacedEmptyQueue) {
-                musicPlayer.skipToQueueItem(fromIndex.coerceAtMost(musicPlayer.songQueue.value.lastIndex))
+                musicPlayer.skipToQueueItem(
+                    fromIndex.coerceAtMost(musicPlayer.songQueue.value.lastIndex),
+                    resumePlayback = wantsPlayback,
+                )
             }
         }
     }
