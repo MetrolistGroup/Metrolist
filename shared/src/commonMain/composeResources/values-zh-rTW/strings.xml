@@ -122,7 +122,7 @@
     <string name="error_unknown">未知的錯誤</string>
     <string name="action_like">按讚</string>
     <string name="repeat_mode_off">重複播放已關閉</string>
-    <string name="repeat_mode_one">重複播放此歌曲</string>
+    <string name="repeat_mode_one">重複播放這個歌曲</string>
     <string name="repeat_mode_all">重複播放佇列</string>
     <string name="up_next">下一首</string>
     <string name="queue_loading">載入佇列…</string>
@@ -163,7 +163,7 @@
     <string name="music_video_quality_desc" tools:ignore="MissingTranslation">音樂影片預設解析度</string>
     <string name="music_video_quality_auto" tools:ignore="MissingTranslation">自動</string>
     <string name="music_video_resolution" tools:ignore="MissingTranslation">影片解析度</string>
-    <string name="music_video_resolution_desc" tools:ignore="MissingTranslation">調整此影片解析度</string>
+    <string name="music_video_resolution_desc" tools:ignore="MissingTranslation">調整這個影片的解析度</string>
     <string name="music_video_resolution_current" tools:ignore="MissingTranslation">正在播放</string>
     <string name="music_video_cache" tools:ignore="MissingTranslation">音樂影片快取</string>
     <string xmlns:tools="http://schemas.android.com/tools" name="clear_music_video_cache" tools:ignore="MissingTranslation">清除音樂影片快取</string>
@@ -205,7 +205,7 @@
     <string name="pause_search_history">暫停搜尋記錄</string>
     <string name="clear_search_history">清除搜尋記錄</string>
     <string name="settings_clear_search_history_description">從本裝置和 YouTube 中移除儲存的搜尋查詢</string>
-    <string name="settings_clear_search_history_confirm_message">即將移除所有已儲存的搜尋查詢。此動作無法復原。</string>
+    <string name="settings_clear_search_history_confirm_message">即將移除所有已儲存的搜尋查詢。這個動作無法復原。</string>
     <string name="settings_show_secret">顯示機密</string>
     <string name="settings_hide_secret">隱藏機密</string>
     <string name="block_screenshots">封鎖螢幕擷取</string>
@@ -213,9 +213,9 @@
     <string name="hidden_playlists">媒體庫中隱藏的項目</string>
     <string name="hidden_playlists_desc">恢復您在媒體庫中隱藏的項目</string>
     <string name="hidden_playlists_empty">媒體庫中沒有隱藏的項目</string>
-    <string name="hidden_playlists_empty_desc">從沒有畫面隱藏的項目會在此顯示</string>
+    <string name="hidden_playlists_empty_desc">從媒體庫隱藏的項目會在這裡顯示</string>
     <string name="hide_from_library">從媒體庫中隱藏</string>
-    <string name="hide_from_library_local">在此裝置上隱藏</string>
+    <string name="hide_from_library_local">在這個裝置上隱藏</string>
     <string name="hide_explicit">隱藏兒童不宜內容</string>
     <string name="action_backup">備份</string>
     <string name="action_restore">還原</string>
@@ -557,9 +557,9 @@
     <string name="onboarding_migration_title">已找到您的 v13 音樂庫</string>
     <string name="onboarding_migration_description">我們找到了獨立版 Metrolist 的資料庫。您可以就地移轉播放清單、歷史記錄、喜歡的歌曲和音樂庫資料。如果移轉失敗，您可以復原原始資料庫。</string>
     <string name="onboarding_migration_complete_title">您的帳戶已移轉</string>
-    <string name="onboarding_migration_complete_description">您的帳戶、播放清單、歷史記錄、喜歡的歌曲和音樂庫資料已可在此版本的 Metrolist 中使用。</string>
+    <string name="onboarding_migration_complete_description">您的帳戶、播放清單、歷史記錄、喜歡的歌曲和音樂庫資料已可在這個 Metrolist 版本中使用。</string>
     <string name="onboarding_crash_reports_title">協助改善 Metrolist</string>
-    <string name="onboarding_crash_reports_description">您可以選擇透過 Sentry 分享診斷資訊，協助我們找出並修正問題。您隨時都可以在設定中變更此選項。</string>
+    <string name="onboarding_crash_reports_description">您可以選擇透過 Sentry 分享診斷資訊，協助我們找出並修正問題。您隨時都可以在設定中變更這個選項。</string>
     <string name="onboarding_notifications_title">允許通知</string>
     <string name="onboarding_notifications_description">啟用播放和下載通知。</string>
     <string name="onboarding_begin_setup">開始設定</string>
@@ -664,7 +664,7 @@
     </plurals>
     <string name="download_paused">已暫停</string>
     <string name="downloads_empty">沒有正在下載的歌曲</string>
-    <string name="downloads_empty_hint">正在下載以供離線收聽的歌曲將在此顯示。</string>
+    <string name="downloads_empty_hint">正在下載以供離線收聽的歌曲將在這裡顯示。</string>
     <string name="remove_all_downloads">移除全部下載</string>
     <string name="lyrics_song_artist">藝人</string>
     <string name="lyrics_capability_unsynced">未同步</string>
@@ -765,5 +765,5 @@
     <string name="show_again">再次顯示</string>
     <string name="restore_hidden_item_title">再次顯示？</string>
     <string name="restore_hidden_item_message">再次顯示「%1$s」？</string>
-    <string name="unblock_artist_title">確定要解除封鎖此藝人嗎？</string>
+    <string name="unblock_artist_title">確定要解除封鎖這位藝人嗎？</string>
 </resources>
