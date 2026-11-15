@@ -360,6 +360,8 @@ class ExoPlaybackPlayer(
     private val forwardedPlayerListeners = linkedSetOf<Player.Listener>()
     private var preferredAudioDevice: AudioDeviceInfo? = null
     private var offloadFailed = false
+    private var offloadSleepStartedAtMs = 0L
+    private var offloadSleepStartPositionMs = -1L
     private val progressWatchdog = PlaybackProgressWatchdog()
     private var audioOutputEnabled = true
     private var outputRecoveryState = AudioOutputRecoveryState()
@@ -874,6 +876,10 @@ class ExoPlaybackPlayer(
         object : ExoPlayer.AudioOffloadListener {
             override fun onSleepingForOffloadChanged(sleepingForOffload: Boolean) {
                 if (source !== exo) return
+                if (sleepingForOffload && offloadRequested() && offloadSleepStartedAtMs == 0L) {
+                    offloadSleepStartedAtMs = SystemClock.elapsedRealtime()
+                    offloadSleepStartPositionMs = getRealtimePositionMs()
+                }
                 recordPlaybackState("Android offload sleep changed.")
             }
         }
@@ -2975,6 +2981,10 @@ class ExoPlaybackPlayer(
     private var lastAudioPositionLogMs = Long.MIN_VALUE
     private var lastEarlyStreamFailure: Throwable? = null
 
+    private companion object {
+        const val OFFLOAD_STALL_TIMEOUT_MS = 2_000L
+    }
+
     private fun updateProgressState(reportSample: Boolean) {
         if (controllerClock != null) return
         val isLive = currentResource?.isLive == true || currentSongValue?.isLive == true || exo.isCurrentMediaItemLive
@@ -3023,21 +3033,41 @@ class ExoPlaybackPlayer(
             reportPlaybackFailure(streamFailure)
         }
         maybeRecoverAudioOutput()
-        if (progressWatchdog.observe(
+        if (offloadSleepStartedAtMs > 0L && position != offloadSleepStartPositionMs) {
+            offloadSleepStartedAtMs = 0L
+            offloadSleepStartPositionMs = -1L
+        }
+        val expectProgress =
+            shouldMonitorPlaybackProgress(
+                playWhenReady = exo.playWhenReady,
+                suppressionReason = exo.playbackSuppressionReason,
+                playbackState = exo.playbackState,
+                transitionPending = playbackTransitions.pending.value,
+                offloadRequested = offloadRequested(),
+            )
+        val playbackProgressTimedOut =
+            progressWatchdog.observe(
                 playbackInstanceId = currentInstance,
                 positionMs = position,
                 durationMs = _duration.value,
-                expectProgress =
-                    shouldMonitorPlaybackProgress(
-                        playWhenReady = exo.playWhenReady,
-                        suppressionReason = exo.playbackSuppressionReason,
-                        playbackState = exo.playbackState,
-                        transitionPending = playbackTransitions.pending.value,
-                        offloadRequested = offloadRequested(),
-                    ),
+                expectProgress = expectProgress,
                 nowMs = now,
             )
+        val playbackProgressStalledMs = progressWatchdog.stalledForMs(now)
+        if (offloadRequested() && offloadSleepStartedAtMs > 0L && position == offloadSleepStartPositionMs &&
+            now - offloadSleepStartedAtMs >= OFFLOAD_STALL_TIMEOUT_MS && playbackProgressStalledMs >= OFFLOAD_STALL_TIMEOUT_MS
         ) {
+            offloadFailed = true
+            updateOffloadPreferences(exo)
+            nextPlayer?.let { updateOffloadPreferences(it) }
+            recordPlaybackState(
+                "Android audio offload disabled after playback stalled.",
+                mapOf("progressStalledMs" to playbackProgressStalledMs.toString()),
+            )
+            offloadSleepStartedAtMs = 0L
+            offloadSleepStartPositionMs = -1L
+        }
+        if (playbackProgressTimedOut) {
             reportPlaybackFailure(
                 PlaybackException(
                     "Playback output stopped advancing",
