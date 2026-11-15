@@ -263,7 +263,7 @@ class AiModelCatalogTest {
         assertEquals(AiProviderPresets.DEFAULT_LYRICS_AI_MODEL, AiModelCatalog.defaultModel(preset, offline))
         assertNull(AiModelCatalog.defaultModel(preset, offline.filterNot { it.free }, freeOnly = true))
         assertEquals("claude-haiku-5-5", AiProviderPresets.find("Anthropic")!!.defaultModel)
-        assertEquals("gemini-2.5-flash-lite", AiProviderPresets.find("Gemini")!!.defaultModel)
+        assertEquals("gemini-flash-lite-latest", AiProviderPresets.find("Gemini")!!.defaultModel)
     }
 
     @Test

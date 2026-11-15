@@ -102,7 +102,7 @@ object AiProviderPresets {
                 AiProviderGroup.DIRECT,
                 AiProtocol.GEMINI,
                 "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
-                "gemini-2.5-flash-lite",
+                "gemini-flash-lite-latest",
                 "google",
             ),
             AiProviderPreset(
