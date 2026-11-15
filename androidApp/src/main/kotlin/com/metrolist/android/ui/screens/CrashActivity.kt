@@ -120,6 +120,8 @@ import com.metrolist.shared.generated.resources.crash_uploading
 import com.metrolist.shared.ui.LocalIsTv
 import com.metrolist.shared.ui.components.ContainedLoadingIndicator
 import com.metrolist.shared.ui.crash.CrashLogsScreen
+import com.metrolist.shared.ui.crash.CrashScreenshotHint
+import com.metrolist.shared.ui.crash.CrashScreenshotHintText
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.tv.tvHorizontalScrollFocus
 import com.metrolist.shared.ui.tv.tvVerticalScrollFocus
@@ -297,6 +299,7 @@ private fun CrashScreen(
     val paste = (uploadState as? CrashUploadState.Uploaded)?.paste
     val pasteIdLine = stringResource(Res.string.crash_paste_id, paste?.id.orEmpty())
     val pasteUrlLine = stringResource(Res.string.crash_paste_url, paste?.url.orEmpty())
+    CrashScreenshotHint(onCopy = onCopy, onShare = { onShare(paste) })
     Scaffold(
         topBar = {
             TopAppBar(
@@ -350,6 +353,10 @@ private fun CrashScreen(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            CrashScreenshotHintText()
 
             Spacer(modifier = Modifier.height(16.dp))
 

@@ -5300,6 +5300,9 @@
     <string name="crash_clear" translatable="false">Clear</string>
     <string name="crash_close" translatable="false">Close</string>
     <string name="crash_copy_logs" translatable="false">Copy logs</string>
+    <string name="crash_screenshot_title" translatable="false">Share the crash report</string>
+    <string name="crash_screenshot_description" translatable="false">Screenshots do not include the details needed to fix a crash. Share the report link or crash log instead.</string>
+    <string name="crash_screenshot_hint" translatable="false">Share the report link or log, not a screenshot.</string>
     <string name="crash_file_size_unit_byte" translatable="false">B</string>
     <string name="crash_file_size_unit_gigabyte" translatable="false">GB</string>
     <string name="crash_file_size_unit_kilobyte" translatable="false">kB</string>

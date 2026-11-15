@@ -62,8 +62,14 @@ fun CrashLogsScreen(
         value = withContext(Dispatchers.Default) { selected?.let { logTextChunks(it.text) }.orEmpty() }
     }
     val clipboard = LocalClipboard.current
+    val reportToShare = selected ?: reports.firstOrNull()
+    CrashScreenshotHint(
+        onCopy = if (reportToShare == null) null else ({ scope.launch { clipboard.setText(reportToShare.text) } }),
+        onShare = reportToShare?.let { report -> { onShare(report.text) } },
+    )
     Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(16.dp)) {
         Text(stringResource(Res.string.crash_logs), style = MaterialTheme.typography.headlineSmall)
+        CrashScreenshotHintText()
         Row {
             TextButton(onClick = {
                 if (selected !=
