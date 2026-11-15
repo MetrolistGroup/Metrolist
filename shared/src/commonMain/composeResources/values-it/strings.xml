@@ -2504,7 +2504,7 @@
     <string name="settings_diagnostic_logs_summary">Leggi e copia il registro diagnostico dell'app</string>
     <string name="settings_log_directory_summary">Esplora i registri salvati nel gestore dei file</string>
     <string name="settings_check_releases_summary">Cerca su GitHub una versione più recente di Metrolist</string>
-    <string name="settings_share_apk_summary">Condividi il pacchetto dell'app installata come file</string>
+    <string name="settings_share_apk_summary">Condivide l'app installata come file</string>
     <string name="settings_system_font_summary">Usa il font fornito dal sistema operativo</string>
     <string name="settings_thumbnail_shape_summary">Scegli la forma delle copertine nel lettore espanso</string>
     <string name="settings_audio_quality_summary">Una qualità maggiore usa più dati e spazio di archiviazione</string>
