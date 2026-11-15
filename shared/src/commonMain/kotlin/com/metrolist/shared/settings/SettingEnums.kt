@@ -172,6 +172,9 @@ enum class MiniPlayerType {
 enum class DensityScale(
     val value: Float,
 ) {
+    MASSIVE(2.00f),
+    HUGE(1.75f),
+    EXTRA_LARGE(1.50f),
     LARGE(1.25f),
     SLIGHTLY_LARGE(1.15f),
     NATIVE(1f),

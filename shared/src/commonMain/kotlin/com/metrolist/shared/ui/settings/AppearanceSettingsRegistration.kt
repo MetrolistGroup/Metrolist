@@ -180,6 +180,9 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                         scale.name,
                         stringResource(
                             when (scale) {
+                                DensityScale.MASSIVE -> Res.string.density_massive
+                                DensityScale.HUGE -> Res.string.density_huge
+                                DensityScale.EXTRA_LARGE -> Res.string.density_extra_large
                                 DensityScale.LARGE -> Res.string.density_large
                                 DensityScale.SLIGHTLY_LARGE -> Res.string.density_slightly_large
                                 DensityScale.NATIVE -> Res.string.density_native
