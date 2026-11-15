@@ -86,6 +86,16 @@ class PlaybackPollingPolicyTest {
     }
 
     @Test
+    fun wakingFromOffloadSleepClearsStallTrackingBeforeLaterBuffering() {
+        val tracker = OffloadSleepStallTracker()
+        tracker.onSleepingForOffload(positionMs = 70_000L, nowMs = 1_000L)
+
+        tracker.reset()
+
+        assertFalse(tracker.shouldDisableOffload(positionMs = 70_000L, expectProgress = true, playbackStalledMs = 8_000L, nowMs = 9_000L))
+    }
+
+    @Test
     fun pcmNetworkBufferingDoesNotConsumeTheOutputStallDeadline() {
         val watchdog = PlaybackProgressWatchdog()
 

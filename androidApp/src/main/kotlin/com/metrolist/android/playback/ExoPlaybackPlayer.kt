@@ -880,6 +880,8 @@ class ExoPlaybackPlayer(
                         positionMs = getRealtimePositionMs(),
                         nowMs = SystemClock.elapsedRealtime(),
                     )
+                } else if (!sleepingForOffload) {
+                    offloadSleepStallTracker.reset()
                 }
                 recordPlaybackState("Android offload sleep changed.")
             }
@@ -2155,6 +2157,7 @@ class ExoPlaybackPlayer(
         nextPlayerListener?.let(candidate::removeListener)
         nextPlayerListener = null
         exo = candidate
+        offloadSleepStallTracker.reset()
         sabrPlaybackCache.release(activeAudioSource)
         activeAudioSource?.closePlaybackSource()
         activeVideoSource?.closePlaybackSource()
