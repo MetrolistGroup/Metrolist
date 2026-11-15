@@ -807,7 +807,7 @@
     <string name="search_songs_artists_podcasts">Rechercher des titres, artistes, podcasts</string>
     <string name="account_login_with_token">Se connecter avec un jeton</string>
     <string name="token_login_title">Jeton de connexion</string>
-    <string name="token_adv_login_description"></string>
+    <string name="token_adv_login_description">Il s'agit d'une méthode de connexion avancée. En guise d'alternative au portail web, vous pouvez saisir ou mettre à jour directement votre jeton de connexion ici.\nCela permet, par exemple, d'accélérer la connexion sur plusieurs appareils.\nVeuillez noter que tout jeton dont le format est invalide — et que l'application ne parvient donc pas à interpréter — sera rejeté.\n\nNe partagez jamais ce jeton.</string>
     <string name="token_login_sensitive_warning_title">Ce jeton contient des données sensibles.</string>
     <string name="account_sign_in">Se connecter</string>
     <string name="menu_sign_in">Connexion…</string>
@@ -2434,7 +2434,7 @@
     <string name="metroeq">MetroEQ</string>
     <string name="metroeq_preset_rock">Rock</string>
     <string name="metroeq_save_as">Sauvegarde</string>
-    <string name="metroeq_peak_reduction">Protection : %1$s dB</string>
+    <string name="metroeq_peak_reduction">Protection: %1$s dB</string>
     <string name="metroeq_preset_bass">Boost des basses</string>
     <string name="metroeq_presets">Préréglages</string>
     <string name="download_error_incomplete">YouTube n'a pas fourni le fichier audio complet. Veuillez réessayer plus tard ou utilisez un autre réseau.</string>
@@ -2591,4 +2591,6 @@
     <string name="devtools_render_backend_direct3d">Direct3D</string>
     <string name="lyrics_active_by_real_timing">Mettre en surbrillance les paroles en fonction de leurs horodatages</string>
     <string name="lyrics_active_by_real_timing_description">Mettez en surbrillance chaque ligne uniquement pendant la durée qui lui est propre, même lorsque les lignes se chevauchent.</string>
+    <string name="playback_event_log_raw_description">Diagnostics de lecture en continu. Copiez ou exportez ce journal brut en cas de problème lors de la lecture.</string>
+    <string name="library_grid_columns">Colonnes de la grille de la bibliothèque</string>
 </resources>
