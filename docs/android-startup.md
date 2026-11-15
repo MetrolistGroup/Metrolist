@@ -8,6 +8,8 @@ Backup restore finishes before infrastructure and database readers initialize. K
 
 `App.infrastructureReady` permits platform/session objects after DI, locale, migration checks and notification channels. `App.startup.await()` also waits for liked songs, saved accounts and database-dependent setup. Controllers, browsing, downloads, widgets and activity content must wait for completion.
 
+The recognition status collector skips widget updates when Android provides no app-widget service.
+
 Saved account restoration runs on I/O. Apply its result only while the originating credentials and visitor data still match. Login, logout and account changes invalidate pending work.
 
 Samsung's quick-panel "Play music" chooser sends `android.intent.action.MUSIC_PLAYER` in [decompiled SystemUI](https://github.com/488315/android_samsung_frameworks_base/blob/d7c13fe69a1ad46f8dff0254f1abd32596fef5cd/packages/SystemUI/src/com/android/systemui/media/PlayLastSongHelper.java#L109-L119). `MainActivity` accepts this action with `CATEGORY_DEFAULT` and opens the app without requesting playback.

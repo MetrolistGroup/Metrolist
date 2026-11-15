@@ -74,7 +74,7 @@ object RecognizerWidgets : KoinComponent {
     private val imageLoader: ImageLoader by inject()
 
     suspend fun update(context: Context) {
-        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val appWidgetManager = AppWidgetManager.getInstance(context) ?: return
         val widgetIds = appWidgetManager.getAppWidgetIds(ComponentName(context, RecognizerWidgetReceiver::class.java))
         if (widgetIds.isEmpty()) return
         val status = MusicRecognitionService.status.value
