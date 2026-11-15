@@ -2035,7 +2035,7 @@
     <string name="download_error_network">Échec de la connexion. Vérifiez votre connexion et réessayez.</string>
     <string name="download_error_generic">Échec du téléchargement. Veuillez réessayer.</string>
     <string name="amazon_music_marketplace">Choisissez votre région Amazon Music</string>
-    <string name="import_cancelled_partial">Importation annulée. Destination : %2$s. Titres enregistrés : au moins %1$d. Pour continuer, relancez l'importation et choisissez cette destination.</string>
+    <string name="import_cancelled_partial">%1$dImportation annulée. Destination : %2$s. Titres enregistrés : au moins %1$d. Pour continuer, relancez l'importation et choisissez cette destination.</string>
     <string name="recognition_history_save_failed">Impossible d'enregistrer ce titre dans l'historique des titres identifiés.</string>
     <string name="device_connect_server_failed">Impossible de démarrer la connexion entre appareils. Vérifiez votre réseau et réessayez.</string>
     <string name="device_connect_discovery_failed">Échec de la recherche d'appareils. Vérifiez l'accès au réseau local et relancez la recherche.</string>
@@ -2422,7 +2422,7 @@
     <string name="login">Se connecter</string>
     <string name="scrobble_login_failed">Échec de la connexion</string>
     <string name="together">Ensemble</string>
-    <string name="equalizer_create_custom">Créer un profil</string>
+    <string name="equalizer_create_custom">Nouveau profil</string>
     <string name="metroeq_profiles">Profils sauvegardés</string>
     <string name="metroeq_preset_treble">Boost des aigus</string>
     <string name="metroeq_preset_flat">Plat</string>
@@ -2433,7 +2433,7 @@
     <string name="metroeq_preset_vocal">Boost des voix</string>
     <string name="metroeq">MetroEQ</string>
     <string name="metroeq_preset_rock">Rock</string>
-    <string name="metroeq_save_as">Sauvegarde</string>
+    <string name="metroeq_save_as">Sauvegarder</string>
     <string name="metroeq_peak_reduction">Protection contre les pics : %1$s dB</string>
     <string name="metroeq_preset_bass">Boost des basses</string>
     <string name="metroeq_presets">Préréglages</string>
@@ -2447,7 +2447,7 @@
     <string name="system_equalizer_unavailable">L'égaliseur système n'est pas disponible.</string>
     <string name="download_filter_in_playlist">Dans une playlist</string>
     <string name="download_filter_not_in_playlist">Dans aucune playlist</string>
-    <string name="download_filter_unavailable">Impossible de charger la playlist entièrement. Affichage des téléchargements. Veuillez réessayer pour appliquer le filtre.</string>
+    <string name="download_filter_unavailable">Impossible de charger entièrement la playlist. Les titres téléchargés sont affichés. Réessayez pour appliquer le filtre.</string>
     <string name="statistics_share">Partagez vos statistiques d'écoute</string>
     <string name="statistics_save_image">Sauvegardez vos statistiques en tant qu'image</string>
     <string name="statistics_share_failed">Impossible de partager vos statistiques. Veuillez réessayer.</string>
@@ -2495,7 +2495,7 @@
     <string name="artist_photo_view_on_lastfm">Voir sur Last.fm</string>
     <string name="artist_photo_open_original">Ouvrir l'originale</string>
     <string name="artist_photo_content_description">Photo de %1$s</string>
-    <string name="artist_photo_uploaded">Importée %1$s</string>
+    <string name="artist_photo_uploaded">Importée le %1$s</string>
     <string name="artist_photo_view_author">Voir le profil Last.fm de l'auteur</string>
     <string name="artist_photo_details_unavailable">Détails de l'image indisponibles</string>
     <string name="android_auto_quick_add_playlist">Ajout rapide à la playlist</string>
@@ -2510,14 +2510,14 @@
     <string name="token_login_save_failed">Impossible de vérifier et de sauvegarder le jeton. Vérifiez votre connexion et votre jeton puis réessayez.</string>
     <string name="playback_reconnecting">Reconnexion…</string>
     <string name="keep_paused_on_song_change">Laisser en pause lors du changement du titre</string>
-    <string name="keep_paused_on_song_change_description">La lecture reste en pause quand vous passez le titre ou en sélectionnez un autre</string>
+    <string name="keep_paused_on_song_change_description">La lecture reste en pause quand vous changez de titre</string>
     <string name="error_audio_output_unavailable">La sortie audio n'est pas disponible. Vérifiez les paramètres de votre appareil puis réessayez.</string>
     <string name="playlist_removed_from_youtube">Cette playlist n'est plus disponible sur YouTube Music et a été retirée de votre bibliothèque. Les titres téléchargés sont toujours disponibles.</string>
     <string name="mini_player_cookie_artwork">Pochette en forme de biscuit</string>
     <string name="mini_player_shape_motion">Rotation du biscuit pendant la lecture</string>
     <string name="mini_player_progress_overlay">Barre de progression circulaire</string>
     <string name="mini_player_artwork_playback">Appuyer sur la pochette pour mettre en pause</string>
-    <string name="mini_player_play_pause_button">Bouton Lecture/pause</string>
+    <string name="mini_player_play_pause_button">Bouton lecture/pause</string>
     <string name="lyrics_provider_user">Utilisateur</string>
     <string name="lyrics_editor_title">Modifier %1$s</string>
     <string name="lyrics_editor_earlier">-0,5 s</string>
