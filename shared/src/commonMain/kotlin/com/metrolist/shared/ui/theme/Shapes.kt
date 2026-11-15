@@ -26,7 +26,7 @@ object ComponentShapes {
     val BottomSheetShape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
     val SmallThumbnailShape get() = RoundedCornerShape(uiEnhanced(4.dp, 8.dp))
     val ThumbnailShape get() = RoundedCornerShape(uiEnhanced(6.dp, 12.dp))
-    val AlbumArtShape get() = RoundedCornerShape(uiEnhanced(16.dp, 32.dp))
+    val AlbumArtShape get() = RoundedCornerShape(uiEnhanced(16.dp, 24.dp))
     val MenuExteriorShape = RoundedCornerShape(28.dp)
     val MenuGroupShape = RoundedCornerShape(20.dp)
     val MenuItemShape = RoundedCornerShape(8.dp)

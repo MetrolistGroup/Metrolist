@@ -53,7 +53,7 @@ fun MetrolistTypography(localeList: LocaleList = currentAppLocaleList()): Typogr
         displayMedium =
             TextStyle(
                 fontFamily = font,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 45.sp,
                 localeList = localeList,
                 lineHeight = 52.sp,
@@ -62,7 +62,7 @@ fun MetrolistTypography(localeList: LocaleList = currentAppLocaleList()): Typogr
         displaySmall =
             TextStyle(
                 fontFamily = font,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 36.sp,
                 localeList = localeList,
                 lineHeight = 44.sp,
@@ -71,7 +71,7 @@ fun MetrolistTypography(localeList: LocaleList = currentAppLocaleList()): Typogr
         headlineLarge =
             TextStyle(
                 fontFamily = font,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 32.sp,
                 localeList = localeList,
                 lineHeight = 40.sp,
@@ -80,7 +80,7 @@ fun MetrolistTypography(localeList: LocaleList = currentAppLocaleList()): Typogr
         headlineMedium =
             TextStyle(
                 fontFamily = font,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 28.sp,
                 localeList = localeList,
                 lineHeight = 36.sp,
@@ -89,7 +89,7 @@ fun MetrolistTypography(localeList: LocaleList = currentAppLocaleList()): Typogr
         headlineSmall =
             TextStyle(
                 fontFamily = font,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 24.sp,
                 localeList = localeList,
                 lineHeight = 32.sp,
@@ -107,7 +107,7 @@ fun MetrolistTypography(localeList: LocaleList = currentAppLocaleList()): Typogr
         titleMedium =
             TextStyle(
                 fontFamily = font,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Medium,
                 fontSize = 16.sp,
                 localeList = localeList,
                 lineHeight = 24.sp,
@@ -116,7 +116,7 @@ fun MetrolistTypography(localeList: LocaleList = currentAppLocaleList()): Typogr
         titleSmall =
             TextStyle(
                 fontFamily = font,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Medium,
                 fontSize = 14.sp,
                 localeList = localeList,
                 lineHeight = 20.sp,

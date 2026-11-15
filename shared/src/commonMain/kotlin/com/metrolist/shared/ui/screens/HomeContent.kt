@@ -228,7 +228,7 @@ fun HomeContent(
             state = listState,
             modifier = Modifier.fillMaxSize().nestedScroll(paginationScrollConnection).desktopArrowScroll(listState),
             contentPadding = contentPadding,
-            verticalArrangement = Arrangement.spacedBy(if (isWide) 16.dp else 8.dp),
+            verticalArrangement = Arrangement.spacedBy(if (isWide) 20.dp else 12.dp),
         ) {
             header?.invoke(this)
 
