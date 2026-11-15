@@ -23,6 +23,20 @@ Substitute the downloaded filename. Check playback, sign-in and retained credent
 
 On Arch Linux, install the community-maintained [`metrolist-desktop-bin`](https://aur.archlinux.org/packages/metrolist-desktop-bin) package, which wraps the x86_64 release AppImage, for example with `yay -S metrolist-desktop-bin`. Update it through your AUR helper instead of replacing the AppImage.
 
+## Homebrew
+
+On x86_64 or ARM64 Linux with [Homebrew](https://brew.sh), the [Metrolist tap](https://github.com/MetrolistGroup/homebrew-tap) unpacks the release AppImage, so FUSE is not needed:
+
+```sh
+brew trust metrolistgroup/tap
+brew install metrolistgroup/tap/metrolist
+metrolist
+```
+
+Homebrew only installs from trusted taps, so `brew trust` is needed once.
+
+`brew info metrolistgroup/tap/metrolist` shows how to add the desktop entry to your application menu. Update with `brew upgrade metrolist`.
+
 ## Nix
 
 The repository flake wraps the release AppImage for x86_64 and aarch64 Linux. Run it once, or install it into your profile:

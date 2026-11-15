@@ -116,6 +116,7 @@ DO NOT REMOVE THIS SECTION, I WANT TO ADD IT LATER!!!
         </a>
       </p>
       <p><sub>Unsigned app, you need to trust it first</sub></p>
+      <p><sub>Or install with <a href="docs/install/macos.md#homebrew">Homebrew</a></sub></p>
     </td>
     <td align="center" valign="top" width="33%">
       <h2>iOS</h2>
@@ -158,6 +159,7 @@ DO NOT REMOVE THIS SECTION, I WANT TO ADD IT LATER!!!
       <p>
         <a href="docs/install/linux.md#nix"><img alt="Get the Nix flake" src="assets/badges/platform/linux-nix.svg"></a>
       </p>
+      <p><sub>Or install with <a href="docs/install/linux.md#homebrew">Homebrew</a></sub></p>
     </td>
     <td align="center" valign="top" width="33%">
       <h2>Android stores</h2>
