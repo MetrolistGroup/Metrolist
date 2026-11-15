@@ -296,15 +296,3 @@ Preserve these rules when changing workflows:
 - Measure cache changes on hosted runners with cold and repeated warm runs. Local timings do not establish CI speedups.
 
 Arch verification restores the unprivileged builder's Gradle caches and wrapper from a separate OS, architecture and dependency-scoped cache. Only successful pushes to main save it. It does not persist the project configuration cache.
-
-## Automated issue and PR triage
-
-[LLM triage](../.github/workflows/llm-triage.yml) runs when an issue or PR opens or reopens. It skips bots and PRs from owners, members and collaborators. It reads only the default branch's script and AGENTS.md, never PR code. The repository secret `OPENROUTER_API_KEY` enables the OpenRouter request; missing credentials, failed reads or requests, and invalid responses leave the item unchanged.
-
-The script posts to [OpenRouter's Decisions API](https://openrouter.ai/docs/api/api-reference/alphadecisions/submit-a-decisions-request) with model `perplexity/pplx-decider-flash-v1.2`. The JSON `state` contains the title, up to 12,000 body characters, author association, repository label descriptions, rejected-feature policy and rules, and up to ten same-repository duplicate candidates. The questions treat item metadata as untrusted data. They ask for a verdict, a candidate number or `none`, a zero-based rule index or `none`, and one `noul` probability for each existing allowlisted label.
-
-The script adds a label only when its `noul` probability is at least 0.7 and never removes labels. Closure requires both the selected verdict probability and the selected evidence probability to be at least 0.85. Evidence must identify a supplied duplicate candidate or an exact rejected-feature rule. PRs can close only for a rejected feature. The script uses the selected entries in `probabilities`, not the response's separate `confidence` values. Missing or invalid answers and request timeouts leave the item unchanged.
-
-The `keep` verdict posts no comment. Other verdicts use fixed English templates. `needs_info` asks for the app version, device and OS, reproduction steps and a Devtools playback log. Duplicate comments link the candidate, and rejected-feature comments quote the rule with mentions and markup neutralized. Each comment includes the reopening note and hidden bot marker. The marker prevents the same verdict from commenting or closing again after reopening.
-
-For verdicts with a comment, the script records it before adding labels or closing. If a later write fails, the job fails and any missing action must be applied manually; reruns preserve the marker instead of repeating it. A `keep` verdict can reapply labels on reruns without posting a comment. Run the Node tests above, `actionlint`, and `python3 -m unittest discover -s .github/tests` when changing triage. Tests mock the Decisions response and never call the live API.

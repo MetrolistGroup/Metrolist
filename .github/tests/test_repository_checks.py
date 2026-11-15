@@ -84,8 +84,6 @@ class RepositoryChecksTest(unittest.TestCase):
             'scripts/metromem',
             'desktopApp/packaging-launchers.gradle.kts',
             '.github/actions/upload-desktop-sentry/verify_metadata.py',
-            '.github/scripts/llm-triage.cjs',
-            '.github/scripts/llm-triage.test.cjs',
             '.githooks/pre-commit',
             '.githooks/commit-msg',
         }
