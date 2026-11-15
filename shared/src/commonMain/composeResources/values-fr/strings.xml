@@ -2059,7 +2059,7 @@
     <string name="search_history_keyboard_hint">Utilisez ↑/↓ pour sélectionner, Entrée pour rechercher ou Suppr pour supprimer.</string>
     <string name="video_stats_codec_bitrate_value">%1$s (%2$d kbit/s)</string>
     <string name="video_stats_resolution_optimal_value">%1$s (Optimale : %2$s)</string>
-    <string name="video_stats_fps_value">%1$s / %2$s nominal</string>
+    <string name="video_stats_fps_value">%1$s / %2$s nominal</string>
     <string name="video_stats_dropped_frames_value">%1$d / %2$d images perdues (%3$s%)</string>
     <string name="video_stats_av_sync_value">%1$s ms (PTS : %2$s | Audio : %3$s)</string>
     <string name="video_stats_latency_value">%1$s ms</string>
@@ -2395,8 +2395,8 @@
     <string name="settings_cast_title">Cast</string>
     <string name="about_play_favorite_song">Lire son titre préféré ?</string>
     <string name="recognition_match_found">Trouvé</string>
-    <string name="no_recognized_songs_hint">Les titres identifiés avec la fonction de reconnaissance musicale apparaîtront ici</string>
-    <string name="recognition_no_match_message">Impossible d'identifier ce titre</string>
+    <string name="no_recognized_songs_hint">Les titres identifiés avec la fonction de reconnaissance musicale apparaîtront ici.</string>
+    <string name="recognition_no_match_message">Impossible d'identifier ce titre.</string>
     <string name="lyrics_offset_earlier">%1$d ms plus tôt</string>
     <string name="lyrics_offset_later">%1$d ms plus tard</string>
     <string name="lyrics_offset_in_sync">Aucun décalage</string>
@@ -2581,8 +2581,8 @@
     <string name="remove_from_recent_question">Supprimer les éléments récents ?</string>
     <string name="cast_playback_failed">Le périphérique de diffusion n'a pas pu effectuer cette lecture.</string>
     <string name="desktop_tray_toggle_on_click">Afficher ou masquer en cliquant sur la barre d'état système</string>
-    <string name="desktop_tray_toggle_on_click_desc">Un clic gauche sur l'icône de la barre d'état système ouvrira ou fermera la fenêtre de Metrolist.</string>
-    <string name="import_error_no_library_matches">Aucun morceau n'a pu être associé à la bibliothèque musicale.</string>
+    <string name="desktop_tray_toggle_on_click_desc">Un clic gauche sur l'icône de la zone de notification permet d'ouvrir ou de fermer la fenêtre de Metrolist</string>
+    <string name="import_error_no_library_matches">Aucun morceau n'a pu être associé à la bibliothèque musicale</string>
     <string name="playback_event_log_raw_empty">Aucun événement de lecture n'a encore été enregistré. Lancez la lecture d'un morceau pour obtenir des informations de diagnostic.</string>
     <string name="ai_setup_credit_hint">Vérifiez le solde de votre compte ainsi que la limite de crédit associée à votre clé OpenRouter. Une clé OAuth peut disposer de sa propre limite. Réessayez une fois cette limite ajustée.</string>
     <string name="ai_setup_busy_hint">Les modèles gratuits disponibles sont temporairement occupés. Veuillez réessayez plus tard.</string>
