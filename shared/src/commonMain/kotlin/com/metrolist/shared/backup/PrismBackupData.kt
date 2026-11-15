@@ -29,14 +29,7 @@ internal fun ForeignLibrary.withPrismArtistPreferences(xml: String?): ForeignLib
     if (xml.contains("<!DOCTYPE", ignoreCase = true)) throw UnsupportedForeignLibraryException()
     val favorites =
         runCatching {
-            val stringElements = Regex("""<string\b([^>]*)>(.*?)</string>""", RegexOption.DOT_MATCHES_ALL)
-            val attributes = Regex("""\bname\s*=\s*(['"])(.*?)\1""")
-            val value =
-                stringElements
-                    .findAll(xml)
-                    .firstOrNull { match -> attributes.find(match.groupValues[1])?.groupValues?.get(2) == "favorites" }
-                    ?.groupValues
-                    ?.get(2) ?: return this
+            val value = findPrismFavoritesValue(xml) ?: return this
             val cdata = Regex("""^<!\[CDATA\[(.*)]]>$""", RegexOption.DOT_MATCHES_ALL).matchEntire(value.trim())?.groupValues?.get(1)
             val json = cdata ?: decodePrismXmlEntities(value)
             Json.parseToJsonElement(json).jsonArray.map { item ->
@@ -50,6 +43,47 @@ internal fun ForeignLibrary.withPrismArtistPreferences(xml: String?): ForeignLib
             }
         }.getOrDefault(emptyList())
     return copy(artists = favorites.asReversed() + artists)
+}
+
+private fun findPrismFavoritesValue(xml: String): String? {
+    val attributeName = Regex("""\bname\s*=\s*(['"])(.*?)\1""")
+    var searchFrom = 0
+    while (searchFrom < xml.length) {
+        val open = xml.indexOf("<string", searchFrom)
+        if (open < 0) return null
+        val nameEnd = open + "<string".length
+        if (nameEnd < xml.length && !xml[nameEnd].isWhitespace() && xml[nameEnd] != '>') {
+            searchFrom = nameEnd
+            continue
+        }
+        val tagEnd = findPrismXmlTagEnd(xml, nameEnd) ?: return null
+        val attributes = xml.substring(nameEnd, tagEnd)
+        if (attributeName.find(attributes)?.groupValues?.get(2) == "favorites") {
+            val valueStart = tagEnd + 1
+            val close = xml.indexOf("</string>", valueStart)
+            return close.takeIf { it >= 0 }?.let { xml.substring(valueStart, it) }
+        }
+        searchFrom = tagEnd + 1
+    }
+    return null
+}
+
+private fun findPrismXmlTagEnd(
+    xml: String,
+    from: Int,
+): Int? {
+    var quote: Char? = null
+    for (index in from until xml.length) {
+        val char = xml[index]
+        if (quote != null) {
+            if (char == quote) quote = null
+        } else if (char == '\'' || char == '"') {
+            quote = char
+        } else if (char == '>') {
+            return index
+        }
+    }
+    return null
 }
 
 private val PRISM_XML_ENTITY = Regex("""&(#x[0-9a-fA-F]+|#[0-9]+|lt|gt|quot|apos|amp);""")

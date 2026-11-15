@@ -97,6 +97,18 @@ class PrismBackupImportTest {
     }
 
     @Test
+    fun malformedPreferencesWithManyUnclosedStringTagsAreIgnored() {
+        val xml = buildString {
+            append("<map>")
+            repeat(3_000) { append("<string name=\"entry$it\">value") }
+            append("</map>")
+        }
+        val library = ForeignLibrary(ForeignLibraryFamily.PRISM, emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+
+        assertTrue(library.withPrismArtistPreferences(xml).artists.isEmpty())
+    }
+
+    @Test
     fun malformedOptionalFavoritesDoNotDiscardValidLibraryCollections() =
         runBlocking {
             val source = sourceDatabase()
