@@ -243,7 +243,7 @@
     <string name="backup_create_success">Sauvegarde créée</string>
     <string name="backup_create_failed">Échec de la création de la sauvegarde</string>
     <string name="restore_failed">Échec de la restauration de la sauvegarde</string>
-    <string name="dismiss">Abandonner</string>
+    <string name="dismiss">Masquer</string>
     <string name="preview">Prévisualisation</string>
     <string name="about">À propos</string>
     <string name="credits_android_lead">Développeur·euse Android principal·e</string>
@@ -365,7 +365,7 @@
     <string name="privacy_settings_title">Confidentialité</string>
     <string name="sentry_reporting">Rapports de plantage et de performances</string>
     <string name="sentry_reporting_desc">Envoie les plantages, les erreurs, les données de performances et des détails de lecture comme les informations du titre à Sentry. Les identifiants sont supprimés.</string>
-    <string name="import_playlist">Importation</string>
+    <string name="import_playlist">Importer</string>
     <string name="playlist_name">Nom de la playlist</string>
     <string name="equalizer">Égaliseur</string>
     <string name="lyrics_timing_unsynced">Non-synchronisées</string>
@@ -508,8 +508,8 @@
         <item quantity="many">%1$d titres importés</item>
         <item quantity="other">%1$d titres importés</item>
     </plurals>
-    <string name="backup_restore_export_desc">Exporte les paramètres, la bibliothèque, les playlists, les titres favoris et l'historique dans un fichier ZIP</string>
-    <string name="backup_restore_import_desc">Restaure une sauvegarde Metrolist puis redémarre l\u0027application</string>
+    <string name="backup_restore_export_desc">Exporter les paramètres, la bibliothèque, les playlists, les titres favoris et l'historique dans un fichier ZIP</string>
+    <string name="backup_restore_import_desc">Restaurer une sauvegarde Metrolist. L'application redémarrera automatiquement.</string>
     <string name="backup_restore_busy">Restauration en cours…</string>
     <string name="backup_sensitive_title">Données sensibles</string>
     <string name="backup_sensitive_message">Cette sauvegarde contient vos clés API, vos identifiants de connexion, vos cookies d\u0027authentification, vos jetons de session et d\u0027autres informations sensibles. Toute personne qui possède ce fichier peut accéder à vos comptes. Conservez-le en lieu sûr et ne le partagez jamais.</string>
@@ -804,7 +804,7 @@
     <string name="go_back">Retour</string>
     <string name="gradient">Dégradé</string>
     <string name="grid_view">Grille</string>
-    <string name="search_songs_artists_podcasts">Rechercher des titres, artistes, podcasts</string>
+    <string name="search_songs_artists_podcasts">Rechercher sur Metrolist</string>
     <string name="account_login_with_token">Se connecter avec un jeton</string>
     <string name="token_login_title">Jeton de connexion</string>
     <string name="token_adv_login_description">Il s'agit d'une méthode de connexion avancée. En guise d'alternative au portail web, vous pouvez saisir ou mettre à jour directement votre jeton de connexion ici.\nCela permet, par exemple, d'accélérer la connexion sur plusieurs appareils.\nVeuillez noter que tout jeton dont le format est invalide — et que l'application ne parvient donc pas à interpréter — sera rejeté.\n\nNe partagez jamais ce jeton.</string>
@@ -1035,14 +1035,14 @@
     <string name="import_provider_amazon_desc">Connectez-vous à Amazon Music ou collez un lien</string>
     <string name="import_provider_youtube_desc">Collez un lien YouTube Music</string>
     <string name="import_paste_spotify_link">Collez un lien Spotify</string>
-    <string name="import_connect_spotify_account">Se connecter avec un compte Spotify</string>
-    <string name="import_connect_apple_music_account">Se connecter avec un compte Apple Music</string>
+    <string name="import_connect_spotify_account">Se connecter à Spotify</string>
+    <string name="import_connect_apple_music_account">Se connecter à Apple Music</string>
     <string name="apple_music_session_sign_in">Connectez-vous à Apple ID dans la fenêtre ci-dessus pour continuer.</string>
     <string name="import_connect_deezer_account">Se connecter à Deezer</string>
     <string name="import_deezer_session_sign_in">Connectez-vous à Deezer dans la fenêtre ci-dessus pour continuer.</string>
-    <string name="import_connect_tidal_account">Se connecter avec un compte Tidal</string>
+    <string name="import_connect_tidal_account">Se connecter à Tidal</string>
     <string name="import_tidal_session_sign_in">Connectez-vous à Tidal dans la fenêtre ci-dessus pour continuer.</string>
-    <string name="import_connect_amazon_music_account">Se connecter avec un compte Amazon Music</string>
+    <string name="import_connect_amazon_music_account">Se connecter à Amazon Music</string>
     <string name="import_amazon_music_session_sign_in">Connectez-vous à Amazon dans la fenêtre ci-dessus pour continuer.</string>
     <string name="import_paste_apple_music_link">Collez un lien Apple Music</string>
     <string name="import_paste_youtube_link">Collez un lien YouTube Music</string>
@@ -1151,7 +1151,7 @@
     <string name="saved">Sauvegardé</string>
     <string name="saved_to_library">Ajouté à la bibliothèque</string>
     <string name="save_episode">Sauvegarder l\u0027épisode</string>
-    <string name="search_recognized_songs">Rechercher un titre</string>
+    <string name="search_recognized_songs">Rechercher dans l'historique</string>
     <string name="search_songs">Rechercher un titre</string>
     <string name="see_all">Voir tout</string>
     <string name="select_track_by_artist">Sélectionner %1$s de %2$s</string>
@@ -1637,9 +1637,9 @@
     <string name="no_logs_available">Aucun journal disponible</string>
     <string name="export_logs">Exporter les journaux</string>
     <string name="create_backup">Sauvegarder</string>
-    <string name="create_backup_desc">Exporte les paramètres, la bibliothèque, les playlists, les titres favoris et l\u0027historique dans un fichier ZIP</string>
+    <string name="create_backup_desc">Exporter les paramètres, la bibliothèque, les playlists, les titres favoris et l'historique dans un fichier ZIP</string>
     <string name="restore_backup">Restaurer</string>
-    <string name="restore_backup_desc">Restaure une sauvegarde Metrolist puis redémarre l\u0027application</string>
+    <string name="restore_backup_desc">Restaurer une sauvegarde Metrolist (bureau ou Android). L'application redémarrera automatiquement.</string>
     <string name="sensitive_backup">Données sensibles</string>
     <string name="restore_backup_confirm">Restaurer la sauvegarde ?</string>
     <string name="restore">Restaurer</string>
@@ -2023,7 +2023,7 @@
     <string name="listen_together_pending_approvals">Approbations en attente</string>
     <string name="onboarding_library_migrated_title">Votre bibliothèque a été importée.</string>
     <string name="onboarding_continue_without_migration">Continuer avec une bibliothèque vide</string>
-    <string name="onboarding_migration_recovery_description">Vous pouvez réessayer ou continuer avec une bibliothèque vide. Une copie de récupération de votre base de données d'origine restera sur cet appareil. Vous pourrez restaurer une sauvegarde après la configuration.</string>
+    <string name="onboarding_migration_recovery_description">Vous pouvez réessayer ou continuer avec une bibliothèque vide. Une copie de récupération de votre base de données d'origine va rester sur cet appareil. Vous pourrez restaurer une sauvegarde après la configuration.</string>
     <string name="onboarding_migration_failed">Impossible de préparer votre bibliothèque. Vos données d'origine ont été conservées.</string>
     <string name="onboarding_library_migrated_description">Vos playlists, votre historique, vos favoris et les données de votre bibliothèque sont prêts à être utilisés.</string>
     <string name="onboarding_notifications_denied">Les notifications sont désactivées. Vous pouvez les activer plus tard dans les paramètres Android de l'application ou choisir Non pour continuer.</string>
@@ -2167,7 +2167,7 @@
     <string name="lyrics_plus_lighter_desc">Éclaire les paroles avec l'effet plus-lighter si l'arrière-plan "Fluide" est activé</string>
     <string name="privacy_diagnostics">Diagnostics</string>
     <string name="foreign_import_title">Importer depuis une autre application</string>
-    <string name="foreign_import_desc">Importez vos titres favoris, playlists et historique d'écoute depuis une sauvegarde InnerTune, OuterTune, ViMusiv, RiMusic, Kreate, SimpMusic ou Prism. Votre bibliothèque actuelle est conservée.</string>
+    <string name="foreign_import_desc">Importer vos titres favoris, playlists et historique d'écoute depuis une sauvegarde InnerTune, OuterTune, ViMusiv, RiMusic, Kreate, SimpMusic ou Prism. Votre bibliothèque actuelle est conservée.</string>
     <string name="foreign_import_success">%1$d titres, %2$d favoris, %3$d playlists et %4$d écoutes importés</string>
     <string name="foreign_import_unsupported">La sauvegarde ne provient pas d'une application supportée.</string>
     <string name="foreign_import_failed">Échec de l'importation : %1$s</string>
@@ -2341,7 +2341,7 @@
     <string name="statistics_period_summary_no_time">%1$s : %2$s.</string>
     <string name="seek_seconds_addup">Avance rapide progressive</string>
     <string name="seek_seconds_addup_desc">Augmente la valeur du saut de l'avance rapide à chaque double appui</string>
-    <string name="token_login_sensitive_warning_generic">NE PARTAGEZ PAS le jeton.</string>
+    <string name="token_login_sensitive_warning_generic">NE PARTAGEZ PAS ce jeton.</string>
     <string name="legacy_shuffle">Lecture aléatoire alternative</string>
     <string name="legacy_shuffle_desc">Mélange tous les titres dont ceux déjà lus, celui en cours de lecture reste en première position. Désactiver pour utiliser la lecture aléatoire KMP : les titres déjà lus restent en place, seuls les titres suivants sont mélangés.</string>
     <string name="artist_subscriber_count">%1$s abonnés</string>
@@ -2411,9 +2411,9 @@
         <item quantity="other">Importez vos playlists</item>
     </plurals>
     <plurals name="import_playlists_notice">
-        <item quantity="one">Importation de %1$s depuis une playlist. L'importation continue en arrière-plan.</item>
-        <item quantity="many">Importation de %1$s depuis %2$d playlists. L'importation continue en arrière-plan.</item>
-        <item quantity="other">Importation de %1$s depuis %2$d playlists. L'importation continue en arrière-plan.</item>
+        <item quantity="one">%1$s vont être importés depuis une playlist. L'importation va s'effectuer en arrière-plan, vous recevrez une notification quand elle sera terminée.</item>
+        <item quantity="many">%1$s vont être importés depuis %2$d playlists. L'importation va s'effectuer en arrière-plan, vous recevrez une notification quand elle sera terminée.</item>
+        <item quantity="other">%1$s vont être importés depuis %2$d playlists. L'importation va s'effectuer en arrière-plan, vous recevrez une notification quand elle sera terminée.</item>
     </plurals>
     <string name="settings_storage_summary">%1$s utilisés • %2$s disponibles</string>
     <string name="live">EN DIRECT</string>
