@@ -281,6 +281,8 @@ The shared playback log keeps the latest 500 events in a ring buffer. Recording 
 
 Android, desktop and iOS use the shared settings registry. The settings shell owns navigation for registered pages, including platform-rendered ones, which reuse its title and Back action. At 840 dp and wider, category selection and search replace the detail pane, and nested pages show Back inside it. Search and reopening restore a page's registered parent path. Hosts mark external actions explicitly. Only a visible collapsing toolbar attaches its own nested-scroll connection. Custom pages register localized action labels in `SettingsPageRegistration.searchTerms` so search can find them.
 
+Search highlights pair `primaryContainer` with `onPrimaryContainer` for row text and icons. Foreground colors animate with the highlight background and retain disabled opacity.
+
 The theme colour picker appears only while Material You is off. With Material You on, artwork colours apply when enabled, then wallpaper colours on Android 12+, otherwise the default seed. Sliders placed directly in a card have a button that restores the default.
 
 ## Lyrics
