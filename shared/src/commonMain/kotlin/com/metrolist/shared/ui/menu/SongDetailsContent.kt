@@ -91,6 +91,7 @@ import com.metrolist.shared.generated.resources.youtube_music
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.state.GlobalYouTubeRepository
+import com.metrolist.shared.ui.components.Scrollbar
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.loadingShimmer
 import com.metrolist.shared.ui.icons.MetrolistIcons
@@ -102,6 +103,7 @@ import com.metrolist.shared.ui.utils.segmentedGroupShape
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.formatDuration
 import com.metrolist.shared.utils.formatLoudness
+import com.metrolist.shared.utils.isDesktop
 import com.metrolist.shared.utils.parseAudienceCount
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import org.jetbrains.compose.resources.pluralStringResource
@@ -293,13 +295,21 @@ fun SongDetailsContent(
                 Triple(stringResource(Res.string.details), MetrolistIcons.Outlined.Info, details),
                 Triple(stringResource(Res.string.about), MetrolistIcons.Outlined.Description, information),
             ).filter { it.third.isNotEmpty() }
-        SelectionContainer {
-            Column(modifier = modifier.fillMaxWidth().verticalScrollWithDrag(rememberScrollState()).padding(16.dp)) {
-                SongDetailsHeader(title, artistText, thumbnail)
-                Spacer(Modifier.height(16.dp))
-                sections.forEachIndexed { index, (sectionTitle, icon, rows) ->
-                    if (index > 0) Spacer(Modifier.height(4.dp))
-                    SongDetailsSection(sectionTitle, icon, rows, index == 0, index == sections.lastIndex)
+        val scrollState = rememberScrollState()
+        Box(modifier.fillMaxWidth()) {
+            SelectionContainer {
+                Column(modifier = Modifier.fillMaxWidth().verticalScrollWithDrag(scrollState).padding(16.dp)) {
+                    SongDetailsHeader(title, artistText, thumbnail)
+                    Spacer(Modifier.height(16.dp))
+                    sections.forEachIndexed { index, (sectionTitle, icon, rows) ->
+                        if (index > 0) Spacer(Modifier.height(4.dp))
+                        SongDetailsSection(sectionTitle, icon, rows, index == 0, index == sections.lastIndex)
+                    }
+                }
+            }
+            if (isDesktop) {
+                Box(Modifier.matchParentSize()) {
+                    Scrollbar(scrollState, Modifier.align(Alignment.CenterEnd))
                 }
             }
         }
