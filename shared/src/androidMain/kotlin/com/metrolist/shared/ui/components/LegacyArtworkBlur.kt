@@ -1,6 +1,7 @@
 package com.metrolist.shared.ui.components
 
 import android.graphics.Bitmap
+import android.os.Build
 import android.util.LruCache
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -29,7 +30,13 @@ internal suspend fun legacyArtworkBlur(
         legacyArtworkBlurMutex.withLock {
             val key = LegacyArtworkBlurKey(source, source.generationId, radius)
             legacyArtworkBlurCache.get(key)?.let { return@withLock it }
-            val bitmap = if (source.config == Bitmap.Config.HARDWARE) source.copy(Bitmap.Config.ARGB_8888, false) else source
+            // Bitmap.Config.HARDWARE only exists from API 26; reading it earlier throws NoSuchFieldError.
+            val bitmap =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && source.config == Bitmap.Config.HARDWARE) {
+                    source.copy(Bitmap.Config.ARGB_8888, false)
+                } else {
+                    source
+                }
             val scale = ARTWORK_TEXTURE_SIZE.toFloat() / max(bitmap.width, bitmap.height)
             val width = (bitmap.width * scale).roundToInt().coerceAtLeast(1)
             val height = (bitmap.height * scale).roundToInt().coerceAtLeast(1)
