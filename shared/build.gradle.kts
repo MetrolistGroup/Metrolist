@@ -136,7 +136,9 @@ val windowsArm64FfmpegNatives =
     }
 val desktopFfmpegNatives =
     tasks.register<Jar>("desktopFfmpegNatives") {
-        archiveFileName.set("ffmpeg-$ffmpegVersion-$javacppPlatform.jar")
+        // JavaCPP caches natives by JAR name; keep old cached audio libraries out of the new extraction directory.
+        val audioSuffix = if (javacppPlatform.startsWith("linux-")) "-system-audio" else ""
+        archiveFileName.set("ffmpeg-$ffmpegVersion-$javacppPlatform$audioSuffix.jar")
         destinationDirectory.set(layout.buildDirectory.dir("platform-libs"))
         isPreserveFileTimestamps = false
         isReproducibleFileOrder = true
@@ -148,6 +150,10 @@ val desktopFfmpegNatives =
                 exclude("META-INF/MANIFEST.MF", "META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA")
                 exclude("**/ffmpeg", "**/ffmpeg.exe", "**/ffprobe", "**/ffprobe.exe")
                 exclude("META-INF/native-image/**/ffmpeg/**", "META-INF/native-image/**/ffprobe/**")
+                if (javacppPlatform.startsWith("linux-")) {
+                    // Host ALSA and audio-server libraries must use the host's configuration and plugins.
+                    exclude("**/libasound.so*", "**/libpulse*.so*", "**/libjack*.so*", "**/libpipewire-*.so*", "**/libspa-*.so*")
+                }
             }
         }
     }

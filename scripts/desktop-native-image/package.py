@@ -11,6 +11,8 @@ import shutil
 import subprocess
 import zipfile
 
+from verify_linux_audio import verify_linux_audio
+
 ROOT = Path(__file__).resolve().parents[2]
 
 MACOS_JDK_DYLIBS = (
@@ -127,6 +129,7 @@ def package(image, target, destination, version, graal=None):
     if target.startswith('linux-'):
         if target not in ('linux-x64', 'linux-arm64'):
             raise ValueError('Unsupported native package platform')
+        verify_linux_audio([image])
         validate_posix(image, target)
         app = destination / (name + '.AppDir')
         if app.exists():

@@ -8,8 +8,9 @@ let
 in
 appimageTools.wrapType2 {
   inherit pname version src;
+  # alsa-plugins would hide the host's /etc/alsa and its PipeWire configuration in the FHS sandbox.
   extraPkgs = pkgs: with pkgs; [
-    gtk3 webkitgtk_4_1 libsecret dbus alsa-plugins
+    gtk3 webkitgtk_4_1 libsecret dbus
   ];
   extraInstallCommands = ''
     install -Dm644 ${contents}/Metrolist.desktop $out/share/applications/metrolist.desktop

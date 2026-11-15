@@ -431,3 +431,19 @@ tasks
             dependsOn(verifyReleaseDistributableJars)
         }
     }
+
+if (platform == "linux") {
+    val verifyLinuxAudioLibraries =
+        tasks.register<Exec>("verifyLinuxAudioLibraries") {
+            group = "verification"
+            description = "Rejects bundled system audio libraries in the Linux distribution and its JARs."
+            val verifier = rootProject.file("scripts/desktop-native-image/verify_linux_audio.py")
+            val appDirectory = layout.buildDirectory.dir("compose/binaries/main-release/app")
+            inputs.file(verifier)
+            inputs.dir(appDirectory)
+            commandLine("python3", verifier, appDirectory.get().asFile)
+        }
+    tasks.matching { it.name == "createReleaseDistributable" || it.name.startsWith("packageRelease") }.configureEach {
+        finalizedBy(verifyLinuxAudioLibraries)
+    }
+}

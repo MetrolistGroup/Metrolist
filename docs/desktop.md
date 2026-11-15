@@ -26,7 +26,9 @@ With logging enabled, `WindowsWindow` records native minimize and restore sizes 
 
 ## Linux audio setup
 
-Desktop uses bundled FFmpeg to decode audio and Java Sound to send PCM through ALSA. Automatic output selection tries `default`, `pipewire` and `pulse` mixers. It does not select arbitrary hardware, loopback or null outputs.
+Desktop uses bundled FFmpeg to decode audio and Java Sound to send PCM through ALSA. Automatic output selection tries named `default`, `pipewire` and `pulse` mixers before asking Java Sound for its default line. This also supports ALSA devices whose mixer names differ. Preferred mixers keep priority so Java Sound does not select a hardware or loopback output when a system route works.
+
+Linux FFmpeg JARs exclude ALSA, PulseAudio, JACK and PipeWire libraries. JVM distributions, AppImages and native-image builds use the host's audio libraries, configuration and plugins. No Linux target keeps a bundled ALSA fallback. `verifyLinuxAudioLibraries` checks JVM package directories and JARs after packaging, including when other packaging checks are disabled. Native builds check their input classpath before compilation and their output directory before packaging. To check a directory, JAR or tarball directly, run `python3 scripts/desktop-native-image/verify_linux_audio.py <path>`.
 
 PipeWire and PulseAudio hosts need their distribution's ALSA integration. On Arch with PipeWire, install `pipewire-alsa`. If playback progresses silently, check the default ALSA route and restart Metrolist after changing it. An explicit `javax.sound.sampled.SourceDataLine` property delegates selection to Java Sound.
 

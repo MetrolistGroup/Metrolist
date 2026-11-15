@@ -10,6 +10,7 @@ import plistlib
 import struct
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -18,6 +19,7 @@ import zipfile
 import native_image
 import package
 import toolchain
+from verify_linux_audio import verify_linux_audio
 
 
 def jdk_archive():
@@ -199,6 +201,60 @@ class PipelineTest(unittest.TestCase):
             app=root/'dist/metrolist-desktop-native-linux-x64-14.0.0-test.AppDir'
             self.assertTrue(os.access(app/'AppRun',os.X_OK))
             self.assertTrue((app/'resources').is_symlink())
+
+    def test_linux_packages_reject_host_audio_libraries(self):
+        for name in ('libasound.so', 'libasound.so.2', 'libpulse.so.0', 'libpulse-simple.so.0',
+                     'libpulsecommon-17.0.so', 'libjack.so.0', 'libpipewire-0.3.so.0', 'libspa-0.2.so'):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                image = root / 'image'
+                posix_executable(image / 'Metrolist', 'linux-x64')
+                library = image / 'lib' / name
+                posix_executable(library, 'linux-x64')
+                with self.assertRaisesRegex(ValueError, 'host audio libraries'):
+                    package.package(image, 'linux-x64', root / 'dist', '14.0.0-test')
+                library.unlink()
+                library.symlink_to('missing-system-library')
+                with self.assertRaisesRegex(ValueError, 'host audio libraries'):
+                    verify_linux_audio([image])
+
+    def test_linux_verifier_checks_jars_and_tarballs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            jar = root / 'ffmpeg.jar'
+            for library in ('libavcodec.so.62', 'libasound.so.2'):
+                with zipfile.ZipFile(jar, 'w') as archive:
+                    archive.writestr(f'org/bytedeco/ffmpeg/linux-arm64/{library}', b'native')
+                tar = root / 'Metrolist.tar.gz'
+                with tarfile.open(tar, 'w:gz') as archive:
+                    archive.add(jar, arcname='lib/app/ffmpeg.jar')
+                for source in (jar, tar):
+                    if library.startswith('libasound'):
+                        with self.assertRaisesRegex(ValueError, 'libasound.so.2'):
+                            verify_linux_audio([source])
+                    else:
+                        verify_linux_audio([source])
+                jar.unlink()
+                tar.unlink()
+            with tarfile.open(tar, 'w:gz') as archive:
+                archive.addfile(tarfile.TarInfo('lib/libasound.so.2'))
+            with self.assertRaisesRegex(ValueError, 'libasound.so.2'):
+                verify_linux_audio([tar])
+            with self.assertRaisesRegex(ValueError, 'does not exist'):
+                verify_linux_audio([root / 'missing'])
+
+    def test_linux_native_build_rejects_audio_libraries_before_compilation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            jar = work / 'ffmpeg.jar'
+            with zipfile.ZipFile(jar, 'w') as archive:
+                archive.writestr('org/bytedeco/ffmpeg/linux-arm64/libasound.so.2', b'native')
+            (work / 'classpath.txt').write_text(str(jar))
+            for target in ('linux-x64', 'linux-arm64'):
+                with patch.object(native_image, 'host_platform', return_value=target), patch('subprocess.run') as run:
+                    with self.assertRaisesRegex(ValueError, 'libasound.so.2'):
+                        native_image.build(work, work, target)
+                    run.assert_not_called()
 
     def test_posix_architecture_checks_launcher_libraries_and_sidecars(self):
         for target, foreign, library in [('linux-x64', 'linux-arm64', 'libshim.so'), ('linux-arm64', 'linux-x64', 'libavutil.so.60'), ('macos-arm64', 'linux-arm64', 'libjawt.dylib')]:

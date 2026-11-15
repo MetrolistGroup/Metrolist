@@ -13,6 +13,7 @@ import zipfile
 
 from serialization_metadata import generate
 from package import macos_minimum_version
+from verify_linux_audio import verify_linux_audio
 
 ROOT = Path(__file__).resolve().parents[2]
 METADATA = Path(__file__).parent / 'resources/META-INF/native-image/com.metrolist/desktop-experiment'
@@ -174,6 +175,8 @@ def arguments(graal, work, output, target, experiment=False, agent=None, macos_v
 def build(graal, work, target, experiment=False, agent=None):
     if target != host_platform() or target not in ('linux-x64', 'linux-arm64', 'windows-x64', 'macos-arm64'):
         raise ValueError('Native Image must build on its supported target OS and architecture')
+    if target.startswith('linux-'):
+        verify_linux_audio((work / 'classpath.txt').read_text().strip().split(os.pathsep))
     generate((work / 'classpath.txt').read_text().strip().split(os.pathsep), work / 'serialization-config')
     (work / 'native-tmp').mkdir(parents=True, exist_ok=True)
     macos_version = macos_deployment_target(graal) if target == 'macos-arm64' and not experiment else None
