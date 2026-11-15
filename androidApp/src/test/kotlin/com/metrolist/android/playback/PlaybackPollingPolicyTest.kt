@@ -56,6 +56,36 @@ class PlaybackPollingPolicyTest {
     }
 
     @Test
+    fun offloadSleepDisablesOffloadAfterTwoSecondsWithoutProgress() {
+        val tracker = OffloadSleepStallTracker()
+        tracker.onSleepingForOffload(positionMs = 70_000L, nowMs = 1_000L)
+
+        assertFalse(tracker.shouldDisableOffload(positionMs = 70_000L, expectProgress = true, playbackStalledMs = 1_999L, nowMs = 2_999L))
+        assertTrue(tracker.shouldDisableOffload(positionMs = 70_000L, expectProgress = true, playbackStalledMs = 2_000L, nowMs = 3_000L))
+        assertFalse(tracker.shouldDisableOffload(positionMs = 70_000L, expectProgress = true, playbackStalledMs = 3_000L, nowMs = 4_000L))
+    }
+
+    @Test
+    fun playbackProgressRestartsOffloadStallTimeoutWithoutEndingSleepEpisode() {
+        val tracker = OffloadSleepStallTracker()
+        tracker.onSleepingForOffload(positionMs = 70_000L, nowMs = 1_000L)
+
+        assertFalse(tracker.shouldDisableOffload(positionMs = 70_500L, expectProgress = true, playbackStalledMs = 0L, nowMs = 1_500L))
+        assertFalse(tracker.shouldDisableOffload(positionMs = 70_500L, expectProgress = true, playbackStalledMs = 1_999L, nowMs = 3_499L))
+        assertTrue(tracker.shouldDisableOffload(positionMs = 70_500L, expectProgress = true, playbackStalledMs = 2_000L, nowMs = 3_500L))
+    }
+
+    @Test
+    fun pausedOrSuppressedPlaybackDoesNotDisableOffloadUntilProgressIsExpectedAgain() {
+        val tracker = OffloadSleepStallTracker()
+        tracker.onSleepingForOffload(positionMs = 70_000L, nowMs = 1_000L)
+
+        assertFalse(tracker.shouldDisableOffload(positionMs = 70_000L, expectProgress = false, playbackStalledMs = 8_000L, nowMs = 8_000L))
+        assertFalse(tracker.shouldDisableOffload(positionMs = 70_000L, expectProgress = true, playbackStalledMs = 1_999L, nowMs = 9_999L))
+        assertTrue(tracker.shouldDisableOffload(positionMs = 70_000L, expectProgress = true, playbackStalledMs = 2_000L, nowMs = 10_000L))
+    }
+
+    @Test
     fun pcmNetworkBufferingDoesNotConsumeTheOutputStallDeadline() {
         val watchdog = PlaybackProgressWatchdog()
 

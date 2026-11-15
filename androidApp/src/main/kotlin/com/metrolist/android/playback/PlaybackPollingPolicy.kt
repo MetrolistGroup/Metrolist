@@ -43,6 +43,47 @@ internal fun shouldMonitorPlaybackProgress(
     playWhenReady && suppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE && !transitionPending &&
         (playbackState == Player.STATE_READY || (offloadRequested && playbackState == Player.STATE_BUFFERING))
 
+internal class OffloadSleepStallTracker(
+    private val timeoutMs: Long = 2_000L,
+) {
+    private var sleepingForOffload = false
+    private var lastPositionMs = -1L
+    private var lastProgressAtMs = 0L
+
+    fun onSleepingForOffload(
+        positionMs: Long,
+        nowMs: Long,
+    ) {
+        if (sleepingForOffload) return
+        sleepingForOffload = true
+        lastPositionMs = positionMs
+        lastProgressAtMs = nowMs
+    }
+
+    fun shouldDisableOffload(
+        positionMs: Long,
+        expectProgress: Boolean,
+        playbackStalledMs: Long,
+        nowMs: Long,
+    ): Boolean {
+        if (!sleepingForOffload || !expectProgress) return false
+        if (positionMs != lastPositionMs) {
+            lastPositionMs = positionMs
+            lastProgressAtMs = nowMs
+            return false
+        }
+        if (nowMs - lastProgressAtMs < timeoutMs || playbackStalledMs < timeoutMs) return false
+        reset()
+        return true
+    }
+
+    fun reset() {
+        sleepingForOffload = false
+        lastPositionMs = -1L
+        lastProgressAtMs = 0L
+    }
+}
+
 internal fun playbackPollIntervalMs(
     fineProgressActive: Boolean,
     positionMs: Long,
