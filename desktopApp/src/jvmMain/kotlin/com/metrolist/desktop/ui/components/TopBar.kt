@@ -729,7 +729,7 @@ fun WindowScope.TopBarWithPlayer(
                 titlebarContent2()
             }
         }
-    } else if (OsUtil.isLinux && !Settings.shared.enableSystemWindowFrame) {
+    } else if (OsUtil.isLinux) {
         WindowDragHandle(
             isMaximized = UiState.isMaximized,
             onRestoreFromMaximized = onMaximized,
