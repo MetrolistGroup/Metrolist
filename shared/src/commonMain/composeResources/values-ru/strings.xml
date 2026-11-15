@@ -1882,7 +1882,7 @@
     <string name="tempo_and_pitch">Темп и высота тона</string>
     <string name="playback_pitch">Высота тона (полутоны)</string>
     <string name="widget_recognizer_name">Распознаватель музыки</string>
-    <string name="widget_recognizer_description">Узнавайте, какая музыка играет рядом, прямо с главного экрана</string>
+    <string name="widget_recognizer_description">Узнавайте, какая музыка играет рядом, с главного экрана</string>
     <string name="widget_recognizer_tap_to_search">Нажмите, чтобы распознать трек</string>
     <string name="widget_recognizer_processing">Определяем…</string>
     <string name="widget_recognizer_no_match">Совпадений не найдено. Повторите попытку</string>
@@ -2647,4 +2647,9 @@
     <string name="channel_switch_browse_hint">Откройте меню с аватаром на странице YouTube Music, выберите свой канал, а затем выберите %1$s.</string>
     <string name="lyrics_curated_by">(прислано %1$s)</string>
     <string name="hidden_home_items_desc">Отображать и от-скрывать исполнителей и подкасты, скрытые на главной странице. Вручную закреплённые элементы "Быстрого набора" остаются видимыми.</string>
+    <string name="active_lyrics_alignment">Выравнивание текущей строки текста песни</string>
+    <string name="desktop_minimize_to_tray">Сворачивать в трей</string>
+    <string name="desktop_minimize_to_tray_desc">При закрытии окна Metrolist будет сворачиваться в трей вместо завершения работы</string>
+    <string name="desktop_tray_toggle_on_click">Показывать или скрывать при нажатии на значок в трее</string>
+    <string name="desktop_tray_toggle_on_click_desc">Щелчок левой кнопкой мыши по значку в трее откроет или скроет окно Metrolist</string>
 </resources>
