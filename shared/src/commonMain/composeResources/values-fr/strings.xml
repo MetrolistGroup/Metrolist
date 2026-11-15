@@ -1355,7 +1355,7 @@
     <string name="sign_in_discord">Se connecter à Discord</string>
     <string name="discord_sign_in_unavailable">Connexion à Discord indisponible</string>
     <string name="display_density">Mise à l\u0027échelle</string>
-    <string name="density_large">125 \u0025, très élevée</string>
+    <string name="density_large">125 % – Très élevée</string>
     <string name="density_slightly_large">115 \u0025, élevée</string>
     <string name="density_native">100 \u0025, native</string>
     <string name="density_slightly_compact">85 \u0025, légèrement plus faible</string>
@@ -2596,9 +2596,9 @@
     <string name="chip_content_description">%1$s, puce</string>
     <string name="settings_library_grid_columns">Colonnes de la grille de la bibliothèque</string>
     <string name="playlist_picker_library_order">Ordre de la bibliothèque</string>
-    <string name="ai_setup_privacy_hint">Votre politique de données OpenRouter exclut les terminaux de ce modèle. Vérifiez les options « modèle gratuit » et « fournisseur » dans les paramètres de confidentialité d'OpenRouter, puis réessayez.</string>
+    <string name="ai_setup_privacy_hint">Votre politique de données OpenRouter exclut les points de terminaison de ce modèle. Vérifiez les options du modèle gratuit et du fournisseur dans les paramètres de confidentialité d'OpenRouter, puis réessayez.</string>
     <string name="ai_setup_rate_hint">Réessayez dans quelques instants ou choisissez un autre modèle gratuit. OpenRouter limite le nombre de requêtes gratuites par minute et par jour. Changer de modèle ne permet pas toujours de contourner la limite de votre compte.</string>
-    <string name="ai_setup_daily_hint">Réessayez demain ou ajoutez des crédits à votre compte OpenRouter pour augmenter votre limite quotidienne. Changer de modèle ne permet pas de contourner cette limite.</string>
+    <string name="ai_setup_daily_hint">Réessayez demain ou ajoutez des crédits dans OpenRouter pour augmenter votre limite quotidienne. Changer de modèle ne permet pas de contourner cette limite.</string>
     <string name="ai_setup_minute_hint">Attendez que la limite de requêtes par minute d'OpenRouter soit réinitialisée, puis réessayez. Changer de modèle ne permettra pas de contourner cette limite.</string>
     <string name="ai_setup_verify_description">Envoie un court échantillon à traduire au modèle sélectionné. La traduction n'est activée que si le test est réussi.</string>
     <string name="account_keyring_required">Metrolist a besoin d'accéder au trousseau système pour restaurer votre compte. Veuillez déverrouiller le trousseau. Metrolist réessaiera automatiquement.</string>
@@ -2608,4 +2608,7 @@
     <string name="blocked_songs_empty">Aucun titre masqué</string>
     <string name="content_undo_hint">Vous pouvez annuler cette action dans %1$s.</string>
     <string name="content_undo_path">%1$s &gt; %2$s &gt; %3$s</string>
+    <string name="density_massive">200 % – Gigantesque</string>
+    <string name="density_huge">175 % – Énorme</string>
+    <string name="density_extra_large">150 % – Hyper élevée</string>
 </resources>
