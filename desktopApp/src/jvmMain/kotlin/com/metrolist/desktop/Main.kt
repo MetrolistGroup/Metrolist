@@ -1284,6 +1284,7 @@ private fun runDesktopApp(args: Array<String>) {
                         }
                     },
                     onCloseWindow = { minimizeToTrayOrClose() },
+                    onQuit = { shutdownApp { exitProcess(0) } },
                 )
             }
 

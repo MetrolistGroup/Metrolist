@@ -38,6 +38,7 @@ import com.metrolist.desktop.storage.DownloadState
 import com.metrolist.desktop.utils.MacMenuBarTemplateHelper
 import com.metrolist.desktop.utils.ThemeUtils
 import com.metrolist.shared.generated.resources.Res
+import com.metrolist.shared.generated.resources.close
 import com.metrolist.shared.generated.resources.home
 import com.metrolist.shared.generated.resources.menu_about_metrolist
 import com.metrolist.shared.generated.resources.menu_account
@@ -154,6 +155,7 @@ fun FrameWindowScope.DesktopMenuBar(
     toggleWindowFullscreen: () -> Unit,
     onRefresh: () -> Unit,
     onCloseWindow: () -> Unit,
+    onQuit: () -> Unit,
 ) {
     val currentTrack = PlayerState.currentTrack
     val isTrackActive = currentTrack != null
@@ -265,8 +267,13 @@ fun FrameWindowScope.DesktopMenuBar(
             )
             Separator()
             Item(
-                text = stringResource(Res.string.tray_quit_metrolist),
+                text = stringResource(Res.string.close),
                 onClick = onCloseWindow,
+                shortcut = KeyShortcut(Key.W, meta = true),
+            )
+            Item(
+                text = stringResource(Res.string.tray_quit_metrolist),
+                onClick = onQuit,
                 shortcut = KeyShortcut(Key.Q, meta = true),
             )
         }
