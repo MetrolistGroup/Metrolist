@@ -876,15 +876,7 @@ class ExoPlaybackPlayer(
             override fun onSleepingForOffloadChanged(sleepingForOffload: Boolean) {
                 if (source !== exo) return
                 if (sleepingForOffload && offloadRequested()) {
-                    val isLive =
-                        currentResource?.isLive == true || currentSongValue?.isLive == true || source.isCurrentMediaItemLive
                     offloadSleepStallTracker.onSleepingForOffload(
-                        positionMs =
-                            playbackProgressPositionMs(
-                                isLive = isLive,
-                                renderedPositionMs = source.currentPosition,
-                                reportedPositionMs = getRealtimePositionMs(),
-                            ),
                         nowMs = SystemClock.elapsedRealtime(),
                     )
                 } else if (!sleepingForOffload) {
@@ -3060,7 +3052,13 @@ class ExoPlaybackPlayer(
                 nowMs = now,
             )
         val playbackProgressStalledMs = progressWatchdog.stalledForMs(now)
-        if (offloadRequested() && offloadSleepStallTracker.shouldDisableOffload(progressPosition, expectProgress, now)) {
+        if (offloadRequested() &&
+            offloadSleepStallTracker.shouldDisableOffload(
+                outputStalled = silenceSupport[exo]?.playoutTracker?.isOutputStalled() == true,
+                expectProgress = expectProgress,
+                nowMs = now,
+            )
+        ) {
             offloadFailed = true
             updateOffloadPreferences(exo)
             nextPlayer?.let { updateOffloadPreferences(it) }
