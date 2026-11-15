@@ -444,11 +444,17 @@ interface SongDao {
                 FROM song
                 WHERE song.albumId = album.id) AS timeListened
         FROM album
-        WHERE bookmarkedAt IS NOT NULL
+        WHERE bookmarkedAt IS NOT NULL OR (
+            :includeSaved AND (
+                album.inLibrary IS NOT NULL OR EXISTS (
+                    SELECT 1 FROM song WHERE song.albumId = album.id AND song.inLibrary IS NOT NULL
+                )
+            )
+        )
         ORDER BY rowId
         """,
     )
-    fun albumsLikedByCreateDateAsc(): Flow<List<Album>>
+    fun albumsLikedByCreateDateAsc(includeSaved: Boolean = false): Flow<List<Album>>
 
     fun albums(
         sortType: AlbumSortType,

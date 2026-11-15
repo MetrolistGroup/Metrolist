@@ -294,9 +294,11 @@ class LibraryViewModel(
                 }
             }
             launch {
-                database?.dao()?.albumsLikedByCreateDateAsc()?.distinctUntilChanged()?.collect {
-                    localReloads.trySend(Unit)
-                }
+                database
+                    ?.dao()
+                    ?.albumsLikedByCreateDateAsc(includeSaved = !repository.canManagePlaylists())
+                    ?.distinctUntilChanged()
+                    ?.collect { localReloads.trySend(Unit) }
             }
             launch {
                 val dao = database?.dao() ?: return@launch
@@ -687,7 +689,7 @@ class LibraryViewModel(
                 )
             }
         val albums =
-            dao.albumsLikedByCreateDateAsc().first().map {
+            dao.albumsLikedByCreateDateAsc(includeSaved = !repository.canManagePlaylists()).first().map {
                 AlbumItem(
                     id = it.album.id,
                     isDownloaded = "album:${it.album.id}" in downloadedKeys,
@@ -706,7 +708,7 @@ class LibraryViewModel(
                             .takeIf { duration -> duration > 0 }
                             ?.toLong(),
                     playtime = it.timeListened,
-                    libraryAddedAt = it.album.bookmarkedAt.toEpochMilliseconds(),
+                    libraryAddedAt = (it.album.bookmarkedAt ?: it.album.inLibrary).toEpochMilliseconds(),
                     libraryUpdatedAt = it.album.lastUpdateTime.toEpochMilliseconds(),
                 )
             }
