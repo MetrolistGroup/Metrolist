@@ -4,6 +4,7 @@ import com.metrolist.innertubex.InnerTube
 import com.metrolist.innertubex.cipher.YouTubeCipherService
 import com.metrolist.innertubex.extraction.TokenProvider
 import com.metrolist.innertubex.models.YouTubeLocale
+import com.metrolist.shared.BuildConfig
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.OfflineSongAvailability
@@ -19,6 +20,11 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import org.koin.dsl.module
 import org.koin.mp.KoinPlatform
+
+private val contentLanguageCodes: Set<String> by lazy {
+    (platformContentLanguageCodes + BuildConfig.BUNDLED_LANGUAGE_TAGS.split(','))
+        .filterTo(mutableSetOf()) { it.isNotBlank() && it != "und" }
+}
 
 val coreModule =
     module {
@@ -70,7 +76,11 @@ object GlobalYouTube {
         systemLanguage: String,
         settings: Settings = Settings.shared,
     ) {
-        val resolvedHl = if (contentLanguage == SYSTEM) systemLanguage.substringBefore('-').substringBefore('_') else contentLanguage
+        val validContentLanguage = contentLanguage in contentLanguageCodes
+        if (contentLanguage != SYSTEM && !validContentLanguage) {
+            settings.contentLanguage = SYSTEM
+        }
+        val resolvedHl = if (validContentLanguage) contentLanguage else systemLanguage.substringBefore('-').substringBefore('_')
         val validContentCountry = contentCountry in contentCountryCodes
         if (contentCountry != SYSTEM && !validContentCountry) {
             settings.contentCountry = SYSTEM

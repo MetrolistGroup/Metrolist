@@ -20,6 +20,27 @@ class SystemContentLocaleTest {
     }
 
     @Test
+    fun invalidSavedLanguageUsesTheJvmSystemLocaleInsteadOfTheAppLanguage() {
+        val previousSystemLocale = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.forLanguageTag("pl-PL"))
+            val settings =
+                Settings(MapSettings()).apply {
+                    appLanguage = "fr-CA"
+                    contentLanguage = "SYSTEM_DEFAULT"
+                    contentCountry = "system"
+                }
+            GlobalYouTube.applyContentRegion(settings.contentCountry, settings.contentLanguage, Locale.getDefault(), settings)
+            assertEquals("SYSTEM", settings.contentLanguage)
+            assertEquals("SYSTEM", settings.contentCountry)
+            assertEquals("pl", GlobalYouTube.innerTube.locale.hl)
+            assertEquals("PL", GlobalYouTube.innerTube.locale.gl)
+        } finally {
+            Locale.setDefault(previousSystemLocale)
+        }
+    }
+
+    @Test
     fun macroregionSystemLocalesResolveToACountryWhenRestoringInvalidSettings() {
         for ((tag, country) in listOf("nl-150" to "NL", "fr-001" to "FR")) {
             val settings = Settings(MapSettings()).apply { contentCountry = "150" }

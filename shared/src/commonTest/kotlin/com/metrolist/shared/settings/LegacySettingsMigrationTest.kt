@@ -14,6 +14,99 @@ import com.russhwolf.settings.Settings as KmpSettings
 
 class LegacySettingsMigrationTest {
     @Test
+    fun legacyLocaleSentinelsAreRepairedEvenAfterEarlierMigrations() {
+        for (version in listOf(0, 2, 11, 14)) {
+            for (sentinel in listOf("SYSTEM_DEFAULT", "system", "SYSTEM")) {
+                val backing =
+                    MapSettings(
+                        "settingsMigrationVersion" to version,
+                        "appLanguage" to sentinel,
+                        "contentLanguage" to sentinel,
+                        "contentCountry" to sentinel,
+                    )
+                repeat(2) {
+                    val settings = Settings(StrictTypedSettings(backing))
+                    assertEquals("SYSTEM", settings.appLanguage)
+                    assertEquals("SYSTEM", settings.contentLanguage)
+                    assertEquals("SYSTEM", settings.contentCountry)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun legacyAndPortableBackupsNormalizeLocaleAndSessionValues() {
+        for (sentinel in listOf("SYSTEM_DEFAULT", "system")) {
+            val values =
+                mapOf(
+                    "appLanguage" to sentinel,
+                    "contentLanguage" to sentinel,
+                    "contentCountry" to sentinel,
+                    "visitorData" to "null",
+                )
+            val settings =
+                Settings(MapSettings()).apply {
+                    innerTubeCookie = "SAPISID=previous-account"
+                    dataSyncId = "previous-channel"
+                }
+            val legacy = settings.portableSettingsFromLegacy(values)
+            assertEquals("SYSTEM", legacy.entries.single { it.key == "contentLanguage" }.value)
+            assertEquals("", legacy.entries.single { it.key == "visitorData" }.value)
+            val portable = PortableSettings(entries = values.map { (key, value) -> PortableSetting(key, SettingType.STRING, value) })
+            for (backup in listOf(legacy, portable)) {
+                settings.importBackupSettings(backup)
+                assertEquals("SYSTEM", settings.appLanguage)
+                assertEquals("SYSTEM", settings.contentLanguage)
+                assertEquals("SYSTEM", settings.contentCountry)
+                assertEquals("", settings.visitorData)
+                assertEquals("", settings.dataSyncId)
+                assertEquals("", settings.innerTubeCookie)
+            }
+        }
+    }
+
+    @Test
+    fun sessionMigrationClearsNullVisitorDataWithoutDroppingValidCredentials() {
+        for (version in listOf(0, 2, 11, 14)) {
+            val settings =
+                Settings(
+                    MapSettings(
+                        "settingsMigrationVersion" to version,
+                        "visitorData" to "null",
+                    ),
+                )
+            assertEquals("", settings.visitorData)
+        }
+        val values =
+            mapOf(
+                "appLanguage" to "fr-CA",
+                "contentLanguage" to "es-419",
+                "contentCountry" to "PL",
+                "visitorData" to "valid-visitor",
+                "dataSyncId" to "valid-channel",
+                "innerTubeCookie" to "SAPISID=valid-cookie",
+            )
+        val backing = MapSettings(*values.toList().toTypedArray())
+        val settings = Settings(StrictTypedSettings(backing))
+        assertTrue(values.all { (key, value) -> backing.getString(key, "") == value })
+        settings.importBackupSettings(settings.portableSettingsFromLegacy(values))
+        assertTrue(values.all { (key, value) -> backing.getString(key, "") == value })
+    }
+
+    @Test
+    fun rollbackKeepsTheExactLocaleAndSessionSnapshot() {
+        val backing = MapSettings()
+        val settings = Settings(backing)
+        settings.contentLanguage = "SYSTEM_DEFAULT"
+        settings.visitorData = "null"
+        val snapshot = settings.exportBackupSettings()
+        settings.importBackupSettings(snapshot)
+        settings.restoreBackupSettingsSnapshot(snapshot)
+        assertEquals("SYSTEM_DEFAULT", settings.contentLanguage)
+        assertEquals("null", settings.visitorData)
+    }
+
+    @Test
     fun storedLyricsProvidersDropRetiredSourcesAndKeepTheRemainingOrder() {
         val backing =
             MapSettings(

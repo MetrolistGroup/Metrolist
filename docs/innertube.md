@@ -42,6 +42,8 @@ Mobile API library shelves show saved music albums while podcast shelves remain 
 
 Home cache identity respects account, locale and browse policy. Visitor publication must pass InnerTubeX's session compatibility check before accepting an in-flight response.
 
+Legacy settings migration and backup imports convert `SYSTEM_DEFAULT` and lowercase `system` to `SYSTEM` for app language, content language and content country. Invalid saved content languages and countries return to the system locale before requests, including settings already migrated to v14. Language validation uses the platform locale catalog and bundled resource tags. Imports also clear v13's literal `null` visitor data without discarding valid session values. Failed restores keep their exact settings snapshot.
+
 ## History and uploads
 
 Imported history keeps localized absolute date-bucket labels and server row order. Refresh repairs matched remote rows without overwriting measured local timestamps. Date buckets count in daily/total statistics, not hourly charts. Preserve offline labels and cancellation during synchronization.

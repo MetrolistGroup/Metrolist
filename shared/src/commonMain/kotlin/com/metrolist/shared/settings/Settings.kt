@@ -1033,7 +1033,9 @@ class Settings(
 
     fun importBackupSettings(backup: PortableSettings) {
         validatePortableSettings(backup)
-        importSettings(backup, backupExcludedKeys, backupCredentialKeys + ArtistNameAliasesJsonKey)
+        val normalized =
+            backup.copy(entries = backup.entries.map { it.copy(value = normalizeLegacyStringSetting(it.key, it.value)) })
+        importSettings(normalized, backupExcludedKeys, backupCredentialKeys + ArtistNameAliasesJsonKey)
     }
 
     fun restoreBackupSettingsSnapshot(snapshot: PortableSettings) {
