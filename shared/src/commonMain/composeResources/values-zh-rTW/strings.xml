@@ -766,4 +766,5 @@
     <string name="restore_hidden_item_title">再次顯示？</string>
     <string name="restore_hidden_item_message">再次顯示「%1$s」？</string>
     <string name="unblock_artist_title">確定要解除封鎖這位藝人嗎？</string>
+    <string name="song_details">歌曲詳細資訊</string>
 </resources>
