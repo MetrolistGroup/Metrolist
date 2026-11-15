@@ -2601,6 +2601,11 @@
     <string name="ai_setup_daily_hint">Réessayez demain ou ajoutez des crédits à votre compte OpenRouter pour augmenter votre limite quotidienne. Changer de modèle ne permet pas de contourner cette limite.</string>
     <string name="ai_setup_minute_hint">Attendez que la limite de requêtes par minute d'OpenRouter soit réinitialisée, puis réessayez. Changer de modèle ne permettra pas de contourner cette limite.</string>
     <string name="ai_setup_verify_description">Envoie un court échantillon à traduire au modèle sélectionné. La traduction n'est activée que si le test est réussi.</string>
-    <string name="account_keyring_required">Metrolist a besoin d'accéder à votre trousseau système pour restaurer votre compte. Déverrouillez le trousseau. Metrolist réessaiera automatiquement.</string>
+    <string name="account_keyring_required">Metrolist a besoin d'accéder au trousseau système pour restaurer votre compte. Veuillez déverrouiller le trousseau. Metrolist réessaiera automatiquement.</string>
     <string name="account_linux_keyring_required">Metrolist a besoin d'un trousseau de clés système pour restaurer votre compte. Installez libsecret-tools ou le paquet de votre distribution fournissant secret-tool, puis assurez-vous que votre trousseau de clés est actif et déverrouillé. Metrolist réessaiera automatiquement.</string>
+    <string name="blocked_songs">Titres masqués</string>
+    <string name="blocked_songs_desc">Restaurez les titres que vous avez masqués</string>
+    <string name="blocked_songs_empty">Aucun titre masqué</string>
+    <string name="content_undo_hint">Vous pouvez annuler cette action dans %1$s.</string>
+    <string name="content_undo_path">%1$s &gt; %2$s &gt; %3$s</string>
 </resources>
