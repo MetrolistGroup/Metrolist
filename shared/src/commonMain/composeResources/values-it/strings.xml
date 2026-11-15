@@ -1263,7 +1263,7 @@
     <string name="ai_deepl_formality_less">Meno formale</string>
     <string name="recognize_music">Riconosci musica</string>
     <string name="listening">In ascolto…</string>
-    <string name="recognition_notification_no_match">Nessuna corrispondenza trovata</string>
+    <string name="recognition_notification_no_match">Nessuna corrispondenza</string>
     <string name="continue_action">Continua</string>
     <string name="discord_button_1">Pulsante 1</string>
     <string name="discord_button_2">Pulsante 2</string>
