@@ -15,14 +15,14 @@
     <string name="history">История прослушивания</string>
     <string name="mood_and_genres">Настроения и жанры</string>
     <string name="account">Аккаунт</string>
-    <string name="quick_picks">Быстрый выбор</string>
+    <string name="quick_picks">Рекомендуем</string>
     <string name="forgotten_favorites">Забытые избранные</string>
     <string name="keep_listening">Продолжайте слушать</string>
     <string name="similar_to">Похоже на</string>
     <string name="new_releases">Новые релизы</string>
     <string name="podcasts_for_you">Подкасты для вас</string>
     <string name="recap">Итоги</string>
-    <string name="home_unavailable">Главная недоступна</string>
+    <string name="home_unavailable">Главная страница недоступна</string>
     <string name="today">Сегодня</string>
     <string name="yesterday">Вчера</string>
     <string name="this_week">На этой неделе</string>
@@ -65,7 +65,7 @@
         <item quantity="other">Скачано %1$d из %2$d песен, %3$d не удалось скачать</item>
     </plurals>
     <string name="download_pause_all">Приостановить все</string>
-    <string name="download_resume_all">Продолжить всё</string>
+    <string name="download_resume_all">Продолжить все</string>
     <string name="download_cancel_all">Отменить все</string>
     <string name="remove_download">Удалить из скачанных</string>
     <string name="add_to_playlist">Добавить в плейлист</string>
@@ -268,7 +268,7 @@
     <string name="open_github_profile">Открыть GitHub</string>
     <string name="sponsor_developer">Спонсировать разработчика</string>
     <string name="credits_license_name">Лицензия</string>
-    <string name="credits_license_desc">Metrolist распространяется под лицензией GPL-3.0.</string>
+    <string name="credits_license_desc">Metrolist распространяется под лицензией GPL-3.0</string>
     <string name="devmode_already_active" translatable="true">Режим разработчика уже активен</string>
     <string name="discord_enable_rich_presence">Discord Rich Presence</string>
     <string name="discord_listen_to_metrolist">Слушает в Metrolist</string>
@@ -769,7 +769,7 @@
     <string name="library_offline_songs">Офлайн песни</string>
     <string name="library_top_songs">Ваши топ песни</string>
     <string name="library_uploaded_songs">Ваши загруженные песни</string>
-    <string name="listen_together_add_custom_server">Добавьте пользовательский сервер</string>
+    <string name="listen_together_add_custom_server">Добавить пользовательский сервер</string>
     <string name="listen_together_add_queue_title">Добавить %1$s?</string>
     <string name="listen_together_server">Сервер</string>
     <string name="listen_together_servers">Сервера</string>
@@ -1063,10 +1063,10 @@
         <item quantity="other">Удалено %1$d песен из плейлиста</item>
     </plurals>
     <plurals name="seconds_short">
-        <item quantity="one">%1$d сек</item>
-        <item quantity="few">%1$d сек</item>
-        <item quantity="many">%1$d сек</item>
-        <item quantity="other">%1$d сек</item>
+        <item quantity="one">%1$d с</item>
+        <item quantity="few">%1$d с</item>
+        <item quantity="many">%1$d с</item>
+        <item quantity="other">%1$d с</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d песня</item>
@@ -1244,8 +1244,8 @@
     <string name="discord_activity_competing">Соревнуется</string>
     <string name="discord_activity_name">Имя активности</string>
     <string name="discord_advanced_mode">Расширенный режим</string>
-    <string name="speed_dial">Быстрый набор</string>
-    <string name="pin_to_speed_dial">Закрепить в Быстрый набор</string>
+    <string name="speed_dial">Быстрый выбор</string>
+    <string name="pin_to_speed_dial">Закрепить в Быстрый выбор</string>
     <string name="unpin_from_speed_dial">Открепить из Быстрого набора</string>
     <string name="view_podcast">Просмотреть подкаст</string>
     <string name="auto_playlist">Автоплейлист</string>
@@ -1851,7 +1851,7 @@
     <string name="device_connect_device_type_and_model">%1$s · %2$s</string>
     <string name="device_connect_available">Доступно</string>
     <string name="settings_disable_wayland_fix_description">Выключает автоматическое определение масштабирования для сессий Wayland. Требуется перезапуск.</string>
-    <string name="device_connect_signed_out_pairing">Вышли: сравните код сопряжения на обоих устройствах перед подтверждением</string>
+    <string name="device_connect_signed_out_pairing">Вы вышли из аккаунта. Сравните код сопряжения на обоих устройствах перед подтверждением.</string>
     <string name="device_connect_paired">Сопряжено</string>
     <string name="shortcut_toggle_device_connect">Переключить панель подключения устройств</string>
     <string name="device_connect_unshareable_queue">Эта очередь содержит локальные файлы и недоступна для обмена.</string>
@@ -2127,12 +2127,12 @@
     <string name="settings_resume_prompt_summary">Спрашивать перед возобновлением сохранённой очереди при запуске приложения</string>
     <string name="settings_player_layout_summary">Изменить расположение обложек и элементов управления воспроизведением</string>
     <string name="settings_filter_q_summary">Q определяет ширину или резонанс выбранного фильтра</string>
-    <string name="settings_reset_to_default">Сбросить</string>
+    <string name="settings_reset_to_default">Сбросить по умолчанию</string>
     <plurals name="downloads_failed_banner">
-        <item quantity="one">%1$d загрузка провалена</item>
-        <item quantity="few">%1$d загрузки провалено</item>
-        <item quantity="many">%1$d загрузок провалено</item>
-        <item quantity="other">%1$d загрузок провалено</item>
+        <item quantity="one">Не удалось скачать %1$d песню</item>
+        <item quantity="few">Не удалось скачать %1$d песни</item>
+        <item quantity="many">Не удалось скачать %1$d песен</item>
+        <item quantity="other">Не удалось скачать %1$d песен</item>
     </plurals>
     <plurals name="download_queue_pending">
         <item quantity="one">%1$d песня в очереди скачивания</item>
