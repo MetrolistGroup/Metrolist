@@ -2,6 +2,9 @@ package com.metrolist.shared.api.lyrics
 
 import com.metrolist.shared.model.lyricsCuratorUrl
 import com.metrolist.shared.model.lyricsProviderUrl
+import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.utils.getSystemLanguage
+import com.russhwolf.settings.MapSettings
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -14,9 +17,99 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class BetterLyricsProviderTest {
+    @Test
+    fun metadataTranslationsFollowLineKeysAndTheSelectedLanguage() =
+        withTranslationLanguage("pl-PL") {
+            val ttml =
+                """
+                <tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata">
+                  <head><metadata><audio lyricOffset="0.5"/><translations>
+                    <translation xml:lang="en"><text for="L1">English</text></translation>
+                    <translation xml:lang="pl"><text for="L2">Drugi</text><text for="L1">Pierwszy</text></translation>
+                  </translations></metadata></head>
+                  <body><div>
+                    <p begin="1s" end="2s" ttm:key="L1">Original one</p>
+                    <p begin="3s" end="4s" ttm:key="missing">Original two</p>
+                    <p begin="5s" end="6s" ttm:key="L2">Original three</p>
+                  </div></body>
+                </tt>
+                """.trimIndent()
+            val mlx = parseTtmlToMlx(ttml, "Song", "Artist", "Unison")
+            val document = MlxParser.parse(mlx)
+            assertEquals(listOf("Pierwszy", null, "Drugi"), document.lines.map { it.translatedText })
+            assertEquals(listOf(1500L, 3500L, 5500L), document.lines.map { it.time })
+            assertEquals("pl-PL", document.song.translationLanguage)
+            Settings.shared.lyricsAiTargetLanguage = "de"
+            assertTrue(MlxParser.parse(mlx).lines.all { it.translatedText == null })
+        }
+
+    @Test
+    fun inlineTranslationsKeepWordTimingAndBackgroundVocals() =
+        withTranslationLanguage("de") {
+            val ttml =
+                """
+                <tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body><div>
+                  <p begin="1s" end="4s">
+                    <span begin="1s" end="2s">Lead</span>
+                    <span ttm:role="x-translation" xml:lang="de-DE">Stimme</span>
+                    <span ttm:role="x-translation" xml:lang="en">Voice</span>
+                    <span ttm:role="x-bg" begin="2s" end="3s">
+                      <span begin="2s" end="3s">Echo</span>
+                      <span ttm:role="x-translation" xml:lang="de">Nachhall</span>
+                    </span>
+                  </p>
+                  <p begin="5s" end="6s">Plain<span ttm:role="x-translation" xml:lang="fr">Autre</span></p>
+                </div></body></tt>
+                """.trimIndent()
+            val lines = MlxParser.parse(parseTtmlToMlx(ttml, "Song", "Artist", "BetterLyrics")).lines
+            assertEquals("Lead", lines.first().text)
+            assertEquals("Stimme", lines.first().translatedText)
+            assertEquals("Nachhall", lines.first().backgroundTranslatedText)
+            assertEquals(listOf("Lead", "Echo"), assertNotNull(lines.first().words).map { it.text })
+            assertEquals(listOf(1.0, 2.0), assertNotNull(lines.first().words).map { it.startTime })
+            assertEquals("Plain", lines.last().text)
+            assertNull(lines.last().translatedText)
+        }
+
+    @Test
+    fun deviceTranslationTargetUsesTheSystemLanguage() =
+        withTranslationLanguage("device") {
+            // Android host tests have no Resources, so there is no device language to follow.
+            val language = runCatching { getSystemLanguage() }.getOrNull()?.takeIf { it.isNotBlank() } ?: return@withTranslationLanguage
+            assertEquals(language, lyricsTranslationTargetLanguage())
+            val ttml =
+                """
+                <tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body><div>
+                  <p begin="1s" end="2s">Original<span ttm:role="x-translation" xml:lang="$language">Translation</span></p>
+                </div></body></tt>
+                """.trimIndent()
+            assertEquals(
+                "Translation",
+                MlxParser
+                    .parse(parseTtmlToMlx(ttml, "Song", "Artist", "test"))
+                    .lines
+                    .single()
+                    .translatedText,
+            )
+        }
+
+    private fun withTranslationLanguage(
+        language: String,
+        block: () -> Unit,
+    ) {
+        val previous = Settings.sharedOverrideForTest()
+        Settings.replaceSharedForTest(Settings(MapSettings()).apply { lyricsAiTargetLanguage = language })
+        try {
+            block()
+        } finally {
+            Settings.replaceSharedForTest(previous)
+        }
+    }
+
     @Test
     fun unisonSubmitterAndVideoMetadataArePreserved() =
         runBlocking {

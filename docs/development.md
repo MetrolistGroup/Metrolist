@@ -289,6 +289,8 @@ Automatic lookup uses the first usable source in the configured provider order, 
 
 Automatic searches wait for Lyprio within its 50-second timeout before trying lower providers. If a completed Lyprio search returns nothing, it retries once with the picker's full provider set within the same budget. Errors and cancellation are not cached as misses. The final selection is cached after the search completes, including refetches. Video-specific sources used for retiming also follow provider priority.
 
+TTML imports read inline translations and metadata translations keyed to lyric lines. They use the saved translation target or system language, preserve vocal timing, and hide cached translations when the target language changes.
+
 Lines that share one start and have no word timing count as unsynced. Lookup keeps them while checking for a synced fallback. Lyrics without line starts do not gain timing from a TTML body-duration end.
 
 Room stores confirmed misses with their lookup identity for seven days. Metadata, enabled providers, provider order, video context and explicit refresh trigger a new lookup. Provider failures are never saved as misses.

@@ -149,7 +149,10 @@ object MlxParser {
             } else {
                 linesWithSongParts
             }
-        val translatedSection = sections["translatedlyrics"] ?: sections["translated_lyrics"]
+        val song = parseSong(sections["song"] ?: emptyList())
+        val translationMatches =
+            song.translationLanguage?.let { lyricsTranslationLanguageMatches(it, lyricsTranslationTargetLanguage()) } != false
+        val translatedSection = (sections["translatedlyrics"] ?: sections["translated_lyrics"]).takeIf { translationMatches }
         val finalLines =
             if (!translatedSection.isNullOrEmpty()) {
                 val translatedLines = parseLyricsSection(translatedSection, agents)
@@ -158,7 +161,10 @@ object MlxParser {
                     val matchingTranslation =
                         translatedMap[mainEntry.time]?.removeFirstOrNull()
                             ?: translatedLines.getOrNull(index).takeIf { mainEntry.time !in translatedMap }
-                    mainEntry.copy(translatedText = matchingTranslation?.text?.takeIf { it.isNotBlank() })
+                    mainEntry.copy(
+                        translatedText = matchingTranslation?.text?.takeIf { it.isNotBlank() },
+                        backgroundTranslatedText = matchingTranslation?.backgroundText?.takeIf { it.isNotBlank() },
+                    )
                 }
             } else {
                 romanizedLines
@@ -166,7 +172,7 @@ object MlxParser {
 
         return MlxDocument(
             meta = parseMeta(sections["meta"] ?: emptyList()),
-            song = parseSong(sections["song"] ?: emptyList()),
+            song = song,
             agents =
                 finalLines.mapNotNull { it.agent }.distinct().associateWith { id ->
                     agents[id] ?: AgentInfo(
