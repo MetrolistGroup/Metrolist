@@ -163,12 +163,12 @@ object PlaybackEventLog {
         if (level != PlaybackEventLevel.WARN && level != PlaybackEventLevel.ERROR) return
         val structuredFailure = lastStructuredFailure
         lastStructuredFailure = null
+        if (tag == "DesktopCredentials") return
         if (error != null && structuredFailure?.matches(tag, error) == true) return
         record(
             level = level,
             kind = kindForYtTag(tag).takeUnless { it == PlaybackEventKind.TRACE } ?: PlaybackEventKind.OTHER,
-            message = "[$tag] $message",
-            error = error,
+            message = "[$tag] $message${error?.let { " (${it::class.simpleName ?: "failure"})" }.orEmpty()}",
             describePlaybackError = false,
         )
     }
