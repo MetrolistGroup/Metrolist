@@ -190,7 +190,7 @@
     <string name="music_video_quality_resolution" tools:ignore="MissingTranslation" translatable="false">%1$sp</string>
     <string name="music_video_resolution" tools:ignore="MissingTranslation">Качество видео</string>
     <string name="music_video_resolution_desc" tools:ignore="MissingTranslation">Измените качество для этого клипа</string>
-    <string name="music_video_resolution_current" tools:ignore="MissingTranslation">Сейчас играет</string>
+    <string name="music_video_resolution_current" tools:ignore="MissingTranslation">Текущее разрешение</string>
     <string name="music_video_cache" tools:ignore="MissingTranslation">Кэш клипа</string>
     <string name="clear_music_video_cache" tools:ignore="MissingTranslation">Очистить кэш клипов</string>
     <string name="clear_music_video_cache_desc" tools:ignore="MissingTranslation">Удалить кэшированные сопоставления разрешений треков с видео</string>
