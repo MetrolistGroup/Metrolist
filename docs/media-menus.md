@@ -69,6 +69,8 @@ Queue keeps its rounded header container, shape and dimensions. During selection
 
 `SongDetailsContent.kt` supplies shared detail content; Android and shared mobile hosts provide their sheet containers. Keep format, source and audio details tied to the active playback instance rather than stale UI metadata.
 
+Desktop song details use the shared draggable scrollbar when the content exceeds the available height. Text selection and mouse-drag scrolling remain available.
+
 ## Verification
 
 `MediaMenuPlaybackActionsTest` covers ordered album/playlist playback, artist shuffle, shuffled duplicate occurrences, queue insertion, empty loads, failures and cancellation without a UI harness.
