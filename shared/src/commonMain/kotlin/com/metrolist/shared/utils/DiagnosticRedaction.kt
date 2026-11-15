@@ -36,14 +36,21 @@ private fun redactIpv6Addresses(text: String): String {
         }
         var candidateEnd = addressEnd
         while (candidateEnd > index && text[candidateEnd - 1] == '.') candidateEnd--
-        val scopedAddressEndsBeforeDelimiter =
+        if (candidateEnd == addressEnd &&
+            candidateEnd > index &&
+            text[candidateEnd - 1] == ':' &&
+            isIpv6Address(text.substring(index, candidateEnd - 1))
+        ) {
+            candidateEnd--
+        }
+        val ipv6AddressEndsBeforeDelimiter =
             candidateEnd < text.length &&
                 text[candidateEnd] == ':' &&
-                '%' in text.substring(index, candidateEnd)
+                isIpv6Address(text.substring(index, candidateEnd))
         if (candidateEnd == addressEnd &&
             candidateEnd < text.length &&
             isIpv6TokenCharacter(text[candidateEnd]) &&
-            !scopedAddressEndsBeforeDelimiter
+            !ipv6AddressEndsBeforeDelimiter
         ) {
             redacted.append(text[index++])
             continue
