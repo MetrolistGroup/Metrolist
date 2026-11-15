@@ -327,6 +327,10 @@ Unchanged JSON lines keep every field, including provider extensions. Editing a 
 
 The first change creates a User fork in the song lyrics row, separate from the provider and translation caches. User lyrics win over refetches and provider selection. Autosave waits 500 ms and flushes on close or backgrounding. Invalid timestamps are reported by line number and saved as a draft beside the recoverable JSON. Revert deletes the fork and draft.
 
+Database open and legacy backup conversion recover rows marked `Manual`, `METROLIST_LOCAL` or `Local` into the User fork, including existing schema 65 installs. Recovery preserves offsets, translations and drafts, leaves active and stashed User forks intact, and clears the old source so Revert stays reverted after a restart.
+
+The v13 editor kept the original provider name when editing existing lyrics. Those edits have no marker that distinguishes them from fetched lyrics. Since v14.0.0, `LyricsRepository.getLyrics` can replace these unmarked edits or unrecognized `Manual` rows through `CacheDao.cacheLyricsIfUnchanged` when it saves a fetched result or confirmed miss. The migration itself copies the lyrics rows. An overwritten value requires an older database or backup to recover; the current row cannot reconstruct it.
+
 The lyrics settings preview uses the current song's lyrics only during active playback and otherwise shows the bundled sample without starting a lookup. Source rows reorder by a drag handle or its move menu.
 
 ### AI translation

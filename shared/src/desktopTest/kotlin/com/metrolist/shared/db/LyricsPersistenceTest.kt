@@ -249,7 +249,7 @@ class LyricsPersistenceTest {
                     LyricsEntity(
                         "song",
                         "source",
-                        "Local",
+                        "LrcLib",
                         translatedLyrics = """METROLIST_TRANSLATION_V2:{"lines":["Bonjour","Old translation"]}""",
                         translationLanguage = "fr",
                         translationMode = "Literal",

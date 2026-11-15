@@ -21,6 +21,7 @@ internal fun getDesktopDatabaseBuilder(dbFile: File): RoomDatabase.Builder<Music
             name = dbFile.absolutePath,
         ).setDriver(JdbcSQLiteDriver())
         .setQueryCoroutineContext(Dispatchers.IO)
+        .addCallback(LegacyUserLyricsRecovery)
         .addCallback(
             object : RoomDatabase.Callback() {
                 override suspend fun onOpen(connection: SQLiteConnection) {

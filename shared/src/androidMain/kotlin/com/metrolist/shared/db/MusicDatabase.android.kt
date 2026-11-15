@@ -22,6 +22,7 @@ actual fun getDatabaseBuilder(context: Any?): RoomDatabase.Builder<MusicDatabase
             name = dbFile.absolutePath,
         ).setDriver(AndroidSQLiteDriver())
         .setQueryCoroutineContext(Dispatchers.IO)
+        .addCallback(LegacyUserLyricsRecovery)
         .addMigrations(
             MIGRATION_36_37,
             MIGRATION_37_38,
