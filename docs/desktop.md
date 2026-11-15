@@ -160,6 +160,8 @@ make flatpak-bundle
 
 `desktopApp/build.gradle.kts` defines launcher options. Packaging generates a Java 25 base CDS archive with the target jlinked VM, without running the app. [AutoCreateSharedArchive](https://docs.oracle.com/en/java/javase/25/docs/specs/man/java.html#creating-dynamic-cds-archive-file-with--xxautocreatesharedarchive) saves an optional `appcds-<bundle-id>.jsa` dynamic archive on normal exit and reuses it on later launches.
 
+JVM packages include `jdk.accessibility` so Windows can load Java Access Bridge when assistive technology is enabled. Native-image builds use the full GraalVM JDK and the existing AWT AccessBridge metadata rather than a jlink module list.
+
 | OS | CDS cache |
 | --- | --- |
 | Linux | `$XDG_CACHE_HOME/metrolist`, default `~/.cache/metrolist` |

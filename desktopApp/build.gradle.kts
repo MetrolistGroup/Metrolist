@@ -771,6 +771,7 @@ compose.desktop {
                 "java.prefs",
                 "java.sql",
                 "java.xml",
+                "jdk.accessibility",
                 "jdk.unsupported",
                 "jdk.security.auth",
                 "jdk.localedata",
