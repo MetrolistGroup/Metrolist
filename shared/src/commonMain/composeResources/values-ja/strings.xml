@@ -429,7 +429,6 @@
     <string name="lastfm_service_error">Last.fm にログインできません。しばらくしてからもう一度お試しください。</string>
     <string name="song_cache_location_custom">カスタムフォルダ</string>
     <string name="song_cache_location_custom_desc">Storage Access Framework で選択したカスタムフォルダ</string>
-
     <string name="settings_appearance_overview">テーマ、フォント、プレーヤーの外観</string>
     <string name="settings_android_auto_overview">車載用プレイリストとクイック追加先</string>
     <string name="settings_about_overview">貢献者、コミュニティのリンク、ライセンス</string>
@@ -497,4 +496,6 @@
     <string name="settings_resume_prompt_summary">アプリ起動時、保存されたキューの再生を再開する前に確認</string>
     <string name="settings_player_layout_summary">カバーと再生操作部品の配置を変更</string>
     <string name="settings_filter_q_summary">Q は選択したフィルターの帯域幅や共振の強さを調整します</string>
+    <string name="offline_mode">オフラインモード</string>
+    <string name="new_releases">新着</string>
 </resources>
