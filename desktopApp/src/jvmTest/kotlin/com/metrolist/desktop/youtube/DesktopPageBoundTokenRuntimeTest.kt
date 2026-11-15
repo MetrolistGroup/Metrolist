@@ -23,6 +23,31 @@ import kotlin.time.Duration.Companion.milliseconds
 @OptIn(ExperimentalCoroutinesApi::class)
 class DesktopPageBoundTokenRuntimeTest {
     @Test
+    fun nativeCreationFailureReleasesWaitingEvaluationWithoutTimeout() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val runtime = DesktopPageBoundTokenRuntime { true }
+                val evaluation = async { runCatching { runtime.evaluate("unused") } }
+                runCurrent()
+                val error = IllegalStateException("WebView2 runtime is missing")
+                runtime.failInitialization(error)
+                runCurrent()
+                assertTrue(evaluation.isCompleted)
+                assertEquals(error.message, evaluation.await().exceptionOrNull()?.message)
+                assertFalse(runtime.requested.value)
+                assertFalse(runtime.available)
+                runtime.detach()
+                runtime.reset()
+                runtime.attach(runtime.session.value, WebViewNavigator(backgroundScope), runtime.pageUrl)
+                assertFalse(runtime.available)
+                assertFailsWith<IllegalStateException> { runtime.evaluate("unused") }
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+
+    @Test
     fun missingFreshDocumentTimesOutAndLeavesRuntimeUnavailable() =
         runTest {
             Dispatchers.setMain(StandardTestDispatcher(testScheduler))
