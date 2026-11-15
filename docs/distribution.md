@@ -40,6 +40,8 @@ The source recipe and verification live in `aur/`. The generator writes `aur/rel
 
 `flake.nix` uses `appimageTools` for Linux x86_64/aarch64 and pins nixpkgs. Generated output includes `nix/packaging/release.json` with fixed-output hashes. The FHS sandbox uses the host's ALSA configuration. Do not add `alsa-plugins` to `extraPkgs`, because its `/etc/alsa` hides the host's PipeWire configuration.
 
+The sandbox includes `glib-networking` and adds its GIO modules to `GIO_EXTRA_MODULES` for WebKitGTK TLS. It preserves any existing module paths.
+
 ```sh
 nix build path:./build/distribution/nix
 nix run path:./build/distribution/nix
