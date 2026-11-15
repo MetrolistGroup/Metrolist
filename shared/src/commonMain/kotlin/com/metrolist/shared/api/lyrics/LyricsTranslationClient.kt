@@ -719,16 +719,29 @@ class LyricsTranslationClient(
         maxTokens: Int,
         temperature: Double,
     ): Result<String> {
-        val effectiveModel = model.ifBlank { "gemini-flash-latest" }
+        val geminiPreset = AiProviderPresets.find("Gemini")
+        val fallbackModel = geminiPreset?.defaultModel?.ifBlank { null } ?: "gemini-flash-lite-latest"
+        val effectiveModel = model.ifBlank { fallbackModel }
         val resolvedBase =
             baseUrl.ifBlank {
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent"
+                geminiPreset?.endpoint?.ifBlank { null }
+                    ?: "https://generativelanguage.googleapis.com/v1beta/models/$fallbackModel:generateContent"
             }
         val url =
             when {
-                resolvedBase.contains("{model}") -> resolvedBase.replace("{model}", effectiveModel)
-                model.isNotBlank() -> resolvedBase.replace(Regex("/models/[^/:]+(:generateContent)"), "/models/$effectiveModel$1")
-                else -> resolvedBase
+                resolvedBase.contains("{model}") -> {
+                    resolvedBase.replace("{model}", effectiveModel)
+                }
+
+                model.isNotBlank() -> {
+                    resolvedBase.replace(Regex("/models/[^/:]+(:generateContent)")) { match ->
+                        "/models/$effectiveModel${match.groupValues[1]}"
+                    }
+                }
+
+                else -> {
+                    resolvedBase
+                }
             }
         val body = buildGeminiRequestBody(systemPrompt, userPrompt, temperature, maxTokens, schema)
         val response =

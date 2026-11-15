@@ -356,4 +356,32 @@ class AiModelCatalogTest {
         assertEquals(zen, AiProviderPresets.requestUrl("OpenCodeZen", zen, "kimi-k2.5"))
         assertEquals(AiProtocol.GEMINI, AiProviderPresets.protocolFor("Gemini-compatible", "https://x/y", "m"))
     }
+
+    @Test
+    fun legacyGeminiEndpointStillValidatesSavedModels() =
+        runBlocking {
+            val gemini = AiProviderPresets.find("Gemini")!!
+            val compatible = AiProviderPresets.find("Gemini-compatible")!!
+            HttpClient(
+                MockEngine { request ->
+                    if (request.url.encodedPath == "/v1beta/models") {
+                        respond(
+                            """{"models":[{"name":"models/gemini-flash-lite-latest","displayName":"Gemini Flash Lite","supportedGenerationMethods":["generateContent"],"inputTokenLimit":10}]}""",
+                        )
+                    } else {
+                        respond("", HttpStatusCode.NotFound)
+                    }
+                },
+            ).use { client ->
+                val catalog = AiModelCatalog(client)
+                assertEquals(
+                    "gemini-flash-lite-latest",
+                    catalog.validatedModel(gemini, "key", AiProviderPresets.LEGACY_GEMINI_ENDPOINT, "retired-model"),
+                )
+                assertEquals(
+                    "retired-model",
+                    catalog.validatedModel(compatible, "key", AiProviderPresets.LEGACY_GEMINI_ENDPOINT, "retired-model"),
+                )
+            }
+        }
 }

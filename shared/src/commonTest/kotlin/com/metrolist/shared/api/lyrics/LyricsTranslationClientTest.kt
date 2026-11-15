@@ -619,11 +619,33 @@ class LyricsTranslationClientTest {
                     baseUrl = geminiPreset.endpoint,
                     model = "gemini-2.5-flash",
                 ).getOrThrow()
+            LyricsTranslationClient(client)
+                .translateLyricsLines(
+                    lines = listOf("Hello"),
+                    provider = "Gemini",
+                    targetLanguage = "es",
+                    mode = "Literal",
+                    apiKey = "test-key",
+                    baseUrl = AiProviderPresets.LEGACY_GEMINI_ENDPOINT,
+                    model = "",
+                ).getOrThrow()
+            LyricsTranslationClient(client)
+                .translateLyricsLines(
+                    lines = listOf("Hello"),
+                    provider = "Gemini-compatible",
+                    targetLanguage = "es",
+                    mode = "Literal",
+                    apiKey = "test-key",
+                    baseUrl = geminiPreset.endpoint,
+                    model = "custom\$1",
+                ).getOrThrow()
 
             assertEquals(
                 listOf(
                     "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
                     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+                    "https://generativelanguage.googleapis.com/v1beta/models/custom\$1:generateContent",
                 ),
                 capturedUrls,
             )

@@ -96,10 +96,16 @@ class AiModelCatalog(
         baseUrl: String,
         savedModel: String,
     ): String {
-        if (!preset.isAi || preset.editableEndpoint || baseUrl != preset.endpoint) return savedModel
-        val models = models(preset, apiKey, baseUrl).getOrNull() ?: return savedModel
+        val effectiveBaseUrl =
+            if (preset.id == "Gemini" && baseUrl == AiProviderPresets.LEGACY_GEMINI_ENDPOINT) {
+                preset.endpoint
+            } else {
+                baseUrl
+            }
+        if (!preset.isAi || preset.editableEndpoint || effectiveBaseUrl != preset.endpoint) return savedModel
+        val models = models(preset, apiKey, effectiveBaseUrl).getOrNull() ?: return savedModel
         // Only a successful provider response can prove a saved model has disappeared.
-        val ids = lock.withLock { availableIds[cacheKey(preset, apiKey, baseUrl)] } ?: return savedModel
+        val ids = lock.withLock { availableIds[cacheKey(preset, apiKey, effectiveBaseUrl)] } ?: return savedModel
         if (ids.isEmpty() || savedModel in ids) return savedModel
         val candidates = models.filter { it.id in ids }
         return defaultModel(preset, candidates, freeOnly = savedModel.endsWith(":free")) ?: savedModel

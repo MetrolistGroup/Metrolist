@@ -33,6 +33,7 @@ data class AiProviderPreset(
 
 object AiProviderPresets {
     private const val LEGACY_CUSTOM = "Custom"
+    const val LEGACY_GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
     const val DEFAULT_LYRICS_AI_MODEL = "qwen/qwen3.7-flash"
     const val FREE_LYRICS_AI_MODEL = "google/gemma-4-26b-a4b-it:free"
