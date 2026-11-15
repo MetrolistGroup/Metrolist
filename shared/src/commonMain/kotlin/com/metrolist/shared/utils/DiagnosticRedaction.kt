@@ -34,15 +34,17 @@ private fun redactIpv6Addresses(text: String): String {
             addressEnd++
             while (addressEnd < text.length && isIpv6ScopeCharacter(text[addressEnd])) addressEnd++
         }
-        if (addressEnd < text.length && isIpv6TokenCharacter(text[addressEnd])) {
+        var candidateEnd = addressEnd
+        while (candidateEnd > index && text[candidateEnd - 1] == '.') candidateEnd--
+        if (candidateEnd == addressEnd && candidateEnd < text.length && isIpv6TokenCharacter(text[candidateEnd])) {
             redacted.append(text[index++])
             continue
         }
 
-        val address = text.substring(index, addressEnd)
+        val address = text.substring(index, candidateEnd)
         if (isIpv6Address(address)) {
             redacted.append("<redacted-ip>")
-            index = addressEnd
+            index = candidateEnd
         } else {
             redacted.append(text[index++])
         }
