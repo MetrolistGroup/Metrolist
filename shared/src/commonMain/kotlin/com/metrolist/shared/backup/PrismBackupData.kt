@@ -38,7 +38,7 @@ internal fun ForeignLibrary.withPrismArtistPreferences(xml: String?): ForeignLib
                     ?.groupValues
                     ?.get(2) ?: return this
             val cdata = Regex("""^<!\[CDATA\[(.*)]]>$""", RegexOption.DOT_MATCHES_ALL).matchEntire(value.trim())?.groupValues?.get(1)
-            val json = decodePrismXmlEntities(cdata ?: value)
+            val json = cdata ?: decodePrismXmlEntities(value)
             Json.parseToJsonElement(json).jsonArray.map { item ->
                 val artist = item.jsonObject
                 ForeignBookmark(

@@ -90,10 +90,10 @@ class PrismBackupImportTest {
         val library = ForeignLibrary(ForeignLibraryFamily.PRISM, emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
 
         val numeric = library.withPrismArtistPreferences("<map><string name=\"favorites\">&#91;{\"id\":\"UC&amp;1\",\"name\":\"Artist &#x1F3B5;\"}&#93;</string></map>")
-        val cdata = library.withPrismArtistPreferences("<map><string name=\"favorites\"><![CDATA[[{\"id\":\"UCartist\",\"name\":\"Artist\"}]]></string></map>")
+        val cdata = library.withPrismArtistPreferences("<map><string name=\"favorites\"><![CDATA[[{\"id\":\"UCartist\",\"name\":\"Artist &quot;\"}]]]></string></map>")
 
         assertEquals("UC&1" to "Artist 🎵", numeric.artists.single().let { it.id to it.name })
-        assertEquals("UCartist" to "Artist", cdata.artists.single().let { it.id to it.name })
+        assertEquals("UCartist" to "Artist &quot;", cdata.artists.single().let { it.id to it.name })
     }
 
     @Test
