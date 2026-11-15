@@ -573,4 +573,31 @@
     <string name="auto_load_more_desc">曲が終盤に近づくと、ラジオやミックスキューに自動的に追加されます</string>
     <string name="music_video_quality" tools:ignore="MissingTranslation">ミュージックビデオの品質</string>
     <string name="music_video_quality_desc" tools:ignore="MissingTranslation">ミュージックビデオのデフォルトの解像度</string>
+    <string name="music_video_quality_auto" tools:ignore="MissingTranslation">自動</string>
+    <string name="music_video_resolution" tools:ignore="MissingTranslation">ビデオの解像度</string>
+    <string name="music_video_resolution_desc" tools:ignore="MissingTranslation">このミュージックビデオの解像度を変更する</string>
+    <string name="music_video_resolution_current" tools:ignore="MissingTranslation">再生中</string>
+    <string name="music_video_cache" tools:ignore="MissingTranslation">ミュージックビデオのキャッシュ</string>
+    <string name="clear_music_video_cache" tools:ignore="MissingTranslation">ミュージックビデオのキャッシュを削除</string>
+    <string name="clear_music_video_cache_desc" tools:ignore="MissingTranslation">キャッシュされた曲とビデオの解像度の一致を削除します</string>
+    <string name="clear_all_downloads_dialog">ダウンロードされたすべての音声ファイルを削除しますか?</string>
+    <string name="song_cache_location">曲のキャッシュの保存場所</string>
+    <string name="song_cache_location_internal">内部ストレージ</string>
+    <string name="song_cache_location_internal_desc">アプリストレージに隠されています</string>
+    <string name="song_cache_location_shared_media">共有メディアフォルダー</string>
+    <string name="song_cache_location_shared_media_desc">ファイルマネージャーやメディアスキャナーでは、Android/media の下に表示されます</string>
+    <string name="song_cache_directory">曲のキャッシュディレクトリ</string>
+    <string name="storage_in_total">合計: %1$s</string>
+    <string name="downloads">ダウンロード</string>
+    <string name="youtube_playlists">YouTube プレイリスト</string>
+    <string name="podcasts">ポッドキャスト</string>
+    <string name="download_location">ダウンロード場所</string>
+    <string name="player_canvas_desc">SpotifyとYouTube Canvasの動画は、利用可能な場合、拡張プレーヤーの背後で再生されます。ストレージ容量とモバイルデータ通信量を多く消費します。</string>
+    <string name="disable_animated_artwork_on_mobile_data">モバイルデータで動くアートワークを無効化</string>
+    <string name="disable_animated_artwork_on_mobile_data_desc">モバイルデータ通信では、アニメーションがキャッシュされている場合でも、静止画を表示します</string>
+    <string name="settings_history_playlists">再生履歴プレイリスト</string>
+    <string name="settings_history_playlists_desc">視聴履歴から週単位および月単位のプレイリストを作成できます。これらのプレイリストは自動的に更新され、ライブラリに表示されます。</string>
+    <string name="history_playlist_weekly">週間トップ曲</string>
+    <string name="history_playlist_monthly">月間トップ曲</string>
+    <string name="queue_youtube_history_when_offline">オフライン時にYouTubeの履歴をキューに追加</string>
 </resources>
