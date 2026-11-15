@@ -5082,8 +5082,10 @@
     <string name="settings_storage_summary">%1$s used • %2$s free</string>
     <string name="new_badge">New</string>
     <string name="live">LIVE</string>
-    <string name="playback_event_log_raw_description">Playback and application failures are recorded here. UI events are excluded.</string>
-    <string name="playback_event_log_raw_empty">No failures recorded yet.</string>
+    <string name="playback_event_log_raw_description">Always-on playback diagnostics. Copy or export this raw log when playback breaks.</string>
+    <string name="playback_event_log_raw_empty">No playback events recorded yet. Play a track to capture diagnostics.</string>
+    <string name="application_failure_log_raw_description">Playback and application failures are recorded here. UI events are excluded.</string>
+    <string name="application_failure_log_raw_empty">No failures recorded yet.</string>
     <string name="import_error_playlist_tracks_unavailable">Could not load the playlist's tracks from %1$s. Export the playlist and paste the track list.</string>
     <string name="import_error_album_tracks_unavailable">Could not load the album's tracks from %1$s. Export the album and paste the track list.</string>
 <string name="audio_boost">Preamp</string>

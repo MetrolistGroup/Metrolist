@@ -179,7 +179,10 @@ object PlaybackEventLog {
         val errorHashCode: Int,
         val timestampMs: Long,
     ) {
-        fun matches(tag: String, error: Throwable): Boolean =
+        fun matches(
+            tag: String,
+            error: Throwable,
+        ): Boolean =
             this.tag == tag &&
                 exceptionType == error::class.simpleName &&
                 errorHashCode == error.hashCode() &&

@@ -8,6 +8,7 @@ package com.metrolist.desktop.utils
 import com.metrolist.shared.BuildConfig
 import com.metrolist.shared.utils.LogBridge
 import com.metrolist.shared.utils.XdgUtils
+import com.metrolist.shared.utils.redactDiagnosticText
 import com.metrolist.shared.youtube.playback.PlaybackEventLevel
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import kotlinx.coroutines.CoroutineDispatcher
@@ -323,7 +324,7 @@ object AppLogger {
     }
 
     internal fun sanitize(value: String): String =
-        value
+        redactDiagnosticText(value)
             .replace(sensitiveQueryRegex, "$1<redacted>")
             .replace(sensitiveHeaderRegex, "$1: <redacted>")
             .replace(urlCredentialsRegex, "$1<redacted>@")
