@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -3703,6 +3704,12 @@ private fun buildDirectDataSourceFactory(
 ): DataSource.Factory {
     val size = if (video) resource.videoContentLengthBytes else resource.contentLengthBytes
     val url = if (video) checkNotNull(resource.videoUrl) else resource.url
+    if (url.startsWith("${LegacyAudioFile.SCHEME}:")) {
+        val path = checkNotNull(Uri.parse(url).path)
+        val manifest = checkNotNull(LegacyAudioFile.fromPath(context, path))
+        val source = LegacyAudioSource(manifest).also(onSourceOpened)
+        return DataSource.Factory { SeekableMediaDataSource(source) }
+    }
     val boundedHttp = url.startsWith("https://")
     if ((boundedHttp || resource.requireBoundedRange || resource.useRangeChunks) && size != null && size > 0L) {
         val source =
@@ -3842,7 +3849,7 @@ private fun resourceSummary(resource: PlaybackResource): String =
 
 private class SeekableMediaDataSource(
     private val source: SeekableMediaSource,
-) : BaseDataSource(true) {
+) : BaseDataSource(source !is LegacyAudioSource) {
     private var opened = false
     private var uri = android.net.Uri.EMPTY
     private var readPosition = 0L

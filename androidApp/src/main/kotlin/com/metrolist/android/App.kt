@@ -383,7 +383,8 @@ class App :
             val settings = Settings.shared
             val location = Json.encodeToString(listOf(settings.audioCacheLocation, settings.downloadLocation, settings.customDownloadPath))
             val now = System.currentTimeMillis()
-            if (startupMaintenanceDue(settings.androidLastStorageAudit, now, STORAGE_AUDIT_INTERVAL_MS) ||
+            if (get<AudioCacheManager>().needsLegacyAudioImport() ||
+                startupMaintenanceDue(settings.androidLastStorageAudit, now, STORAGE_AUDIT_INTERVAL_MS) ||
                 settings.androidStorageAuditLocation != location
             ) {
                 runStartupStorageAudit(

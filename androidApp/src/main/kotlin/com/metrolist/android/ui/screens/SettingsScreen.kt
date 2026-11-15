@@ -296,11 +296,10 @@ fun SettingsScreen(
         scope.launch {
             isCalculatingCacheSize = true
             try {
-                val exoplayerDir = context.filesDir.resolve("exoplayer")
                 val coilDir = context.cacheDir.resolve("coil")
                 val songCacheSize =
                     withContext(Dispatchers.IO) {
-                        audioCacheManager.getCacheSizeBytes() + exoplayerDir.calculateDirectorySize()
+                        audioCacheManager.getCacheSizeBytes()
                     }
                 val downloadSize = withContext(Dispatchers.IO) { audioCacheManager.getDownloadSizeBytes() }
                 val imageCacheSize =
