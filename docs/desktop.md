@@ -88,6 +88,8 @@ Mouse drags continue scrolling at the release velocity with the container's flin
 
 Horizontal Home rows show arrow buttons at each edge that has more content. The buttons fade at the scroll limits and animate scrolling. Artwork and video shelves use Material carousel snapping; Speed Dial and song grids scroll freely. Home chips and moods use the same controls. Android and iOS do not show these buttons.
 
+Compose 1.13.0-beta02's `CarouselState` inherits scroll flags that always return true. The controls read its internal pager's measured limits so arrows follow scrolling, window resizing and content changes. Check this accessor when upgrading Compose.
+
 Desktop category pages such as Moods & genres fit as many columns as the available width allows, with a minimum chip width of 240 dp. Chips in the final row share its full width. Category-only pages use 6 dp gaps in both directions.
 
 Scrolling changes need checks with physical wheel, touchpad and touchscreen input, including Shift+wheel and rows nested in vertical pages, on each desktop platform.
