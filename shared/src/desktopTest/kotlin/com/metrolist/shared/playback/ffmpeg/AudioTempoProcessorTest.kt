@@ -8,6 +8,7 @@ import kotlin.math.abs
 import kotlin.math.sin
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class AudioTempoProcessorTest {
@@ -20,7 +21,11 @@ class AudioTempoProcessorTest {
                     tone().asList().chunked(2048).forEach { processor.process(it.toByteArray(), output::write) }
                     val beforeFlush = output.size()
                     processor.process(null, output::write)
-                    assertTrue(output.size() > beforeFlush, "Filter tail was not flushed at $speed")
+                    if (speed == 1f && pitch == 1f) {
+                        assertEquals(beforeFlush, output.size(), "Identity processing produced a filter tail")
+                    } else {
+                        assertTrue(output.size() > beforeFlush, "Filter tail was not flushed at $speed")
+                    }
                 }
                 val samples = ByteBuffer.wrap(output.toByteArray()).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
                 val expectedSamples = (SAMPLE_RATE * 2 / speed).toInt()
@@ -43,14 +48,15 @@ class AudioTempoProcessorTest {
     fun speedCanChangeWithinAnExistingStream() {
         val output = ByteArrayOutputStream()
         val data = tone()
-        AudioTempoProcessor(SAMPLE_RATE, 1, 1f).use { processor ->
+        AudioTempoProcessor(SAMPLE_RATE, 1, 1.25f).use { processor ->
             processor.process(data, output::write)
-            processor.setSpeed(1.25f)
+            assertFalse(processor.requiresRebuild(1.5f, 1f))
+            processor.setSpeed(1.5f)
             processor.process(data, output::write)
             processor.process(null, output::write)
         }
         val seconds = output.size().toDouble() / (SAMPLE_RATE * Short.SIZE_BYTES)
-        assertTrue(seconds in 3.4..3.8, "Expected about 3.6 seconds after speed change, got $seconds")
+        assertTrue(seconds in 2.8..3.1, "Expected about 2.9 seconds after speed change, got $seconds")
     }
 
     @Test
