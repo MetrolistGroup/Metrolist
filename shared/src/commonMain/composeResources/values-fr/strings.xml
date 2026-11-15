@@ -2445,7 +2445,7 @@
     <string name="tempo_pitch_preset_name">Nom du profil</string>
     <string name="back_again_to_exit">Appuyez à nouveau sur retour pour quitter</string>
     <string name="system_equalizer_unavailable">L'égaliseur système n'est pas disponible.</string>
-    <string name="download_filter_in_playlist">Dans une playlist</string>
+    <string name="download_filter_in_playlist">Dans la playlist</string>
     <string name="download_filter_not_in_playlist">Dans aucune playlist</string>
     <string name="download_filter_unavailable">Impossible de charger la playlist entièrement. Affichage des téléchargements. Veuillez réessayer pour appliquer le filtre.</string>
     <string name="statistics_share">Partagez vos statistiques d'écoute</string>
@@ -2593,4 +2593,11 @@
     <string name="lyrics_active_by_real_timing_description">Mettez en surbrillance chaque ligne uniquement pendant la durée qui lui est propre, même lorsque les lignes se chevauchent.</string>
     <string name="playback_event_log_raw_description">Diagnostics de lecture en continu. Copiez ou exportez ce journal brut en cas de problème lors de la lecture.</string>
     <string name="library_grid_columns">Colonnes de la grille de la bibliothèque</string>
+    <string name="chip_content_description">%1$s, puce</string>
+    <string name="settings_library_grid_columns">Colonnes de la grille de la bibliothèque</string>
+    <string name="playlist_picker_library_order">Commande de bibliothèque</string>
+    <string name="ai_setup_privacy_hint">La politique de données d'OpenRouter exclut les points de terminaison de ce modèle. Vérifiez les options relatives aux modèles gratuits et aux fournisseurs dans les paramètres de confidentialité d'OpenRouter, puis réessayez.</string>
+    <string name="ai_setup_rate_hint">Veuillez patienter et réessayer, ou choisissez un autre modèle gratuit. OpenRouter limite le nombre de requêtes gratuites par minute et par jour. Changer de modèle ne permet pas de contourner la limite de votre compte.</string>
+    <string name="ai_setup_daily_hint">Réessayez demain ou ajoutez des crédits à votre compte OpenRouter pour augmenter votre limite quotidienne gratuite. Changer de modèle ne vous permettra pas de contourner cette limite.</string>
+    <string name="ai_setup_minute_hint">Attendez que la limite de requêtes par minute d'OpenRouter soit réinitialisée, puis réessayez. Changer de modèle ne permettra pas de contourner cette limite.</string>
 </resources>
