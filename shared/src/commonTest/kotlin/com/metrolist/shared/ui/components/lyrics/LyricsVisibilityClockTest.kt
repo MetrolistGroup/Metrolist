@@ -106,6 +106,67 @@ class LyricsVisibilityClockTest {
         }
     }
 
+    @Test
+    fun castClocksInterpolateAtUnitySpeedWithoutReadingLocalPlayer() {
+        for (wordSynced in listOf(false, true)) {
+            runTest {
+                val samples = MutableStateFlow(1_000L)
+                val visible = MutableStateFlow(true)
+                var reads = 0
+                var position = 0L
+                val reader = {
+                    reads++
+                    99_999L
+                }
+                backgroundScope.launch {
+                    val flow =
+                        if (wordSynced) {
+                            smoothLyricsPositions(
+                                positionFlow = samples,
+                                isPlaying = true,
+                                playbackSpeed = 2f,
+                                visibility = visible,
+                                isCasting = true,
+                                positionReader = reader,
+                                timeSource = testScheduler.timeSource,
+                                tickOrigin = testScheduler.timeSource.markNow(),
+                            )
+                        } else {
+                            deadlineLyricsPositions(
+                                positionFlow = samples,
+                                deadlines = listOf(1_000L, 1_250L, 1_500L),
+                                initial = LyricsDeadlinePosition(samples.value),
+                                isPlaying = true,
+                                isCasting = true,
+                                playbackSpeed = 2f,
+                                timingOffsetMs = 0,
+                                visibility = visible,
+                                timeSource = testScheduler.timeSource,
+                                positionReader = reader,
+                            ).map { it.positionMs }
+                        }
+                    flow.collect { position = it }
+                }
+                runCurrent()
+                assertEquals(1_000L, position)
+
+                advanceTimeBy(300L)
+                runCurrent()
+                assertEquals(0, reads)
+                if (wordSynced) {
+                    assertTrue(position in 1_280L..1_300L, "Expected ~1300ms while casting, got $position")
+                } else {
+                    assertEquals(1_250L, position)
+                }
+
+                samples.value = 5_000L
+                runCurrent()
+                assertEquals(5_000L, position)
+                assertEquals(0, reads)
+            }
+        }
+    }
+
     private fun TestScope.positions(
         wordSynced: Boolean,
         samples: MutableStateFlow<Long>,

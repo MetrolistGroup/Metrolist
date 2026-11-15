@@ -70,10 +70,13 @@ internal fun deadlineLyricsPositions(
     timingOffsetMs: Int,
     visibility: StateFlow<Boolean>,
     timeSource: TimeSource = TimeSource.Monotonic,
-    anchor: LyricsPlaybackAnchor = LyricsPlaybackAnchor(initial.positionMs, isPlaying, playbackSpeed, timeSource),
+    anchor: LyricsPlaybackAnchor =
+        LyricsPlaybackAnchor(initial.positionMs, isPlaying, if (isCasting) 1f else playbackSpeed, timeSource),
     positionReader: (() -> Long)? = null,
 ): Flow<LyricsDeadlinePosition> =
     channelFlow {
+        val effectiveReader = if (isCasting) null else positionReader
+        val effectiveSpeed = if (isCasting) 1f else playbackSpeed
         var published = initial
         visibility.collectLatest { shown ->
             if (!shown) {
@@ -89,7 +92,7 @@ internal fun deadlineLyricsPositions(
             }
             var firstSample = true
             positionFlow.collectLatest sample@{ rawSample ->
-                val sample = (if (isCasting) rawSample else positionReader?.invoke() ?: rawSample).coerceAtLeast(0L)
+                val sample = (effectiveReader?.invoke() ?: rawSample).coerceAtLeast(0L)
                 val mark = timeSource.markNow()
                 val isSeek =
                     anchor.needsReseed || sample < anchor.positionMs - 80L ||
@@ -103,7 +106,7 @@ internal fun deadlineLyricsPositions(
                 anchor.positionMs = sample
                 anchor.mark = mark
                 anchor.isPlaying = isPlaying
-                anchor.playbackSpeed = playbackSpeed
+                anchor.playbackSpeed = effectiveSpeed
                 val effectiveSample =
                     if (!isSeek && !firstSample && isPlaying && published.positionMs - sample in 1L..250L) {
                         published.positionMs
@@ -111,7 +114,7 @@ internal fun deadlineLyricsPositions(
                         sample
                     }
                 val generation = published.seekGeneration + if (isSeek) 1 else 0
-                if (firstSample || isSeek || !isPlaying || isCasting ||
+                if (firstSample || isSeek || !isPlaying ||
                     nextLyricsDeadlineIndex(deadlines, effectiveSample + timingOffsetMs) !=
                     nextLyricsDeadlineIndex(deadlines, published.positionMs + timingOffsetMs)
                 ) {
@@ -119,15 +122,15 @@ internal fun deadlineLyricsPositions(
                     send(published)
                 }
                 firstSample = false
-                if (!isPlaying || isCasting || !playbackSpeed.isFinite() || playbackSpeed <= 0f) return@sample
+                if (!isPlaying || !effectiveSpeed.isFinite() || effectiveSpeed <= 0f) return@sample
 
                 while (true) {
                     val position =
                         maxOf(
                             effectiveSample,
                             published.positionMs,
-                            positionReader?.invoke()
-                                ?: (sample + (mark.elapsedNow().inWholeMilliseconds * playbackSpeed.toDouble()).toLong()),
+                            effectiveReader?.invoke()
+                                ?: (sample + (mark.elapsedNow().inWholeMilliseconds * effectiveSpeed.toDouble()).toLong()),
                         )
                     if (nextLyricsDeadlineIndex(deadlines, position + timingOffsetMs) !=
                         nextLyricsDeadlineIndex(deadlines, published.positionMs + timingOffsetMs)
@@ -135,8 +138,8 @@ internal fun deadlineLyricsPositions(
                         published = LyricsDeadlinePosition(position, generation)
                         send(published)
                     }
-                    val waitMs = nextLyricsDeadlineDelay(deadlines, position + timingOffsetMs, playbackSpeed) ?: break
-                    delay(if (positionReader != null) minOf(waitMs, 16L) else waitMs)
+                    val waitMs = nextLyricsDeadlineDelay(deadlines, position + timingOffsetMs, effectiveSpeed) ?: break
+                    delay(if (effectiveReader != null) minOf(waitMs, 16L) else waitMs)
                 }
             }
         }
@@ -168,7 +171,14 @@ internal fun rememberDeadlineLyricsPositionState(
             mutableStateOf(LyricsDeadlinePosition(initial.coerceAtLeast(0L)))
         }
     val anchor =
-        remember(songId) { LyricsPlaybackAnchor(positionFlow.value.coerceAtLeast(0L), isPlaying, playbackSpeed, TimeSource.Monotonic) }
+        remember(songId) {
+            LyricsPlaybackAnchor(
+                positionFlow.value.coerceAtLeast(0L),
+                isPlaying,
+                if (isCasting) 1f else playbackSpeed,
+                TimeSource.Monotonic,
+            )
+        }
     val readPosition by rememberUpdatedState(positionReader)
     val hasLiveReader = positionReader != null
     LaunchedEffect(
@@ -202,7 +212,7 @@ internal fun rememberDeadlineLyricsPositionState(
             timingOffsetMs,
             visibility,
             anchor = anchor,
-            positionReader = if (hasLiveReader) ({ readPosition?.invoke() ?: positionFlow.value }) else null,
+            positionReader = if (hasLiveReader && !isCasting) ({ readPosition?.invoke() ?: positionFlow.value }) else null,
         ).collect { position.value = it }
     }
     return position

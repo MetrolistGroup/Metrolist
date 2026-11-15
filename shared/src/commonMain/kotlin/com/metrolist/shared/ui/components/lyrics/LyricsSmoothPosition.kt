@@ -118,7 +118,7 @@ fun rememberSmoothLyricsPositionState(
             enabled = enabled,
             visibility = visibility,
             frameInterval = frameInterval,
-            positionReader = if (hasLiveReader) ({ readPosition?.invoke() ?: positionFlow.value }) else null,
+            positionReader = if (hasLiveReader && !isCasting) ({ readPosition?.invoke() ?: positionFlow.value }) else null,
             songId = songId,
         ).collect { smoothPosition.longValue = it }
     }
@@ -140,29 +140,33 @@ internal fun smoothLyricsPositions(
     tickOrigin: TimeMark = playbackAnimationOrigin,
 ): Flow<Long> =
     channelFlow {
+        val effectiveReader = if (isCasting) null else positionReader
+        val effectiveSpeed = if (isCasting) 1f else playbackSpeed
         visibility.collectLatest { shown ->
-            if (!enabled || !shown || !isPlaying || isCasting) {
+            if (!enabled || !shown || !isPlaying) {
                 positionFlow.collect { sample ->
-                    val position = if (enabled && shown && !isCasting) positionReader?.invoke() ?: sample else sample
+                    val position = if (enabled && shown) effectiveReader?.invoke() ?: sample else sample
                     send(position.coerceIn(0L, maxPosition))
                 }
                 return@collectLatest
             }
-            val clock = LyricsPositionClock(playbackSpeed, maxPosition, timeSource)
-            clock.sample(positionFlow.value, positionReader)
-            send(clock.positionMs())
+            val clock = LyricsPositionClock(effectiveSpeed, maxPosition, timeSource)
+            clock.sample(positionFlow.value, effectiveReader)
+            send(clock.positionMs(effectiveReader))
             var logMark: TimeMark? = null
             coroutineScope {
                 launch {
                     positionFlow.collect { sample ->
-                        clock.sample(sample, positionReader)
+                        if (clock.sample(sample, effectiveReader)) {
+                            send(clock.positionMs(effectiveReader))
+                        }
                     }
                 }
                 launch {
                     lyricsPositionTicks(frameInterval, tickOrigin).collect {
-                        val position = clock.positionMs(positionReader)
+                        val position = clock.positionMs(effectiveReader)
                         send(position)
-                        if (positionReader != null && (logMark == null || logMark!!.elapsedNow().inWholeMilliseconds >= 5_000L)) {
+                        if (effectiveReader != null && (logMark == null || logMark!!.elapsedNow().inWholeMilliseconds >= 5_000L)) {
                             logMark = timeSource.markNow()
                             PlaybackEventLog.debug(
                                 PlaybackEventKind.PLAYER,
@@ -174,7 +178,7 @@ internal fun smoothLyricsPositions(
                                         "anchorPositionMs" to clock.anchorPositionMs.toString(),
                                         "anchorAgeMs" to clock.anchorAgeMs.toString(),
                                         "renderPositionMs" to position.toString(),
-                                        "playbackSpeed" to playbackSpeed.toString(),
+                                        "playbackSpeed" to effectiveSpeed.toString(),
                                         "livePositionReader" to "true",
                                     ),
                             )
@@ -200,14 +204,16 @@ internal class LyricsPositionClock(
     fun sample(
         positionMs: Long,
         positionReader: (() -> Long)? = null,
-    ) {
+    ): Boolean {
         val bounded = (positionReader?.invoke() ?: positionMs).coerceIn(0L, maxPosition)
-        if (!initialized || isPlaybackPositionDiscontinuity(anchorPositionMs, bounded, anchorAgeMs, playbackSpeed)) {
+        val discontinuity = !initialized || isPlaybackPositionDiscontinuity(anchorPositionMs, bounded, anchorAgeMs, playbackSpeed)
+        if (discontinuity) {
             lastPositionMs = bounded
         }
         anchorPositionMs = bounded
         anchorMark = timeSource.markNow()
         initialized = true
+        return discontinuity
     }
 
     fun positionMs(positionReader: (() -> Long)? = null): Long {
