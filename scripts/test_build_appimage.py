@@ -10,13 +10,14 @@ import unittest
 
 
 class AppImageBuildTest(unittest.TestCase):
-    def test_pr_assembles_arm64_and_release_packages_it(self):
+    def test_ci_uses_x64_and_manual_builds_keep_arm64(self):
         workflows = Path(__file__).resolve().parents[1] / ".github/workflows"
         verify = (workflows / "reusable-desktop-verify.yml").read_text()
         release = (workflows / "reusable-desktop-linux.yml").read_text()
-        self.assertIn("./gradlew :desktopApp:assemble --no-daemon", verify)
-        self.assertIn(":desktopApp:compileKotlinJvm :shared:desktopTest", verify)
-        self.assertIn("tasks+=(:desktopApp:jvmTest :desktopApp:ktlintCheck)", verify)
+        self.assertIn(":shared:desktopTest :desktopApp:jvmTest :desktopApp:ktlintCheck", verify)
+        self.assertIn("tasks+=(:desktopApp:compileKotlinJvm)", verify)
+        self.assertIn("include-arm64: true", (workflows / "build-desktop.yml").read_text())
+        self.assertNotIn("include-arm64: true", (workflows / "ci.yml").read_text())
         self.assertNotIn("./scripts/build_appimage.sh", verify)
         self.assertIn("./scripts/build_appimage.sh", release)
         self.assertIn("Expected aarch64 AppImage", release)

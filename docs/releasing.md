@@ -6,15 +6,12 @@ Change `appVersion` only with release authorization. Workflows own signing, chec
 
 Keep release commits to `appVersion`, `versionCode` and release metadata. `.github/scripts/release_verification.py` follows first-parent history to find the source commit whose tree differs only in `gradle.properties` version assignments, `docs/changelog.md` and `fastlane/metadata/android/*/changelogs/*.txt`. Any other Gradle property or source change ends that search. Manual retries with release fixes must verify those fixes too.
 
-Before creating staging or starting platform builds, releases query GitHub for the applicable Verify Android, Verify Desktop, Verify iOS and Verify repository checks runs. The gate uses the same path rules as push/PR verification. It requires successful, completed GitHub Actions check runs from the expected main-branch workflows. A successful workflow with a skipped required job is insufficient. Android verification must include the debug checks, not just release APK assembly. A failed platform run blocks reuse even if the last commit did not touch that platform, because one push can contain several commits.
+Before creating staging or starting platform builds, releases query GitHub for the applicable Android, desktop, iOS and repository jobs in CI. The gate uses the same path rules as push/PR verification. It requires successful, completed GitHub Actions check runs from the expected main-branch workflows. A successful workflow with a skipped required job is insufficient. Android verification must include the debug checks, not just release APK assembly. A failed CI run blocks reuse even if the last commit did not touch that platform, because one push can contain several commits.
 
 The gate first tries the release revision, then each metadata-equivalent ancestor through the source commit. If it cannot prove verification, it fails before packaging. It does not start a second test matrix or wait for another run. Finish or rerun verification, then retry the failed release run. To verify the current main revision explicitly, run the needed commands below and wait for success.
 
 ```bash
-gh workflow run build-android.yml --ref main -f variant=debug
-gh workflow run build-desktop.yml --ref main
-gh workflow run build-ios.yml --ref main
-gh workflow run verify-repository-checks.yml --ref main
+gh workflow run ci.yml --ref main
 ```
 
 Once the gate passes, release jobs build, sign and upload. They skip unit tests, lint, launch smoke tests, verification-only Gradle dependencies and the duplicate iOS simulator job. They still inspect archive versions and native architectures and verify APK signatures. `metrolist.verifyPackaging=false` removes the Gradle verification dependencies only in these gated jobs; normal builds keep them. Manual package dispatches keep final distributable inspection. `build-desktop.yml` with `windows-manager=true` builds and tests the pinned Windows installer against its portable ZIP, including install, repair and uninstall. Run it when changing installer or payload behavior. See [release verification gate](build-performance.md#release-verification-gate) for where skipped checks run.
@@ -27,7 +24,7 @@ Dispatch `build-desktop-native.yml` for one target; the package and its evidence
 
 ## Nightly prereleases
 
-[`nightly.yml`](../.github/workflows/nightly.yml) runs after pushes to main, except changes limited to docs, Markdown, fastlane metadata or assets. GitHub's `[skip ci]` commit marker skips push runs. Maintainers can also dispatch it on main. New runs cancel an unfinished nightly.
+[`nightly.yml`](../.github/workflows/nightly.yml) runs after pushes to main, except changes limited to docs, Markdown, fastlane metadata or assets. GitHub's `[skip ci]` commit marker skips push runs. Maintainers can also dispatch it on main. New runs cancel an unfinished nightly. CI runs the affected platform's ktlint and unit tests alongside Nightly, without debug APK assembly or a separate desktop compile task. Native launch probes run on manual builds only.
 
 All three builds must succeed before publication. The rolling `nightly` tag moves to the built commit, and the "Metrolist Nightly" prerelease replaces its assets with exactly one signed Android release APK, one native Linux x64 AppImage and one native Windows x64 portable ZIP. The assets use the stable release names: `Metrolist.apk`, `metrolist-desktop-linux-x64-<version>.AppImage` and `Metrolist-Desktop-windows.zip`. Publication keeps the release in draft while replacing assets, then publishes it as a prerelease without marking it latest. A failed publication can leave a draft; rerun the workflow to finish it.
 

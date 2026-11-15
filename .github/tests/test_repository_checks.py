@@ -5,7 +5,7 @@ import re
 import sys
 import unittest
 
-WORKFLOW = Path(__file__).resolve().parents[1] / 'workflows/verify-repository-checks.yml'
+WORKFLOW = Path(__file__).resolve().parents[1] / 'workflows/ci.yml'
 sys.path.insert(0, str(WORKFLOW.parents[1] / 'scripts'))
 from ci_paths import classify
 
@@ -29,19 +29,21 @@ class RepositoryChecksTest(unittest.TestCase):
         self.assertIn("'gradle/libs.versions.toml'", restore)
         self.assertLess(workflow.index('Give builder ownership'), workflow.index('Build local Arch package'))
 
-    def test_flatpak_gating_fails_open_and_keeps_translation_checks(self):
-        workflow = WORKFLOW.read_text()
-        checks, flatpak = workflow.split('\n  flatpak:', 1)
-        self.assertIn('fetch-depth: 0', checks)
-        self.assertIn('run: node .github/scripts/flatpak-paths.cjs', checks)
-        self.assertIn('python3 scripts/check_translation_mechanics.py', checks)
-        self.assertIn('needs: checks', flatpak)
-        self.assertIn("if: always() && needs.checks.result != 'skipped' && needs.checks.outputs.flatpak != 'false'", flatpak)
+    def test_packaging_entry_points_are_manual_only(self):
+        for name in ('build-android.yml', 'build-desktop.yml', 'build-ios.yml',
+                     'verify-aur-package.yml', 'verify-repository-checks.yml'):
+            workflow = (WORKFLOW.parent / name).read_text()
+            events = workflow.split('on:\n', 1)[1].split('\nconcurrency:', 1)[0]
+            self.assertIn('  workflow_dispatch:', events)
+            self.assertNotRegex(events, r'(?m)^  (push|pull_request):')
+            self.assertNotIn('uses: ./.github/actions/ci-changes', workflow)
+        flatpak = (WORKFLOW.parent / 'verify-repository-checks.yml').read_text()
         self.assertIn('flatpak-builder --show-manifest', flatpak)
         self.assertIn('make --dry-run flatpak-deps flatpak-build flatpak-install flatpak-bundle', flatpak)
+        self.assertIn('python3 scripts/check_translation_mechanics.py', WORKFLOW.read_text())
 
     def test_android_generator_changes_trigger_its_check(self):
-        workflow = (WORKFLOW.parent / 'build-android.yml').read_text()
+        workflow = WORKFLOW.read_text()
         for event in ('push', 'pull_request'):
             block = re.search(rf'(?ms)^  {event}:\n(.*?)(?=^  \w|^\w|\Z)', workflow)[1]
             self.assertNotIn("paths:", block)
@@ -51,7 +53,7 @@ class RepositoryChecksTest(unittest.TestCase):
         self.assertIn('run: python3 scripts/test_generate_android_strings.py', reusable)
 
     def test_dmg_packaging_changes_trigger_desktop_checks(self):
-        workflow = (WORKFLOW.parent / 'build-desktop.yml').read_text()
+        workflow = WORKFLOW.read_text()
         for event in ('push', 'pull_request'):
             block = re.search(rf'(?ms)^  {event}:\n(.*?)(?=^  \w|^\w|\Z)', workflow)[1]
             self.assertNotIn("paths:", block)

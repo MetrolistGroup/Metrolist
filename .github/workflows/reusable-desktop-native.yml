@@ -124,7 +124,7 @@ jobs:
             :desktopApp:prepareNativeImage --no-daemon --no-build-cache --no-configuration-cache
 
       - name: Trace Windows startup when a desktop is available
-        if: runner.os == 'Windows'
+        if: github.event_name == 'workflow_dispatch' && runner.os == 'Windows'
         shell: bash
         run: |
           python scripts/desktop_smoke.py "$NATIVE_WORK/classpath.txt" \
@@ -146,6 +146,7 @@ jobs:
             --image "$NATIVE_WORK/image" --output "$NATIVE_WORK/packages"
 
       - name: Strict native launch smoke
+        if: github.event_name == 'workflow_dispatch'
         shell: bash
         env:
           PACKAGE: ${{ steps.package.outputs.path }}

@@ -23,7 +23,7 @@ Android unit tests include the generated shared Compose catalog on their runtime
 
 Android lint uses `androidApp/lint-baseline.xml`. Translation and resource checks cannot see all shared Compose accessors, so lint disables `MissingTranslation`, `MissingQuantity`, `PluralsCandidate` and `UnusedResources`.
 
-`.editorconfig` changes run Android and desktop ktlint checks. Flatpak manifest and Makefile changes run manifest parsing and packaging-target dry runs in repository checks.
+`.editorconfig` changes run Android and desktop ktlint checks. Dispatch `verify-repository-checks.yml` to parse the Flatpak manifest and dry-run its Makefile targets.
 
 `make ios-test` parses all Swift host sources with the iOS Simulator SDK on macOS; it requires Xcode command-line tools.
 
@@ -235,7 +235,7 @@ python3 scripts/test_deps.py
 python3 scripts/test_find_unused_strings.py
 ```
 
-Repository checks run for shared catalog and translation-validator changes, iOS version-script changes, and profiler changes. The workflow-trigger test ensures every Python check can trigger its own workflow and covers these script inputs.
+CI runs the cheap repository checks in its selection job on every push and PR, including docs-only changes. The workflow tests cover path selection, manual packaging, task arguments and release verification without starting builds.
 
 `test_generate_android_strings.py` compiles the production task and source filters in an isolated Gradle build, then checks scanning, missing keys, XML escaping and stale output removal. It runs in Android debug CI. Set `GRADLE` to use a different Gradle executable.
 
@@ -275,13 +275,25 @@ Each attempted launch uploads a `desktop-smoke-<platform>-<arch>` artifact, with
 
 ## CI path selection
 
-The platform workflow YAML files under `.github/workflows/` define triggers and the full check lists.
+[CI](../.github/workflows/ci.yml) handles PRs and pushes to main with one selection job. That job also runs the cheap repository checks, including translation validation. Docs-only changes stop there. New runs cancel unfinished checks for the same PR or branch.
 
-`.github/scripts/ci_paths.py` owns the path rules for push and PR verification. Common sources, common tests, Compose resources and documentation run one Linux x64 desktop compile and shared JVM tests. Android, desktop and iOS source sets select their platform. JVM shared sources select Android and desktop. Gradle scripts, catalogs, wrapper files, shared actions, release workflows and unknown paths select every platform. Platform workflow files select their platform. An unreadable diff runs every check. Version-only release bumps reuse the source revision's checks through the [release gate](releasing.md#reuse-verification).
+`.github/scripts/ci_paths.py` owns the path rules. Common production code and Compose resources select Android, desktop and iOS. Common tests and JVM shared sources select Android and desktop. Platform source sets select their platform. Gradle scripts, catalogs, wrapper files, shared actions, release workflows and unknown paths select every platform. Deleted paths and both sides of renames count. An unreadable diff selects every platform. Version-only release bumps reuse the source revision's checks through the [release gate](releasing.md#reuse-verification).
 
-Main pushes run the affected platform's unit tests. Shared-only changes skip the desktop ARM64 matrix and packaging-script tests. Other desktop changes verify Linux x64 and, on main, ARM64. iOS verification uses macOS; Linux cannot compile its Apple SDK targets. Arch packaging runs for its recipe and global build changes, with a manual dispatch for other packaging changes. Verification uses Ubuntu 26.04, while AppImage packaging uses 24.04 for its older glibc baseline. Run `python3 -m unittest discover -s .github/tests` and `actionlint` after workflow edits. The Python tests simulate path selection, metadata bumps, trusted check results, cache policies and manual package routing without calling Actions.
+Android runs ktlint, lint and unit tests. PRs also assemble the debug APK. Desktop verifies Linux x64 with ktlint, shared and desktop tests, and integrity checks. PRs also request desktop compilation. On main, Nightly supplies Android APK and Linux/Windows native builds, so CI omits debug APK assembly and the separate desktop compile task. Tests still compile their dependencies. iOS runs Swift validation and simulator backend tests on macOS for common production, iOS or build-input changes. Linux cannot compile Apple SDK targets.
 
-Repository checks always validate translations. Flatpak validation runs for changes to `flatpak/`, `Makefile`, workflows or its changed-path script. A failed changed-path check runs Flatpak validation too.
+ARM64 desktop verification, macOS and Windows packaging, Arch builds, Flatpak validation and packaged launch checks run only through manual workflows or the existing release paths. Native Nightly builds skip launch probes. Arch compilation can take an hour and Flatpak validation installs extra tools, so neither runs automatically for packaging edits. Dispatch `build-desktop.yml`, `verify-aur-package.yml` or `verify-repository-checks.yml` when changing their inputs. `release.yml` keeps its verification gate, signing, Sentry finalization and publication steps.
+
+The table counts jobs that acquire a runner, including selection jobs and Nightly's five jobs on eligible main pushes. It excludes skipped jobs, tags and manual runs. The before counts use the former path rules. The [main desktop run](https://github.com/MetrolistGroup/Metrolist/actions/runs/43665327533) had both Linux architectures. The [sample PR desktop run](https://github.com/MetrolistGroup/Metrolist/actions/runs/43663069470) had Linux x64 only; its four sibling Verify workflows added five runner jobs.
+
+| Change | Before | After |
+| --- | ---: | ---: |
+| Docs-only main push | 7 | 1 |
+| Common production main push | 12 | 9 |
+| Android source-only main push | 11 | 7 |
+| Desktop source-only main push | 13 | 7 |
+| Sample desktop PR, `8964d2a` | 7 | 2 |
+
+A PR touching global build inputs now runs four jobs. Run `python3 -m unittest discover -s .github/tests` and `actionlint` after workflow edits. Verification uses Ubuntu 26.04; AppImage packaging keeps Ubuntu 24.04 for its older glibc baseline.
 
 ## CI cache rules
 

@@ -281,7 +281,7 @@ while True:
     def test_script_changes_trigger_x64_self_check_without_new_runners(self):
         sys.path.insert(0, str(ROOT / ".github/scripts"))
         from ci_paths import classify
-        workflow = (ROOT / ".github/workflows/build-desktop.yml").read_text()
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text()
         for event in ("push", "pull_request"):
             block = re.search(rf"(?ms)^  {event}:\n(.*?)(?=^  \w|^\w|\Z)", workflow)[1]
             self.assertNotIn("paths:", block)

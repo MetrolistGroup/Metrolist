@@ -92,7 +92,7 @@ python3 .github/tests/test_release_workflows.py
 python3 .github/tests/test_repository_checks.py
 bash -n scripts/build_appimage.sh
 shellcheck scripts/build_appimage.sh packaging/flatpak/com.metrolist.desktop
-actionlint .github/workflows/release.yml .github/workflows/verify-repository-checks.yml
+actionlint .github/workflows/ci.yml .github/workflows/release.yml .github/workflows/verify-repository-checks.yml
 ```
 
 `scripts/build_appimage.sh` accepts a `GRADLE` executable override and rejects a successful build without a nonempty AppImage.

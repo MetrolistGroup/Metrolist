@@ -27,9 +27,10 @@ def main():
     verify = (repository / ".github/workflows/build-ios.yml").read_text()
     assert "      upload-artifact: ${{ github.event_name == 'workflow_dispatch' }}" in verify
     assert "  compile:" not in verify, "Linux cannot compile the iOS targets"
-    assert "uses: ./.github/actions/ci-changes" in verify
-    assert "needs.changes.outputs.platform == 'true'" in verify
-    assert "    needs: changes" in verify
+    ci = (repository / ".github/workflows/ci.yml").read_text()
+    assert "uses: ./.github/actions/ci-changes" in ci
+    assert "needs.changes.outputs.ios == 'true'" in ci
+    assert "    needs: changes" in ci
 
     xcode_project = (repository / "iosApp/iosApp.xcodeproj/project.pbxproj").read_text()
     xcconfig_path = repository / "iosApp/Configuration/Config.xcconfig"

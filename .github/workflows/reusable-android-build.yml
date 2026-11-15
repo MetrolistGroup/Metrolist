@@ -8,6 +8,11 @@ on:
         required: false
         default: true
         type: boolean
+      assemble:
+        description: Assemble the APK, disabled for push checks covered by Nightly
+        required: false
+        default: true
+        type: boolean
       variant:
         description: Android build variant
         required: false
@@ -140,7 +145,7 @@ jobs:
         uses: ./.github/actions/prepare-ci-gradle
         with:
           # Separate task graphs need separate configuration-cache entries.
-          cache-scope: android-${{ inputs.variant }}
+          cache-scope: android-${{ inputs.variant }}-${{ inputs.assemble }}
           cache-read-only: ${{ inputs.cache-read-only }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           persist-configuration-cache: 'false'
@@ -175,6 +180,7 @@ jobs:
         shell: bash
         env:
           BUILD_VARIANT: ${{ inputs.variant }}
+          ASSEMBLE: ${{ inputs.assemble }}
           VERIFICATION_ONLY: ${{ inputs.variant == 'debug' && !inputs.upload-artifact && inputs.staging-release-tag == '' }}
           KEYSTORE_PATH: ${{ steps.signing.outputs.keystore_path }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -199,12 +205,14 @@ jobs:
             extra_args+=(-x :androidApp:lintVitalRelease)
           else
             tasks=(
-              ":androidApp:assembleDebug"
               ":androidApp:lintDebug"
               ":androidApp:testDebugUnitTest"
               ":shared:testAndroidHostTest"
               ":androidApp:ktlintCheck"
             )
+            if [[ "$ASSEMBLE" == "true" ]]; then
+              tasks+=(':androidApp:assembleDebug')
+            fi
           fi
           ./gradlew "${tasks[@]}" --no-daemon "${extra_args[@]}"
 
@@ -218,6 +226,7 @@ jobs:
           retention-days: 4
 
       - name: Collect APK
+        if: inputs.assemble
         id: apk
         shell: bash
         env:

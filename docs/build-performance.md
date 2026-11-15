@@ -2,9 +2,9 @@
 
 ## CI path selection
 
-`.github/scripts/ci_paths.py` owns the path rules for Android, desktop, iOS, repository checks and Arch packaging. The entry workflows run a small Linux selection job. Common sources, common tests, Compose resources and documentation select one Linux x64 JVM build with shared tests. Android and iOS source sets select their own platform. JVM shared sources select Android and desktop. Platform workflows select their platform. Gradle scripts, catalogs, wrapper files, shared actions, release workflows and unknown paths select everything. Deleted paths and both sides of renames count. An unreadable diff selects everything. Arch packaging runs for recipe or global build changes, not for every desktop edit.
+[CI](../.github/workflows/ci.yml) uses one Linux selection job and runs cheap repository checks there. Docs-only changes need no build runner. Common production sources and Compose resources select Android, desktop x64 and iOS. Common tests and JVM shared sources select Android and desktop. Platform source sets select their platform. Global build inputs and unreadable diffs select every platform. Deleted paths and both sides of renames count. See [CI path selection](checks.md#ci-path-selection) for job counts and manual packaging commands.
 
-Main pushes run the affected platform's unit tests. Shared-only changes run the shared JVM tests. iOS targets require Apple SDKs, so iOS compiles and tests only on macOS.
+Main pushes run the affected platform's ktlint and unit tests. Nightly supplies the APK and native desktop builds, so CI skips debug APK assembly and its separate desktop compile task on push. Tests still compile their dependencies. ARM64 verification, other desktop packaging and launch probes stay manual. iOS targets need Apple SDKs and run only on macOS.
 
 ## Release verification gate
 

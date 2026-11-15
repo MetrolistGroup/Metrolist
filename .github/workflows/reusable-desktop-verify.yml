@@ -3,6 +3,16 @@ name: Desktop Verify
 on:
   workflow_call:
     inputs:
+      include-arm64:
+        description: Also verify ARM64 on manual desktop builds
+        required: false
+        default: false
+        type: boolean
+      compile:
+        description: Request a separate compile task outside push checks covered by Nightly
+        required: false
+        default: true
+        type: boolean
       shared-only:
         description: Verify common code once on Linux x64
         required: false
@@ -37,7 +47,7 @@ jobs:
       fail-fast: false
       matrix:
         include: >-
-          ${{ fromJSON((inputs.shared-only || github.event_name == 'pull_request')
+          ${{ fromJSON(!inputs.include-arm64
             && '[{"arch":"x64","runner":"blacksmith-4vcpu-ubuntu-2604"}]'
             || '[{"arch":"x64","runner":"blacksmith-4vcpu-ubuntu-2604"},{"arch":"arm64","runner":"blacksmith-4vcpu-ubuntu-2604-arm"}]') }}
     steps:
@@ -53,7 +63,7 @@ jobs:
       - name: Prepare CI Gradle
         uses: ./.github/actions/prepare-ci-gradle
         with:
-          cache-scope: desktop-verify-${{ matrix.arch }}
+          cache-scope: desktop-verify-${{ matrix.arch }}-${{ inputs.compile }}
           persist-configuration-cache: 'false'
           cache-read-only: ${{ inputs.cache-read-only }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
@@ -96,11 +106,8 @@ jobs:
         if: matrix.arch == 'x64' && !inputs.shared-only
         shell: bash
         run: |
-          python3 scripts/test_build_appimage.py
           python3 scripts/test_desktop_smoke.py
           python3 scripts/test_dmg_packaging.py
-          python3 scripts/test_hooks.py
-          python3 scripts/test_compose_resource_escapes.py
 
       - name: Build and verify desktop app
         shell: bash
@@ -109,6 +116,7 @@ jobs:
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
           LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
           LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+          JAVA_TOOL_OPTIONS: -Djava.awt.headless=true
           # The local 4 GB heap is too small for in-process Kotlin compiling desktop and iOS sources together.
           GRADLE_OPTS: >-
             -Dorg.gradle.jvmargs="-XX:MaxRAMPercentage=60.0 -XX:+UseParallelGC -Dfile.encoding=UTF-8"
@@ -116,12 +124,12 @@ jobs:
           set -euo pipefail
           if [[ "${{ matrix.arch }}" == "x64" ]]; then
             tasks=(
-              :desktopApp:compileKotlinJvm :shared:desktopTest
+              :shared:desktopTest :desktopApp:jvmTest :desktopApp:ktlintCheck
               :shared:verifyDesktopJarIntegrity :shared:verifyKuromojiPackaging :shared:verifyIosKuromojiPackaging
               :shared:ktlintCheck :listenTogetherProto:ktlintCheck
             )
-            if [[ '${{ inputs.shared-only }}' != 'true' ]]; then
-              tasks+=(:desktopApp:jvmTest :desktopApp:ktlintCheck)
+            if [[ '${{ inputs.compile }}' == 'true' ]]; then
+              tasks+=(:desktopApp:compileKotlinJvm)
             fi
             ./gradlew "${tasks[@]}" --no-daemon -Pmetrolist.sourceRevision=
           else

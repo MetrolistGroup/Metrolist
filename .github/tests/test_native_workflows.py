@@ -39,6 +39,12 @@ class NativeWorkflowTest(unittest.TestCase):
                 expected=event in ['workflow_dispatch','push'] and target in ['linux-x64','windows-x64','linux-arm64','macos-arm64']
                 self.assertEqual(evaluate(condition,bindings),expected,(event,target))
 
+    def test_launch_probes_only_run_for_manual_packages(self):
+        text = (ROOT / '.github/workflows/reusable-desktop-native.yml').read_text()
+        for name in ('Trace Windows startup when a desktop is available', 'Strict native launch smoke'):
+            step = text.split(f'      - name: {name}\n', 1)[1].split('      - name:', 1)[0]
+            self.assertIn("if: github.event_name == 'workflow_dispatch'", step)
+
     def test_native_caches_exclude_application_outputs_and_credentials(self):
         text=(ROOT/'.github/workflows/reusable-desktop-native.yml').read_text()
         cache=text.split('      - name: Cache verified GraalVM archives\n',1)[1].split('      - name:',1)[0]

@@ -8,13 +8,12 @@ import subprocess
 
 
 PLATFORMS = ("android", "desktop", "ios", "repository")
-ALL_CHECKS = (*PLATFORMS, "arch")
+ALL_CHECKS = PLATFORMS
 WORKFLOWS = {
     "android": ("build-android.yml", "reusable-android-build.yml"),
     "desktop": ("build-desktop-native.yml", "build-desktop.yml", "reusable-desktop-", "reusable-windows-manager.yml"),
     "ios": ("build-ios.yml", "reusable-ios-build.yml"),
-    "repository": ("verify-repository-checks.yml",),
-    "arch": ("verify-aur-package.yml",),
+    "repository": ("verify-repository-checks.yml", "verify-aur-package.yml"),
 }
 
 
@@ -22,8 +21,14 @@ def classify(paths):
     selected = set()
     shared_only = True
     for path in paths:
-        if path.startswith(("shared/src/commonMain/", "shared/src/commonTest/", "docs/")):
-            selected.update(("desktop", "repository"))
+        if path.startswith("docs/") or path.endswith(".md"):
+            selected.add("repository")
+            continue
+        if path.startswith("shared/src/commonMain/"):
+            selected.update(PLATFORMS)
+            continue
+        if path.startswith("shared/src/commonTest/"):
+            selected.update(("android", "desktop", "repository"))
             continue
         shared_only = False
         if path.startswith(".github/workflows/"):
@@ -52,7 +57,7 @@ def classify(paths):
         elif path.startswith(("shared/src/jvmShared", "shared/src/jvmTest", "listenTogetherProto/", "metroproto")):
             selected.update(("android", "desktop"))
         elif path.startswith("aur/"):
-            selected.update(("arch", "repository"))
+            selected.add("repository")
         elif path.startswith(("scripts/", ".github/tests/", ".github/scripts/", ".githooks/", "packaging/", "flatpak/", "fastlane/")) or path in (
             "Makefile", "flake.nix", "flake.lock", "README.md", "AGENTS.md", "CLAUDE.md", ".gitignore",
         ):
