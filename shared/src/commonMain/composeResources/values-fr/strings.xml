@@ -2601,4 +2601,6 @@
     <string name="ai_setup_daily_hint">Réessayez demain ou ajoutez des crédits à votre compte OpenRouter pour augmenter votre limite quotidienne gratuite. Changer de modèle ne vous permettra pas de contourner cette limite.</string>
     <string name="ai_setup_minute_hint">Attendez que la limite de requêtes par minute d'OpenRouter soit réinitialisée, puis réessayez. Changer de modèle ne permettra pas de contourner cette limite.</string>
     <string name="ai_setup_verify_description">Envoie un court échantillon à traduire au modèle sélectionné. La traduction n'est activée que si le test est réussi.</string>
+    <string name="account_keyring_required">Metrolist a besoin d’accéder au trousseau de clés de votre système pour restaurer votre compte. Déverrouillez le trousseau de clés. Metrolist effectuera une nouvelle tentative automatiquement.</string>
+    <string name="account_linux_keyring_required">Metrolist a besoin d'un trousseau de clés système pour restaurer votre compte. Installez libsecret-tools ou le paquet correspondant à votre distribution, et assurez-vous que votre trousseau de clés est actif et déverrouillé. Metrolist effectuera une nouvelle tentative automatiquement.</string>
 </resources>
