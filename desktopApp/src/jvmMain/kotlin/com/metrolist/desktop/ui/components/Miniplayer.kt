@@ -84,6 +84,7 @@ import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.desktop.ui.DesktopDensityProvider
 import com.metrolist.desktop.ui.theme.MetrolistTheme
 import com.metrolist.desktop.utils.ComposeTrayManager
+import com.metrolist.desktop.utils.WindowDragHandle
 import com.metrolist.desktop.window.WindowVisibility
 import com.metrolist.desktop.window.WindowsMiniPlayerWindowFrame
 import com.metrolist.shared.generated.resources.Res
@@ -128,6 +129,8 @@ fun MiniplayerWindow() {
 
     val seedColor = UiState.seedColor
     val isNightMode = Settings.shared.isPureBlackTheme()
+    // Linux backends can consume the render loop without drawing transparent undecorated windows.
+    val transparentWindow = !(OsUtil.isLinux || OsUtil.isWindows)
 
     Window(
         onCloseRequest = { PlayerState.showMiniplayer = false },
@@ -135,8 +138,7 @@ fun MiniplayerWindow() {
         resizable = false,
         visible = true,
         undecorated = !OsUtil.isWindows,
-        // Linux backends can consume the render loop without drawing transparent undecorated windows.
-        transparent = !(OsUtil.isLinux || OsUtil.isWindows),
+        transparent = transparentWindow,
         state = windowState,
         alwaysOnTop = true,
     ) {
@@ -157,9 +159,9 @@ fun MiniplayerWindow() {
                                 areWeInDarkMode.value = !MaterialTheme.colorScheme.background.isLight()
                                 WindowDraggableArea {
                                     if (isFocusMode) {
-                                        FocusModeMiniplayer(colorScheme, isNightMode)
+                                        FocusModeMiniplayer(colorScheme, isNightMode, transparentWindow)
                                     } else {
-                                        StandardMiniplayer(colorScheme, isNightMode)
+                                        StandardMiniplayer(colorScheme, isNightMode, transparentWindow)
                                     }
                                 }
                             }
@@ -171,11 +173,11 @@ fun MiniplayerWindow() {
                     MetrolistTheme(seedColor = seedColor, pureBlack = isNightMode) {
                         val colorScheme = MaterialTheme.colorScheme
 
-                        WindowDraggableArea {
+                        WindowDragHandle(isMaximized = false, onRestoreFromMaximized = {}) {
                             if (isFocusMode) {
-                                FocusModeMiniplayer(colorScheme, isNightMode)
+                                FocusModeMiniplayer(colorScheme, isNightMode, transparentWindow)
                             } else {
-                                StandardMiniplayer(colorScheme, isNightMode)
+                                StandardMiniplayer(colorScheme, isNightMode, transparentWindow)
                             }
                         }
                     }
@@ -189,13 +191,14 @@ fun MiniplayerWindow() {
 private fun StandardMiniplayer(
     colorScheme: ColorScheme,
     isNightMode: Boolean,
+    transparentWindow: Boolean,
 ) {
     val isListenTogetherGuest = ListenTogetherState.isListenTogetherGuest()
     Surface(
         modifier =
             Modifier
                 .fillMaxSize(),
-        shape = RoundedCornerShape(if (OsUtil.isWindows) 0.dp else 16.dp),
+        shape = RoundedCornerShape(if (transparentWindow) 16.dp else 0.dp),
         color = if (isNightMode) Color.Black else colorScheme.surfaceContainerHigh,
         border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.3f)),
         tonalElevation = 0.dp,
@@ -384,6 +387,7 @@ private fun StandardMiniplayer(
 private fun FocusModeMiniplayer(
     colorScheme: ColorScheme,
     isNightMode: Boolean,
+    transparentWindow: Boolean,
 ) {
     val isListenTogetherGuest = ListenTogetherState.isListenTogetherGuest()
     val interactionSource = remember { MutableInteractionSource() }
@@ -397,7 +401,7 @@ private fun FocusModeMiniplayer(
                 .hoverable(interactionSource)
                 .onFocusChanged { hasFocus = it.hasFocus }
                 .focusable(interactionSource = interactionSource),
-        shape = RoundedCornerShape(if (OsUtil.isWindows) 0.dp else 12.dp),
+        shape = RoundedCornerShape(if (transparentWindow) 12.dp else 0.dp),
         color = Color.Transparent,
         border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.2f)),
     ) {

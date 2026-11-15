@@ -16,6 +16,12 @@ Windows paints behind the maximized frame insets and applies the theme backgroun
 
 Connected action groups use the shared Material shapes and spacing, with fixed corners during press and selection. The fullscreen artwork player's action buttons are 40 dp tall, and its transport buttons share one height. Overflow sizing includes minimum touch targets and the gap before the overflow button so the last visible action has the trailing corners. The bottom volume button stays round beside overflow, with a 12 dp gap before the volume segment.
 
+## Miniplayer
+
+The Linux miniplayer uses the main window's X11 drag handler, which avoids Compose's JBR window-move lookup. Both JVM and native packages use this handler. Linux keeps the miniplayer window opaque, because some backends stop drawing transparent undecorated windows, so both layouts use square corners there.
+
+Check both layouts on a Linux desktop with the packaged JVM AppImage and native AppImage. Verify dragging, playback buttons, seeking, opening and closing, focus-mode control fades and pressed-button springs. Repeat on X11 and XWayland with OpenGL and software rendering.
+
 ## Windows taskbar
 
 The thumbnail toolbar keeps its COM object on one STA thread and pumps native messages while waiting for updates, as required by [COM's STA message loop](https://learn.microsoft.com/en-us/windows/win32/com/single-threaded-apartments). Registration waits for `TaskbarButtonCreated`, as [Win32 requires](https://learn.microsoft.com/en-us/windows/win32/shell/taskbar-extensions). Registration, updates and cleanup share one background thread and use the captured HWND without asking AWT for the peer from that worker.
