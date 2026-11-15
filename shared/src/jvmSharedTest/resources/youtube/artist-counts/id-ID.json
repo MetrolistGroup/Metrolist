@@ -1,0 +1,41 @@
+{
+  "header": {
+    "musicImmersiveHeaderRenderer": {
+      "subscriptionButton": {
+        "subscribeButtonRenderer": {
+          "subscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 jt"
+              }
+            ]
+          },
+          "longSubscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 jt subscriber"
+              }
+            ],
+            "accessibility": {
+              "accessibilityData": {
+                "label": "59,3 juta subscriber"
+              }
+            }
+          }
+        }
+      },
+      "monthlyListenerCount": {
+        "runs": [
+          {
+            "text": "240 jt audiens bulanan"
+          }
+        ],
+        "accessibility": {
+          "accessibilityData": {
+            "label": "240 juta audiens bulanan"
+          }
+        }
+      }
+    }
+  }
+}

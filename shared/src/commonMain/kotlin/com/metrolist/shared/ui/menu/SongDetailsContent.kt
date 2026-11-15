@@ -102,6 +102,7 @@ import com.metrolist.shared.ui.utils.segmentedGroupShape
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.formatDuration
 import com.metrolist.shared.utils.formatLoudness
+import com.metrolist.shared.utils.parseAudienceCount
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -261,13 +262,18 @@ fun SongDetailsContent(
         val information =
             buildList {
                 fun addValue(
-                    label: String,
+                    label: String?,
                     value: String?,
                     loading: Boolean,
                 ) {
                     if (!value.isNullOrBlank() || loading) add(label to value?.takeIf { it.isNotBlank() })
                 }
-                addValue(stringResource(Res.string.subscribers), watchInformation?.subscriberCount, watchInformationLoading)
+                val subscribers = parseAudienceCount(watchInformation?.subscriberCount)
+                addValue(
+                    stringResource(Res.string.subscribers).takeUnless { subscribers?.isCountOnly == false },
+                    subscribers?.text,
+                    watchInformationLoading,
+                )
                 addValue(
                     stringResource(Res.string.views),
                     (watchInformation?.viewCount ?: playerInformation?.viewCount)?.let(numbers::number),
@@ -357,7 +363,7 @@ private fun SongDetailsHeader(
 private fun SongDetailsSection(
     title: String,
     icon: ImageVector,
-    rows: List<Pair<String, String?>>,
+    rows: List<Pair<String?, String?>>,
     first: Boolean,
     last: Boolean,
 ) {
@@ -374,7 +380,9 @@ private fun SongDetailsSection(
             Spacer(Modifier.height(4.dp))
             rows.forEach { (label, value) ->
                 Column(Modifier.fillMaxWidth()) {
-                    Text(label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                    if (label != null) {
+                        Text(label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                    }
                     if (value == null) {
                         Box(
                             Modifier

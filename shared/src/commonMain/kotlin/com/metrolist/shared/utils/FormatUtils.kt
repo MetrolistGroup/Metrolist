@@ -68,32 +68,54 @@ private fun Double.formatFixed(digits: Int): String {
     }
 }
 
-private val MONTHLY_LISTENERS_NUMBER_REGEX = Regex("^\\p{Nd}+(?:[\\s\\p{Zs}.,٬٫]\\p{Nd}+)*")
+private val AUDIENCE_NUMBER_REGEX = Regex("""\p{Nd}+(?:[\p{Zs}.,٬٫'’]\p{Nd}+)*""")
+private val AUDIENCE_FORMAT_CONTROLS_REGEX = Regex("""\p{Cf}""")
 
-private val MONTHLY_LISTENERS_UNIT_REGEX =
-    Regex("^(?:[kmbt]|mln|mio|mil|mrd|тыс|млн|млрд|трлн|ألف|مليون|مليار)(?:\\.)?(?![\\p{L}\\p{M}])|^[万萬亿億兆]", RegexOption.IGNORE_CASE)
+// Unknown magnitude units keep YouTube's full text.
+private val AUDIENCE_UNIT_REGEX =
+    Regex(
+        """(?:[kmbt]|mln|mio|mil|mrd|mi|mn|milj|jt|rb|tr|тыс|млн|млрд|трлн|ألف|مليون|مليار|هزار|میلیون|میلیارد|কো|লাখ|কোটি|क॰|लाख|करोड़|ล้าน|พัน)(?:\.)?(?![\p{L}\p{M}])|[万萬亿億兆만억조](?=[人位명]|$|[^\p{L}\p{M}])""",
+        RegexOption.IGNORE_CASE,
+    )
 
-private data class MonthlyListenersValue(
+data class AudienceCount(
     val text: String,
-)
+    val isCountOnly: Boolean,
+) {
+    inline fun withLabel(format: (String) -> String): String = if (isCountOnly) format(text) else text
+}
 
-fun monthlyListenersCount(raw: String?): String? = parseMonthlyListeners(raw)?.text
+fun parseAudienceCount(raw: String?): AudienceCount? {
+    if (raw.isNullOrBlank()) return null
+    val text = raw.replace(AUDIENCE_FORMAT_CONTROLS_REGEX, "").trim()
+    val original = AudienceCount(raw, isCountOnly = false)
+    val number = AUDIENCE_NUMBER_REGEX.findAll(text).singleOrNull() ?: return original
+    val before = text.substring(0, number.range.first).trimEnd()
+    val trailing = text.substring(number.range.last + 1)
+    val after = trailing.trimStart()
+    val suffix = AUDIENCE_UNIT_REGEX.matchAt(after, 0)
+    val prefix =
+        AUDIENCE_UNIT_REGEX.findAll(before).lastOrNull {
+            it.range.last == before.lastIndex &&
+                (it.range.first == 0 || !before[it.range.first - 1].isLetter())
+        }
+    if (suffix != null && prefix != null) return original
+    val count =
+        when {
+            suffix != null -> number.value + trailing.takeWhile(Char::isWhitespace) + suffix.value
+            prefix != null -> text.substring(prefix.range.first, number.range.last + 1)
+            before.isEmpty() && after.isEmpty() -> number.value
+            else -> return original
+        }
+    return AudienceCount(count, isCountOnly = true)
+}
+
+fun monthlyListenersCount(raw: String?): String? = parseAudienceCount(raw)?.text
 
 fun monthlyAudienceText(
     value: String?,
     audienceLabel: String,
-): String? = monthlyListenersCount(value)?.let { "$it $audienceLabel" }
-
-private fun parseMonthlyListeners(raw: String?): MonthlyListenersValue? {
-    val text = raw?.trim().orEmpty()
-    if (text.isEmpty()) return null
-    val numberMatch = MONTHLY_LISTENERS_NUMBER_REGEX.find(text) ?: return null
-    if (!numberMatch.value.any(Char::isDigit)) return null
-    val numberEnd = numberMatch.range.last + 1
-    val rest = text.substring(numberEnd)
-    val unit = MONTHLY_LISTENERS_UNIT_REGEX.find(rest.trimStart())?.value
-    return MonthlyListenersValue(numberMatch.value + if (unit != null) rest.takeWhile(Char::isWhitespace) + unit else "")
-}
+): String? = parseAudienceCount(value)?.withLabel { "$it $audienceLabel" }
 
 private fun Double.format(digits: Int): String {
     if (!isFinite()) return toString()

@@ -1,0 +1,41 @@
+{
+  "header": {
+    "musicImmersiveHeaderRenderer": {
+      "subscriptionButton": {
+        "subscribeButtonRenderer": {
+          "subscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 M"
+              }
+            ]
+          },
+          "longSubscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 M de suscriptores"
+              }
+            ],
+            "accessibility": {
+              "accessibilityData": {
+                "label": "59,3 millones de suscriptores"
+              }
+            }
+          }
+        }
+      },
+      "monthlyListenerCount": {
+        "runs": [
+          {
+            "text": "240 M usuarios mensuales"
+          }
+        ],
+        "accessibility": {
+          "accessibilityData": {
+            "label": "240 millones usuarios mensuales"
+          }
+        }
+      }
+    }
+  }
+}

@@ -7,6 +7,7 @@ import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.HomeSection
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
+import com.metrolist.shared.utils.parseAudienceCount
 import io.ktor.client.request.get
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -201,10 +202,7 @@ internal object YouTubeResponseParser {
             ?.takeIf { it.isNotBlank() }
             ?.toLongOrNull()
 
-    internal fun String?.cleanSubscriberCount(): String? =
-        this
-            ?.replace(Regex("\\s+subscribers?$", RegexOption.IGNORE_CASE), "")
-            ?.takeIf { it.isNotBlank() }
+    internal fun String?.cleanSubscriberCount(): String? = parseAudienceCount(this)?.text
 
     internal fun JsonObject?.feedbackToken(): String? =
         this

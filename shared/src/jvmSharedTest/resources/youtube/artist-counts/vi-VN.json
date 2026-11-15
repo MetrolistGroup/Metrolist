@@ -1,0 +1,41 @@
+{
+  "header": {
+    "musicImmersiveHeaderRenderer": {
+      "subscriptionButton": {
+        "subscribeButtonRenderer": {
+          "subscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 Tr"
+              }
+            ]
+          },
+          "longSubscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 Tr người đăng ký"
+              }
+            ],
+            "accessibility": {
+              "accessibilityData": {
+                "label": "59,3 triệu người đăng ký"
+              }
+            }
+          }
+        }
+      },
+      "monthlyListenerCount": {
+        "runs": [
+          {
+            "text": "240 Tr khán thính giả mỗi tháng"
+          }
+        ],
+        "accessibility": {
+          "accessibilityData": {
+            "label": "240 triệu khán thính giả mỗi tháng"
+          }
+        }
+      }
+    }
+  }
+}

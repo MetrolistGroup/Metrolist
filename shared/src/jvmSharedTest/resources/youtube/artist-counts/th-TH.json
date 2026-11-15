@@ -1,0 +1,41 @@
+{
+  "header": {
+    "musicImmersiveHeaderRenderer": {
+      "subscriptionButton": {
+        "subscribeButtonRenderer": {
+          "subscriberCountText": {
+            "runs": [
+              {
+                "text": "59.3 ล้าน"
+              }
+            ]
+          },
+          "longSubscriberCountText": {
+            "runs": [
+              {
+                "text": "ผู้ติดตาม 59.3 ล้าน คน"
+              }
+            ],
+            "accessibility": {
+              "accessibilityData": {
+                "label": "ผู้ติดตาม 59.3 ล้าน คน"
+              }
+            }
+          }
+        }
+      },
+      "monthlyListenerCount": {
+        "runs": [
+          {
+            "text": "มีผู้ชมรายเดือน 240 ล้าน คน"
+          }
+        ],
+        "accessibility": {
+          "accessibilityData": {
+            "label": "มีผู้ชมรายเดือน 240 ล้าน คน"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "header": {
+    "musicImmersiveHeaderRenderer": {
+      "subscriptionButton": {
+        "subscribeButtonRenderer": {
+          "subscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 млн"
+              }
+            ]
+          },
+          "longSubscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 млн подписчиков"
+              }
+            ],
+            "accessibility": {
+              "accessibilityData": {
+                "label": "59,3 миллиона подписчиков"
+              }
+            }
+          }
+        }
+      },
+      "monthlyListenerCount": {
+        "runs": [
+          {
+            "text": "240 млн слушателей в месяц"
+          }
+        ],
+        "accessibility": {
+          "accessibilityData": {
+            "label": "240 миллионов слушателей в месяц"
+          }
+        }
+      }
+    }
+  }
+}

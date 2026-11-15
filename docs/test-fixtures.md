@@ -75,6 +75,16 @@ The browse IDs are `VLPLPFNXelFU5pPeamFpCnM6plwdHA1fJ27V` for Hann's public WOOF
 
 To refresh, POST to `https://music.youtube.com/youtubei/v1/browse` with the browse ID and a signed-out `WEB_REMIX` client context. The fixtures use client version `1.20260615.03.00`, `hl=en` and `gl=PL` as explicit probe parameters. Keep only the header renderer and its containing path before committing a fixture. The album supplies a real strapline shape for comparison; it does not change album parsing.
 
+## Artist audience counts
+
+`shared/src/jvmSharedTest/resources/youtube/artist-counts/*.json` contains 27 signed-out WEB_REMIX artist header captures from 2026-11-15. They retain only `subscriberCountText`, `longSubscriberCountText` and `monthlyListenerCount` under their original header paths, including text runs and accessibility labels. No cookies, account data, visitor data, menus or track bodies were saved.
+
+To refresh, POST to `https://music.youtube.com/youtubei/v1/browse?prettyPrint=false` with browse ID `UC0C-w0YjGpqDXGB8IHb662A`. Use the pinned InnerTubeX v0.11.7 context: client name `WEB_REMIX`, client version `1.20260707.12.00`, the fixture's explicit `hl` and `gl`, `request.internalExperimentFlags=[]`, `request.useSsl=true` and `user.lockedSafetyMode=false`. Send no cookies. Keep only the three count subtrees and their containing path.
+
+The file names identify the request pairs. They cover en/US, de/DE, fr/FR, es/ES, pt-BR/BR, it/IT, nl/NL, pl/PL, cs/CZ, ru/RU, uk/UA, tr/TR, ar/EG, fa/US, iw/IL, he/IL, hi/IN, bn/BD, th/TH, vi/VN, id/ID, ja/JP, ko/KR, zh-CN/SG, zh-TW/TW, hu/HU and fi/FI. Persian requests with IR and AF returned HTTP 400; fa/US returned Persian text. The supplied probe ID `UCvoQ3TJRxv-g8uPvnz5Nqfg` returned no artist header.
+
+`ArtistAudienceFixturesTest` loads every capture on desktop and Android host, checks both subscriber fields and asserts the displayed count with its app label. `AudienceCountTest` covers Unicode digits and separators, units before the number and unchanged text without an added label when extraction is uncertain. Neither test uses settings or Android APIs.
+
 ## Music-video round trips
 
 `MusicVideoResolverTest.audioSwitchRetainsUgcVideoWhenNextAndVideoSearchHaveNoCounterpart` uses reduced `/next` rows from signed-out WEB_REMIX requests with client version `1.20260707.12.00`. `W5ww34C76Gk` is the UGC upload of Myth In Slaughter; `olNdzTu5QYg` is its ATV audio track. Both responses contain an ordinary `playlistPanelVideoRenderer` without a counterpart wrapper. The fixture keeps the video ID and type, with a shortened containing path. Search results are supplied by the test, not captured. The authoritative timing fixture in the adjacent test is synthetic.
