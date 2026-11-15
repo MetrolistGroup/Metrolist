@@ -287,7 +287,7 @@ private class WindowsBluetoothFallbackTransport(
         onLost: (DiscoveredDevice) -> Unit,
     ) {
         scope.launch {
-            val peers = findPairedWindowsBluetoothPeers(localInfo.deviceId)
+            val peers = findPairedWindowsBluetoothPeers()
             for (peer in peers) {
                 onFound(peer)
             }
@@ -382,9 +382,10 @@ private class WindowsBluetoothFallbackTransport(
             }
         }.getOrNull()
 
-    private fun findPairedWindowsBluetoothPeers(localDeviceId: String): List<DiscoveredDevice> =
+    private fun findPairedWindowsBluetoothPeers(): List<DiscoveredDevice> =
         runCatching {
             val api = BluetoothApisLib.INSTANCE
+            val localMac = readLocalWindowsBluetoothAddress()
             val searchParams =
                 BluetoothDeviceSearchParams().apply {
                     dwSize = size()
@@ -403,19 +404,16 @@ private class WindowsBluetoothFallbackTransport(
                 do {
                     deviceInfo.read()
                     val mac = windowsBtAddrToMacAddress(deviceInfo.address)
-                    if (mac != null) {
+                    if (mac != null && mac != localMac && hasWindowsBluetoothService(ws2, mac, serviceUuid)) {
                         val name = Native.toString(deviceInfo.szName).ifBlank { mac }
-                        val synthesizedId = "bt-${mac.replace(":", "")}"
-                        if (synthesizedId != localDeviceId) {
-                            results +=
-                                DiscoveredDevice(
-                                    serviceName = "bt-$mac",
-                                    deviceId = synthesizedId,
-                                    deviceName = sanitizeDeviceName(name).ifBlank { mac },
-                                    host = "$DEVICE_CONNECT_BT_PREFIX$mac",
-                                    port = DEVICE_CONNECT_BT_PORT,
-                                )
-                        }
+                        results +=
+                            DiscoveredDevice(
+                                serviceName = "bt-$mac",
+                                deviceId = unknownBluetoothDeviceId(mac),
+                                deviceName = sanitizeDeviceName(name).ifBlank { mac },
+                                host = "$DEVICE_CONNECT_BT_PREFIX$mac",
+                                port = DEVICE_CONNECT_BT_PORT,
+                            )
                     }
                 } while (api.BluetoothFindNextDevice(findHandle, deviceInfo))
             } finally {
@@ -423,6 +421,66 @@ private class WindowsBluetoothFallbackTransport(
             }
             results
         }.getOrDefault(emptyList())
+}
+
+internal fun hasWindowsBluetoothService(
+    ws2: Ws232Lib,
+    mac: String,
+    serviceUuid: UUID = UUID.fromString(DEVICE_CONNECT_BT_SERVICE_UUID),
+): Boolean {
+    val normalizedMac = normalizeBluetoothMac(mac) ?: return false
+    return lookupWindowsBluetoothService(ws2, normalizedMac, serviceUuid, flushCache = false) ||
+        lookupWindowsBluetoothService(ws2, normalizedMac, serviceUuid, flushCache = true)
+}
+
+private fun lookupWindowsBluetoothService(
+    ws2: Ws232Lib,
+    normalizedMac: String,
+    serviceUuid: UUID,
+    flushCache: Boolean,
+): Boolean {
+    val guid = uuidToWinGuid(serviceUuid).apply { write() }
+    val contextStr = WString("($normalizedMac)")
+    val querySet =
+        WsaQuerySetW().apply {
+            dwSize = size()
+            lpServiceClassId = guid.pointer
+            dwNameSpace = NS_BTH
+            lpszContext = contextStr
+        }
+    querySet.write()
+    val lookupRef = WinNT.HANDLEByReference()
+    val returnFlags = LUP_RETURN_NAME or LUP_RETURN_ADDR
+    val beginFlags = if (flushCache) returnFlags or LUP_FLUSHCACHE else returnFlags
+    val beginStatus =
+        try {
+            ws2.WSALookupServiceBeginW(querySet.pointer, beginFlags, lookupRef)
+        } finally {
+            Reference.reachabilityFence(guid)
+            Reference.reachabilityFence(contextStr)
+            Reference.reachabilityFence(querySet)
+            querySet.lpServiceClassId = null
+            querySet.lpszContext = null
+        }
+    if (beginStatus != 0) return false
+    val handle = lookupRef.value ?: return false
+    try {
+        var bufferSize = maxOf(4096, querySet.size())
+        var buffer = Memory(bufferSize.toLong())
+        val lengthRef = IntByReference(bufferSize)
+        var nextStatus = ws2.WSALookupServiceNextW(handle, returnFlags, lengthRef, buffer)
+        if (nextStatus != 0 && ws2.WSAGetLastError() == WSAEFAULT) {
+            val requiredSize = lengthRef.value
+            if (requiredSize in (bufferSize + 1)..MAX_SDP_LOOKUP_BUFFER_BYTES) {
+                bufferSize = requiredSize
+                buffer = Memory(bufferSize.toLong())
+                nextStatus = ws2.WSALookupServiceNextW(handle, returnFlags, lengthRef, buffer)
+            }
+        }
+        return nextStatus == 0
+    } finally {
+        runCatching { ws2.WSALookupServiceEnd(handle) }
+    }
 }
 
 private class WinsockInputStream(
@@ -507,7 +565,7 @@ private fun uuidToWinGuid(uuid: UUID): Guid.GUID {
 }
 
 @Suppress("FunctionName", "ktlint:standard:function-naming")
-private interface Ws232Lib : StdCallLibrary {
+internal interface Ws232Lib : StdCallLibrary {
     fun WSAStartup(
         wVersionRequested: Int,
         lpWSAData: Pointer,
@@ -576,6 +634,21 @@ private interface Ws232Lib : StdCallLibrary {
         essoperation: Int,
         dwControlFlags: Int,
     ): Int
+
+    fun WSALookupServiceBeginW(
+        lpqsRestrictions: Pointer,
+        dwControlFlags: Int,
+        lphLookup: WinNT.HANDLEByReference,
+    ): Int
+
+    fun WSALookupServiceNextW(
+        hLookup: WinNT.HANDLE,
+        dwControlFlags: Int,
+        lpdwBufferLength: IntByReference,
+        lpqsResults: Pointer,
+    ): Int
+
+    fun WSALookupServiceEnd(hLookup: WinNT.HANDLE): Int
 
     companion object {
         val INSTANCE: Ws232Lib by lazy {
@@ -818,3 +891,8 @@ private const val NS_BTH = 16
 private const val RNRSERVICE_REGISTER = 0
 private const val RNRSERVICE_DELETE = 2
 private const val SD_BOTH = 2
+private const val LUP_RETURN_NAME = 0x0010
+private const val LUP_RETURN_ADDR = 0x0100
+private const val LUP_FLUSHCACHE = 0x1000
+private const val WSAEFAULT = 10014
+private const val MAX_SDP_LOOKUP_BUFFER_BYTES = 65_536

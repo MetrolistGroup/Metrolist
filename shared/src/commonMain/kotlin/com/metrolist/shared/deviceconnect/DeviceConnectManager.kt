@@ -406,7 +406,7 @@ class DeviceConnectManager
             stateMutex.withLock {
                 accountIdentity = null
                 peerById.clear()
-                discoveredEndpoints.clear()
+                discoveredEndpoints.reset()
                 autoConnectNotBeforeMs.clear()
                 _state.value =
                     _state.value.copy(
@@ -558,6 +558,7 @@ class DeviceConnectManager
                     logWarn("Initial local grant deletion failed but the post-close retry succeeded.")
                 }
                 if (settings.deviceConnectDefaultDeviceId == deviceId) settings.deviceConnectDefaultDeviceId = ""
+                stateMutex.withLock { discoveredEndpoints.unbindDevice(deviceId) }
                 refreshPairedDevices()
                 logInfo("Forgot local Device Connect grant for $deviceId.")
             }
@@ -924,15 +925,17 @@ class DeviceConnectManager
             generation: Long,
             fromFallback: Boolean = false,
         ): Boolean {
-            if (!isValidDeviceId(device.deviceId) || !isDeviceConnectPeerHost(device.host) || device.port !in 1..65535) {
+            val idValid = isValidDeviceId(device.deviceId) || isUnknownBluetoothDeviceId(device.deviceId, device.host)
+            if (!idValid || !isDeviceConnectPeerHost(device.host) || device.port !in 1..65535) {
                 logWarn(
                     "Ignored invalid discovery record from ${device.host}:${device.port} " +
-                        "(idValid=${isValidDeviceId(device.deviceId)}, peerHost=${isDeviceConnectPeerHost(device.host)}).",
+                        "(idValid=$idValid, peerHost=${isDeviceConnectPeerHost(device.host)}).",
                 )
                 return false
             }
             val advertisedName = sanitizeDeviceName(device.deviceName.ifBlank { device.serviceName })
             var shouldAutoConnect = false
+            var resolvedDeviceId = device.deviceId
             val safeName =
                 stateMutex.withLock {
                     val activeGeneration = if (fromFallback) fallbackGeneration else discoveryGeneration
@@ -940,11 +943,17 @@ class DeviceConnectManager
                         logDebug("Discovery result for $advertisedName ignored: discovery is stale or Device Connect is off.")
                         return false
                     }
-                    discoveredEndpoints.discover(device)
-                    val existing = peerById[device.deviceId]
-                    val endpoint = discoveredEndpoints.first(device.deviceId) ?: device
+                    val resolved = discoveredEndpoints.discover(device)
+                    resolvedDeviceId = resolved.deviceId
+                    val existing = peerById[resolved.deviceId]
+                    val endpoint = discoveredEndpoints.first(resolved.deviceId) ?: resolved
                     val retainEndpoint = existing?.state?.isLiveConnectionState() == true
-                    val paired = _state.value.pairedDevices.firstOrNull { it.deviceId == device.deviceId }
+                    val paired =
+                        if (isValidDeviceId(resolved.deviceId)) {
+                            _state.value.pairedDevices.firstOrNull { it.deviceId == resolved.deviceId }
+                        } else {
+                            null
+                        }
                     val name =
                         paired
                             ?.deviceName
@@ -962,9 +971,9 @@ class DeviceConnectManager
 
                             else -> PeerState.DISCOVERED
                         }
-                    peerById[device.deviceId] =
+                    peerById[resolved.deviceId] =
                         PeerDevice(
-                            id = device.deviceId,
+                            id = resolved.deviceId,
                             name = name,
                             host = if (retainEndpoint) checkNotNull(existing).host else endpoint.host,
                             port = if (retainEndpoint) checkNotNull(existing).port else endpoint.port,
@@ -978,7 +987,7 @@ class DeviceConnectManager
                                             ?.takeIf { it.state == PeerState.CONNECTED }
                                             ?.deviceType ?: DeviceConnectDeviceType.UNKNOWN,
                                     stored = paired?.deviceType ?: DeviceConnectDeviceType.UNKNOWN,
-                                    advertised = device.deviceType,
+                                    advertised = resolved.deviceType,
                                 ),
                         )
                     shouldAutoConnect = paired != null
@@ -986,7 +995,7 @@ class DeviceConnectManager
                     name
                 }
             logInfo("Discovered $safeName @ ${device.host}:${device.port}")
-            if (shouldAutoConnect) autoConnect(device.deviceId)
+            if (shouldAutoConnect) autoConnect(resolvedDeviceId)
             return shouldAutoConnect
         }
 
@@ -998,14 +1007,14 @@ class DeviceConnectManager
             stateMutex.withLock {
                 val activeGeneration = if (fromFallback) fallbackGeneration else discoveryGeneration
                 if (!_state.value.enabled || generation != activeGeneration) return
-                discoveredEndpoints.lost(device)
-                val current = peerById[device.deviceId]
-                val updated = current?.let { peerAfterLostDeviceConnectEndpoint(it, device) }
+                val resolved = discoveredEndpoints.lost(device)
+                val current = peerById[resolved.deviceId]
+                val updated = current?.let { peerAfterLostDeviceConnectEndpoint(it, resolved) }
                 when {
                     updated == null -> {
-                        val alternative = discoveredEndpoints.first(device.deviceId)
+                        val alternative = discoveredEndpoints.first(resolved.deviceId)
                         if (alternative != null && current != null) {
-                            peerById[device.deviceId] =
+                            peerById[resolved.deviceId] =
                                 current.copy(
                                     host = alternative.host,
                                     port = alternative.port,
@@ -1013,12 +1022,12 @@ class DeviceConnectManager
                                     state = PeerState.DISCOVERED,
                                 )
                         } else {
-                            peerById.remove(device.deviceId)
+                            peerById.remove(resolved.deviceId)
                         }
                     }
 
                     updated != current -> {
-                        peerById[device.deviceId] = updated
+                        peerById[resolved.deviceId] = updated
                     }
                 }
                 rebuildPeers()
@@ -1155,16 +1164,24 @@ class DeviceConnectManager
             serviceName: String,
             allowNewPairing: Boolean,
             fallbackVisited: Set<Pair<String, Int>> = emptySet(),
+            isDirectConnection: Boolean = expectedDeviceId == null,
         ) {
             val isBluetoothTarget = isDeviceConnectBluetoothHost(host)
-            val effectivePort = if (isBluetoothTarget) DEVICE_CONNECT_BT_PORT else port
-            val deviceId = expectedDeviceId ?: "direct:$host:$effectivePort"
+            val effectivePort = if (isBluetoothTarget && port <= 0) DEVICE_CONNECT_BT_PORT else port
+            val resolvedExpectedId =
+                expectedDeviceId?.let { id ->
+                    stateMutex.withLock { discoveredEndpoints.resolveDeviceId(id, host) }
+                }
+            val isUnknownBluetoothTarget =
+                resolvedExpectedId != null && isUnknownBluetoothDeviceId(resolvedExpectedId, host)
+            val verifiedExpectedId = resolvedExpectedId?.takeUnless { isUnknownBluetoothTarget }
+            val deviceId = resolvedExpectedId ?: "direct:$host:$effectivePort"
             if (host.isBlank() ||
                 effectivePort !in 1..65535 ||
                 !isDeviceConnectPeerHost(host) ||
-                (expectedDeviceId != null && !isValidDeviceId(expectedDeviceId))
+                (verifiedExpectedId != null && !isValidDeviceId(verifiedExpectedId))
             ) {
-                val idValid = expectedDeviceId == null || isValidDeviceId(expectedDeviceId)
+                val idValid = verifiedExpectedId == null || isValidDeviceId(verifiedExpectedId)
                 logWarn(
                     "Ignored invalid connection target $host:$effectivePort " +
                         "(hostBlank=${host.isBlank()}, portValid=${effectivePort in 1..65535}, " +
@@ -1178,7 +1195,7 @@ class DeviceConnectManager
                 stateMutex.withLock {
                     val existing = peerById[deviceId]
                     val liveEndpoint =
-                        expectedDeviceId == null &&
+                        verifiedExpectedId == null &&
                             peerById.values.any {
                                 it.host == host && it.port == effectivePort && it.state.isLiveConnectionState()
                             }
@@ -1193,7 +1210,7 @@ class DeviceConnectManager
                         logDebug("Connection to $safeName ($host:$effectivePort) skipped: $skip.")
                         false
                     } else {
-                        if (expectedDeviceId == null) _state.value = _state.value.copy(directConnectionFailed = false)
+                        if (isDirectConnection) _state.value = _state.value.copy(directConnectionFailed = false)
                         peerById[deviceId] =
                             (existing ?: PeerDevice(deviceId, safeName, host, effectivePort, PeerState.CONNECTING))
                                 .copy(
@@ -1217,9 +1234,9 @@ class DeviceConnectManager
                     host,
                     effectivePort,
                     serviceName,
-                    if (expectedDeviceId == null) null else PeerState.ERROR,
+                    if (isDirectConnection) null else PeerState.ERROR,
                 )
-                if (expectedDeviceId == null) reportDirectConnectionFailure()
+                if (isDirectConnection) reportDirectConnectionFailure()
                 return
             }
             var ownsSlot = true
@@ -1259,7 +1276,8 @@ class DeviceConnectManager
                         isIncoming = false,
                         identity = identity,
                         allowNewPairing = allowNewPairing,
-                        expectedPeerId = expectedDeviceId,
+                        expectedPeerId = verifiedExpectedId,
+                        isDirectConnection = isDirectConnection,
                     )
                 val registered =
                     stateMutex.withLock {
@@ -1284,9 +1302,13 @@ class DeviceConnectManager
                 if (e is CancellationException) throw e
                 finishFailedConnectAttempt(deviceId, host, effectivePort, serviceName)
                 val visited = fallbackVisited + (host to effectivePort)
+                val currentExpectedId =
+                    resolvedExpectedId?.let { id ->
+                        stateMutex.withLock { discoveredEndpoints.resolveDeviceId(id, host) }
+                    }
                 val alternative =
-                    if (expectedDeviceId != null) {
-                        findAlternativeFallbackEndpoint(expectedDeviceId, visited)
+                    if (currentExpectedId != null) {
+                        findAlternativeFallbackEndpoint(currentExpectedId, visited)
                     } else {
                         null
                     }
@@ -1298,18 +1320,19 @@ class DeviceConnectManager
                     connectTo(
                         host = alternative.host,
                         port = alternative.port,
-                        expectedDeviceId = expectedDeviceId,
+                        expectedDeviceId = currentExpectedId,
                         deviceName = safeName,
                         serviceName = alternative.serviceName,
                         allowNewPairing = allowNewPairing,
                         fallbackVisited = visited,
+                        isDirectConnection = isDirectConnection,
                     )
                     return
                 }
-                if (!isBluetoothTarget && expectedDeviceId != null) {
+                if (!isBluetoothTarget && currentExpectedId != null) {
                     activateFallbackDiscoveryAfterLanFailure(safeName)
                 }
-                if (expectedDeviceId == null) reportDirectConnectionFailure()
+                if (isDirectConnection) reportDirectConnectionFailure()
                 logWarn(
                     "Connection endpoint for $safeName ($host:$effectivePort) is unavailable; discovery remains active: ${e.message}",
                     e,
@@ -1430,6 +1453,7 @@ class DeviceConnectManager
             private val allowNewPairing: Boolean = true,
             private var incomingAdmissionHeld: Boolean = false,
             private val expectedPeerId: String? = if (isIncoming) null else initial.id,
+            private val isDirectConnection: Boolean = !isIncoming && expectedPeerId == null,
         ) {
             private val keypair = DeviceCrypto.generateEcKeyPair()
             private val localRole = if (isIncoming) DeviceConnectRole.RESPONDER else DeviceConnectRole.INITIATOR
@@ -1544,12 +1568,11 @@ class DeviceConnectManager
                             channel.incoming.collect { handleText(it) }
                         } catch (e: Exception) {
                             logInfo("$logTag channel closed: ${e.message}")
-                            try {
-                                channel.close()
-                            } catch (_: Exception) {
-                            }
                         } finally {
-                            withContext(NonCancellable) { onClosed() }
+                            withContext(NonCancellable) {
+                                runCatching { channel.close() }
+                                onClosed()
+                            }
                         }
                     }
             }
@@ -1830,15 +1853,39 @@ class DeviceConnectManager
                 outboundKey = deviceConnectTrafficKey(shared, transcript, localRole)
                 inboundKey = deviceConnectTrafficKey(shared, transcript, peerRole)
                 pairSecret = deviceConnectPairSecret(shared, transcript)
-                val discovered =
+                val (discovered, boundBluetoothPeer) =
                     stateMutex.withLock {
-                        if (!isIncoming && expectedPeerId == null) peerById.remove(device.id)
-                        peerById[hello.deviceId]
+                        val removedPlaceholder = if (!isIncoming && expectedPeerId == null) peerById.remove(device.id) else null
+                        val boundPeer =
+                            if (isDeviceConnectBluetoothHost(device.host)) {
+                                val unknownId = unknownBluetoothDeviceId(device.host.removePrefix(DEVICE_CONNECT_BT_PREFIX))
+                                val moved = discoveredEndpoints.bindBluetoothHost(device.host, hello.deviceId)
+                                peerById.remove(unknownId)
+                                    ?: removedPlaceholder?.takeIf { it.id == unknownId }
+                                    ?: moved.firstOrNull()?.let { cand ->
+                                        PeerDevice(
+                                            id = hello.deviceId,
+                                            name = cand.deviceName,
+                                            host = cand.host,
+                                            port = cand.port,
+                                            state = PeerState.HANDSHAKING,
+                                            serviceName = cand.serviceName,
+                                            deviceType = cand.deviceType,
+                                        )
+                                    }
+                            } else {
+                                null
+                            }
+                        (peerById[hello.deviceId] ?: boundPeer) to boundPeer
                     }
+                val fallbackPort = boundBluetoothPeer?.port?.takeIf { it != 0 } ?: device.port
+                val fallbackServiceName = device.serviceName.ifBlank { boundBluetoothPeer?.serviceName.orEmpty() }
                 device =
                     device.copy(
                         id = hello.deviceId,
                         name = discovered?.name ?: hello.deviceId,
+                        port = if (device.port != 0) device.port else fallbackPort,
+                        serviceName = fallbackServiceName,
                         model = discovered?.model.orEmpty(),
                         deviceType = discovered?.deviceType ?: device.deviceType,
                     )
@@ -1846,7 +1893,11 @@ class DeviceConnectManager
                     logInfo("$logTag duplicate peer session closed before pairing.")
                     return
                 }
-                if (!isIncoming && expectedPeerId == null && !notifyPeerState(hello.deviceId, device.name, PeerState.HANDSHAKING)) return
+                if (((!isIncoming && expectedPeerId == null) || boundBluetoothPeer != null) &&
+                    !notifyPeerState(hello.deviceId, device.name, PeerState.HANDSHAKING)
+                ) {
+                    return
+                }
                 logInfo("$logTag HELLO received; v$DEVICE_CONNECT_PROTOCOL_VERSION directional session keys derived.")
                 sendIdentity()
             }
@@ -2629,7 +2680,7 @@ class DeviceConnectManager
                 pairingMutex.withLock { rollbackUnconfirmedPair() }
                 logInfo("$logTag session closed.")
                 val id = device.id
-                if (!isIncoming && expectedPeerId == null && device.state != PeerState.CONNECTED && !intentionalClosure) {
+                if (isDirectConnection && device.state != PeerState.CONNECTED && !intentionalClosure) {
                     reportDirectConnectionFailure()
                 }
                 clearPairingRequest()
@@ -2725,8 +2776,29 @@ class DeviceConnectManager
                     stateMutex.withLock {
                         if (closing) return false
                         if (state == PeerState.CONNECTED) releaseIncomingAdmission()
+                        var boundFallback: PeerDevice? = null
+                        if (isDeviceConnectBluetoothHost(device.host) && isValidDeviceId(id)) {
+                            val moved = discoveredEndpoints.bindBluetoothHost(device.host, id)
+                            val unknownId = unknownBluetoothDeviceId(device.host.removePrefix(DEVICE_CONNECT_BT_PREFIX))
+                            val removedUnknown = peerById.remove(unknownId)
+                            boundFallback =
+                                removedUnknown
+                                    ?: moved.firstOrNull()?.let { cand ->
+                                        PeerDevice(
+                                            id = id,
+                                            name = cand.deviceName,
+                                            host = cand.host,
+                                            port = cand.port,
+                                            state = state,
+                                            serviceName = cand.serviceName,
+                                            deviceType = cand.deviceType,
+                                        )
+                                    }
+                        }
                         val prev = peerById[id]
-                        val matchingEndpoint = prev?.takeIf { it.host == device.host && (isIncoming || it.port == device.port) }
+                        val matchingEndpoint =
+                            prev?.takeIf { it.host == device.host && (isIncoming || it.port == device.port) }
+                                ?: boundFallback?.takeIf { it.host == device.host && (isIncoming || it.port == device.port) }
                         val host = device.host
                         val port = matchingEndpoint?.port?.takeIf { it != 0 } ?: device.port
                         // A blank previous service name marks a withdrawn live endpoint; do not restore it on close.
@@ -2756,7 +2828,9 @@ class DeviceConnectManager
                         // Merge endpoint and authenticated IDs so one physical device does not appear twice.
                         val dup =
                             peerById.entries.firstOrNull {
-                                it.key != id && it.value.host == host && it.value.port == port && port != 0
+                                it.key != id &&
+                                    it.value.host == host &&
+                                    ((it.value.port == port && port != 0) || isUnknownBluetoothDeviceId(it.key, host))
                             }
                         if (dup != null) peerById.remove(dup.key)
                         peerById[id] =

@@ -232,8 +232,8 @@ private class AndroidBluetoothFallbackTransport(
         discoveredByKey.clear()
 
         if (hasConnectPermission()) {
-            emitBondedCandidatePeers(localInfo.deviceId, onFound)
-            registerClassicDiscoveryReceiver(localInfo.deviceId, onFound)
+            emitBondedCandidatePeers(onFound)
+            registerClassicDiscoveryReceiver(onFound)
         }
         if (hasAdvertisePermission() && adapter.isMultipleAdvertisementSupported) {
             startBleAdvertising(localInfo)
@@ -246,40 +246,34 @@ private class AndroidBluetoothFallbackTransport(
     }
 
     @SuppressLint("MissingPermission")
-    private fun emitBondedCandidatePeers(
-        localId: String,
-        onFound: (DiscoveredDevice) -> Unit,
-    ) {
+    private fun emitBondedCandidatePeers(onFound: (DiscoveredDevice) -> Unit) {
+        val localMac = localAddress
         val bonded = runCatching { adapter.bondedDevices }.getOrNull().orEmpty()
         for (device in bonded) {
             val mac = normalizeBluetoothMac(device.address.orEmpty()) ?: continue
+            if (mac == localMac) continue
             val uuids = runCatching { device.uuids }.getOrNull()
             val hasMetrolistUuid = uuids?.any { it.uuid == RFCOMM_SERVICE_UUID } == true
             if (hasMetrolistUuid) {
                 val deviceName = sanitizeDeviceName(runCatching { device.name }.getOrNull().orEmpty()).ifBlank { mac }
-                val synthesizedId = "bt-${mac.replace(":", "")}"
-                if (synthesizedId == localId) continue
                 val discovered =
                     DiscoveredDevice(
                         serviceName = "bt-$mac",
-                        deviceId = synthesizedId,
+                        deviceId = unknownBluetoothDeviceId(mac),
                         deviceName = deviceName,
                         host = "$DEVICE_CONNECT_BT_PREFIX$mac",
                         port = DEVICE_CONNECT_BT_PORT,
                     )
                 discoveredByKey["bonded:$mac"] = discovered
                 onFound(discovered)
-            } else {
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S || hasPermission(Manifest.permission.BLUETOOTH_ADMIN)) {
                 runCatching { device.fetchUuidsWithSdp() }
             }
         }
     }
 
     @SuppressLint("MissingPermission")
-    private fun registerClassicDiscoveryReceiver(
-        localId: String,
-        onFound: (DiscoveredDevice) -> Unit,
-    ) {
+    private fun registerClassicDiscoveryReceiver(onFound: (DiscoveredDevice) -> Unit) {
         val filter = IntentFilter(BluetoothDevice.ACTION_UUID)
         val receiver =
             object : BroadcastReceiver() {
@@ -305,18 +299,17 @@ private class AndroidBluetoothFallbackTransport(
                     val hasService = uuids?.any { (it as? ParcelUuid)?.uuid == RFCOMM_SERVICE_UUID } == true
                     if (!hasService) return
                     val mac = normalizeBluetoothMac(device.address.orEmpty()) ?: return
+                    if (mac == localAddress) return
                     val deviceName =
                         if (hasConnectPermission()) {
                             sanitizeDeviceName(runCatching { device.name }.getOrNull().orEmpty()).ifBlank { mac }
                         } else {
                             mac
                         }
-                    val synthesizedId = "bt-${mac.replace(":", "")}"
-                    if (synthesizedId == localId) return
                     val discovered =
                         DiscoveredDevice(
                             serviceName = "bt-$mac",
-                            deviceId = synthesizedId,
+                            deviceId = unknownBluetoothDeviceId(mac),
                             deviceName = deviceName,
                             host = "$DEVICE_CONNECT_BT_PREFIX$mac",
                             port = DEVICE_CONNECT_BT_PORT,
@@ -546,14 +539,17 @@ private class AndroidBluetoothFallbackTransport(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             hasPermission(Manifest.permission.BLUETOOTH_SCAN)
         } else {
-            hasPermission(Manifest.permission.BLUETOOTH)
+            hasPermission(Manifest.permission.BLUETOOTH) &&
+                hasPermission(Manifest.permission.BLUETOOTH_ADMIN) &&
+                hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
         }
 
     private fun hasAdvertisePermission(): Boolean =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             hasPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
         } else {
-            hasPermission(Manifest.permission.BLUETOOTH)
+            hasPermission(Manifest.permission.BLUETOOTH) &&
+                hasPermission(Manifest.permission.BLUETOOTH_ADMIN)
         }
 
     private fun hasPermission(permission: String): Boolean =

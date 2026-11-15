@@ -4,6 +4,23 @@ internal const val DEVICE_CONNECT_BT_SCHEME = "bt"
 internal const val DEVICE_CONNECT_BT_PREFIX = "bt://"
 internal const val DEVICE_CONNECT_BT_PORT = 1
 internal const val DEVICE_CONNECT_BT_SERVICE_UUID = "8f64b3c0-7a1d-4e92-9b5a-3c1e2d4f6a80"
+internal const val DEVICE_CONNECT_UNKNOWN_BT_ID_PREFIX = "bt:"
+
+internal fun unknownBluetoothDeviceId(mac: String): String {
+    val normalized = requireNotNull(normalizeBluetoothMac(mac)) { "Invalid Bluetooth MAC: $mac" }
+    return "$DEVICE_CONNECT_UNKNOWN_BT_ID_PREFIX$normalized"
+}
+
+internal fun isUnknownBluetoothDeviceId(
+    deviceId: String,
+    host: String? = null,
+): Boolean {
+    if (!deviceId.startsWith(DEVICE_CONNECT_UNKNOWN_BT_ID_PREFIX)) return false
+    val rawMac = deviceId.removePrefix(DEVICE_CONNECT_UNKNOWN_BT_ID_PREFIX)
+    val normalized = normalizeBluetoothMac(rawMac) ?: return false
+    if (deviceId != "$DEVICE_CONNECT_UNKNOWN_BT_ID_PREFIX$normalized") return false
+    return host == null || host == "$DEVICE_CONNECT_BT_PREFIX$normalized"
+}
 
 internal fun DeviceConnectManager.PeerState.isLiveConnectionState(): Boolean =
     this == DeviceConnectManager.PeerState.CONNECTING ||

@@ -78,4 +78,31 @@ class DeviceConnectEndpointsTest {
         endpoints.failed("phone", ipv6.host, ipv6.port)
         assertEquals(bt, endpoints.first("phone"))
     }
+
+    @Test
+    fun unknownBluetoothIdentityRemainsSeparateUntilBoundThenSharesCandidatesWithLan() {
+        val mac = "AA:BB:CC:DD:EE:02"
+        val unknownId = unknownBluetoothDeviceId(mac)
+        val btUnknown = DiscoveredDevice("bt-$mac", unknownId, "Phone", "bt://$mac", DEVICE_CONNECT_BT_PORT)
+        val lan = DiscoveredDevice("lan-svc", "phone", "Phone", "192.168.1.5", 4000)
+
+        val endpoints = DeviceConnectEndpoints()
+        assertEquals(btUnknown, endpoints.discover(btUnknown))
+        assertEquals(lan, endpoints.discover(lan))
+        assertEquals(btUnknown, endpoints.first(unknownId))
+        assertEquals(lan, endpoints.first("phone"))
+
+        val moved = endpoints.bindBluetoothHost("bt://$mac", "phone")
+        assertEquals(listOf(btUnknown.copy(deviceId = "phone")), moved)
+        assertEquals(null, endpoints.first(unknownId))
+        assertEquals(lan, endpoints.first("phone"))
+
+        endpoints.failed("phone", lan.host, lan.port)
+        assertEquals(btUnknown.copy(deviceId = "phone"), endpoints.first("phone"))
+
+        val refreshedUnknown = btUnknown.copy(serviceName = "bt-refreshed")
+        val resolved = endpoints.discover(refreshedUnknown)
+        assertEquals("phone", resolved.deviceId)
+        assertEquals(null, endpoints.first(unknownId))
+    }
 }

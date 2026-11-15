@@ -60,7 +60,7 @@ internal fun deviceConnectBluetoothFallbackPermissions(sdkInt: Int): List<String
             Manifest.permission.BLUETOOTH_ADVERTISE,
         )
     } else {
-        emptyList()
+        listOf(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
 internal fun Int.toDeviceConnectRepeatMode(): DcRepeatMode =

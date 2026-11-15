@@ -10,6 +10,12 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playback.MusicQueueSnapshot
 import com.metrolist.shared.settings.Settings
 import com.russhwolf.settings.MapSettings
+import com.sun.jna.Pointer
+import com.sun.jna.Structure
+import com.sun.jna.platform.win32.Guid
+import com.sun.jna.platform.win32.WinDef
+import com.sun.jna.platform.win32.WinNT
+import com.sun.jna.ptr.IntByReference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -21,11 +27,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.PipedInputStream
 import java.io.PipedOutputStream
 import java.net.InetAddress
 import java.net.ServerSocket
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -54,12 +62,14 @@ class DeviceConnectFallbackTransportTest {
                         runCatching { bToAIn.close() }
                     },
                 )
+            var bClosed = false
             val channelB =
                 createJvmStreamDeviceChannel(
                     remoteHost = "bt://AA:BB:CC:DD:EE:01",
                     input = aToBIn,
                     output = bToAOut,
                     onClose = {
+                        bClosed = true
                         runCatching { bToAOut.close() }
                         runCatching { aToBIn.close() }
                     },
@@ -79,6 +89,7 @@ class DeviceConnectFallbackTransportTest {
             channelA.close()
             withTimeout(TEST_TIMEOUT_MS.milliseconds) { collectorB.join() }
             assertEquals(sentToB + """{"type":"PING"}""", receivedByB)
+            assertTrue(bClosed)
             channelB.close()
         }
 
@@ -97,7 +108,7 @@ class DeviceConnectFallbackTransportTest {
                 createJvmStreamDeviceChannel(
                     remoteHost = "bt://AA:BB:CC:DD:EE:02",
                     input = ByteArrayInputStream(header),
-                    output = java.io.ByteArrayOutputStream(),
+                    output = ByteArrayOutputStream(),
                     onClose = {},
                 )
             assertFailsWith<IllegalArgumentException> {
@@ -402,6 +413,432 @@ class DeviceConnectFallbackTransportTest {
         val settings = Settings(MapSettings()).apply { deviceConnectBluetoothFallbackEnabled = true }
         val backup = settings.exportBackupSettings()
         assertTrue(backup.entries.none { it.key == DeviceConnectBluetoothFallbackKey })
+    }
+
+    @Test
+    fun unknownBluetoothDiscoveryPairsBindsAndSharesCandidatesWithLanRecords() =
+        runBlocking<Unit> {
+            val localLanIp = getLocalIpV4Addresses().firstOrNull() ?: return@runBlocking
+            val deadPort = ServerSocket(0, 1, InetAddress.getByName(localLanIp)).use { it.localPort }
+
+            val bus = FakeBluetoothBus()
+            val leftSettings = Settings(MapSettings()).apply { deviceConnectBluetoothFallbackEnabled = true }
+            val rightSettings = Settings(MapSettings()).apply { deviceConnectBluetoothFallbackEnabled = true }
+
+            val left =
+                DeviceConnectManager(
+                    settings = leftSettings,
+                    identityProvider = ::anonymousIdentity,
+                    localInfoProvider = { LEFT_INFO },
+                    fallbackTransportFactory = { _, _ -> bus.transportFor(LEFT_MAC) },
+                )
+            val right =
+                DeviceConnectManager(
+                    settings = rightSettings,
+                    identityProvider = ::anonymousIdentity,
+                    localInfoProvider = { RIGHT_INFO },
+                    fallbackTransportFactory = { _, _ -> bus.transportFor(RIGHT_MAC) },
+                )
+
+            try {
+                left.enable(Unit)
+                right.enable(Unit)
+                withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                    left.state.first { it.bluetoothFallbackActive }
+                    right.state.first { it.bluetoothFallbackActive }
+                }
+
+                val unknownId = unknownBluetoothDeviceId(RIGHT_MAC)
+                val btUnknown =
+                    DiscoveredDevice(
+                        serviceName = "bt-$RIGHT_MAC",
+                        deviceId = unknownId,
+                        deviceName = "Right BT",
+                        host = "$DEVICE_CONNECT_BT_PREFIX$RIGHT_MAC",
+                        port = DEVICE_CONNECT_BT_PORT,
+                    )
+                left.reportDiscoveredDeviceForTest(btUnknown)
+                withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                    left.state.first { state -> state.peers.any { it.id == unknownId } }
+                }
+
+                left.pair(unknownId)
+
+                val leftReq =
+                    withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                        left.state
+                            .first { state -> state.pairingRequests.any { it.requiresApproval } }
+                            .pairingRequests
+                            .first()
+                    }
+                val rightReq =
+                    withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                        right.state
+                            .first { state -> state.pairingRequests.any { it.requiresApproval } }
+                            .pairingRequests
+                            .first()
+                    }
+                assertEquals(RIGHT_ID, leftReq.deviceId)
+                assertEquals(LEFT_ID, rightReq.deviceId)
+                left.approvePairing(leftReq.requestId)
+                right.approvePairing(rightReq.requestId)
+
+                withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                    left.state.first { state ->
+                        state.peers.any { it.id == RIGHT_ID && it.state == DeviceConnectManager.PeerState.CONNECTED } &&
+                            state.peers.none { it.id == unknownId }
+                    }
+                    right.state.first { state ->
+                        state.peers.any { it.id == LEFT_ID && it.state == DeviceConnectManager.PeerState.CONNECTED }
+                    }
+                }
+                assertFalse(left.state.value.directConnectionFailed)
+
+                // Re-discovering the unknown Bluetooth ID and a LAN endpoint must merge into RIGHT_ID without a duplicate peer.
+                val lanEndpoint = DiscoveredDevice("lan-right", RIGHT_ID, "Right", localLanIp, deadPort)
+                left.reportDiscoveredDeviceForTest(btUnknown)
+                left.reportDiscoveredDeviceForTest(lanEndpoint)
+                assertEquals(listOf(RIGHT_ID), left.state.value.peers.map { it.id })
+
+                // Drop the link and restart Right; re-discovering btUnknown must resolve to RIGHT_ID and auto-reconnect.
+                right.disable()
+                left.awaitSessionClosedForTest(RIGHT_ID)
+                withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                    left.state.first { state -> state.peers.none { it.id == RIGHT_ID && it.state == DeviceConnectManager.PeerState.CONNECTED } }
+                    right.state.first { !it.enabled && !it.bluetoothFallbackActive }
+                }
+
+                right.enable(Unit)
+                withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                    right.state.first { it.bluetoothFallbackActive }
+                }
+                left.reportDiscoveredDeviceForTest(btUnknown)
+                withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                    left.state.first { state ->
+                        state.peers.any { it.id == RIGHT_ID && it.state == DeviceConnectManager.PeerState.CONNECTED } &&
+                            state.peers.none { it.id == unknownId }
+                    }
+                    right.state.first { state ->
+                        state.peers.any { it.id == LEFT_ID && it.state == DeviceConnectManager.PeerState.CONNECTED }
+                    }
+                }
+            } finally {
+                runCatching { left.release() }
+                runCatching { right.release() }
+                bus.closeAll()
+            }
+        }
+
+    @Test
+    fun bluetoothConnectPreservesAdvertisedL2capPsmAndRotatesToRfcommWithoutRetryingFailedPsm() =
+        runBlocking<Unit> {
+            val bus = FakeBluetoothBus()
+            val leftSettings = Settings(MapSettings()).apply { deviceConnectBluetoothFallbackEnabled = true }
+            val rightSettings = Settings(MapSettings()).apply { deviceConnectBluetoothFallbackEnabled = true }
+            val attemptedPorts = mutableListOf<Pair<String, Int>>()
+
+            val left =
+                DeviceConnectManager(
+                    settings = leftSettings,
+                    identityProvider = ::anonymousIdentity,
+                    localInfoProvider = { LEFT_INFO },
+                    fallbackTransportFactory = { _, _ ->
+                        val delegate = bus.transportFor(LEFT_MAC)
+                        object : LocalDeviceTransport by delegate {
+                            override suspend fun connect(
+                                host: String,
+                                port: Int,
+                            ): DeviceChannel {
+                                attemptedPorts += host to port
+                                if (port != DEVICE_CONNECT_BT_PORT) {
+                                    throw IOException("L2CAP PSM $port refused")
+                                }
+                                return delegate.connect(host, port)
+                            }
+                        }
+                    },
+                )
+            val right =
+                DeviceConnectManager(
+                    settings = rightSettings,
+                    identityProvider = ::anonymousIdentity,
+                    localInfoProvider = { RIGHT_INFO },
+                    fallbackTransportFactory = { _, _ -> bus.transportFor(RIGHT_MAC) },
+                )
+
+            try {
+                left.enable(Unit)
+                right.enable(Unit)
+                withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                    left.state.first { it.bluetoothFallbackActive }
+                    right.state.first { it.bluetoothFallbackActive }
+                }
+
+                val btHost = "$DEVICE_CONNECT_BT_PREFIX$RIGHT_MAC"
+                left.reportDiscoveredDeviceForTest(DiscoveredDevice("ble-$RIGHT_MAC", RIGHT_ID, "Right", btHost, 135))
+                left.reportDiscoveredDeviceForTest(DiscoveredDevice("bt-$RIGHT_MAC", RIGHT_ID, "Right", btHost, DEVICE_CONNECT_BT_PORT))
+
+                left.pair(RIGHT_ID)
+
+                val leftReq =
+                    withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                        left.state
+                            .first { state -> state.pairingRequests.any { it.requiresApproval } }
+                            .pairingRequests
+                            .first()
+                    }
+                val rightReq =
+                    withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                        right.state
+                            .first { state -> state.pairingRequests.any { it.requiresApproval } }
+                            .pairingRequests
+                            .first()
+                    }
+                left.approvePairing(leftReq.requestId)
+                right.approvePairing(rightReq.requestId)
+
+                withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                    left.state.first { state ->
+                        state.peers.any { it.id == RIGHT_ID && it.state == DeviceConnectManager.PeerState.CONNECTED }
+                    }
+                }
+                assertEquals(listOf(btHost to 135, btHost to DEVICE_CONNECT_BT_PORT), attemptedPorts)
+            } finally {
+                runCatching { left.release() }
+                runCatching { right.release() }
+                bus.closeAll()
+            }
+        }
+
+    @Test
+    fun bluetoothConnectDoesNotInfinitelyRetrySingleFailedL2capEndpoint() =
+        runBlocking<Unit> {
+            val bus = FakeBluetoothBus()
+            val leftSettings = Settings(MapSettings()).apply { deviceConnectBluetoothFallbackEnabled = true }
+            val attemptedPorts = mutableListOf<Pair<String, Int>>()
+
+            val left =
+                DeviceConnectManager(
+                    settings = leftSettings,
+                    identityProvider = ::anonymousIdentity,
+                    localInfoProvider = { LEFT_INFO },
+                    fallbackTransportFactory = { _, _ ->
+                        val delegate = bus.transportFor(LEFT_MAC)
+                        object : LocalDeviceTransport by delegate {
+                            override suspend fun connect(
+                                host: String,
+                                port: Int,
+                            ): DeviceChannel {
+                                attemptedPorts += host to port
+                                throw IOException("L2CAP PSM $port unreachable")
+                            }
+                        }
+                    },
+                )
+
+            try {
+                left.enable(Unit)
+                withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                    left.state.first { it.bluetoothFallbackActive }
+                }
+
+                val btHost = "$DEVICE_CONNECT_BT_PREFIX$RIGHT_MAC"
+                left.reportDiscoveredDeviceForTest(DiscoveredDevice("ble-$RIGHT_MAC", RIGHT_ID, "Right", btHost, 135))
+                left.pair(RIGHT_ID)
+
+                withTimeout(TEST_TIMEOUT_MS.milliseconds) {
+                    left.state.first { state ->
+                        state.log.any { it.message.contains("Connection endpoint for Right ($btHost:135) is unavailable") }
+                    }
+                }
+                assertEquals(listOf(btHost to 135), attemptedPorts)
+            } finally {
+                runCatching { left.release() }
+                bus.closeAll()
+            }
+        }
+
+    @Test
+    fun windowsBluetoothServiceLookupChecksUuidHandlesResizeAndRejectsNonMetrolistPeers() {
+        val expectedUuid = UUID.fromString(DEVICE_CONNECT_BT_SERVICE_UUID)
+        val cachedHitWs2 = FakeLookupWs232Lib(cachedResult = LookupOutcome.NEEDS_LARGER_BUFFER_THEN_FOUND)
+        assertTrue(hasWindowsBluetoothService(cachedHitWs2, RIGHT_MAC, expectedUuid))
+        assertEquals(listOf(false), cachedHitWs2.beginFlushFlags)
+        assertEquals(1, cachedHitWs2.openHandles)
+        assertEquals(1, cachedHitWs2.closedHandles)
+        assertEquals("($RIGHT_MAC)", cachedHitWs2.seenContexts.single())
+        assertEquals(expectedUuid, cachedHitWs2.seenUuids.single())
+
+        val flushHitWs2 = FakeLookupWs232Lib(cachedResult = LookupOutcome.NOT_FOUND, flushResult = LookupOutcome.FOUND)
+        assertTrue(hasWindowsBluetoothService(flushHitWs2, RIGHT_MAC, expectedUuid))
+        assertEquals(listOf(false, true), flushHitWs2.beginFlushFlags)
+        assertEquals(2, flushHitWs2.openHandles)
+        assertEquals(2, flushHitWs2.closedHandles)
+
+        val missingWs2 = FakeLookupWs232Lib(cachedResult = LookupOutcome.NOT_FOUND, flushResult = LookupOutcome.NOT_FOUND)
+        assertFalse(hasWindowsBluetoothService(missingWs2, RIGHT_MAC, expectedUuid))
+        assertEquals(listOf(false, true), missingWs2.beginFlushFlags)
+        assertEquals(2, missingWs2.openHandles)
+        assertEquals(2, missingWs2.closedHandles)
+
+        assertFalse(hasWindowsBluetoothService(missingWs2, "not-a-mac", expectedUuid))
+    }
+
+    private enum class LookupOutcome {
+        FOUND,
+        NEEDS_LARGER_BUFFER_THEN_FOUND,
+        NOT_FOUND,
+    }
+
+    private class FakeLookupWs232Lib(
+        private val cachedResult: LookupOutcome,
+        private val flushResult: LookupOutcome = LookupOutcome.NOT_FOUND,
+    ) : Ws232Lib {
+        val beginFlushFlags = mutableListOf<Boolean>()
+        val seenContexts = mutableListOf<String>()
+        val seenUuids = mutableListOf<UUID>()
+        var openHandles = 0
+        var closedHandles = 0
+        private var lastError = 0
+        private val handleOutcomes = mutableMapOf<Long, LookupOutcome>()
+        private val handleRetried = mutableSetOf<Long>()
+
+        override fun WSALookupServiceBeginW(
+            lpqsRestrictions: Pointer,
+            dwControlFlags: Int,
+            lphLookup: WinNT.HANDLEByReference,
+        ): Int {
+            val querySet = Structure.newInstance(WsaQuerySetW::class.java, lpqsRestrictions).apply { read() }
+            assertEquals(16, querySet.dwNameSpace)
+            seenContexts += querySet.lpszContext?.toString().orEmpty()
+            val guidPtr = checkNotNull(querySet.lpServiceClassId)
+            val guid = Structure.newInstance(Guid.GUID::class.java, guidPtr).apply { read() }
+            seenUuids += guidToUuid(guid)
+
+            val isFlush = (dwControlFlags and 0x1000) != 0
+            beginFlushFlags += isFlush
+            val handleId = (++openHandles).toLong()
+            handleOutcomes[handleId] = if (isFlush) flushResult else cachedResult
+            lphLookup.value = WinNT.HANDLE(Pointer.createConstant(handleId))
+            return 0
+        }
+
+        override fun WSALookupServiceNextW(
+            hLookup: WinNT.HANDLE,
+            dwControlFlags: Int,
+            lpdwBufferLength: IntByReference,
+            lpqsResults: Pointer,
+        ): Int {
+            val handleId = Pointer.nativeValue(hLookup.pointer)
+            return when (handleOutcomes[handleId]) {
+                LookupOutcome.FOUND -> {
+                    lastError = 0
+                    0
+                }
+
+                LookupOutcome.NEEDS_LARGER_BUFFER_THEN_FOUND -> {
+                    if (handleRetried.add(handleId)) {
+                        lpdwBufferLength.value = lpdwBufferLength.value + 1024
+                        lastError = 10014
+                        -1
+                    } else {
+                        lastError = 0
+                        0
+                    }
+                }
+
+                LookupOutcome.NOT_FOUND, null -> {
+                    lastError = 10110
+                    -1
+                }
+            }
+        }
+
+        override fun WSALookupServiceEnd(hLookup: WinNT.HANDLE): Int {
+            closedHandles++
+            return 0
+        }
+
+        override fun WSAGetLastError(): Int = lastError
+
+        override fun WSAStartup(
+            wVersionRequested: Int,
+            lpWSAData: Pointer,
+        ): Int = 0
+
+        override fun socket(
+            af: Int,
+            type: Int,
+            protocol: Int,
+        ): WinDef.UINT_PTR = WinDef.UINT_PTR(0)
+
+        override fun bind(
+            s: WinDef.UINT_PTR,
+            name: Pointer,
+            namelen: Int,
+        ): Int = 0
+
+        override fun listen(
+            s: WinDef.UINT_PTR,
+            backlog: Int,
+        ): Int = 0
+
+        override fun accept(
+            s: WinDef.UINT_PTR,
+            addr: Pointer?,
+            addrlen: IntByReference?,
+        ): WinDef.UINT_PTR = WinDef.UINT_PTR(0)
+
+        override fun connect(
+            s: WinDef.UINT_PTR,
+            name: Pointer,
+            namelen: Int,
+        ): Int = 0
+
+        override fun getsockname(
+            s: WinDef.UINT_PTR,
+            name: Pointer,
+            namelen: IntByReference,
+        ): Int = 0
+
+        override fun recv(
+            s: WinDef.UINT_PTR,
+            buf: Pointer,
+            len: Int,
+            flags: Int,
+        ): Int = 0
+
+        override fun send(
+            s: WinDef.UINT_PTR,
+            buf: Pointer,
+            len: Int,
+            flags: Int,
+        ): Int = 0
+
+        override fun shutdown(
+            s: WinDef.UINT_PTR,
+            how: Int,
+        ): Int = 0
+
+        override fun closesocket(s: WinDef.UINT_PTR): Int = 0
+
+        override fun WSASetServiceW(
+            lpqsRegInfo: Pointer,
+            essoperation: Int,
+            dwControlFlags: Int,
+        ): Int = 0
+
+        private fun guidToUuid(guid: Guid.GUID): UUID {
+            val msb =
+                ((guid.Data1.toLong() and 0xffffffffL) shl 32) or
+                    ((guid.Data2.toLong() and 0xffffL) shl 16) or
+                    (guid.Data3.toLong() and 0xffffL)
+            var lsb = 0L
+            for (b in guid.Data4) {
+                lsb = (lsb shl 8) or (b.toLong() and 0xffL)
+            }
+            return UUID(msb, lsb)
+        }
     }
 
     private class FakeBluetoothBus {

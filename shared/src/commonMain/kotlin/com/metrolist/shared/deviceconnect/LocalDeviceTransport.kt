@@ -9,10 +9,12 @@
 package com.metrolist.shared.deviceconnect
 
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 enum class DeviceTransportKind {
     LAN_WEBSOCKET,
@@ -58,35 +60,41 @@ internal class LengthPrefixedStreamDeviceChannel(
 
     override val incoming: Flow<String> =
         flow {
-            while (!closed.isCompleted) {
-                val header = readBytes(FRAME_HEADER_BYTES) ?: break
-                if (header.size != FRAME_HEADER_BYTES) {
-                    throw IllegalStateException("Truncated DeviceConnect stream frame header")
+            try {
+                while (!closed.isCompleted) {
+                    val header = readBytes(FRAME_HEADER_BYTES) ?: break
+                    if (header.size != FRAME_HEADER_BYTES) {
+                        throw IllegalStateException("Truncated DeviceConnect stream frame header")
+                    }
+                    val length =
+                        ((header[0].toInt() and 0xff) shl 24) or
+                            ((header[1].toInt() and 0xff) shl 16) or
+                            ((header[2].toInt() and 0xff) shl 8) or
+                            (header[3].toInt() and 0xff)
+                    require(length in 1..DEVICE_CONNECT_MAX_FRAME_BYTES.toInt()) {
+                        "Invalid DeviceConnect stream frame size: $length"
+                    }
+                    val payload =
+                        readBytes(length)
+                            ?: throw IllegalStateException("Truncated DeviceConnect stream frame body")
+                    if (payload.size != length) {
+                        throw IllegalStateException("Incomplete DeviceConnect stream frame body")
+                    }
+                    emit(payload.decodeToString(throwOnInvalidSequence = true))
                 }
-                val length =
-                    ((header[0].toInt() and 0xff) shl 24) or
-                        ((header[1].toInt() and 0xff) shl 16) or
-                        ((header[2].toInt() and 0xff) shl 8) or
-                        (header[3].toInt() and 0xff)
-                require(length in 1..DEVICE_CONNECT_MAX_FRAME_BYTES.toInt()) {
-                    "Invalid DeviceConnect stream frame size: $length"
+            } finally {
+                withContext(NonCancellable) {
+                    close()
                 }
-                val payload =
-                    readBytes(length)
-                        ?: throw IllegalStateException("Truncated DeviceConnect stream frame body")
-                if (payload.size != length) {
-                    throw IllegalStateException("Incomplete DeviceConnect stream frame body")
-                }
-                emit(payload.decodeToString(throwOnInvalidSequence = true))
             }
         }
 
     override suspend fun send(text: String) {
-        check(!closed.isCompleted) { "DeviceConnect stream channel is closed" }
         val payload = text.encodeToByteArray()
         require(payload.size in 1..DEVICE_CONNECT_MAX_FRAME_BYTES.toInt()) {
             "DeviceConnect stream frame exceeds limit: ${payload.size}"
         }
+        check(!closed.isCompleted) { "DeviceConnect stream channel is closed" }
         val frame = ByteArray(FRAME_HEADER_BYTES + payload.size)
         val length = payload.size
         frame[0] = (length ushr 24).toByte()

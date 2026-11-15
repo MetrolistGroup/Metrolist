@@ -26,9 +26,12 @@ class AndroidDeviceConnectTest {
     }
 
     @Test
-    fun requiresBluetoothFallbackPermissionsStartingAtApi31() {
-        for (sdkInt in listOf(28, 30)) {
-            assertEquals(emptyList<String>(), deviceConnectBluetoothFallbackPermissions(sdkInt))
+    fun requiresBluetoothFallbackPermissionsForApi24To30AndApi31Plus() {
+        for (sdkInt in listOf(24, 28, 30)) {
+            assertEquals(
+                listOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                deviceConnectBluetoothFallbackPermissions(sdkInt),
+            )
         }
         for (sdkInt in listOf(31, 36)) {
             assertEquals(
