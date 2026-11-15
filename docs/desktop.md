@@ -12,6 +12,8 @@ The fullscreen player's exit button restores the previous window placement and c
 
 Windows keeps its native borderless style and placement snapshot separate from Compose's placement. Exit restores the saved style, frame, bounds and maximized state. A window restored in native fullscreen exits to its last normal placement instead of saving fullscreen as the restore target. Fullscreen changes the existing window's style and placement; video does not embed a native surface.
 
+On Linux and macOS, restoring a maximized window first clears native fullscreen, then reapplies the saved placement. The player button and macOS menu use the same placement setter.
+
 Windows paints behind the maximized frame insets and applies the theme background to the AWT and Skiko backing components during startup and normal use.
 
 Connected action groups use the shared Material shapes and spacing, with fixed corners during press and selection. The fullscreen artwork player's action buttons are 40 dp tall, and its transport buttons share one height. Overflow sizing includes minimum touch targets and the gap before the overflow button so the last visible action has the trailing corners. The bottom volume button stays round beside overflow, with a 12 dp gap before the volume segment.

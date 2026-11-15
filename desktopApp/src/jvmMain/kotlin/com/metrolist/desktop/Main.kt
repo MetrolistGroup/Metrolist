@@ -151,6 +151,7 @@ import com.metrolist.desktop.window.WindowFrame
 import com.metrolist.desktop.window.WindowVisibility
 import com.metrolist.desktop.window.findSkiaLayer
 import com.metrolist.desktop.window.restoreWindowPosition
+import com.metrolist.desktop.window.setWindowPlacement
 import com.metrolist.desktop.youtube.DesktopPageBoundTokenHost
 import com.metrolist.desktop.youtube.DesktopPageBoundTokenRuntime
 import com.metrolist.shared.BuildConfig
@@ -1271,12 +1272,13 @@ private fun runDesktopApp(args: Array<String>) {
                     navigator = navigator,
                     windowState = windowState,
                     toggleWindowFullscreen = {
-                        windowState.placement =
+                        val placement =
                             if (windowState.placement == WindowPlacement.Fullscreen) {
                                 lastNormalPlacement.value
                             } else {
                                 WindowPlacement.Fullscreen
                             }
+                        setWindowPlacement(windowState, placement) { window.placement = it }
                     },
                     onRefresh = {
                         UiState.isRefreshingApp = true
