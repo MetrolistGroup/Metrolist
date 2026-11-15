@@ -755,4 +755,8 @@
     <string name="immersive_player">沈浸式播放器</string>
     <string name="immersive_player_description">播放器擴大時隱藏系統資訊列</string>
     <string name="lyrics_curated_by">(由 %1$s 提供歌詞)</string>
+    <string name="hide_from_home">從首頁隱藏</string>
+    <string name="hidden_from_home">%1$s 以從首頁隱藏</string>
+    <string name="hidden_home_items">從首頁隱藏</string>
+    <string name="speed_dial">快速存取</string>
 </resources>
