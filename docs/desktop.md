@@ -249,6 +249,8 @@ Desktop playback installs FFmpeg's native log callback. Warnings and errors go t
 
 Animated covers keep one decoder at a time per artwork slot. Track changes wait for the previous load, decoder and draw to finish before creating the next cover player. Failed loads or ended playback clear the animated frame so static artwork remains visible. Cover cancellation aborts pending downloads and waits for native cleanup off the UI thread.
 
+The Spotify sign-in button in player artwork settings opens the same login window as playlist imports. Successful authentication saves the Spotify session for Canvas artwork; failures leave the login window open for retry.
+
 `session-running.txt` records an active desktop session. Normal app shutdown removes it. On the next start, a remaining marker or an unreported `hs_err_pid` file produces a diagnostic in both logs. When crash reporting is enabled and an unreported crash file exists, the Sentry client sends a previous-exit event with `previous-desktop-exit.txt` attached. The attachment contains the session description and a bounded, redacted summary of each crash header and native stack. It omits VM arguments, environment variables and memory dumps. The original crash files stay on disk; `.reported` files prevent repeated uploads. An unfinished shutdown alone also covers forced termination and power loss, so it does not prove a native crash. Sentry events include `desktop.os`, `desktop.os_version` and `desktop.arch` tags.
 
 `scripts/metromem --help` lists profiling modes. Keep heap dumps and traces private; they can contain account data.

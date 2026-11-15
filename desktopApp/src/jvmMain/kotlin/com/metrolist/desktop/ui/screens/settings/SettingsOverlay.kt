@@ -21,6 +21,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,6 +38,7 @@ import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import com.metrolist.desktop.spotifyimport.SpotifyLoginDialog
 import com.metrolist.desktop.state.DesktopLocaleManager
 import com.metrolist.desktop.state.app.DesktopNavigation
 import com.metrolist.desktop.state.app.UiState
@@ -84,8 +86,10 @@ import com.metrolist.shared.generated.resources.settings_storage_summary
 import com.metrolist.shared.generated.resources.settings_system_font_summary
 import com.metrolist.shared.generated.resources.settings_view_application_logs
 import com.metrolist.shared.model.ArtistSource
+import com.metrolist.shared.network.sharedHttpEngine
 import com.metrolist.shared.settings.FontOption
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.spotifyimport.SpotifyImportManager
 import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.state.applyContentRegion
 import com.metrolist.shared.state.contentCountryCodes
@@ -105,9 +109,12 @@ import com.metrolist.shared.ui.settings.SharedSettingsHost
 import com.metrolist.shared.ui.settings.SharedSettingsScreen
 import com.metrolist.shared.ui.settings.settingsPageSubtitle
 import com.metrolist.shared.ui.utils.rememberFileSizeFormatter
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import meow.nyx.spotlib.SpotifyClient
+import meow.nyx.spotlib.SpotifyConfig
 import org.jetbrains.compose.resources.stringResource
 import java.awt.Desktop
 import java.util.Locale
@@ -115,6 +122,7 @@ import java.util.Locale
 @Composable
 fun SettingsOverlay(colorScheme: ColorScheme) {
     val formatFileSize = rememberFileSizeFormatter()
+    var showSpotifyLogin by remember { mutableStateOf(false) }
     var devtoolsUnlocked by remember { mutableStateOf(Settings.shared.devtoolsUnlocked) }
     val openDevtoolsOnLaunch = remember { UiState.openDevtoolsSettingsRequested }
     val openPlaylistImportOnLaunch = remember { UiState.openPlaylistImportRequested }
@@ -337,6 +345,7 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
                 host =
                     SharedSettingsHost(
                         platform = SettingsPlatform.DESKTOP,
+                        onSpotifySignIn = { showSpotifyLogin = true },
                         onSwitchYouTubeChannel = if (AuthState.isSignedIn) ({ UiState.showSwitchChannel = true }) else null,
                         lyricsPreview = { modifier ->
                             val song = PlayerState.currentTrack
@@ -524,5 +533,40 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
                 modifier = Modifier.fillMaxSize(),
             )
         }
+    }
+
+    if (showSpotifyLogin) {
+        val spotifyManager =
+            remember {
+                SpotifyImportManager(
+                    clientFactory = { SpotifyClient.create(SpotifyConfig(engine = sharedHttpEngine)) },
+                    saveStoredSession = { Settings.shared.spotifySession = it },
+                )
+            }
+        var spotifyCookie by remember { mutableStateOf<String?>(null) }
+        var authenticationFailed by remember { mutableStateOf(false) }
+        DisposableEffect(spotifyManager) {
+            onDispose { spotifyManager.close() }
+        }
+        LaunchedEffect(spotifyCookie) {
+            val cookie = spotifyCookie ?: return@LaunchedEffect
+            authenticationFailed = false
+            try {
+                spotifyManager.authenticate(cookie)
+                showSpotifyLogin = false
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                authenticationFailed = true
+            } finally {
+                spotifyCookie = null
+            }
+        }
+        SpotifyLoginDialog(
+            isAuthenticating = spotifyCookie != null,
+            authenticationFailed = authenticationFailed,
+            onDismissRequest = { showSpotifyLogin = false },
+            onSessionCookie = { spotifyCookie = it },
+        )
     }
 }
