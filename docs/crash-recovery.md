@@ -46,7 +46,7 @@ Recovery logs file names and exception types, never keys, values, decrypted data
 
 Kotlin and Objective-C exception handlers save a redacted report and pending marker. On the next launch, normal initialization waits until the report list closes. Closing acknowledges it; clearing logs does not delete the library.
 
-iOS cannot safely present UI in a terminating process or restart itself. Native signals, Swift traps, watchdog/OOM termination and failures before entry require OS/Sentry diagnostics. In-app updating is unavailable.
+iOS cannot safely present UI in a terminating process or restart itself. Native signals, Swift traps, watchdog/OOM termination and failures before entry require OS diagnostics or, on stable releases with consent, Sentry diagnostics. Nightlies never send Sentry reports. In-app updating is unavailable.
 
 ## Verification
 

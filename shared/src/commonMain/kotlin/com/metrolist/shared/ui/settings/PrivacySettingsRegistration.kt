@@ -45,6 +45,7 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.ui.components.CollectionPreviews
 import com.metrolist.shared.ui.icons.MetrolistIcons
+import com.metrolist.shared.utils.isCrashReportingAvailable
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
@@ -140,13 +141,15 @@ internal fun SettingsUiRegistryBuilder.registerPrivacySettings(host: SharedSetti
             }
         }
         group("diagnostics", stringResource(Res.string.privacy_diagnostics)) {
-            switch(
-                id = "sentry",
-                title = stringResource(Res.string.sentry_reporting),
-                description = stringResource(Res.string.sentry_reporting_desc),
-                checked = settings.sentryEnabled,
-            ) {
-                host.onSettingChanged(SettingsChangeEffect.SENTRY, it)
+            if (isCrashReportingAvailable()) {
+                switch(
+                    id = "sentry",
+                    title = stringResource(Res.string.sentry_reporting),
+                    description = stringResource(Res.string.sentry_reporting_desc),
+                    checked = settings.sentryEnabled,
+                ) {
+                    host.onSettingChanged(SettingsChangeEffect.SENTRY, it)
+                }
             }
             if (host.platform != SettingsPlatform.ANDROID) {
                 switch(

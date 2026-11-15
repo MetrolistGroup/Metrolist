@@ -391,6 +391,8 @@ Android and desktop offer an opt-in **SponsorBlock (podcasts)** switch. Only ite
 
 ### Sentry
 
+Only stable releases offer Sentry reporting. Builds whose app version contains `+` build metadata, including nightlies, never initialize Sentry or send crashes, ANRs, sessions or playback reports. These builds hide Sentry consent in onboarding and Privacy settings and preserve the saved consent for stable releases. Local crash logs and manual report sharing remain available.
+
 Every platform passes reports and breadcrumbs through `redactDiagnosticText` and `redactDiagnosticUrl` in `beforeSend` and `beforeBreadcrumb`, removing credentials, tokens, cookies, query strings, long opaque path segments and IP addresses. Playback reports attach the last 200 playback events. Android and desktop report playback failures only after recovery is exhausted or a track cannot start. iOS releases are named `com.metrolist.ios@<appVersion>` because sideloaded builds get random bundle IDs, and release workflows upload dSYMs. iOS reports HTTP 5xx automatically only for HTTPS on port 443 to `metrolist.cc`, its subdomains and `metroserverx.meowery.eu`; see [HTTP client errors](https://docs.sentry.io/platforms/apple/configuration/http-client-errors/).
 
 ### Imports and scrobbling

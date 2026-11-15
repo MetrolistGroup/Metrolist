@@ -7,6 +7,7 @@ package com.metrolist.desktop.utils
 
 import com.metrolist.shared.BuildConfig
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.utils.isCrashReportingAvailable
 import com.metrolist.shared.utils.redactDiagnosticText
 import com.metrolist.shared.utils.redactDiagnosticUrl
 import io.sentry.Attachment
@@ -41,7 +42,7 @@ object SentryManager {
     }
 
     private fun applyEnabled(enabled: Boolean) {
-        if (!enabled || !isPackagedApplication()) {
+        if (!enabled || !isCrashReportingAvailable() || !isPackagedApplication()) {
             shutdown()
             return
         }
