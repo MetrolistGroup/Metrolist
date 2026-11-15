@@ -2620,4 +2620,9 @@
     <string name="desktop_minimize_to_tray_desc">Închiderea ferestrei va minimiza aplicația Metrolist în bară în loc să o închidă</string>
     <string name="desktop_tray_toggle_on_click">Ascunde sau afișează la apăsarea pictogramei din bară</string>
     <string name="desktop_tray_toggle_on_click_desc">Atunci când vei face clic-stânga pe pictograma din bară, fereastra aplicației Metrolist va fi deschisă sau închisă</string>
+    <string name="blocked_songs">Melodii blocate</string>
+    <string name="blocked_songs_desc">Restaurează melodiile pe care le-ai apreciat negativ sau blocat</string>
+    <string name="blocked_songs_empty">Nicio melodie blocată</string>
+    <string name="content_undo_hint">Poți anula acest lucru în %1$s.</string>
+    <string name="content_undo_path">%1$s &gt; %2$s &gt; %3$s</string>
 </resources>
