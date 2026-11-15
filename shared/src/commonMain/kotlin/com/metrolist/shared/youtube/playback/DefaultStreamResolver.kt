@@ -15,9 +15,11 @@ import com.metrolist.innertubex.extraction.strategy.ClientHealthScope
 import com.metrolist.innertubex.extraction.strategy.PlaybackClientCatalog
 import com.metrolist.innertubex.extraction.strategy.PlaybackTransport
 import com.metrolist.innertubex.models.YouTubeClient
-import com.metrolist.innertubex.models.response.PlayerResponse
 import com.metrolist.shared.api.PLAYER_NEXT_RESPONSE_LIMIT
+import com.metrolist.shared.api.YouTubeResponseParser.asObject
+import com.metrolist.shared.api.YouTubeResponseParser.primitiveText
 import com.metrolist.shared.api.bodyLimited
+import com.metrolist.shared.api.isLivePlayerResponse
 import com.metrolist.shared.api.musicvideo.CounterpartPositionMap
 import com.metrolist.shared.api.musicvideo.MusicVideoResolver
 import com.metrolist.shared.api.musicvideo.MusicVideoResult
@@ -64,6 +66,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.JsonObject
 import kotlin.io.encoding.Base64
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
@@ -107,6 +110,8 @@ class DefaultStreamResolver(
         val sessionFingerprint: String,
         val networkScope: String,
         val excludedProfiles: Set<String>,
+        val sourceDurationSeconds: Long?,
+        val sourceIsLive: Boolean,
     )
 
     private data class FailureKey(
@@ -397,7 +402,17 @@ class DefaultStreamResolver(
         val sessionIdentityFingerprint = playbackSessionIdentityFingerprint()
         val scope = networkState()
         invalidateNetworkScope(scope)
-        val key = CacheKey(videoId, hints, audioQuality, sessionFingerprint, scope.cacheScope(), excludedProfiles)
+        val key =
+            CacheKey(
+                videoId,
+                hints,
+                audioQuality,
+                sessionFingerprint,
+                scope.cacheScope(),
+                excludedProfiles,
+                sourceSong?.duration?.takeIf { it > 0L },
+                sourceSong?.isLive == true,
+            )
         val nowMs = Clock.System.now().toEpochMilliseconds()
         var flightMap = if (refresh) refreshFlights else normalFlights
         var owner = false
@@ -711,33 +726,34 @@ class DefaultStreamResolver(
                 isUploaded = if (extractVideoId != videoId) false else hints.isUploaded,
             )
 
-        val isLive = hints.isLive == true || sourceSong?.isLive == true
+        val isLive = (hints.isLive == true || sourceSong?.isLive == true) && sourceSong?.duration?.let { it > 0L } != true
         if (isLive) {
-            val liveResource =
-                resolveLiveStream(
+            val hlsResource =
+                resolveHlsStream(
                     videoId,
                     extractVideoId,
                     extractWantVideo,
                     counterpartSource,
                     hints.maxVideoHeight,
                     counterpartPositionMap,
+                    sourceSong?.duration,
                 )
-            if (liveResource != null) {
+            if (hlsResource != null) {
                 val elapsed = Clock.System.now().toEpochMilliseconds() - startTime
-                YtLogger.d(TAG, "resolve live stream success client=${liveResource.clientName} elapsed=${elapsed}ms")
+                YtLogger.d(TAG, "resolve HLS stream success client=${hlsResource.clientName} elapsed=${elapsed}ms")
                 PlaybackEventLog.info(
                     PlaybackEventKind.RESOLVE,
-                    "Resolved live stream from ${liveResource.clientName} in ${elapsed}ms.",
+                    "Resolved HLS stream from ${hlsResource.clientName} in ${elapsed}ms.",
                     videoId = videoId,
-                    clientName = liveResource.clientName,
-                    profileId = liveResource.profileId,
+                    clientName = hlsResource.clientName,
+                    profileId = hlsResource.profileId,
                     details =
-                        liveResource.toPlaybackLogDetails() +
+                        hlsResource.toPlaybackLogDetails() +
                             mapOf("elapsedMs" to elapsed.toString()) +
                             hints.toPlaybackLogDetails() +
                             innerTube.toPlaybackSessionLogDetails(),
                 )
-                return liveResource
+                return hlsResource
             }
         }
 
@@ -876,34 +892,35 @@ class DefaultStreamResolver(
                 }
             )
                 ?: run {
-                    val liveResource =
-                        resolveLiveStream(
+                    val hlsResource =
+                        resolveHlsStream(
                             videoId,
                             extractVideoId,
                             extractWantVideo,
                             counterpartSource,
                             hints.maxVideoHeight,
                             counterpartPositionMap,
+                            sourceSong?.duration,
                         )
-                    if (liveResource != null) {
+                    if (hlsResource != null) {
                         val elapsed = Clock.System.now().toEpochMilliseconds() - startTime
                         YtLogger.d(
                             TAG,
-                            "resolve live stream fallback on unplayable stream success client=${liveResource.clientName} elapsed=${elapsed}ms",
+                            "resolve HLS stream fallback on unplayable stream success client=${hlsResource.clientName} elapsed=${elapsed}ms",
                         )
                         PlaybackEventLog.info(
                             PlaybackEventKind.RESOLVE,
-                            "Resolved live stream from ${liveResource.clientName} in ${elapsed}ms.",
+                            "Resolved HLS stream from ${hlsResource.clientName} in ${elapsed}ms.",
                             videoId = videoId,
-                            clientName = liveResource.clientName,
-                            profileId = liveResource.profileId,
+                            clientName = hlsResource.clientName,
+                            profileId = hlsResource.profileId,
                             details =
-                                liveResource.toPlaybackLogDetails() +
+                                hlsResource.toPlaybackLogDetails() +
                                     mapOf("elapsedMs" to elapsed.toString()) +
                                     hints.toPlaybackLogDetails() +
                                     innerTube.toPlaybackSessionLogDetails(),
                         )
-                        return liveResource
+                        return hlsResource
                     }
                     lastSelectionFailure?.afterPreferredClients(preferredFailure, preferredTimedOut)?.let { failure ->
                         if (failure.reason == StreamResolveException.Reason.UNAVAILABLE) {
@@ -922,31 +939,32 @@ class DefaultStreamResolver(
                     )
                 }
         if (isLiveStreamUrl(stream.audioUrl)) {
-            val liveResource =
-                resolveLiveStream(
+            val hlsResource =
+                resolveHlsStream(
                     videoId,
                     extractVideoId,
                     extractWantVideo,
                     counterpartSource,
                     hints.maxVideoHeight,
                     counterpartPositionMap,
+                    stream.finiteDurationSeconds ?: sourceSong?.duration,
                 )
-            if (liveResource != null) {
+            if (hlsResource != null) {
                 val elapsed = Clock.System.now().toEpochMilliseconds() - startTime
-                YtLogger.d(TAG, "resolve live stream fallback success client=${liveResource.clientName} elapsed=${elapsed}ms")
+                YtLogger.d(TAG, "resolve HLS stream fallback success client=${hlsResource.clientName} elapsed=${elapsed}ms")
                 PlaybackEventLog.info(
                     PlaybackEventKind.RESOLVE,
-                    "Resolved live stream from ${liveResource.clientName} in ${elapsed}ms.",
+                    "Resolved HLS stream from ${hlsResource.clientName} in ${elapsed}ms.",
                     videoId = videoId,
-                    clientName = liveResource.clientName,
-                    profileId = liveResource.profileId,
+                    clientName = hlsResource.clientName,
+                    profileId = hlsResource.profileId,
                     details =
-                        liveResource.toPlaybackLogDetails() +
+                        hlsResource.toPlaybackLogDetails() +
                             mapOf("elapsedMs" to elapsed.toString()) +
                             hints.toPlaybackLogDetails() +
                             innerTube.toPlaybackSessionLogDetails(),
                 )
-                return liveResource
+                return hlsResource
             }
         }
         if (!usesOriginalAudioTrack(stream.audioUrl, stream.sabrBootstrap?.audioFormat?.xtags)) {
@@ -966,7 +984,7 @@ class DefaultStreamResolver(
         // Keep the queue audio ID as the resource identity even when extracting its music-video counterpart.
         val resourceSessionFingerprint = playbackSessionFingerprint()
         val resource =
-            stream.toPlaybackResource(videoId).copy(
+            stream.toPlaybackResource(videoId, sourceSong?.duration, isLive, hints.isLive != false).copy(
                 counterpartSource = counterpartSource,
                 musicVideoId = if (extractVideoId != videoId) extractVideoId else null,
                 musicVideoPositionMap = counterpartPositionMap.takeIf { extractVideoId != videoId },
@@ -1050,20 +1068,35 @@ class DefaultStreamResolver(
         return values.joinToString("|") { "${it.length}:$it" }.fingerprint()
     }
 
-    private suspend fun resolveLiveStream(
+    private suspend fun resolveHlsStream(
         videoId: String,
         extractVideoId: String,
         extractWantVideo: Boolean,
         counterpartSource: String?,
         maxVideoHeight: Int?,
         counterpartPositionMap: CounterpartPositionMap?,
+        sourceDurationSeconds: Long?,
     ): PlaybackResource? =
         try {
             val response =
                 innerTube
                     .player(YouTubeClient.ANDROID, extractVideoId)
-                    .bodyLimited<PlayerResponse>(PLAYER_NEXT_RESPONSE_LIMIT)
-            val hlsUrl = response.streamingData?.hlsManifestUrl?.takeIf { it.isNotBlank() }
+                    .bodyLimited<JsonObject>(PLAYER_NEXT_RESPONSE_LIMIT)
+            val hlsUrl =
+                response["streamingData"]
+                    .asObject()
+                    ?.get("hlsManifestUrl")
+                    .primitiveText()
+                    ?.takeIf { it.isNotBlank() }
+            val durationSeconds =
+                response["videoDetails"]
+                    .asObject()
+                    ?.get("lengthSeconds")
+                    .primitiveText()
+                    ?.toLongOrNull()
+                    ?.takeIf { it > 0L }
+                    ?: sourceDurationSeconds?.takeIf { it > 0L }
+            val isLive = response.isLivePlayerResponse(sourceDurationSeconds)
             if (hlsUrl != null) {
                 var resolvedAudioUrl = hlsUrl
                 var resolvedVideoUrl = if (extractWantVideo) hlsUrl else null
@@ -1109,7 +1142,7 @@ class DefaultStreamResolver(
 
                             YtLogger.d(
                                 TAG,
-                                "Resolved live stream variants: " +
+                                "Resolved HLS stream variants: " +
                                     "video=${chosenVideo.width}x${chosenVideo.height}@${chosenVideo.bandwidth}bps " +
                                     "audio=${chosenAudio.width}x${chosenAudio.height}",
                             )
@@ -1127,7 +1160,9 @@ class DefaultStreamResolver(
                     expiresAt = null,
                     mimeType = "application/x-mpegURL",
                     clientName = YouTubeClient.ANDROID.clientName,
-                    profileId = "ANDROID_LIVE",
+                    profileId = if (isLive) "ANDROID_LIVE" else "ANDROID_HLS",
+                    durationSeconds = durationSeconds.takeUnless { isLive },
+                    isLive = isLive,
                     requireBoundedRange = false,
                     videoUrl = if (extractWantVideo || resolvedVideoUrl != null) resolvedVideoUrl else null,
                     videoWidth = resolvedWidth,
@@ -1143,12 +1178,24 @@ class DefaultStreamResolver(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            YtLogger.w(TAG, "Android live stream resolution failed type=${e::class.simpleName ?: "unknown"}")
+            YtLogger.w(TAG, "Android HLS stream resolution failed type=${e::class.simpleName ?: "unknown"}")
             null
         }
 
-    private fun ExtractedStream.toPlaybackResource(videoId: String) =
-        PlaybackResource(
+    private fun ExtractedStream.toPlaybackResource(
+        videoId: String,
+        sourceDurationSeconds: Long?,
+        confirmedLive: Boolean,
+        allowLiveHls: Boolean,
+    ): PlaybackResource {
+        val durationSeconds = finiteDurationSeconds ?: sourceDurationSeconds?.takeIf { it > 0L }
+        val isHls =
+            mimeType.orEmpty().contains("mpegurl", ignoreCase = true) ||
+                audioUrl.contains("/hls_playlist/", ignoreCase = true) ||
+                audioUrl.contains("/hls_variant/", ignoreCase = true) ||
+                audioUrl.substringBefore('?').endsWith(".m3u8", ignoreCase = true)
+        val isLive = confirmedLive || (allowLiveHls && durationSeconds == null && sabrBootstrap == null && isHls)
+        return PlaybackResource(
             videoId = videoId,
             url = audioUrl,
             headers = headers,
@@ -1161,7 +1208,8 @@ class DefaultStreamResolver(
             codecs = codecs,
             bitrate = bitrate,
             sampleRate = sampleRate,
-            durationSeconds = mediaMetadata?.durationSeconds,
+            durationSeconds = durationSeconds.takeUnless { isLive },
+            isLive = isLive,
             clientName = clientName,
             profileId = profileId,
             requireBoundedRange = requireBoundedRange,
@@ -1182,7 +1230,13 @@ class DefaultStreamResolver(
             sabrVideoBootstrap = sabrVideoBootstrap,
             availableVideoHeights = availableVideoHeights,
         )
+    }
 }
+
+private val ExtractedStream.finiteDurationSeconds: Long?
+    get() =
+        mediaMetadata?.durationSeconds?.takeIf { it > 0L }
+            ?: sabrBootstrap?.durationMs?.div(1000L)?.takeIf { it > 0L }
 
 /**
  * The last-resort stage only asks tokenless visionOS, so its verdict must not hide what the full client set

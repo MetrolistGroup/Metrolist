@@ -1709,20 +1709,7 @@ class YouTubeRepository(
                     repositoryJson.decodeFromJsonElement<PlayerResponse>(response).videoDetails
                 } ?: return null
             val duration = details.lengthSeconds?.toLongOrNull()?.takeIf { it > 0L }
-            val rawDetails = response["videoDetails"].asObject()
-            val liveFlags =
-                listOf(
-                    rawDetails?.get("isLive"),
-                    rawDetails?.get("isLiveNow"),
-                    response.findFirstObject("liveBroadcastDetails")?.get("isLiveNow"),
-                ).mapNotNull { it?.jsonPrimitive?.booleanOrNull }
-            val streamingData = response["streamingData"].asObject()
-            val hlsOnly =
-                streamingData?.get("hlsManifestUrl").primitiveText()?.isNotBlank() == true &&
-                    streamingData?.get("formats").asArray().isNullOrEmpty() &&
-                    streamingData?.get("adaptiveFormats").asArray().isNullOrEmpty()
-            // isLiveContent also marks recordings and premieres; only current stream evidence counts.
-            val isLive = true in liveFlags || (false !in liveFlags && duration == null && hlsOnly)
+            val isLive = response.isLivePlayerResponse()
             SongPlayerInformation(
                 title = details.title?.takeIf { it.isNotBlank() },
                 artist = details.author?.takeIf { it.isNotBlank() },

@@ -10,21 +10,23 @@ import kotlin.test.assertTrue
 
 class PlaybackResourceTest {
     @Test
-    fun liveClassificationFollowsTheResourceAndItsCopies() {
-        val recorded = PlaybackResource("video", "https://media.example.test/audio", emptyMap(), null, null)
+    fun transportMarkersDoNotClassifyRecordingsAsLive() {
+        val recorded = PlaybackResource("video", "https://media.example.test/audio", emptyMap(), null, null, durationSeconds = 228L)
         assertFalse(recorded.isLive)
         val liveProfile = recorded.copy(profileId = "ANDROID_LIVE")
-        assertTrue(liveProfile.isLive)
-        assertFalse(liveProfile.copy(profileId = "WEB_REMIX").isLive)
+        assertFalse(liveProfile.isLive)
         for (marker in listOf("yt_live_broadcast", "/live/1", "live=1", "/hls_playlist/", "/hls_variant/")) {
             val liveUrl = "https://media.example.test/$marker".uppercase()
             val audio = recorded.copy(url = liveUrl)
             val video = recorded.copy(videoUrl = liveUrl)
-            assertTrue(audio.isLive)
-            assertTrue(video.isLive)
-            assertFalse(audio.copy(url = recorded.url).isLive)
-            assertFalse(video.copy(videoUrl = null).isLive)
+            assertFalse(audio.isLive)
+            assertFalse(video.isLive)
+            assertFalse(audio.copy(durationSeconds = null).isLive)
+            assertFalse(video.copy(durationSeconds = null).isLive)
         }
+        val live = recorded.copy(durationSeconds = null, isLive = true)
+        assertTrue(live.isLive)
+        assertTrue(live.copy(url = "https://media.example.test/rendition").isLive)
     }
 
     @Test

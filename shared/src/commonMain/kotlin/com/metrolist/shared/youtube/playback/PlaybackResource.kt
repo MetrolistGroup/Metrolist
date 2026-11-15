@@ -44,6 +44,7 @@ data class PlaybackResource(
     val allowPlaybackTrackingFallback: Boolean = false,
     val sabrTokenSupplier: (suspend () -> ByteArray?)? = null,
     val onSabrAttestationPending: (() -> Unit)? = null,
+    val isLive: Boolean = false,
 ) {
     val networkUrl: String?
         get() =
@@ -69,8 +70,6 @@ data class PlaybackResource(
 
     val hasVideo: Boolean
         get() = hasDirectVideo || hasSabrVideo
-
-    val isLive: Boolean = profileId == "ANDROID_LIVE" || isLiveStreamUrl(url) || isLiveStreamUrl(videoUrl.orEmpty())
 
     fun hasSameSabrAudio(other: PlaybackResource): Boolean {
         val first = sabrBootstrap ?: return false

@@ -1632,6 +1632,143 @@ class DefaultStreamResolverTest {
         }
 
     @Test
+    fun finiteHlsRecordingsStaySeekableInEveryResolutionPath() =
+        runBlocking {
+            val song = SongItem("j9Sn1nFGQQ8", "Color Your Night", null, emptyList(), null, duration = 228L)
+            for ((liveHint, hasExtractedStream) in listOf(true to false, false to false, false to true)) {
+                withHlsResponse(
+                    details = """"lengthSeconds":"228","isLiveContent":true,"musicVideoType":"MUSIC_VIDEO_TYPE_LIVE"""",
+                    extractor =
+                        RecordingStreamExtractor(
+                            profiles = if (hasExtractedStream) listOf("ANDROID" to "ANDROID_LIVE") else emptyList(),
+                            audioUrl = hlsMasterUrl,
+                        ),
+                ) { resolver ->
+                    for (sourceSong in listOf(null, song)) {
+                        val resource = resolver.resolve(song.id, ContentHints(isLive = liveHint), sourceSong = sourceSong)
+                        assertFalse(resource.isLive)
+                        assertEquals(228L, resource.durationSeconds)
+                        assertEquals("ANDROID_HLS", resource.profileId)
+                    }
+                }
+            }
+        }
+
+    @Test
+    fun queuedDurationPreventsHlsInferenceIncludingCachedAndRefreshedResources() =
+        runBlocking {
+            withHlsResponse(details = """"isLiveContent":true""") { resolver ->
+                val song = SongItem("video", "Recording", null, emptyList(), null, duration = 228L)
+                assertTrue(resolver.resolve(song.id).isLive)
+                val resource = resolver.resolve(song.id, sourceSong = song)
+                assertFalse(resource.isLive)
+                assertEquals(228L, resource.durationSeconds)
+                assertFalse(resolver.resolve(song.id, sourceSong = song).isLive)
+                assertFalse(resolver.refresh(song.id, sourceSong = song).isLive)
+            }
+        }
+
+    @Test
+    fun hlsClassificationUsesCurrentFlagsAndRequiresHlsOnlyWithoutDuration() =
+        runBlocking {
+            for (details in listOf(
+                """"isLive":true""",
+                """"isLiveNow":true""",
+                """"isLiveContent":true""",
+            )) {
+                withHlsResponse(details) { resolver ->
+                    assertTrue(resolver.resolve("video").isLive)
+                }
+            }
+            for (details in listOf(""""isLive":true""", """"isLiveNow":true""")) {
+                withHlsResponse(""""lengthSeconds":"228",$details""") { resolver ->
+                    val song = SongItem("video", "Stream", null, emptyList(), null, duration = 228L)
+                    val resource = resolver.resolve(song.id, sourceSong = song)
+                    assertTrue(resource.isLive)
+                    assertEquals(null, resource.durationSeconds)
+                }
+            }
+            withHlsResponse(""""isLiveContent":true,"isLive":false""") { resolver ->
+                assertFalse(resolver.resolve("video").isLive)
+            }
+            for (formats in listOf("formats", "adaptiveFormats")) {
+                withHlsResponse(""""isLiveContent":true""", extraStreamingData = """, "$formats":[{"itag":140}]""") { resolver ->
+                    assertFalse(resolver.resolve("video").isLive)
+                }
+            }
+        }
+
+    @Test
+    fun extractedRecordingsKeepQueueAndSabrDurationsDespiteLiveTransportMarkers() =
+        runBlocking {
+            val song = SongItem("video", "Recording", null, emptyList(), null, duration = 228L)
+            val bootstrap = checkNotNull(sabrAudioResource(durationMs = 228_000L).sabrBootstrap)
+            for ((audioUrl, sabr) in listOf(
+                "https://example.test/audio?live=1" to null,
+                hlsMasterUrl to null,
+                hlsMasterUrl to bootstrap,
+                "sabr://video" to bootstrap,
+            )) {
+                val extractor =
+                    RecordingStreamExtractor(
+                        profiles = listOf("ANDROID" to "ANDROID_LIVE"),
+                        audioUrl = audioUrl,
+                        sabrBootstrap = sabr,
+                    )
+                val client =
+                    HttpClient(MockEngine { respondOk("{}") }) {
+                        install(ContentNegotiation) { json() }
+                    }
+                val resolver = DefaultStreamResolver(extractor, InnerTube(client), networkStateFlow = null)
+                try {
+                    val resource = resolver.resolve(song.id, sourceSong = song.takeIf { sabr == null })
+                    assertFalse(resource.isLive)
+                    assertEquals(228L, resource.durationSeconds)
+                } finally {
+                    resolver.close()
+                    client.close()
+                }
+            }
+            withHlsResponse(
+                """"isLiveContent":true""",
+                extractor = RecordingStreamExtractor(audioUrl = hlsMasterUrl, sabrBootstrap = bootstrap),
+            ) { resolver ->
+                val resource = resolver.resolve(song.id)
+                assertFalse(resource.isLive)
+                assertEquals(228L, resource.durationSeconds)
+            }
+        }
+
+    private suspend fun withHlsResponse(
+        details: String,
+        extractor: StreamExtractor = RecordingStreamExtractor(profiles = emptyList()),
+        extraStreamingData: String = "",
+        block: suspend (DefaultStreamResolver) -> Unit,
+    ) {
+        val client =
+            HttpClient(
+                MockEngine {
+                    respondOk(
+                        """{"playabilityStatus":{"status":"OK"},"videoDetails":{$details},"streamingData":{"hlsManifestUrl":"$hlsMasterUrl"$extraStreamingData}}""",
+                    )
+                },
+            ) { install(ContentNegotiation) { json() } }
+        val resolver =
+            DefaultStreamResolver(
+                extractor,
+                InnerTube(client).apply { visitorData = "known-visitor" },
+                networkStateFlow = null,
+                liveHttpClientFactory = { HttpClient(MockEngine { respondOk("#EXTM3U") }) },
+            )
+        try {
+            block(resolver)
+        } finally {
+            resolver.close()
+            client.close()
+        }
+    }
+
+    @Test
     fun liveHlsAutoUsesResolvedHeightInEveryResolutionPath() =
         runBlocking {
             assertLiveHlsSelection(maxVideoHeight = 720, expectedHeight = 360, expectedItag = 93)
@@ -1694,6 +1831,7 @@ class DefaultStreamResolverTest {
                     )
 
                 assertEquals("ANDROID_LIVE", resource.profileId)
+                assertTrue(resource.isLive)
                 assertEquals(expectedHeight, resource.videoHeight)
                 assertEquals(
                     "https://manifest.googlevideo.com/api/manifest/hls_playlist/itag/$expectedItag/playlist/index.m3u8",

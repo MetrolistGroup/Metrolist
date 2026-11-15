@@ -78,6 +78,8 @@ Android closes storage off the playback thread. Video hiding must wait until the
 
 Player metadata uses current-live flags or an HLS-only response without a finite duration. `isLiveContent` alone does not mark an active stream. Recordings with a finite duration keep seeking and the normal client fallback, including saved songs with a live performance type. Confirmed live playback clears the song duration so extraction and player controls use the same classification.
 
+Stream resolution uses the same rule for Android HLS responses. Extracted streams retain finite durations from client metadata, SABR or the queued song. Playback resources carry the resolver's classification; client profiles and URL markers alone do not mark a song live.
+
 ## Live tests
 
 `Live*` tests under `shared/src/desktopTest/kotlin/com/metrolist/shared/youtube/innertube/` contact YouTube. They require explicit opt-in and never run in CI. Supply `INNERTUBE_TOKEN_BASE64` through the environment or untracked `local.properties` for signed-in probes. Never commit credentials or unsanitized traces.
