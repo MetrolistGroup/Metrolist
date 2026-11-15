@@ -754,4 +754,5 @@
     <string name="artwork_sources">封面來源</string>
     <string name="immersive_player">沈浸式播放器</string>
     <string name="immersive_player_description">播放器擴大時隱藏系統資訊列</string>
+    <string name="lyrics_curated_by">(由 %1$s 提供歌詞)</string>
 </resources>
