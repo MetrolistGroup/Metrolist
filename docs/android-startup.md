@@ -8,7 +8,7 @@ Backup restore finishes before infrastructure and database readers initialize. K
 
 `App.infrastructureReady` permits platform/session objects after DI, locale, migration checks and notification channels. `App.startup.await()` also waits for liked songs, saved accounts and database-dependent setup. Controllers, browsing, downloads, widgets and activity content must wait for completion.
 
-The recognition status collector skips widget updates when Android provides no app-widget service.
+The recognition status collector skips widget updates when Android provides no app-widget service. Widget broadcasts share one async completion handler. It finishes once after success, failure or cancellation, cancels unfinished work after eight seconds and tolerates a result Android has already finished.
 
 Saved account restoration runs on I/O. Apply its result only while the originating credentials and visitor data still match. Login, logout and account changes invalidate pending work.
 

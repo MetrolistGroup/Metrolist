@@ -8,15 +8,15 @@ import android.content.Intent
 import com.metrolist.android.App
 import com.metrolist.android.playback.MusicService
 import com.metrolist.android.playback.PlayerConnection
+import com.metrolist.android.utils.launchAsync
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.db.refreshHistoryPlaylist
 import com.metrolist.shared.model.BuiltinPlaylist
 import com.metrolist.shared.state.SongLikeState
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.core.context.GlobalContext
 import timber.log.Timber
@@ -51,12 +51,11 @@ class WidgetActionReceiver : BroadcastReceiver() {
                 else -> null
             } ?: return
 
-        val pendingResult = goAsync()
-        CoroutineScope(Dispatchers.Main).launch {
+        launchAsync {
             try {
                 val app = context.applicationContext as App
                 app.startup.await()
-                if (!app.onboardingManager.isComplete) return@launch
+                if (!app.onboardingManager.isComplete) return@launchAsync
                 if (serviceAction == MusicWidgetReceiver.ACTION_UPDATE_WIDGET) {
                     if (MusicService.isRunning) {
                         context.startService(Intent(context, MusicService::class.java).setAction(serviceAction))
@@ -68,7 +67,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
                             widgets.getAppWidgetIds(ComponentName(context, TurntableWidgetReceiver::class.java)),
                         )
                     }
-                    return@launch
+                    return@launchAsync
                 }
                 val connection = GlobalContext.get().get<PlayerConnection>()
                 when (serviceAction) {
@@ -90,7 +89,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
                     }
 
                     PlaylistWidgetReceiver.ACTION_PLAY_TARGET -> {
-                        val id = intent.getStringExtra(PlaylistWidgetReceiver.EXTRA_TARGET_ID) ?: return@launch
+                        val id = intent.getStringExtra(PlaylistWidgetReceiver.EXTRA_TARGET_ID) ?: return@launchAsync
                         val title = intent.getStringExtra(PlaylistWidgetReceiver.EXTRA_TARGET_TITLE)
                         val type =
                             intent.getStringExtra(PlaylistWidgetReceiver.EXTRA_TARGET_TYPE)
@@ -118,10 +117,10 @@ class WidgetActionReceiver : BroadcastReceiver() {
                         }
                     }
                 }
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 Timber.w(error, "Widget action could not start playback")
-            } finally {
-                pendingResult.finish()
             }
         }
     }
