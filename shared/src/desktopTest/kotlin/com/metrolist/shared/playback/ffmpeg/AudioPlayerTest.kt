@@ -112,6 +112,37 @@ class AudioPlayerTest {
     }
 
     @Test
+    fun playbackCompletesWhenTheMixerNeverReportsItsFinalBufferEmpty() {
+        val file = Files.createTempFile("metrolist-stalled-drain", ".wav")
+        val line = TestPlaybackLine()
+        val completed = CountDownLatch(1)
+        val completions = AtomicInteger()
+        val failures = AtomicInteger()
+        val player =
+            AudioPlayer(
+                onPlaybackCompleted = {
+                    completions.incrementAndGet()
+                    completed.countDown()
+                },
+                onPlaybackFailed = { _, _ -> failures.incrementAndGet() },
+                rendererFactory = { rate, channels -> AudioRenderer(rate, channels, line.line) },
+            )
+        try {
+            Files.write(file, silentWav(sampleRate = 8_000, samples = 400))
+            assertTrue(player.loadFile(file.toString()))
+            line.awaitBuffered()
+            assertTrue(completed.await(3, TimeUnit.SECONDS), "Stalled mixer prevented track completion")
+            assertEquals(1, completions.get())
+            assertEquals(0, failures.get())
+            assertFalse(player.isPlaying())
+            assertTrue(line.line.available() < line.line.bufferSize)
+        } finally {
+            player.close()
+            Files.deleteIfExists(file)
+        }
+    }
+
+    @Test
     fun asynchronousCloseStopsTheAudioLineBeforeReturning() {
         val file = Files.createTempFile("metrolist-audio-close", ".wav")
         val line = TestPlaybackLine()

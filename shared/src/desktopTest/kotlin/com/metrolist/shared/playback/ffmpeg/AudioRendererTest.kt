@@ -149,6 +149,33 @@ class AudioRendererTest {
     }
 
     @Test
+    fun stalledDrainWaitsForResumeAndCancelsOnFlush() {
+        for (flush in listOf(false, true)) {
+            val line = TestSourceDataLine()
+            val renderer = AudioRenderer(1_000, 1, line.line)
+            val completed = CountDownLatch(1)
+            val drained = AtomicBoolean()
+            renderer.pause()
+            val worker =
+                thread(isDaemon = true) {
+                    drained.set(renderer.drain { true })
+                    completed.countDown()
+                }
+            try {
+                assertTrue(line.availabilityChecked.await(5, TimeUnit.SECONDS))
+                assertFalse(completed.await(500, TimeUnit.MILLISECONDS), "Paused drain completed the track")
+                if (flush) renderer.flush() else renderer.resume()
+                assertTrue(completed.await(3, TimeUnit.SECONDS))
+                assertEquals(!flush, drained.get())
+            } finally {
+                renderer.close()
+                worker.interrupt()
+                worker.join(5_000)
+            }
+        }
+    }
+
+    @Test
     fun returningToUnityDrainsTempoThenWritesPcmDirectly() {
         val line = TestSourceDataLine().apply { availableBytes = Int.MAX_VALUE }
         val renderer = AudioRenderer(48_000, 1, line.line)

@@ -59,7 +59,7 @@ class AudioTempoProcessorTest {
             var active = true
             var checks = 0
             val drained =
-                awaitAudioDrain({ active }) {
+                awaitAudioDrain(timeoutMs = 1_000L, shouldContinue = { active }) {
                     if (++checks == 3) {
                         if (cancel) active = false
                         cancel

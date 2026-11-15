@@ -821,12 +821,21 @@ private const val DEFAULT_PREBUFFER_FRAMES = 3
 private const val PCM_BYTES_PER_SAMPLE = 2
 
 internal fun awaitAudioDrain(
+    timeoutMs: Long,
     shouldContinue: () -> Boolean,
+    awaitResume: () -> Unit = {},
+    nanoTime: () -> Long = System::nanoTime,
+    sleep: (Long) -> Unit = Thread::sleep,
     hasPendingAudio: () -> Boolean,
 ): Boolean {
+    var remainingNs = TimeUnit.MILLISECONDS.toNanos(timeoutMs)
     while (shouldContinue()) {
-        if (!hasPendingAudio()) return shouldContinue()
-        Thread.sleep(5)
+        awaitResume()
+        if (!shouldContinue()) return false
+        val startedAtNs = nanoTime()
+        if (!hasPendingAudio() || remainingNs <= 0L) return shouldContinue()
+        sleep(5)
+        remainingNs -= nanoTime() - startedAtNs
     }
     return false
 }

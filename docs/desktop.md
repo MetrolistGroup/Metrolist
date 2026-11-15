@@ -42,6 +42,8 @@ PipeWire and PulseAudio hosts need their distribution's ALSA integration. On Arc
 
 For microcuts, export the playback event log immediately. Output-underrun records describe the buffer and time between writes; they do not identify the cause by themselves.
 
+At the end of a track, desktop waits for the remaining PCM buffer duration plus 250 ms. Pausing suspends this wait. If a mixer never reports an empty buffer, the track still completes so normal and gapless playback can advance. Crossfade keeps its existing fade and handoff.
+
 ## Linux login
 
 Embedded login requires WebKitGTK. Linux credentials require libsecret, `secret-tool`, `dbus-send` and a running Secret Service. Install these runtime dependencies through your distribution.

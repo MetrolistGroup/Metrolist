@@ -380,19 +380,27 @@ class AudioRenderer private constructor(
         for (data in pending) {
             if (!shouldContinue() || !writeOutput(data, generation, outputSpeed)) return false
         }
-        synchronized(safeLock) {
-            if (generation != outputGeneration || !shouldContinue()) return false
-            expectingOutput = false
-            positionClock.finishSilence(writtenFrameCount, silenceSkipper.outputFrames)
-        }
+        val drainTimeoutMs =
+            synchronized(safeLock) {
+                if (generation != outputGeneration || !shouldContinue()) return false
+                expectingOutput = false
+                positionClock.finishSilence(writtenFrameCount, silenceSkipper.outputFrames)
+                val bufferedBytes = (line.bufferSize.toLong() - line.available()).coerceAtLeast(0L)
+                val bytesPerSecond = sampleRate.toLong() * audioFormat.frameSize
+                (bufferedBytes * 1_000L + bytesPerSecond - 1L) / bytesPerSecond + 250L
+            }
         // SourceDataLine.drain() cannot be interrupted reliably on every mixer.
+        // Some Linux mixers never report an empty buffer, so allow the queued duration plus scheduling margin.
         return awaitAudioDrain(
+            timeoutMs = drainTimeoutMs,
             shouldContinue = { generation == outputGeneration && shouldContinue() },
-            hasPendingAudio = {
+            awaitResume = {
                 synchronized(safeLock) {
                     while (generation == outputGeneration && line.isOpen && !isPlaying && shouldContinue()) safeLock.wait()
-                    line.isOpen && line.available() < line.bufferSize
                 }
+            },
+            hasPendingAudio = {
+                synchronized(safeLock) { line.isOpen && line.available() < line.bufferSize }
             },
         )
     }
