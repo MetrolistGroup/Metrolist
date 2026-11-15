@@ -3,7 +3,6 @@
 package com.metrolist.desktop.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.updateTransition
@@ -91,7 +90,6 @@ import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.PodcastItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.ui.icons.MetrolistIcons
-import com.metrolist.shared.ui.navigation.acceptsInput
 import com.metrolist.shared.ui.navigation.blockInput
 import com.metrolist.shared.ui.navigation.rememberNavigationMotion
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
@@ -287,7 +285,7 @@ fun FloatingSearchOverlay(
             Surface(
                 modifier =
                     Modifier
-                        .blockInput(!this.transition.acceptsInput(EnterExitState.Visible))
+                        .blockInput(!isVisible)
                         .padding(horizontal = 24.dp)
                         .widthIn(max = 640.dp)
                         .fillMaxWidth()
