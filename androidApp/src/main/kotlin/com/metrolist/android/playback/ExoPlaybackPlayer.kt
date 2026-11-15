@@ -3060,10 +3060,7 @@ class ExoPlaybackPlayer(
                 nowMs = now,
             )
         val playbackProgressStalledMs = progressWatchdog.stalledForMs(now)
-        if (
-            offloadRequested() &&
-            offloadSleepStallTracker.shouldDisableOffload(progressPosition, expectProgress, playbackProgressStalledMs, now)
-        ) {
+        if (offloadRequested() && offloadSleepStallTracker.shouldDisableOffload(progressPosition, expectProgress, now)) {
             offloadFailed = true
             updateOffloadPreferences(exo)
             nextPlayer?.let { updateOffloadPreferences(it) }

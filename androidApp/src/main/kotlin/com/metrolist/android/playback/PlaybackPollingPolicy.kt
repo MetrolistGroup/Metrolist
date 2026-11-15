@@ -69,16 +69,20 @@ internal class OffloadSleepStallTracker(
     fun shouldDisableOffload(
         positionMs: Long,
         expectProgress: Boolean,
-        playbackStalledMs: Long,
         nowMs: Long,
     ): Boolean {
-        if (!sleepingForOffload || !expectProgress) return false
+        if (!sleepingForOffload) return false
+        if (!expectProgress) {
+            lastPositionMs = positionMs
+            lastProgressAtMs = nowMs
+            return false
+        }
         if (positionMs != lastPositionMs) {
             lastPositionMs = positionMs
             lastProgressAtMs = nowMs
             return false
         }
-        if (nowMs - lastProgressAtMs < timeoutMs || playbackStalledMs < timeoutMs) return false
+        if (nowMs - lastProgressAtMs < timeoutMs) return false
         reset()
         return true
     }
