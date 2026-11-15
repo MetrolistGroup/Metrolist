@@ -1,5 +1,6 @@
 package com.metrolist.shared.youtube.playback
 
+import com.metrolist.shared.playback.findPlaybackHttpStatusCode
 import com.metrolist.shared.utils.redactDiagnosticText
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -165,12 +166,24 @@ object PlaybackEventLog {
         lastStructuredFailure = null
         if (tag == "DesktopCredentials") return
         if (error != null && structuredFailure?.matches(tag, error) == true) return
+        val failureDetails = error?.let(::safeFailureDetails).orEmpty()
         record(
             level = level,
             kind = kindForYtTag(tag).takeUnless { it == PlaybackEventKind.TRACE } ?: PlaybackEventKind.OTHER,
-            message = "[$tag] $message${error?.let { " (${it::class.simpleName ?: "failure"})" }.orEmpty()}",
+            message = "[$tag] $message${failureDetails.takeIf { it.isNotEmpty() }?.let { " ($it)" }.orEmpty()}",
             describePlaybackError = false,
         )
+    }
+
+    private fun safeFailureDetails(error: Throwable): String {
+        val causes =
+            generateSequence(error) { current -> current.cause?.takeUnless { it === current } }
+                .take(5)
+                .mapNotNull { it::class.simpleName }
+                .distinct()
+                .toList()
+        val status = error.findPlaybackHttpStatusCode()
+        return (causes + listOfNotNull(status?.let { "HTTP $it" })).joinToString(" caused by ")
     }
 
     private data class StructuredFailure(
