@@ -101,6 +101,8 @@ Artwork palettes request a fixed source and decode at 128 px with a separate mem
 
 The landscape TV player keeps artwork backgrounds visible through a dark scrim behind its controls. Solid backgrounds keep their surface and content color pair. Both color changes animate with the theme motion scheme.
 
+The full-screen artwork style also applies to audio tracks in immersive landscape mode. Immersive mode hides system bars without changing the selected artwork style. Playing music videos retain their inline surface and fullscreen controls.
+
 Current-song rows use a pill container, scalloped artwork and matching content colors. Color transitions run in both directions. Preserve playing/paused accessibility descriptions without a repeating list animation.
 
 ## Verification
