@@ -41,7 +41,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.stringResource
+import java.awt.Desktop
 import java.awt.EventQueue
+import java.awt.Frame
 import java.awt.Window
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -90,14 +92,10 @@ object ComposeTrayManager {
     }
 
     fun toggleWindow() {
-        windowState?.let { state ->
-            if (state.isMinimized) {
-                state.isMinimized = false
-                isWindowVisible.value = true
-            } else {
-                state.isMinimized = true
-                isWindowVisible.value = false
-            }
+        if (isWindowVisible.value) {
+            hideWindow()
+        } else {
+            showWindow()
         }
     }
 
@@ -109,7 +107,17 @@ object ComposeTrayManager {
                 state.isMinimized = false
                 isWindowVisible.value = true
             }
+            if (window is Frame && (window.extendedState and Frame.ICONIFIED) != 0) {
+                window.extendedState = window.extendedState and Frame.ICONIFIED.inv()
+            }
             window.isVisible = true
+            if (OsUtil.isMac) {
+                runCatching {
+                    if (Desktop.isDesktopSupported()) {
+                        Desktop.getDesktop().requestForeground(true)
+                    }
+                }
+            }
             window.toFront()
             window.requestFocus()
         }
@@ -118,10 +126,7 @@ object ComposeTrayManager {
     fun hideWindow() {
         EventQueue.invokeLater {
             val window = mainWindow?.takeIf { it.isDisplayable } ?: return@invokeLater
-            windowState?.let { state ->
-                state.isMinimized = true
-                isWindowVisible.value = false
-            }
+            isWindowVisible.value = false
             window.isVisible = false
         }
     }

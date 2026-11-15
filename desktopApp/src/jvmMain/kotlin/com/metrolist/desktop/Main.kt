@@ -231,9 +231,11 @@ import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import sun.misc.Signal
 import sun.misc.SignalHandler
+import java.awt.Desktop
 import java.awt.EventQueue
 import java.awt.Frame
 import java.awt.GraphicsEnvironment
+import java.awt.desktop.AppReopenedListener
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.io.File
@@ -1436,6 +1438,27 @@ private fun runDesktopApp(args: Array<String>) {
                 startup.appFrame.await()
                 if (!OsUtil.isMac) withContext(Dispatchers.IO) { DesktopUrlHandler.install() }
                 DesktopUrlHandler.onUiReady()
+            }
+
+            if (OsUtil.isMac) {
+                DisposableEffect(Unit) {
+                    val reopenListener =
+                        AppReopenedListener {
+                            ComposeTrayManager.showWindow()
+                        }
+                    runCatching {
+                        if (Desktop.isDesktopSupported()) {
+                            Desktop.getDesktop().addAppEventListener(reopenListener)
+                        }
+                    }
+                    onDispose {
+                        runCatching {
+                            if (Desktop.isDesktopSupported()) {
+                                Desktop.getDesktop().removeAppEventListener(reopenListener)
+                            }
+                        }
+                    }
+                }
             }
 
             LaunchedEffect(UiState.restartRequested) {
