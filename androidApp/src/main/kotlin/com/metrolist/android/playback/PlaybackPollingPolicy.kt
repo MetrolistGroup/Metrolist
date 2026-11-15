@@ -56,10 +56,11 @@ internal class OffloadSleepStallTracker(
     private var lastProgressAtMs = 0L
     private var lastOutputPosition: Long? = null
 
-    fun onSleepingForOffload(nowMs: Long) {
+    fun onSleepingForOffload(nowMs: Long, outputPosition: Long?) {
         if (sleepingForOffload) return
         sleepingForOffload = true
         lastProgressAtMs = nowMs
+        lastOutputPosition = outputPosition
     }
 
     fun shouldDisableOffload(
@@ -72,9 +73,9 @@ internal class OffloadSleepStallTracker(
             lastProgressAtMs = nowMs
             return false
         }
-        if (outputPosition == null || outputPosition != lastOutputPosition) {
-            lastProgressAtMs = nowMs
+        if (outputPosition != lastOutputPosition) {
             lastOutputPosition = outputPosition
+            if (outputPosition != null) lastProgressAtMs = nowMs
             return false
         }
         if (nowMs - lastProgressAtMs < timeoutMs) return false

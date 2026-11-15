@@ -878,6 +878,7 @@ class ExoPlaybackPlayer(
                 if (sleepingForOffload && offloadRequested()) {
                     offloadSleepStallTracker.onSleepingForOffload(
                         nowMs = SystemClock.elapsedRealtime(),
+                        outputPosition = silenceSupport[source]?.playbackHeadPosition,
                     )
                 } else if (!sleepingForOffload) {
                     offloadSleepStallTracker.reset()

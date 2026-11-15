@@ -72,21 +72,20 @@ class PlaybackPollingPolicyTest {
         val watchdog = PlaybackProgressWatchdog()
         val tracker = OffloadSleepStallTracker()
         watchdog.observe(1L, 59_000L, 60_000L, true, 1_000L)
-        tracker.onSleepingForOffload(nowMs = 1_000L)
+        tracker.onSleepingForOffload(nowMs = 1_000L, outputPosition = 10L)
 
         assertFalse(watchdog.observe(1L, 59_000L, 60_000L, true, 2_999L))
         assertEquals(0L, watchdog.stalledForMs(2_999L))
         assertFalse(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = true, nowMs = 2_999L))
         assertFalse(watchdog.observe(1L, 59_000L, 60_000L, true, 3_000L))
         assertEquals(0L, watchdog.stalledForMs(3_000L))
-        assertFalse(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = true, nowMs = 3_000L))
-        assertTrue(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = true, nowMs = 4_999L))
+        assertTrue(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = true, nowMs = 3_000L))
     }
 
     @Test
     fun reportedOutputStallDisablesOffloadOnlyAfterTimeout() {
         val tracker = OffloadSleepStallTracker()
-        tracker.onSleepingForOffload(nowMs = 1_000L)
+        tracker.onSleepingForOffload(nowMs = 1_000L, outputPosition = 9L)
 
         assertFalse(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = true, nowMs = 1_500L))
         assertFalse(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = true, nowMs = 3_499L))
@@ -94,9 +93,19 @@ class PlaybackPollingPolicyTest {
     }
 
     @Test
+    fun missingOutputPositionDoesNotKeepOffloadEnabledForever() {
+        val tracker = OffloadSleepStallTracker()
+        tracker.onSleepingForOffload(nowMs = 1_000L, outputPosition = 10L)
+
+        assertFalse(tracker.shouldDisableOffload(outputPosition = null, expectProgress = true, nowMs = 1_500L))
+        assertFalse(tracker.shouldDisableOffload(outputPosition = null, expectProgress = true, nowMs = 2_999L))
+        assertTrue(tracker.shouldDisableOffload(outputPosition = null, expectProgress = true, nowMs = 3_000L))
+    }
+
+    @Test
     fun pausedOrSuppressedPlaybackDoesNotDisableOffloadUntilProgressIsExpectedAgain() {
         val tracker = OffloadSleepStallTracker()
-        tracker.onSleepingForOffload(nowMs = 1_000L)
+        tracker.onSleepingForOffload(nowMs = 1_000L, outputPosition = 10L)
 
         assertFalse(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = false, nowMs = 8_000L))
         assertFalse(tracker.shouldDisableOffload(outputPosition = 10L, expectProgress = true, nowMs = 9_999L))
@@ -106,7 +115,7 @@ class PlaybackPollingPolicyTest {
     @Test
     fun wakingFromOffloadSleepClearsStallTrackingBeforeLaterBuffering() {
         val tracker = OffloadSleepStallTracker()
-        tracker.onSleepingForOffload(nowMs = 1_000L)
+        tracker.onSleepingForOffload(nowMs = 1_000L, outputPosition = 10L)
 
         tracker.reset()
 
