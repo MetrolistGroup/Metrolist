@@ -447,7 +447,20 @@ class AndroidPlaylistImportService : Service() {
                 }
             }
         runningJob = job
-        job.invokeOnCompletion { finishRequest(request) }
+        job.invokeOnCompletion { cause ->
+            try {
+                if (cause != null && !request.result.isCompleted) {
+                    if (cause is CancellationException && cause !is ImportTimeoutException) {
+                        PlaylistImportStatusManager.finishCancellation(request.statusId, cause)
+                        AndroidPlaylistImportTransfer.complete(request, Result.failure(cause), replayPreparation = false)
+                    } else {
+                        failRequest(request, cause)
+                    }
+                }
+            } finally {
+                finishRequest(request)
+            }
+        }
         PlaylistImportStatusManager.attachJob(request.statusId, job)
         job.start()
         return START_NOT_STICKY
