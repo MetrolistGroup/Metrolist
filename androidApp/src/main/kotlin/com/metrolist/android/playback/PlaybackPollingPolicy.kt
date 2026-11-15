@@ -43,6 +43,12 @@ internal fun shouldMonitorPlaybackProgress(
     playWhenReady && suppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE && !transitionPending &&
         (playbackState == Player.STATE_READY || (offloadRequested && playbackState == Player.STATE_BUFFERING))
 
+internal fun playbackProgressPositionMs(
+    isLive: Boolean,
+    renderedPositionMs: Long,
+    reportedPositionMs: Long,
+): Long = if (isLive) renderedPositionMs.coerceAtLeast(0L) else reportedPositionMs.coerceAtLeast(0L)
+
 internal class OffloadSleepStallTracker(
     private val timeoutMs: Long = 2_000L,
 ) {

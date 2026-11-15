@@ -21,6 +21,18 @@ class PlaybackPollingPolicyTest {
     }
 
     @Test
+    fun liveOutputStallUsesRendererPositionInsteadOfElapsedSessionPosition() {
+        assertEquals(
+            71_000L,
+            playbackProgressPositionMs(isLive = true, renderedPositionMs = 71_000L, reportedPositionMs = 72_000L),
+        )
+        assertEquals(
+            72_000L,
+            playbackProgressPositionMs(isLive = false, renderedPositionMs = 71_000L, reportedPositionMs = 72_000L),
+        )
+    }
+
+    @Test
     fun briefBufferedRebufferDoesNotTriggerRecovery() {
         val watchdog = PlaybackProgressWatchdog()
 
