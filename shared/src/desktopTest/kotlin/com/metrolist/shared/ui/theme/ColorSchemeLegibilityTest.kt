@@ -41,6 +41,14 @@ class ColorSchemeLegibilityTest {
     }
 
     @Test
+    fun darkThemeUsesTheMetrolistSurfaceLadder() {
+        val dark = themeColorScheme(DefaultThemeColor, true, ThemePaletteStyle.TONAL_SPOT)
+        assertEquals(Color(0xFF0E1213), dark.background)
+        assertEquals(Color(0xFF111718), dark.surface)
+        assertEquals(Color(0xFF273233), dark.surfaceContainerHighest)
+    }
+
+    @Test
     fun contentPaletteRetainsMoreOfTheSeedChroma() {
         val seed = Color(0xFFFF0000)
         for (dark in listOf(false, true)) {

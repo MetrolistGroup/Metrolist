@@ -38,7 +38,21 @@ import com.metrolist.shared.utils.artworkColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-val DefaultThemeColor = Color(0xFF6750A4)
+val DefaultThemeColor = Color(0xFF006A6A)
+
+private fun ColorScheme.withMetrolistDarkSurfaces(): ColorScheme =
+    copy(
+        background = Color(0xFF0E1213),
+        surface = Color(0xFF111718),
+        surfaceVariant = Color(0xFF293435),
+        surfaceDim = Color(0xFF0B1011),
+        surfaceBright = Color(0xFF313A3B),
+        surfaceContainerLowest = Color(0xFF090D0E),
+        surfaceContainerLow = Color(0xFF151B1C),
+        surfaceContainer = Color(0xFF1A2223),
+        surfaceContainerHigh = Color(0xFF202A2B),
+        surfaceContainerHighest = Color(0xFF273233),
+    )
 
 // Official material-color-utilities Score fallback (Google Blue), used when the artwork has no usable colour.
 val ArtworkFallbackSeedColor = Color(0xFF4285F4)
@@ -135,10 +149,13 @@ fun themeColorScheme(
 ): ColorScheme {
     val seed = if (seedColor.isOpaqueAndFinite()) seedColor else seedColor.copy(alpha = 1f).takeIf { it.isOpaqueAndFinite() }
     val contrast = contrastLevel.takeIf { it.isFinite() }?.coerceIn(0.0, 1.0) ?: 0.0
-    val scheme = generatedColorScheme(seed ?: DefaultThemeColor, isDark, paletteStyle, contrast)
+    val scheme =
+        generatedColorScheme(seed ?: DefaultThemeColor, isDark, paletteStyle, contrast)
+            .let { if (isDark) it.withMetrolistDarkSurfaces() else it }
     if (seed == DefaultThemeColor || scheme.isLegible(isDark)) return scheme
     Logger.w("Theme", "Generated $paletteStyle palette is illegible; using the default seed")
     return generatedColorScheme(DefaultThemeColor, isDark, paletteStyle, contrast)
+        .let { if (isDark) it.withMetrolistDarkSurfaces() else it }
 }
 
 private fun generatedColorScheme(
