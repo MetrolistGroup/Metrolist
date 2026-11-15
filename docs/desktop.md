@@ -196,7 +196,7 @@ After that frame, consent-controlled Sentry, enabled Discord integration, native
 
 Windows protects credentials with DPAPI. macOS uses AES-GCM with a Keychain key. An unavailable Keychain is retried; never replace an existing encrypted file with plaintext. Authentication failure preserves a unique encrypted backup. Only the original key can decrypt it.
 
-Linux reads and writes Secret Service through libsecret. Missing tools, locked collections, timeouts and failed reads leave recovery pending. They do not imply sign-out. Startup shows account loading until the initial read resolves; retries can recover without restart.
+Linux reads and writes Secret Service through libsecret. Missing tools, locked collections, timeouts and failed reads leave recovery pending. They do not imply sign-out. The account menu explains that a running, unlocked keyring and the package providing `secret-tool` are needed instead of showing an indefinite loading indicator. Recovery retries automatically without restart. macOS shows an unlock message while its Keychain is unavailable.
 
 Linux records pending mutations in owner-only `secrets.properties` before acknowledging them. The journal keeps values and deletion markers through restart. Keyring I/O stays outside the settings lock. Remove the journal only after writing and reading back matching values. Truncated writes and unreadable duplicates must leave it intact.
 

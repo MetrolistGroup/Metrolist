@@ -3392,6 +3392,8 @@
     <string name="account_logout_confirm">Log out?</string>
     <!-- Translators: Imperative action label for sign in in the account menu. -->
     <string name="account_sign_in">Sign in</string>
+    <string name="account_keyring_required">Metrolist needs access to your system keyring to restore your account. Unlock the keyring. Metrolist will retry automatically.</string>
+    <string name="account_linux_keyring_required">Metrolist needs a system keyring to restore your account. Install libsecret-tools or your distribution's package that provides secret-tool, and make sure your keyring is running and unlocked. Metrolist will retry automatically.</string>
     <!-- Translators: Error message about logout WebView in the account menu. -->
     <string name="account_logout_webview_failed">Signed out, but the WebView login profile could not be removed.</string>
     <!-- Translators: Error message about WebView remove in the account menu. -->
