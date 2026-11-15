@@ -52,6 +52,8 @@ The hidden PO-token WebView is created on first use and reused until shutdown. I
 
 ## Discord login
 
+Hiding the window to the tray keeps Discord presence, because playback continues. Quit, SIGTERM and the JVM shutdown hook clear presence before closing the connection. A fresh connection sends an empty presence before publishing the current track. A forced process kill cannot run cleanup; Discord controls how long the disconnected Gateway session remains visible. Track-end timestamps describe playback progress and do not guarantee presence expiry.
+
 Desktop Discord login opens the default browser with a PKCE authorization URL and the `metrolist-auth://discord/callback` redirect. The waiting dialog offers Cancel and Open again. Callbacks use the saved two-minute session, require the exact redirect and state, and consume the verifier before token exchange. macOS open-URI events and second-launch arguments on Windows and Linux enter the desktop URL handler. A callback can restore a pending session after an app restart.
 
 Windows registers `metrolist-auth` under `HKCU\Software\Classes` for the running packaged executable, including portable ZIPs. The macOS bundle declares the scheme beside `metrolist`. AppImage, Arch, Nix and Flatpak desktop entries advertise `x-scheme-handler/metrolist-auth`. Linux reuses an associated package desktop entry when available. Otherwise login writes a hidden per-user desktop entry and verifies its `xdg-mime` association. AppImage registration uses the persistent AppImage path; native Linux packages use the launcher wrapper. Installed Flatpak uses its exported desktop entry.

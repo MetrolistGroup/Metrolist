@@ -657,6 +657,7 @@ private fun shutdownApp(onComplete: () -> Unit) {
     if (!isShuttingDown.compareAndSet(false, true)) return
     shutdownScope.launch {
         try {
+            runCatching { DiscordRpcManager.destroy() }
             // Bounded: after a fatal error the composition may never dispose, and cleanup must still run.
             withTimeoutOrNull(UI_DISPOSE_TIMEOUT_MS) {
                 withContext(Dispatchers.Main) { uiVisible = false }
@@ -667,7 +668,6 @@ private fun shutdownApp(onComplete: () -> Unit) {
             if (startup.initialized) {
                 val deviceConnectRelease = launch { runCatching { DesktopDeviceConnect.manager.release() } }
                 runCatching { PlayerState.release() }
-                runCatching { DiscordRpcManager.destroy() }
                 runCatching { ComposeTrayManager.cleanup() }
                 runCatching { SongCacheManager.release() }
                 runCatching { DownloadManager.release() }
@@ -717,6 +717,9 @@ internal fun runBoundedShutdown(
 }
 
 private fun installGracefulShutdownSignals() {
+    Runtime.getRuntime().addShutdownHook(
+        Thread({ runBlocking { DiscordRpcManager.destroy() } }, "DiscordPresenceShutdown"),
+    )
     val handler =
         SignalHandler { signal ->
             AppLogger.info("Main", "Received ${signal.name} signal, shutting down")
