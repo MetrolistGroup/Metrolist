@@ -390,7 +390,7 @@ fun <T> AdaptiveNavigationScaffold(
                     Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .then(if (desktopRail) Modifier.background(MaterialTheme.colorScheme.surfaceContainer) else Modifier),
+                        .then(if (desktopRail) Modifier.background(MaterialTheme.colorScheme.background) else Modifier),
                 ) {
                     Box(Modifier.fillMaxSize().then(if (floatingBar || slimBar) Modifier.clipToBounds() else Modifier)) {
                         // Custom navigation layouts use the same content color as a Material surface.
