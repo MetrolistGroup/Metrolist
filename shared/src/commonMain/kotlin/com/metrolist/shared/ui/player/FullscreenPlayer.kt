@@ -248,8 +248,8 @@ fun FullscreenPlayerContent(
                             Modifier
                                 .fillMaxWidth(if (isSplitScreen) 1f else 0.8f)
                                 .aspectRatio(1f)
-                                .clip(RoundedCornerShape(uiEnhanced(16.dp, 28.dp)))
-                                .shadow(24.dp, RoundedCornerShape(uiEnhanced(16.dp, 28.dp))),
+                                .clip(RoundedCornerShape(uiEnhanced(16.dp, 24.dp)))
+                                .shadow(16.dp, RoundedCornerShape(uiEnhanced(16.dp, 24.dp))),
                         contentScale = ContentScale.Crop,
                     )
                 }
@@ -485,7 +485,7 @@ private fun FullscreenControlsOverlay(
                         Text(
                             text = currentSong?.title ?: stringResource(Res.string.unknown),
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = Color.White,
                             maxLines = 1,
                         )
