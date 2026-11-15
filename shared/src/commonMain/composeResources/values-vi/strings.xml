@@ -429,7 +429,6 @@
     <string name="lastfm_service_error">Không thể đăng nhập Last.fm. Vui lòng thử lại sau.</string>
     <string name="song_cache_location_custom">Thư mục tùy chỉnh</string>
     <string name="song_cache_location_custom_desc">Thư mục tùy chỉnh được chọn qua Storage Access Framework</string>
-
     <string name="settings_appearance_overview">Giao diện, phông chữ và hình thức trình phát</string>
     <string name="settings_android_auto_overview">Danh sách phát trên xe và đích thêm nhanh</string>
     <string name="settings_about_overview">Người đóng góp, liên kết cộng đồng và giấy phép</string>
@@ -497,4 +496,5 @@
     <string name="settings_resume_prompt_summary">Hỏi trước khi tiếp tục hàng đợi đã lưu lúc khởi động ứng dụng</string>
     <string name="settings_player_layout_summary">Đổi cách sắp xếp ảnh bìa và các nút điều khiển phát nhạc</string>
     <string name="settings_filter_q_summary">Q điều khiển độ rộng hoặc độ cộng hưởng của bộ lọc đã chọn</string>
+    <string name="choose_from_library">Chọn từ thư viện</string>
 </resources>
