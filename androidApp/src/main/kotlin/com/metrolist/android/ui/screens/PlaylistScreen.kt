@@ -124,6 +124,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.canEdit
 import com.metrolist.shared.model.filterForPlaylistSearch
 import com.metrolist.shared.model.indexOfPlaylistOccurrence
+import com.metrolist.shared.model.isReordering
 import com.metrolist.shared.model.playlistOccurrenceKey
 import com.metrolist.shared.model.preparePlaylistPresentation
 import com.metrolist.shared.model.previewThumbnailUrl
@@ -226,7 +227,6 @@ fun PlaylistScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var editName by remember(playlistInfo?.title) { mutableStateOf(playlistInfo?.title.orEmpty()) }
     var editDescription by remember(playlistInfo?.description) { mutableStateOf(playlistInfo?.description.orEmpty()) }
-    var reorderMode by remember(playlistInfo?.id) { mutableStateOf(false) }
     var searchQuery by remember(playlistInfo?.id) { mutableStateOf("") }
     val sorting =
         Settings.shared.playlistSongSorting(
@@ -241,6 +241,12 @@ fun PlaylistScreen(
     val isEditablePlaylist =
         playlistInfo?.canEdit == true &&
             playlistInfo?.id !in setOf("liked", "downloaded", "LP_LIKED", "LP_DOWNLOADED")
+    val reorderMode = sortType.isReordering(Settings.shared.playlistEditLock, isEditablePlaylist, page?.hasMore == true)
+    LaunchedEffect(playlistId, isEditablePlaylist, Settings.shared.playlistEditLock, sortType, page?.hasMore) {
+        if (sortType.isReordering(Settings.shared.playlistEditLock, isEditablePlaylist) && page?.hasMore == true) {
+            viewModel.withAllSongs { }
+        }
+    }
     val isLocalPlaylist = playlistInfo?.isLocal == true || playlistId.startsWith("LP")
     val canRemoveFromLibrary = !isLocalPlaylist && (isFavorite || isEditablePlaylist)
     val canEditSingle = playlistInfo?.canEdit == true
@@ -706,7 +712,7 @@ fun PlaylistScreen(
                             )
                         }
                     },
-                    onTrackMenuClick = { song, _ -> if (!reorderMode) selectedSongForMenu = song },
+                    onTrackMenuClick = { song, _ -> selectedSongForMenu = song },
                     onTrackLongClick = { song ->
                         if (!reorderMode) selection.begin(occurrenceKey(song))
                     },
@@ -762,9 +768,9 @@ fun PlaylistScreen(
                                 searchQuery = ""
                                 val enabled = it
                                 if (enabled && page?.hasMore == true) {
-                                    viewModel.withAllSongs { reorderMode = true }
+                                    viewModel.withAllSongs { Settings.shared.playlistEditLock = false }
                                 } else {
-                                    reorderMode = enabled
+                                    Settings.shared.playlistEditLock = !enabled
                                 }
                             },
                             modifier = Modifier.padding(vertical = 8.dp),
@@ -785,8 +791,7 @@ fun PlaylistScreen(
                             { song, _ ->
                                 IconButton(
                                     modifier = Modifier.navigationPopupSource(),
-                                    onClick = { if (!reorderMode) selectedSongForMenu = song },
-                                    enabled = !reorderMode,
+                                    onClick = { selectedSongForMenu = song },
                                     shapes = IconButtonDefaults.shapes(),
                                 ) {
                                     Icon(

@@ -2685,6 +2685,7 @@
     <!-- Translators: Label for the listening period of the last year in the My top playlist. -->
     <string name="top_period_past_year">Past year</string>
     <!-- Translators: Label for playlist reorder in the Home and browse screens. -->
+    <string name="playlist_lock">Lock</string>
     <string name="playlist_reorder">Reorder</string>
     <!-- Translators: Label for no data in the listening statistics. -->
     <string name="statistics_no_data">No data</string>

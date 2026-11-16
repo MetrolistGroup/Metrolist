@@ -51,6 +51,7 @@ data class PlaylistOrderControlsText(
     val ascending: String,
     val descending: String,
     val reorder: String,
+    val lock: String = reorder,
 )
 
 @Composable
@@ -178,7 +179,7 @@ fun PlaylistOrderControls(
                     ),
                 shapes = ButtonDefaults.shapes(),
             ) {
-                Text(text.reorder, maxLines = 1, softWrap = false)
+                Text(if (reorderMode) text.lock else text.reorder, maxLines = 1, softWrap = false)
             }
         }
     }

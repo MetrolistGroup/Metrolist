@@ -144,6 +144,7 @@ import com.metrolist.shared.model.SortDirection
 import com.metrolist.shared.model.TopPlaylistPeriod
 import com.metrolist.shared.model.defaultDirection
 import com.metrolist.shared.model.indexOfPlaylistOccurrence
+import com.metrolist.shared.model.isReordering
 import com.metrolist.shared.model.toSongItem
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.HiddenLibraryItem
@@ -306,7 +307,7 @@ fun AutoPlaylistScreen(
     }
     var topPeriod by remember { mutableStateOf(TopPlaylistPeriod.ALL_TIME) }
     var topDirection by remember { mutableStateOf(SortDirection.DESCENDING) }
-    var likedReorderMode by remember { mutableStateOf(false) }
+    val likedReorderMode = playlistSort.isReordering(Settings.shared.playlistEditLock, currentType == "liked")
     val addToPlaylist = LocalPlaylistAdder.current
     val selection = rememberSelectionState(currentType)
     val downloadFilter = rememberDownloadPlaylistFilter(database)
@@ -449,7 +450,6 @@ fun AutoPlaylistScreen(
         selection.exit()
         collectionQuery = ""
         collectionEntries = emptyList()
-        likedReorderMode = false
         when (currentType) {
             "liked" -> {
                 songs = BlockedContent.filterSongs(SongLikeState.likedSongs)
@@ -918,7 +918,7 @@ fun AutoPlaylistScreen(
                                         )
                                     },
                                     onReorderModeChange = {
-                                        likedReorderMode = it
+                                        Settings.shared.playlistEditLock = !it
                                     },
                                     modifier = Modifier.padding(vertical = 8.dp),
                                 )

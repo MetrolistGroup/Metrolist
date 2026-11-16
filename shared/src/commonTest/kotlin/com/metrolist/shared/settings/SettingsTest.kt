@@ -18,6 +18,18 @@ import com.russhwolf.settings.Settings as KmpSettings
 
 class SettingsTest {
     @Test
+    fun playlistLockDefaultsOnAndRemembersUnlockAcrossRestartAndBackup() {
+        val backing = MapSettings()
+        val settings = Settings(backing)
+        assertEquals(true, settings.playlistEditLock)
+        settings.playlistEditLock = false
+        assertFalse(Settings(backing).playlistEditLock)
+        val restored = Settings(MapSettings())
+        restored.importBackupSettings(settings.exportBackupSettings())
+        assertFalse(restored.playlistEditLock)
+    }
+
+    @Test
     fun libraryTabsKeepTheirViewChoicesAcrossRestartAndBackup() {
         val backing = MapSettings()
         val settings = Settings(backing)

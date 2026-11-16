@@ -18,6 +18,12 @@ enum class SortDirection {
 
 fun PlaylistSongSort.allowsReordering(): Boolean = this == PlaylistSongSort.ORIGINAL
 
+fun PlaylistSongSort.isReordering(
+    locked: Boolean,
+    editable: Boolean,
+    hasMore: Boolean = false,
+): Boolean = !locked && editable && !hasMore && allowsReordering()
+
 fun List<SongItem>.sortedForPlaylist(
     sort: PlaylistSongSort,
     direction: SortDirection,

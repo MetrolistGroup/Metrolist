@@ -91,6 +91,7 @@ import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.model.defaultDirection
 import com.metrolist.shared.model.filterForPlaylistSearch
 import com.metrolist.shared.model.indexOfPlaylistOccurrence
+import com.metrolist.shared.model.isReordering
 import com.metrolist.shared.model.playlistOccurrenceKey
 import com.metrolist.shared.model.presentCollection
 import com.metrolist.shared.model.sortedForLikedPlaylist
@@ -472,7 +473,7 @@ internal fun MobileSongCollectionScreen(
         )
     val playlistSort = playlistSorting.sort
     val playlistSortDirection = playlistSorting.direction
-    var playlistReorderMode by remember(type, localPlaylistId) { mutableStateOf(false) }
+    val playlistReorderMode = playlistSort.isReordering(Settings.shared.playlistEditLock, localPlaylistId != null || type == "liked")
     val selection = rememberSelectionState(localPlaylistId ?: type)
     LaunchedEffect(downloadFilterState) { selection.exit() }
     var selectionQuery by remember(localPlaylistId ?: type) { mutableStateOf("") }
@@ -985,7 +986,7 @@ internal fun MobileSongCollectionScreen(
                                     )
                                 },
                                 onReorderModeChange = {
-                                    playlistReorderMode = it
+                                    Settings.shared.playlistEditLock = !it
                                 },
                                 modifier = Modifier.padding(vertical = 8.dp),
                             )

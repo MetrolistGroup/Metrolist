@@ -212,6 +212,7 @@ val DownloadedCollectionSortDirectionKey = "downloadedCollectionSortDirection"
 val PlaylistPickerSortKey = "playlistPickerSort"
 val PlaylistPickerSortDirectionKey = "playlistPickerSortDirection"
 val CollectionCoversKey = "collectionCoversJson"
+val PlaylistEditLockKey = "playlistEditLock"
 val PlaylistSongSortingsKey = "playlistSongSortingsJson"
 val PlaylistCollectionSortingsKey = "playlistCollectionSortingsJson"
 

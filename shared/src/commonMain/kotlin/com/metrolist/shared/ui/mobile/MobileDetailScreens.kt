@@ -60,6 +60,7 @@ import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.model.canEdit
 import com.metrolist.shared.model.filterForPlaylistSearch
 import com.metrolist.shared.model.indexOfPlaylistOccurrence
+import com.metrolist.shared.model.isReordering
 import com.metrolist.shared.model.playlistOccurrenceKey
 import com.metrolist.shared.model.playlistSearchIndices
 import com.metrolist.shared.model.sortedForPlaylist
@@ -434,7 +435,6 @@ internal fun MobilePlaylistScreen(
             Settings.shared.playlistSongSort,
             Settings.shared.playlistSongSortDirection,
         )
-    var reorderMode by remember(playlistId) { mutableStateOf(false) }
     var showAddSong by remember(playlistId) { mutableStateOf(false) }
     val reorder =
         remember(playlistId, reloadKey, database, scope) {
@@ -584,6 +584,10 @@ internal fun MobilePlaylistScreen(
             val metadataRevision by SongMetadataState.revision.collectAsState()
             val listeningTimes = if (sorting.sort == PlaylistSongSort.LISTENING_TIME) SongMetadataState.listeningTimes else emptyMap()
             val sourceSongs = if (reorder.entries.isNotEmpty()) reorder.entries.map { it.first } else loadedSongs
+            val canEdit =
+                (data["header"]?.firstOrNull() as? PlaylistItem)?.canEdit == true &&
+                    GlobalYouTubeRepository.instance.canManagePlaylists()
+            val reorderMode = sorting.sort.isReordering(Settings.shared.playlistEditLock, canEdit && editingPrepared)
             val songs =
                 remember(sourceSongs, blockedVersion, sorting, reorderMode, metadataRevision, listeningTimes) {
                     val visible = BlockedContent.filterSongs(sourceSongs)
@@ -610,7 +614,6 @@ internal fun MobilePlaylistScreen(
                 }
 
             val bookmark = rememberPlaylistBookmark(playlist, database, scope) { onSwipeFeedback(errorText) }
-            val canEdit = playlist.canEdit && GlobalYouTubeRepository.instance.canManagePlaylists()
 
             fun withEditablePlaylist(action: () -> Unit) {
                 scope.launch {
@@ -637,6 +640,9 @@ internal fun MobilePlaylistScreen(
                         onSwipeFeedback(errorText)
                     }
                 }
+            }
+            LaunchedEffect(playlistId, canEdit, Settings.shared.playlistEditLock, sorting.sort) {
+                if (sorting.sort.isReordering(Settings.shared.playlistEditLock, canEdit)) withEditablePlaylist { }
             }
             PopupVisibility(visible = showAddSong) {
                 ModalBottomSheet(onDismissRequest = { showAddSong = false }) {
@@ -717,9 +723,9 @@ internal fun MobilePlaylistScreen(
                         onReorderModeChange = { enabled ->
                             selectionQuery = ""
                             if (!enabled) {
-                                reorderMode = false
+                                Settings.shared.playlistEditLock = true
                             } else {
-                                withEditablePlaylist { reorderMode = true }
+                                withEditablePlaylist { Settings.shared.playlistEditLock = false }
                             }
                         },
                         modifier = Modifier.padding(vertical = 8.dp),
@@ -883,7 +889,7 @@ internal fun MobilePlaylistScreen(
                         }
                     }
                 },
-                onTrackMenuClick = { song, _ -> if (!reorderMode) onSongMenu(song) },
+                onTrackMenuClick = { song, _ -> onSongMenu(song) },
                 onBackClick = onBack,
                 onArtistClick = onArtistClick,
                 currentSongId = playbackState.currentSongId,

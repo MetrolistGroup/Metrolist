@@ -99,6 +99,7 @@ import com.metrolist.shared.model.PlaylistSongSort
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.canEdit
 import com.metrolist.shared.model.filterForPlaylistSearch
+import com.metrolist.shared.model.isReordering
 import com.metrolist.shared.model.playlistOccurrenceKey
 import com.metrolist.shared.model.sortedForPlaylist
 import com.metrolist.shared.playlist.PlaylistPartiallyUpdatedException
@@ -161,7 +162,8 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
         )
     val sortMode = sorting.sort
     val sortDirection = sorting.direction
-    var reorderMode by remember(playlistInfo?.id) { mutableStateOf(false) }
+    val isEditable = playlistInfo.isUserCreatedPlaylist() && !PlaylistAlbumState.playlistHasMore
+    val reorderMode = sortMode.isReordering(Settings.shared.playlistEditLock, isEditable)
     var searchQuery by remember(playlistInfo?.id) { mutableStateOf("") }
     val selection = rememberSelectionState(playlistInfo?.id)
     val metadataRevision by SongMetadataState.revision.collectAsState()
@@ -227,7 +229,6 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
     var deleteFailed by remember { mutableStateOf(false) }
     var showAddSongDialog by remember { mutableStateOf(false) }
 
-    val isEditable = playlistInfo.isUserCreatedPlaylist() && !PlaylistAlbumState.playlistHasMore
     val isLocal = playlistInfo?.isLocal == true || playlistInfo?.id?.startsWith("LP") == true
     val canRemoveFromLibrary = !isLocal && (PlaylistAlbumState.isPlaylistBookmarked || isEditable)
     val canEditSingle = playlistInfo?.canEdit == true
@@ -539,7 +540,7 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
                     },
                     onReorderModeChange = {
                         searchQuery = ""
-                        reorderMode = it
+                        Settings.shared.playlistEditLock = !it
                     },
                 )
             },

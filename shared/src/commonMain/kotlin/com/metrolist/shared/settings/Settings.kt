@@ -142,6 +142,7 @@ import com.metrolist.shared.constants.PlaybackSpeedKey
 import com.metrolist.shared.constants.PlayerConfigRemoteEtagKey
 import com.metrolist.shared.constants.PlayerConfigRemoteSourceUrlKey
 import com.metrolist.shared.constants.PlaylistCollectionSortingsKey
+import com.metrolist.shared.constants.PlaylistEditLockKey
 import com.metrolist.shared.constants.PlaylistPickerSortDirectionKey
 import com.metrolist.shared.constants.PlaylistPickerSortKey
 import com.metrolist.shared.constants.PlaylistSongSortingsKey
@@ -727,6 +728,7 @@ class Settings(
     var libraryManualOrder by preference(LibraryManualOrderKey, "")
     var playlistPickerSort by preference(PlaylistPickerSortKey, PlaylistPickerSort.LIBRARY)
     var playlistPickerSortDirection by preference(PlaylistPickerSortDirectionKey, SortDirection.ASCENDING)
+    var playlistEditLock by preference(PlaylistEditLockKey, true)
     var playlistSongSort by preference(PlaylistSongSort.ORIGINAL)
     var playlistSongSortDirection by preference(SortDirection.ASCENDING)
     var likedSongSort by preference(LikedSongSortKey, PlaylistSongSort.DATE_ADDED)

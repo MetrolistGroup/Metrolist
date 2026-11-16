@@ -62,6 +62,7 @@ import com.metrolist.shared.generated.resources.play
 import com.metrolist.shared.generated.resources.playlist
 import com.metrolist.shared.generated.resources.playlist_direction_ascending
 import com.metrolist.shared.generated.resources.playlist_direction_descending
+import com.metrolist.shared.generated.resources.playlist_lock
 import com.metrolist.shared.generated.resources.playlist_order_original
 import com.metrolist.shared.generated.resources.playlist_reorder
 import com.metrolist.shared.generated.resources.playlists
@@ -294,6 +295,7 @@ fun playlistOrderControlsText() =
         ascending = stringResource(Res.string.playlist_direction_ascending),
         descending = stringResource(Res.string.playlist_direction_descending),
         reorder = stringResource(Res.string.playlist_reorder),
+        lock = stringResource(Res.string.playlist_lock),
     )
 
 @Composable

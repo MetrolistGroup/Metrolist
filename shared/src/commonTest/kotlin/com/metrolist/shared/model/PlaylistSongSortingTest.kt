@@ -7,6 +7,16 @@ import kotlin.test.assertEquals
 
 class PlaylistSongSortingTest {
     @Test
+    fun unlockedPlaylistsOnlyReorderEditableCompleteListsInPlaylistOrder() {
+        for (sort in PlaylistSongSort.entries) {
+            assertEquals(sort == PlaylistSongSort.ORIGINAL, sort.isReordering(locked = false, editable = true))
+            assertEquals(false, sort.isReordering(locked = true, editable = true))
+            assertEquals(false, sort.isReordering(locked = false, editable = false))
+            assertEquals(false, sort.isReordering(locked = false, editable = true, hasMore = true))
+        }
+    }
+
+    @Test
     fun listeningTimeUsesLocalTotalsAndPreservesDuplicateOccurrencesAndTies() {
         val first = SongItem("repeat", "First", null, emptyList(), null, playlistSetVideoId = "first")
         val duplicate = first.copy(playlistSetVideoId = "second")
