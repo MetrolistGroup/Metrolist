@@ -131,6 +131,7 @@ import com.metrolist.shared.ui.components.rememberScrollingFabState
 import com.metrolist.shared.ui.components.topPlaylistOrderControlsText
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.menu.SpeedDialPinMenuItem
+import com.metrolist.shared.ui.menu.groupedMenuItemShapes
 import com.metrolist.shared.ui.navigation.NavigationBackHandler
 import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.playback.PlaybackController
@@ -338,13 +339,16 @@ internal fun MobileLibrary(
                             content = content,
                         )
                         DropdownMenuPopup(expanded = autoMenuExpanded, onDismissRequest = { autoMenuExpanded = false }) {
+                            val builtin = BuiltinPlaylist.fromId("auto:${hiddenItem.id}")
+                            val menuItemCount = if (builtin == null) 1 else 2
                             DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
-                                BuiltinPlaylist.fromId("auto:${hiddenItem.id}")?.let { builtin ->
+                                builtin?.let { builtin ->
                                     val playlist = builtin.playlist(stringResource(builtin.title))
-                                    SpeedDialPinMenuItem(playlist, database) { autoMenuExpanded = false }
+                                    SpeedDialPinMenuItem(playlist, database, count = menuItemCount) { autoMenuExpanded = false }
                                 }
                                 DropdownMenuItem(
                                     text = { Text(stringResource(Res.string.hide_from_library_local)) },
+                                    shape = groupedMenuItemShapes(menuItemCount - 1, menuItemCount).shape,
                                     onClick = {
                                         HiddenLibraryItems.hide(hiddenItem)
                                         autoMenuExpanded = false

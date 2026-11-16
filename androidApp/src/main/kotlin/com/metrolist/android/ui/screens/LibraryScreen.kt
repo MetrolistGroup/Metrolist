@@ -139,6 +139,7 @@ import com.metrolist.shared.ui.components.RefreshIndicator
 import com.metrolist.shared.ui.components.ScrollingAddButton
 import com.metrolist.shared.ui.components.rememberScrollingFabState
 import com.metrolist.shared.ui.icons.MetrolistIcons
+import com.metrolist.shared.ui.menu.groupedMenuItemShapes
 import com.metrolist.shared.ui.menu.loadMediaItemSongs
 import com.metrolist.shared.ui.navigation.LocalRootContentActive
 import com.metrolist.shared.ui.navigation.navigationPopupSource
@@ -786,16 +787,18 @@ fun LibraryScreen(
             ) {
                 DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
                     DropdownMenuItem(
-                        modifier = Modifier.tvFocusHighlight(RoundedCornerShape(4.dp)).navigationPopupSource(),
+                        modifier = Modifier.tvFocusHighlight(groupedMenuItemShapes(0, 2).shape).navigationPopupSource(),
                         text = { Text(stringResource(Res.string.create_playlist)) },
+                        shape = groupedMenuItemShapes(0, 2).shape,
                         onClick = {
                             showNewPlaylistMenu = false
                             showCreateDialog = true
                         },
                     )
                     DropdownMenuItem(
-                        modifier = Modifier.tvFocusHighlight(RoundedCornerShape(4.dp)),
+                        modifier = Modifier.tvFocusHighlight(groupedMenuItemShapes(1, 2).shape),
                         text = { Text(stringResource(Res.string.import_playlist)) },
+                        shape = groupedMenuItemShapes(1, 2).shape,
                         onClick = {
                             showNewPlaylistMenu = false
                             onNavigateToPlaylistImport()

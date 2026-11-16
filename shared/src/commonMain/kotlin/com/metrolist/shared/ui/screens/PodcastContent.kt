@@ -63,6 +63,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
@@ -112,6 +113,7 @@ import com.metrolist.shared.ui.components.loadingShimmer
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.menu.CursorDropdownMenu
 import com.metrolist.shared.ui.menu.contextMenuAnchor
+import com.metrolist.shared.ui.menu.groupedMenuItemShapes
 import com.metrolist.shared.ui.menu.onSecondaryClick
 import com.metrolist.shared.ui.menu.rememberCursorContextMenuState
 import com.metrolist.shared.ui.navigation.navigationPopupSource
@@ -531,9 +533,12 @@ private fun EpisodeRow(
                         Icon(MetrolistIcons.Default.MoreVert, stringResource(Res.string.episode_actions), Modifier.size(20.dp))
                     }
                     val menuContent: @Composable ColumnScope.() -> Unit = {
+                        val menuItemCount = if (onDownload == null) 4 else 5
                         DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
                             EpisodeAction(
-                                stringResource(if (episode.saved) Res.string.remove_from_saved_episodes else Res.string.save_episode),
+                                shape = groupedMenuItemShapes(0, menuItemCount).shape,
+                                text =
+                                    stringResource(if (episode.saved) Res.string.remove_from_saved_episodes else Res.string.save_episode),
                             ) {
                                 showMenu = false
                                 onToggleSaved()
@@ -552,7 +557,10 @@ private fun EpisodeRow(
                                     onDownload()
                                 }
                             }
-                            EpisodeAction(stringResource(Res.string.share)) {
+                            EpisodeAction(
+                                stringResource(Res.string.share),
+                                shape = groupedMenuItemShapes(menuItemCount - 1, menuItemCount).shape,
+                            ) {
                                 showMenu = false
                                 onShare()
                             }
@@ -707,7 +715,8 @@ private fun EpisodeDetails(
 private fun EpisodeAction(
     text: String,
     enabled: Boolean = true,
+    shape: Shape = MenuDefaults.middleItemShape,
     onClick: () -> Unit,
 ) {
-    DropdownMenuItem(text = { Text(text) }, onClick = onClick, enabled = enabled)
+    DropdownMenuItem(text = { Text(text) }, onClick = onClick, enabled = enabled, shape = shape)
 }

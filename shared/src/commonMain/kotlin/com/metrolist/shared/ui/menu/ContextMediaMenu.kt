@@ -636,7 +636,13 @@ fun ExpressiveMenuActionGroup(
                             )
                         }
                     },
-                shape = MenuDefaults.itemShape(index, actions.size).shape,
+                shape =
+                    groupedMenuItemShapes(
+                        index,
+                        actions.size,
+                        if (isDesktop) 0 else groupIndex,
+                        if (isDesktop) 1 else groupCount,
+                    ).shape,
                 leadingIcon = {
                     PlayerMenuActionIcon(action, Modifier.size(22.dp))
                 },

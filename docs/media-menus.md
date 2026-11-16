@@ -37,7 +37,7 @@ Built-in collections use the Speed Dial pin action and playlist rows: Liked song
 
 In TV playlist reorder mode, holding a song row or pressing Menu opens that row's Move actions.
 
-Menu action descriptions wrap within the menu width to keep their full text visible.
+Menu action descriptions wrap within the menu width to keep their full text visible. `groupedMenuItemShapes` matches the outer corners of the first, last and only item to the group shape. Inner corners and Material selection and hover animations keep their existing behavior.
 
 Desktop menu hosts capture presses with the shared `contextMenuAnchor` modifier, which converts local pointer positions to window coordinates before child click handlers run. Every menu state a host opens must use that capture, including separate header and item states. Artist shelves share one item state for songs, videos, albums, playlists, related artists, podcasts and episodes.
 

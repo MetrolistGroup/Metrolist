@@ -118,6 +118,7 @@ import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.rememberScrollingFabState
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.menu.cursorContextMenu
+import com.metrolist.shared.ui.menu.groupedMenuItemShapes
 import com.metrolist.shared.ui.menu.rememberCursorContextMenuState
 import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.screens.LibraryAutoPlaylist
@@ -396,6 +397,7 @@ fun LibraryScreen(
                     DropdownMenuItem(
                         modifier = Modifier.navigationPopupSource(),
                         text = { Text(stringResource(Res.string.create_playlist)) },
+                        shape = groupedMenuItemShapes(0, 2).shape,
                         onClick = {
                             showNewPlaylistMenu = false
                             showCreateDialog = true
@@ -403,6 +405,7 @@ fun LibraryScreen(
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(Res.string.import_playlist)) },
+                        shape = groupedMenuItemShapes(1, 2).shape,
                         onClick = {
                             showNewPlaylistMenu = false
                             UiState.openPlaylistImportRequested = true

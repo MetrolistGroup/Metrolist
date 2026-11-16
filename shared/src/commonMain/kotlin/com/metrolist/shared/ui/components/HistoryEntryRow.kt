@@ -43,6 +43,7 @@ import com.metrolist.shared.generated.resources.edit
 import com.metrolist.shared.generated.resources.more_options
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.icons.MetrolistIcons
+import com.metrolist.shared.ui.menu.groupedMenuItemShapes
 import com.metrolist.shared.ui.menu.onSecondaryClick
 import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.theme.ComponentShapes
@@ -181,6 +182,7 @@ fun HistoryEntryRow(
                             if (onEdit != null) {
                                 DropdownMenuItem(
                                     text = { Text(editText) },
+                                    shape = groupedMenuItemShapes(0, 2).shape,
                                     onClick = {
                                         menuExpanded = false
                                         onEdit()
@@ -196,6 +198,7 @@ fun HistoryEntryRow(
                             }
                             DropdownMenuItem(
                                 text = { Text(deleteText) },
+                                shape = groupedMenuItemShapes(if (onEdit == null) 0 else 1, if (onEdit == null) 1 else 2).shape,
                                 onClick = {
                                     menuExpanded = false
                                     onDelete()
