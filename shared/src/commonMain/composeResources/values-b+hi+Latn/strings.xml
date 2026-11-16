@@ -902,7 +902,6 @@
     <string name="settings_translation_mode_summary">Shabdo ka anuvad kare ya unka uchcharan chuni hui lipi me likhe</string>
     <string name="settings_translation_provider_summary">Lyrics ka anuvad karne wali seva chune</string>
     <string name="settings_translation_model_summary">Lyrics ka anuvad ya unka uchcharan likhne wala model</string>
-    <string name="settings_detector_model_summary">Yeh tay karne wala model ki lyrics ko anuvad chahiye ya nahi</string>
     <string name="settings_translation_formality_summary">DeepL ke anuvad ke liye aupcharik ya bolchal ki bhasha chune</string>
     <string name="settings_discord_advanced_summary">Activity ke templates aur apne link wale buttons dikhaye</string>
     <string name="settings_discord_activity_type_summary">Chune ki Discord aapki sangeet activity ko kaise batayega</string>

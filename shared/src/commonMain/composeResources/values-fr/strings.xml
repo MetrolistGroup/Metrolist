@@ -984,7 +984,6 @@
     <string name="required">Requis</string>
     <string name="ai_base_url">URL de base</string>
     <string name="ai_translation_model">Modèle de traduction</string>
-    <string name="ai_judge_detector_model">Modèle du détecteur</string>
     <string name="ai_deepl_formality">Ton</string>
     <string name="ai_deepl_formality_more">Plus formel</string>
     <string name="ai_deepl_formality_less">Moins formel</string>
@@ -2228,7 +2227,6 @@
     <string name="settings_translation_mode_summary">Traduisez les mots ou transcrivez leur prononciation dans l'écriture cible</string>
     <string name="settings_translation_provider_summary">Choisissez le service qui traduit les paroles</string>
     <string name="settings_translation_model_summary">Modèle de traduction ou de transcription des paroles</string>
-    <string name="settings_detector_model_summary">Modèle qui détermine si les paroles doivent être traduites</string>
     <string name="settings_translation_formality_summary">Choisissez un langage formel ou informel pour les traductions DeepL</string>
     <string name="settings_discord_advanced_summary">Affichez les modèles d'activité et les boutons avec liens personnalisés</string>
     <string name="settings_discord_activity_type_summary">Choisissez comment Discord décrit votre activité musicale</string>

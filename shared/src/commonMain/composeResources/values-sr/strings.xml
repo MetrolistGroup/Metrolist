@@ -634,7 +634,6 @@
     <string name="ai_provider">Provajder</string>
     <string name="ai_base_url">Osnovni URL</string>
     <string name="ai_translation_model">Model prevođenja</string>
-    <string name="ai_judge_detector_model">Model sudije/detektora</string>
     <string name="ai_target_language">Ciljni jezik</string>
     <string name="ai_deepl_formality">Formalnost</string>
     <string name="ai_deepl_formality_default">Podrazumevano</string>
@@ -1103,7 +1102,6 @@
     <string name="settings_translation_mode_summary">Prevedi reči ili zapiši izgovor ciljnim pismom</string>
     <string name="settings_translation_provider_summary">Izaberite uslugu koja prevodi tekstove</string>
     <string name="settings_translation_model_summary">Model za prevođenje ili transkripciju tekstova</string>
-    <string name="settings_detector_model_summary">Model koji odlučuje da li tekstove treba prevesti</string>
     <string name="settings_translation_formality_summary">Izaberite formalan ili neformalan jezik za DeepL prevode</string>
     <string name="settings_discord_advanced_summary">Prikaži šablone aktivnosti i sopstvenu dugmad sa vezama</string>
     <string name="settings_discord_activity_type_summary">Izaberite kako Discord opisuje vašu muzičku aktivnost</string>

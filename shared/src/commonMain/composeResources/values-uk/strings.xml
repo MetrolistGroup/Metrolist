@@ -498,7 +498,6 @@
     <string name="settings_translation_mode_summary">Перекладати слова або записувати їхню вимову цільовою системою письма</string>
     <string name="settings_translation_provider_summary">Виберіть сервіс для перекладу текстів</string>
     <string name="settings_translation_model_summary">Модель для перекладу або транскрипції текстів</string>
-    <string name="settings_detector_model_summary">Модель, яка визначає, чи потрібен переклад тексту</string>
     <string name="settings_translation_formality_summary">Виберіть формальний або неформальний стиль перекладу DeepL</string>
     <string name="settings_discord_advanced_summary">Показувати шаблони активності й власні кнопки з посиланнями</string>
     <string name="settings_discord_activity_type_summary">Виберіть, як Discord позначає вашу музичну активність</string>

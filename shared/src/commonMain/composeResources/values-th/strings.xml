@@ -474,7 +474,6 @@
     <string name="settings_translation_mode_summary">แปลคำหรือถอดเสียงเป็นระบบอักษรของภาษาปลายทาง</string>
     <string name="settings_translation_provider_summary">เลือกบริการที่ใช้แปลเนื้อเพลง</string>
     <string name="settings_translation_model_summary">โมเดลสำหรับแปลหรือถอดเสียงเนื้อเพลง</string>
-    <string name="settings_detector_model_summary">โมเดลที่ตัดสินว่าเนื้อเพลงต้องแปลหรือไม่</string>
     <string name="settings_translation_formality_summary">เลือกภาษาทางการหรือไม่เป็นทางการสำหรับคำแปล DeepL</string>
     <string name="settings_discord_advanced_summary">แสดงแม่แบบกิจกรรมและปุ่มลิงก์ที่กำหนดเอง</string>
     <string name="settings_discord_activity_type_summary">เลือกวิธีที่ Discord ระบุกิจกรรมฟังเพลงของคุณ</string>

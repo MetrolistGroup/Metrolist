@@ -19,7 +19,7 @@ import com.metrolist.shared.api.lyrics.lyricsTranslationLanguageMatches
 import com.metrolist.shared.api.lyrics.lyricsTranslationTargetLanguage
 import com.metrolist.shared.api.lyrics.retryLyricsTranslation
 import com.metrolist.shared.api.lyrics.romanizer.LyricsRomanizer
-import com.metrolist.shared.api.lyrics.romanizer.prepareJapaneseRomanizer
+import com.metrolist.shared.api.lyrics.romanizer.prepareRomanizationDictionaries
 import com.metrolist.shared.db.daos.DatabaseDao
 import com.metrolist.shared.db.entities.LyricsEntity
 import com.metrolist.shared.model.LyricsEntry
@@ -173,12 +173,12 @@ internal fun needsRomanizedWordAlignment(entry: LyricsEntry): Boolean =
         entry.romanizedText != entry.text &&
         !entry.words.isNullOrEmpty()
 
-internal fun needsJapaneseDictionaryPreparation(
+internal fun needsDictionaryPreparation(
     entry: LyricsEntry,
     romanizationEnabled: Boolean,
 ): Boolean = romanizationEnabled && needsLocalRomanizationOrAlignment(entry)
 
-internal fun needsJapaneseDictionaryForAiAlignment(
+internal fun needsDictionaryForAiAlignment(
     nonEmpty: List<Pair<Int, LyricsEntry>>,
     romanizedLines: List<String>?,
     romanizedWordsPerLine: List<List<String>?>?,
@@ -262,7 +262,7 @@ class LyricsRepository(
     private val databaseDao: DatabaseDao? = null,
     private val youtubeLyricsApi: YouTubeLyricsApi? = null,
     private val nowMs: () -> Long = { Clock.System.now().toEpochMilliseconds() },
-    private val prepareJapaneseDictionary: suspend () -> Boolean = ::prepareJapaneseRomanizer,
+    private val prepareDictionaries: suspend (String, Set<String>) -> Boolean = ::prepareRomanizationDictionaries,
     private val providerResultsDispatcher: CoroutineDispatcher? = Dispatchers.Default,
     private val aiModelCatalog: AiModelCatalog? = null,
 ) {
@@ -908,10 +908,6 @@ class LyricsRepository(
 
         val sourceLines = nonEmpty.map { (_, entry) -> translationSourceLine(entry) }
         val dictionaryDetectionText = romanizationDetectionText(entries)
-        val prepareDictionary: suspend () -> Boolean = {
-            onDictionaryPreparation()
-            prepareJapaneseDictionary()
-        }
         val enabledLanguages =
             Settings.shared.lyricsRomanizeLanguages
                 .split(',')
@@ -919,6 +915,10 @@ class LyricsRepository(
                     val pieces = part.split(':', limit = 2)
                     pieces.getOrNull(0)?.takeIf { pieces.getOrNull(1)?.toBooleanStrictOrNull() ?: false }
                 }.toSet()
+        val prepareDictionary: suspend () -> Boolean = {
+            onDictionaryPreparation()
+            prepareDictionaries(dictionaryDetectionText, enabledLanguages)
+        }
         val romanizationEnabled = Settings.shared.isLyricsRomanizationActive
         val backgroundSources =
             if (translationStyle == "Romanized") {
@@ -943,7 +943,7 @@ class LyricsRepository(
         ) {
             validateSavedAiModels()
         }
-        val configKey = buildTranslationConfigKey() + if (translationStyle != "Romanized") "|passages-v1|$skipLanguageDetection" else ""
+        val configKey = buildTranslationConfigKey() + if (translationStyle != "Romanized") "|glyphmind-v1|$skipLanguageDetection" else ""
 
         if (Settings.shared.lyricsAiTranslationEnabled && targetLanguage.isNotBlank()) {
             val activationMode = Settings.shared.lyricsAiActivationMode
@@ -1020,15 +1020,15 @@ class LyricsRepository(
                     }
                 }
             if (aiResult != null) {
-                val needsJapaneseDictionaryForAlignment =
-                    needsJapaneseDictionaryForAiAlignment(
+                val needsDictionaryForAlignment =
+                    needsDictionaryForAiAlignment(
                         nonEmpty,
                         aiResult.romanizedLines,
                         aiResult.romanizedWordsPerLine,
                     )
-                if (romanizationEnabled && enabledLanguages.isNotEmpty() && needsJapaneseDictionaryForAlignment) {
+                if (romanizationEnabled && enabledLanguages.isNotEmpty() && needsDictionaryForAlignment) {
                     currentCoroutineContext().ensureActive()
-                    LyricsRomanizer.prepareJapaneseRomanizationIfNeeded(dictionaryDetectionText, enabledLanguages, prepareDictionary)
+                    LyricsRomanizer.prepareDictionariesIfNeeded(dictionaryDetectionText, enabledLanguages, prepareDictionary)
                 }
                 enriched =
                     withContext(Dispatchers.Default) {
@@ -1100,11 +1100,11 @@ class LyricsRepository(
             }
         }
 
-        val needsJapaneseDictionary =
-            nonEmpty.any { (index, _) -> needsJapaneseDictionaryPreparation(enriched[index], romanizationEnabled) }
-        if (enabledLanguages.isNotEmpty() && needsJapaneseDictionary) {
+        val needsDictionary =
+            nonEmpty.any { (index, _) -> needsDictionaryPreparation(enriched[index], romanizationEnabled) }
+        if (enabledLanguages.isNotEmpty() && needsDictionary) {
             currentCoroutineContext().ensureActive()
-            LyricsRomanizer.prepareJapaneseRomanizationIfNeeded(dictionaryDetectionText, enabledLanguages, prepareDictionary)
+            LyricsRomanizer.prepareDictionariesIfNeeded(dictionaryDetectionText, enabledLanguages, prepareDictionary)
         }
         if (romanizationEnabled && enabledLanguages.isNotEmpty()) {
             val fullText = sourceLines.joinToString("\n")
@@ -1187,12 +1187,9 @@ class LyricsRepository(
         val preset = AiProviderPresets.find(provider) ?: return
         val (apiKey, baseUrl) = settings.lyricsAiCredentials(provider)
         val model = settings.lyricsAiModel
-        val detector = settings.lyricsAiDetectorModel
         val validated = catalog.validatedModel(preset, apiKey, baseUrl, model)
-        val validatedDetector = if (detector.isBlank()) detector else catalog.validatedModel(preset, apiKey, baseUrl, detector)
         if (settings.lyricsAiProvider == provider && settings.lyricsAiCredentials(provider) == (apiKey to baseUrl)) {
             if (settings.lyricsAiModel == model) settings.lyricsAiModel = validated
-            if (settings.lyricsAiDetectorModel == detector) settings.lyricsAiDetectorModel = validatedDetector
         }
     }
 
@@ -1231,7 +1228,14 @@ class LyricsRepository(
     ): CachedLyricsTranslation? {
         val configMatches =
             entity.translationConfigKey == configKey ||
-                (!entity.translationNotNeeded && entity.translationConfigKey in completedTranslationConfigKeys(configKey))
+                (
+                    !entity.translationNotNeeded && entity.translationConfigKey?.let { storedKey ->
+                        completedTranslationConfigKeys(configKey).any { key ->
+                            storedKey.split('|').filterIndexed { index, _ -> index != 4 } ==
+                                key.split('|').filterIndexed { index, _ -> index != 4 }
+                        }
+                    } == true
+                )
         val valid =
             entity.translationLanguage == targetLanguage &&
                 entity.translationMode == translationStyle &&
@@ -1273,7 +1277,6 @@ class LyricsRepository(
                         "stage" to stage,
                         "provider" to provider,
                         "model" to Settings.shared.lyricsAiModel,
-                        "detectorModel" to Settings.shared.lyricsAiDetectorModel.ifBlank { Settings.shared.lyricsAiModel },
                         "failure" to failure.name,
                         "errorType" to error::class.simpleName.orEmpty(),
                         "inputLines" to sourceLines.size.toString(),
@@ -1282,10 +1285,9 @@ class LyricsRepository(
             onTranslationFailure(failure)
         }
         val detectPerLine = translationStyle != "Romanized"
-        val combineDetection = detectPerLine && provider == "OpenRouter" && Settings.shared.lyricsAiModel.endsWith(":free")
         val needed =
             when {
-                skipLanguageDetection || combineDetection -> {
+                skipLanguageDetection -> {
                     sourceLines.map(String::isNotBlank)
                 }
 
@@ -1294,12 +1296,7 @@ class LyricsRepository(
                         lyricsTranslationClient
                             .shouldTranslateLyricsLines(
                                 lines = sourceLines,
-                                provider = provider,
                                 targetLanguage = targetLanguage,
-                                apiKey = apiKey,
-                                baseUrl = baseUrl,
-                                model = Settings.shared.lyricsAiDetectorModel.ifBlank { Settings.shared.lyricsAiModel },
-                                systemPrompt = Settings.shared.lyricsAiSystemPrompt,
                             )
                     }.getOrElse { error ->
                         if (error is CancellationException) throw error
@@ -1314,12 +1311,7 @@ class LyricsRepository(
                             lyricsTranslationClient
                                 .shouldTranslateLyrics(
                                     lines = sourceLines,
-                                    provider = provider,
                                     targetLanguage = targetLanguage,
-                                    apiKey = apiKey,
-                                    baseUrl = baseUrl,
-                                    model = Settings.shared.lyricsAiDetectorModel.ifBlank { Settings.shared.lyricsAiModel },
-                                    systemPrompt = Settings.shared.lyricsAiSystemPrompt,
                                 )
                         }.getOrElse { error ->
                             if (error is CancellationException) throw error
@@ -1351,7 +1343,7 @@ class LyricsRepository(
                         deepLApiKey = Settings.shared.lyricsDeepLApiKey,
                         deepLFormality = Settings.shared.lyricsDeepLFormality,
                         wordsPerLine = selected.map { sourceWordsPerLine[it] },
-                        preserveTargetLanguage = combineDetection && !skipLanguageDetection,
+                        preserveTargetLanguage = !skipLanguageDetection,
                     )
             }.getOrElse { error ->
                 if (error is CancellationException) throw error
@@ -1435,11 +1427,19 @@ class LyricsRepository(
 
     private fun completedTranslationConfigKeys(configKey: String): List<String> {
         // Detection policy changes invalidate negative decisions, not completed translations.
-        val baseKey = configKey.removeSuffix("|passages-v1|false").removeSuffix("|passages-v1|true")
+        val baseKey =
+            configKey
+                .removeSuffix(
+                    "|glyphmind-v1|false",
+                ).removeSuffix("|glyphmind-v1|true")
+                .removeSuffix("|passages-v1|false")
+                .removeSuffix("|passages-v1|true")
         val keys =
             if (baseKey != configKey) {
                 listOf(
                     baseKey,
+                    "$baseKey|glyphmind-v1|false",
+                    "$baseKey|glyphmind-v1|true",
                     "$baseKey|passages-v1|false",
                     "$baseKey|passages-v1|true",
                     "$baseKey|vocals-v1|false",
@@ -1462,7 +1462,7 @@ class LyricsRepository(
             Settings.shared.lyricsAiProvider,
             Settings.shared.lyricsAiCredentials(Settings.shared.lyricsAiProvider).second,
             Settings.shared.lyricsAiModel,
-            Settings.shared.lyricsAiDetectorModel.ifBlank { Settings.shared.lyricsAiModel },
+            "glyphmind-0.1.0",
             Settings.shared.lyricsAiSystemPrompt
                 .hashCode()
                 .toString(),

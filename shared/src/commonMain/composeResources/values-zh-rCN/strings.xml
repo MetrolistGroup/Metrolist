@@ -737,7 +737,6 @@
     <string name="settings_translation_mode_summary">翻译文字，或用目标文字系统转写发音</string>
     <string name="settings_translation_provider_summary">选择翻译歌词的服务</string>
     <string name="settings_translation_model_summary">用于翻译或转写歌词的模型</string>
-    <string name="settings_detector_model_summary">判断歌词是否需要翻译的模型</string>
     <string name="settings_translation_formality_summary">选择 DeepL 翻译使用正式或非正式用语</string>
     <string name="settings_discord_advanced_summary">显示活动模板和自定义链接按钮</string>
     <string name="settings_discord_activity_type_summary">选择 Discord 描述音乐活动的方式</string>

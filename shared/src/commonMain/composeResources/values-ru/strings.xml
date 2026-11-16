@@ -1224,7 +1224,6 @@
     <string name="ai_provider">Провайдер</string>
     <string name="ai_base_url">Базовый URL</string>
     <string name="ai_translation_model">Модель перевода</string>
-    <string name="ai_judge_detector_model">Модель детектора</string>
     <string name="ai_target_language">Целевой язык</string>
     <string name="ai_deepl_formality">Формальность</string>
     <string name="ai_deepl_formality_default">По умолчанию</string>
@@ -2104,7 +2103,6 @@
     <string name="settings_translation_mode_summary">Переводить слова или записывать их произношение в целевой системе письма</string>
     <string name="settings_translation_provider_summary">Выберите сервис для перевода текстов</string>
     <string name="settings_translation_model_summary">Модель для перевода или транскрипции текстов</string>
-    <string name="settings_detector_model_summary">Модель, которая определяет, нужен ли перевод текста</string>
     <string name="settings_translation_formality_summary">Выберите формальный или неформальный стиль перевода DeepL</string>
     <string name="settings_discord_advanced_summary">Показывать шаблоны активности и собственные кнопки со ссылками</string>
     <string name="settings_discord_activity_type_summary">Выберите, как Discord обозначает вашу музыкальную активность</string>

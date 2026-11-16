@@ -7,7 +7,6 @@ componentsResources = "1.13.0-beta02"
 composenativetray = "2.1.7"
 # Every Nucleus module must share one version: they all depend on nucleus.core-runtime.
 nucleusframework = "3.0.0-dev-202611061347"
-kuromoji = "0.9.0"
 kotlin = "2.4.21"
 compose = "1.13.0-beta02"
 composeMaterial3 = "1.13.0-beta02"
@@ -132,8 +131,6 @@ timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
-kuromoji-core = { module = "com.atilika.kuromoji:kuromoji-core", version.ref = "kuromoji" }
-kuromoji-ipadic = { module = "com.atilika.kuromoji:kuromoji-ipadic", version.ref = "kuromoji" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "splashscreen" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }

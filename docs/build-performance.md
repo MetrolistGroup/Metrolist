@@ -18,7 +18,7 @@ Release callers pass `run-verification: false` only after the gate passes. `-Pme
 | Packaged launch smoke tests | Manual Linux, Windows and macOS packages |
 | iOS simulator backend tests | iOS verification and manual IPA builds |
 | Windows manager tests and payload installation | `build-desktop.yml` with `windows-manager=true` |
-| Shared JAR integrity and iOS dictionary checks | Linux verification; manual packaging also checks final distributables |
+| Shared JAR integrity checks | Linux verification; manual packaging also checks final distributables |
 
 Packaging jobs always keep the macOS architecture inspection, APK signature checks, archive existence and version checks, provenance, Sentry uploads, staging and publication. The stable Windows manager installer builds in parallel with portable packaging.
 

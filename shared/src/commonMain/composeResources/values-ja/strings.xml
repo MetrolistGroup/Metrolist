@@ -474,7 +474,6 @@
     <string name="settings_translation_mode_summary">言葉を翻訳するか、発音を対象言語の文字で表記</string>
     <string name="settings_translation_provider_summary">歌詞を翻訳するサービスを選択</string>
     <string name="settings_translation_model_summary">歌詞の翻訳や発音表記に使うモデル</string>
-    <string name="settings_detector_model_summary">歌詞の翻訳が必要かを判断するモデル</string>
     <string name="settings_translation_formality_summary">DeepL の翻訳で使う丁寧な表現またはくだけた表現を選択</string>
     <string name="settings_discord_advanced_summary">アクティビティのテンプレートと独自のリンクボタンを表示</string>
     <string name="settings_discord_activity_type_summary">Discord での音楽アクティビティの表示方法を選択</string>

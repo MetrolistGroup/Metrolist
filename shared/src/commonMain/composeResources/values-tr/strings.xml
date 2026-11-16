@@ -1155,7 +1155,6 @@
     <string name="ai_provider">Sağlayıcı</string>
     <string name="ai_base_url">Temel URL</string>
     <string name="ai_translation_model">Çeviri modeli</string>
-    <string name="ai_judge_detector_model">Algılayıcı model</string>
     <string name="ai_target_language">Hedef dil</string>
     <string name="ai_deepl_formality">Resmiyet düzeyi</string>
     <string name="ai_deepl_formality_default">Varsayılan</string>
@@ -2002,7 +2001,6 @@
     <string name="settings_translation_mode_summary">Sözleri çevirin veya telaffuzlarını hedef yazı sistemine aktarın</string>
     <string name="settings_translation_provider_summary">Şarkı sözlerini çeviren hizmeti seçin</string>
     <string name="settings_translation_model_summary">Şarkı sözlerini çevirmek veya telaffuzlarını yazıya aktarmak için model</string>
-    <string name="settings_detector_model_summary">Şarkı sözlerinin çeviri gerektirip gerektirmediğine karar veren model</string>
     <string name="settings_translation_formality_summary">DeepL çevirileri için resmî veya günlük dil seçin</string>
     <string name="settings_discord_advanced_summary">Etkinlik şablonlarını ve özel bağlantı düğmelerini gösterin</string>
     <string name="settings_discord_activity_type_summary">Discord'un müzik etkinliğinizi nasıl adlandıracağını seçin</string>

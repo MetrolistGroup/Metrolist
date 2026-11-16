@@ -523,7 +523,6 @@ class Settings(
     var lyricsAiBaseUrl by preference("https://openrouter.ai/api/v1/chat/completions")
     var lyricsAiModel by preference(AiProviderPresets.DEFAULT_LYRICS_AI_MODEL)
 
-    var lyricsAiDetectorModel by preference("")
     var lyricsAiTargetLanguage by preference("device")
     var lyricsAiTranslationMode by preference("Literal")
     var lyricsAiActivationMode by preference("Automatic")

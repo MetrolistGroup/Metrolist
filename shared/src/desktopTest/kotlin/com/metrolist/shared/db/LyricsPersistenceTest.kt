@@ -224,11 +224,8 @@ class LyricsPersistenceTest {
             val responses =
                 ArrayDeque(
                     listOf(
-                        """{"lines":["","Goodbye"]}""",
                         "{\"lines\":[\"Au revoir\"]}",
-                        """{"lines":["","Good night"]}""",
                         "{\"lines\":[\"Bonne nuit\"]}",
-                        """{"lines":["",""]}""",
                         "{\"lines\":[\"Salut\",\"À bientôt\"]}",
                     ),
                 )
@@ -257,26 +254,26 @@ class LyricsPersistenceTest {
                 val translated = repository.enrichLyricsEntries("song", original)
                 assertNull(translated.single().translatedText)
                 assertEquals("Au revoir", translated.single().backgroundTranslatedText)
-                assertEquals(2, requests)
+                assertEquals(1, requests)
                 database.close()
                 database = getDesktopDatabaseBuilder(path.toFile()).build()
                 repository = LyricsRepository(NoOpLyricsFetcher, LyricsTranslationClient(client), database.dao())
                 assertEquals(translated, repository.enrichLyricsEntries("song", original, allowRemoteTranslation = false))
-                assertEquals(2, requests)
+                assertEquals(1, requests)
 
                 val changed = listOf(original.single().copy(backgroundText = "Good night"))
                 assertEquals("Bonne nuit", repository.enrichLyricsEntries("song", changed).single().backgroundTranslatedText)
-                assertEquals(4, requests)
+                assertEquals(2, requests)
                 val forced = repository.enrichLyricsEntries("song", changed, forceAiTranslation = true)
                 assertNull(forced.single().translatedText)
                 assertEquals("Bonne nuit", forced.single().backgroundTranslatedText)
                 assertEquals(forced, repository.enrichLyricsEntries("song", changed, forceAiTranslation = true))
-                assertEquals(4, requests)
+                assertEquals(2, requests)
 
                 val unnecessary = listOf(original.single().copy(backgroundText = "Au revoir"))
                 assertEquals(unnecessary, repository.enrichLyricsEntries("song", unnecessary))
                 assertEquals(unnecessary, repository.enrichLyricsEntries("song", unnecessary))
-                assertEquals(5, requests)
+                assertEquals(2, requests)
                 assertEquals(
                     "À bientôt",
                     repository
@@ -284,7 +281,7 @@ class LyricsPersistenceTest {
                         .single()
                         .backgroundTranslatedText,
                 )
-                assertEquals(6, requests)
+                assertEquals(3, requests)
                 assertTrue(responses.isEmpty())
             } finally {
                 client.close()
