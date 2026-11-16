@@ -57,7 +57,7 @@ internal object YouTubeAlbumParser {
                     ?.jsonPrimitive
                     ?.contentOrNull
 
-        if (playlistId == null) return null
+        if (playlistId == null && !albumId.startsWith("FEmusic_library_privately_owned_release")) return null
 
         val header =
             response.contents
@@ -76,6 +76,9 @@ internal object YouTubeAlbumParser {
                 ?.get("musicResponsiveHeaderRenderer")
                 ?.jsonObject
                 ?: response.header?.musicDetailHeaderRenderer
+                ?: response.header?.musicResponsiveHeaderRenderer
+
+        if (header == null && playlistId == null) return null
 
         val title =
             header

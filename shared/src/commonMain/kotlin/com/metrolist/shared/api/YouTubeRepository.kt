@@ -1411,7 +1411,6 @@ class YouTubeRepository(
                 return loadLocal()
             }
             val albumItem = albumHeader.item
-            val playlistId = albumItem.playlistId ?: return loadLocal()
 
             val secondaryContents =
                 response.contents
@@ -1425,7 +1424,20 @@ class YouTubeRepository(
 
             requireCurrentSession(requestSession)
             stage = "tracks"
-            val initialTracks = getPlaylistPlaybackPage(playlistId).copy(album = albumItem)
+            val initialTracks =
+                if (albumId.startsWith("FEmusic_library_privately_owned_release")) {
+                    val parsed = parseBrowseResponse(response)
+                    PlaylistPage(
+                        sections =
+                            mapOf("Tracks" to response.uploadShelfObjects().flatMap { parseUploadedSongItems(it["contents"].asArray()) }),
+                        pending = parsed.continuationBranches.map { it.copy(sectionTitle = "Tracks") },
+                        seen = emptySet(),
+                        session = requestSession,
+                        album = albumItem,
+                    )
+                } else {
+                    getPlaylistPlaybackPage(albumItem.playlistId ?: return loadLocal()).copy(album = albumItem)
+                }
             val tracks =
                 (
                     if (loadAllPages) {
