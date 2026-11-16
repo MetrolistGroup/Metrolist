@@ -15,8 +15,6 @@ import android.os.Build
 import android.os.SystemClock
 import android.service.quicksettings.TileService
 import android.util.Log
-import java.io.PrintWriter
-import java.io.StringWriter
 import android.webkit.WebView
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.core.app.NotificationChannelCompat
@@ -90,6 +88,8 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 import timber.log.Timber
 import java.io.File
+import java.io.PrintWriter
+import java.io.StringWriter
 import com.metrolist.shared.BuildConfig as SharedBuildConfig
 
 class App :
@@ -440,6 +440,7 @@ private class AppFailureTree : Timber.Tree() {
         message: String,
         t: Throwable?,
     ) {
+        if (message.startsWith("[YtLogger] ")) return
         val level =
             when (priority) {
                 Log.ERROR -> PlaybackEventLevel.ERROR
@@ -448,9 +449,11 @@ private class AppFailureTree : Timber.Tree() {
             }
         val messageWithoutThrowable =
             t?.let { throwable ->
-                val stackTrace = StringWriter(256).also { writer ->
-                    throwable.printStackTrace(PrintWriter(writer, false))
-                }.toString()
+                val stackTrace =
+                    StringWriter(256)
+                        .also { writer ->
+                            throwable.printStackTrace(PrintWriter(writer, false))
+                        }.toString()
                 message.removeSuffix("\n$stackTrace").removeSuffix(stackTrace).removeSuffix("\n")
             } ?: message
         PlaybackEventLog.captureApplicationFailure(level, tag ?: "Android", messageWithoutThrowable, t)
