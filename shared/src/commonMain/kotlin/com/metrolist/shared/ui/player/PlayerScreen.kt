@@ -1426,12 +1426,13 @@ fun PlayerScreen(
                                                                         colors =
                                                                             ToggleButtonDefaults.colors(
                                                                                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                                                                contentColor = textBackgroundColor,
+                                                                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                                                                 checkedContainerColor = MaterialTheme.colorScheme.primary,
                                                                                 checkedContentColor = MaterialTheme.colorScheme.onPrimary,
                                                                                 disabledContainerColor =
                                                                                     MaterialTheme.colorScheme.surfaceVariant,
-                                                                                disabledContentColor = textBackgroundColor,
+                                                                                disabledContentColor =
+                                                                                    MaterialTheme.colorScheme.onSurfaceVariant,
                                                                             ),
                                                                         modifier =
                                                                             Modifier
@@ -1506,12 +1507,13 @@ fun PlayerScreen(
                                                                         colors =
                                                                             ToggleButtonDefaults.colors(
                                                                                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                                                                contentColor = textBackgroundColor,
+                                                                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                                                                 checkedContainerColor = MaterialTheme.colorScheme.primary,
                                                                                 checkedContentColor = MaterialTheme.colorScheme.onPrimary,
                                                                                 disabledContainerColor =
                                                                                     MaterialTheme.colorScheme.surfaceVariant,
-                                                                                disabledContentColor = textBackgroundColor,
+                                                                                disabledContentColor =
+                                                                                    MaterialTheme.colorScheme.onSurfaceVariant,
                                                                             ),
                                                                         modifier =
                                                                             Modifier
@@ -1609,7 +1611,7 @@ fun PlayerScreen(
                                                         colors =
                                                             IconButtonDefaults.filledIconButtonColors(
                                                                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                                                contentColor = textBackgroundColor,
+                                                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                                             ),
                                                         modifier =
                                                             Modifier
@@ -1650,7 +1652,7 @@ fun PlayerScreen(
                                                                             if (castState.isConnected) {
                                                                                 MaterialTheme.colorScheme.onPrimary
                                                                             } else {
-                                                                                textBackgroundColor
+                                                                                MaterialTheme.colorScheme.onSurfaceVariant
                                                                             },
                                                                     ),
                                                                 modifier = Modifier.size(36.dp).playerControlBlend(),

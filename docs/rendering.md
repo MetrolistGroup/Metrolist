@@ -97,7 +97,7 @@ Player lyric captions have a separate alignment setting, centered by default. Th
 
 ## Themes
 
-Android publishes system dark mode to shared settings before palette resolution. Check Auto mode after a system theme change. Player action groups use Screen blending over non-solid dark backgrounds and SrcOver in light mode or over solid backgrounds.
+Android publishes system dark mode to shared settings before palette resolution. Check Auto mode after a system theme change. Player action groups use Screen blending over non-solid dark backgrounds and SrcOver in light mode or over solid backgrounds. Filled player controls pair surface-variant containers with on-surface-variant icons, including over artwork in light mode.
 
 Android status-bar icons follow the full player's foreground contrast while the player is visible. Collapsing the player, entering picture-in-picture or pausing the activity releases its override, so the app theme and artist header control the icons again.
 
