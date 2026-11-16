@@ -215,6 +215,7 @@ val CollectionCoversKey = "collectionCoversJson"
 val PlaylistSongSortingsKey = "playlistSongSortingsJson"
 val PlaylistCollectionSortingsKey = "playlistCollectionSortingsJson"
 
+val LibraryViewsByFilterKey = "library_views_by_filter"
 val LibrarySortingByFilterKey = "library_sorting_by_filter"
 val LibrarySortDirectionKey = "library_sort_direction"
 val GridItemSizeKey = "grid_item_size"

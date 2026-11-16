@@ -159,7 +159,8 @@ fun LibraryScreen(
                 },
             )
         }
-    var isGridView by remember { mutableStateOf(LibraryState.libraryViewType == LibraryViewType.GRID) }
+    val gridFilter = selectedFilter?.let { LibraryFilterType.valueOf(it.name) } ?: LibraryFilterType.ALL
+    val isGridView = Settings.shared.libraryGridView(gridFilter, LibraryState.libraryViewType == LibraryViewType.GRID)
     var manualOrder by remember { mutableStateOf(Settings.shared.libraryManualOrder) }
     var searchQuery by remember { mutableStateOf("") }
     val activeLibraryGridState = rememberLibrarySearchScrollState(searchQuery, libraryGridState)
@@ -215,8 +216,7 @@ fun LibraryScreen(
                         }
                 },
                 onGridViewChange = {
-                    isGridView = it
-                    LibraryState.updateLibraryViewType(if (it) LibraryViewType.GRID else LibraryViewType.LIST)
+                    Settings.shared.setLibraryGridView(gridFilter, it)
                 },
                 onManualOrderChange = {
                     manualOrder = it

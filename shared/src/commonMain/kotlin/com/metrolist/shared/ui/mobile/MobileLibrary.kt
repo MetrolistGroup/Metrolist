@@ -240,7 +240,8 @@ internal fun MobileLibrary(
         Settings.shared.libraryFilter = LibraryFilterType.ALL
     }
 
-    var isGridView by remember { mutableStateOf(Settings.shared.libraryGridView) }
+    val gridFilter = selectedFilter?.let { LibraryFilterType.valueOf(it.name) } ?: LibraryFilterType.ALL
+    val isGridView = Settings.shared.libraryGridView(gridFilter)
     var manualOrder by remember { mutableStateOf(Settings.shared.libraryManualOrder) }
     val autoPlaylists = libraryAutoPlaylists()
 
@@ -309,8 +310,7 @@ internal fun MobileLibrary(
                         }
                 },
                 onGridViewChange = {
-                    isGridView = it
-                    Settings.shared.libraryGridView = it
+                    Settings.shared.setLibraryGridView(gridFilter, it)
                 },
                 onManualOrderChange = {
                     manualOrder = it

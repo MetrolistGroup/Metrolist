@@ -108,6 +108,7 @@ import com.metrolist.shared.constants.LibraryManualOrderKey
 import com.metrolist.shared.constants.LibraryPinchColumnsKey
 import com.metrolist.shared.constants.LibrarySortDirectionKey
 import com.metrolist.shared.constants.LibrarySortingByFilterKey
+import com.metrolist.shared.constants.LibraryViewsByFilterKey
 import com.metrolist.shared.constants.LikedSongSortDirectionKey
 import com.metrolist.shared.constants.LikedSongSortKey
 import com.metrolist.shared.constants.LikedSongsCustomOrdersJsonKey
@@ -772,6 +773,25 @@ class Settings(
     var pendingRemoteLibraryRemovalKeysJson by preference(PendingRemoteLibraryRemovalKeysJsonKey, "[]")
     var deletedPlaylistIdsJson by preference(DeletedPlaylistIdsJsonKey, "[]")
     var libraryGridView by preference(true)
+    private var libraryViewsByFilterJson by preference(LibraryViewsByFilterKey, "{}")
+
+    fun libraryGridView(
+        filter: LibraryFilterType,
+        defaultValue: Boolean = libraryGridView,
+    ): Boolean =
+        libraryViewsByFilter()[(filter.takeUnless { it == LibraryFilterType.DEFAULT } ?: LibraryFilterType.ALL).name] ?: defaultValue
+
+    fun setLibraryGridView(
+        filter: LibraryFilterType,
+        grid: Boolean,
+    ) {
+        val key = filter.takeUnless { it == LibraryFilterType.DEFAULT } ?: LibraryFilterType.ALL
+        libraryViewsByFilterJson = Json.encodeToString(libraryViewsByFilter() + (key.name to grid))
+    }
+
+    private fun libraryViewsByFilter(): Map<String, Boolean> =
+        runCatching { Json.decodeFromString<Map<String, Boolean>>(libraryViewsByFilterJson) }.getOrDefault(emptyMap())
+
     var gridItemSize by preference(GridItemSizeKey, GridItemSize.BIG)
     private var storedLibraryGridColumns by preference(LibraryGridColumnsKey, 3)
     var libraryGridColumns: Int

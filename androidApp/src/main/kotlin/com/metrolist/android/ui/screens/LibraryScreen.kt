@@ -248,7 +248,8 @@ fun LibraryScreen(
         selectedFilter = null
         Settings.shared.libraryFilter = LibraryFilterType.ALL
     }
-    var isGridView by remember { mutableStateOf(Settings.shared.libraryGridView) }
+    val gridFilter = selectedFilter?.let { LibraryFilterType.valueOf(it.name) } ?: LibraryFilterType.ALL
+    val isGridView = Settings.shared.libraryGridView(gridFilter)
     var manualOrder by remember { mutableStateOf(Settings.shared.libraryManualOrder) }
     var isSearchOpen by remember { mutableStateOf(false) }
     val hiddenItemVersion by HiddenLibraryItems.version.collectAsStateWithLifecycle()
@@ -486,8 +487,7 @@ fun LibraryScreen(
                 compactGrid = !isLandscape,
                 onFilterChange = onFilterChange,
                 onGridViewChange = {
-                    isGridView = it
-                    Settings.shared.libraryGridView = it
+                    Settings.shared.setLibraryGridView(gridFilter, it)
                 },
                 onManualOrderChange = {
                     manualOrder = it

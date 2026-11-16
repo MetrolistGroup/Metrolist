@@ -18,6 +18,26 @@ import com.russhwolf.settings.Settings as KmpSettings
 
 class SettingsTest {
     @Test
+    fun libraryTabsKeepTheirViewChoicesAcrossRestartAndBackup() {
+        val backing = MapSettings()
+        val settings = Settings(backing)
+        settings.libraryGridView = true
+        settings.setLibraryGridView(LibraryFilterType.TRACKS, false)
+        settings.setLibraryGridView(LibraryFilterType.PLAYLISTS, true)
+        val restored = Settings(backing)
+        assertFalse(restored.libraryGridView(LibraryFilterType.TRACKS))
+        assertEquals(true, restored.libraryGridView(LibraryFilterType.PLAYLISTS))
+        assertEquals(true, restored.libraryGridView(LibraryFilterType.ALBUMS))
+        assertFalse(restored.libraryGridView(LibraryFilterType.ARTISTS, defaultValue = false))
+        restored.setLibraryGridView(LibraryFilterType.DEFAULT, false)
+        assertFalse(restored.libraryGridView(LibraryFilterType.ALL))
+        val otherDevice = Settings(MapSettings())
+        otherDevice.importBackupSettings(restored.exportBackupSettings())
+        assertFalse(otherDevice.libraryGridView(LibraryFilterType.TRACKS))
+        assertEquals(true, otherDevice.libraryGridView(LibraryFilterType.PLAYLISTS))
+    }
+
+    @Test
     fun desktopRenderBackendStaysOnTheInstallationAcrossBackupRestore() {
         val backing = MapSettings()
         val settings = Settings(backing)
