@@ -33,7 +33,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
@@ -215,6 +214,7 @@ import com.metrolist.shared.ui.components.formatSleepTimerRemaining
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.lyrics.LyricsContrastScrim
 import com.metrolist.shared.ui.components.lyrics.LyricsOffsetEditor
+import com.metrolist.shared.ui.components.playbackMarquee
 import com.metrolist.shared.ui.components.playerControlBlend
 import com.metrolist.shared.ui.components.rememberBottomSheetState
 import com.metrolist.shared.ui.components.rememberTrackMarquee
@@ -1592,7 +1592,7 @@ fun PlayerScreen(
                                                                     color = textBackgroundColor.copy(alpha = 0.8f),
                                                                     maxLines = 1,
                                                                     modifier =
-                                                                        Modifier.basicMarquee(
+                                                                        Modifier.playbackMarquee(
                                                                             iterations = if (LocalPlayerContentActive.current) 1 else 0,
                                                                             initialDelayMillis = 3000,
                                                                             velocity = 30.dp,

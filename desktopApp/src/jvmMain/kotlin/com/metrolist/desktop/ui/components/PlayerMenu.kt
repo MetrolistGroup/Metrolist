@@ -7,7 +7,6 @@
 
 package com.metrolist.desktop.ui.components
 
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -100,6 +99,7 @@ import com.metrolist.shared.ui.components.PlayerMenuAction
 import com.metrolist.shared.ui.components.PopupVisibility
 import com.metrolist.shared.ui.components.TempoPitchControls
 import com.metrolist.shared.ui.components.lyrics.LyricsEditorScreen
+import com.metrolist.shared.ui.components.playbackMarquee
 import com.metrolist.shared.ui.equalizer.EqualizerDialog
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.menu.CursorDropdownMenu
@@ -416,7 +416,7 @@ private fun LyricsActionRow(
                 color = colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.basicMarquee(),
+                modifier = Modifier.playbackMarquee(),
             )
             if (subtitle != null) {
                 Text(
@@ -425,7 +425,7 @@ private fun LyricsActionRow(
                     color = colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.basicMarquee(),
+                    modifier = Modifier.playbackMarquee(),
                 )
             }
         }
@@ -467,7 +467,7 @@ private fun LyricsToggleRow(
                 color = colorScheme.onSurface.copy(alpha = contentAlpha),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.basicMarquee(),
+                modifier = Modifier.playbackMarquee(),
             )
             if (subtitle != null) {
                 Text(
@@ -476,7 +476,7 @@ private fun LyricsToggleRow(
                     color = colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.basicMarquee(),
+                    modifier = Modifier.playbackMarquee(),
                 )
             }
         }

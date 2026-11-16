@@ -11,7 +11,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -99,6 +98,7 @@ import com.metrolist.shared.ui.components.PlayerMenuAction
 import com.metrolist.shared.ui.components.PlayerMenuActionIcon
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.isAutoPlaylistIcon
+import com.metrolist.shared.ui.components.playbackMarquee
 import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.theme.ComponentShapes
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
@@ -497,7 +497,7 @@ private fun MediaContextMenuHeader(
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false).basicMarquee(),
+                    modifier = Modifier.weight(1f, fill = false).playbackMarquee(),
                 )
                 if (isExplicit && subtitle.isNullOrBlank()) {
                     Spacer(Modifier.width(6.dp))
@@ -514,7 +514,7 @@ private fun MediaContextMenuHeader(
                         overflow = TextOverflow.Ellipsis,
                         modifier =
                             Modifier.weight(1f, fill = false).then(
-                                if (subtitleLinks == null) Modifier.basicMarquee() else Modifier,
+                                if (subtitleLinks == null) Modifier.playbackMarquee() else Modifier,
                             ),
                     )
                     if (isExplicit) {

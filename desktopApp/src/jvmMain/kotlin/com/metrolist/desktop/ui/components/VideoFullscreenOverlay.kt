@@ -15,7 +15,6 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -113,6 +112,7 @@ import com.metrolist.shared.ui.components.VintagePlayerControls
 import com.metrolist.shared.ui.components.VintagePlayerControlsText
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.lyrics.rememberCaptionLyricsPositionState
+import com.metrolist.shared.ui.components.playbackMarquee
 import com.metrolist.shared.ui.components.sliders.rememberPendingSeekPosition
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.menu.CursorDropdownMenu
@@ -693,7 +693,7 @@ private fun FullscreenVideoControls(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier =
-                                        Modifier.basicMarquee(
+                                        Modifier.playbackMarquee(
                                             iterations = 1,
                                             initialDelayMillis = 1500,
                                             velocity = 30.dp,
@@ -701,7 +701,7 @@ private fun FullscreenVideoControls(
                                 )
                                 Row(
                                     modifier =
-                                        Modifier.basicMarquee(
+                                        Modifier.playbackMarquee(
                                             iterations = 1,
                                             initialDelayMillis = 1500,
                                             velocity = 30.dp,

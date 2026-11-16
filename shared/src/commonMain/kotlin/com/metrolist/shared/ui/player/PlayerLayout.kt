@@ -20,7 +20,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -160,6 +159,7 @@ import com.metrolist.shared.ui.components.lyrics.LyricsOffsetEditor
 import com.metrolist.shared.ui.components.lyrics.LyricsView
 import com.metrolist.shared.ui.components.lyrics.rememberCaptionLyricsPositionState
 import com.metrolist.shared.ui.components.lyrics.resolveLyricsTextColor
+import com.metrolist.shared.ui.components.playbackMarquee
 import com.metrolist.shared.ui.components.playerControlBlend
 import com.metrolist.shared.ui.components.rememberTrackMarquee
 import com.metrolist.shared.ui.components.vintageOnButtonColor
@@ -1103,7 +1103,7 @@ internal fun LandscapePlayerContent(
                             color = controlsColor.copy(alpha = 0.8f),
                             maxLines = 1,
                             modifier =
-                                Modifier.basicMarquee(
+                                Modifier.playbackMarquee(
                                     iterations = if (LocalPlayerContentActive.current) 1 else 0,
                                     initialDelayMillis = 3000,
                                     velocity = 30.dp,
