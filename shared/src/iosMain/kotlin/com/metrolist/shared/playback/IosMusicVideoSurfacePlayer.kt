@@ -41,6 +41,8 @@ internal class IosMusicVideoSurfacePlayer(
     private var attachedSurfaceGeneration: Long? = null
     private var seekInFlight = false
     private var latestTargetPositionMs = 0L
+    private var latestTargetUpdatedAt: TimeMark? = null
+    private var userSeekPending = false
     var positionSynchronized = false
         private set
     private var foreground = false
@@ -101,7 +103,17 @@ internal class IosMusicVideoSurfacePlayer(
             expectingProgress = playing
             watchdog.reset()
         }
-        latestTargetPositionMs = positionMs.coerceAtLeast(0L)
+        val targetPositionMs = positionMs.coerceAtLeast(0L)
+        val targetDeltaMs = targetPositionMs - latestTargetPositionMs
+        val targetUpdateElapsedMs = latestTargetUpdatedAt?.elapsedNow()?.inWholeMilliseconds ?: 0L
+        val expectedPlaybackAdvanceMs = if (expectingProgress) (targetUpdateElapsedMs * playbackSpeed).toLong() else 0L
+        if ((seekInFlight || seekCooldownStartedAt != null) &&
+            isMaterialMusicVideoTargetChange(targetDeltaMs, expectedPlaybackAdvanceMs, SEEK_USER_TARGET_CHANGE_TOLERANCE_MS)
+        ) {
+            userSeekPending = true
+        }
+        latestTargetPositionMs = targetPositionMs
+        latestTargetUpdatedAt = TimeSource.Monotonic.markNow()
         applyPendingSeek()
         if (playing && player.rate != playbackSpeed) {
             player.rate = playbackSpeed
@@ -124,25 +136,27 @@ internal class IosMusicVideoSurfacePlayer(
         val itemReady = player.currentItem?.status == AVPlayerItemStatusReadyToPlay
         if (closed || !canApplyMusicVideoSeek(foreground, seekInFlight, itemReady)) return
         val sinceLastSeekMs = seekCooldownStartedAt?.elapsedNow()?.inWholeMilliseconds
-        if (sinceLastSeekMs != null && sinceLastSeekMs < SEEK_RETRY_COOLDOWN_MS) return
+        if (sinceLastSeekMs != null && sinceLastSeekMs < SEEK_RETRY_COOLDOWN_MS && !userSeekPending) return
         val currentMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong()
         val targetPositionMs = latestTargetPositionMs
         val driftToleranceMs = if (sinceLastSeekMs == null) SEEK_DRIFT_TOLERANCE_MS else SEEK_POST_SEEK_DRIFT_TOLERANCE_MS
         if (abs(currentMs - targetPositionMs) <= driftToleranceMs) {
             positionSynchronized = true
+            userSeekPending = false
             return
         }
         seekInFlight = true
+        userSeekPending = false
         val target = CMTimeMakeWithSeconds(targetPositionMs / 1000.0, 600)
         val zero = CMTimeMakeWithSeconds(0.0, 600)
         player.seekToTime(target, toleranceBefore = zero, toleranceAfter = zero) {
             seekInFlight = false
             seekCooldownStartedAt = TimeSource.Monotonic.markNow()
             val currentPositionMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong()
-            if (abs(latestTargetPositionMs - targetPositionMs) > SEEK_DRIFT_TOLERANCE_MS) {
+            if (userSeekPending) {
                 seekCooldownStartedAt = null
                 applyPendingSeek()
-            } else if (abs(currentPositionMs - latestTargetPositionMs) <= SEEK_DRIFT_TOLERANCE_MS) {
+            } else if (abs(currentPositionMs - latestTargetPositionMs) <= SEEK_POST_SEEK_DRIFT_TOLERANCE_MS) {
                 positionSynchronized = true
             }
         }
@@ -167,6 +181,9 @@ internal class IosMusicVideoSurfacePlayer(
         attachedSurfaceGeneration = null
         foreground = false
         expectingProgress = false
+        positionSynchronized = false
+        userSeekPending = false
+        seekCooldownStartedAt = null
         watchdog.reset()
         player.pause()
     }
@@ -176,6 +193,8 @@ internal class IosMusicVideoSurfacePlayer(
         attachedSurfaceGeneration = null
         foreground = false
         expectingProgress = false
+        positionSynchronized = false
+        userSeekPending = false
         watchdog.reset()
         player.pause()
         closed = true
@@ -189,6 +208,7 @@ internal class IosMusicVideoSurfacePlayer(
         const val MAX_NATURAL_PROGRESS_STEP_MS = 2_000L
         const val SEEK_DRIFT_TOLERANCE_MS = 750L
         const val SEEK_POST_SEEK_DRIFT_TOLERANCE_MS = 1_500L
+        const val SEEK_USER_TARGET_CHANGE_TOLERANCE_MS = 1_500L
         const val SEEK_RETRY_COOLDOWN_MS = 2_000L
     }
 }

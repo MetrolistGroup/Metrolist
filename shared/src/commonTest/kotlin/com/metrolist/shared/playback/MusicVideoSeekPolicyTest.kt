@@ -12,4 +12,11 @@ class MusicVideoSeekPolicyTest {
         assertFalse(canApplyMusicVideoSeek(isForeground = true, seekInFlight = true, itemReady = true))
         assertFalse(canApplyMusicVideoSeek(isForeground = true, seekInFlight = false, itemReady = false))
     }
+
+    @Test
+    fun targetChangesIgnoreNormalPlaybackAdvanceButDetectExplicitSeeks() {
+        assertFalse(isMaterialMusicVideoTargetChange(targetDeltaMs = 1_200L, expectedPlaybackAdvanceMs = 1_000L, toleranceMs = 1_500L))
+        assertTrue(isMaterialMusicVideoTargetChange(targetDeltaMs = 8_000L, expectedPlaybackAdvanceMs = 1_000L, toleranceMs = 1_500L))
+        assertTrue(isMaterialMusicVideoTargetChange(targetDeltaMs = -4_000L, expectedPlaybackAdvanceMs = 1_000L, toleranceMs = 1_500L))
+    }
 }

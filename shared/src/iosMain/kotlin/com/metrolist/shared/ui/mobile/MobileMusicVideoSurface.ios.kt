@@ -120,7 +120,11 @@ internal actual fun MobileMusicVideoSurface(
                 break
             }
             if (foreground) video.applyPendingSeek()
-            if (video.ready && video.positionSynchronized) firstFrameRendered = true
+            if (video.ready && video.positionSynchronized) {
+                firstFrameRendered = true
+            } else if (!video.positionSynchronized) {
+                firstFrameRendered = false
+            }
             delay(250)
         }
     }
