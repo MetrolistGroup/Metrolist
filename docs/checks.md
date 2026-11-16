@@ -147,6 +147,10 @@ For desktop player polish, check the queue under Windows caption buttons in rest
 
 For the desktop three-column player bar, resize through 800, 880, 960 and 1280 dp with long song and artist names. The transport group stays centered between equal-width side slots; metadata stays bounded and secondary actions move into the overflow menu. Check every player style, RTL, display scaling, action overflow and the separate seek row. The swapped-controls setting places transport at the start; check the compact layout below 600 dp too.
 
+### System tray
+
+On Windows and Linux, verify that left-clicking the tray icon toggles the main window when "Hide or show on tray click" is enabled, and right-clicking opens the context menu with track info, playback controls, miniplayer toggle, settings and quit. On macOS, verify that left-clicking opens the status bar menu and right-clicking toggles window visibility when enabled. Verify that menu bar template rendering produces readable icon contrast across both light and dark macOS menu bar appearances and dynamic wallpaper changes. Check that quitting from the tray shuts down the application cleanly.
+
 ### Lyrics
 
 With Expressive and Braccato word lyrics active, check both short- and normal-duration word timings: short words fill smoothly rather than snap. Collapse the retained player, background the app and reopen it in a floating window. Hidden lyrics request no animation frames, visible lyrics resume at the current position, and visible word waves and Braccato line exits animate. Repeat with paused playback, settings previews, desktop minimize/restore and the shared iOS host.

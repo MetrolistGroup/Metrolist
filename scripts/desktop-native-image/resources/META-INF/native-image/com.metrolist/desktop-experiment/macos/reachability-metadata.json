@@ -83,6 +83,53 @@
           ]
         }
       ]
+    },
+    {
+      "type": "sun.lwawt.macosx.CTrayIcon",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "handleMouseEvent",
+          "parameterTypes": [
+            "sun.lwawt.macosx.NSEvent"
+          ]
+        },
+        {
+          "name": "getPopupMenuModel",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.lwawt.macosx.CMenuItem",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "handleAction",
+          "parameterTypes": [
+            "long",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.lwawt.macosx.CCheckboxMenuItem",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "handleAction",
+          "parameterTypes": [
+            "boolean"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.lwawt.macosx.CPopupMenu",
+      "jniAccessible": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
     }
   ]
 }

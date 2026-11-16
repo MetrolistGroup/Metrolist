@@ -54,6 +54,8 @@ private const val AUTO_CACHE_DEFAULT_MIGRATION = "desktopAutoCacheDefaultDisable
 
 internal actual fun defaultMinimizeToTrayOnClose(): Boolean = OsUtil.isMac
 
+internal actual fun isDesktopMac(): Boolean = OsUtil.isMac
+
 private val secretKeys =
     setOf(
         "innerTubeCookie",

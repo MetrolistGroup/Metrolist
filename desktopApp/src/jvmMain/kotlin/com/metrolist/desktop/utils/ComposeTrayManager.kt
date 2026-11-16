@@ -5,8 +5,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.ApplicationScope
@@ -49,6 +47,12 @@ import androidx.compose.ui.window.Tray as StockTray
 import dev.nucleusframework.composenativetray.tray.api.Tray as NativeTray
 
 object ComposeTrayManager {
+    init {
+        if (OsUtil.isMac) {
+            System.setProperty("apple.awt.enableTemplateImages", "true")
+        }
+    }
+
     private var windowState: WindowState? = null
     private var mainWindow: Window? = null
     private var onQuit: (() -> Unit)? = null
@@ -144,10 +148,8 @@ object ComposeTrayManager {
         val currentTrack = PlayerState.currentTrack
         val isListenTogetherGuest = ListenTogetherState.isListenTogetherGuest()
 
-        val isMacDarkMenu = if (OsUtil.isMac) Settings.shared.systemInDarkTheme else true
-
         @Suppress("DEPRECATION")
-        val icon = painterResource(if (isMacDarkMenu) "logo.png" else "logo_dark.png")
+        val icon = painterResource("logo.png")
 
         val strUnknownTitle = stringResource(Res.string.tray_unknown_title)
         val strUnknown = stringResource(Res.string.tray_unknown)
