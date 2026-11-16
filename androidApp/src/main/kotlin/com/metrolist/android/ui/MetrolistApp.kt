@@ -189,6 +189,7 @@ import com.metrolist.android.ui.components.DesktopCaptionBar
 import com.metrolist.android.ui.components.DesktopMiniPlayerHeight
 import com.metrolist.android.ui.components.MiniPlayer
 import com.metrolist.android.ui.components.calculateMiniPlayerInsets
+import com.metrolist.android.ui.components.calculateNavigationContentInset
 import com.metrolist.android.ui.components.shouldUseDesktopCaption
 import com.metrolist.android.ui.components.shouldUseDesktopMiniPlayer
 import com.metrolist.android.ui.player.AndroidPlayerPlatform
@@ -1407,13 +1408,21 @@ fun MetrolistApp(
                                         ),
                             ) {
                                 Column(
-                                    Modifier.fillMaxSize().then(
-                                        if (activeImport != null) {
-                                            Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
-                                        } else {
-                                            Modifier
-                                        },
-                                    ),
+                                    // Measure the full content slot before the import card and top inset reduce the scaffold.
+                                    Modifier
+                                        .fillMaxSize()
+                                        .onSizeChanged { size ->
+                                            if (hasBottomNavigation && !useFloatingNavBar) {
+                                                navigationBarContentInset =
+                                                    calculateNavigationContentInset(maxHeight, with(density) { size.height.toDp() })
+                                            }
+                                        }.then(
+                                            if (activeImport != null) {
+                                                Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                                            } else {
+                                                Modifier
+                                            },
+                                        ),
                                 ) {
                                     PlaylistImportProgressCard()
                                     Scaffold(
@@ -1562,13 +1571,7 @@ fun MetrolistApp(
                                         },
                                         modifier =
                                             Modifier
-                                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
-                                                .onSizeChanged { size ->
-                                                    if (hasBottomNavigation && !useFloatingNavBar) {
-                                                        navigationBarContentInset =
-                                                            (maxHeight - with(density) { size.height.toDp() }).coerceAtLeast(0.dp)
-                                                    }
-                                                },
+                                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                                     ) { scaffoldPadding ->
                                         Box(
                                             Modifier
