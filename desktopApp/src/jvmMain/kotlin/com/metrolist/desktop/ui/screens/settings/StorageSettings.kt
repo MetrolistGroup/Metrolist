@@ -95,9 +95,35 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
+import java.awt.EventQueue
 import java.io.File
+import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JFileChooser
 import kotlin.math.roundToInt
+
+private fun selectDownloadDirectory(
+    title: String,
+    initialDirectory: File?,
+): File? {
+    val selected = AtomicReference<File?>()
+    val showChooser = {
+        val chooser =
+            JFileChooser().apply {
+                fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+                dialogTitle = title
+                initialDirectory?.takeIf(File::isDirectory)?.let { currentDirectory = it }
+            }
+        if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+            selected.set(chooser.selectedFile)
+        }
+    }
+    if (EventQueue.isDispatchThread()) {
+        showChooser()
+    } else {
+        EventQueue.invokeAndWait(showChooser)
+    }
+    return selected.get()
+}
 
 private data class StorageUsage(
     val downloads: Long,
@@ -414,18 +440,17 @@ fun StorageSettingsScreen(
                     isLast = Settings.shared.customDownloadPath.isBlank(),
                     enabled = !busy && usage != null,
                     onClick = {
-                        val chooser =
-                            JFileChooser().apply {
-                                fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-                                dialogTitle = selectTitle
-                                currentDirectory = usage?.directory?.let(::File)
+                        val directory =
+                            try {
+                                selectDownloadDirectory(selectTitle, usage?.directory?.let(::File))
+                            } catch (_: Exception) {
+                                failureMessage = Res.string.error_unknown
+                                null
                             }
-                        if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
-                            chooser.selectedFile?.let { directory ->
-                                perform(
-                                    Res.string.download_folder_unavailable,
-                                ) { withContext(Dispatchers.IO) { DownloadManager.changeDownloadDirectory(directory) } }
-                            }
+                        directory?.let {
+                            perform(
+                                Res.string.download_folder_unavailable,
+                            ) { withContext(Dispatchers.IO) { DownloadManager.changeDownloadDirectory(it) } }
                         }
                     },
                     subtitle = stringResource(Res.string.settings_download_folder_summary),
