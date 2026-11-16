@@ -3107,6 +3107,10 @@
     <string name="listen_together_server_url">Server URL</string>
     <string name="listen_together_server_name">Server name</string>
     <string name="listen_together_server_maintainer">Maintainer</string>
+    <string name="listen_together_location_poland">Poland</string>
+    <string name="listen_together_location_custom">Custom</string>
+    <string name="listen_together_custom_server_name">Custom server</string>
+    <string name="listen_together_custom_server_maintainer">User</string>
     <string name="listen_together_edit_server">Edit server details</string>
     <!-- Translators: Label for custom server; retained for translation compatibility but not currently referenced by app code. -->
     <!-- Translators: Listen Together room connection status. -->
