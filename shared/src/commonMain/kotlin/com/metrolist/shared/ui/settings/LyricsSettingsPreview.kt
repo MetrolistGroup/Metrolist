@@ -68,7 +68,8 @@ internal fun useCurrentLyricsForPreview(
     songId: String?,
     isPlaying: Boolean,
     lyrics: List<LyricsEntry>,
-): Boolean = isPlaying && !songId.isNullOrBlank() && lyrics.any { it.text.isNotBlank() }
+    isVideoModeActive: Boolean = false,
+): Boolean = !isVideoModeActive && isPlaying && !songId.isNullOrBlank() && lyrics.any { it.text.isNotBlank() }
 
 @Composable
 fun PlayerLyricsSettingsPreview(
@@ -81,17 +82,18 @@ fun PlayerLyricsSettingsPreview(
     LaunchedEffect(
         state.currentSong?.id,
         state.isPlaying,
+        state.isVideoModeActive,
         Settings.shared.lyricsProviderOrder,
         Settings.shared.lyricsEnabledProviders,
         Settings.shared.lyricsYoutubeCaptionsEnabled,
         Settings.shared.preferWordSyncedLyrics,
     ) {
-        if (state.isPlaying) state.currentSong?.let { viewModel.loadLyrics(it) }
+        if (state.isPlaying && !state.isVideoModeActive) state.currentSong?.let { viewModel.loadLyrics(it) }
     }
     LyricsSettingsPreview(
         modifier = modifier,
-        songId = state.currentSong?.id,
-        currentLyrics = state.lyrics,
+        songId = state.currentSong?.id.takeUnless { state.isVideoModeActive },
+        currentLyrics = state.lyrics.takeUnless { state.isVideoModeActive }.orEmpty(),
         currentAgents = state.lyricsAgents,
         currentSongwriters = state.lyricsSongwriters,
         currentProvider = state.lyricsProvider,
@@ -100,7 +102,7 @@ fun PlayerLyricsSettingsPreview(
         playbackSpeed = viewModel.playbackSpeed.collectAsState().value,
         timingOffsetMs = state.lyricsOffsetMs,
         lyricsRetimed = state.mvLyricsRetimed,
-        isPlaying = state.isPlaying,
+        isPlaying = state.isPlaying && !state.isVideoModeActive,
         isCasting = isCasting,
         isBuffering = isBuffering,
         onSeek = viewModel::seekToPosition,
