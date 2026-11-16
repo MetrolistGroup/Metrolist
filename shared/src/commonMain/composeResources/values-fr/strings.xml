@@ -357,7 +357,7 @@
     <string name="background">Arrière-plan</string>
     <string name="progress_bar">Barre de progression</string>
     <string name="appearance_misc">Divers</string>
-    <string name="appearance_default_open_tab">Ouvrir l\u0027onglet au démarrage</string>
+    <string name="appearance_default_open_tab">Onglet au démarrage</string>
     <string name="player_settings_title">Lecteur et audio</string>
     <string name="lyrics_text_position_left">Gauche</string>
     <string name="lyrics_text_position_center">Centre</string>
@@ -390,7 +390,7 @@
     <string name="artwork_sources">Source des pochettes animées</string>
     <string name="immersive_player">Lecteur immersif</string>
     <string name="immersive_player_description">Masque les barres système lorsque le lecteur est étendu</string>
-    <string name="song_gestures">Gestes des titres</string>
+    <string name="song_gestures">Gestes</string>
     <string name="appearance_enable_swipe_to_change_track">Balayer la pochette dans le lecteur pour changer de titre</string>
     <string name="appearance_play_videos_in_mini_player" tools:ignore="MissingTranslation">Vidéos dans le mini-lecteur</string>
     <string name="appearance_play_videos_in_mini_player_desc" tools:ignore="MissingTranslation">Affiche les vidéos dans le mini-lecteur lorsqu\u0027il est réduit</string>
@@ -1254,7 +1254,7 @@
         <item quantity="other">%1$d titres supprimés de la playlist</item>
     </plurals>
     <string name="my_top">Mon top</string>
-    <string name="cached_playlist">En cache</string>
+    <string name="cached_playlist">Mis en cache</string>
     <string name="show_more">Voir plus</string>
     <string name="show_less">Voir moins</string>
     <plurals name="n_time">
@@ -1637,7 +1637,7 @@
     <string name="no_logs_available">Aucun journal disponible</string>
     <string name="export_logs">Exporter les journaux</string>
     <string name="create_backup">Sauvegarder</string>
-    <string name="create_backup_desc">Exporter les paramètres, la bibliothèque, les playlists, les titres favoris et l'historique dans un fichier ZIP</string>
+    <string name="create_backup_desc">Exporter les paramètres, la base de données de la bibliothèque, les playlists, les favoris et l'historique dans un fichier ZIP</string>
     <string name="restore_backup">Restaurer</string>
     <string name="restore_backup_desc">Restaurer une sauvegarde Metrolist (bureau ou Android). L'application redémarrera automatiquement.</string>
     <string name="sensitive_backup">Données sensibles</string>
@@ -2480,7 +2480,7 @@
     <string name="tempo_pitch_input_range">Entrez un nombre entre %1$s et %2$s.</string>
     <string name="settings_more_options">Autres</string>
     <string name="settings_navigation_gestures">Navigation et gestes</string>
-    <string name="settings_navigation_gestures_description">Page d'accueil, onglets de navigation et gestes de balayage</string>
+    <string name="settings_navigation_gestures_description">Onglet au démarrage, barre de navigation et gestes de balayage</string>
     <string name="settings_queue_description">File d'attente persistante, lecture aléatoire et téléchargements automatiques</string>
     <string name="settings_home_library">Accueil et bibliothèque</string>
     <string name="settings_home_library_description">Sections de la page d'accueil et playlists automatiques</string>
