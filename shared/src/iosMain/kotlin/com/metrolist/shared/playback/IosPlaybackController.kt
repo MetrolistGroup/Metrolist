@@ -287,6 +287,7 @@ internal class IosPlaybackController(
     private var videoModeJob: Job? = null
     private var videoModeRequestId = 0L
     private val failedVideoResourceIds = mutableSetOf<String>()
+    private var deferredVideoModeSongId: String? = null
     private var videoSurfacePlayer: IosMusicVideoSurfacePlayer? = null
     private var videoSurfaceUrl: String? = null
     private var videoSurfaceHeaders: Map<String, String>? = null
@@ -1053,7 +1054,15 @@ internal class IosPlaybackController(
         videoModeRequestId++
         val requestId = videoModeRequestId
         videoModeJob?.cancel()
-        if (!wantVideo || !Settings.shared.musicVideoPlaybackEnabled || guestLocked || pendingPlayback.value != null) {
+        val pendingSong = pendingPlayback.value?.song
+        if (pendingSong != null) {
+            deferredVideoModeSongId =
+                pendingSong.id.takeIf { wantVideo && Settings.shared.musicVideoPlaybackEnabled && !guestLocked }
+            clearVideoMode()
+            return
+        }
+        deferredVideoModeSongId = null
+        if (!wantVideo || !Settings.shared.musicVideoPlaybackEnabled || guestLocked) {
             clearVideoMode()
             return
         }
@@ -1344,6 +1353,7 @@ internal class IosPlaybackController(
     }
 
     private fun discardPendingPlayback() {
+        deferredVideoModeSongId = null
         pendingPlayback.value = null
         isShuffled.value = player.isShuffleEnabled
         player.cancelQueueTransition()
@@ -1723,6 +1733,7 @@ internal class IosPlaybackController(
         val song = pendingQueue.currentItem() ?: return null
         audioRecovery.select(song.id)
         if (song.id != player.currentSong.value?.id) {
+            if (deferredVideoModeSongId != song.id) deferredVideoModeSongId = null
             videoModeRequestId++
             videoModeJob?.cancel()
             clearVideoMode()
@@ -1840,11 +1851,16 @@ internal class IosPlaybackController(
                     check(player.loadError.value == null) { "iOS player rejected playback resource" }
                     player.editQueue { restore(pending.queueSnapshot) }
                     pendingPlayback.value = null
+                    if (deferredVideoModeSongId == song.id) {
+                        deferredVideoModeSongId = null
+                        setVideoMode(true)
+                    }
                     if (previousSong?.id == song.id) scrobbleManager.onPlaybackInstanceStart(song)
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Exception) {
                     if (generation != requestGeneration) return@launch
+                    if (deferredVideoModeSongId == song.id) deferredVideoModeSongId = null
                     logIosPlaybackError("Playback resolution failed for ${song.id}", error)
                     handleTerminalPlaybackFailure(
                         pendingPlayback.value?.startPlaying == true,

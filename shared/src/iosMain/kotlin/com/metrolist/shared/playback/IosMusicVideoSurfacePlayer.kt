@@ -51,6 +51,8 @@ internal class IosMusicVideoSurfacePlayer(
     private var expectingProgress = false
     private var lastPositionMs: Long? = null
     private var renderedProgress = 0L
+    private var completedSeekGeneration = 0L
+    private var lastProgressSeekGeneration = 0L
     private var seekCooldownStartedAt: TimeMark? = null
     private val watchdog = CanvasPlaybackWatchdog()
     private val watchdogClock = TimeSource.Monotonic.markNow()
@@ -170,6 +172,7 @@ internal class IosMusicVideoSurfacePlayer(
                 }
                 return@seekToTime
             }
+            completedSeekGeneration++
             seekCooldownStartedAt = TimeSource.Monotonic.markNow()
             if (userSeekPending) {
                 seekCooldownStartedAt = null
@@ -184,10 +187,14 @@ internal class IosMusicVideoSurfacePlayer(
         if (seconds.isFinite()) {
             val positionMs = (seconds * 1000.0).toLong()
             val previousPositionMs = lastPositionMs
-            if (ready && previousPositionMs != null && positionMs - previousPositionMs in 1..MAX_NATURAL_PROGRESS_STEP_MS) {
+            if (ready && previousPositionMs != null &&
+                positionMs - previousPositionMs in 1..MAX_NATURAL_PROGRESS_STEP_MS &&
+                completedSeekGeneration == lastProgressSeekGeneration
+            ) {
                 renderedProgress++
             }
             lastPositionMs = positionMs
+            lastProgressSeekGeneration = completedSeekGeneration
         }
         return watchdog.isStalled(watchdogClock.elapsedNow().inWholeMilliseconds, renderedProgress, expectingProgress && foreground)
     }
