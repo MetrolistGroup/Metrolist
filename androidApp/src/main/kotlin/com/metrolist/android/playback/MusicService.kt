@@ -485,6 +485,7 @@ class MusicService :
                 withPlaybackLoading = { block -> withQueueLoading(isPlaybackLoading = true, block = block) },
                 fetchPlaybackResource = { song, wantVideo -> fetchPlaybackResource(song, wantVideo).resource },
                 onError = ::showPlaybackErrorToast,
+                isDownloaded = audioCacheManager::isDownloaded,
             )
         player.onPreloadedPlaybackCommitted = videoMode::onPreloadedPlaybackCommitted
         automotiveLibrary = AutomotiveMediaLibrary(this, database)

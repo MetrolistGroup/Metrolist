@@ -118,6 +118,7 @@ class AndroidVideoCounterpartMapTest {
                             PlaybackResource(target.id, "https://audio.test", emptyMap(), null, null)
                         },
                         { error(it) },
+                        isDownloaded = { false },
                     )
                 controller.onQueuePlaybackStarted(song, resolved.hasVideo, resolved)
                 controller.onSongChanged(song)

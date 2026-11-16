@@ -405,6 +405,7 @@ class ExoPlaybackPlayerTest {
                             { it() },
                             { _, _ -> null },
                             { error(it) },
+                            isDownloaded = { false },
                         )
                     controller.onQueuePlaybackStarted(first, Settings.shared.videoViewerVisible, resource)
                     val collector = collectorScope.launch { player.currentSong.collect(controller::onSongChanged) }

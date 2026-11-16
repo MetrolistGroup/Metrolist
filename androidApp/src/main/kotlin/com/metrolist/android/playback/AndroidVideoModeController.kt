@@ -54,6 +54,7 @@ internal class AndroidVideoModeController(
     private val withPlaybackLoading: suspend (suspend () -> PlaybackResource?) -> PlaybackResource?,
     private val fetchPlaybackResource: suspend (SongItem, Boolean) -> PlaybackResource?,
     private val onError: (String) -> Unit,
+    private val isDownloaded: suspend (String) -> Boolean,
 ) {
     companion object {
         private const val MUSIC_VIDEO_TAG = "MusicVideo"
@@ -360,26 +361,28 @@ internal class AndroidVideoModeController(
                         playbackSong = originalAudio
                         positionMap = videoModePositionMap?.reversed()
                     } else if (shouldResolveMusicTrackCounterpart(sourceSong.isVideoSong, wantVideo)) {
-                        when (val result = musicVideoResolver.resolveMusicTrack(sourceSong)) {
-                            is MusicTrackResult.Found -> {
-                                Timber.tag(MUSIC_VIDEO_TAG).d(
-                                    "counterpart track found generation=%d sourceVideoId=%s targetVideoId=%s mappedPosition=%s",
-                                    generation,
-                                    sourceSong.id,
-                                    result.song.id,
-                                    result.positionMap != null,
-                                )
-                                playbackSong = result.song
-                                positionMap = result.positionMap
-                            }
+                        if (!isDownloaded(sourceSong.id)) {
+                            when (val result = musicVideoResolver.resolveMusicTrack(sourceSong)) {
+                                is MusicTrackResult.Found -> {
+                                    Timber.tag(MUSIC_VIDEO_TAG).d(
+                                        "counterpart track found generation=%d sourceVideoId=%s targetVideoId=%s mappedPosition=%s",
+                                        generation,
+                                        sourceSong.id,
+                                        result.song.id,
+                                        result.positionMap != null,
+                                    )
+                                    playbackSong = result.song
+                                    positionMap = result.positionMap
+                                }
 
-                            MusicTrackResult.NotFound, MusicTrackResult.Error -> {
-                                Timber.tag(MUSIC_VIDEO_TAG).w(
-                                    "counterpart track unavailable generation=%d sourceVideoId=%s result=%s, falling back to audio stream",
-                                    generation,
-                                    sourceSong.id,
-                                    result::class.simpleName,
-                                )
+                                MusicTrackResult.NotFound, MusicTrackResult.Error -> {
+                                    Timber.tag(MUSIC_VIDEO_TAG).w(
+                                        "counterpart track unavailable generation=%d sourceVideoId=%s result=%s, falling back to audio stream",
+                                        generation,
+                                        sourceSong.id,
+                                        result::class.simpleName,
+                                    )
+                                }
                             }
                         }
                     } else {
