@@ -400,7 +400,7 @@
           "name": "mainOwner"
         },
         {
-          "name": "_layersCopyCache"
+          "name": "layers"
         },
         {
           "name": "focusedLayer"
@@ -413,17 +413,6 @@
       "fields": [
         {
           "name": "owner"
-        }
-      ]
-    },
-    {
-      "type": "androidx.compose.ui.scene.CopiedList",
-      "methods": [
-        {
-          "name": "withCopy",
-          "parameterTypes": [
-            "kotlin.jvm.functions.Function1"
-          ]
         }
       ]
     },

@@ -16,6 +16,8 @@ On Linux and macOS, restoring a maximized window first clears native fullscreen,
 
 Windows paints behind the maximized frame insets and applies the theme background to the AWT and Skiko backing components during startup and normal use.
 
+Windows caption hit testing takes its own snapshot of Compose scene layers. Native window callbacks must not use Compose's reusable layer-copy cache, because rendering can traverse that cache at the same time. Popup order, focused-popup blocking and passive popup-source observers keep their existing hit-test behavior.
+
 Connected action groups use the shared Material shapes and spacing, with fixed corners during press and selection. The fullscreen artwork player's action buttons are 40 dp tall, and its transport buttons share one height. Overflow sizing includes minimum touch targets and the gap before the overflow button so the last visible action has the trailing corners. The bottom volume button stays round beside overflow, with a 12 dp gap before the volume segment.
 
 ## Miniplayer
