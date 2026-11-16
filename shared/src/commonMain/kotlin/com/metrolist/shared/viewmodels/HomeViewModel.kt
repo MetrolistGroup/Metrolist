@@ -1917,8 +1917,8 @@ internal fun homeSelectedChipCacheAfterOfflineCancellation(
 ): HomeViewModel.HomeUiState? {
     val selectedChip = interruptedState.selectedChip ?: return null
     val publishedContent =
-        interruptedState.takeIf { it.hasHomeFeedContent() }
-            ?: cachedSelectedChipContent?.takeIf { it.selectedChip == selectedChip }
+        cachedSelectedChipContent?.takeIf { it.selectedChip == selectedChip }
+            ?: interruptedState.takeIf { it.hasHomeFeedContent() }
     return publishedContent?.asOfflineSnapshot()
 }
 
