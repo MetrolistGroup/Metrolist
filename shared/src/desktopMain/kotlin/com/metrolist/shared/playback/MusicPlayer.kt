@@ -447,16 +447,7 @@ class MusicPlayer(
                             )
                         }
                     }
-                stateChanged =
-                    if (waitMs == null) {
-                        sampleChanges.receive()
-                        true
-                    } else {
-                        withTimeoutOrNull(waitMs) {
-                            sampleChanges.receive()
-                            true
-                        } == true
-                    }
+                stateChanged = sampleChanges.awaitPlaybackSample(waitMs)
             }
         }
     }
