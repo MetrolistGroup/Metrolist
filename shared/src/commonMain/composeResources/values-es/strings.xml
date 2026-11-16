@@ -2610,4 +2610,12 @@
     <string name="ai_setup_key_limits">Revisar los límites de la clave</string>
     <string name="blocked_songs_desc">Restaura canciones que no te hayan gustado o que hayas bloqueado</string>
     <string name="blocked_songs_empty">No canciones bloqueadas</string>
+    <string name="blocked_songs">Canciones bloqueadas</string>
+    <string name="content_undo_hint">Puedes revertir esto en %1$s.</string>
+    <string name="content_undo_path">%1$s &gt; %2$s &gt; %3$s</string>
+    <string name="account_keyring_required">Metrolist necesita acceso a tu llavero del sistema para restaurar tu cuenta. Desbloquea el llavero. Metrolist lo intentará automáticamente.</string>
+    <string name="account_linux_keyring_required">Metrolist necesita un llavero del sistema para restaurar tu cuenta. Instala libsecret-tools o el paquete de tu distribución que proporciona secret-tool, y asegúrate de que tu llavero está funcionando y desbloqueado. Metrolist lo intentará automáticamente.</string>
+    <string name="density_massive">Masivo (200%)</string>
+    <string name="density_huge">Enorme (175%)</string>
+    <string name="density_extra_large">Extra grande (150%)</string>
 </resources>
