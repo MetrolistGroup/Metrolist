@@ -235,15 +235,7 @@ fun SettingsScreen(
                 title = stringResource(Res.string.app_font_choose),
                 description = if (hasCustomFont) SharedPreferences.shared.androidCustomFontName else importCustomFontLabel,
                 onClick = {
-                    fontPicker.launch(
-                        arrayOf(
-                            "font/ttf",
-                            "font/otf",
-                            "application/x-font-ttf",
-                            "application/x-font-opentype",
-                            "application/octet-stream",
-                        ),
-                    )
+                    fontPicker.launch(arrayOf("*/*"))
                 },
             ),
         )
