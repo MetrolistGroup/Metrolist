@@ -945,6 +945,7 @@ internal class AndroidQueueCoordinator(
 
     suspend fun advanceQueueAfterCurrent(completedPlaybackInstanceId: Long? = null) {
         if (transitions.consumeCrossfadeCompletion(completedPlaybackInstanceId) || transitions.isCrossfading) return
+        if (completedPlaybackInstanceId != null && completedPlaybackInstanceId != player.currentPlaybackInstanceId) return
         if (AndroidDeviceConnect.manager.remote.isActive) {
             AndroidDeviceConnect.manager.remote.playbackEnded()
             return
