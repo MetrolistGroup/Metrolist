@@ -26,6 +26,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import com.russhwolf.settings.Settings as SettingsStore
 
@@ -173,6 +174,54 @@ class IosBackupRestoreManagerTest {
         }
 
     @Test
+    fun rejectsZip64LocatorBeforeImportOrRestoreOpensArchive() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val directory = "${NSTemporaryDirectory()}zip64-rejection-${NSUUID().UUIDString}".toPath()
+            val fs = FileSystem.SYSTEM
+            fs.createDirectories(directory)
+            val target = directory / "library.db"
+            val archive = directory / "zip64.zip"
+            val zip64WithEmptyOrdinaryDirectory =
+                ByteArray(42).apply {
+                    this[0] = 0x50
+                    this[1] = 0x4b
+                    this[2] = 0x06
+                    this[3] = 0x07
+                    this[20] = 0x50
+                    this[21] = 0x4b
+                    this[22] = 0x05
+                    this[23] = 0x06
+                }
+            try {
+                fs.write(archive) { write(zip64WithEmptyOrdinaryDirectory) }
+                val database = getIosDatabaseBuilder(target.toString()).build()
+                try {
+                    val manager = IosBackupRestoreManager(target.toString(), Settings(MapSettings()))
+                    val importFailure = manager.importForeignBackup(archive.toString(), database).exceptionOrNull()
+                    assertNotNull(importFailure)
+                    assertTrue(importFailure.causeMessages().contains("ZIP64"))
+
+                    var databaseClosed = false
+                    val restoreFailure =
+                        manager
+                            .restore(
+                                archive.toString(),
+                                closeDatabase = { databaseClosed = true },
+                                reopenDatabase = {},
+                            ).exceptionOrNull()
+                    assertNotNull(restoreFailure)
+                    assertTrue(restoreFailure.causeMessages().contains("ZIP64"))
+                    assertFalse(databaseClosed)
+                } finally {
+                    database.close()
+                }
+            } finally {
+                fs.deleteRecursively(directory)
+            }
+        }
+
+    @Test
     fun successfulRestoreAndSettingsFailureKeepDatabaseAndPreferencesTogether() =
         runTest {
             // Restore closes and reopens the database on Main, which runTest blocks on iOS.
@@ -295,3 +344,8 @@ class IosBackupRestoreManagerTest {
         }
     }
 }
+
+private fun Throwable.causeMessages(): String =
+    generateSequence(this) { it.cause }
+        .mapNotNull(Throwable::message)
+        .joinToString(" ")
