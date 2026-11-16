@@ -304,7 +304,10 @@ private fun braccatoCoverage(
     return area.coerceIn(0f, 1f)
 }
 
-internal fun braccatoExitOpacity(elapsedMs: Float): Float = 1f - BraccatoEase.transform((elapsedMs / FADE_OUT_MS).coerceIn(0f, 1f))
+internal fun braccatoExitOpacity(
+    elapsedMs: Float,
+    completionMs: Float = 0f,
+): Float = 1f - BraccatoEase.transform(((elapsedMs - completionMs) / FADE_OUT_MS).coerceIn(0f, 1f))
 
 private class BraccatoRuntime {
     var hadActive = false
@@ -617,8 +620,8 @@ internal fun BraccatoWordAnimation(
                     val finishMs = if (needsFinish) FINISH_MS else 0f
                     val fxRemainingMs = if (started) max(0f, (bst.fxEndMs - exitPos) / speed) else 0f
                     val holdMs = max(finishMs, fxRemainingMs)
-                    fadeOpacity = braccatoExitOpacity(elapsed)
-                    if (elapsed >= max(holdMs, FADE_OUT_MS)) {
+                    fadeOpacity = braccatoExitOpacity(elapsed, finishMs)
+                    if (elapsed >= max(holdMs, finishMs + FADE_OUT_MS)) {
                         runtime.hadActive = false
                     } else if (elapsed < holdMs) {
                         mode = 1

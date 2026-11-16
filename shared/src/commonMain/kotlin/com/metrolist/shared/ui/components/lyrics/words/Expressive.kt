@@ -5,6 +5,8 @@
 
 package com.metrolist.shared.ui.components.lyrics.words
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,6 +50,7 @@ import androidx.compose.ui.unit.IntSize
 import com.metrolist.shared.model.WordTimestamp
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.components.lyrics.LYRICS_LINE_HORIZONTAL_PADDING
+import kotlinx.coroutines.withContext
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.exp
@@ -209,10 +212,22 @@ internal fun ExpressiveWordAnimation(
     val extraPaddingPx = minOf(fontSizePx * 0.4f, with(density) { LYRICS_LINE_HORIZONTAL_PADDING.toPx() })
 
     var frameWallTimeMs by remember { mutableLongStateOf(0L) }
+    val exitOpacity = remember { Animatable(if (isActiveLine) 1f else 0f) }
+    LaunchedEffect(isActiveLine) {
+        if (isActiveLine) {
+            exitOpacity.snapTo(1f)
+        } else if (exitOpacity.value > 0f) {
+            withContext(FixedMotionDurationScale) {
+                exitOpacity.animateTo(0f, tween(500))
+            }
+        }
+    }
 
     val animationVisibility = rememberLyricsAnimationVisibility()
     LaunchedEffect(isActiveLine, isPlaying, animationVisibility) {
-        if (isActiveLine) animateLyricsFrames(animationVisibility) { frameWallTimeMs = it }
+        if (isActiveLine || exitOpacity.value > 0f) {
+            animateLyricsFrames(animationVisibility, shouldAnimate = { isActiveLine || exitOpacity.value > 0f }) { frameWallTimeMs = it }
+        }
     }
 
     val (effectiveWords, effectiveToOriginalIdx) =
@@ -627,7 +642,7 @@ internal fun ExpressiveWordAnimation(
                     ).graphicsLayer {
                         clip = false
                         compositingStrategy =
-                            if (isActiveLine) {
+                            if (isActiveLine || exitOpacity.value > 0f) {
                                 CompositingStrategy.Offscreen
                             } else {
                                 CompositingStrategy.Auto
@@ -638,12 +653,12 @@ internal fun ExpressiveWordAnimation(
 
             val padOffset = Offset(extraPaddingPx, extraPaddingPx)
             val unfocusedAlphaVal = focusedAlpha()
-            val litColor = litColorCache.get(expressiveAccent, 1f)
-            val unlitColor = unlitColorCache.get(expressiveAccent, unfocusedAlphaVal)
+            val litColor = lerp(lineColor(), litColorCache.get(expressiveAccent, 1f), exitOpacity.value)
+            val unlitColor = lerp(lineColor(), unlitColorCache.get(expressiveAccent, unfocusedAlphaVal), exitOpacity.value)
             val pastBrush = pastBrushCache.get(litColor)
             val unlitBrush = unlitBrushCache.get(unlitColor)
 
-            if (!isActiveLine) {
+            if (!isActiveLine && exitOpacity.value == 0f) {
                 val inactiveLineColor = lineColor()
                 if (!hasSyllableRomanization) {
                     drawText(
