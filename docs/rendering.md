@@ -14,6 +14,12 @@ Android full-player artwork uses software bitmaps so Compose and image decoding 
 
 Official YouTube artwork hosts keep system DNS results, including VPN mappings; arbitrary artwork hosts still require public addresses. HTTPS certificate checks and response-size limits remain in place.
 
+Notification requests decode at 512 px but fetch the canonical source when they use its disk-cache key, so full-player requests do not reuse a smaller encoded cover. Online requests refresh undersized images left under larger cache keys by earlier notification loads; offline requests and failed online refreshes retain their cached fallback. Refreshes replace the saved disk bytes only after the new response decodes, so an invalid HTTP 200 response cannot destroy a valid offline cover. Successful image decodes record their source in memory and disk metadata. A source that remains small then reuses its verified cache across loads and restarts instead of refreshing again.
+
+Dimension-based recovery requires positive image dimensions. Prefetch requests keep cached bytes without attempting that recovery. Cache lookups preserve explicit precision and bitmap limits, including iOS now-playing artwork at 600 px.
+
+Only one refresh runs per destination key. Waiting requests check the repaired cache before fetching again.
+
 When skipping in the expanded player, keep the displayed track and decoded cover until the next cover or mini-player preview is ready. First open shows metadata immediately. Failed or missing covers advance to the new track without keeping old metadata. Keep the background fades and crossfade the title and artist together. Android's pause control follows playback intent between tracks, including a pause requested during loading.
 
 ## Android artwork blur

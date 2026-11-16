@@ -11,7 +11,7 @@ import kotlinx.atomicfu.locks.synchronized
 
 private const val DEFAULT_ARTWORK_SIZE_PX = 544
 private const val CANONICAL_ARTWORK_SIZE_PX = 1200
-private const val MAX_ARTWORK_SIZE_PX = 2400
+internal const val MAX_ARTWORK_SIZE_PX = 2400
 
 private val GoogleArtworkSizeSuffix = Regex("=(?:s(\\d+)|w(\\d+)(?:-[^-?#=]+)*-h\\d+)([^?#]*)")
 private val YouTubeVideoArtworkPath =
