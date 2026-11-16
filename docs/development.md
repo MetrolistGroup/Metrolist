@@ -229,6 +229,8 @@ Android Home's top app bar links to History, which is also in the account menu.
 
 History shows the latest eligible play per song. Select all uses displayed rows across pages. Deletion removes only those plays, so an older play of the same song can appear afterward. The search field stays visible while a query is active, including empty, loading and failed results; the no-history state applies only to an empty history without a query.
 
+Remote-history sync applies only complete responses. A failed continuation leaves stored rows and feedback tokens unchanged. Complete scans match stored feedback tokens first. Changed or missing tokens reuse unmatched occurrences of the same song and date bucket within the current account. Each stored occurrence matches once per scan, so repeated listens remain separate. A response without a token keeps the stored deletion token. Existing duplicate events remain in history.
+
 Search song rows, including the Top result song, use the swipe actions: left adds to queue, right plays next. They require the song swipe setting and are disabled for locked Listen Together guests on Android and desktop. The Top result Save action opens the playlist picker. Search album rows keep their browse destination even when the thumbnail has a playback endpoint.
 
 Deleting a synced search-history entry refreshes the list. The session ignores stale copies of deleted queries until the server omits them or the query is recorded again. Remote deletion waits for YouTube confirmation and keeps the entry if it fails. Privacy settings can hide **From recent searches** without deleting entries.

@@ -346,14 +346,14 @@ class HistorySyncTest {
                 assertEquals(start + 86_400_000L, db.history().single().playedAt)
                 assertEquals("YOUTUBE", db.history().single().source)
                 assertEquals(15_000L, db.history().single().playTimeMs)
-                db.applyYouTubeHistoryEntry(first.copy(feedbackToken = null), RemoteHistoryDate(start + 86_410_000L, "date"), known)
+                db.applyYouTubeHistoryEntry(first.copy(feedbackToken = null), RemoteHistoryDate(start + 86_410_000L, "date"))
                 assertEquals(1, db.history().size)
 
                 db.applyYouTubeHistoryEntry(first.copy(feedbackToken = "second"), RemoteHistoryDate(start + 2 * 86_400_000L, "date"), known)
                 val second = db.history().first { it.remoteFeedbackToken == "second" }
                 assertEquals(db.history().first { it.remoteFeedbackToken == "second" }.id, second.id)
                 db.applyYouTubeHistoryEntry(first.copy(feedbackToken = "second"), RemoteHistoryDate(start + 3 * 86_400_000L, "date"), known)
-                db.applyYouTubeHistoryEntry(first.copy(feedbackToken = null), RemoteHistoryDate(start + 3 * 86_400_000L, "date"), known)
+                db.applyYouTubeHistoryEntry(first.copy(feedbackToken = null), RemoteHistoryDate(start + 3 * 86_400_000L, "date"))
                 assertEquals(2, db.history().size)
                 assertEquals(start + 3 * 86_400_000L, db.history().first { it.id == second.id }.playedAt)
             } finally {
@@ -378,11 +378,11 @@ class HistorySyncTest {
                 db.applyYouTubeHistoryEntry(first, RemoteHistoryDate(start + 90_000L, "date"))
                 assertEquals(start + 90_000L, db.history().single().playedAt)
                 db.applyYouTubeHistoryEntry(first.copy(feedbackToken = "another"), RemoteHistoryDate(start + 120_000L, "date"))
-                assertEquals(2, db.history().size)
+                assertEquals(1, db.history().size)
                 db.applyYouTubeHistoryEntry(first.copy(feedbackToken = null), RemoteHistoryDate(start + 180_000L, "date"))
-                assertEquals(2, db.history().size)
+                assertEquals(1, db.history().size)
                 db.applyYouTubeHistoryEntry(first.copy(feedbackToken = "next-day"), RemoteHistoryDate(start + 86_400_000L, "date"))
-                assertEquals(3, db.history().size)
+                assertEquals(2, db.history().size)
                 assertEquals(0L, db.history().sumOf { it.playTimeMs ?: 0L })
             } finally {
                 db.close()
