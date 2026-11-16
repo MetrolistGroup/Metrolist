@@ -7,6 +7,7 @@ import com.metrolist.shared.equalizer.ParametricEqualizer
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.LoudnessLevel
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import com.russhwolf.settings.MapSettings
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -21,6 +22,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import platform.AVFAudio.AVAudioSessionMediaServicesWereResetNotification
 import platform.AVFoundation.AVPlayer
 import platform.AVFoundation.AVPlayerItemDidPlayToEndTimeNotification
 import platform.AVFoundation.AVPlayerItemFailedToPlayToEndTimeNotification
@@ -36,12 +38,101 @@ import kotlin.test.assertTrue
 
 class IosMusicPlayerLifecycleTest {
     @Test
+    fun stalledStartSnapshotBelongsOnlyToTheLatestRequestAndIsEmittedOnce() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val player = MusicPlayer(activateAudioSession = {}, outputVolume = { 1f })
+            try {
+                player.beginPlaybackRequest(IosPlaybackRequestLog(50L, "stalled-start-test"), 0L, true)
+                runCurrent()
+                advanceTimeBy(10_000L)
+                player.beginPlaybackRequest(IosPlaybackRequestLog(51L, "stalled-start-test"), 0L, true)
+                runCurrent()
+                advanceTimeBy(15_000L)
+                runCurrent()
+                advanceTimeBy(30_000L)
+                runCurrent()
+                val snapshots =
+                    PlaybackEventLog.events.value.filter {
+                        it.videoId == "stalled-start-test" && it.message == "iOS playback start stalled"
+                    }
+                assertEquals(1, snapshots.size)
+                assertEquals("51", snapshots.single().details["requestGeneration"])
+            } finally {
+                player.release()
+            }
+        }
+
+    @Test
+    fun pitchFailuresAreDrainedOncePerItem() =
+        runTest {
+            val log = IosPlaybackRequestLog(42L, "pitch-failure-test")
+            val tap = IosAudioTapState(backgroundScope, MutableStateFlow(1f), MutableStateFlow(1f), MutableStateFlow(false), log)
+            try {
+                runCurrent()
+                tap.pitchInitStatus = -10851
+                tap.pitchRenderStatus = -50
+                advanceTimeBy(250L)
+                runCurrent()
+                advanceTimeBy(500L)
+                runCurrent()
+                val failures = PlaybackEventLog.events.value.filter { it.videoId == log.videoId && "failed" in it.message }
+                assertEquals(2, failures.size)
+                assertEquals(setOf("-10851", "-50"), failures.map { it.details["osStatus"] }.toSet())
+                assertTrue(failures.all { it.details["requestGeneration"] == "42" })
+            } finally {
+                tap.close()
+            }
+        }
+
+    @Test
+    fun mediaServicesResetRecreatesThePlayerWithoutReactivatingIt() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val nativePlayer = AVPlayer()
+            var activations = 0
+            val player = MusicPlayer(nativePlayer, activateAudioSession = { activations++ }, outputVolume = { 1f })
+            val resource =
+                PlaybackResource(
+                    song.id,
+                    "https://example.invalid/audio.m3u8",
+                    emptyMap(),
+                    null,
+                    null,
+                    mimeType = "application/x-mpegURL",
+                )
+            try {
+                player.play(song, resource)
+                assertEquals(1, activations)
+                NSNotificationCenter.defaultCenter.postNotificationName(AVAudioSessionMediaServicesWereResetNotification, null)
+                assertEquals(null, nativePlayer.currentItem)
+                assertEquals(song.id, player.currentSong.value?.id)
+                assertFalse(player.isPlaying.value)
+                assertEquals(1, activations)
+                player.play(song, resource)
+                assertFalse(player.isPlaying.value)
+                assertEquals(1, activations)
+                player.resume()
+                assertEquals(2, activations)
+                assertTrue(player.isPlaying.value)
+            } finally {
+                player.release()
+            }
+        }
+
+    @Test
     fun pcmNormalizationBoostsQuietSamplesAndStillProtectsPeaks() =
         runTest {
             Settings.shared.audioBoostDb = 0f
             val gain = MutableStateFlow(playbackNormalizationGain(null, true, LoudnessLevel.BALANCED, -30.0))
             val tap =
-                IosAudioTapState(backgroundScope, gain, MutableStateFlow(1f), MutableStateFlow(false)).apply {
+                IosAudioTapState(
+                    backgroundScope,
+                    gain,
+                    MutableStateFlow(1f),
+                    MutableStateFlow(false),
+                    IosPlaybackRequestLog(1L, song.id),
+                ).apply {
                     sampleRate = 48_000
                     channelCount = 2
                     equalizer = ParametricEqualizer(sampleRate, channelCount)
@@ -72,7 +163,7 @@ class IosMusicPlayerLifecycleTest {
             val gain = MutableStateFlow(1f)
             val pitch = MutableStateFlow(1f)
             val tap =
-                IosAudioTapState(backgroundScope, gain, pitch, MutableStateFlow(false)).apply {
+                IosAudioTapState(backgroundScope, gain, pitch, MutableStateFlow(false), IosPlaybackRequestLog(1L, song.id)).apply {
                     sampleRate = 48_000
                     channelCount = 2
                     equalizer = ParametricEqualizer(sampleRate, channelCount)

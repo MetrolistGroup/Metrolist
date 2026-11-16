@@ -673,8 +673,10 @@ internal class IosPlaybackController(
                                 val expectedCurrentSongId = player.currentSong.value?.id ?: return@launch
                                 val expectedIndex = player.currentMediaItemIndex.value
                                 val preparedQueueIndex = if (nextIndex <= state.value.queue.lastIndex) nextIndex else 0
+                                val preloadLog = IosPlaybackRequestLog(requestGeneration, nextSong.id)
+                                preloadLog.event("iOS preload resolution begin")
                                 try {
-                                    val resource = resolveAudioResource(nextSong)
+                                    val resource = resolveAudioResource(nextSong, log = preloadLog)
                                     currentCoroutineContext().ensureActive()
                                     if (nextQueuedSong == null) return@launch
                                     if (nextSong.isPodcast && PodcastLibrary.resumePosition(
@@ -698,8 +700,13 @@ internal class IosPlaybackController(
                                         player.prepareNext(nextSong, resource, preparedQueueIndex)
                                     }
                                 } catch (error: CancellationException) {
+                                    preloadLog.event("iOS preload resolution cancelled")
                                     throw error
-                                } catch (_: Exception) {
+                                } catch (error: Exception) {
+                                    preloadLog.event(
+                                        "iOS preload resolution failed",
+                                        mapOf("errorType" to error::class.simpleName.orEmpty()),
+                                    )
                                 }
                             }
                     }
@@ -893,12 +900,18 @@ internal class IosPlaybackController(
     }
 
     suspend fun resolveAndPlayVideo(videoId: String): Boolean {
-        if (guestLocked) return false
+        if (guestLocked) {
+            rejectPlaybackRequest("listen-together-guest", videoId)
+            return false
+        }
         val generation = requestGeneration
         val song = repository().getSongMetadata(videoId)
         currentCoroutineContext().ensureActive()
         if (generation != requestGeneration) throw CancellationException()
-        if (song == null) return false
+        if (song == null) {
+            rejectPlaybackRequest("metadata-unavailable", videoId)
+            return false
+        }
         play(song)
         return true
     }
@@ -927,9 +940,15 @@ internal class IosPlaybackController(
         index: Int,
         shuffle: Boolean = false,
     ) {
-        if (guestLocked) return
+        if (guestLocked) {
+            rejectPlaybackRequest("listen-together-guest")
+            return
+        }
         val songs = queue.ifEmpty { listOf(song) }
-        if (songs.none { !it.isUnavailable }) return
+        if (songs.none { !it.isUnavailable }) {
+            rejectPlaybackRequest("no-playable-songs")
+            return
+        }
         clearRadioState()
         recommendationsSongsOnly = songsOnly
         isFiniteQueue = queue.isNotEmpty()
@@ -942,10 +961,20 @@ internal class IosPlaybackController(
         startIndex: Int,
         queueTitle: String?,
     ) {
-        if (guestLocked) return
-        if (songs.none { !it.isUnavailable }) return
+        if (guestLocked) {
+            rejectPlaybackRequest("listen-together-guest")
+            return
+        }
+        if (songs.none { !it.isUnavailable }) {
+            rejectPlaybackRequest("no-playable-songs")
+            return
+        }
         val adjustedIndex = startIndex.coerceIn(0, songs.lastIndex.coerceAtLeast(0))
-        val seed = songs.getOrNull(adjustedIndex) ?: return
+        val seed =
+            songs.getOrNull(adjustedIndex) ?: run {
+                rejectPlaybackRequest("empty-queue")
+                return
+            }
         play(seed, songs, songsOnly = false, index = adjustedIndex)
         this.queueTitle.value = queueTitle
         if (songs.size > 1) activeSong?.let { bootstrapRecommendations(it.id) }
@@ -957,15 +986,25 @@ internal class IosPlaybackController(
         songsOnly: Boolean,
     ) {
         val playable = songs.filterNot { it.isUnavailable }
-        val index = playable.indices.randomOrNull() ?: return
+        val index =
+            playable.indices.randomOrNull() ?: run {
+                rejectPlaybackRequest("no-playable-songs")
+                return
+            }
         play(playable[index], playable, songsOnly, index, shuffle = true)
         this.queueTitle.value = queueTitle
         if (playable.size > 1) activeSong?.let { bootstrapRecommendations(it.id) }
     }
 
     override fun togglePlayPause() {
-        if (guestLocked) return
-        if (pendingPlayback.value?.isLoading == true) return
+        if (guestLocked) {
+            rejectPlaybackRequest("listen-together-guest")
+            return
+        }
+        if (pendingPlayback.value?.isLoading == true) {
+            rejectPlaybackRequest("request-loading")
+            return
+        }
         val snapshot = state.value
         if (snapshot.error == null && player.isPlaying.value) {
             player.pause()
@@ -973,6 +1012,7 @@ internal class IosPlaybackController(
             player.resume()
         } else {
             val current = activeSong ?: snapshot.currentSong
+            if (current == null) rejectPlaybackRequest("no-current-song")
             current?.let {
                 requestPlayback(
                     it,
@@ -1004,12 +1044,18 @@ internal class IosPlaybackController(
     }
 
     override fun skipToNext() {
-        if (guestLocked) return
+        if (guestLocked) {
+            rejectPlaybackRequest("listen-together-guest")
+            return
+        }
         skipToNextFromListenTogether(startPlaying = localSongChangeStartsPlayback())
     }
 
     internal fun skipToNextFromListenTogether(startPlaying: Boolean = pendingPlayback.value?.startPlaying ?: player.isPlaying.value) {
-        if (!canApplyListenTogetherPlayback) return
+        if (!canApplyListenTogetherPlayback) {
+            rejectPlaybackRequest("listen-together-transition")
+            return
+        }
         val queue = activeQueue
         val index = activeIndex + 1
         val nextSong =
@@ -1019,12 +1065,19 @@ internal class IosPlaybackController(
         if (nextSong != null) {
             requestPlayback(nextSong, queue, nextIndex, startPlaying = startPlaying)
         } else if (!isFiniteQueue || canAutoLoadMore) {
-            suggestedTracks.value.firstOrNull()?.let { playSuggestedTrack(it, startPlaying) }
+            val suggested = suggestedTracks.value.firstOrNull()
+            if (suggested == null) rejectPlaybackRequest("no-next-song")
+            suggested?.let { playSuggestedTrack(it, startPlaying) }
+        } else {
+            rejectPlaybackRequest("queue-ended")
         }
     }
 
     override fun skipToPrevious() {
-        if (guestLocked) return
+        if (guestLocked) {
+            rejectPlaybackRequest("listen-together-guest")
+            return
+        }
         if ((pendingPlayback.value?.startPositionMs ?: player.currentPositionMs()) > 3000L) {
             seekTo(0L)
         } else {
@@ -1033,7 +1086,10 @@ internal class IosPlaybackController(
     }
 
     internal fun skipToPreviousFromListenTogether(startPlaying: Boolean = pendingPlayback.value?.startPlaying ?: player.isPlaying.value) {
-        if (!canApplyListenTogetherPlayback) return
+        if (!canApplyListenTogetherPlayback) {
+            rejectPlaybackRequest("listen-together-transition")
+            return
+        }
         if ((pendingPlayback.value?.startPositionMs ?: player.currentPositionMs()) > 3000L) {
             seekFromListenTogether(0L)
             return
@@ -1044,6 +1100,7 @@ internal class IosPlaybackController(
             queue.getOrNull(index)
                 ?: if (repeatMode.value == RepeatMode.ALL) queue.lastOrNull() else null
         val prevIndex = if (index >= 0) index else queue.lastIndex
+        if (prevSong == null) rejectPlaybackRequest("no-previous-song")
         prevSong?.let {
             requestPlayback(it, queue, prevIndex, startPlaying = startPlaying)
         }
@@ -1064,7 +1121,10 @@ internal class IosPlaybackController(
     }
 
     override fun startRadio(song: SongItem) {
-        if (guestLocked) return
+        if (guestLocked) {
+            rejectPlaybackRequest("listen-together-guest")
+            return
+        }
         val current = player.currentSong.value
         if (pendingPlayback.value != null || current?.id != song.id || player.currentPlaybackResource.value == null ||
             player.loadError.value != null
@@ -1159,7 +1219,11 @@ internal class IosPlaybackController(
         startIndex: Int,
         title: String?,
     ) {
-        val song = songs.getOrNull(startIndex) ?: return
+        val song =
+            songs.getOrNull(startIndex) ?: run {
+                rejectPlaybackRequest("queue-index-out-of-range")
+                return
+            }
         requestPlayback(song, songs, startIndex, startPositionMs = 0L, startPlaying = false, preserveShuffle = false) ?: return
         val job = resolveJob
         job?.invokeOnCompletion { error ->
@@ -1196,8 +1260,12 @@ internal class IosPlaybackController(
     }
 
     override fun playQueueIndex(index: Int) {
-        if (guestLocked) return
+        if (guestLocked) {
+            rejectPlaybackRequest("listen-together-guest")
+            return
+        }
         val queue = activeQueue
+        if (queue.getOrNull(index) == null) rejectPlaybackRequest("queue-index-out-of-range")
         queue.getOrNull(index)?.let { requestPlayback(it, queue, index, startPlaying = localSongChangeStartsPlayback()) }
     }
 
@@ -1207,8 +1275,14 @@ internal class IosPlaybackController(
         song: SongItem,
         startPlaying: Boolean,
     ) {
-        if (guestLocked) return
-        if (suggestedTracks.value.none { it.id == song.id }) return
+        if (guestLocked) {
+            rejectPlaybackRequest("listen-together-guest")
+            return
+        }
+        if (suggestedTracks.value.none { it.id == song.id }) {
+            rejectPlaybackRequest("suggestion-unavailable", song.id)
+            return
+        }
         val queue = activeQueue
         suggestedTracks.value = suggestedTracks.value.filterNot { it.id == song.id }
         requestPlayback(song, queue + song, queue.size, startPlaying = startPlaying)
@@ -1542,6 +1616,13 @@ internal class IosPlaybackController(
         }
     }
 
+    private fun rejectPlaybackRequest(
+        reason: String,
+        videoId: String? = activeSong?.id,
+    ) {
+        IosPlaybackRequestLog(requestGeneration, videoId).event("iOS playback request rejected", mapOf("reason" to reason))
+    }
+
     private fun requestPlayback(
         requestedSong: SongItem,
         queue: List<SongItem>,
@@ -1564,13 +1645,19 @@ internal class IosPlaybackController(
                     setQueue(songs, index)
                 }
             }
-        val song = pendingQueue.currentItem() ?: return null
+        val song =
+            pendingQueue.currentItem() ?: run {
+                rejectPlaybackRequest("no-queue-item")
+                return null
+            }
         audioRecovery.select(song.id)
         resolveJob?.cancel()
         audioQualityReloadJob?.cancel()
         preResolveJob?.cancel()
         preResolveKey = null
         val generation = ++requestGeneration
+        val log = IosPlaybackRequestLog(generation, song.id)
+        log.event("iOS playback request accepted")
         val initialPosition = startPositionMs ?: 0L
         val podcastWrite = flushPodcastProgress()
         val previousSong = player.currentSong.value
@@ -1579,6 +1666,7 @@ internal class IosPlaybackController(
         val refreshExpiredUrl =
             failedResource === failedCaptureResource && player.audioCaptureFailure?.category == PlaybackFailureCategory.URL_EXPIRED
         player.suspendForQueueTransition(song.id)
+        player.beginPlaybackRequest(log, initialPosition, startPlaying)
         pendingPlayback.value =
             PendingPlayback(generation, song, pendingQueue.snapshot(), initialPosition, startPlaying = startPlaying)
         isShuffled.value = pendingQueue.isShuffled
@@ -1589,15 +1677,21 @@ internal class IosPlaybackController(
                 try {
                     bgTaskId =
                         UIApplication.sharedApplication.beginBackgroundTaskWithName("MetrolistPlaybackResolution") {
+                            log.event("iOS playback background task expired")
                             if (bgTaskId != UIBackgroundTaskInvalid) {
                                 UIApplication.sharedApplication.endBackgroundTask(bgTaskId)
                                 bgTaskId = UIBackgroundTaskInvalid
                             }
                         }
+                    log.event("iOS playback resume lookup begin")
                     podcastWrite?.join()
                     val resumePosition = PodcastLibrary.resumePosition(database, song, startPositionMs ?: 0L.takeIf { guestLocked })
                     currentCoroutineContext().ensureActive()
-                    if (generation != requestGeneration) return@launch
+                    if (generation != requestGeneration) {
+                        log.event("iOS playback request superseded")
+                        return@launch
+                    }
+                    log.event("iOS playback resume lookup end", mapOf("positionMs" to resumePosition.toString()))
                     pendingPlayback.value =
                         pendingPlayback.value?.let { pending ->
                             if (pending.startPositionMs == initialPosition) {
@@ -1642,9 +1736,13 @@ internal class IosPlaybackController(
                                 )
                             }
                     }
-                    var resource = resolveAudioResource(song, skipCachedAudio = failedCachedVideoId == song.id, refresh = refreshExpiredUrl)
+                    var resource =
+                        resolveAudioResource(song, skipCachedAudio = failedCachedVideoId == song.id, refresh = refreshExpiredUrl, log = log)
                     currentCoroutineContext().ensureActive()
-                    if (generation != requestGeneration) return@launch
+                    if (generation != requestGeneration) {
+                        log.event("iOS playback request superseded")
+                        return@launch
+                    }
                     if (song.isPodcast && song.duration == null && pendingPlayback.value?.startPositionMs == resumePosition &&
                         startPositionMs == null && !guestLocked
                     ) {
@@ -1656,10 +1754,17 @@ internal class IosPlaybackController(
                                     resource.durationSeconds?.times(1000L) ?: 0L,
                             )
                         currentCoroutineContext().ensureActive()
-                        if (generation != requestGeneration) return@launch
+                        if (generation != requestGeneration) {
+                            log.event("iOS playback request superseded")
+                            return@launch
+                        }
                         pendingPlayback.value = pendingPlayback.value?.copy(startPositionMs = position)
                     }
-                    var pending = pendingPlayback.value?.takeIf { it.generation == generation } ?: return@launch
+                    var pending =
+                        pendingPlayback.value?.takeIf { it.generation == generation } ?: run {
+                            log.event("iOS playback request cancelled", mapOf("reason" to "pending-request-missing"))
+                            return@launch
+                        }
                     player.play(song, resource, startPlaying = pending.startPlaying, startPositionMs = pending.startPositionMs)
                     while (player.loadError.value != null) {
                         val failure = player.audioCaptureFailure?.takeIf { it.resource === resource } ?: break
@@ -1670,10 +1775,17 @@ internal class IosPlaybackController(
                                 song,
                                 skipCachedAudio = true,
                                 refresh = failure.category == PlaybackFailureCategory.URL_EXPIRED,
+                                log = log,
                             )
                         currentCoroutineContext().ensureActive()
-                        if (generation != requestGeneration) return@launch
-                        pending = pendingPlayback.value?.takeIf { it.generation == generation } ?: return@launch
+                        if (generation != requestGeneration) {
+                            log.event("iOS playback request superseded")
+                            return@launch
+                        }
+                        pending = pendingPlayback.value?.takeIf { it.generation == generation } ?: run {
+                            log.event("iOS playback request cancelled", mapOf("reason" to "pending-request-missing"))
+                            return@launch
+                        }
                         player.play(song, resource, startPlaying = pending.startPlaying, startPositionMs = pending.startPositionMs)
                     }
                     check(player.loadError.value == null) { "iOS player rejected playback resource" }
@@ -1681,9 +1793,17 @@ internal class IosPlaybackController(
                     pendingPlayback.value = null
                     if (previousSong?.id == song.id) scrobbleManager.onPlaybackInstanceStart(song)
                 } catch (error: CancellationException) {
+                    log.event(
+                        "iOS playback request cancelled",
+                        mapOf("reason" to if (generation == requestGeneration) "cancelled" else "superseded"),
+                    )
                     throw error
                 } catch (error: Exception) {
-                    if (generation != requestGeneration) return@launch
+                    log.event("iOS playback request failed", mapOf("errorType" to error::class.simpleName.orEmpty()))
+                    if (generation != requestGeneration) {
+                        log.event("iOS playback request superseded")
+                        return@launch
+                    }
                     logIosPlaybackError("Playback resolution failed for ${song.id}", error)
                     handleTerminalPlaybackFailure(
                         pendingPlayback.value?.startPlaying == true,
@@ -1751,6 +1871,41 @@ internal class IosPlaybackController(
         song: SongItem,
         skipCachedAudio: Boolean = false,
         refresh: Boolean = false,
+        log: IosPlaybackRequestLog = IosPlaybackRequestLog(requestGeneration, song.id),
+    ): PlaybackResource {
+        val started = TimeSource.Monotonic.markNow()
+        log.event("iOS playback resolution begin")
+        try {
+            return resolveAudioResourceValue(song, skipCachedAudio, refresh).also {
+                log.event(
+                    "iOS playback resolution end",
+                    mapOf(
+                        "result" to "resolved",
+                        "elapsedMs" to started.elapsedNow().inWholeMilliseconds.toString(),
+                        "client" to it.clientName,
+                        "profile" to it.profileId,
+                        "sabr" to it.isSabr.toString(),
+                        "directFile" to it.isDirectFile.toString(),
+                    ),
+                )
+            }
+        } catch (error: Exception) {
+            log.event(
+                "iOS playback resolution end",
+                mapOf(
+                    "result" to if (error is CancellationException) "cancelled" else "failed",
+                    "elapsedMs" to started.elapsedNow().inWholeMilliseconds.toString(),
+                    "errorType" to error::class.simpleName.orEmpty(),
+                ),
+            )
+            throw error
+        }
+    }
+
+    private suspend fun resolveAudioResourceValue(
+        song: SongItem,
+        skipCachedAudio: Boolean,
+        refresh: Boolean,
     ): PlaybackResource {
         val excludedProfiles = audioRecovery.excludedProfiles(song.id)
         if (!skipCachedAudio && !refresh && excludedProfiles.isEmpty()) {

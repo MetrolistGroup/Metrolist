@@ -12,6 +12,8 @@ Android and desktop begin bounded SABR recovery when the producer fails, while b
 
 On Android, an offload AudioTrack that stops advancing its playback head after entering offload sleep is switched to PCM after two seconds. The 12-second playback watchdog remains the fallback for other output stalls.
 
+iOS logs request acceptance or rejection, resolution, capture admission, tap readiness, native item readiness and first position progress with the request generation. A request with no progress after fifteen seconds adds one native-state snapshot. Tap loading and seeks on the active player have five-second deadlines. Audio-session setup and activation failures include the NSError domain and code. After a media-services reset, iOS restores the session configuration and recreates the player and item, then waits for a user action before activating audio again. See [Apple's reset guidance](https://developer.apple.com/library/archive/qa/qa1749/_index.html).
+
 ## Seek diagnostics
 
 Export the playback log immediately after a jump. Android's 500-event buffer records `Android seek requested.` separately from `Android native position discontinuity.`. Compare source, player ID, queue request and playback instance with preparation and recovery events.
