@@ -511,6 +511,10 @@ fun SearchScreen(
                                 else -> {}
                             }
                         },
+                        onAlbumPlay = { album ->
+                            dismissKeyboardAndFocus()
+                            playerConnection?.playAlbum(album.id, album.title)
+                        },
                         onItemLongClick = { item ->
                             when (item) {
                                 is SongItem -> showSongMenu = item

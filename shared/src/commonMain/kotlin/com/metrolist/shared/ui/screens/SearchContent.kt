@@ -1192,7 +1192,7 @@ private fun TopResultCard(
     onAlbumPlay: (() -> Unit)? = null,
 ) {
     val podcastActions = if (mainItem is PodcastItem) rememberPodcastSearchActions(mainItem) else null
-    val onPlay = podcastActions?.play ?: { onItemClick(mainItem) }
+    val onPlay = podcastActions?.play ?: onAlbumPlay?.takeIf { mainItem is AlbumItem } ?: { onItemClick(mainItem) }
     val onSave =
         podcastActions?.save ?: {
             if (mainItem is SongItem) {

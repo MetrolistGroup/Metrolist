@@ -84,6 +84,7 @@ fun SearchResultsList(
                 menuAnchor.open()
             },
             onSongSave = { PlayerState.showAddToPlaylistSong = it },
+            onAlbumPlay = { PlaylistAlbumState.playAlbum(it.id) },
             onHistoryItemClick = { query ->
                 SearchState.search(query)
             },
