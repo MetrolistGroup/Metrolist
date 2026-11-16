@@ -53,6 +53,7 @@ internal class IosMusicVideoSurfacePlayer(
     private var renderedProgress = 0L
     private var seekCooldownStartedAt: TimeMark? = null
     private val watchdog = CanvasPlaybackWatchdog()
+    private val watchdogClock = TimeSource.Monotonic.markNow()
     private var failureObserver: Any? = null
     private var didFail = false
 
@@ -177,7 +178,7 @@ internal class IosMusicVideoSurfacePlayer(
         }
     }
 
-    fun hasFailed(nowMs: Long): Boolean {
+    fun hasFailed(): Boolean {
         if (failed) return true
         val seconds = CMTimeGetSeconds(player.currentTime())
         if (seconds.isFinite()) {
@@ -188,7 +189,7 @@ internal class IosMusicVideoSurfacePlayer(
             }
             lastPositionMs = positionMs
         }
-        return watchdog.isStalled(nowMs, renderedProgress, expectingProgress && foreground)
+        return watchdog.isStalled(watchdogClock.elapsedNow().inWholeMilliseconds, renderedProgress, expectingProgress && foreground)
     }
 
     fun detach(surfaceGeneration: Long) {

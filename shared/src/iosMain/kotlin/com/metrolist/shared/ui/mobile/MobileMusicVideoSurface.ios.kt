@@ -43,7 +43,6 @@ import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import platform.UIKit.UIApplicationState
 import platform.UIKit.UIApplicationWillResignActiveNotification
 import platform.UIKit.UIView
-import kotlin.time.TimeSource
 
 @OptIn(ExperimentalForeignApi::class)
 @Composable
@@ -115,9 +114,8 @@ internal actual fun MobileMusicVideoSurface(
         )
     }
     LaunchedEffect(video) {
-        val started = TimeSource.Monotonic.markNow()
         while (isActive) {
-            if (video.hasFailed(started.elapsedNow().inWholeMilliseconds)) {
+            if (video.hasFailed()) {
                 controller.reportVideoPlaybackFailure()
                 break
             }
