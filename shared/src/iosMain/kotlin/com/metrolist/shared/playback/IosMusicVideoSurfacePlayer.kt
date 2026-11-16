@@ -40,14 +40,14 @@ internal class IosMusicVideoSurfacePlayer(
     private var closed = false
     private var surfaceGeneration = 0L
     private var attachedSurfaceGeneration: Long? = null
-    private var seekInFlight = false
-    private var seekGeneration = 0L
+    private val seekLifecycle = MusicVideoSeekLifecycle()
     private var latestTargetPositionMs = 0L
     private var latestTargetUpdatedAt: TimeMark? = null
     private var userSeekPending = false
-    var positionSynchronized = false
-        private set
-    private var foreground = false
+    val positionSynchronized: Boolean
+        get() = seekLifecycle.positionSynchronized
+    private val foreground: Boolean
+        get() = seekLifecycle.isForeground
     private var expectingProgress = false
     private var lastPositionMs: Long? = null
     private var renderedProgress = 0L
@@ -107,11 +107,9 @@ internal class IosMusicVideoSurfacePlayer(
         val targetDeltaMs = targetPositionMs - latestTargetPositionMs
         val targetUpdateElapsedMs = latestTargetUpdatedAt?.elapsedNow()?.inWholeMilliseconds ?: 0L
         val expectedPlaybackAdvanceMs = if (expectingProgress) (targetUpdateElapsedMs * playbackSpeed).toLong() else 0L
-        if ((seekInFlight || seekCooldownStartedAt != null) &&
-            isMaterialMusicVideoTargetChange(targetDeltaMs, expectedPlaybackAdvanceMs, SEEK_USER_TARGET_CHANGE_TOLERANCE_MS)
-        ) {
+        if (isMaterialMusicVideoTargetChange(targetDeltaMs, expectedPlaybackAdvanceMs, SEEK_USER_TARGET_CHANGE_TOLERANCE_MS)) {
             userSeekPending = true
-            positionSynchronized = false
+            seekLifecycle.markUnsynchronized()
         }
         latestTargetPositionMs = targetPositionMs
         latestTargetUpdatedAt = TimeSource.Monotonic.markNow()
@@ -126,17 +124,15 @@ internal class IosMusicVideoSurfacePlayer(
     fun setForeground(isForeground: Boolean) {
         if (closed || foreground == isForeground) return
         val wasForeground = foreground
-        foreground = isForeground
+        seekLifecycle.setForeground(isForeground)
         if (!isForeground) {
             expectingProgress = false
             watchdog.reset()
             cancelPendingSeek()
-            positionSynchronized = false
             userSeekPending = false
             seekCooldownStartedAt = null
             player.pause()
-        } else if (shouldResynchronizeMusicVideoOnForeground(wasForeground, isForeground)) {
-            positionSynchronized = false
+        } else if (!wasForeground && isForeground) {
             userSeekPending = false
             seekCooldownStartedAt = null
         }
@@ -144,26 +140,25 @@ internal class IosMusicVideoSurfacePlayer(
 
     fun applyPendingSeek() {
         val itemReady = player.currentItem?.status == AVPlayerItemStatusReadyToPlay
-        if (closed || !canApplyMusicVideoSeek(foreground, seekInFlight, itemReady)) return
+        if (closed || !itemReady || !foreground) return
+        if (seekLifecycle.seekInFlight) return
         val sinceLastSeekMs = seekCooldownStartedAt?.elapsedNow()?.inWholeMilliseconds
         if (sinceLastSeekMs != null && sinceLastSeekMs < SEEK_RETRY_COOLDOWN_MS && !userSeekPending) return
         val currentMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong()
         val targetPositionMs = latestTargetPositionMs
         val driftToleranceMs = if (sinceLastSeekMs == null) SEEK_DRIFT_TOLERANCE_MS else SEEK_POST_SEEK_DRIFT_TOLERANCE_MS
         if (abs(currentMs - targetPositionMs) <= driftToleranceMs) {
-            positionSynchronized = true
             userSeekPending = false
+            seekLifecycle.markSynchronized()
             return
         }
-        seekInFlight = true
         userSeekPending = false
-        val currentSeekGeneration = ++seekGeneration
+        val currentSeekGeneration = seekLifecycle.beginSeek() ?: return
         val target = CMTimeMakeWithSeconds(targetPositionMs / 1000.0, 600)
         val zero = CMTimeMakeWithSeconds(0.0, 600)
         player.seekToTime(target, toleranceBefore = zero, toleranceAfter = zero) { finished ->
-            if (!isCurrentMusicVideoSeek(currentSeekGeneration, seekGeneration)) return@seekToTime
-            seekInFlight = false
-            if (!shouldAcceptMusicVideoSeekCompletion(foreground, finished)) {
+            if (!seekLifecycle.isCurrentSeek(currentSeekGeneration)) return@seekToTime
+            if (!seekLifecycle.completeSeek(currentSeekGeneration, finished)) {
                 if (foreground) {
                     if (userSeekPending) {
                         seekCooldownStartedAt = null
@@ -178,8 +173,6 @@ internal class IosMusicVideoSurfacePlayer(
             if (userSeekPending) {
                 seekCooldownStartedAt = null
                 applyPendingSeek()
-            } else if (shouldRevealMusicVideoAfterSeek(finished, userSeekPending)) {
-                positionSynchronized = true
             }
         }
     }
@@ -201,10 +194,9 @@ internal class IosMusicVideoSurfacePlayer(
     fun detach(surfaceGeneration: Long) {
         if (closed || attachedSurfaceGeneration != surfaceGeneration) return
         attachedSurfaceGeneration = null
-        foreground = false
+        seekLifecycle.setForeground(false)
         expectingProgress = false
         cancelPendingSeek()
-        positionSynchronized = false
         userSeekPending = false
         seekCooldownStartedAt = null
         watchdog.reset()
@@ -214,10 +206,9 @@ internal class IosMusicVideoSurfacePlayer(
     fun close() {
         if (closed) return
         attachedSurfaceGeneration = null
-        foreground = false
+        seekLifecycle.setForeground(false)
         expectingProgress = false
         cancelPendingSeek()
-        positionSynchronized = false
         userSeekPending = false
         watchdog.reset()
         player.pause()
@@ -237,8 +228,7 @@ internal class IosMusicVideoSurfacePlayer(
     }
 
     private fun cancelPendingSeek() {
-        seekGeneration++
-        seekInFlight = false
+        seekLifecycle.cancelSeek()
         player.currentItem?.cancelPendingSeeks()
     }
 }

@@ -1,30 +1,58 @@
 package com.metrolist.shared.playback
 
-internal fun canApplyMusicVideoSeek(
-    isForeground: Boolean,
-    seekInFlight: Boolean,
-    itemReady: Boolean,
-): Boolean = isForeground && !seekInFlight && itemReady
+internal class MusicVideoSeekLifecycle {
+    var isForeground = false
+        private set
+    var seekInFlight = false
+        private set
+    var positionSynchronized = false
+        private set
+    private var generation = 0L
 
-internal fun shouldResynchronizeMusicVideoOnForeground(
-    wasForeground: Boolean,
-    isForeground: Boolean,
-): Boolean = !wasForeground && isForeground
+    fun setForeground(foreground: Boolean) {
+        if (isForeground == foreground) return
+        isForeground = foreground
+        invalidateSeek()
+    }
 
-internal fun shouldAcceptMusicVideoSeekCompletion(
-    isForeground: Boolean,
-    finished: Boolean,
-): Boolean = isForeground && finished
+    fun markUnsynchronized() {
+        positionSynchronized = false
+    }
 
-internal fun isCurrentMusicVideoSeek(
-    completedSeekGeneration: Long,
-    currentSeekGeneration: Long,
-): Boolean = completedSeekGeneration == currentSeekGeneration
+    fun markSynchronized() {
+        positionSynchronized = true
+    }
 
-internal fun shouldRevealMusicVideoAfterSeek(
-    finished: Boolean,
-    userSeekPending: Boolean,
-): Boolean = finished && !userSeekPending
+    fun beginSeek(): Long? {
+        if (!isForeground || seekInFlight) return null
+        seekInFlight = true
+        positionSynchronized = false
+        return ++generation
+    }
+
+    fun cancelSeek() {
+        invalidateSeek()
+    }
+
+    fun completeSeek(
+        completedGeneration: Long,
+        finished: Boolean,
+    ): Boolean {
+        if (completedGeneration != generation) return false
+        seekInFlight = false
+        if (!isForeground || !finished) return false
+        positionSynchronized = true
+        return true
+    }
+
+    fun isCurrentSeek(completedGeneration: Long): Boolean = completedGeneration == generation
+
+    private fun invalidateSeek() {
+        generation++
+        seekInFlight = false
+        positionSynchronized = false
+    }
+}
 
 internal fun isMaterialMusicVideoTargetChange(
     targetDeltaMs: Long,
