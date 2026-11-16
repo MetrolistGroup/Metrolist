@@ -1,6 +1,5 @@
 package com.metrolist.shared.ui.mobile
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,7 +25,6 @@ import com.metrolist.shared.api.lyrics.LyricsUtils
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.KIND_DOWNLOAD
 import com.metrolist.shared.generated.resources.Res
-import com.metrolist.shared.generated.resources.equalizer
 import com.metrolist.shared.generated.resources.listen_together
 import com.metrolist.shared.generated.resources.playback_pitch
 import com.metrolist.shared.generated.resources.playback_speed

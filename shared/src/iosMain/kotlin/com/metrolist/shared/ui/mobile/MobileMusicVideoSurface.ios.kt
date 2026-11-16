@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
+import com.metrolist.shared.api.artwork.CanvasPlaybackWatchdog
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.enter_fullscreen
 import com.metrolist.shared.ui.components.images.AsyncImage
@@ -61,6 +62,7 @@ import platform.UIKit.UIApplicationState
 import platform.UIKit.UIApplicationWillResignActiveNotification
 import platform.UIKit.UIView
 import kotlin.math.abs
+import kotlin.time.TimeSource
 
 @OptIn(ExperimentalForeignApi::class)
 @Composable
@@ -117,11 +119,13 @@ internal actual fun MobileMusicVideoSurface(
             targetPosition,
             state.isPlaying && !state.isLoading && state.isVideoModeActive && foreground && positionMapped,
             state.playbackSpeed,
+            foreground,
         )
     }
     LaunchedEffect(video) {
+        val started = TimeSource.Monotonic.markNow()
         while (isActive) {
-            if (video.failed) {
+            if (video.hasFailed(started.elapsedNow().inWholeMilliseconds)) {
                 controller.reportVideoPlaybackFailure()
                 break
             }
@@ -183,6 +187,11 @@ private class IosMusicVideoSurfacePlayer(
     private var closed = false
     private var seekInFlight = false
     private var latestTargetPositionMs = 0L
+    private var foreground = false
+    private var expectingProgress = false
+    private var lastPositionMs: Long? = null
+    private var renderedProgress = 0L
+    private val watchdog = CanvasPlaybackWatchdog()
     private var failureObserver: Any? = null
 
     init {
@@ -220,8 +229,14 @@ private class IosMusicVideoSurfacePlayer(
         positionMs: Long,
         playing: Boolean,
         playbackSpeed: Float,
+        isForeground: Boolean,
     ) {
         if (closed) return
+        foreground = isForeground
+        if (expectingProgress != playing) {
+            expectingProgress = playing
+            watchdog.reset()
+        }
         latestTargetPositionMs = positionMs.coerceAtLeast(0L)
         applyPendingSeek()
         if (playing && player.rate != playbackSpeed) {
@@ -232,7 +247,7 @@ private class IosMusicVideoSurfacePlayer(
     }
 
     fun applyPendingSeek() {
-        if (closed || seekInFlight || player.currentItem?.status != AVPlayerItemStatusReadyToPlay) return
+        if (closed || !foreground || seekInFlight || player.currentItem?.status != AVPlayerItemStatusReadyToPlay) return
         val currentMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong()
         val targetPositionMs = latestTargetPositionMs
         if (abs(currentMs - targetPositionMs) <= 750L) return
@@ -241,8 +256,18 @@ private class IosMusicVideoSurfacePlayer(
         val zero = CMTimeMakeWithSeconds(0.0, 600)
         player.seekToTime(target, toleranceBefore = zero, toleranceAfter = zero) { completed ->
             seekInFlight = false
-            if (completed && targetPositionMs != latestTargetPositionMs) applyPendingSeek()
+            if (completed && foreground && targetPositionMs != latestTargetPositionMs) applyPendingSeek()
         }
+    }
+
+    fun hasFailed(nowMs: Long): Boolean {
+        if (failed) return true
+        val positionMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong()
+        if (ready && positionMs != lastPositionMs) {
+            renderedProgress++
+            lastPositionMs = positionMs
+        }
+        return watchdog.isStalled(nowMs, renderedProgress, expectingProgress && foreground)
     }
 
     fun close() {
