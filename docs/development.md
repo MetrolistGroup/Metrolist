@@ -407,7 +407,7 @@ Last.fm and ListenBrainz login dialogs link to account registration; ListenBrain
 
 ## Android music widgets
 
-The music player defaults to 4x2 cells with a 250x110 dp fallback and a 2:1 preview. Shorter placements keep metadata beside the four controls when possible and drop the cover first; smaller ones use the controls-only and square variants. The minimum resize width of 240 dp keeps 48 dp touch targets and the action label. Layout selection uses available dp and font scale, with size-specific RemoteViews on Android 12+ and portrait/landscape layouts before that. Keep existing widget IDs and actions valid.
+The music player defaults to 4x2 cells with a 250x110 dp fallback and a 2:1 preview. Shorter placements keep metadata beside the four controls when possible and drop the cover first; smaller ones use the controls-only and square variants. A three-column placement can shrink to 180 dp and uses artwork, metadata, Like and Play/Pause with 48 dp touch targets. Wider short placements retain the four controls and the action label. Short rows use icon controls when scaled metadata does not fit their height. Layout selection uses available dp and font scale, with size-specific RemoteViews on Android 12+ and portrait/landscape layouts before that. Keep existing widget IDs and actions valid.
 
 Turntable requests a fixed 2x2 placement with 110 dp minimums and draws artwork and controls in a centered square. Recognizer requests 4x1 cells with a 250x40 dp fallback; its card wraps its content so taller hosts do not stretch it, and narrow hosts get the mic-only variant.
 
