@@ -681,7 +681,7 @@ object DownloadManager {
         synchronized(metadataLock) { DownloadedPlaylists.stop(playlistId) }
         scope.launch {
             val retainedIds = retainedPlaylistDownloadIds() ?: return@launch
-            deleteDownloadsAndAwait(songs.map(SongItem::id).filterNot { it in retainedIds })
+            deleteDownloads(songs.map(SongItem::id).filterNot { it in retainedIds })
         }
     }
 

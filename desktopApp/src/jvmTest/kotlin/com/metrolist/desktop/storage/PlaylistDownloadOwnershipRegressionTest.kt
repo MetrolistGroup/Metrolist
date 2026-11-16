@@ -1,5 +1,7 @@
 package com.metrolist.desktop.storage
 
+import com.metrolist.desktop.utils.AppLogger
+import com.metrolist.shared.crash.FatalCrashHandler
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.PlaylistEntity
 import com.metrolist.shared.db.entities.PlaylistSongMap
@@ -10,33 +12,59 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.storage.DownloadedPlaylists
 import com.metrolist.shared.utils.XdgUtils
 import com.russhwolf.settings.PropertiesSettings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.junit.Assume.assumeTrue
 import org.junit.runner.JUnitCore
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
+import java.nio.file.AccessDeniedException
 import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.attribute.PosixFilePermissions
 import java.util.Properties
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.absolutePathString
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PlaylistDownloadOwnershipRegressionTest {
     @Test
-    fun removingOnePlaylistKeepsDownloadsOwnedByAnotherTrackedPlaylist() {
-        if (System.getenv(CHILD_PROCESS) == "1") {
-            runScenario()
+    fun removingOnePlaylistKeepsDownloadsOwnedByAnotherTrackedPlaylist() = runInChild("shared")
+
+    @Test
+    fun removingPlaylistWithReadOnlyDownloadDirectoryDoesNotReachFatalHandler() = runInChild("read-only")
+
+    private fun runInChild(scenario: String) {
+        val childScenario = System.getenv(CHILD_PROCESS)
+        if (childScenario != null) {
+            if (childScenario == scenario) runScenario(readOnly = scenario == "read-only")
             return
         }
 
         val root = Files.createTempDirectory("playlist-download-ownership")
         try {
+            if (scenario == "read-only") {
+                assumeTrue(Files.getFileStore(root).supportsFileAttributeView("posix"))
+                Files.setPosixFilePermissions(root, PosixFilePermissions.fromString("r-x------"))
+                try {
+                    assumeTrue("Tests require permissions enforced for the current user", !Files.isWritable(root))
+                } finally {
+                    Files.setPosixFilePermissions(root, PosixFilePermissions.fromString("rwx------"))
+                }
+            }
             val command =
                 listOf(
                     ProcessHandle
@@ -55,7 +83,7 @@ class PlaylistDownloadOwnershipRegressionTest {
                 ProcessBuilder(command)
                     .redirectErrorStream(true)
                     .apply {
-                        environment()[CHILD_PROCESS] = "1"
+                        environment()[CHILD_PROCESS] = scenario
                         environment()["XDG_DATA_HOME"] = root.resolve("data").absolutePathString()
                         environment()["XDG_STATE_HOME"] = root.resolve("state").absolutePathString()
                         environment()["XDG_CACHE_HOME"] = root.resolve("cache").absolutePathString()
@@ -68,7 +96,7 @@ class PlaylistDownloadOwnershipRegressionTest {
         }
     }
 
-    private fun runScenario() =
+    private fun runScenario(readOnly: Boolean) =
         runBlocking {
             val databaseFile = XdgUtils.getXdgStateHome().resolve("music.db")
             databaseFile.parentFile.mkdirs()
@@ -92,7 +120,8 @@ class PlaylistDownloadOwnershipRegressionTest {
                 val audio = XdgUtils.getXdgDataHome().resolve("metrolist/downloads/shared.m4a").toPath()
                 Files.createDirectories(audio.parent)
                 Files.write(audio, ByteArray(2_048) { 1 })
-                val uniqueAudio = audio.resolveSibling("unique.m4a")
+                val uniqueAudio = audio.parent.resolve("external/unique.m4a")
+                Files.createDirectories(uniqueAudio.parent)
                 Files.write(uniqueAudio, ByteArray(2_048) { 2 })
                 val catalog = XdgUtils.getXdgStateHome().resolve("metrolist/downloads.json").toPath()
                 Files.createDirectories(catalog.parent)
@@ -127,6 +156,12 @@ class PlaylistDownloadOwnershipRegressionTest {
 
                 assertTrue(DownloadManager.isDownloaded(song.id))
                 assertTrue(DownloadManager.isDownloaded(unique.id))
+                if (readOnly) {
+                    verifyDeniedRemoval(first.id, listOf(song, unique), uniqueAudio)
+                    assertTrue(DownloadedPlaylists.contains(second.id))
+                    assertTrue(DownloadManager.isDownloaded(song.id))
+                    return@runBlocking
+                }
                 DownloadManager.removePlaylistDownloads(first.id, listOf(song, unique))
                 withTimeout(10_000) {
                     while (DownloadManager.isDownloaded(unique.id)) delay(10)
@@ -145,6 +180,48 @@ class PlaylistDownloadOwnershipRegressionTest {
                 database.close()
             }
         }
+
+    private suspend fun verifyDeniedRemoval(
+        playlistId: String,
+        songs: List<SongItem>,
+        audio: Path,
+    ) {
+        val directory = audio.parent
+        val probe = Files.createFile(directory.resolve("delete-probe"))
+        val originalPermissions = Files.getPosixFilePermissions(directory)
+        val originalHandler = Thread.getDefaultUncaughtExceptionHandler()
+        val fatal = AtomicReference<Throwable>()
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val logDirectory = XdgUtils.getXdgStateHome().resolve("test-logs")
+        val log = logDirectory.resolve("app.log")
+        try {
+            Files.setPosixFilePermissions(directory, PosixFilePermissions.fromString("r-x------"))
+            assertTrue(Files.isReadable(audio))
+            assertFailsWith<AccessDeniedException> { Files.delete(probe) }
+            Thread.setDefaultUncaughtExceptionHandler(
+                FatalCrashHandler(originalHandler) { _, error -> fatal.set(error) },
+            )
+            AppLogger.initialize(scope, logDirectory)
+
+            DownloadManager.removePlaylistDownloads(playlistId, songs)
+            withTimeout(10_000) {
+                while (fatal.get() == null) {
+                    AppLogger.flush()
+                    if (log.isFile && "[DownloadManager] Failed to delete downloads" in log.readText()) break
+                    delay(10)
+                }
+            }
+
+            assertNull(fatal.get(), "A normal file deletion error must not reach the fatal crash handler")
+            assertTrue(DownloadManager.isDownloaded(songs.last().id))
+            assertTrue(Files.isRegularFile(audio))
+        } finally {
+            AppLogger.shutdown()
+            Thread.setDefaultUncaughtExceptionHandler(originalHandler)
+            scope.cancel()
+            Files.setPosixFilePermissions(directory, originalPermissions)
+        }
+    }
 
     private companion object {
         const val CHILD_PROCESS = "METROLIST_PLAYLIST_OWNERSHIP_TEST_CHILD"
