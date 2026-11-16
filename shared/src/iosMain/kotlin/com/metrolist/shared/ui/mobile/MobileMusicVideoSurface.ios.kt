@@ -30,6 +30,7 @@ import com.metrolist.shared.playback.IosPlaybackController
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.playback.LocalPlaybackController
+import com.metrolist.shared.ui.player.LocalPlayerPositionActive
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -55,6 +56,7 @@ internal actual fun MobileMusicVideoSurface(
 ) {
     val controller = LocalPlaybackController.current
     val iosController = controller as? IosPlaybackController
+    val surfaceVisible = LocalPlayerPositionActive.current
     val state by controller.state.collectAsState()
     val resource = state.videoPlaybackResource
     val url = resource?.videoUrl?.takeIf { state.isVideoModeActive }
@@ -103,6 +105,7 @@ internal actual fun MobileMusicVideoSurface(
         state.isVideoModeActive,
         state.videoPositionMap,
         foreground,
+        surfaceVisible,
     ) {
         val positionMap = state.videoPositionMap
         val targetPosition = positionMap?.mapPosition(state.positionMs) ?: state.positionMs
@@ -111,6 +114,7 @@ internal actual fun MobileMusicVideoSurface(
             targetPosition,
             state.isPlaying && !state.isLoading && state.isVideoModeActive && foreground && positionMapped,
             state.playbackSpeed,
+            surfaceVisible,
         )
     }
     LaunchedEffect(video) {

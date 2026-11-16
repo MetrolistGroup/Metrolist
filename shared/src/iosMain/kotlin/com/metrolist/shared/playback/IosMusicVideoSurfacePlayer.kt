@@ -100,8 +100,15 @@ internal class IosMusicVideoSurfacePlayer(
         positionMs: Long,
         playing: Boolean,
         playbackSpeed: Float,
+        surfaceVisible: Boolean = true,
     ) {
         if (closed) return
+        if (!surfaceVisible) {
+            expectingProgress = false
+            watchdog.reset()
+            player.pause()
+            return
+        }
         if (expectingProgress != playing) {
             expectingProgress = playing
             watchdog.reset()

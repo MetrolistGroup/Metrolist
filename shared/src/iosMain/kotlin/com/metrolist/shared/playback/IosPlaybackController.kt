@@ -1732,8 +1732,8 @@ internal class IosPlaybackController(
             }
         val song = pendingQueue.currentItem() ?: return null
         audioRecovery.select(song.id)
-        if (song.id != player.currentSong.value?.id) {
-            if (deferredVideoModeSongId != song.id) deferredVideoModeSongId = null
+        if (song.id != player.currentSong.value?.id && deferredVideoModeSongId != song.id) {
+            deferredVideoModeSongId = null
             videoModeRequestId++
             videoModeJob?.cancel()
             clearVideoMode()
