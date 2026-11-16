@@ -48,6 +48,7 @@ fun WindowScope.DesktopDensityProvider(content: @Composable () -> Unit) {
     DisposableEffect(window) {
         fun refreshVisibility() {
             visible = window.isVisible && (window !is Frame || window.extendedState and Frame.ICONIFIED == 0)
+            WaylandScale.setWindowVisible(window, visible)
             if (visible) WaylandScale.requestMonitorRefresh()
         }
         val listener =
@@ -78,7 +79,9 @@ fun WindowScope.DesktopDensityProvider(content: @Composable () -> Unit) {
         window.addWindowFocusListener(focusListener)
         window.addPropertyChangeListener("graphicsConfiguration", screenListener)
         window.addComponentListener(listener)
+        refreshVisibility()
         onDispose {
+            WaylandScale.setWindowVisible(window, false)
             window.removeComponentListener(listener)
             window.removeWindowStateListener(focusListener)
             window.removeWindowFocusListener(focusListener)

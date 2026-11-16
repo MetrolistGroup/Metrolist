@@ -9,6 +9,7 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.XdgUtils
 import com.sun.jna.Library
 import com.sun.jna.Native
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
@@ -18,7 +19,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.util.Properties
-import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.roundToInt
@@ -32,14 +32,19 @@ object WaylandScale {
     private val monitorCache = AtomicReference<List<Monitor>>(emptyList())
     private val fallbackScale = AtomicReference<Float?>(null)
     private var watcherThread: Thread? = null
-    private val refreshRequested = Semaphore(0)
+    private val monitorWatcher = MonitorRefreshWatcher()
     private val outputPattern = Regex("""Output:.*?(?=Output:|\z)""", RegexOption.DOT_MATCHES_ALL)
     private val geometryPattern = Regex("""Geometry:\s*(-?\d+),(-?\d+)\s+(\d+)x(\d+)""")
     private val scalePattern = Regex("""Scale:\s*([\d.]+)""")
 
     fun requestMonitorRefresh() {
-        if (watcherThread != null && refreshRequested.availablePermits() == 0) refreshRequested.release()
+        if (watcherThread != null) monitorWatcher.requestRefresh()
     }
+
+    fun setWindowVisible(
+        window: Any,
+        visible: Boolean,
+    ) = monitorWatcher.setWindowVisible(window, visible)
 
     interface LibC : Library {
         fun setenv(
@@ -232,17 +237,19 @@ object WaylandScale {
 
         watcherThread =
             Thread({
-                while (!Thread.interrupted()) {
+                val refresh = {
                     try {
                         refreshMonitorCache()
-                        if (refreshRequested.tryAcquire(30, TimeUnit.SECONDS)) {
-                            Thread.sleep(2000)
-                            refreshRequested.drainPermits()
-                        }
-                    } catch (e: InterruptedException) {
-                        break
+                    } catch (error: InterruptedException) {
+                        throw error
                     } catch (_: Exception) {
                     }
+                }
+                try {
+                    // The first window reads the cache before it becomes visible.
+                    refresh()
+                    runBlocking { monitorWatcher.watch(refresh) }
+                } catch (_: InterruptedException) {
                 }
             }, "WaylandMonitorWatcher").apply {
                 isDaemon = true
