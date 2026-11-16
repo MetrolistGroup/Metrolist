@@ -337,7 +337,13 @@ class LyricsVisibilityClockTest {
                     visibility = visible,
                     timeSource = testScheduler.timeSource,
                 ).collect { published ->
-                    snapshots += engine.update(published.positionMs, shouldFollowPlayback = true, isWordByWord = false, seekGeneration = published.seekGeneration)
+                    snapshots +=
+                        engine.update(
+                            published.positionMs,
+                            shouldFollowPlayback = true,
+                            isWordByWord = false,
+                            seekGeneration = published.seekGeneration,
+                        )
                 }
             }
             runCurrent()
