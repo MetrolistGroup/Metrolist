@@ -485,18 +485,42 @@ internal fun SettingsUiRegistryBuilder.registerLyricsSettings(host: SharedSettin
             tone = SettingsTone.ROSE,
         ) {
             group("display", stringResource(Res.string.lyrics_romanization_display)) {
-                switch(
-                    id = "romanizationEnabled",
-                    title = stringResource(Res.string.lyrics_romanization_enable),
-                    description = stringResource(Res.string.lyrics_romanization_enable_description),
-                    checked = settings.lyricsRomanizationEnabled,
-                ) { settings.lyricsRomanizationEnabled = it }
-                switch(
-                    id = "romanizeAsMain",
-                    title = stringResource(Res.string.lyrics_romanize_as_main),
-                    description = stringResource(Res.string.lyrics_romanization_as_main_description),
-                    checked = settings.lyricsRomanizeAsMain,
-                ) { settings.lyricsRomanizeAsMain = it }
+                val largerTextChoices =
+                    listOf(
+                        SettingsChoice("lyrics", stringResource(Res.string.lyrics)),
+                        SettingsChoice("romanization", stringResource(Res.string.lyrics_romanize_title)),
+                    )
+                val romanizeAsMain = settings.isLyricsRomanizationActive && settings.lyricsRomanizeAsMain
+                val largerTextChoiceId = if (romanizeAsMain) "romanization" else "lyrics"
+                choice(
+                    id = "romanizationLargerText",
+                    title = stringResource(Res.string.lyrics_romanization_larger_text),
+                    description = stringResource(Res.string.lyrics_romanization_larger_text_description),
+                    valueLabel = largerTextChoices.first { it.id == largerTextChoiceId }.label,
+                    choices = largerTextChoices,
+                    selectedChoiceId = largerTextChoiceId,
+                ) { selected ->
+                    val useRomanization = selected == "romanization"
+                    settings.lyricsRomanizeAsMain = useRomanization
+                    if (useRomanization) {
+                        settings.lyricsRomanizationEnabled = true
+                    }
+                }
+                if (romanizeAsMain) {
+                    switch(
+                        id = "showSecondaryLyrics",
+                        title = stringResource(Res.string.lyrics_romanization_show_original),
+                        description = stringResource(Res.string.lyrics_romanization_show_original_description),
+                        checked = settings.lyricsShowOriginalLyrics,
+                    ) { settings.lyricsShowOriginalLyrics = it }
+                } else {
+                    switch(
+                        id = "showSecondaryLyrics",
+                        title = stringResource(Res.string.lyrics_romanization_show_romanization),
+                        description = stringResource(Res.string.lyrics_romanization_show_romanization_description),
+                        checked = settings.lyricsRomanizationEnabled,
+                    ) { settings.lyricsRomanizationEnabled = it }
+                }
                 switch(
                     id = "syllableRomanization",
                     title = stringResource(Res.string.lyrics_romanization_syllable_title),

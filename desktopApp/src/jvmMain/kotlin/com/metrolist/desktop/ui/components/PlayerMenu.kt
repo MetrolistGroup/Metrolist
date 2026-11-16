@@ -69,6 +69,8 @@ import com.metrolist.shared.generated.resources.hide_lyrics
 import com.metrolist.shared.generated.resources.hide_queue
 import com.metrolist.shared.generated.resources.lyrics_offset
 import com.metrolist.shared.generated.resources.lyrics_respect_agent_positioning
+import com.metrolist.shared.generated.resources.lyrics_romanization_show_original
+import com.metrolist.shared.generated.resources.lyrics_romanization_show_original_description
 import com.metrolist.shared.generated.resources.lyrics_show_translations
 import com.metrolist.shared.generated.resources.manual_translate_this_track
 import com.metrolist.shared.generated.resources.no_provider_results_found
@@ -129,7 +131,6 @@ fun LyricsActionsMenuCard(
 ) {
     var respectAgentPositioning by remember { mutableStateOf(Settings.shared.respectAgentPositioning) }
     var showIntervalIndicator by remember { mutableStateOf(true) }
-    var romanizeChecked by remember { mutableStateOf(Settings.shared.lyricsRomanizationEnabled) }
     var aiTranslationChecked by remember(LyricsState.manualAiTranslationEnabled) { mutableStateOf(LyricsState.manualAiTranslationEnabled) }
     var showTranslationsChecked by remember { mutableStateOf(Settings.shared.lyricsShowTranslations) }
 
@@ -319,15 +320,39 @@ fun LyricsActionsMenuCard(
                 )
             }
 
+            val romanizeAsMain = Settings.shared.isLyricsRomanizationActive && Settings.shared.lyricsRomanizeAsMain
+            val toggleChecked =
+                if (romanizeAsMain) {
+                    Settings.shared.lyricsShowOriginalLyrics
+                } else {
+                    Settings.shared.lyricsRomanizationEnabled
+                }
             LyricsToggleRow(
                 icon = MetrolistIcons.Outlined.Translate,
-                title = stringResource(Res.string.romanize_track),
-                subtitle = stringResource(Res.string.add_romanization_below_lyrics),
-                checked = romanizeChecked,
+                title =
+                    stringResource(
+                        if (romanizeAsMain) {
+                            Res.string.lyrics_romanization_show_original
+                        } else {
+                            Res.string.romanize_track
+                        },
+                    ),
+                subtitle =
+                    stringResource(
+                        if (romanizeAsMain) {
+                            Res.string.lyrics_romanization_show_original_description
+                        } else {
+                            Res.string.add_romanization_below_lyrics
+                        },
+                    ),
+                checked = toggleChecked,
                 colorScheme = colorScheme,
                 onCheckedChange = {
-                    romanizeChecked = it
-                    Settings.shared.lyricsRomanizationEnabled = it
+                    if (romanizeAsMain) {
+                        Settings.shared.lyricsShowOriginalLyrics = it
+                    } else {
+                        Settings.shared.lyricsRomanizationEnabled = it
+                    }
                 },
             )
         }

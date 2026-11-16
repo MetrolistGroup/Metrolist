@@ -564,6 +564,43 @@ class LyricsRepositoryTest {
         }
 
     @Test
+    fun romanizeAsMainDoesNotEnableRomanizationWhenGateIsDisabled() =
+        runBlocking {
+            val previousEnabled = Settings.shared.lyricsRomanizationEnabled
+            val previousAsMain = Settings.shared.lyricsRomanizeAsMain
+            val previousLanguages = Settings.shared.lyricsRomanizeLanguages
+            try {
+                Settings.shared.lyricsRomanizationEnabled = false
+                Settings.shared.lyricsRomanizeAsMain = true
+                Settings.shared.lyricsRomanizeLanguages = "Korean:true"
+                assertFalse(Settings.shared.isLyricsRomanizationActive)
+
+                HttpClient(
+                    MockEngine { error("Unexpected network call") },
+                ).use { client ->
+                    val repository =
+                        LyricsRepository(
+                            FakeLyricsFetcher(emptyMap()),
+                            LyricsTranslationClient(client),
+                            aiModelCatalog = AiModelCatalog(client),
+                        )
+                    val original = listOf(LyricsEntry(10_000, "안녕"))
+                    val prepared = repository.enrichLyricsEntries("song", original, allowRemoteTranslation = false) {}
+                    assertNull(prepared.single().romanizedText)
+
+                    Settings.shared.lyricsRomanizationEnabled = true
+                    assertTrue(Settings.shared.isLyricsRomanizationActive)
+                    val enabled = repository.enrichLyricsEntries("song", original, allowRemoteTranslation = false) {}
+                    assertEquals("annyeong", enabled.single().romanizedText)
+                }
+            } finally {
+                Settings.shared.lyricsRomanizationEnabled = previousEnabled
+                Settings.shared.lyricsRomanizeAsMain = previousAsMain
+                Settings.shared.lyricsRomanizeLanguages = previousLanguages
+            }
+        }
+
+    @Test
     fun videoSpecificLyricsUseOnlyRemainingVideoProviders() =
         runBlocking {
             Settings.replaceSharedForTest(Settings(MapSettings()))

@@ -245,8 +245,8 @@ fun rememberCaptionLyricsPositionState(
     val clockEnabled = enabled && remember(lyrics) { LyricsUtils.hasPlaybackTiming(lyrics) }
     val hasAnimatedWords =
         LyricsAnimationStyle.fromString(Settings.shared.lyricsAnimationStyle) != LyricsAnimationStyle.NONE &&
-            remember(lyrics, Settings.shared.lyricsRomanizationEnabled) {
-                lyrics.any { it.hasAnimatedWordTiming(Settings.shared.lyricsRomanizationEnabled) }
+            remember(lyrics, Settings.shared.isLyricsRomanizationActive) {
+                lyrics.any { it.hasAnimatedWordTiming(Settings.shared.isLyricsRomanizationActive) }
             }
     if (hasAnimatedWords) {
         val position =
