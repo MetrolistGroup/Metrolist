@@ -137,6 +137,7 @@ import com.metrolist.desktop.utils.DesktopSingleInstance
 import com.metrolist.desktop.utils.DesktopStartup
 import com.metrolist.desktop.utils.DesktopUrlHandler
 import com.metrolist.desktop.utils.NativeMemoryTrimmer
+import com.metrolist.desktop.utils.STOP_OMARCHY_URL
 import com.metrolist.desktop.utils.SentryManager
 import com.metrolist.desktop.utils.SkiaCacheCleaner
 import com.metrolist.desktop.utils.SystemMediaManager
@@ -147,6 +148,8 @@ import com.metrolist.desktop.utils.configureDesktopJvmErrorFile
 import com.metrolist.desktop.utils.configureLinuxWebKitRenderer
 import com.metrolist.desktop.utils.desktopRenderApiOverride
 import com.metrolist.desktop.utils.isDesktopPlatformSupported
+import com.metrolist.desktop.utils.isOmarchy
+import com.metrolist.desktop.utils.openStopOmarchy
 import com.metrolist.desktop.web.DesktopWebViewError
 import com.metrolist.desktop.window.IconResources
 import com.metrolist.desktop.window.LinuxWindowFrame
@@ -168,9 +171,12 @@ import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.action_login
 import com.metrolist.shared.generated.resources.action_not_now
 import com.metrolist.shared.generated.resources.app_name
+import com.metrolist.shared.generated.resources.close
 import com.metrolist.shared.generated.resources.copy
 import com.metrolist.shared.generated.resources.desktop_display_unavailable
+import com.metrolist.shared.generated.resources.desktop_omarchy_unsupported
 import com.metrolist.shared.generated.resources.desktop_platform_unsupported
+import com.metrolist.shared.generated.resources.learn_more
 import com.metrolist.shared.generated.resources.liked_songs
 import com.metrolist.shared.generated.resources.ok
 import com.metrolist.shared.generated.resources.playback_error
@@ -788,7 +794,32 @@ private fun exitWithStartupMessage(message: String): Nothing {
     exitProcess(1)
 }
 
+private fun exitOnOmarchy(): Nothing {
+    val message = runBlocking { getString(Res.string.desktop_omarchy_unsupported) }
+    System.err.println("$message $STOP_OMARCHY_URL")
+    if (!GraphicsEnvironment.isHeadless()) {
+        runCatching {
+            val learnMore = runBlocking { getString(Res.string.learn_more) }
+            val choice =
+                JOptionPane.showOptionDialog(
+                    null,
+                    message,
+                    runBlocking { getString(Res.string.app_name) },
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.ERROR_MESSAGE,
+                    null,
+                    arrayOf(learnMore, runBlocking { getString(Res.string.close) }),
+                    learnMore,
+                )
+            if (choice == 0) openStopOmarchy()
+        }
+    }
+    DesktopSingleInstance.release()
+    exitProcess(1)
+}
+
 private fun runDesktopApp(args: Array<String>) {
+    if (OsUtil.isLinux && isOmarchy()) exitOnOmarchy()
     if (!isDesktopPlatformSupported()) {
         exitWithStartupMessage(runBlocking { getString(Res.string.desktop_platform_unsupported) })
     }

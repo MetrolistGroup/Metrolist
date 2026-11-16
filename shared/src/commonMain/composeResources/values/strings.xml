@@ -5162,6 +5162,8 @@
     <string name="widget_recognizer_open_result">Open identified song</string>
     <string name="statistics_load_failed">Could not refresh statistics. Try again.</string>
     <string name="desktop_platform_unsupported">This operating system is not supported by Metrolist. Use Windows 10 or later, macOS, or a Linux distribution other than Omarchy.</string>
+    <string name="desktop_omarchy_unsupported">Metrolist does not run on Omarchy. Use another Linux distribution, Windows 10 or later, or macOS.</string>
+    <string name="learn_more">Learn more</string>
     <string name="shortcut_toggle_expanded">Toggle expanded player</string>
     <string name="desktop_display_unavailable">Metrolist could not connect to this session’s X display. Launch it from your desktop session with DISPLAY set.</string>
     <string name="webkit_install_hint">Embedded sign-in requires WebKitGTK 4.1 (%1$s). Install it using your system package manager.</string>

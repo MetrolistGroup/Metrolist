@@ -6,7 +6,7 @@ Release AppImages target x64 and ARM64 on glibc-based distributions. The packagi
 
 Choose x64 for `uname -m` output `x86_64`, or ARM64 for `aarch64`. Get the matching package through [the download channels](README.md#get-the-package).
 
-Use X11 or XWayland. Login needs GTK3/WebKitGTK 4.1. Saved credentials need Secret Service, libsecret, `secret-tool` and `dbus-send`. Audio needs ALSA integration with your audio server. See [Linux setup](../desktop.md#linux-login) and [audio setup](../desktop.md#linux-audio-setup). Startup rejects Omarchy.
+Use X11 or XWayland. Login needs GTK3/WebKitGTK 4.1. Saved credentials need Secret Service, libsecret, `secret-tool` and `dbus-send`. Audio needs ALSA integration with your audio server. See [Linux setup](../desktop.md#linux-login) and [audio setup](../desktop.md#linux-audio-setup). Startup rejects Omarchy, detected from its packages, install directories, environment, pacman repository or `os-release`, and links to [stopomarchy.org](https://stopomarchy.org/).
 
 ## Install and verify
 
