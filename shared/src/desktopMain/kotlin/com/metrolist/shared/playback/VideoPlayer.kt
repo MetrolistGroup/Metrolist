@@ -57,30 +57,19 @@ enum class VideoColorRange {
     FULL,
 }
 
-internal data class VideoDecoderConfiguration(
-    val hardwareAcceleration: String?,
-    val threadCount: String,
-)
-
-internal fun videoDecoderConfiguration(
-    looping: Boolean,
-    optimalThreads: String,
-): VideoDecoderConfiguration =
-    if (looping) {
-        VideoDecoderConfiguration(hardwareAcceleration = null, threadCount = "1")
-    } else {
-        VideoDecoderConfiguration(hardwareAcceleration = "auto", threadCount = optimalThreads)
-    }
-
 internal fun applyVideoDecoderConfiguration(
     looping: Boolean,
     optimalThreads: String,
     options: MutableMap<String, String>,
     videoOptions: MutableMap<String, String>,
 ): Int {
-    val configuration = videoDecoderConfiguration(looping, optimalThreads)
-    configuration.hardwareAcceleration?.let { options["hwaccel"] = it }
-    videoOptions["threads"] = configuration.threadCount
+    if (looping) {
+        options.remove("hwaccel")
+        videoOptions["threads"] = "1"
+    } else {
+        options["hwaccel"] = "auto"
+        videoOptions["threads"] = optimalThreads
+    }
     videoOptions["flags"] = "low_delay"
     return 1
 }
