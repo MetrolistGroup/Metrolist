@@ -927,4 +927,14 @@
     <string name="loudness_level_aggressive">Agressivo (-7 dB)</string>
     <string name="loudness_level_loud">Barulhento (-11 dB)</string>
     <string name="loudness_level_balanced">Balanceado (-14 dB)</string>
+    <string name="settings_reset_to_default">Restaurar a predefinição</string>
+    <plurals name="download_queue_pending">
+        <item quantity="one">A fazer download de %1$d música</item>
+        <item quantity="many">A fazer download de %1$d músicas</item>
+        <item quantity="other">A fazer download de %1$d músicas</item>
+    </plurals>
+    <string name="downloads_empty">Ainda não foi efetuado o descarregamento de uma música</string>
+    <string name="downloads_empty_hint">As músicas descarregadas aparecem aqui.</string>
+    <string name="remove_all_downloads">Remover todos as músicas descarregadas</string>
+    <string name="lyrics_song_artist">Compositor</string>
 </resources>
