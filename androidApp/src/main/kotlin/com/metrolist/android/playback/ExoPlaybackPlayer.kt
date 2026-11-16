@@ -873,9 +873,11 @@ class ExoPlaybackPlayer(
                 if (nextPlaylistIndex != C.INDEX_UNSET && eventTime.windowIndex == nextPlaylistIndex &&
                     source.currentMediaItemIndex != nextPlaylistIndex
                 ) {
-                    val onFailure = nextPlaylistFailure
-                    cancelNextInternal()
-                    onFailure?.invoke(error)
+                    if (wasCanceled) {
+                        val onFailure = nextPlaylistFailure
+                        cancelNextInternal()
+                        onFailure?.invoke(error)
+                    }
                     return
                 }
                 val category = error.media3PlaybackFailureCategory()
@@ -1993,14 +1995,10 @@ class ExoPlaybackPlayer(
         val normalizationGain = normalizationProcessors[player]?.normalizationGain
         val canOffload =
             player === exo && normalizationGain != null &&
+                (nextPlaylistIndex == C.INDEX_UNSET || nextResource.normalizationGain() == 1f) &&
                 AudioOffloadEligibility(
                     equalizer = EqualizerProfiles.configuration,
-                    normalizationGain =
-                        if (nextPlaylistIndex != C.INDEX_UNSET) {
-                            maxOf(normalizationGain, nextResource.normalizationGain())
-                        } else {
-                            normalizationGain
-                        },
+                    normalizationGain = normalizationGain,
                     skipSilence = Settings.shared.skipSilence,
                     speed = parameters.speed,
                     pitch = parameters.pitch,
@@ -2045,13 +2043,11 @@ class ExoPlaybackPlayer(
         }
         updateOffloadPreferences(exo)
         nextPlayer?.let { updateOffloadPreferences(it) }
-        // Output gain also covers PCM already buffered by a paused preload.
         exo.volume =
             playbackOutputGain(
                 effectivePlaybackVolume(_volume.value, audioOutputEnabled),
                 sleepTimerGain,
                 transitionGain,
-                (normalizationProcessors[exo]?.normalizationGain ?: 1f).coerceAtMost(1f),
             )
         nextPlayer?.let { player ->
             player.volume =
@@ -2059,7 +2055,6 @@ class ExoPlaybackPlayer(
                     effectivePlaybackVolume(_volume.value, audioOutputEnabled),
                     sleepTimerGain,
                     nextTransitionGain,
-                    (normalizationProcessors[player]?.normalizationGain ?: 1f).coerceAtMost(1f),
                 )
         }
     }
@@ -2160,13 +2155,21 @@ class ExoPlaybackPlayer(
         val playlistIndex = nextPlaylistIndex
         nextPlaylistIndex = C.INDEX_UNSET
         nextPlaylistFailure = null
-        if (playlistIndex != C.INDEX_UNSET && playlistIndex < exo.mediaItemCount) exo.removeMediaItem(playlistIndex)
+        val isPlayingPreload = playlistIndex != C.INDEX_UNSET && playlistIndex == exo.currentMediaItemIndex
+        if (playlistIndex in 0 until exo.mediaItemCount && !isPlayingPreload) exo.removeMediaItem(playlistIndex)
+        if (isPlayingPreload) {
+            sabrPlaybackCache.release(activeAudioSource)
+            activeAudioSource?.closePlaybackSource()
+            activeVideoSource?.closePlaybackSource()
+            activeAudioSource = nextAudioSource
+            activeVideoSource = nextVideoSource
+        }
         val candidate = nextPlayer
         val token = nextToken
         val reporter = nextPlaybackReporter
         val listener = nextPlayerListener
-        val audioSource = nextAudioSource
-        val videoSource = nextVideoSource
+        val audioSource = nextAudioSource.takeUnless { isPlayingPreload }
+        val videoSource = nextVideoSource.takeUnless { isPlayingPreload }
         nextProgressJob?.cancel()
         nextProgressJob = null
         nextPlayerListener = null

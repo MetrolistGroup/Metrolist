@@ -15,7 +15,7 @@ internal class NormalizationAudioProcessor(
     private val gain: (PlaybackResource?) -> Float,
 ) : BaseAudioProcessor() {
     var resource: PlaybackResource? = null
-        set(value) {
+        @Synchronized set(value) {
             if (field === value) return
             field = value
             refreshGain()
@@ -25,16 +25,17 @@ internal class NormalizationAudioProcessor(
     var normalizationGain: Float = 1f
         private set
 
-    @Volatile private var streamResource: PlaybackResource? = null
+    private var streamResource: PlaybackResource? = null
 
     @Volatile private var streamGain = 1f
 
+    @Synchronized
     fun refreshGain() {
         normalizationGain = gain(resource)
-        streamGain =
-            (if (streamResource == null || streamResource === resource) normalizationGain else gain(streamResource)).coerceAtLeast(1f)
+        streamGain = if (streamResource == null || streamResource === resource) normalizationGain else gain(streamResource)
     }
 
+    @Synchronized
     override fun onFlush(streamMetadata: AudioProcessor.StreamMetadata) {
         // The next item's PCM can reach the sink before the playlist transition reaches the app.
         val nextStreamResource =
@@ -61,12 +62,13 @@ internal class NormalizationAudioProcessor(
         // An empty replaceOutputBuffer() can return the shared EMPTY_BUFFER that is also our input.
         if (!inputBuffer.hasRemaining()) return
         val output = replaceOutputBuffer(inputBuffer.remaining())
-        val boost = streamGain
-        if (boost == 1f) {
+        val gain = streamGain
+        if (gain == 1f) {
             output.put(inputBuffer)
         } else {
             while (inputBuffer.hasRemaining()) {
-                output.putShort(normalizationBoostPcm16(inputBuffer.short, boost))
+                val sample = inputBuffer.short
+                output.putShort(if (gain < 1f) (sample * gain).toInt().toShort() else normalizationBoostPcm16(sample, gain))
             }
         }
         output.flip()

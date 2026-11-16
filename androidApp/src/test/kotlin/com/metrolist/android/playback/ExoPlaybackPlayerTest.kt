@@ -78,6 +78,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.util.ReflectionHelpers
 import java.io.IOException
+import java.net.SocketTimeoutException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.time.Duration
@@ -518,6 +519,52 @@ class ExoPlaybackPlayerTest {
         }
 
     @Test
+    fun retryablePlaylistLoadErrorsKeepTheQueuedSourceAndDoNotRecoverTheCurrentTrack() =
+        runBlocking {
+            player.releaseAndAwaitScope()
+            Dispatchers.resetMain()
+            player = ExoPlaybackPlayer(RuntimeEnvironment.getApplication())
+            val first = song()
+            val second = first.copy(id = "second")
+            player.setQueue(listOf(first, second), preparePlayback = false)
+            val resource = downloadedResource()
+            assertTrue(player.prepareAndPlay(first, resource, resumePlayback = false))
+            val native = underlyingPlayer().also(::awaitPlaybackReady)
+            val instanceId = player.currentPlaybackInstanceId
+            val failures = mutableListOf<Throwable>()
+            val recoveries = mutableListOf<AndroidPlaybackRecoveryRequest>()
+            val collector = CoroutineScope(Dispatchers.Main.immediate)
+            collector.launch { player.streamFailure.collect { recoveries += it } }
+            try {
+                val nextResource = resource.copy(videoId = second.id)
+                val token =
+                    checkNotNull(
+                        player.prepareNextTrack(nextResource, startPaused = true, queueSongId = second.id, onFailure = { failures += it }),
+                    )
+                val listener = ReflectionHelpers.getField<AnalyticsListener>(player, "networkLoadListener")
+                for (error in listOf(SocketTimeoutException("Read timed out"), IOException("Retry pending"))) {
+                    listener.onLoadError(
+                        AnalyticsListener.EventTime(0L, native.currentTimeline, 1, null, 0L, native.currentTimeline, 0, null, 0L, 0L),
+                        LoadEventInfo.Builder(0L, DataSpec(Uri.parse(resource.url)), 0L).build(),
+                        MediaLoadData(C.DATA_TYPE_MEDIA),
+                        error,
+                        false,
+                    )
+                    shadowOf(Looper.getMainLooper()).idle()
+                    assertEquals(2, native.mediaItemCount)
+                    assertSame(nextResource, native.getMediaItemAt(1).localConfiguration?.tag)
+                    assertTrue(player.isPreloadedPlaybackActive(token))
+                    assertTrue(failures.isEmpty())
+                    assertTrue(recoveries.isEmpty())
+                    assertEquals(instanceId, player.currentPlaybackInstanceId)
+                    assertSame(resource, player.currentPlaybackResource.value)
+                }
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
     fun failedPlaylistPreloadPreservesTheCurrentTrackAndRestoresItsOffloadEligibility() =
         runBlocking {
             player.releaseAndAwaitScope()
@@ -536,7 +583,7 @@ class ExoPlaybackPlayerTest {
             val token =
                 checkNotNull(
                     player.prepareNextTrack(
-                        resource.copy(videoId = second.id, perceptualLoudnessDb = -17.0),
+                        resource.copy(videoId = second.id, perceptualLoudnessDb = -3.0),
                         startPaused = true,
                         queueSongId = second.id,
                         onFailure = { failures += it },
@@ -552,7 +599,7 @@ class ExoPlaybackPlayerTest {
                 LoadEventInfo(0L, DataSpec(Uri.parse(resource.url)), 0L),
                 MediaLoadData(C.DATA_TYPE_MEDIA),
                 error,
-                false,
+                true,
             )
 
             assertEquals(listOf(error), failures)
@@ -632,6 +679,61 @@ class ExoPlaybackPlayerTest {
         }
 
     @Test
+    fun cancellingAPreloadAfterNativeTransitionKeepsThePlayingItemAndItsSource() =
+        runBlocking {
+            player.releaseAndAwaitScope()
+            Dispatchers.resetMain()
+            player = ExoPlaybackPlayer(RuntimeEnvironment.getApplication())
+            val first = song()
+            val second = first.copy(id = "second")
+            player.setQueue(listOf(first, second), preparePlayback = false)
+            val resource = downloadedResource()
+            assertTrue(player.prepareAndPlay(first, resource, resumePlayback = false))
+            val native = underlyingPlayer().also(::awaitPlaybackReady)
+            val nextResource = resource.copy(videoId = second.id)
+            val token = checkNotNull(player.prepareNextTrack(nextResource, startPaused = true, queueSongId = second.id))
+            val source = SabrInputStream(0L, { _, _ -> flow { } }, startImmediately = false, tempDirectory = temporaryFolder.root)
+            ReflectionHelpers.setField(player, "nextAudioSource", source)
+            try {
+                val oldPosition =
+                    Player.PositionInfo(
+                        null,
+                        0,
+                        native.getMediaItemAt(0),
+                        null,
+                        0,
+                        20_000L,
+                        20_000L,
+                        C.INDEX_UNSET,
+                        C.INDEX_UNSET,
+                    )
+                val newPosition = Player.PositionInfo(null, 1, native.getMediaItemAt(1), null, 1, 0L, 0L, C.INDEX_UNSET, C.INDEX_UNSET)
+                native.seekTo(1, 750L)
+                awaitPlaybackReady(native)
+                ReflectionHelpers
+                    .getField<Player.Listener>(player, "playbackListener")
+                    .onPositionDiscontinuity(oldPosition, newPosition, Player.DISCONTINUITY_REASON_AUTO_TRANSITION)
+                assertEquals(0, ReflectionHelpers.getField<Int>(player, "nextPlaylistIndex"))
+
+                player.cancelNext()
+                shadowOf(Looper.getMainLooper()).idle()
+
+                assertEquals(1, native.mediaItemCount)
+                assertEquals(0, native.currentMediaItemIndex)
+                assertSame(nextResource, native.currentMediaItem?.localConfiguration?.tag)
+                assertEquals(750L, native.currentPosition)
+                assertEquals(Player.STATE_READY, native.playbackState)
+                assertFalse(player.isPreloadedPlaybackActive(token))
+                assertSame(source, ReflectionHelpers.getField<SabrInputStream>(player, "activeAudioSource"))
+                assertFalse(ReflectionHelpers.getField<Boolean>(source, "closed"))
+                player.stop()
+                assertTrue(ReflectionHelpers.getField<Boolean>(source, "closed"))
+            } finally {
+                source.close()
+            }
+        }
+
+    @Test
     fun consecutiveGaplessTransitionsKeepOnlyTheCurrentAndPreloadedItems() =
         runBlocking {
             player.releaseAndAwaitScope()
@@ -645,7 +747,6 @@ class ExoPlaybackPlayerTest {
             val native = underlyingPlayer().also(::awaitPlaybackReady)
             val sessionId = native.audioSessionId
             val listener = ReflectionHelpers.getField<Player.Listener>(player, "playbackListener")
-            val stalls = ReflectionHelpers.getField<OffloadSleepStallTracker>(player, "offloadSleepStallTracker")
             val nativeTransitions = mutableListOf<Int>()
             val nativeStates = mutableListOf<Int>()
             native.addListener(
@@ -680,7 +781,6 @@ class ExoPlaybackPlayerTest {
                     awaitPlaybackReady(native)
                     nativeTransitions.clear()
                     nativeStates.clear()
-                    stalls.onSleepingForOffload(nowMs = 0L, outputPosition = 123L)
                     player.startPreloadedNextAtEof = {
                         assertEquals(completedInstance, it)
                         assertEquals(1, native.mediaItemCount)
@@ -715,7 +815,11 @@ class ExoPlaybackPlayerTest {
                         normalizationProcessors().getValue(native).normalizationGain,
                         0.00001f,
                     )
-                    assertTrue(ReflectionHelpers.getField<Boolean>(stalls, "sleepingForOffload"))
+                    assertEquals(1f, native.volume, 0f)
+                    assertEquals(
+                        AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED,
+                        native.trackSelectionParameters.audioOffloadPreferences.audioOffloadMode,
+                    )
                     assertTrue(nativeTransitions.isEmpty())
                     assertFalse(nativeStates.contains(Player.STATE_ENDED))
                     assertEquals(index, completions.size)
