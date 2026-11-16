@@ -2142,14 +2142,14 @@
     </plurals>
     <string name="download_paused">Остановлено</string>
     <string name="downloads_empty">В процессе загрузок нет</string>
-    <string name="downloads_empty_hint">Песни которые вы сохранили для офлайн прослушивания будут появляться здесь пока они скачиваются.</string>
+    <string name="downloads_empty_hint">Песни, которые вы сохраняете для офлайн-прослушивания, будут появляться здесь во время скачивания.</string>
     <string name="remove_all_downloads">Удалить все скачивания</string>
     <string name="lyrics_song_artist">Исполнитель песни</string>
-    <string name="lyrics_capability_line_syllable">Линия и слог</string>
-    <string name="lyrics_capability_line_syllable_unsynced">Линия, слог и несинхронизированное</string>
-    <string name="lyrics_capability_line_unsynced">Линия и несинхронизированное</string>
-    <string name="lyrics_capability_line">Линия</string>
-    <string name="lyrics_capability_unsynced">Несинхронизированное</string>
+    <string name="lyrics_capability_line_syllable">Построчно и по слогам</string>
+    <string name="lyrics_capability_line_syllable_unsynced">Построчно, по слогам и без синхронизации</string>
+    <string name="lyrics_capability_line_unsynced">Построчно и без синхронизации</string>
+    <string name="lyrics_capability_line">Построчно</string>
+    <string name="lyrics_capability_unsynced">Без синхронизации</string>
     <string name="lyrics_youtube_captions">Субтитры YouTube</string>
     <string name="edit_playlist_cover">Изменить обложку альбома</string>
     <string name="edit_playlist_cover_note">Чтобы изменить обложку плейлиста, ваша учетная запись должна быть привязана к номеру телефона и подтверждена в YouTube Music</string>
