@@ -11,7 +11,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -23,9 +22,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
-import com.metrolist.shared.api.artwork.CanvasPlaybackWatchdog
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.enter_fullscreen
+import com.metrolist.shared.playback.IosMusicVideoSurfacePlayer
+import com.metrolist.shared.playback.IosPlaybackController
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.playback.LocalPlaybackController
@@ -33,35 +33,15 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import org.jetbrains.compose.resources.stringResource
-import platform.AVFoundation.AVLayerVideoGravityResizeAspect
-import platform.AVFoundation.AVPlayer
-import platform.AVFoundation.AVPlayerItem
-import platform.AVFoundation.AVPlayerItemFailedToPlayToEndTimeNotification
-import platform.AVFoundation.AVPlayerItemStatusFailed
-import platform.AVFoundation.AVPlayerItemStatusReadyToPlay
-import platform.AVFoundation.AVPlayerLayer
-import platform.AVFoundation.AVURLAsset
-import platform.AVFoundation.currentItem
-import platform.AVFoundation.currentTime
-import platform.AVFoundation.muted
-import platform.AVFoundation.pause
-import platform.AVFoundation.rate
-import platform.AVFoundation.replaceCurrentItemWithPlayerItem
-import platform.AVFoundation.seekToTime
-import platform.AVFoundation.status
 import platform.CoreGraphics.CGRectMake
-import platform.CoreMedia.CMTimeGetSeconds
-import platform.CoreMedia.CMTimeMakeWithSeconds
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSOperationQueue
-import platform.Foundation.NSURL
 import platform.QuartzCore.CATransaction
 import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import platform.UIKit.UIApplicationState
 import platform.UIKit.UIApplicationWillResignActiveNotification
 import platform.UIKit.UIView
-import kotlin.math.abs
 import kotlin.time.TimeSource
 
 @OptIn(ExperimentalForeignApi::class)
@@ -69,10 +49,12 @@ import kotlin.time.TimeSource
 internal actual fun MobileMusicVideoSurface(
     modifier: Modifier,
     cornerRadius: Dp,
+    fillContainer: Boolean,
     showControls: Boolean,
     onFullscreenClick: (() -> Unit)?,
 ) {
     val controller = LocalPlaybackController.current
+    val iosController = controller as? IosPlaybackController
     val state by controller.state.collectAsState()
     val resource = state.videoPlaybackResource
     val url = resource?.videoUrl?.takeIf { state.isVideoModeActive }
@@ -81,12 +63,16 @@ internal actual fun MobileMusicVideoSurface(
         return
     }
 
-    val video = remember(url, resource.headers) { IosMusicVideoSurfacePlayer(url, resource.headers) }
-    var firstFrameRendered by remember(video) { mutableStateOf(false) }
+    val video =
+        remember(controller, url, resource.headers) {
+            iosController?.musicVideoSurfacePlayer(url, resource.headers) ?: IosMusicVideoSurfacePlayer(url, resource.headers)
+        }
+    var firstFrameRendered by remember(video) { mutableStateOf(video.ready) }
     var foreground by remember {
         mutableStateOf(UIApplication.sharedApplication.applicationState == UIApplicationState.UIApplicationStateActive)
     }
     DisposableEffect(video) {
+        val surfaceGeneration = video.attach()
         val center = NSNotificationCenter.defaultCenter
         val activeObserver =
             center.addObserverForName(UIApplicationDidBecomeActiveNotification, null, NSOperationQueue.mainQueue) {
@@ -99,9 +85,10 @@ internal actual fun MobileMusicVideoSurface(
         onDispose {
             center.removeObserver(activeObserver)
             center.removeObserver(inactiveObserver)
-            video.close()
+            if (iosController == null) video.close() else video.detach(surfaceGeneration)
         }
     }
+    LaunchedEffect(video, fillContainer) { video.setFillContainer(fillContainer) }
     LaunchedEffect(
         video,
         state.positionMs,
@@ -136,28 +123,26 @@ internal actual fun MobileMusicVideoSurface(
     }
 
     Box(modifier) {
-        key(video) {
-            UIKitView(
-                factory = {
-                    object : UIView(frame = CGRectMake(0.0, 0.0, 0.0, 0.0)) {
-                        init {
-                            clipsToBounds = true
-                            layer.addSublayer(video.layer)
-                        }
-
-                        override fun layoutSubviews() {
-                            super.layoutSubviews()
-                            CATransaction.begin()
-                            CATransaction.setDisableActions(true)
-                            video.layer.frame = bounds
-                            CATransaction.commit()
-                        }
+        UIKitView(
+            factory = {
+                object : UIView(frame = CGRectMake(0.0, 0.0, 0.0, 0.0)) {
+                    init {
+                        clipsToBounds = true
+                        layer.addSublayer(video.layer)
                     }
-                },
-                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(cornerRadius)),
-                properties = UIKitInteropProperties(interactionMode = null, isNativeAccessibilityEnabled = false),
-            )
-        }
+
+                    override fun layoutSubviews() {
+                        super.layoutSubviews()
+                        CATransaction.begin()
+                        CATransaction.setDisableActions(true)
+                        video.layer.frame = bounds
+                        CATransaction.commit()
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(cornerRadius)),
+            properties = UIKitInteropProperties(interactionMode = null, isNativeAccessibilityEnabled = false),
+        )
         if (!firstFrameRendered) {
             AsyncImage(
                 url = state.currentSong?.thumbnail,
@@ -174,109 +159,5 @@ internal actual fun MobileMusicVideoSurface(
                 Icon(MetrolistIcons.Default.Fullscreen, contentDescription = stringResource(Res.string.enter_fullscreen))
             }
         }
-    }
-}
-
-@OptIn(ExperimentalForeignApi::class)
-private class IosMusicVideoSurfacePlayer(
-    url: String,
-    headers: Map<String, String>,
-) {
-    private val player = AVPlayer()
-    val layer = AVPlayerLayer.playerLayerWithPlayer(player)
-    private var closed = false
-    private var seekInFlight = false
-    private var latestTargetPositionMs = 0L
-    private var foreground = false
-    private var expectingProgress = false
-    private var lastPositionMs: Long? = null
-    private var renderedProgress = 0L
-    private val watchdog = CanvasPlaybackWatchdog()
-    private var failureObserver: Any? = null
-
-    init {
-        player.muted = true
-        layer.videoGravity = AVLayerVideoGravityResizeAspect
-        val nativeUrl = NSURL.URLWithString(url)
-        if (nativeUrl != null) {
-            val asset =
-                AVURLAsset(
-                    uRL = nativeUrl,
-                    options = headers.takeIf { it.isNotEmpty() }?.let { mapOf("AVURLAssetHTTPHeaderFieldsKey" to it) },
-                )
-            val item = AVPlayerItem(asset = asset)
-            player.replaceCurrentItemWithPlayerItem(item)
-            failureObserver =
-                NSNotificationCenter.defaultCenter.addObserverForName(
-                    AVPlayerItemFailedToPlayToEndTimeNotification,
-                    item,
-                    NSOperationQueue.mainQueue,
-                ) {
-                    didFail = true
-                }
-        }
-    }
-
-    val failed: Boolean
-        get() = closed || didFail || player.currentItem == null || player.currentItem?.status == AVPlayerItemStatusFailed
-
-    private var didFail = false
-
-    val ready: Boolean
-        get() = !closed && layer.readyForDisplay
-
-    fun synchronize(
-        positionMs: Long,
-        playing: Boolean,
-        playbackSpeed: Float,
-        isForeground: Boolean,
-    ) {
-        if (closed) return
-        foreground = isForeground
-        if (expectingProgress != playing) {
-            expectingProgress = playing
-            watchdog.reset()
-        }
-        latestTargetPositionMs = positionMs.coerceAtLeast(0L)
-        applyPendingSeek()
-        if (playing && player.rate != playbackSpeed) {
-            player.rate = playbackSpeed
-        } else if (!playing && player.rate != 0f) {
-            player.pause()
-        }
-    }
-
-    fun applyPendingSeek() {
-        if (closed || !foreground || seekInFlight || player.currentItem?.status != AVPlayerItemStatusReadyToPlay) return
-        val currentMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong()
-        val targetPositionMs = latestTargetPositionMs
-        if (abs(currentMs - targetPositionMs) <= 750L) return
-        seekInFlight = true
-        val target = CMTimeMakeWithSeconds(targetPositionMs / 1000.0, 600)
-        val zero = CMTimeMakeWithSeconds(0.0, 600)
-        player.seekToTime(target, toleranceBefore = zero, toleranceAfter = zero) { completed ->
-            seekInFlight = false
-            if (completed && foreground && targetPositionMs != latestTargetPositionMs) applyPendingSeek()
-        }
-    }
-
-    fun hasFailed(nowMs: Long): Boolean {
-        if (failed) return true
-        val positionMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong()
-        if (ready && positionMs != lastPositionMs) {
-            renderedProgress++
-            lastPositionMs = positionMs
-        }
-        return watchdog.isStalled(nowMs, renderedProgress, expectingProgress && foreground)
-    }
-
-    fun close() {
-        if (closed) return
-        closed = true
-        failureObserver?.let { NSNotificationCenter.defaultCenter.removeObserver(it) }
-        failureObserver = null
-        player.pause()
-        layer.player = null
-        player.replaceCurrentItemWithPlayerItem(null)
     }
 }

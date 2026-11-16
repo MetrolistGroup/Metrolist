@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.Dp
 internal expect fun MobileMusicVideoSurface(
     modifier: Modifier,
     cornerRadius: Dp,
+    fillContainer: Boolean,
     showControls: Boolean,
     onFullscreenClick: (() -> Unit)?,
 )

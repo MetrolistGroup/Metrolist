@@ -287,6 +287,9 @@ internal class IosPlaybackController(
     private var videoModeJob: Job? = null
     private var videoModeRequestId = 0L
     private var failedVideoResourceId: String? = null
+    private var videoSurfacePlayer: IosMusicVideoSurfacePlayer? = null
+    private var videoSurfaceUrl: String? = null
+    private var videoSurfaceHeaders: Map<String, String>? = null
 
     private val coreState =
         combine(baseState, player.currentMediaItemIndex, pendingPlayback, playbackError) { base, index, pending, error ->
@@ -1033,6 +1036,19 @@ internal class IosPlaybackController(
 
     override fun toggleVideoMode() = setVideoMode(!isVideoModeActive.value)
 
+    internal fun musicVideoSurfacePlayer(
+        url: String,
+        headers: Map<String, String>,
+    ): IosMusicVideoSurfacePlayer {
+        if (videoSurfaceUrl != url || videoSurfaceHeaders != headers) {
+            releaseMusicVideoSurfacePlayer()
+            videoSurfaceUrl = url
+            videoSurfaceHeaders = headers.toMap()
+            videoSurfacePlayer = IosMusicVideoSurfacePlayer(url, headers)
+        }
+        return checkNotNull(videoSurfacePlayer)
+    }
+
     override fun setVideoMode(wantVideo: Boolean) {
         videoModeRequestId++
         val requestId = videoModeRequestId
@@ -1106,6 +1122,14 @@ internal class IosPlaybackController(
         isVideoModeActive.value = false
         videoPlaybackResource.value = null
         videoPositionMap.value = null
+        releaseMusicVideoSurfacePlayer()
+    }
+
+    private fun releaseMusicVideoSurfacePlayer() {
+        videoSurfacePlayer?.close()
+        videoSurfacePlayer = null
+        videoSurfaceUrl = null
+        videoSurfaceHeaders = null
     }
 
     override fun reportVideoPlaybackFailure() {

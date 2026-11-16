@@ -123,7 +123,7 @@ internal class MobilePlayerPlatform(
         useSurfaceView: Boolean,
         onFullscreenClick: (() -> Unit)?,
         onPiPClick: (() -> Unit)?,
-    ) = MobileMusicVideoSurface(modifier, cornerRadius, showControls, onFullscreenClick)
+    ) = MobileMusicVideoSurface(modifier, cornerRadius, fillContainer, showControls, onFullscreenClick)
 
     @Composable
     override fun AnimatedCoverVideo(
