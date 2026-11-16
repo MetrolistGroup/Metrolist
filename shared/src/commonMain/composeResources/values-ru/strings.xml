@@ -706,7 +706,7 @@
     <string name="device_has_no_microphone">Это устройство не имеет микрофона.</string>
     <string name="discord_unknown_album">Неизвестный альбом</string>
     <string name="disliked_song">Не понравившаяся песня</string>
-    <string name="dislike_song">Не нравится песня</string>
+    <string name="dislike_song">Не нравится</string>
     <string name="done">Готово</string>
     <string name="download_not_found">Скачивание не найдено</string>
     <string name="drag_to_reorder">Перетащите для изменения порядка</string>
@@ -846,10 +846,10 @@
     <string name="refreshing">Обновление</string>
     <string name="remove">Удалить</string>
     <string name="remove_all">Удалить все</string>
-    <string name="removed_dislike">Дизлайк удалён</string>
+    <string name="removed_dislike">Отметка "Не нравится" убрана</string>
     <string name="removed_download">Скачивание удалено</string>
     <string name="removed_from_library">Удалено из библиотеки</string>
-    <string name="remove_dislike">Удалить дизлайк</string>
+    <string name="remove_dislike">Убрать отметку "Не нравится"</string>
     <string name="remove_from_device">Удалить с устройства</string>
     <string name="remove_from_favorites">Удалить из Любимых</string>
     <string name="remove_from_recent_question">Удалить из недавних?</string>
@@ -2659,4 +2659,13 @@
     <string name="settings_library_grid_columns">Столбцы библиотеки</string>
     <string name="playlist_picker_library_order">Порядок библиотеки</string>
     <string name="blocked_songs">Заблокированные песни</string>
+    <string name="blocked_songs_desc">Восстановить заблокированные песни и песни с отметкой "Не нравится"</string>
+    <string name="blocked_songs_empty">Нет заблокированных песен</string>
+    <string name="content_undo_hint">Это действие можно отменить здесь: %1$s.</string>
+    <string name="content_undo_path">%1$s &gt; %2$s &gt; %3$s</string>
+    <string name="account_keyring_required">Для восстановления аккаунта Metrolist нужен доступ к системной связке ключей. Разблокируйте её. Metrolist повторит попытку автоматически.</string>
+    <string name="account_linux_keyring_required">Для восстановления аккаунта Metrolist нужна системная связка ключей. Установите libsecret-tools или соответствующий пакет вашего дистрибутива, содержащий команду secret-tool, и убедитесь, что связка ключей запущена и разблокирована. Metrolist повторит попытку автоматически.</string>
+    <string name="density_massive">Гигантский (200%)</string>
+    <string name="density_huge">Огромный (175%)</string>
+    <string name="density_extra_large">Очень крупный (150%)</string>
 </resources>
