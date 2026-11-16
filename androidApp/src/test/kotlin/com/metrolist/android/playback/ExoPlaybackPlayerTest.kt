@@ -98,6 +98,27 @@ class ExoPlaybackPlayerTest {
     }
 
     @Test
+    fun cancellingASilentPreloadDoesNotNotifySystemAudioEffects() {
+        val context = RuntimeEnvironment.getApplication()
+        val incoming =
+            ExoPlaybackPlayer::class.java
+                .getDeclaredMethod("createPlayer", Int::class.javaPrimitiveType, AndroidPlaybackPlayerRole::class.java)
+                .apply { isAccessible = true }
+                .invoke(player, 2_000, AndroidPlaybackPlayerRole.SECONDARY) as ExoPlayer
+        incoming.setAudioSessionId(42)
+        ReflectionHelpers.setField(player, "nextPlayer", incoming)
+        val sessionId = incoming.audioSessionId
+        assertTrue(sessionId > 0)
+        player.cancelNext()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertFalse(
+            shadowOf(context).broadcastIntents.any {
+                it.getIntExtra(AudioEffect.EXTRA_AUDIO_SESSION, 0) == sessionId
+            },
+        )
+    }
+
+    @Test
     fun terminalSabrFailureStartsRecoveryBeforeBufferedBytesDrain() =
         runBlocking {
             for (kind in SabrFailureKind.entries) {
@@ -498,6 +519,13 @@ class ExoPlaybackPlayerTest {
             assertNotSame(normalizationProcessors()[previous], normalizationProcessors()[incoming])
             assertSame(resource, normalizationProcessors().getValue(previous).resource)
             assertSame(nextResource, normalizationProcessors().getValue(incoming).resource)
+            assertFalse(
+                "Preparing a silent track must not reconfigure system effects during the current song",
+                shadowOf(RuntimeEnvironment.getApplication()).broadcastIntents.any {
+                    it.action == AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION &&
+                        it.getIntExtra(AudioEffect.EXTRA_AUDIO_SESSION, 0) == incoming.audioSessionId
+                },
+            )
             player.setVolume(0.8f)
             player.setSleepTimerGain(0.5f)
             assertTrue(player.startNextPlayback())

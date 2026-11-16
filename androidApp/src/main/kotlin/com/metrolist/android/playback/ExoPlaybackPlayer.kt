@@ -409,7 +409,6 @@ class ExoPlaybackPlayer(
                 normalizationProcessors[this] = normalization
                 silenceSupport[this] = silence
                 silence.attach(this)
-                systemAudioEffects.attach(this)
                 val player = this
                 PlaybackEventLog.info(
                     PlaybackEventKind.PLAYER,
@@ -1573,6 +1572,7 @@ class ExoPlaybackPlayer(
     }
 
     private fun attachPlayerListeners(player: ExoPlayer) {
+        systemAudioEffects.attach(player)
         _playbackState.value = player.playbackState
         playbackListener = createPlaybackListener(player)
         networkLoadListener = createNetworkLoadListener(player)
@@ -2036,6 +2036,7 @@ class ExoPlaybackPlayer(
     }
 
     private fun syncNextPlayback() {
+        if (nextStarted) nextPlayer?.let(systemAudioEffects::attach)
         nextPlayer?.playWhenReady =
             exo.playWhenReady && nextStarted && !nextHeldAtStart &&
             exo.playbackSuppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
