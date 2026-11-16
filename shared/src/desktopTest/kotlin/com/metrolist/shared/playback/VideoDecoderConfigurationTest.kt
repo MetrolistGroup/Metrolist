@@ -4,20 +4,19 @@ import com.metrolist.shared.playback.ffmpeg.FFmpegFrameGrabber
 import kotlinx.coroutines.runBlocking
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext
 import java.io.File
-import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class VideoDecoderConfigurationTest {
     @Test
     fun loopingVideoOpensSoftwareDecoderWithOneThread() {
-        val directory = createTempDirectory("looping-video-decoder").toFile()
         val player = VideoPlayer(onFrame = {}, onEnded = {}, looping = true)
         try {
-            val file = videoFile(directory)
-            assertTrue(player.load(file.path, emptyMap()) { 0L })
+            val videoPath = fixturePath()
+            assertTrue(player.load(videoPath, emptyMap()) { 0L })
 
             val grabber = grabber(player)
             val codec = codec(grabber)
@@ -25,34 +24,25 @@ class VideoDecoderConfigurationTest {
             assertEquals(1, codec.thread_count())
         } finally {
             runBlocking { player.closeAsync().join() }
-            directory.deleteRecursively()
         }
     }
 
     @Test
     fun regularVideoOpensWithAutomaticHardwareAndOptimalThreadSettings() {
-        val directory = createTempDirectory("regular-video-decoder").toFile()
         val player = VideoPlayer(onFrame = {}, onEnded = {})
         try {
-            val file = videoFile(directory)
-            assertTrue(player.load(file.path, emptyMap()) { 0L })
+            val videoPath = fixturePath()
+            assertTrue(player.load(videoPath, emptyMap()) { 0L })
 
             val grabber = grabber(player)
             assertEquals("auto", grabber.options["hwaccel"])
             assertEquals(OPTIMAL_VIDEO_THREADS, grabber.videoOptions["threads"])
         } finally {
             runBlocking { player.closeAsync().join() }
-            directory.deleteRecursively()
         }
     }
 
-    private fun videoFile(directory: File): File =
-        File(directory, "video.y4m").apply {
-            writeBytes(
-                "YUV4MPEG2 W64 H36 F25:1 Ip A1:1 C420jpeg\nFRAME\n".toByteArray() +
-                    ByteArray(64 * 36) { 100 } + ByteArray(64 * 36 / 2) { 128.toByte() },
-            )
-        }
+    private fun fixturePath(): String = File(assertNotNull(javaClass.getResource("/ffmpeg/canvas-source.mp4")).toURI()).path
 
     private fun grabber(player: VideoPlayer): FFmpegFrameGrabber =
         VideoPlayer::class.java
