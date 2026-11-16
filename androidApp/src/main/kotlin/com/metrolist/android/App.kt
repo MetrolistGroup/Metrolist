@@ -434,19 +434,24 @@ class App :
 }
 
 private class AppFailureTree : Timber.Tree() {
+    override fun isLoggable(
+        tag: String?,
+        priority: Int,
+    ): Boolean = priority == Log.WARN || priority == Log.ERROR
+
     override fun log(
         priority: Int,
         tag: String?,
         message: String,
         t: Throwable?,
     ) {
-        if (message.startsWith("[YtLogger] ")) return
         val level =
             when (priority) {
                 Log.ERROR -> PlaybackEventLevel.ERROR
                 Log.WARN -> PlaybackEventLevel.WARN
                 else -> return
             }
+        if (message.startsWith("[YtLogger] ")) return
         val messageWithoutThrowable =
             t?.let { throwable ->
                 val stackTrace =
