@@ -206,6 +206,9 @@ fun PlaylistContent(
     val searchListState = rememberLazyListState()
     val activeListState = if (effectiveQuery.isBlank()) listState else searchListState
     val updateQuery: (String) -> Unit = { newQuery ->
+        if (effectiveQuery.isBlank() && newQuery.isNotBlank()) {
+            searchListState.requestScrollToItem(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset)
+        }
         if (onSearchQueryChange != null) {
             onSearchQueryChange(newQuery)
         } else {
@@ -288,11 +291,6 @@ fun PlaylistContent(
             BoxWithConstraints(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 val isWide = maxWidth >= 960.dp
                 val isMedium = maxWidth >= 600.dp && !isWide
-                LaunchedEffect(effectiveQuery.isNotBlank(), isWide) {
-                    if (effectiveQuery.isNotBlank() && !isWide) {
-                        searchListState.animateScrollToItem(listOfNotNull(header).size + 1)
-                    }
-                }
                 val leadingItems =
                     if (isWide) {
                         0
@@ -330,7 +328,7 @@ fun PlaylistContent(
                     } else {
                         160.dp
                     }
-                LaunchedEffect(isSearchOpen, isWide, loadingHeader) {
+                LaunchedEffect(isSearchOpen, activeListState, isWide, loadingHeader) {
                     if (isSearchOpen && !isWide) {
                         activeListState.animateScrollToItem(listOfNotNull(header).size + 1)
                     }

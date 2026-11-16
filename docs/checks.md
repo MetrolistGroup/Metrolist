@@ -59,7 +59,7 @@ For playlist headers on Android, desktop and iOS, tap or click a truncated title
 
 For album and playlist headers, scroll the title out of view in narrow and medium layouts. The title fades into the top bar and fades out when the header returns. Check long titles, search, selection and wide layouts.
 
-For album and playlist search, open the field below a large cover with the keyboard visible. The search row scrolls to the top and shows results below it. Check clearing and closing the field, repeated searches, large fonts, narrow and wide desktop layouts and duplicate songs. The unfiltered position returns when the query clears, and wide results start at the first match.
+For album and playlist search, open the field below a large cover with the keyboard visible. The search row scrolls to the top and shows results below it. Typing the first character keeps that position when the filtered list takes over, including while the keyboard resizes the viewport. Check clearing and closing the field, repeated searches, large fonts, narrow and wide desktop layouts and duplicate songs. The unfiltered position returns when the query clears, and wide results start at the first match.
 
 Scroll Android's Liked songs, Downloads, Cached and Uploaded collections past the cover. The fixed back, edit and menu controls have an opaque background so rows do not show through them. Enter and exit selection, then open and close search. Check desktop playlists at narrow and wide widths; their navigation row keeps its reserved space above the list.
 
