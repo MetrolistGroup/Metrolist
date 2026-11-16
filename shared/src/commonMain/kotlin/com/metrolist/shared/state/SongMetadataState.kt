@@ -34,6 +34,7 @@ object SongMetadataState {
         val loaded: Boolean = false,
         val values: Map<String, SongDisplayMetadata> = emptyMap(),
         val durations: Map<String, Long> = emptyMap(),
+        val libraryMemberships: Map<String, Boolean> = emptyMap(),
     )
 
     private var snapshot by mutableStateOf(MetadataSnapshot())
@@ -66,18 +67,24 @@ object SongMetadataState {
                         .distinctUntilChanged()
                         .map { rows -> rows.associate { it.id to it.duration } }
                         .distinctUntilChanged(),
-                ) { metadata, durations -> metadata to durations }
-                    .collect { (metadata, durations) ->
-                        synchronized(snapshotLock) {
-                            if (generation != bindingGeneration || this@SongMetadataState.database !== database) return@synchronized
-                            val reset = snapshot.values.mapValues { (_, value) -> value.copy(customTitle = null, customArtist = null) }
-                            val updated = MetadataSnapshot(loaded = true, values = reset + metadata, durations = durations)
-                            if (snapshot != updated) {
-                                snapshot = updated
-                                _revision.value++
-                            }
+                    database
+                        .dao()
+                        .songLibraryMemberships()
+                        .map { rows -> rows.associate { it.id to it.inLibrary } }
+                        .distinctUntilChanged(),
+                ) { metadata, durations, libraryMemberships ->
+                    MetadataSnapshot(loaded = true, values = metadata, durations = durations, libraryMemberships = libraryMemberships)
+                }.collect { collected ->
+                    synchronized(snapshotLock) {
+                        if (generation != bindingGeneration || this@SongMetadataState.database !== database) return@synchronized
+                        val reset = snapshot.values.mapValues { (_, value) -> value.copy(customTitle = null, customArtist = null) }
+                        val updated = collected.copy(values = reset + collected.values)
+                        if (snapshot != updated) {
+                            snapshot = updated
+                            _revision.value++
                         }
                     }
+                }
             }
         collectionJob?.invokeOnCompletion {
             synchronized(snapshotLock) {
@@ -129,6 +136,11 @@ object SongMetadataState {
         val displayed = song.withStoredMetadata(metadata)
         val duration = song.duration?.takeIf { it > 0L } ?: current.durations[song.id]
         return if (displayed.duration == duration) displayed else displayed.copy(duration = duration)
+    }
+
+    fun isInLibrary(song: SongItem): Boolean {
+        val current = synchronized(snapshotLock) { snapshot }
+        return current.libraryMemberships[song.id] ?: (song.libraryRemoveToken != null)
     }
 }
 

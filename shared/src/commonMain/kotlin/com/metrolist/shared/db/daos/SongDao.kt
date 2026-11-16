@@ -39,6 +39,11 @@ data class SongCustomMetadata(
     val customArtist: String?,
 )
 
+data class SongLibraryMembership(
+    val id: String,
+    val inLibrary: Boolean,
+)
+
 data class SongDuration(
     val id: String,
     val duration: Long,
@@ -657,6 +662,9 @@ interface SongDao {
 
     @Query("SELECT id, duration FROM song WHERE duration > 0")
     fun knownSongDurations(): Flow<List<SongDuration>>
+
+    @Query("SELECT id, inLibrary IS NOT NULL AS inLibrary FROM song")
+    fun songLibraryMemberships(): Flow<List<SongLibraryMembership>>
 
     @Transaction
     suspend fun upsert(song: SongEntity) {
