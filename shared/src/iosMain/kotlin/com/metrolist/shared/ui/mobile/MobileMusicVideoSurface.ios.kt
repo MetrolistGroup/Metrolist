@@ -74,16 +74,19 @@ internal actual fun MobileMusicVideoSurface(
     }
     DisposableEffect(video) {
         val surfaceGeneration = video.attach()
+        video.setForeground(foreground)
         val center = NSNotificationCenter.defaultCenter
         val activeObserver =
             center.addObserverForName(UIApplicationDidBecomeActiveNotification, null, NSOperationQueue.mainQueue) {
                 video.setForeground(true)
                 foreground = true
+                firstFrameRendered = false
             }
         val inactiveObserver =
             center.addObserverForName(UIApplicationWillResignActiveNotification, null, NSOperationQueue.mainQueue) {
                 video.setForeground(false)
                 foreground = false
+                firstFrameRendered = false
             }
         onDispose {
             center.removeObserver(activeObserver)
@@ -109,7 +112,6 @@ internal actual fun MobileMusicVideoSurface(
             targetPosition,
             state.isPlaying && !state.isLoading && state.isVideoModeActive && foreground && positionMapped,
             state.playbackSpeed,
-            foreground,
         )
     }
     LaunchedEffect(video) {
