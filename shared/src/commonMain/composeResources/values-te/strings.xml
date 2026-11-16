@@ -868,4 +868,13 @@
     <string name="hide_video_songs">వీడియో పాటలు దాచండి</string>
     <string name="hide_video_songs_desc">వెతుకులాటలో మరియు ప్లేలిస్ట్‌లో పాటకు వీడియో రూపాంతరం దాచండి</string>
     <string name="hide_non_musical_videos">పాట-లేన వీడియోలు దాచండి</string>
+    <string name="hide_non_musical_videos_desc">అధికారిక పాటల వీడియోలను ఉంచి ఇతర వీడియోలు, వ్లాగ్‌లు మరియు ట్రేలర్‌లు లాంటి వీడియోలు దాచండి.</string>
+    <string name="hide_podcasts">పాడ్‌కాస్ట్‌లు దాచండి</string>
+    <string name="hide_podcasts_desc">పాడ్‌కాస్ట్‌లు మరియు</string>
+    <string name="hide_short_songs">చిన్న పాటలు దాచండి</string>
+    <string name="minimum_song_duration_desc">%1$d కన్న తక్కువ సమయం కోసం ఉన్న పాటలు దాచండి</string>
+    <string name="block_ai_slop_artists">తేలిసిన్న AI-వాడే కళాకారులను నిరోధించండి</string>
+    <string name="listen_together_entry_subtitle">నిజ సమయంలో మీ స్నేహితులతో కలిసి పాటల వినండి.</string>
+    <string name="listen_together_description">నిజ సమయంలో మీ స్నేహితులతో కలిసి పాటల వినండి. హోస్ట్ చేయడానికి గది చేసుకోండి, లేదా ఉన్న గదిలోకి కోడ్ తో జోడించండి</string>
+    <string name="listen_together_host_card_title">గది ని హోస్ట్ చేయండి</string>
 </resources>
