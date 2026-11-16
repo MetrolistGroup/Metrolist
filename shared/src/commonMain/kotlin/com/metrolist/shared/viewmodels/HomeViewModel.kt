@@ -573,11 +573,13 @@ class HomeViewModel(
                         } else {
                             val cancelledGeneration = contentLoadGeneration
                             val interruptedPrimary = publishedPrimaryAllContent
+                            val interruptedState = _uiState.value
                             if (interruptedPrimary?.first == cancelledGeneration) {
+                                val latestPrimary = interruptedPrimary.second.withLatestLibraryAndSpeedDialState(interruptedState)
                                 cachedAllContent =
                                     homeCacheAfterOfflineCancellation(
                                         cachedAllContent,
-                                        interruptedPrimary.second,
+                                        latestPrimary,
                                         interruptedPrimary.first,
                                         cancelledGeneration,
                                     )
@@ -587,7 +589,6 @@ class HomeViewModel(
                                     lastKnownLocaleSignature = "${locale.hl}:${locale.gl}"
                                 }
                             }
-                            val interruptedState = _uiState.value
                             if (isFilteredHome(
                                     interruptedState.selectedChip?.params,
                                     interruptedState.selectedChip?.browseId ?: "FEmusic_home",
@@ -599,7 +600,7 @@ class HomeViewModel(
                                         interruptedState,
                                     )
                                 cachedSelectedChipContent?.selectedChip?.let { chip ->
-                                    cachedSelectedChipContent?.let { cacheChipContent(chip, it) }
+                                    cachedSelectedChipContent?.let { cacheChipContent(chip, it, markFresh = false) }
                                 }
                             }
                             contentLoadGeneration++
@@ -1461,10 +1462,16 @@ class HomeViewModel(
     private fun cacheChipContent(
         chip: Chip,
         state: HomeUiState,
+        markFresh: Boolean = true,
     ) {
         val key = chipCacheKey(chip)
         chipContentCache = boundedHomeChipCache(chipContentCache, key, state)
-        chipUpdatedAt = chipUpdatedAt.filterKeys { it in chipContentCache } + (key to getCurrentTimeMillis())
+        chipUpdatedAt =
+            if (markFresh) {
+                chipUpdatedAt.filterKeys { it in chipContentCache } + (key to getCurrentTimeMillis())
+            } else {
+                chipUpdatedAt.filterKeys { it in chipContentCache && it != key }
+            }
     }
 
     private fun chipCacheKey(chip: Chip): HomeChipKey =
@@ -1817,6 +1824,15 @@ internal fun shouldReloadIncompleteAllContent(
     state: HomeViewModel.HomeUiState,
     hasCachedAllContent: Boolean,
 ): Boolean = state.isAllContentPending || (reloadRequired && !hasCachedAllContent)
+
+internal fun HomeViewModel.HomeUiState.withLatestLibraryAndSpeedDialState(
+    latestState: HomeViewModel.HomeUiState,
+): HomeViewModel.HomeUiState =
+    copy(
+        userPlaylists = latestState.userPlaylists,
+        speedDialItems = latestState.speedDialItems,
+        speedDialPinnedIds = latestState.speedDialPinnedIds,
+    )
 
 internal fun isCurrentHomeLibraryRevision(
     snapshotRevision: Long,
