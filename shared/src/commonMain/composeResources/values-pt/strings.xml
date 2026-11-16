@@ -886,7 +886,6 @@
     <string name="settings_translation_mode_summary">Traduza as palavras ou transcreva a pronúncia no sistema de escrita de destino</string>
     <string name="settings_translation_provider_summary">Escolha o serviço que traduz as letras</string>
     <string name="settings_translation_model_summary">Modelo para traduzir ou transcrever letras</string>
-    <string name="settings_detector_model_summary">Modelo que decide se as letras precisam de tradução</string>
     <string name="settings_translation_formality_summary">Escolha linguagem formal ou informal para as traduções do DeepL</string>
     <string name="settings_discord_advanced_summary">Mostre modelos de atividade e botões com ligações personalizadas</string>
     <string name="settings_discord_activity_type_summary">Escolha como o Discord descreve a sua atividade musical</string>

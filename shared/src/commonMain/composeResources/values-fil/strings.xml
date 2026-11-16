@@ -1153,7 +1153,6 @@
     <string name="ai_provider">Provider</string>
     <string name="ai_base_url">Base URL</string>
     <string name="ai_translation_model">Modelo ng pagsasalin</string>
-    <string name="ai_judge_detector_model">Modelo ng judge/detector</string>
     <string name="ai_target_language">Target na wika</string>
     <string name="ai_deepl_formality">Pormalidad</string>
     <string name="ai_deepl_formality_more">Mas pormal</string>
@@ -1958,7 +1957,6 @@
     <string name="settings_translation_mode_summary">Isalin ang mga salita o isulat ang pagbigkas sa target na sistema ng pagsulat</string>
     <string name="settings_translation_provider_summary">Piliin ang serbisyong nagsasalin ng liriko</string>
     <string name="settings_translation_model_summary">Modelong nagsasalin o nagsusulat ng pagbigkas ng liriko</string>
-    <string name="settings_detector_model_summary">Modelong nagpapasiya kung kailangang isalin ang liriko</string>
     <string name="settings_translation_formality_summary">Pumili ng pormal o kaswal na wika para sa mga salin ng DeepL</string>
     <string name="settings_discord_advanced_summary">Ipakita ang mga template ng aktibidad at sariling button na may link</string>
     <string name="settings_discord_activity_type_summary">Piliin kung paano inilalarawan ng Discord ang iyong aktibidad sa musika</string>

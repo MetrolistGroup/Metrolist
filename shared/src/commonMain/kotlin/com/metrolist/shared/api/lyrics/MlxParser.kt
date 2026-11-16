@@ -5,7 +5,6 @@
 
 package com.metrolist.shared.api.lyrics
 
-import com.metrolist.shared.api.lyrics.romanizer.containsJapaneseKanji
 import com.metrolist.shared.model.AgentInfo
 import com.metrolist.shared.model.AgentType
 import com.metrolist.shared.model.LyricsEntry
@@ -15,6 +14,7 @@ import com.metrolist.shared.model.MlxMeta
 import com.metrolist.shared.model.MlxSong
 import com.metrolist.shared.model.MlxSongPart
 import com.metrolist.shared.model.WordTimestamp
+import meow.nyx.glyphmind.containsJapaneseKanji
 
 object MlxParser {
     private const val MAX_DOCUMENT_CHARS = 8 * 1024 * 1024

@@ -1094,7 +1094,6 @@
     <string name="recognize_music">Tunnista musiikkia</string>
     <string name="lyrics_animation_style">Sanoitusten animaatiot</string>
     <string name="not_playing">Mikään ei soi</string>
-    <string name="ai_judge_detector_model">Tunnistusmalli</string>
     <string name="listen_together_room_code">Huonekoodi</string>
     <string name="account_logout_webview_failed">Kirjauduttu ulos, mutta WebView:n kirjautumisprofiilia ei voitu poistaa.</string>
     <string name="spotify_session_sign_in">Kirjaudu sisään Spotifyhin jatkaaksesi</string>
@@ -2176,7 +2175,6 @@
     <string name="settings_translation_mode_summary">Käännä sanat tai kirjoita niiden ääntämys kohdekirjoitusjärjestelmällä</string>
     <string name="settings_translation_provider_summary">Valitse sanoitukset kääntävä palvelu</string>
     <string name="settings_translation_model_summary">Sanoitusten kääntämiseen tai ääntämyksen kirjoittamiseen käytettävä malli</string>
-    <string name="settings_detector_model_summary">Malli, joka päättää, tarvitsevatko sanoitukset käännöksen</string>
     <string name="settings_translation_formality_summary">Valitse DeepL-käännöksille muodollinen tai epämuodollinen kieli</string>
     <string name="settings_discord_advanced_summary">Näytä toimintamallipohjat ja omat linkkipainikkeet</string>
     <string name="settings_discord_activity_type_summary">Valitse, miten Discord kuvaa musiikkitoimintaasi</string>

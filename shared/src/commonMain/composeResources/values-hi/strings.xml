@@ -1231,7 +1231,6 @@
     <string name="settings_translation_mode_summary">शब्दों का अनुवाद करें या उनका उच्चारण चुनी हुई लिपि में लिखें</string>
     <string name="settings_translation_provider_summary">गीत के बोलों का अनुवाद करने वाली सेवा चुनें</string>
     <string name="settings_translation_model_summary">बोलों का अनुवाद या उनका उच्चारण लिखने वाला मॉडल</string>
-    <string name="settings_detector_model_summary">यह तय करने वाला मॉडल कि बोलों को अनुवाद की ज़रूरत है या नहीं</string>
     <string name="settings_translation_formality_summary">DeepL के अनुवादों के लिए औपचारिक या बोलचाल की भाषा चुनें</string>
     <string name="settings_discord_advanced_summary">गतिविधि के टेम्पलेट और अपने लिंक वाले बटन दिखाएँ</string>
     <string name="settings_discord_activity_type_summary">चुनें कि Discord आपकी संगीत गतिविधि को कैसे बताएगा</string>

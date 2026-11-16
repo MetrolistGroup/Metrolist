@@ -307,7 +307,6 @@
     <string name="settings_translation_mode_summary">الفاظ کا ترجمہ کریں یا ان کا تلفظ ہدف کے رسم الخط میں لکھیں</string>
     <string name="settings_translation_provider_summary">بول کا ترجمہ کرنے والی سروس منتخب کریں</string>
     <string name="settings_translation_model_summary">بول کا ترجمہ کرنے یا تلفظ لکھنے والا ماڈل</string>
-    <string name="settings_detector_model_summary">یہ طے کرنے والا ماڈل کہ بول کو ترجمے کی ضرورت ہے یا نہیں</string>
     <string name="settings_translation_formality_summary">DeepL کے تراجم کے لیے رسمی یا عام بول چال کی زبان منتخب کریں</string>
     <string name="settings_discord_advanced_summary">سرگرمی کے سانچے اور اپنے لنک والے بٹن دکھائیں</string>
     <string name="settings_discord_activity_type_summary">منتخب کریں کہ Discord آپ کی موسیقی کی سرگرمی کیسے بیان کرے</string>

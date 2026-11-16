@@ -257,12 +257,11 @@ private class VerifyReleaseDistributableAction(
             "Release distributable must not contain kotlin-reflect"
         }
         check(jars.none { it.name.startsWith("pinyin-") || it.name.startsWith("nlp-common-") || it.name.startsWith("heaven-") }) {
-            "Release distributable must use the in-tree Mandarin table"
+            "Release distributable must use glyphmind for Mandarin"
         }
 
         URLClassLoader(jars.map { it.toURI().toURL() }.toTypedArray(), ClassLoader.getPlatformClassLoader()).use { loader ->
             listOf(
-                "com.atilika.kuromoji.viterbi.ViterbiNode\$Type",
                 "javax.jmdns.ServiceInfo\$Fields",
             ).forEach { className ->
                 check(loader.loadClass(className).enumConstants?.isNotEmpty() == true) {
@@ -287,8 +286,8 @@ private class VerifyReleaseDistributableAction(
         check("kotlin/reflect/jvm/internal/ReflectionFactoryImpl.class" !in packagedEntries) {
             "Release distributable must not contain repackaged kotlin-reflect classes"
         }
-        check("romanization/mandarin.bin" in packagedEntries) {
-            "Release distributable is missing the Mandarin table"
+        check(packagedEntries.none { it == "romanization/mandarin.bin" || it.startsWith("com/atilika/kuromoji/") }) {
+            "Release distributable contains retired romanization assets"
         }
         if (requiredArm64WebView != null && requiredArm64WebView !in packagedEntries) {
             throw GradleException("Release distributable is missing the ARM64 WebView native library $requiredArm64WebView")

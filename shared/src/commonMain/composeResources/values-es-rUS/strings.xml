@@ -1186,7 +1186,6 @@
     <string name="ai_provider">Proveedor</string>
     <string name="ai_base_url">URL base</string>
     <string name="ai_translation_model">Modelo de traducción</string>
-    <string name="ai_judge_detector_model">Modelo juez/detector</string>
     <string name="ai_target_language">Idioma de destino</string>
     <string name="ai_deepl_formality">Formalidad</string>
     <string name="ai_deepl_formality_default">Predeterminado</string>
@@ -2138,7 +2137,6 @@
     <string name="settings_translation_mode_summary">Traduce las palabras o transcribe su pronunciación al sistema de escritura de destino</string>
     <string name="settings_translation_provider_summary">Elige el servicio que traduce las letras</string>
     <string name="settings_translation_model_summary">Modelo para traducir o transcribir letras</string>
-    <string name="settings_detector_model_summary">Modelo que decide si las letras necesitan traducción</string>
     <string name="settings_translation_formality_summary">Elige un lenguaje formal o informal para las traducciones de DeepL</string>
     <string name="settings_discord_advanced_summary">Muestra plantillas de actividad y botones con enlaces personalizados</string>
     <string name="settings_discord_activity_type_summary">Elige cómo Discord describe tu actividad musical</string>

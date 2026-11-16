@@ -1174,7 +1174,6 @@
     <string name="ai_provider">Provedor</string>
     <string name="ai_base_url">URL base</string>
     <string name="ai_translation_model">model de traducció</string>
-    <string name="ai_judge_detector_model">Model de detector</string>
     <string name="ai_target_language">Idioma de destinació</string>
     <string name="ai_deepl_formality">Formalitat</string>
     <string name="ai_deepl_formality_default">Per defecte</string>
@@ -2209,7 +2208,6 @@
     <string name="settings_translation_mode_summary">Tradueix les paraules o transcriu-ne la pronunciació al sistema d'escriptura de destinació</string>
     <string name="settings_translation_provider_summary">Tria el servei que tradueix la lletra</string>
     <string name="settings_translation_model_summary">Model per traduir o transcriure la lletra</string>
-    <string name="settings_detector_model_summary">Model que decideix si cal traduir la lletra</string>
     <string name="settings_translation_formality_summary">Tria un llenguatge formal o informal per a les traduccions de DeepL</string>
     <string name="settings_discord_advanced_summary">Mostra plantilles d'activitat i botons amb enllaços personalitzats</string>
     <string name="settings_discord_activity_type_summary">Tria com Discord descriu la teva activitat musical</string>

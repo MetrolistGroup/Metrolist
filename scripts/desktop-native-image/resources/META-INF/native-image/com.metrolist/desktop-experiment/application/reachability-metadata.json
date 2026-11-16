@@ -16,13 +16,7 @@
       "glob": "composeResources"
     },
     {
-      "glob": "romanization/**"
-    },
-    {
       "glob": "com/ibm/icu/impl/data/**"
-    },
-    {
-      "glob": "com/atilika/kuromoji/**"
     },
     {
       "module": "java.desktop",

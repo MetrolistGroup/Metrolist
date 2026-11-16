@@ -125,7 +125,7 @@ jobs:
           if [[ "${{ matrix.arch }}" == "x64" ]]; then
             tasks=(
               :shared:desktopTest :desktopApp:jvmTest :desktopApp:ktlintCheck
-              :shared:verifyDesktopJarIntegrity :shared:verifyKuromojiPackaging :shared:verifyIosKuromojiPackaging
+              :shared:verifyDesktopJarIntegrity
               :shared:ktlintCheck :listenTogetherProto:ktlintCheck
             )
             if [[ '${{ inputs.compile }}' == 'true' ]]; then

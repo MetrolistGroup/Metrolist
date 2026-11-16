@@ -1188,7 +1188,6 @@
     <string name="settings_translation_mode_summary">Terjemahkan perkataan atau tulis sebutannya dalam sistem tulisan sasaran</string>
     <string name="settings_translation_provider_summary">Pilih perkhidmatan yang menterjemahkan lirik</string>
     <string name="settings_translation_model_summary">Model untuk menterjemahkan atau mentranskripsikan lirik</string>
-    <string name="settings_detector_model_summary">Model yang menentukan sama ada lirik memerlukan terjemahan</string>
     <string name="settings_translation_formality_summary">Pilih bahasa formal atau santai untuk terjemahan DeepL</string>
     <string name="settings_discord_advanced_summary">Paparkan templat aktiviti dan butang pautan tersuai</string>
     <string name="settings_discord_activity_type_summary">Pilih cara Discord menerangkan aktiviti muzik anda</string>

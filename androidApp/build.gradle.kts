@@ -300,7 +300,6 @@ android {
             excludes += "META-INF/io.netty.versions.properties"
             excludes += "META-INF/CONTRIBUTORS.md"
             excludes += "META-INF/LICENSE.md"
-            excludes += "META-INF/*kuromoji*"
             excludes += "lib/**"
             excludes += "google/protobuf/*.proto"
         }

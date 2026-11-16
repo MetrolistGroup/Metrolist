@@ -183,44 +183,6 @@ class OpenRouterTranslationTest {
         }
 
     @Test
-    fun wrappedLanguageDetectionUsesTheRequestedLanguageAndRejectsMalformedDecisions() =
-        runBlocking {
-            val responses =
-                listOf("```json\n{\"foreign_text\":\"bonjour\"}\n```", "Explanation {source}\n{\"lines\":[\"bonjour\",\"\"]}\n{done}")
-            var calls = 0
-            HttpClient(
-                MockEngine { request ->
-                    val body = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
-                    val prompt =
-                        body
-                            .getValue("messages")
-                            .jsonArray
-                            .last()
-                            .jsonObject
-                            .getValue("content")
-                            .jsonPrimitive.content
-                    assertTrue("pt-BR" in prompt)
-                    respond(completion(responses[calls++]))
-                },
-            ).use { http ->
-                val client = LyricsTranslationClient(http)
-                assertTrue(client.shouldTranslateLyrics(listOf("bonjour"), "OpenRouter", "pt-BR", "key", ENDPOINT, PRIMARY).getOrThrow())
-                assertEquals(
-                    listOf(true, false),
-                    client
-                        .shouldTranslateLyricsLines(
-                            listOf("bonjour", "Olá"),
-                            "OpenRouter",
-                            "pt-BR",
-                            "key",
-                            ENDPOINT,
-                            PRIMARY,
-                        ).getOrThrow(),
-                )
-            }
-        }
-
-    @Test
     fun errorsInsideHttp200CompletionsCannotBeAcceptedAsTranslations() =
         runBlocking {
             for (response in listOf(

@@ -1219,7 +1219,6 @@
     <string name="ai_provider">Poskytovatel</string>
     <string name="ai_base_url">Základní URL</string>
     <string name="ai_translation_model">Překladový model</string>
-    <string name="ai_judge_detector_model">Model detektoru</string>
     <string name="ai_target_language">Cílový jazyk</string>
     <string name="ai_deepl_formality">Formálnost</string>
     <string name="ai_deepl_formality_default">Výchozí</string>
@@ -2277,7 +2276,6 @@
     <string name="settings_translation_mode_summary">Překládat slova nebo přepsat jejich výslovnost do cílového písma</string>
     <string name="settings_translation_provider_summary">Vyberte službu, která překládá texty</string>
     <string name="settings_translation_model_summary">Model pro překlad nebo přepis textů</string>
-    <string name="settings_detector_model_summary">Model, který rozhoduje, zda texty potřebují překlad</string>
     <string name="settings_translation_formality_summary">Vyberte formální nebo neformální jazyk překladů DeepL</string>
     <string name="settings_discord_advanced_summary">Zobrazit šablony aktivity a vlastní tlačítka s odkazy</string>
     <string name="settings_discord_activity_type_summary">Vyberte, jak Discord označuje vaši hudební aktivitu</string>

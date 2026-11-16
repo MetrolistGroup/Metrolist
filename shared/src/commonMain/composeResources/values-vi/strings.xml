@@ -474,7 +474,6 @@
     <string name="settings_translation_mode_summary">Dịch từ ngữ hoặc ghi cách phát âm bằng hệ chữ đích</string>
     <string name="settings_translation_provider_summary">Chọn dịch vụ dịch lời bài hát</string>
     <string name="settings_translation_model_summary">Mô hình dùng để dịch hoặc phiên âm lời bài hát</string>
-    <string name="settings_detector_model_summary">Mô hình quyết định lời bài hát có cần dịch không</string>
     <string name="settings_translation_formality_summary">Chọn cách diễn đạt trang trọng hoặc thân mật cho bản dịch DeepL</string>
     <string name="settings_discord_advanced_summary">Hiện mẫu hoạt động và nút liên kết tùy chỉnh</string>
     <string name="settings_discord_activity_type_summary">Chọn cách Discord mô tả hoạt động nghe nhạc của bạn</string>

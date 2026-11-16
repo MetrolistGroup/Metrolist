@@ -1789,7 +1789,6 @@
     <string name="ai_provider">Penyedia</string>
     <string name="ai_base_url">Base URL</string>
     <string name="ai_translation_model">Model terjemahan</string>
-    <string name="ai_judge_detector_model">Model detektor</string>
     <string name="ai_target_language">Target bahasa</string>
     <string name="ai_deepl_formality">Formalitas</string>
     <string name="add_to_queue_desc">Tambahkan ke bagian bawah antrean Anda</string>
@@ -2381,7 +2380,6 @@
     <string name="settings_translation_mode_summary">Terjemahkan kata atau tulis pelafalannya dalam sistem tulisan tujuan</string>
     <string name="settings_translation_provider_summary">Pilih layanan yang menerjemahkan lirik</string>
     <string name="settings_translation_model_summary">Model untuk menerjemahkan atau menyalin pelafalan lirik</string>
-    <string name="settings_detector_model_summary">Model yang menentukan apakah lirik perlu diterjemahkan</string>
     <string name="settings_translation_formality_summary">Pilih bahasa formal atau santai untuk terjemahan DeepL</string>
     <string name="settings_discord_advanced_summary">Tampilkan templat aktivitas dan tombol tautan khusus</string>
     <string name="settings_discord_activity_type_summary">Pilih cara Discord menyebut aktivitas musik Anda</string>
