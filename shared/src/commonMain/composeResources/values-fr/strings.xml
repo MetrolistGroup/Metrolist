@@ -2326,7 +2326,7 @@
     <string name="unblock_artist_message">Débloquer "%1$s" ?</string>
     <string name="appearance_floating_top_bar">Barre supérieur flottante</string>
     <string name="appearance_floating_top_bar_description">Affiche une barre supérieure flottante plutôt qu'ancrée en haut de l'écran</string>
-    <string name="active_lyrics_alignment">Alignement de la ligne de paroles active</string>
+    <string name="active_lyrics_alignment">Alignement de la ligne de paroles affichée dans le lecteur</string>
     <string name="listen_together_host_action">Créer</string>
     <string name="updates_share_app">Partager l'application</string>
     <string name="updates_share_apk">Partager le fichier APK</string>
