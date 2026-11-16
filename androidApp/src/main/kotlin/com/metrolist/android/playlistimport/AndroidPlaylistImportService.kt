@@ -179,6 +179,52 @@ object AndroidPlaylistImportTransfer {
                 ).getOrThrow()
         }
 
+    internal suspend fun startBatch(
+        context: Context,
+        manager: PlaylistImportManager,
+        playlists: List<ImportedPlaylistData>,
+    ): Result<ImportProgressState.Completed> {
+        val title = context.resources.getQuantityString(R.plurals.import_playlists, playlists.size)
+        return runForeground(context, title, playlists.first().source, completed = { it }) { update ->
+            val result =
+                executePlaylistBatch(playlists, title, update) { data, destination, onStateUpdate ->
+                    UnifiedPlaylistImporter.executeImport(
+                        manager = manager,
+                        title = data.title,
+                        tracks = data.tracks,
+                        destination = destination,
+                        provider = data.provider,
+                        coverUrl = data.coverUrl,
+                        onStateUpdate = onStateUpdate,
+                    )
+                }
+            if (result.failures.isNotEmpty()) {
+                val summary =
+                    context.getString(
+                        R.string.spotify_import_imported_partial,
+                        result.completed.size,
+                        playlists.size,
+                        result.importedTracks,
+                        result.failures.size,
+                    )
+                throw IllegalStateException(
+                    summary + "\n\n" +
+                        result.failures.joinToString("\n") { (name, error) ->
+                            "$name: ${error.message ?: context.getString(R.string.import_error_generic)}"
+                        },
+                )
+            }
+            ImportProgressState.Completed(
+                playlistTitle = title,
+                totalSourceTracks = playlists.sumOf { it.tracks.size },
+                resolvedTracks = result.completed.sumOf { it.resolvedTracks },
+                importedTracks = result.importedTracks,
+                destinationName = title,
+                unresolvedTracks = result.completed.flatMap { it.unresolvedTracks },
+            )
+        }
+    }
+
     private fun <T> createRequest(
         context: Context,
         playlistTitle: String,
