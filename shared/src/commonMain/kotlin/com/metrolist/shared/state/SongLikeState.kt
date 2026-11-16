@@ -238,23 +238,25 @@ object SongLikeState {
         }
         if (previous == current) return false
 
+        val localLikes = _likedSongsFlow.value.takeIf { previous.startsWith("signed-out|") && !current.startsWith("signed-out|") }
         remoteSyncGeneration.begin()
         successfulRefresh = null
         remotePreview = null
-        Settings.shared.pendingSongVotesJson = "{}"
+        savePendingVotes(localLikes.orEmpty().filterNot(SongItem::isLocal).associate { it.id to SongVote.LIKE })
         voteRevision.incrementAndGet()
         customOrdersCache = null
         val savedOrder = savedCustomOrder(current)
-        updateLikedSongs(emptyList())
+        updateLikedSongs(localLikes.orEmpty())
         persistenceGate.withLock {
             persistenceRevision.incrementAndGet()
             Settings.shared.likedSongsOrderAccount = current
-            Settings.shared.likedSongsOrderCustomized = savedOrder != null
-            Settings.shared.likedSongsJson = "[]"
-            Settings.shared.likedSongsRecencyJson = "[]"
-            Settings.shared.likedSongIds = ""
+            Settings.shared.likedSongsOrderCustomized =
+                savedOrder != null || (localLikes != null && Settings.shared.likedSongsOrderCustomized)
+            Settings.shared.likedSongsJson = Json.encodeToString(_likedSongsFlow.value)
+            Settings.shared.likedSongsRecencyJson = Json.encodeToString(likedSongRecency)
+            Settings.shared.likedSongIds = _likedSongsFlow.value.joinToString(",", transform = SongItem::id)
         }
-        enqueueSnapshot()
+        if (localLikes != null && savedOrder == null) saveLikedSongs() else enqueueSnapshot()
         return true
     }
 
@@ -355,7 +357,7 @@ object SongLikeState {
         }
         savePendingVotes(pending)
         songs.filter { pending[it.id] == null }.forEach { removeDislike(it.id, sync = false) }
-        val pendingLikes = _likedSongsFlow.value.filter { pending[it.id] == SongVote.LIKE }
+        val pendingLikes = _likedSongsFlow.value.filter { it.isLocal || pending[it.id] == SongVote.LIKE }
         val reconciledRemote = (pendingLikes + songs.filter { pending[it.id] == null }).distinctBy(SongItem::id)
         val snapshotIds = localSnapshot.mapTo(hashSetOf(), SongItem::id)
         val concurrentLikes =
@@ -386,9 +388,9 @@ object SongLikeState {
                     reconcileLikedSongsAfterRefresh(
                         localSnapshot,
                         _likedSongsFlow.value,
-                        reconciledRemote.applyCustomOrder(savedOrder),
+                        reconciledRemote,
                         preserveLocalOrder = true,
-                    )
+                    ).applyCustomOrder(savedOrder)
                 }
 
                 else -> {

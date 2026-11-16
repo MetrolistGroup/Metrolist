@@ -653,6 +653,8 @@ class SongLikeStateTest {
     fun recencyRefreshesLegacySnapshotsAndResetsForAnotherAccount() =
         runTest {
             SongLikeState.awaitPersistence()
+            Settings.shared.dataSyncId = "account-a"
+            SongLikeState.activateCurrentAccount()
             val older = testSong.copy(id = "older")
             Settings.shared.likedSongsJson = Json.encodeToString(listOf(testSong, older))
             SongLikeState.refreshFromSettings()
@@ -1142,6 +1144,85 @@ class SongLikeStateTest {
     }
 
     @Test
+    fun refreshKeepsAManualMoveOfALikeAddedDuringTheRequest() =
+        runTest {
+            val first = testSong.copy(id = "first")
+            val second = testSong.copy(id = "second")
+            val added = testSong.copy(id = "added")
+            val discovered = testSong.copy(id = "discovered")
+            SongLikeState.replaceLikesLocally(listOf(first, second), orderCustomized = true)
+            val (generation, snapshot) = SongLikeState.beginRemoteRefresh()
+            SongLikeState.addLike(added)
+            SongLikeState.moveLike(added.id, second.id)
+            assertEquals(listOf(first, second, added), SongLikeState.likedSongs)
+
+            assertTrue(SongLikeState.applyRemoteRefresh(generation, listOf(discovered, second, first), snapshot))
+            assertEquals(listOf(discovered, first, second, added), SongLikeState.likedSongs)
+            SongLikeState.awaitPersistence()
+            SongLikeState.refreshFromSettings()
+            SongLikeState.replaceLikesFromRemote(listOf(discovered, added, second, first))
+            assertEquals(listOf(discovered, first, second, added), SongLikeState.likedSongs)
+        }
+
+    @Test
+    fun signingBackInKeepsTheSavedOrderWhenSignedOutLikesOverlapOrCoverOnlyPartOfIt() =
+        runTest {
+            val songs = (1..4).map { testSong.copy(id = "song-$it") }
+            val savedOrder = listOf(songs[1], songs[0], songs[2], songs[3])
+            for (signedOutLikes in listOf(songs, listOf(songs[2], songs[0]), songs.asReversed())) {
+                Settings.shared.dataSyncId = "overlapping-account"
+                SongLikeState.replaceLikesLocally(savedOrder, orderCustomized = true)
+                SongLikeState.awaitPersistence()
+                Settings.shared.dataSyncId = ""
+                SongLikeState.activateCurrentAccount()
+                SongLikeState.replaceLikesLocally(signedOutLikes, orderCustomized = true)
+                SongLikeState.awaitPersistence()
+
+                Settings.shared.dataSyncId = "overlapping-account"
+                SongLikeState.activateCurrentAccount()
+                SongLikeState.awaitPersistence()
+                SongLikeState.refreshFromSettings()
+                SongLikeState.replaceLikesFromRemote(songs.asReversed())
+                assertEquals(savedOrder, SongLikeState.likedSongs)
+                SongLikeState.awaitPersistence()
+                SongLikeState.refreshFromSettings()
+                SongLikeState.replaceLikesFromRemote(songs)
+                assertEquals(savedOrder, SongLikeState.likedSongs)
+            }
+        }
+
+    @Test
+    fun signingBackInKeepsTheAccountsCustomOrderWithOrWithoutSignedOutLikes() =
+        runTest {
+            val first = testSong.copy(id = "first")
+            val second = testSong.copy(id = "second")
+            val local = testSong.copy(id = "signed-out-like")
+            for (signedOutLikes in listOf(emptyList(), listOf(local))) {
+                Settings.shared.dataSyncId = "returning-account"
+                SongLikeState.replaceLikesFromRemote(listOf(first, second))
+                SongLikeState.replaceLikesLocally(listOf(second, first), orderCustomized = true)
+                SongLikeState.awaitPersistence()
+                Settings.shared.dataSyncId = ""
+                SongLikeState.activateCurrentAccount()
+                SongLikeState.replaceLikesLocally(signedOutLikes, orderCustomized = true)
+                SongLikeState.awaitPersistence()
+
+                Settings.shared.dataSyncId = "returning-account"
+                SongLikeState.activateCurrentAccount()
+                SongLikeState.awaitPersistence()
+                SongLikeState.refreshFromSettings()
+                SongLikeState.replaceLikesFromRemote(listOf(first, second))
+
+                val restored = SongLikeState.likedSongs
+                assertEquals(listOf(second, first), restored.filterNot { it == local })
+                assertEquals((signedOutLikes + listOf(second, first)).toSet(), restored.toSet())
+                SongLikeState.awaitPersistence()
+                SongLikeState.refreshFromSettings()
+                assertEquals(restored, SongLikeState.likedSongs)
+            }
+        }
+
+    @Test
     fun savedOrderSurvivesActivationBeforeRemoteRefresh() {
         val first = testSong.copy(id = "first")
         val second = testSong.copy(id = "second")
@@ -1230,6 +1311,34 @@ class SongLikeStateTest {
         assertTrue(SongLikeState.applyRemoteRefresh(currentGeneration, listOf(testSong), currentSnapshot))
         assertEquals(listOf(testSong), SongLikeState.likedSongs)
     }
+
+    @Test
+    fun signingInMergesLocalLikesUntilYouTubeAcknowledgesThem() =
+        runTest {
+            val local = testSong.copy(id = "local-like")
+            val file = testSong.copy(id = "local-file", isLocal = true)
+            val remote = testSong.copy(id = "remote-like")
+            SongLikeState.replaceLikesLocally(listOf(local, file), orderCustomized = true)
+            SongLikeState.awaitPersistence()
+            Settings.shared.dataSyncId = "account-a"
+            SongLikeState.activateCurrentAccount()
+            assertEquals(listOf(local, file), SongLikeState.likedSongs)
+            assertEquals(mapOf(local.id to SongVote.LIKE), Json.decodeFromString(Settings.shared.pendingSongVotesJson))
+
+            repeat(2) { SongLikeState.replaceLikesFromRemote(listOf(remote)) }
+            assertEquals(setOf(local, file, remote), SongLikeState.likedSongs.toSet())
+            SongLikeState.replaceLikesFromRemote(listOf(remote, local))
+            assertEquals("{}", Settings.shared.pendingSongVotesJson)
+            SongLikeState.replaceLikesFromRemote(listOf(remote))
+            assertEquals(setOf(file, remote), SongLikeState.likedSongs.toSet())
+            SongLikeState.awaitPersistence()
+            SongLikeState.refreshFromSettings()
+            assertEquals(setOf(file, remote), SongLikeState.likedSongs.toSet())
+
+            Settings.shared.dataSyncId = "account-b"
+            SongLikeState.activateCurrentAccount()
+            assertTrue(SongLikeState.likedSongs.isEmpty())
+        }
 
     @Test
     fun activatingChangedAccountClearsPreviousLikesBeforeMutation() {
