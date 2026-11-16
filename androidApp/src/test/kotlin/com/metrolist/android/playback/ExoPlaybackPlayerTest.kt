@@ -679,17 +679,127 @@ class ExoPlaybackPlayerTest {
         }
 
     @Test
-    fun cancellingAPreloadAfterNativeTransitionKeepsThePlayingItemAndItsSource() =
+    fun cancellingAPreloadAfterNativeTransitionCommitsItsPlaybackIdentityAndSource() =
+        runBlocking {
+            player.releaseAndAwaitScope()
+            Dispatchers.resetMain()
+            player = ExoPlaybackPlayer(RuntimeEnvironment.getApplication())
+            Settings.shared.audioNormalization = true
+            val first = song()
+            val second = first.copy(id = "second")
+            val selected = second.copy(id = "selected-audio", title = "Selected audio")
+            player.setQueue(listOf(first, second, first.copy(id = "third")), preparePlayback = false)
+            val occurrenceKey =
+                player.queueState.value.entries[1]
+                    .key
+            val resource = downloadedResource().copy(perceptualLoudnessDb = -17.0)
+            assertTrue(player.prepareAndPlay(first, resource, resumePlayback = false))
+            val native = underlyingPlayer().also(::awaitPlaybackReady)
+            val previousInstance = player.currentPlaybackInstanceId
+            val nextResource = resource.copy(videoId = selected.id, perceptualLoudnessDb = -3.0)
+            val token =
+                checkNotNull(player.prepareNextTrack(nextResource, startPaused = true, queueSongId = second.id, playbackSong = selected))
+            val reporter = ReflectionHelpers.getField<Any>(player, "nextPlaybackReporter")
+            var commits = 0
+            player.onPreloadedPlaybackCommitted = { committedSong, committedResource ->
+                assertEquals(selected, committedSong)
+                assertSame(nextResource, committedResource)
+                commits++
+            }
+            val source = SabrInputStream(0L, { _, _ -> flow { } }, startImmediately = false, tempDirectory = temporaryFolder.root)
+            ReflectionHelpers.setField(player, "nextAudioSource", source)
+            val completions = mutableListOf<Long>()
+            val collector = CoroutineScope(Dispatchers.Main.immediate)
+            collector.launch { player.onEOFPlaybackInstance.collect { completions += it } }
+            try {
+                val oldPosition =
+                    Player.PositionInfo(
+                        null,
+                        0,
+                        native.getMediaItemAt(0),
+                        null,
+                        0,
+                        20_000L,
+                        20_000L,
+                        C.INDEX_UNSET,
+                        C.INDEX_UNSET,
+                    )
+                val newPosition = Player.PositionInfo(null, 1, native.getMediaItemAt(1), null, 1, 0L, 0L, C.INDEX_UNSET, C.INDEX_UNSET)
+                native.seekTo(1, 750L)
+                awaitPlaybackReady(native)
+                native.addListener(
+                    object : Player.Listener {
+                        override fun onTimelineChanged(
+                            timeline: Timeline,
+                            reason: Int,
+                        ) {
+                            if (native.mediaItemCount == 1 && ReflectionHelpers.getField<Int>(player, "nextPlaylistIndex") == 0) {
+                                player.cancelNext()
+                            }
+                        }
+                    },
+                )
+                ReflectionHelpers
+                    .getField<Player.Listener>(player, "playbackListener")
+                    .onPositionDiscontinuity(oldPosition, newPosition, Player.DISCONTINUITY_REASON_AUTO_TRANSITION)
+                player.cancelNext()
+                shadowOf(Looper.getMainLooper()).idle()
+
+                assertEquals(1, native.mediaItemCount)
+                assertEquals(0, native.currentMediaItemIndex)
+                assertSame(nextResource, native.currentMediaItem?.localConfiguration?.tag)
+                assertEquals(750L, native.currentPosition)
+                assertEquals(Player.STATE_READY, native.playbackState)
+                assertFalse(player.isPreloadedPlaybackActive(token))
+                assertSame(nextResource, player.currentPlaybackResource.value)
+                assertEquals(token.playerInstanceId, player.currentPlaybackInstanceId)
+                assertTrue(previousInstance != player.currentPlaybackInstanceId)
+                assertEquals(selected, player.currentSong.value)
+                assertEquals(selected, ReflectionHelpers.getField<SongItem>(player, "currentSongValue"))
+                assertEquals(1, player.currentMediaItemIndex.value)
+                assertEquals(
+                    occurrenceKey,
+                    player.queueState.value.entries[player.currentMediaItemIndex.value]
+                        .key,
+                )
+                assertEquals(selected, player.songQueue.value[1])
+                assertSame(reporter, ReflectionHelpers.getField<Any>(player, "playbackReporter"))
+                assertSame(nextResource, normalizationProcessors().getValue(native).resource)
+                assertEquals(
+                    playbackNormalizationGain(nextResource.loudnessDb, true, perceptualLoudnessDb = nextResource.perceptualLoudnessDb),
+                    normalizationProcessors().getValue(native).normalizationGain,
+                    0.00001f,
+                )
+                assertEquals(1, commits)
+                assertTrue(completions.all { it == previousInstance })
+                assertFalse(player.swapToPreloadedQueueNext(token, nextResource, selected))
+                assertSame(source, ReflectionHelpers.getField<SabrInputStream>(player, "activeAudioSource"))
+                assertFalse(ReflectionHelpers.getField<Boolean>(source, "closed"))
+                player.cancelNext()
+                assertEquals(1, commits)
+                assertSame(nextResource, player.currentPlaybackResource.value)
+                player.stop()
+                assertTrue(ReflectionHelpers.getField<Boolean>(source, "closed"))
+            } finally {
+                collector.cancel()
+                source.close()
+            }
+        }
+
+    @Test
+    fun cancellingAPlayingPreloadRestoresThePreviousTrackWhenItsQueueOccurrenceWasRemoved() =
         runBlocking {
             player.releaseAndAwaitScope()
             Dispatchers.resetMain()
             player = ExoPlaybackPlayer(RuntimeEnvironment.getApplication())
             val first = song()
             val second = first.copy(id = "second")
-            player.setQueue(listOf(first, second), preparePlayback = false)
+            player.setQueue(listOf(first, second, second), preparePlayback = false)
+            val originalEntries = player.queueState.value.entries
             val resource = downloadedResource()
             assertTrue(player.prepareAndPlay(first, resource, resumePlayback = false))
             val native = underlyingPlayer().also(::awaitPlaybackReady)
+            val instance = player.currentPlaybackInstanceId
             val nextResource = resource.copy(videoId = second.id)
             val token = checkNotNull(player.prepareNextTrack(nextResource, startPaused = true, queueSongId = second.id))
             val source = SabrInputStream(0L, { _, _ -> flow { } }, startImmediately = false, tempDirectory = temporaryFolder.root)
@@ -713,21 +823,30 @@ class ExoPlaybackPlayerTest {
                 ReflectionHelpers
                     .getField<Player.Listener>(player, "playbackListener")
                     .onPositionDiscontinuity(oldPosition, newPosition, Player.DISCONTINUITY_REASON_AUTO_TRANSITION)
-                assertEquals(0, ReflectionHelpers.getField<Int>(player, "nextPlaylistIndex"))
 
-                player.cancelNext()
+                player.removeQueueItem(1)
                 shadowOf(Looper.getMainLooper()).idle()
 
                 assertEquals(1, native.mediaItemCount)
-                assertEquals(0, native.currentMediaItemIndex)
-                assertSame(nextResource, native.currentMediaItem?.localConfiguration?.tag)
-                assertEquals(750L, native.currentPosition)
-                assertEquals(Player.STATE_READY, native.playbackState)
+                assertSame(resource, native.currentMediaItem?.localConfiguration?.tag)
+                assertSame(resource, player.currentPlaybackResource.value)
+                assertEquals(first, player.currentSong.value)
+                assertEquals(instance, player.currentPlaybackInstanceId)
+                assertEquals(0, player.currentMediaItemIndex.value)
+                assertEquals(
+                    listOf(originalEntries[0].key, originalEntries[2].key),
+                    player.queueState.value.entries
+                        .map { it.key },
+                )
                 assertFalse(player.isPreloadedPlaybackActive(token))
-                assertSame(source, ReflectionHelpers.getField<SabrInputStream>(player, "activeAudioSource"))
-                assertFalse(ReflectionHelpers.getField<Boolean>(source, "closed"))
-                player.stop()
+                assertFalse(player.swapToPreloadedQueueNext(token, nextResource, second))
                 assertTrue(ReflectionHelpers.getField<Boolean>(source, "closed"))
+                assertTrue(
+                    PlaybackEventLog.events.value.any {
+                        it.message == "Android seek requested." && it.details["reason"] == "cancel_playing_preload" &&
+                            it.details["toPositionMs"] == "20000"
+                    },
+                )
             } finally {
                 source.close()
             }

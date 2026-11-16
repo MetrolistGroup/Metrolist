@@ -565,6 +565,9 @@ class ExoPlaybackPlayer(
         }
     private var nextPlayer: ExoPlayer? = null
     private var nextPlaylistIndex = C.INDEX_UNSET
+    private var nextPlaylistQueueEntryKey: Long? = null
+    private var nextPlaylistSong: SongItem? = null
+    private var nextPlaylistPreviousPositionMs: Long? = null
     private var nextPlaylistFailure: ((Throwable) -> Unit)? = null
     private var nextAudioSource: SeekableMediaSource? = null
     private var nextVideoSource: SeekableMediaSource? = null
@@ -727,8 +730,10 @@ class ExoPlaybackPlayer(
                 if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION &&
                     nextPlaylistIndex != C.INDEX_UNSET && newPosition.mediaItemIndex == nextPlaylistIndex
                 ) {
+                    val completedInstance = currentInstance
+                    nextPlaylistPreviousPositionMs = oldPosition.positionMs.coerceAtLeast(0L)
                     removeFinishedPlaylistItems()
-                    completePlaybackAtEof(oldPosition.positionMs.coerceAtLeast(0L))
+                    if (currentInstance == completedInstance) completePlaybackAtEof(oldPosition.positionMs.coerceAtLeast(0L))
                 }
             }
 
@@ -1672,6 +1677,7 @@ class ExoPlaybackPlayer(
         startPaused: Boolean,
         queueSongId: String,
         positionMs: Long,
+        playbackSong: SongItem?,
         onFailure: (Throwable) -> Unit,
     ): AndroidPlaybackPlayer.PlaybackPreloadToken? =
         withContext(Dispatchers.Main.immediate) {
@@ -1694,6 +1700,9 @@ class ExoPlaybackPlayer(
                     ),
             )
             cancelNextInternal(preserveTransitionGain = !nextStarted && transitionGain < 1f)
+            if (currentInstance != expectedCurrentPlaybackInstanceId || currentResource?.videoId != expectedCurrentVideoId) {
+                return@withContext null
+            }
             if (startPaused && positionMs == 0L && !resource.hasVideo && !resource.isLive &&
                 currentResource?.hasVideo == false && currentResource?.isLive == false &&
                 (
@@ -1723,6 +1732,11 @@ class ExoPlaybackPlayer(
                         YouTubePlaybackReporter.create(scope, GlobalYouTubeRepository.instance).also(playbackReporters::add)
                     nextPlaylistFailure = onFailure
                     nextPlaylistIndex = exo.currentMediaItemIndex + 1
+                    nextPlaylistQueueEntryKey =
+                        queue.state.value.entries
+                            .getOrNull(queue.currentIndex.value + 1)
+                            ?.key
+                    nextPlaylistSong = playbackSong ?: queue.peekNext()?.let(SongMetadataState::apply)
                     exo.addMediaSource(nextPlaylistIndex, mediaSource)
                     updateOffloadPreferences(exo)
                     token
@@ -2139,7 +2153,17 @@ class ExoPlaybackPlayer(
     }
 
     private fun cancelNextIfQueueTargetChanged() {
-        if (isPreloadedQueueTargetChanged(nextToken, queue.peekNext()?.id)) cancelNextInternal()
+        if (isPreloadedQueueTargetChanged(nextToken, queue.peekNext()?.id) ||
+            (
+                nextPlaylistIndex != C.INDEX_UNSET &&
+                    nextPlaylistQueueEntryKey !=
+                    queue.state.value.entries
+                        .getOrNull(queue.currentIndex.value + 1)
+                        ?.key
+            )
+        ) {
+            cancelNextInternal()
+        }
     }
 
     private fun removeFinishedPlaylistItems() {
@@ -2153,23 +2177,23 @@ class ExoPlaybackPlayer(
     private fun cancelNextInternal(preserveTransitionGain: Boolean = false) {
         nextGeneration++
         val playlistIndex = nextPlaylistIndex
-        nextPlaylistIndex = C.INDEX_UNSET
-        nextPlaylistFailure = null
-        val isPlayingPreload = playlistIndex != C.INDEX_UNSET && playlistIndex == exo.currentMediaItemIndex
-        if (playlistIndex in 0 until exo.mediaItemCount && !isPlayingPreload) exo.removeMediaItem(playlistIndex)
-        if (isPlayingPreload) {
-            sabrPlaybackCache.release(activeAudioSource)
-            activeAudioSource?.closePlaybackSource()
-            activeVideoSource?.closePlaybackSource()
-            activeAudioSource = nextAudioSource
-            activeVideoSource = nextVideoSource
-        }
-        val candidate = nextPlayer
+        val isPlayingPreload = playlistIndex in 0 until exo.mediaItemCount && playlistIndex == exo.currentMediaItemIndex
         val token = nextToken
+        val resource = nextResource
+        if (isPlayingPreload && token != null && resource != null && swapToPreloaded(token, resource, nextPlaylistSong, 1f)) return
+        val restorePositionMs = nextPlaylistPreviousPositionMs ?: _currentPosition.value
+        if (isPlayingPreload) exo.stop()
+        nextPlaylistIndex = C.INDEX_UNSET
+        nextPlaylistQueueEntryKey = null
+        nextPlaylistSong = null
+        nextPlaylistPreviousPositionMs = null
+        nextPlaylistFailure = null
+        if (playlistIndex in 0 until exo.mediaItemCount && !isPlayingPreload) exo.removeMediaItem(playlistIndex)
+        val candidate = nextPlayer
         val reporter = nextPlaybackReporter
         val listener = nextPlayerListener
-        val audioSource = nextAudioSource.takeUnless { isPlayingPreload }
-        val videoSource = nextVideoSource.takeUnless { isPlayingPreload }
+        val audioSource = nextAudioSource
+        val videoSource = nextVideoSource
         nextProgressJob?.cancel()
         nextProgressJob = null
         nextPlayerListener = null
@@ -2200,7 +2224,39 @@ class ExoPlaybackPlayer(
         )
         if (!preserveTransitionGain) transitionGain = 1f
         nextTransitionGain = 0f
+        if (isPlayingPreload) restoreCurrentPlaylistItem(restorePositionMs)
         applyPlaybackGains()
+    }
+
+    private fun restoreCurrentPlaylistItem(positionMs: Long) {
+        val resource = currentResource ?: return
+        sabrPlaybackCache.release(activeAudioSource)
+        activeAudioSource?.closePlaybackSource()
+        activeVideoSource?.closePlaybackSource()
+        activeAudioSource = null
+        activeVideoSource = null
+        try {
+            val source =
+                buildSource(
+                    resource,
+                    onAudioSourceOpened = { activeAudioSource = it },
+                    onVideoSourceOpened = { activeVideoSource = it },
+                    deferAudioStart = true,
+                )
+            activeAudioSource?.updatePlaybackPosition(positionMs)
+            recordSeek(exo, positionMs, PlaybackSeekSource("queue_restore", mapOf("reason" to "cancel_playing_preload")), resource.videoId)
+            exo.setMediaSource(source, positionMs)
+            exo.prepare()
+            sabrPlaybackCache.start(
+                currentSongValue?.id ?: resource.videoId,
+                resource,
+                activeAudioSource,
+                exo.isPlaying,
+                newPlayback = false,
+            )
+        } catch (error: Exception) {
+            reportPlaybackFailure(error)
+        }
     }
 
     private fun swapToPreloaded(
@@ -2223,6 +2279,14 @@ class ExoPlaybackPlayer(
         ) {
             return false
         }
+        if (usesPlaylist &&
+            nextPlaylistQueueEntryKey !=
+            queue.state.value.entries
+                .getOrNull(queue.currentIndex.value + 1)
+                ?.key
+        ) {
+            return false
+        }
         val queueSong = queue.peekNext()?.takeIf { it.id == token.queueSongId } ?: return false
         val song = playbackSong ?: queueSong
         if (song.id != resource.videoId) return false
@@ -2230,7 +2294,7 @@ class ExoPlaybackPlayer(
         val previous = exo
         val previousReporter = playbackReporter
         val previousInstance = currentInstance
-        val previousPosition = previous.currentPosition.coerceAtLeast(0L)
+        val previousPosition = nextPlaylistPreviousPositionMs ?: previous.currentPosition.coerceAtLeast(0L)
         val shouldPlay = previous.playWhenReady
         if (usesPlaylist) {
             if (candidate.currentMediaItemIndex != playlistIndex) candidate.seekTo(playlistIndex, 0L)
@@ -2252,6 +2316,9 @@ class ExoPlaybackPlayer(
         updateVideoProducer(activeVideoSource, activeVideoSurface != null)
         nextPlayer = null
         nextPlaylistIndex = C.INDEX_UNSET
+        nextPlaylistQueueEntryKey = null
+        nextPlaylistSong = null
+        nextPlaylistPreviousPositionMs = null
         nextPlaylistFailure = null
         nextAudioSource = null
         nextVideoSource = null

@@ -18,6 +18,8 @@ When crossfade is disabled, or same-album gapless is enabled for consecutive tra
 
 After a native handover, Android removes finished playlist items before queue promotion. The active player holds only the current source and, while preloading, the next source.
 
+Cancellation after a native handover commits the playing track's identity, resource, reporter and queue occurrence together. If that occurrence is no longer the intended next item, Android restores the previous track.
+
 Other crossfades keep separate players and their gain ramps. Same-album gapless transitions use the playlist path and do not ramp, even when crossfade is enabled. Video, live streams and tracks restored at a nonzero position keep the separate-player preload path. Queue edits, repeat-one and end-of-song sleep timers cancel the queued source.
 
 ## Seek diagnostics
