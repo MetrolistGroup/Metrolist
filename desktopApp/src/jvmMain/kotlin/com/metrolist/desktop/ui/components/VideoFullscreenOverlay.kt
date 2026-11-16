@@ -410,6 +410,7 @@ private fun VideoPlayerArea(
                         isPlaying = PlayerState.isPlaying,
                         songId = PlayerState.currentTrack?.id,
                         isCasting = castState.isConnected,
+                        isBuffering = castState.isBuffering,
                         finalLineDurationMs = LyricsUtils.FINAL_DYNAMIC_LINE_DURATION_MS,
                     )
                 val animatedBottomPadding by animateDpAsState(

@@ -138,6 +138,7 @@ internal class DlnaSession(
             CastSessionState(
                 connected = true,
                 isPlaying = autoplay,
+                isBuffering = autoplay,
                 positionMs = positionMs,
                 durationMs = media.durationMs,
                 volume = readVolume(logFailure = false) ?: _state.value.volume,
@@ -242,10 +243,12 @@ internal class DlnaSession(
         val transportState = transport.text("CurrentTransportState")
         val volume = readVolume(logFailure = false) ?: current.volume
         val isPlaying = transportState == "PLAYING" || transportState == "TRANSITIONING"
+        val isBuffering = transportState == "TRANSITIONING"
         _state.value =
             CastSessionState(
                 connected = true,
                 isPlaying = isPlaying,
+                isBuffering = isBuffering,
                 positionMs = positionMs,
                 durationMs = durationMs,
                 volume = volume,

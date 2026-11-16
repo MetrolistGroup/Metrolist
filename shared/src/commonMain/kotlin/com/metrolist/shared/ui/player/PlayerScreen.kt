@@ -1201,6 +1201,7 @@ fun PlayerScreen(
                                 onShowSleepTimer = { showSleepTimerDialog = true },
                                 onOpenCast = openCastDialog,
                                 isCasting = castState.isConnected,
+                                isBuffering = castState.isBuffering,
                             )
                         } else if (useLandscapeLayout) {
                             if (useTabletLayout || landscapeQueueVisible) {
@@ -1348,6 +1349,7 @@ fun PlayerScreen(
                                             isLoading = uiState.isLyricsLoading,
                                             textColor = textBackgroundColor,
                                             isCasting = castState.isConnected,
+                                            isBuffering = castState.isBuffering,
                                         )
                                     } else {
                                         Column(
@@ -1785,6 +1787,7 @@ fun PlayerScreen(
                                                             textBackgroundColor
                                                         },
                                                     isCasting = castState.isConnected,
+                                                    isBuffering = castState.isBuffering,
                                                     hasBackground = usesFullscreenThumbnail || canvasMinimalUi,
                                                     modifier = Modifier.fillMaxWidth(),
                                                 )
