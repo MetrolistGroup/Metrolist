@@ -14,6 +14,9 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -148,6 +151,12 @@ class SpotifyImportTest {
         }
 
     @Test
+    fun `delayed stored session cannot replace a newer sign in`() = runBlocking { verifyDelayedRestoreCannotReplace("new-cookie") }
+
+    @Test
+    fun `delayed stored session cannot undo logout`() = runBlocking { verifyDelayedRestoreCannotReplace(null) }
+
+    @Test
     fun `batch import retains successes and reports individual failures`() =
         runBlocking {
             val errors = mutableListOf<String>()
@@ -267,9 +276,72 @@ class SpotifyImportTest {
             count,
         ) { """{"name":"Track"}""" }.joinToString(",")}]}}}}"""
 
+    private suspend fun verifyDelayedRestoreCannotReplace(replacement: String?) =
+        coroutineScope {
+            var stored =
+                SpotifyImportManager.sessionJsonForTest(
+                    SpotifySession(
+                        cookies = mapOf("sp_dc" to "old-cookie"),
+                        accessToken = "expired-access",
+                        accessTokenExpiresAtMs = 0,
+                        clientToken = "client-token",
+                        clientTokenFetchedAtMs = System.currentTimeMillis(),
+                    ),
+                )
+            val restoreStarted = CompletableDeferred<Unit>()
+            val releaseRestore = CompletableDeferred<Unit>()
+            val clientCount = AtomicInteger()
+            val manager =
+                SpotifyImportManager(
+                    clientFactory = {
+                        val clientNumber = clientCount.incrementAndGet()
+                        spotifyClient(
+                            tokenResponse = {
+                                if (clientNumber == 1) {
+                                    restoreStarted.complete(Unit)
+                                    releaseRestore.await()
+                                }
+                                respond(
+                                    """{"accessToken":"access-$clientNumber","accessTokenExpirationTimestampMs":9223372036854775807,"isAnonymous":false}""",
+                                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                                )
+                            },
+                        )
+                    },
+                    loadStoredSession = { stored },
+                    saveStoredSession = { stored = it },
+                )
+            try {
+                val restore = async { manager.restorePersistedSession() }
+                restoreStarted.await()
+
+                if (replacement == null) {
+                    manager.logout()
+                    assertEquals("", stored)
+                } else {
+                    manager.authenticate(replacement)
+                    assertEquals(replacement, Json.decodeFromString<SpotifySession>(stored).cookies["sp_dc"])
+                }
+
+                releaseRestore.complete(Unit)
+                assertFalse(restore.await())
+                if (replacement == null) {
+                    assertFalse(manager.isAuthenticated)
+                    assertEquals("", stored)
+                } else {
+                    assertTrue(manager.isAuthenticated)
+                    assertEquals(replacement, Json.decodeFromString<SpotifySession>(stored).cookies["sp_dc"])
+                }
+            } finally {
+                releaseRestore.complete(Unit)
+                manager.close()
+            }
+        }
+
     private fun spotifyClient(
         tokenCount: AtomicInteger = AtomicInteger(),
         tokenStatus: HttpStatusCode = HttpStatusCode.OK,
+        tokenResponse: (suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData)? = null,
         playlistResponse: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData = { error("Unexpected playlist request") },
     ): SpotifyClient =
         SpotifyClient.create(
@@ -278,11 +350,12 @@ class SpotifyImportTest {
                     MockEngine { request ->
                         when (request.url.host) {
                             "open.spotify.com" -> {
-                                respond(
-                                    """{"accessToken":"access-${tokenCount.incrementAndGet()}","accessTokenExpirationTimestampMs":9223372036854775807,"isAnonymous":false}""",
-                                    tokenStatus,
-                                    headersOf(HttpHeaders.ContentType, "application/json"),
-                                )
+                                tokenResponse?.invoke(this, request)
+                                    ?: respond(
+                                        """{"accessToken":"access-${tokenCount.incrementAndGet()}","accessTokenExpirationTimestampMs":9223372036854775807,"isAnonymous":false}""",
+                                        tokenStatus,
+                                        headersOf(HttpHeaders.ContentType, "application/json"),
+                                    )
                             }
 
                             "clienttoken.spotify.com" -> {
