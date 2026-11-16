@@ -2216,5 +2216,17 @@
     <string name="sleep_timer_set_default">Aseta oletukseksi</string>
     <string name="lyrics_curated_by">(Lisännyt %1$s)</string>
     <string name="player_canvas_desc">Toista Spotifyn ja Youtuben Canvas-videoita laajennetun soittimen taustana, kun mahdollista. Käyttää enemmän tallennustilaa ja dataa.</string>
-    <string name="disable_animated_artwork_on_mobile_data">Älä lataa animoituja kansikuvia mobiilidatalla</string>
+    <string name="disable_animated_artwork_on_mobile_data">Älä näytä animoituja kansikuvia mobiilidataa käytettäessä</string>
+    <string name="disable_animated_artwork_on_mobile_data_desc">Näytä staattisia kansikuvia mobiilidataa käytettäessä, jopa animaatioiden ollessa välimuistissa</string>
+    <string name="hide_recent_searches">Piilota "viimeisimmistä hauista"</string>
+    <string name="hide_from_home">Piilota Kodista</string>
+    <string name="hidden_from_home">%1$s piilotettu Kodista</string>
+    <string name="hidden_home_items">Piilotettu Kodista</string>
+    <string name="hidden_home_items_desc">Näytä ja poista Kodista piilotettujen artistien ja podcastien piilotus.</string>
+    <string name="hidden_home_items_empty">Kodista ei ole piilotettu kohteita</string>
+    <string name="show_on_home">Näytä Kodissa</string>
+    <string name="show_again">Näytä uudelleen</string>
+    <string name="restore_hidden_item_title">Näytä uudelleen?</string>
+    <string name="restore_hidden_item_message">Näytä "%1$s" uudelleen?</string>
+    <string name="unblock_artist_title">Poista artistin esto?</string>
 </resources>
