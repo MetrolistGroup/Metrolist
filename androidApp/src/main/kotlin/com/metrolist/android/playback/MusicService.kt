@@ -368,6 +368,8 @@ class MusicService :
 
     private val playbackPersistenceLifecycle = PlaybackPersistenceLifecycle()
 
+    private var pendingRadioJob: Job? = null
+
     private lateinit var audioManager: AudioManager
     private val pauseOnMute = PauseOnMuteController()
     private val volumeMuteObserver =
@@ -3344,6 +3346,7 @@ class MusicService :
         ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> =
             serviceScope.future {
                 (application as App).startup.await()
+                pendingRadioJob?.cancel()
                 if (!canResolveMediaSessionItems(
                         canBrowse = canBrowseLibrary(session, controller),
                         isAssistant = isAssistantController(controller),
@@ -3396,7 +3399,28 @@ class MusicService :
                 }
 
                 val pinnedQueue = requestedItem?.let { automotiveLibrary.resolvePinnedPlaylist(it) }
-                val songQueue = requestedItem?.let { automotiveLibrary.resolveSongQueue(it) }
+                val songQueue = requestedItem?.let { item ->
+                    resolveAutomotiveSearchSongQueue(
+                        item = item,
+                        library = automotiveLibrary,
+                        mode = Settings.shared.androidAutoSongPlaybackMode,
+                        onRadioSeed = { song ->
+                            val initialRequestId = player.latestQueuePlaybackRequestId
+                            pendingRadioJob = serviceScope.launch {
+                                awaitAutomotiveRadioSeed(
+                                    song = song,
+                                    initialRequestId = initialRequestId,
+                                    requests = player.queuePlaybackRequests,
+                                    currentSong = player.currentSong,
+                                    isPlaying = player.isPlaying,
+                                    transitionPending = player.playbackTransitionPending,
+                                    latestRequestId = { player.latestQueuePlaybackRequestId },
+                                    playMix = { playMix(it) }
+                                )
+                            }
+                        }
+                    )
+                }
                 val individuallyResolvedSongs =
                     if (mediaItems.size != 1 || (pinnedQueue == null && songQueue == null)) {
                         mediaItems.map { item ->

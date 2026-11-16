@@ -35,9 +35,11 @@ import com.metrolist.shared.db.entities.SongEntity
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playback.MusicQueue
+import com.metrolist.shared.playback.QueuePlaybackRequest
 import com.metrolist.shared.playlist.removeSongsFromStoredPlaylist
 import com.metrolist.shared.settings.AutomotivePinnedPlaylist
 import com.metrolist.shared.settings.AutomotivePlaylistSource
+import com.metrolist.shared.settings.AutomotiveSongPlaybackMode
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.setAutomotivePinnedPlaylists
 import com.metrolist.shared.state.SongLikeState
@@ -57,10 +59,13 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -1547,6 +1552,113 @@ class AutomotiveBrowseTest {
             assertTrue(library.search("missing", 0, 20).isEmpty())
             assertEquals(successfulRequests, requests)
         }
+
+    @Test
+    fun searchSongPlaybackModesResolveCorrectQueuesAndFallbacks() = runBlocking {
+        val library = library()
+        val searchItems = library.search("Song", 0, 20)
+        val selected = searchItems[1]
+        val selectedId = AutomotiveMediaIds.songId(selected.mediaId)
+
+        val queue = resolveAutomotiveSearchSongQueue(selected, library, AutomotiveSongPlaybackMode.QUEUE)
+        assertEquals(searchItems.size, queue?.songs?.size)
+        assertEquals(1, queue?.startIndex)
+
+        val single = resolveAutomotiveSearchSongQueue(selected, library, AutomotiveSongPlaybackMode.SINGLE_SONG)
+        assertEquals(listOf(selectedId), single?.songs?.map { it.id })
+        assertEquals(0, single?.startIndex)
+
+        var seed: SongItem? = null
+        val radio = resolveAutomotiveSearchSongQueue(selected, library, AutomotiveSongPlaybackMode.RADIO) { seed = it }
+        assertEquals(listOf(selectedId), radio?.songs?.map { it.id })
+        assertEquals(selectedId, seed?.id)
+
+        //Non search items uses the previous behavior (Queue)
+        database.dao().insert(PlaylistSongMap(playlistId = "local", songId = "episode", position = 1))
+        val playlistItem = library.children(AutomotiveMediaIds.localPlaylist("local"), 0, 20).last()
+        val full = library.resolveSongQueue(playlistItem)!!
+        assertTrue(full.songs.size > 1)
+
+        val withSingleSongMode =
+            resolveAutomotiveSearchSongQueue(playlistItem, library, AutomotiveSongPlaybackMode.SINGLE_SONG)!!
+        assertEquals(full.songs.map { it.id }, withSingleSongMode.songs.map { it.id })
+        assertEquals(full.startIndex, withSingleSongMode.startIndex)
+
+        val withRadioMode =
+            resolveAutomotiveSearchSongQueue(playlistItem, library, AutomotiveSongPlaybackMode.RADIO)!!
+        assertEquals(full.songs.map { it.id }, withRadioMode.songs.map { it.id })
+        assertEquals(full.startIndex, withRadioMode.startIndex)
+    }
+
+    @Test
+    fun radioWaiterOnlyTriggersForOriginalRequestAndSong() = runBlocking {
+        val songA = SongItem("A", "A", null, emptyList(), null)
+        val songB = SongItem("B", "B", null, emptyList(), null)
+        val requests = MutableSharedFlow<QueuePlaybackRequest>(replay = 1)
+        val currentSong = MutableStateFlow<SongItem?>(null)
+        val isPlaying = MutableStateFlow(false)
+        val pending = MutableStateFlow(false)
+        var latestId = 0L
+        var mixCalls = 0
+
+        fun runWaiter(initialId: Long, target: SongItem) = launch {
+            awaitAutomotiveRadioSeed(
+                target, initialId, requests,
+                currentSong, isPlaying, pending,
+                { latestId }) { mixCalls++ }
+        }
+
+        // correct request and song
+        var job = runWaiter(0L, songA)
+        latestId = 1L
+        pending.value = true
+        requests.emit(QueuePlaybackRequest(1L, songA))
+        currentSong.value = songA
+        isPlaying.value = true
+        pending.value = false
+        job.join()
+        assertEquals(1, mixCalls)
+
+        // latestId changes before playMix is called
+        mixCalls = 0
+        job = runWaiter(1L, songA)
+        latestId = 2L
+        pending.value = true
+        requests.emit(QueuePlaybackRequest(2L, songA))
+        currentSong.value = songA
+        isPlaying.value = true
+        pending.value = false
+        latestId = 3L
+        job.join()
+        assertEquals(0, mixCalls)
+
+        // The waiter waits for A, but B starts.
+        mixCalls = 0
+        job = runWaiter(3L, songA)
+        latestId = 4L
+        pending.value = true
+        requests.emit(QueuePlaybackRequest(4L, songB))
+        currentSong.value = songB
+        isPlaying.value = true
+        pending.value = false
+        job.join()
+        assertEquals(0, mixCalls)
+
+        // The waiter waits for A, but the another request for A is done
+        mixCalls = 0
+        job = runWaiter(10L, songA)
+        latestId = 11L
+        pending.value = true
+        requests.emit(QueuePlaybackRequest(11L, songA))
+        currentSong.value = songA
+        isPlaying.value = true
+        latestId = 12L
+        yield()
+        requests.emit(QueuePlaybackRequest(12L, songA))
+        pending.value = false
+        job.join()
+        assertEquals(0, mixCalls)
+    }
 
     private fun playlistResponse(
         ids: List<String>,

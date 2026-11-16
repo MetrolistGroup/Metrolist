@@ -10,7 +10,13 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playback.MusicQueueEntry
 import com.metrolist.shared.playback.PlaybackFailureCategory
 import com.metrolist.shared.playback.PlaybackFailureClassifier
+import com.metrolist.shared.playback.QueuePlaybackRequest
+import com.metrolist.shared.settings.AutomotiveSongPlaybackMode
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import timber.log.Timber
 
 internal fun nextMediaSessionRepeatMode(mode: Int): Int =
@@ -100,5 +106,53 @@ internal suspend fun addAutomotiveSongToQueue(
     } catch (error: Exception) {
         Timber.e(error, "Automotive queue addition failed")
         SessionResult(SessionError.ERROR_IO)
+    }
+}
+
+internal suspend fun resolveAutomotiveSearchSongQueue(
+    item: MediaItem,
+    library: AutomotiveMediaLibrary,
+    mode: AutomotiveSongPlaybackMode,
+    onRadioSeed: (SongItem) -> Unit = {}
+): AutomotiveSongQueue? {
+    val isSearchSong = AutomotiveMediaIds.browseSong(item.mediaId)
+        ?.parentId?.startsWith("auto:search:") == true
+
+    if (isSearchSong && mode != AutomotiveSongPlaybackMode.QUEUE) {
+        return when (mode) {
+            AutomotiveSongPlaybackMode.SINGLE_SONG -> {
+                library.resolveSong(item)?.let { song ->
+                    AutomotiveSongQueue(songs = listOf(song), startIndex = 0)
+                }
+            }
+            AutomotiveSongPlaybackMode.RADIO -> {
+                library.resolveSong(item)?.let { song ->
+                    onRadioSeed(song)
+                    AutomotiveSongQueue(songs = listOf(song), startIndex = 0)
+                }
+            }
+        } ?: library.resolveSongQueue(item)
+    }
+    return library.resolveSongQueue(item)
+}
+
+internal suspend fun awaitAutomotiveRadioSeed(
+    song: SongItem,
+    initialRequestId: Long,
+    requests: SharedFlow<QueuePlaybackRequest>,
+    currentSong: StateFlow<SongItem?>,
+    isPlaying: StateFlow<Boolean>,
+    transitionPending: StateFlow<Boolean>,
+    latestRequestId: () -> Long,
+    playMix: (SongItem) -> Unit,
+) {
+    val request = requests.first { it.requestId > initialRequestId }
+    if (request.song.id != song.id) return
+
+    combine(currentSong, isPlaying, transitionPending) { current, playing, pending ->
+        current?.id == song.id && playing && !pending
+    }.first { it }
+    if (latestRequestId() == request.requestId) {
+        playMix(song)
     }
 }

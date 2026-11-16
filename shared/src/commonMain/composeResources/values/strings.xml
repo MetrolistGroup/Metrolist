@@ -1286,6 +1286,16 @@
     <string name="android_auto_youtube_playlist">YouTube playlist</string>
     <!-- Translators: Option or section label for driving playlists in the Android Auto settings. -->
     <string name="android_auto_driving_playlists">Driving playlists</string>
+    <!-- Translators: Title of the setting that controls what happens when a song is selected in Android Auto search results. -->
+    <string name="android_auto_song_playback_mode">Search song playback</string>
+    <!-- Translators: Description text beneath the song playback mode option in the Android Auto settings. -->
+    <string name="android_auto_song_playback_mode_desc">Select what plays when clicking a song from the search results</string>
+    <!-- Translators: Option label for playing a queue of search results in the Android Auto settings. -->
+    <string name="android_auto_play_queue">Search results queue</string>
+    <!-- Translators: Option label for playing only the selected song in the Android Auto settings. -->
+    <string name="android_auto_play_single_song">Selected song only</string>
+    <!-- Translators: Option label for playing a radio mix starting from the selected song in the Android Auto settings. -->
+    <string name="android_auto_play_radio">Selected song radio mix</string>
     <!-- Translators: Label for my top 100 in the multiple app screens. -->
     <string name="my_top_100">My top 100</string>
     <!-- Translators: Confirmation message about uploaded playlist name in the multiple app screens. -->

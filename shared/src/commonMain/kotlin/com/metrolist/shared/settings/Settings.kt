@@ -17,6 +17,7 @@ import com.metrolist.shared.constants.AiSlopBlocklistUpdatedAtKey
 import com.metrolist.shared.constants.AndroidActiveFontIdKey
 import com.metrolist.shared.constants.AndroidAutoPinnedPlaylistPlaybackModeKey
 import com.metrolist.shared.constants.AndroidAutoPinnedPlaylistsJsonKey
+import com.metrolist.shared.constants.AndroidAutoSongPlaybackModeKey
 import com.metrolist.shared.constants.AndroidAutoTargetPlaylistKey
 import com.metrolist.shared.constants.AndroidCustomFontFileKey
 import com.metrolist.shared.constants.AndroidCustomFontNameKey
@@ -428,6 +429,10 @@ class Settings(
     var androidAutoPinnedPlaylistPlaybackMode by preference(
         AndroidAutoPinnedPlaylistPlaybackModeKey,
         AutomotivePinnedPlaylistPlaybackMode.IN_ORDER,
+    )
+    var androidAutoSongPlaybackMode by preference(
+        AndroidAutoSongPlaybackModeKey,
+        AutomotiveSongPlaybackMode.QUEUE,
     )
     var crossfadeEnabled by preference(false)
     var crossfadeDuration by preference(10f)
