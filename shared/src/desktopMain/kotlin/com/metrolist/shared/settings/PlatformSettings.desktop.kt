@@ -5,6 +5,7 @@
 
 package com.metrolist.shared.settings
 
+import com.metrolist.shared.constants.DiscordPendingAuthSessionKey
 import com.metrolist.shared.constants.LyricsOpenRouterOAuthKey
 import com.metrolist.shared.constants.LyricsOpenRouterOAuthSessionKey
 import com.metrolist.shared.utils.LogBridge
@@ -58,6 +59,7 @@ internal actual fun isDesktopMac(): Boolean = OsUtil.isMac
 
 private val secretKeys =
     setOf(
+        DiscordPendingAuthSessionKey,
         "innerTubeCookie",
         "visitorData",
         "dataSyncId",
