@@ -938,7 +938,8 @@
     <string name="remove_all_downloads">Remover todos as músicas descarregadas</string>
     <string name="lyrics_song_artist">Compositor</string>
     <string name="lyrics_capability_line_syllable">Linha a linha e sílaba a sílaba</string>
-    <string name="lyrics_capability_line_syllable_unsynced">Linha, sílaba e assíncrona</string>
-    <string name="lyrics_capability_line_unsynced">Linha e assíncrona</string>
+    <string name="lyrics_capability_line_syllable_unsynced">Linha a linha, sílaba a sílaba e assíncrona</string>
+    <string name="lyrics_capability_line_unsynced">Linha a linha e assíncrona</string>
     <string name="lyrics_capability_line">Linha a linha</string>
+    <string name="lyrics_capability_unsynced">Assíncrona</string>
 </resources>
