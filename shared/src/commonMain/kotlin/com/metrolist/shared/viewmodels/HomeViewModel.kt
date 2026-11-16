@@ -263,6 +263,8 @@ class HomeViewModel(
 
     @Volatile private var cachedAllContent: HomeUiState? = null
 
+    @Volatile private var publishedPrimaryAllContent: Pair<Long, HomeUiState>? = null
+
     @Volatile private var cachedSelectedChipContent: HomeUiState? = null
 
     @Volatile private var chipContentCache: Map<HomeChipKey, HomeUiState> = emptyMap()
@@ -569,6 +571,22 @@ class HomeViewModel(
                                 isRefresh = true,
                             )
                         } else {
+                            val cancelledGeneration = contentLoadGeneration
+                            val interruptedPrimary = publishedPrimaryAllContent
+                            if (interruptedPrimary?.first == cancelledGeneration) {
+                                cachedAllContent =
+                                    homeCacheAfterOfflineCancellation(
+                                        cachedAllContent,
+                                        interruptedPrimary.second,
+                                        interruptedPrimary.first,
+                                        cancelledGeneration,
+                                    )
+                                publishedPrimaryAllContent = null
+                                if (cachedAllContent != null) {
+                                    val locale = GlobalYouTube.innerTube.locale
+                                    lastKnownLocaleSignature = "${locale.hl}:${locale.gl}"
+                                }
+                            }
                             contentLoadGeneration++
                             cancelPagination()
                             loadJob?.cancel()
@@ -722,6 +740,7 @@ class HomeViewModel(
                                         sections = uncategorizedHomeSections(hydratedPrimarySections),
                                     )
                             primaryContentSnapshot = primaryState
+                            if (!isFiltered) publishedPrimaryAllContent = generation to primaryState
                             if (isFiltered) cachedSelectedChipContent = primaryState
                             primaryState.withoutBlockedContent()
                         }
@@ -887,6 +906,7 @@ class HomeViewModel(
                             } else {
                                 allContentReloadRequired = false
                                 cacheAllContentState(loadedState)
+                                publishedPrimaryAllContent = null
                             }
                             saveLastHomePage(loadedState)
                             if (!isFiltered) appendMissingMainFeedMoods(generation)
@@ -1819,6 +1839,18 @@ internal fun homeCacheAfterAssemblyFailure(
     primaryContentPublished: Boolean,
 ): HomeViewModel.HomeUiState? =
     if (primaryContentPublished) cacheableAllContentSnapshot(failedState) ?: cachedAllContent else cachedAllContent
+
+internal fun homeCacheAfterOfflineCancellation(
+    cachedAllContent: HomeViewModel.HomeUiState?,
+    primaryContent: HomeViewModel.HomeUiState,
+    publishedGeneration: Long,
+    cancelledGeneration: Long,
+): HomeViewModel.HomeUiState? =
+    if (publishedGeneration == cancelledGeneration) {
+        cacheableAllContentSnapshot(primaryContent.copy(isAllContentPending = false)) ?: cachedAllContent
+    } else {
+        cachedAllContent
+    }
 
 internal fun homeSelectedChipCacheAfterAssemblyFailure(
     cachedSelectedChipContent: HomeViewModel.HomeUiState?,
