@@ -94,6 +94,7 @@ private fun YTItem.withLibraryMetadata(local: YTItem?): YTItem =
     when {
         this is SongItem && local is SongItem -> {
             copy(
+                downloadedAt = local.downloadedAt,
                 libraryAddedAt = local.libraryAddedAt ?: libraryAddedAt,
                 libraryUpdatedAt = local.libraryUpdatedAt ?: libraryUpdatedAt,
             )
@@ -153,6 +154,7 @@ class LibraryViewModel(
     private val database: MusicDatabase? = null,
     private val downloadedSongIds: Flow<Set<String>>? = null,
     private val repository: YouTubeRepository = GlobalYouTubeRepository.instance,
+    private val downloadedSongDates: Flow<Map<String, Long>>? = null,
 ) {
     private val _uiState = MutableStateFlow(LibraryUiState(isLoading = database != null))
     private var downloadedKeys: Set<String> = emptySet()
@@ -316,6 +318,9 @@ class LibraryViewModel(
                         dao.downloadedCollectionKeys(ids.toList()).distinctUntilChanged().collect { localReloads.trySend(Unit) }
                     }
                 }
+            }
+            launch {
+                downloadedSongDates?.distinctUntilChanged()?.collect { localReloads.trySend(Unit) }
             }
             launch {
                 snapshotFlow { Settings.shared.historyPlaylistsEnabled }
@@ -657,9 +662,12 @@ class LibraryViewModel(
                     customThumbnail = entity.customThumbnailUrl,
                 )
             }
+        val downloadDates = downloadedSongDates?.first()
         val songs =
             dao.songsByCreateDateAsc().first().filterNot { it.song.isEpisode }.map { song ->
-                song.toSongItem().copy(
+                val item = song.toSongItem()
+                item.copy(
+                    downloadedAt = if (downloadDates != null) downloadDates[song.id] else item.downloadedAt,
                     libraryAddedAt = song.song.inLibrary.toEpochMilliseconds(),
                     libraryUpdatedAt = song.song.inLibrary.toEpochMilliseconds(),
                 )

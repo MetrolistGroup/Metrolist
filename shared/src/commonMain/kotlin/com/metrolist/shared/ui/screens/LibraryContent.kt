@@ -160,6 +160,7 @@ enum class LibraryFilter {
 }
 
 enum class LibrarySortType {
+    DOWNLOADED,
     RECENTLY_ADDED,
     NAME,
     LAST_UPDATED,
@@ -844,6 +845,10 @@ private fun LibraryHeader(
 
 private fun LibrarySortType.isAvailableFor(filter: LibraryFilter?): Boolean =
     when (this) {
+        LibrarySortType.DOWNLOADED -> {
+            filter == LibraryFilter.TRACKS
+        }
+
         LibrarySortType.ARTIST, LibrarySortType.YEAR, LibrarySortType.LENGTH -> {
             filter == LibraryFilter.ALBUMS
         }
@@ -1064,6 +1069,10 @@ internal fun sortLibraryItems(
     direction: SortDirection = sort.defaultDirection,
 ): List<YTItem> =
     when (sort) {
+        LibrarySortType.DOWNLOADED -> {
+            items.sortedByLibraryMetadata(direction) { (it as? SongItem)?.downloadedAt }
+        }
+
         LibrarySortType.RECENTLY_ADDED -> {
             items.sortedByLibraryMetadata(direction, YTItem::libraryAddedAt)
         }
@@ -1127,7 +1136,7 @@ internal fun <T : Comparable<T>> List<YTItem>.sortedByLibraryMetadata(
 internal val LibrarySortType.defaultDirection: SortDirection
     get() =
         if (this in
-            setOf(LibrarySortType.RECENTLY_ADDED, LibrarySortType.LAST_UPDATED)
+            setOf(LibrarySortType.RECENTLY_ADDED, LibrarySortType.LAST_UPDATED, LibrarySortType.DOWNLOADED)
         ) {
             SortDirection.DESCENDING
         } else {

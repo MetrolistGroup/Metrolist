@@ -25,6 +25,7 @@ import com.metrolist.shared.youtube.logging.YtLogger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -66,6 +67,10 @@ object LibraryContentState {
             AppState.scope,
             database,
             DownloadManager.downloadStates.map { states -> states.filterValues { it == DownloadState.DOWNLOADED }.keys },
+            downloadedSongDates =
+                combine(DownloadManager.downloadedFiles, DownloadManager.downloadStates) { files, states ->
+                    files.filter { states[it.songId] == DownloadState.DOWNLOADED }.associate { it.songId to it.downloadDate }
+                },
         )
     var librarySections by mutableStateOf<Map<String, List<YTItem>>>(emptyMap())
         private set

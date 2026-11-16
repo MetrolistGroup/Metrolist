@@ -53,6 +53,7 @@ data class SongItem(
     val playbackPositionMs: Long? = null,
     val playbackProgressPercent: Int? = null,
     override val isUnavailable: Boolean = false,
+    val downloadedAt: Long? = null,
 ) : YTItem()
 
 val SongItem.artworkExplicitness: Boolean?

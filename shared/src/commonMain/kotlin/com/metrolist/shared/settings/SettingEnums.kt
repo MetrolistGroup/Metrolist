@@ -109,6 +109,7 @@ enum class LibraryContentSort {
     SONG_COUNT,
     LENGTH,
     PLAYTIME,
+    DOWNLOADED,
 }
 
 enum class FontOption {

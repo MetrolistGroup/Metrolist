@@ -166,6 +166,7 @@ fun libraryContentText() =
             ),
         sortLabels =
             mapOf(
+                LibrarySortType.DOWNLOADED to stringResource(Res.string.filter_downloaded),
                 LibrarySortType.RECENTLY_ADDED to stringResource(Res.string.sort_by_create_date),
                 LibrarySortType.NAME to stringResource(Res.string.sort_by_name),
                 LibrarySortType.LAST_UPDATED to stringResource(Res.string.library_sort_updated),

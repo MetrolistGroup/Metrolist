@@ -4,6 +4,8 @@ import com.metrolist.shared.model.AlbumTiny
 import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.MUSIC_VIDEO_TYPE_UNSPECIFIED_VIDEO
 import com.metrolist.shared.model.SongItem
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 
 fun Song.toSongItem(): SongItem {
     val canonicalArtists =
@@ -45,6 +47,11 @@ fun Song.toSongItem(): SongItem {
             },
         podcastId = song.albumId.takeIf { song.isEpisode },
         explicitness = song.explicitness ?: song.explicit.takeIf { it },
+        downloadedAt =
+            song.dateDownload
+                ?.takeIf { song.isDownloaded }
+                ?.toInstant(TimeZone.UTC)
+                ?.toEpochMilliseconds(),
     )
 }
 
