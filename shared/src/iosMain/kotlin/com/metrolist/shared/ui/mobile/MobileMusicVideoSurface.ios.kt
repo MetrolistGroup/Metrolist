@@ -11,6 +11,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -123,26 +124,28 @@ internal actual fun MobileMusicVideoSurface(
     }
 
     Box(modifier) {
-        UIKitView(
-            factory = {
-                object : UIView(frame = CGRectMake(0.0, 0.0, 0.0, 0.0)) {
-                    init {
-                        clipsToBounds = true
-                        layer.addSublayer(video.layer)
-                    }
+        key(video) {
+            UIKitView(
+                factory = {
+                    object : UIView(frame = CGRectMake(0.0, 0.0, 0.0, 0.0)) {
+                        init {
+                            clipsToBounds = true
+                            layer.addSublayer(video.layer)
+                        }
 
-                    override fun layoutSubviews() {
-                        super.layoutSubviews()
-                        CATransaction.begin()
-                        CATransaction.setDisableActions(true)
-                        video.layer.frame = bounds
-                        CATransaction.commit()
+                        override fun layoutSubviews() {
+                            super.layoutSubviews()
+                            CATransaction.begin()
+                            CATransaction.setDisableActions(true)
+                            video.layer.frame = bounds
+                            CATransaction.commit()
+                        }
                     }
-                }
-            },
-            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(cornerRadius)),
-            properties = UIKitInteropProperties(interactionMode = null, isNativeAccessibilityEnabled = false),
-        )
+                },
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(cornerRadius)),
+                properties = UIKitInteropProperties(interactionMode = null, isNativeAccessibilityEnabled = false),
+            )
+        }
         if (!firstFrameRendered) {
             AsyncImage(
                 url = state.currentSong?.thumbnail,

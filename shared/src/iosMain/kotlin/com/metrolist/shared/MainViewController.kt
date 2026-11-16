@@ -259,6 +259,7 @@ fun MetrolistIOSApp() {
             listenTogetherManager.close()
             listenTogetherClient.close()
             downloadManager.close()
+            playbackController.releaseMusicVideoSurfacePlayer()
             appJob.cancel()
             player.release()
         }
@@ -295,6 +296,7 @@ fun MetrolistIOSApp() {
         runCatching { downloadManager.pauseAll() }.onFailure { shutdownFailure = it }
         downloadManager.close()
         player.stop()
+        playbackController.releaseMusicVideoSurfacePlayer()
         appJob.cancelAndJoin()
         player.release()
         database.close()
