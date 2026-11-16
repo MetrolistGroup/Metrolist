@@ -22,6 +22,8 @@ Cancellation after a native handover commits the playing track's identity, resou
 
 Other crossfades keep separate players and their gain ramps. Same-album gapless transitions use the playlist path and do not ramp, even when crossfade is enabled. Video, live streams and tracks restored at a nonzero position keep the separate-player preload path. Queue edits, repeat-one and end-of-song sleep timers cancel the queued source.
 
+On Android, `MusicService.seekTo` cancels an active crossfade and leaves an unstarted preload queued.
+
 ## Seek diagnostics
 
 Export the playback log immediately after a jump. Android's 500-event buffer records `Android seek requested.` separately from `Android native position discontinuity.`. Compare source, player ID, queue request and playback instance with preparation and recovery events.

@@ -21,10 +21,13 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
+import androidx.room3.Room
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.metrolist.innertubex.sabr.SabrChunk
 import com.metrolist.innertubex.sabr.SabrFailureKind
 import com.metrolist.innertubex.sabr.SabrProtocolException
 import com.metrolist.shared.api.musicvideo.MusicVideoResolver
+import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.deviceconnect.DcLocalPlaybackState
 import com.metrolist.shared.model.AlbumTiny
 import com.metrolist.shared.model.ArtistTiny
@@ -73,6 +76,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -1047,6 +1051,70 @@ class ExoPlaybackPlayerTest {
                 }
             } finally {
                 collector.cancel()
+            }
+        }
+
+    @Test
+    fun serviceSeeksKeepTheUnstartedPlaylistPreloadNearTheEndOfTheTrack() =
+        runBlocking {
+            player.releaseAndAwaitScope()
+            Dispatchers.resetMain()
+            val context = RuntimeEnvironment.getApplication()
+            player = ExoPlaybackPlayer(context)
+            val database = Room.inMemoryDatabaseBuilder(context, MusicDatabase::class.java).setDriver(AndroidSQLiteDriver()).build()
+            val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
+            try {
+                val coordinator =
+                    AndroidQueueCoordinator(
+                        context,
+                        player,
+                        scope,
+                        MutableStateFlow(Player.REPEAT_MODE_OFF),
+                        MutableStateFlow(false),
+                        {},
+                        {},
+                    )
+                val transitions =
+                    AndroidQueueTransitions(
+                        player,
+                        scope,
+                        AudioCacheManager(context, database),
+                        MusicVideoResolver(counterpartLookup = { null }, search = { _, _ -> SearchResultPage(emptyList()) }),
+                        coordinator,
+                        { _, _ -> null },
+                        { _, _, _, _ -> },
+                        {},
+                        episodeResumePosition = { _, _ -> 0L },
+                    )
+                coordinator.transitions = transitions
+                val service = Robolectric.buildService(MusicService::class.java).get()
+                ReflectionHelpers.setField(service, "player", player)
+                ReflectionHelpers.setField(service, "transitions", transitions)
+                val first = song()
+                val second = first.copy(id = "second")
+                player.setQueue(listOf(first, second), preparePlayback = false)
+                val resource = downloadedResource()
+                assertTrue(player.prepareAndPlay(first, resource, resumePlayback = false))
+                val native = underlyingPlayer().also(::awaitPlaybackReady)
+                val instance = player.currentPlaybackInstanceId
+                val nextResource = resource.copy(videoId = second.id)
+                val token = checkNotNull(player.prepareNextTrack(nextResource, startPaused = true, queueSongId = second.id))
+
+                for (positionMs in listOf(5_000L, 19_000L)) {
+                    service.seekTo(positionMs)
+                    awaitPlaybackReady(native)
+
+                    assertEquals(positionMs, native.currentPosition)
+                    assertEquals(2, native.mediaItemCount)
+                    assertEquals(0, native.currentMediaItemIndex)
+                    assertSame(nextResource, native.getMediaItemAt(1).localConfiguration?.tag)
+                    assertTrue(player.isPreloadedPlaybackActive(token))
+                    assertEquals(instance, player.currentPlaybackInstanceId)
+                    assertSame(resource, player.currentPlaybackResource.value)
+                }
+            } finally {
+                scope.cancel()
+                database.close()
             }
         }
 

@@ -832,7 +832,7 @@ class MusicService :
         source: PlaybackSeekSource = PlaybackSeekSource.Other,
     ) {
         if (player.currentSong.value?.isLive == true) return
-        transitions.cancelAndroidCrossfade()
+        if (transitions.isCrossfading) transitions.cancelAndroidCrossfade()
         player.seekTo(positionMs, source)
     }
 
