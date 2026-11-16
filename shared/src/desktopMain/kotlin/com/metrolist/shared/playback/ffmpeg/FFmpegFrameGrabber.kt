@@ -1356,9 +1356,11 @@ class FFmpegFrameGrabber : FrameGrabber {
 
         val sample_format = sFrame.format()
         if (sample_format == AV_SAMPLE_FMT_NONE || sFrame.nb_samples() <= 0) return
-        val nbChannels = audioCtx.ch_layout().nb_channels()
+        val channelLayout = audioCtx.ch_layout()
+        val nbChannels = channelLayout.nb_channels()
         if (nbChannels !in 1..AVFrame.AV_NUM_DATA_POINTERS) return
 
+        val outputChannels = super.audioChannels.takeIf { it > 0 } ?: nbChannels
         val planes = if (av_sample_fmt_is_planar(sample_format) != 0) sFrame.ch_layout().nb_channels() else 1
         if (planes !in 1..AVFrame.AV_NUM_DATA_POINTERS) return
         val data_size =
@@ -1376,7 +1378,7 @@ class FFmpegFrameGrabber : FrameGrabber {
             samples_buf = arrayOfNulls(planes)
         }
         frame!!.sampleRate = sampleRate
-        frame!!.audioChannels = audioChannels
+        frame!!.audioChannels = outputChannels
         frame!!.samples = samples_buf
         frame!!.opaque = sFrame
         val bytesPerSample = av_get_bytes_per_sample(sample_format)
@@ -1400,20 +1402,20 @@ class FFmpegFrameGrabber : FrameGrabber {
             }
         }
 
-        if (audioCtx.ch_layout().nb_channels() != audioChannels || audioCtx.sample_fmt() != sampleFormat ||
+        if (nbChannels != outputChannels || audioCtx.sample_fmt() != sampleFormat ||
             audioCtx.sample_rate() != sampleRate
         ) {
-            if (samples_convert_ctx == null || samples_channels != audioChannels || samples_format != sampleFormat ||
+            if (samples_convert_ctx == null || samples_channels != outputChannels || samples_format != sampleFormat ||
                 samples_rate != sampleRate
             ) {
                 if (samples_convert_ctx == null) samples_convert_ctx = SwrContext().retainReference()
-                av_channel_layout_default(default_layout, audioChannels)
+                av_channel_layout_default(default_layout, outputChannels)
                 if (swr_alloc_set_opts2(
                         samples_convert_ctx,
                         default_layout,
                         sampleFormat,
                         sampleRate,
-                        audioCtx.ch_layout(),
+                        channelLayout,
                         audioCtx.sample_fmt(),
                         audioCtx.sample_rate(),
                         0,
@@ -1424,13 +1426,13 @@ class FFmpegFrameGrabber : FrameGrabber {
                 } else if (swr_init(samples_convert_ctx) < 0) {
                     return
                 }
-                samples_channels = audioChannels
+                samples_channels = outputChannels
                 samples_format = sampleFormat
                 samples_rate = sampleRate
             }
 
             val sample_size_in = sFrame.nb_samples()
-            val planes_out = if (av_sample_fmt_is_planar(samples_format) != 0) audioChannels else 1
+            val planes_out = if (av_sample_fmt_is_planar(samples_format) != 0) outputChannels else 1
             if (planes_out !in 1..AVFrame.AV_NUM_DATA_POINTERS) return
             val sample_size_out = swr_get_out_samples(samples_convert_ctx, sample_size_in)
             val sample_bytes_out = av_get_bytes_per_sample(samples_format)
@@ -1460,7 +1462,7 @@ class FFmpegFrameGrabber : FrameGrabber {
                 }
             }
             frame!!.sampleRate = sampleRate
-            frame!!.audioChannels = audioChannels
+            frame!!.audioChannels = outputChannels
             frame!!.samples = samples_buf_out
 
             val ptrOut = plane_ptr ?: return
@@ -1474,7 +1476,7 @@ class FFmpegFrameGrabber : FrameGrabber {
             if (ret < 0) {
                 return
             }
-            val outLimit = ret * (if (planes_out > 1) 1 else audioChannels)
+            val outLimit = ret * (if (planes_out > 1) 1 else outputChannels)
             for (i in 0 until planes_out) {
                 samples_ptr_out!![i]?.position(0L)?.limit(outLimit.toLong())
                 samples_buf_out!![i]?.position(0)?.limit(outLimit)
