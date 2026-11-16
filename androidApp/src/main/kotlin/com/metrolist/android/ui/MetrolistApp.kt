@@ -729,7 +729,8 @@ fun MetrolistApp(
                 Settings.shared.forceBottomNavBar,
             ).withPointerInput(useDesktopLayout)
         val useDesktopUi = adaptiveLayout.formFactor == AdaptiveFormFactor.DESKTOP
-        val useDesktopMiniPlayer = shouldUseDesktopMiniPlayer(useDesktopUi, LocalConfiguration.current.smallestScreenWidthDp)
+        val useDesktopMiniPlayer =
+            shouldUseDesktopMiniPlayer(useDesktopUi, LocalConfiguration.current.smallestScreenWidthDp, Settings.shared.miniPlayerType)
         val captionHeight = WindowInsets.captionBar.getTop(LocalDensity.current)
         val hasDesktopCaption = shouldUseDesktopCaption(Build.VERSION.SDK_INT, captionHeight, useDesktopLayout)
         val shouldShowNavigationBar =
