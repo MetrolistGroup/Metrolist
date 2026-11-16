@@ -30,6 +30,7 @@ object HomeShelfBuilder {
         val sourceSections = state.data.orEmpty().ifEmpty { state.sections }
 
         fun sourceFor(shelf: HomeShelf): HomeSection? {
+            if (shelf.style == HomeShelfStyle.SPEED_DIAL) return null
             state.sections
                 .singleOrNull { section ->
                     section.hasTitle && section.title == shelf.title && section.browseId == shelf.browseId &&
