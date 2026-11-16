@@ -9,7 +9,7 @@ Fonctionnalités :
 - **Sans publicité**, pour toujours
 - Écoute en groupe (Listen Together) avec d'autres personnes en ligne et en temps réel
 - Diffusion vers **Google Cast**, F-Cast, des appareils SONOS et via DLNA
-- Importation de sauvegardes/listes de lecture depuis plus de 29 autres clients et 6 services différents
+- Importation de sauvegardes/playlists depuis plus de 29 autres clients et 6 services différents
 - Reconnaissance musicale via **Shazam**
 - Fournisseur de paroles personnalisées rapide, prise en charge des traductions de paroles et de la romanisation
 - Traductions dans plus de 15 langues
