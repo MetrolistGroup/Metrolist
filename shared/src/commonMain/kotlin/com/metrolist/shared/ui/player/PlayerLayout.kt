@@ -389,6 +389,7 @@ internal fun TabletPlayerContent(
                                     isLoading = uiState.isLyricsLoading,
                                     textColor = textBackgroundColor,
                                     isCasting = castState.isConnected,
+                                    isBuffering = castState.isBuffering,
                                     modifier = Modifier.fillMaxWidth().height(artworkSize),
                                 )
                                 if (showLyricsOffsetEditor) {
@@ -652,6 +653,7 @@ internal fun TabletPlayerContent(
                             isLoading = uiState.isLyricsLoading,
                             textColor = textBackgroundColor,
                             isCasting = castState.isConnected,
+                            isBuffering = castState.isBuffering,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -1222,6 +1224,7 @@ internal fun LandscapePlayerContent(
                                     isLoading = uiState.isLyricsLoading,
                                     textColor = textBackgroundColor,
                                     isCasting = castState.isConnected,
+                                    isBuffering = castState.isBuffering,
                                 )
                             } else if (showVideoSurface || currentSong?.displayThumbnail != null) {
                                 Box(
@@ -1818,6 +1821,7 @@ internal fun LyricsViewWithPosition(
     isLoading: Boolean,
     textColor: Color,
     isCasting: Boolean,
+    isBuffering: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectWhilePlayerActive(LocalPlayerPositionActive.current)
@@ -1850,6 +1854,7 @@ internal fun LyricsViewWithPosition(
         textColor = textColor,
         songId = uiState.currentSong?.id,
         isCasting = isCasting,
+        isBuffering = isBuffering,
         modifier = modifier,
     )
 }
@@ -1864,6 +1869,7 @@ internal fun ActiveLyricsLine(
     showLyrics: Boolean,
     textColor: Color,
     isCasting: Boolean,
+    isBuffering: Boolean = false,
     hasBackground: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -1879,6 +1885,7 @@ internal fun ActiveLyricsLine(
             songId = songId,
             timingOffsetMs = timingOffsetMs,
             isCasting = isCasting,
+            isBuffering = isBuffering,
             finalLineDurationMs = LyricsUtils.FINAL_DYNAMIC_LINE_DURATION_MS,
         )
 

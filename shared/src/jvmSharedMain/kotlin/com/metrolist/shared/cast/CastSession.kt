@@ -55,6 +55,7 @@ fun PlaybackResource.isPlayableOn(protocol: CastProtocol?): Boolean =
 internal data class CastSessionState(
     val connected: Boolean = false,
     val isPlaying: Boolean = false,
+    val isBuffering: Boolean = false,
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
     val volume: Float = 1f,

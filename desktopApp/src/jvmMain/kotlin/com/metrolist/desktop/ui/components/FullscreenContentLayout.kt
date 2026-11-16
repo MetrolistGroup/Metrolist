@@ -348,6 +348,7 @@ internal fun DesktopLyricsContent(
             textSizeMultiplier = textSizeMultiplier,
             songId = PlayerState.currentTrack?.id,
             isCasting = castState.isConnected,
+            isBuffering = castState.isBuffering,
             selectionState = selection,
             onShareSelection = { selectedText = it },
             textColor = textColor,

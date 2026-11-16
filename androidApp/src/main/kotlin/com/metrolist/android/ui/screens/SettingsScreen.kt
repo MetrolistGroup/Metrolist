@@ -384,6 +384,7 @@ fun SettingsScreen(
                             viewModel = viewModel,
                             modifier = modifier,
                             isCasting = castState?.isConnected == true,
+                            isBuffering = castState?.isBuffering == true,
                         )
                     },
                     rememberMetroEqProfilePicker = { onPicked -> rememberMetroEqProfilePicker(onPicked) },

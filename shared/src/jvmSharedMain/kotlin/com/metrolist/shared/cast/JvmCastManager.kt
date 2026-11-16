@@ -218,6 +218,7 @@ class JvmCastManager(
                         status = CastConnectionStatus.CONNECTED,
                         device = device,
                         isPlaying = autoplay,
+                        isBuffering = nextSession.state.value.isBuffering,
                         positionMs = positionMs.coerceAtLeast(0L),
                         durationMs = media.durationMs,
                         volume = nextSession.state.value.volume,
@@ -295,6 +296,7 @@ class JvmCastManager(
                         _state.value.copy(
                             status = CastConnectionStatus.CONNECTED,
                             isPlaying = autoplay,
+                            isBuffering = activeSession.state.value.isBuffering,
                             positionMs = positionMs.coerceAtLeast(0L),
                             durationMs = media.durationMs,
                             volume = activeSession.state.value.volume,
@@ -342,7 +344,7 @@ class JvmCastManager(
     suspend fun stop() {
         operationLock.withStopMarker {
             controlLocked { it.stop() }
-            _state.value = _state.value.copy(isPlaying = false, hasEnded = false)
+            _state.value = _state.value.copy(isPlaying = false, isBuffering = false, hasEnded = false)
         }
     }
 
@@ -422,6 +424,7 @@ class JvmCastManager(
                             status = CastConnectionStatus.CONNECTED,
                             device = device,
                             isPlaying = playback.isPlaying,
+                            isBuffering = playback.isBuffering,
                             positionMs = playback.positionMs,
                             durationMs = playback.durationMs,
                             volume = playback.volume,

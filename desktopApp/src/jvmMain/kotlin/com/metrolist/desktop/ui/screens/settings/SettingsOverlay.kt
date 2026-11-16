@@ -358,6 +358,7 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
                                 timingOffsetMs = LyricsState.currentLyricsOffsetMs,
                                 isPlaying = PlayerState.isPlaying,
                                 isCasting = castState.isConnected,
+                                isBuffering = castState.isBuffering,
                                 lyricsRetimed = LyricsState.mvLyricsRetimed,
                                 onSeek = PlayerState::seekToPosition,
                             )

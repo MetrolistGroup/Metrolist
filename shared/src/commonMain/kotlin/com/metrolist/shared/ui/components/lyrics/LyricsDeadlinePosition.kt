@@ -69,14 +69,18 @@ internal fun deadlineLyricsPositions(
     playbackSpeed: Float,
     timingOffsetMs: Int,
     visibility: StateFlow<Boolean>,
+    isBuffering: Boolean = false,
     timeSource: TimeSource = TimeSource.Monotonic,
     anchor: LyricsPlaybackAnchor =
-        LyricsPlaybackAnchor(initial.positionMs, isPlaying, if (isCasting) 1f else playbackSpeed, timeSource),
+        LyricsPlaybackAnchor(initial.positionMs, isPlaying && !isBuffering, if (isCasting) 1f else playbackSpeed, timeSource),
     positionReader: (() -> Long)? = null,
 ): Flow<LyricsDeadlinePosition> =
     channelFlow {
         val effectiveReader = if (isCasting) null else positionReader
         val effectiveSpeed = if (isCasting) 1f else playbackSpeed
+        val discontinuityToleranceMs =
+            if (isCasting) CAST_PLAYBACK_DISCONTINUITY_TOLERANCE_MS else DEFAULT_PLAYBACK_DISCONTINUITY_TOLERANCE_MS
+        val shouldInterpolate = isPlaying && !isBuffering
         var published = initial
         visibility.collectLatest { shown ->
             if (!shown) {
@@ -101,20 +105,21 @@ internal fun deadlineLyricsPositions(
                             sample,
                             if (anchor.isPlaying) anchor.mark.elapsedNow().inWholeMilliseconds else 0L,
                             anchor.playbackSpeed,
+                            discontinuityToleranceMs,
                         )
                 anchor.needsReseed = false
                 anchor.positionMs = sample
                 anchor.mark = mark
-                anchor.isPlaying = isPlaying
+                anchor.isPlaying = shouldInterpolate
                 anchor.playbackSpeed = effectiveSpeed
                 val effectiveSample =
-                    if (!isSeek && !firstSample && isPlaying && published.positionMs - sample in 1L..250L) {
+                    if (!isSeek && !firstSample && shouldInterpolate && published.positionMs - sample in 1L..250L) {
                         published.positionMs
                     } else {
                         sample
                     }
                 val generation = published.seekGeneration + if (isSeek) 1 else 0
-                if (firstSample || isSeek || !isPlaying ||
+                if (firstSample || isSeek || !shouldInterpolate ||
                     nextLyricsDeadlineIndex(deadlines, effectiveSample + timingOffsetMs) !=
                     nextLyricsDeadlineIndex(deadlines, published.positionMs + timingOffsetMs)
                 ) {
@@ -122,7 +127,7 @@ internal fun deadlineLyricsPositions(
                     send(published)
                 }
                 firstSample = false
-                if (!isPlaying || !effectiveSpeed.isFinite() || effectiveSpeed <= 0f) return@sample
+                if (!shouldInterpolate || !effectiveSpeed.isFinite() || effectiveSpeed <= 0f) return@sample
 
                 while (true) {
                     val position =
@@ -154,6 +159,7 @@ internal fun rememberDeadlineLyricsPositionState(
     timingOffsetMs: Int,
     isCasting: Boolean,
     enabled: Boolean,
+    isBuffering: Boolean = false,
     playbackSpeed: Float = Settings.shared.playbackSpeed,
     positionReader: (() -> Long)? = null,
 ): State<LyricsDeadlinePosition> {
@@ -174,7 +180,7 @@ internal fun rememberDeadlineLyricsPositionState(
         remember(songId) {
             LyricsPlaybackAnchor(
                 positionFlow.value.coerceAtLeast(0L),
-                isPlaying,
+                isPlaying && !isBuffering,
                 if (isCasting) 1f else playbackSpeed,
                 TimeSource.Monotonic,
             )
@@ -186,6 +192,7 @@ internal fun rememberDeadlineLyricsPositionState(
         deadlines,
         enabled,
         isPlaying,
+        isBuffering,
         songId,
         timingOffsetMs,
         isCasting,
@@ -211,6 +218,7 @@ internal fun rememberDeadlineLyricsPositionState(
             playbackSpeed,
             timingOffsetMs,
             visibility,
+            isBuffering = isBuffering,
             anchor = anchor,
             positionReader = if (hasLiveReader && !isCasting) ({ readPosition?.invoke() ?: positionFlow.value }) else null,
         ).collect { position.value = it }
@@ -243,6 +251,7 @@ fun rememberCaptionLyricsPositionState(
     positionReader: (() -> Long)? = null,
     currentPosition: Long = 0L,
     enabled: Boolean = true,
+    isBuffering: Boolean = false,
     finalLineDurationMs: Long? = null,
     playbackSpeed: Float = Settings.shared.playbackSpeed,
 ): State<Long> {
@@ -267,6 +276,7 @@ fun rememberCaptionLyricsPositionState(
                 isPlaying = isPlaying,
                 songId = songId,
                 isCasting = isCasting,
+                isBuffering = isBuffering,
                 enabled = clockEnabled,
             )
         return remember(position, effectiveOffsetMs) {
@@ -283,6 +293,7 @@ fun rememberCaptionLyricsPositionState(
             timingOffsetMs = effectiveOffsetMs,
             isCasting = isCasting,
             enabled = clockEnabled,
+            isBuffering = isBuffering,
             playbackSpeed = playbackSpeed,
             positionReader = positionReader,
         )
