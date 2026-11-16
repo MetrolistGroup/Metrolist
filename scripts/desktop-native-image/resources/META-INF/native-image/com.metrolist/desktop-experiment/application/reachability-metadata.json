@@ -595,6 +595,15 @@
           "name": "pData"
         }
       ]
+    },
+    {
+      "type": "com.ibm.icu.text.NumberFormatServiceShim",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
     }
   ]
 }
