@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -134,7 +133,7 @@ fun StorageSummary(
             val stopColor = MaterialTheme.colorScheme.primary
             LinearProgressIndicator(
                 progress = { storageUsageFraction(usedBytes, totalBytes) },
-                modifier = Modifier.fillMaxWidth().height(40.dp).clip(CircleShape),
+                modifier = Modifier.fillMaxWidth().height(40.dp).clip(RoundedCornerShape(12.dp)),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.secondaryContainer,
                 strokeCap = StrokeCap.Butt,
