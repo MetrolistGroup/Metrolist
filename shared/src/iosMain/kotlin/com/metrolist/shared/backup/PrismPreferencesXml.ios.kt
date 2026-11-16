@@ -10,11 +10,11 @@ import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.readBytes
 import kotlinx.cinterop.usePinned
 import platform.Foundation.NSData
-import platform.Foundation.NSObject
 import platform.Foundation.NSXMLParser
 import platform.Foundation.NSXMLParserDelegateProtocol
 import platform.Foundation.NSXMLParserResolveExternalEntitiesNever
 import platform.Foundation.create
+import platform.darwin.NSObject
 
 @OptIn(ExperimentalForeignApi::class)
 internal actual fun extractPrismFavoritesXmlText(xml: String): String? {

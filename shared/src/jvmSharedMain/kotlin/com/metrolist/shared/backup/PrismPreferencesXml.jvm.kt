@@ -6,6 +6,7 @@
 package com.metrolist.shared.backup
 
 import org.w3c.dom.Element
+import org.xml.sax.EntityResolver
 import org.xml.sax.InputSource
 import org.xml.sax.SAXParseException
 import org.xml.sax.helpers.DefaultHandler
@@ -20,15 +21,12 @@ internal actual fun extractPrismFavoritesXmlText(xml: String): String? {
             isXIncludeAware = false
             isExpandEntityReferences = false
             setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
-            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
             setFeature("http://xml.org/sax/features/external-general-entities", false)
             setFeature("http://xml.org/sax/features/external-parameter-entities", false)
-            setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
-            setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "")
-            setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "")
         }
     val builder =
         factory.newDocumentBuilder().apply {
+            setEntityResolver(EntityResolver { _, _ -> InputSource(StringReader("")) })
             setErrorHandler(
                 object : DefaultHandler() {
                     override fun error(exception: SAXParseException) = throw exception
