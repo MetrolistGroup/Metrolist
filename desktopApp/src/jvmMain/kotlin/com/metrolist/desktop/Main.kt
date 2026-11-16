@@ -768,6 +768,8 @@ fun main() {
 }
 
 fun main(args: Array<String>) {
+    // The JDK reads this once when its default proxy selector initializes.
+    if (OsUtil.isWindows) System.getProperties().putIfAbsent("java.net.useSystemProxies", "true")
     runCatching { System.getProperty("metrolist.cds.cache")?.let { File(it).mkdirs() } }
     startup.trace("main")
     val recoveryIndex = args.indexOf(DesktopCrashRecovery.ARGUMENT)
