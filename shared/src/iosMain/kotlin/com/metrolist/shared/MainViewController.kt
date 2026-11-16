@@ -113,6 +113,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
@@ -390,7 +391,7 @@ fun MetrolistIOSApp() {
                     backupStatus = BackupRestoreStatus.RESTORE_FAILED
                 } finally {
                     copiedPath?.let { path ->
-                        withContext(Dispatchers.IO) {
+                        withContext(NonCancellable + Dispatchers.IO) {
                             NSFileManager.defaultManager.removeItemAtPath(path, error = null)
                         }
                     }
@@ -430,7 +431,7 @@ fun MetrolistIOSApp() {
                         Result.failure(error)
                     } finally {
                         copiedPath?.let { path ->
-                            withContext(Dispatchers.IO) {
+                            withContext(NonCancellable + Dispatchers.IO) {
                                 NSFileManager.defaultManager.removeItemAtPath(path, error = null)
                             }
                         }
