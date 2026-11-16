@@ -68,7 +68,7 @@ internal actual fun MobileMusicVideoSurface(
         remember(controller, url, resource.headers) {
             iosController?.musicVideoSurfacePlayer(url, resource.headers) ?: IosMusicVideoSurfacePlayer(url, resource.headers)
         }
-    var firstFrameRendered by remember(video) { mutableStateOf(video.ready) }
+    var firstFrameRendered by remember(video) { mutableStateOf(video.ready && video.positionSynchronized) }
     var foreground by remember {
         mutableStateOf(UIApplication.sharedApplication.applicationState == UIApplicationState.UIApplicationStateActive)
     }
@@ -120,7 +120,7 @@ internal actual fun MobileMusicVideoSurface(
                 break
             }
             if (foreground) video.applyPendingSeek()
-            if (video.ready) firstFrameRendered = true
+            if (video.ready && video.positionSynchronized) firstFrameRendered = true
             delay(250)
         }
     }

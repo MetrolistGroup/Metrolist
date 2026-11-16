@@ -41,6 +41,8 @@ internal class IosMusicVideoSurfacePlayer(
     private var attachedSurfaceGeneration: Long? = null
     private var seekInFlight = false
     private var latestTargetPositionMs = 0L
+    var positionSynchronized = false
+        private set
     private var foreground = false
     private var expectingProgress = false
     private var lastPositionMs: Long? = null
@@ -126,13 +128,23 @@ internal class IosMusicVideoSurfacePlayer(
         val currentMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong()
         val targetPositionMs = latestTargetPositionMs
         val driftToleranceMs = if (sinceLastSeekMs == null) SEEK_DRIFT_TOLERANCE_MS else SEEK_POST_SEEK_DRIFT_TOLERANCE_MS
-        if (abs(currentMs - targetPositionMs) <= driftToleranceMs) return
+        if (abs(currentMs - targetPositionMs) <= driftToleranceMs) {
+            positionSynchronized = true
+            return
+        }
         seekInFlight = true
         val target = CMTimeMakeWithSeconds(targetPositionMs / 1000.0, 600)
         val zero = CMTimeMakeWithSeconds(0.0, 600)
         player.seekToTime(target, toleranceBefore = zero, toleranceAfter = zero) {
             seekInFlight = false
             seekCooldownStartedAt = TimeSource.Monotonic.markNow()
+            val currentPositionMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong()
+            if (abs(latestTargetPositionMs - targetPositionMs) > SEEK_DRIFT_TOLERANCE_MS) {
+                seekCooldownStartedAt = null
+                applyPendingSeek()
+            } else if (abs(currentPositionMs - latestTargetPositionMs) <= SEEK_DRIFT_TOLERANCE_MS) {
+                positionSynchronized = true
+            }
         }
     }
 
