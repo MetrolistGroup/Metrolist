@@ -779,4 +779,11 @@
     <string name="devtools_render_backend_metal">Metal</string>
     <string name="theme_palette_content">內容</string>
     <string name="theme_palette_style">調色板樣式</string>
+    <string name="theme_palette_tonal_spot">色調點</string>
+    <string name="app_icon_zenith_white">白色</string>
+    <string name="song_gestures">歌曲手勢</string>
+    <string name="appearance_enable_swipe_to_change_track">滑動封面以切換歌曲</string>
+    <string name="appearance_play_videos_in_mini_player" tools:ignore="MissingTranslation">用迷你播放器播放影片</string>
+    <string name="appearance_play_videos_in_mini_player_desc" tools:ignore="MissingTranslation">迷你播放器關閉時，仍然顯示音樂影片</string>
+    <string name="appearance_mini_player_swipe_sensitivity">滑動敏感度</string>
 </resources>
