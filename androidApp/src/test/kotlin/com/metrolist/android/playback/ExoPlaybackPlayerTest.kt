@@ -3,6 +3,7 @@ package com.metrolist.android.playback
 import android.app.Application
 import android.media.AudioManager
 import android.media.audiofx.AudioEffect
+import android.net.Uri
 import android.os.Looper
 import android.os.PowerManager
 import androidx.media3.common.C
@@ -14,19 +15,24 @@ import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences
 import androidx.media3.common.audio.AudioProcessor
+import androidx.media3.datasource.DataSpec
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.source.LoadEventInfo
+import androidx.media3.exoplayer.source.MediaLoadData
 import com.metrolist.innertubex.sabr.SabrChunk
 import com.metrolist.innertubex.sabr.SabrFailureKind
 import com.metrolist.innertubex.sabr.SabrProtocolException
 import com.metrolist.shared.api.musicvideo.MusicVideoResolver
 import com.metrolist.shared.deviceconnect.DcLocalPlaybackState
+import com.metrolist.shared.model.AlbumTiny
 import com.metrolist.shared.model.SearchResultPage
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playback.PlaybackSeekSource
 import com.metrolist.shared.playback.ffmpeg.SabrInputStream
 import com.metrolist.shared.playback.playbackCrossfadeGains
+import com.metrolist.shared.playback.playbackNormalizationGain
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.youtube.playback.PlaybackEventKind
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
@@ -71,6 +77,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.util.ReflectionHelpers
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.time.Duration
@@ -466,6 +473,324 @@ class ExoPlaybackPlayerTest {
     }
 
     @Test
+    fun gaplessPreloadEnqueuesTheNextSourceAndManualNextKeepsThePlayerAndSession() =
+        runBlocking {
+            player.releaseAndAwaitScope()
+            Dispatchers.resetMain()
+            player = ExoPlaybackPlayer(RuntimeEnvironment.getApplication())
+            val first = song()
+            val second = first.copy(id = "second")
+            player.setQueue(listOf(first, second), preparePlayback = false)
+            val resource = downloadedResource()
+            assertTrue(player.prepareAndPlay(first, resource, resumePlayback = false))
+            val native = underlyingPlayer().also(::awaitPlaybackReady)
+            val sessionId = native.audioSessionId
+            val instanceId = player.currentPlaybackInstanceId
+            val nextResource = resource.copy(videoId = second.id)
+            val token = checkNotNull(player.prepareNextTrack(nextResource, startPaused = true, queueSongId = second.id))
+
+            assertEquals(2, native.mediaItemCount)
+            assertEquals(0, native.currentMediaItemIndex)
+            assertSame(nextResource, native.getMediaItemAt(1).localConfiguration?.tag)
+            assertEquals(first, player.currentSong.value)
+            assertEquals(instanceId, player.currentPlaybackInstanceId)
+            assertTrue(player.isPreloadedPlaybackActive(token))
+            assertEquals(null, ReflectionHelpers.getField<ExoPlayer?>(player, "nextPlayer"))
+            assertEquals(
+                AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED,
+                native.trackSelectionParameters.audioOffloadPreferences.audioOffloadMode,
+            )
+
+            player.consumePreloadedNext = { player.swapToPreloadedQueueNext(token, nextResource, second) }
+            val stalls = ReflectionHelpers.getField<OffloadSleepStallTracker>(player, "offloadSleepStallTracker")
+            player.resume()
+            stalls.onSleepingForOffload(nowMs = 0L, outputPosition = 123L)
+            player.skipToNext()
+
+            assertSame(native, underlyingPlayer())
+            assertEquals(sessionId, native.audioSessionId)
+            assertEquals(1, native.mediaItemCount)
+            assertEquals(second, player.currentSong.value)
+            assertEquals(1, player.currentMediaItemIndex.value)
+            assertEquals(token.playerInstanceId, player.currentPlaybackInstanceId)
+            assertFalse(player.isPreloadedPlaybackActive(token))
+            assertTrue(ReflectionHelpers.getField<Boolean>(stalls, "sleepingForOffload"))
+        }
+
+    @Test
+    fun failedPlaylistPreloadPreservesTheCurrentTrackAndRestoresItsOffloadEligibility() =
+        runBlocking {
+            player.releaseAndAwaitScope()
+            Dispatchers.resetMain()
+            player = ExoPlaybackPlayer(RuntimeEnvironment.getApplication())
+            Settings.shared.audioNormalization = true
+            val first = song()
+            val second = first.copy(id = "second")
+            player.setQueue(listOf(first, second), preparePlayback = false)
+            val resource = downloadedResource()
+            assertTrue(player.prepareAndPlay(first, resource, resumePlayback = false))
+            val native = underlyingPlayer().also(::awaitPlaybackReady)
+            val instanceId = player.currentPlaybackInstanceId
+            val error = IOException("Next source failed")
+            val failures = mutableListOf<Throwable>()
+            val token =
+                checkNotNull(
+                    player.prepareNextTrack(
+                        resource.copy(videoId = second.id, perceptualLoudnessDb = -17.0),
+                        startPaused = true,
+                        queueSongId = second.id,
+                        onFailure = { failures += it },
+                    ),
+                )
+            assertEquals(
+                AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED,
+                native.trackSelectionParameters.audioOffloadPreferences.audioOffloadMode,
+            )
+            val listener = ReflectionHelpers.getField<AnalyticsListener>(player, "networkLoadListener")
+            listener.onLoadError(
+                AnalyticsListener.EventTime(0L, native.currentTimeline, 1, null, 0L, native.currentTimeline, 0, null, 0L, 0L),
+                LoadEventInfo(0L, DataSpec(Uri.parse(resource.url)), 0L),
+                MediaLoadData(C.DATA_TYPE_MEDIA),
+                error,
+                false,
+            )
+
+            assertEquals(listOf(error), failures)
+            assertEquals(1, native.mediaItemCount)
+            assertFalse(player.isPreloadedPlaybackActive(token))
+            assertSame(native, underlyingPlayer())
+            assertSame(resource, player.currentPlaybackResource.value)
+            assertEquals(instanceId, player.currentPlaybackInstanceId)
+            assertEquals(first, player.currentSong.value)
+            assertEquals(null, player.loadError.value)
+            assertEquals(
+                AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED,
+                native.trackSelectionParameters.audioOffloadPreferences.audioOffloadMode,
+            )
+        }
+
+    @Test
+    fun nativeGaplessTransitionCommitsTheNextOccurrenceWithoutWaitingForPlayerEnded() =
+        runBlocking {
+            player.releaseAndAwaitScope()
+            Dispatchers.resetMain()
+            player = ExoPlaybackPlayer(RuntimeEnvironment.getApplication())
+            Settings.shared.crossfadeEnabled = true
+            val first = song().copy(album = AlbumTiny("album", "Album"))
+            val second = first.copy(id = "second")
+            val third = first.copy(id = "third")
+            player.setQueue(listOf(first, second, third), preparePlayback = false)
+            val resource = downloadedResource()
+            assertTrue(player.prepareAndPlay(first, resource, resumePlayback = false))
+            val native = underlyingPlayer().also(::awaitPlaybackReady)
+            val sessionId = native.audioSessionId
+            val instanceId = player.currentPlaybackInstanceId
+            val nextResource = resource.copy(videoId = second.id)
+            val token = checkNotNull(player.prepareNextTrack(nextResource, startPaused = true, queueSongId = second.id))
+            var commits = 0
+            player.onPreloadedPlaybackCommitted = { song, committed ->
+                assertEquals(first, player.currentSong.value)
+                assertEquals(second, song)
+                assertSame(nextResource, committed)
+                commits++
+            }
+            val completions = mutableListOf<Long>()
+            val collector = CoroutineScope(Dispatchers.Main.immediate)
+            collector.launch {
+                player.onEOFPlaybackInstance.collect { completedInstance ->
+                    completions += completedInstance
+                    player.swapToPreloadedQueueNext(token, nextResource, second)
+                }
+            }
+            native.seekTo(1, 0L)
+            val listener = ReflectionHelpers.getField<Player.Listener>(player, "playbackListener")
+            listener.onPositionDiscontinuity(
+                Player.PositionInfo(null, 0, native.getMediaItemAt(0), null, 0, 20_000L, 20_000L, C.INDEX_UNSET, C.INDEX_UNSET),
+                Player.PositionInfo(null, 1, native.getMediaItemAt(1), null, 1, 0L, 0L, C.INDEX_UNSET, C.INDEX_UNSET),
+                Player.DISCONTINUITY_REASON_AUTO_TRANSITION,
+            )
+            shadowOf(Looper.getMainLooper()).idle()
+            collector.cancel()
+
+            assertEquals(listOf(instanceId), completions)
+            assertTrue(native.playbackState != Player.STATE_ENDED)
+            assertSame(native, underlyingPlayer())
+            assertEquals(sessionId, native.audioSessionId)
+            assertEquals(second, player.currentSong.value)
+            assertEquals(1, player.currentMediaItemIndex.value)
+            assertEquals(1, native.mediaItemCount)
+            assertEquals(1, commits)
+
+            val thirdToken =
+                checkNotNull(player.prepareNextTrack(resource.copy(videoId = third.id), startPaused = true, queueSongId = third.id))
+            assertEquals(2, native.mediaItemCount)
+            player.removeQueueItem(2)
+            assertEquals(1, native.mediaItemCount)
+            assertFalse(player.isPreloadedPlaybackActive(thirdToken))
+            assertEquals(second, player.currentSong.value)
+            assertSame(native, underlyingPlayer())
+        }
+
+    @Test
+    fun consecutiveGaplessTransitionsKeepOnlyTheCurrentAndPreloadedItems() =
+        runBlocking {
+            player.releaseAndAwaitScope()
+            Dispatchers.resetMain()
+            player = ExoPlaybackPlayer(RuntimeEnvironment.getApplication())
+            Settings.shared.audioNormalization = true
+            val songs = List(6) { song().copy(id = "song-$it") }
+            player.setQueue(songs, preparePlayback = false)
+            val resource = downloadedResource().copy(videoId = songs.first().id, perceptualLoudnessDb = -3.0)
+            assertTrue(player.prepareAndPlay(songs.first(), resource, resumePlayback = false))
+            val native = underlyingPlayer().also(::awaitPlaybackReady)
+            val sessionId = native.audioSessionId
+            val listener = ReflectionHelpers.getField<Player.Listener>(player, "playbackListener")
+            val stalls = ReflectionHelpers.getField<OffloadSleepStallTracker>(player, "offloadSleepStallTracker")
+            val nativeTransitions = mutableListOf<Int>()
+            val nativeStates = mutableListOf<Int>()
+            native.addListener(
+                object : Player.Listener {
+                    override fun onMediaItemTransition(
+                        mediaItem: MediaItem?,
+                        reason: Int,
+                    ) {
+                        nativeTransitions += reason
+                    }
+
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        nativeStates += playbackState
+                    }
+                },
+            )
+            val completions = mutableListOf<Long>()
+            val collector = CoroutineScope(Dispatchers.Main.immediate)
+            collector.launch { player.onEOFPlaybackInstance.collect { completions += it } }
+            try {
+                for (index in 1..songs.lastIndex) {
+                    val nextResource = resource.copy(videoId = songs[index].id, perceptualLoudnessDb = if (index % 2 == 0) -3.0 else -6.0)
+                    val token = checkNotNull(player.prepareNextTrack(nextResource, startPaused = true, queueSongId = songs[index].id))
+                    assertEquals(2, native.mediaItemCount)
+                    assertEquals(1, ReflectionHelpers.getField<Int>(player, "nextPlaylistIndex"))
+                    val completedInstance = player.currentPlaybackInstanceId
+                    val oldPosition =
+                        Player.PositionInfo(null, 0, native.getMediaItemAt(0), null, 0, 20_000L, 20_000L, C.INDEX_UNSET, C.INDEX_UNSET)
+                    val newPosition =
+                        Player.PositionInfo(null, 1, native.getMediaItemAt(1), null, 1, 0L, 0L, C.INDEX_UNSET, C.INDEX_UNSET)
+                    native.seekTo(1, 750L)
+                    awaitPlaybackReady(native)
+                    nativeTransitions.clear()
+                    nativeStates.clear()
+                    stalls.onSleepingForOffload(nowMs = 0L, outputPosition = 123L)
+                    player.startPreloadedNextAtEof = {
+                        assertEquals(completedInstance, it)
+                        assertEquals(1, native.mediaItemCount)
+                        assertEquals(0, native.currentMediaItemIndex)
+                        assertEquals(0, ReflectionHelpers.getField<Int>(player, "nextPlaylistIndex"))
+                        assertTrue(player.startNextPlayback())
+                    }
+
+                    listener.onPositionDiscontinuity(oldPosition, newPosition, Player.DISCONTINUITY_REASON_AUTO_TRANSITION)
+                    shadowOf(Looper.getMainLooper()).idle()
+                    assertEquals(index, completions.size)
+                    assertEquals(completedInstance, completions.last())
+                    assertTrue(player.swapToPreloadedQueueNext(token, nextResource, songs[index]))
+                    shadowOf(Looper.getMainLooper()).idle()
+
+                    assertEquals(1, native.mediaItemCount)
+                    assertEquals(0, native.currentMediaItemIndex)
+                    assertEquals(750L, native.currentPosition)
+                    assertEquals(index, player.currentMediaItemIndex.value)
+                    assertEquals(token.playerInstanceId, player.currentPlaybackInstanceId)
+                    assertSame(native, underlyingPlayer())
+                    assertEquals(sessionId, native.audioSessionId)
+                    assertSame(nextResource, native.currentMediaItem?.localConfiguration?.tag)
+                    assertSame(nextResource, normalizationProcessors().getValue(native).resource)
+                    assertEquals(
+                        playbackNormalizationGain(
+                            nextResource.loudnessDb,
+                            true,
+                            Settings.shared.loudnessLevel,
+                            nextResource.perceptualLoudnessDb,
+                        ),
+                        normalizationProcessors().getValue(native).normalizationGain,
+                        0.00001f,
+                    )
+                    assertTrue(ReflectionHelpers.getField<Boolean>(stalls, "sleepingForOffload"))
+                    assertTrue(nativeTransitions.isEmpty())
+                    assertFalse(nativeStates.contains(Player.STATE_ENDED))
+                    assertEquals(index, completions.size)
+                    assertFalse(player.isPreloadedPlaybackActive(token))
+                }
+            } finally {
+                collector.cancel()
+            }
+        }
+
+    @Test
+    fun queuedGaplessSourceSurvivesSeeksAndCancelsForPreviousOrQueueReplacement() =
+        runBlocking {
+            val resource = downloadedResource()
+            val songs = List(3) { song().copy(id = "song-$it") }
+            for (action in listOf("seek", "restart", "previous", "replace", "cancel")) {
+                player.releaseAndAwaitScope()
+                Dispatchers.resetMain()
+                player = ExoPlaybackPlayer(RuntimeEnvironment.getApplication())
+                player.setQueue(songs, startIndex = 1, preparePlayback = false)
+                val currentResource = resource.copy(videoId = songs[1].id)
+                assertTrue(player.prepareAndPlay(songs[1], currentResource, resumePlayback = false))
+                val native = underlyingPlayer().also(::awaitPlaybackReady)
+                val token =
+                    checkNotNull(
+                        player.prepareNextTrack(resource.copy(videoId = songs[2].id), startPaused = true, queueSongId = songs[2].id),
+                    )
+                when (action) {
+                    "seek" -> {
+                        player.seekTo(6_000L)
+                    }
+
+                    "restart" -> {
+                        player.seekTo(6_000L)
+                        player.skipToPrevious()
+                    }
+
+                    "previous" -> {
+                        player.skipToPrevious()
+                    }
+
+                    "replace" -> {
+                        player.setQueue(listOf(songs[0]), preparePlayback = true)
+                    }
+
+                    else -> {
+                        player.cancelNext()
+                    }
+                }
+                shadowOf(Looper.getMainLooper()).idle()
+                assertSame(native, underlyingPlayer())
+                assertEquals(0, native.currentMediaItemIndex)
+                assertSame(currentResource, native.currentMediaItem?.localConfiguration?.tag)
+                if (action == "seek" || action == "restart") {
+                    assertEquals(if (action == "seek") 6_000L else 0L, native.currentPosition)
+                    assertEquals(2, native.mediaItemCount)
+                    assertTrue(player.isPreloadedPlaybackActive(token))
+                    player.cancelNext()
+                } else {
+                    assertFalse(player.isPreloadedPlaybackActive(token))
+                    if (action != "cancel") {
+                        assertEquals(
+                            songs[0],
+                            player.queuePlaybackRequests.replayCache
+                                .single()
+                                .song,
+                        )
+                    }
+                }
+                assertEquals(1, native.mediaItemCount)
+                assertSame(currentResource, native.currentMediaItem?.localConfiguration?.tag)
+            }
+        }
+
+    @Test
     fun preloadedTrackKeepsItsOwnEffectsSessionDuringOverlapAndAfterPromotion() {
         player.releaseAndAwaitScope()
         Dispatchers.resetMain()
@@ -474,7 +799,8 @@ class ExoPlaybackPlayerTest {
             val first = song()
             val second = song().copy(id = "second")
             player.setQueue(listOf(first, second), preparePlayback = false)
-            val resource = downloadedResource()
+            val audio = downloadedResource()
+            val resource = audio.copy(videoUrl = audio.url)
             val nextResource = resource.copy(videoId = second.id)
             assertTrue(player.prepareAndPlay(first, resource, positionMs = 6_183L, resumePlayback = false))
             val previous = underlyingPlayer()
@@ -797,6 +1123,16 @@ class ExoPlaybackPlayerTest {
             assertTrue(discontinuities.all { it.details["playbackInstanceId"] == instance })
             assertTrue(request.id < discontinuities.first().id)
         }
+
+    private fun awaitPlaybackReady(native: ExoPlayer) {
+        for (attempt in 0 until 500) {
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(10))
+            if (native.playbackState == Player.STATE_READY && native.audioSessionId > 0) return
+            Thread.sleep(1)
+        }
+        assertEquals(Player.STATE_READY, native.playbackState)
+        assertTrue(native.audioSessionId > 0)
+    }
 
     private fun downloadedResource(): PlaybackResource {
         val audio = temporaryFolder.newFile("download.wav")

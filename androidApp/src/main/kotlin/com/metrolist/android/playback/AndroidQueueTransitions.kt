@@ -183,7 +183,7 @@ internal class AndroidQueueTransitions(
         }
 
         scope.launch {
-            snapshotFlow { Settings.shared.videoViewerVisible }
+            snapshotFlow { Triple(Settings.shared.videoViewerVisible, Settings.shared.crossfadeEnabled, Settings.shared.crossfadeGapless) }
                 .distinctUntilChanged()
                 .collect { cancelNextTrackPreload() }
         }

@@ -12,6 +12,14 @@ Android and desktop begin bounded SABR recovery when the producer fails, while b
 
 On Android, an offload AudioTrack that stops advancing its playback head after entering offload sleep is switched to PCM after two seconds. The 12-second playback watchdog remains the fallback for other output stalls.
 
+## Android track transitions
+
+For audio tracks without a crossfade, Android adds the resolved next source to the active ExoPlayer playlist before the current track ends. ExoPlayer handles the boundary without replacing the player or its audio session. Per-stream metadata selects the normalization boost for queued PCM; output volume still applies attenuation. Offload requires gapless support and stays disabled when either queued track needs a software boost.
+
+After a native handover, Android removes finished playlist items before queue promotion. The active player holds only the current source and, while preloading, the next source.
+
+Crossfades keep separate players and their gain ramps. Video, live streams and tracks restored at a nonzero position keep the separate-player preload path. Queue edits, repeat-one and end-of-song sleep timers cancel the queued source.
+
 ## Seek diagnostics
 
 Export the playback log immediately after a jump. Android's 500-event buffer records `Android seek requested.` separately from `Android native position discontinuity.`. Compare source, player ID, queue request and playback instance with preparation and recovery events.

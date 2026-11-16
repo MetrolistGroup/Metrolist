@@ -79,6 +79,7 @@ import com.metrolist.shared.playback.findPlaybackHttpStatusCode
 import com.metrolist.shared.playback.playbackFailureCategoryFromSabr
 import com.metrolist.shared.playback.playbackNormalizationGain
 import com.metrolist.shared.playback.playbackOutputGain
+import com.metrolist.shared.playback.songsShareAlbum
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.state.GlobalYouTubeRepository
@@ -563,6 +564,8 @@ class ExoPlaybackPlayer(
             activeVideoSourcePrepared = false
         }
     private var nextPlayer: ExoPlayer? = null
+    private var nextPlaylistIndex = C.INDEX_UNSET
+    private var nextPlaylistFailure: ((Throwable) -> Unit)? = null
     private var nextAudioSource: SeekableMediaSource? = null
     private var nextVideoSource: SeekableMediaSource? = null
     private var nextResource: PlaybackResource? = null
@@ -721,6 +724,12 @@ class ExoPlaybackPlayer(
                             "toPositionMs" to newPosition.positionMs.toString(),
                         ),
                 )
+                if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION &&
+                    nextPlaylistIndex != C.INDEX_UNSET && newPosition.mediaItemIndex == nextPlaylistIndex
+                ) {
+                    removeFinishedPlaylistItems()
+                    completePlaybackAtEof(oldPosition.positionMs.coerceAtLeast(0L))
+                }
             }
 
             override fun onPlaybackStateChanged(state: Int) {
@@ -861,6 +870,14 @@ class ExoPlaybackPlayer(
                 wasCanceled: Boolean,
             ) {
                 if (source !== exo) return
+                if (nextPlaylistIndex != C.INDEX_UNSET && eventTime.windowIndex == nextPlaylistIndex &&
+                    source.currentMediaItemIndex != nextPlaylistIndex
+                ) {
+                    val onFailure = nextPlaylistFailure
+                    cancelNextInternal()
+                    onFailure?.invoke(error)
+                    return
+                }
                 val category = error.media3PlaybackFailureCategory()
                 if (!wasCanceled && (PlaybackNetworkRecovery.handles(category) || PlaybackRecoveryPolicy.requiresFreshUrl(category))) {
                     reportPlaybackFailure(error)
@@ -1351,7 +1368,9 @@ class ExoPlaybackPlayer(
 
     override fun skipToNext(resumePlayback: Boolean) {
         advanceWithPreloadedNext(
-            ready = resumePlayback && wantsPlayback && !nextStarted && nextPlayer?.playbackState == Player.STATE_READY,
+            ready =
+                resumePlayback && wantsPlayback && !nextStarted &&
+                    (nextPlaylistIndex != C.INDEX_UNSET || nextPlayer?.playbackState == Player.STATE_READY),
             consume = { consumePreloadedNext?.invoke() == true },
             advance = { request(queue.next(), resumePlayback = resumePlayback) },
         )
@@ -1662,7 +1681,7 @@ class ExoPlaybackPlayer(
             }
             PlaybackEventLog.info(
                 PlaybackEventKind.PLAYER,
-                "Android next player preparation started.",
+                "Android next track preparation started.",
                 videoId = resource.videoId,
                 details =
                     mapOf(
@@ -1673,6 +1692,45 @@ class ExoPlaybackPlayer(
                     ),
             )
             cancelNextInternal(preserveTransitionGain = !nextStarted && transitionGain < 1f)
+            if (startPaused && positionMs == 0L && !resource.hasVideo && !resource.isLive &&
+                currentResource?.hasVideo == false && currentResource?.isLive == false &&
+                (
+                    !Settings.shared.crossfadeEnabled ||
+                        (Settings.shared.crossfadeGapless && songsShareAlbum(queue.currentSong(), queue.peekNext()))
+                )
+            ) {
+                return@withContext try {
+                    val mediaSource =
+                        buildSource(
+                            resource,
+                            onAudioSourceOpened = { nextAudioSource = it },
+                            onVideoSourceOpened = { nextVideoSource = it },
+                        )
+                    val token =
+                        AndroidPlaybackPlayer.PlaybackPreloadToken(
+                            generation = ++nextGeneration,
+                            playerInstanceId = instanceCounter.incrementAndGet(),
+                            videoId = resource.videoId,
+                            queueSongId = queueSongId,
+                        )
+                    nextResource = resource
+                    nextToken = token
+                    nextExpectedCurrentInstanceId = expectedCurrentPlaybackInstanceId
+                    nextExpectedCurrentVideoId = expectedCurrentVideoId
+                    nextPlaybackReporter =
+                        YouTubePlaybackReporter.create(scope, GlobalYouTubeRepository.instance).also(playbackReporters::add)
+                    nextPlaylistFailure = onFailure
+                    nextPlaylistIndex = exo.currentMediaItemIndex + 1
+                    exo.addMediaSource(nextPlaylistIndex, mediaSource)
+                    updateOffloadPreferences(exo)
+                    token
+                } catch (error: Exception) {
+                    cancelNextInternal()
+                    if (error is CancellationException) throw error
+                    onFailure(error)
+                    null
+                }
+            }
             val candidate =
                 createPlayer(
                     bufferForPlaybackMs = SWITCH_READY_BUFFER_MS.toInt(),
@@ -1937,7 +1995,12 @@ class ExoPlaybackPlayer(
             player === exo && normalizationGain != null &&
                 AudioOffloadEligibility(
                     equalizer = EqualizerProfiles.configuration,
-                    normalizationGain = normalizationGain,
+                    normalizationGain =
+                        if (nextPlaylistIndex != C.INDEX_UNSET) {
+                            maxOf(normalizationGain, nextResource.normalizationGain())
+                        } else {
+                            normalizationGain
+                        },
                     skipSilence = Settings.shared.skipSilence,
                     speed = parameters.speed,
                     pitch = parameters.pitch,
@@ -2011,6 +2074,7 @@ class ExoPlaybackPlayer(
 
     override fun startNextPlayback(): Boolean {
         if (playbackTransitions.recovering) return false
+        if (nextPlaylistIndex != C.INDEX_UNSET) return exo.currentMediaItemIndex == nextPlaylistIndex
         val candidate = nextPlayer ?: return false
         if (nextFailed || candidate.playerError != null || candidate.playbackState == Player.STATE_ENDED) return false
         nextStarted = true
@@ -2043,7 +2107,7 @@ class ExoPlaybackPlayer(
     }
 
     override fun isPreloadedPlaybackActive(token: AndroidPlaybackPlayer.PlaybackPreloadToken): Boolean {
-        val candidate = nextPlayer ?: return false
+        val candidate = if (nextPlaylistIndex != C.INDEX_UNSET) exo else nextPlayer ?: return false
         return token == nextToken &&
             !nextFailed &&
             candidate.playerError == null &&
@@ -2083,8 +2147,20 @@ class ExoPlaybackPlayer(
         if (isPreloadedQueueTargetChanged(nextToken, queue.peekNext()?.id)) cancelNextInternal()
     }
 
+    private fun removeFinishedPlaylistItems() {
+        val currentIndex = exo.currentMediaItemIndex
+        if (currentIndex <= 0) return
+        // Queue promotion can run later, so keep its preload index aligned with the trimmed playlist.
+        if (nextPlaylistIndex != C.INDEX_UNSET) nextPlaylistIndex -= currentIndex
+        exo.removeMediaItems(0, currentIndex)
+    }
+
     private fun cancelNextInternal(preserveTransitionGain: Boolean = false) {
         nextGeneration++
+        val playlistIndex = nextPlaylistIndex
+        nextPlaylistIndex = C.INDEX_UNSET
+        nextPlaylistFailure = null
+        if (playlistIndex != C.INDEX_UNSET && playlistIndex < exo.mediaItemCount) exo.removeMediaItem(playlistIndex)
         val candidate = nextPlayer
         val token = nextToken
         val reporter = nextPlaybackReporter
@@ -2112,8 +2188,8 @@ class ExoPlaybackPlayer(
                 videoSource?.closePlaybackSource()
             },
             stopReporting = {
-                if (token != null && reporter != null && candidate != null) {
-                    reporter.onPlaybackStopped(token.playerInstanceId, candidate.currentPosition.coerceAtLeast(0L))
+                if (token != null && reporter != null) {
+                    reporter.onPlaybackStopped(token.playerInstanceId, candidate?.currentPosition?.coerceAtLeast(0L) ?: 0L)
                     retirePlaybackReporter(reporter)
                 }
             },
@@ -2130,7 +2206,9 @@ class ExoPlaybackPlayer(
         playbackSong: SongItem?,
         initialTransitionGain: Float,
     ): Boolean {
-        val candidate = nextPlayer ?: return false
+        val playlistIndex = nextPlaylistIndex
+        val usesPlaylist = playlistIndex != C.INDEX_UNSET
+        val candidate = if (usesPlaylist) exo else nextPlayer ?: return false
         if (
             token != nextToken ||
             resource != nextResource ||
@@ -2151,14 +2229,18 @@ class ExoPlaybackPlayer(
         val previousInstance = currentInstance
         val previousPosition = previous.currentPosition.coerceAtLeast(0L)
         val shouldPlay = previous.playWhenReady
-        removeVideoSurface(previous, activeVideoSurface)
-        detachPlayerListeners(previous)
+        if (usesPlaylist) {
+            if (candidate.currentMediaItemIndex != playlistIndex) candidate.seekTo(playlistIndex, 0L)
+        } else {
+            removeVideoSurface(previous, activeVideoSurface)
+            detachPlayerListeners(previous)
+        }
         nextProgressJob?.cancel()
         nextProgressJob = null
         nextPlayerListener?.let(candidate::removeListener)
         nextPlayerListener = null
         exo = candidate
-        offloadSleepStallTracker.reset()
+        if (!usesPlaylist) offloadSleepStallTracker.reset()
         sabrPlaybackCache.release(activeAudioSource)
         activeAudioSource?.closePlaybackSource()
         activeVideoSource?.closePlaybackSource()
@@ -2166,6 +2248,8 @@ class ExoPlaybackPlayer(
         activeVideoSource = nextVideoSource
         updateVideoProducer(activeVideoSource, activeVideoSurface != null)
         nextPlayer = null
+        nextPlaylistIndex = C.INDEX_UNSET
+        nextPlaylistFailure = null
         nextAudioSource = null
         nextVideoSource = null
         nextResource = null
@@ -2198,22 +2282,27 @@ class ExoPlaybackPlayer(
                 playbackPrepared = true,
                 isLive = resource.isLive || effectiveSong.isLive || candidate.isCurrentMediaItemLive,
             )
-        attachPlayerListeners(candidate)
+        if (!usesPlaylist) attachPlayerListeners(candidate)
         setVideoTrackEnabled(candidate, activeVideoSurface != null)
         applyVideoSurface(candidate, activeVideoSurface)
         transitionGain = initialTransitionGain.coerceIn(0f, 1f)
         nextTransitionGain = 0f
-        transferPlaybackAudioFocus(
-            retirePrimary = {
-                previous.playWhenReady = false
-                releasePlayer(previous)
-            },
-            enablePromotedPlayer = {
-                applyPlaybackGains()
-                candidate.setAudioAttributes(playbackAudioAttributes, true)
-                candidate.playWhenReady = shouldPlay
-            },
-        )
+        if (usesPlaylist) {
+            removeFinishedPlaylistItems()
+            applyPlaybackGains()
+        } else {
+            transferPlaybackAudioFocus(
+                retirePrimary = {
+                    previous.playWhenReady = false
+                    releasePlayer(previous)
+                },
+                enablePromotedPlayer = {
+                    applyPlaybackGains()
+                    candidate.setAudioAttributes(playbackAudioAttributes, true)
+                    candidate.playWhenReady = shouldPlay
+                },
+            )
+        }
         _isPlaying.value = candidate.isPlaying
         queue.next()
         if (effectiveSong.id != queueSong.id || (effectiveSong.isLive && !queueSong.isLive)) queue.replaceCurrent(effectiveSong)
@@ -2224,7 +2313,7 @@ class ExoPlaybackPlayer(
         _loadError.value = null
         PlaybackEventLog.info(
             PlaybackEventKind.PLAYER,
-            "Android next player promoted to main.",
+            if (usesPlaylist) "Android playlist advanced to next track." else "Android next player promoted to main.",
             videoId = resource.videoId,
             details =
                 mapOf(
@@ -3116,13 +3205,16 @@ class ExoPlaybackPlayer(
         activeVideoSource = null
     }
 
-    private fun completePlaybackAtEof() {
+    private fun completePlaybackAtEof() = completePlaybackAtEof(exo.currentPosition.coerceAtLeast(0L))
+
+    private fun completePlaybackAtEof(positionMs: Long) {
         if (controllerClock != null) return
         if (eofInstance != currentInstance || lastEofInstance == currentInstance) return
         val completedInstance = currentInstance
+        val completedReporter = playbackReporter
         lastEofInstance = completedInstance
         startPreloadedNextAtEof?.invoke(completedInstance)
-        playbackReporter.onPlaybackEnded(completedInstance, exo.currentPosition.coerceAtLeast(0L))
+        completedReporter.onPlaybackEnded(completedInstance, positionMs)
         onEOFPlaybackInstanceState.tryEmit(completedInstance)
     }
 
@@ -3605,6 +3697,7 @@ private fun buildAudioMediaSource(
         if (resource.isSabr) "metrolist://sabr/${resource.videoId}" else resource.url,
         resource.mimeType,
         keepBufferDuringNetworkRecovery = true,
+        tag = resource,
     )
 }
 
@@ -3703,12 +3796,14 @@ internal fun buildStreamingMediaSource(
     uri: String,
     mimeType: String?,
     keepBufferDuringNetworkRecovery: Boolean = false,
+    tag: Any? = null,
 ): MediaSource {
     val item =
         MediaItem
             .Builder()
             .setUri(uri)
             .setMimeType(mimeType)
+            .setTag(tag)
             .build()
     val type = Util.inferContentTypeForUriAndMimeType(checkNotNull(item.localConfiguration).uri, mimeType)
     val factory =

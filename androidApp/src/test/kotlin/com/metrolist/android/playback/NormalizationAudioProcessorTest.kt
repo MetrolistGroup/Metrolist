@@ -1,16 +1,61 @@
 package com.metrolist.android.playback
 
+import android.app.Application
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
 import androidx.media3.common.audio.AudioProcessor
+import androidx.media3.exoplayer.source.SinglePeriodTimeline
 import com.metrolist.shared.playback.playbackNormalizationGain
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+@RunWith(RobolectricTestRunner::class)
+@Config(manifest = Config.NONE, application = Application::class, sdk = [33])
 class NormalizationAudioProcessorTest {
+    @Test
+    fun queuedPcmUsesItsOwnNormalizationBeforeTheCurrentSongChanges() {
+        val outgoing = PlaybackResource("outgoing", "file:///outgoing", emptyMap(), null, null)
+        val incoming = outgoing.copy(videoId = "incoming", url = "file:///incoming")
+        val processor = NormalizationAudioProcessor { if (it?.videoId == incoming.videoId) 2f else 1f }
+        processor.resource = outgoing
+        processor.configure(AudioProcessor.AudioFormat(48_000, 1, C.ENCODING_PCM_16BIT))
+        val timeline =
+            SinglePeriodTimeline(
+                20_000_000L,
+                true,
+                false,
+                false,
+                null,
+                MediaItem
+                    .Builder()
+                    .setUri(incoming.url)
+                    .setTag(incoming)
+                    .build(),
+            )
+        processor.flush(
+            AudioProcessor.StreamMetadata
+                .Builder()
+                .setTimeline(timeline)
+                .setPeriodUid(timeline.getUidOfPeriod(0))
+                .build(),
+        )
+
+        processor.queueInput(ByteBuffer.allocateDirect(2).order(ByteOrder.nativeOrder()).putShort(0, 1000))
+        assertEquals(2000.toShort(), processor.output.getShort(0))
+        assertEquals(1f, processor.normalizationGain)
+
+        processor.resource = incoming
+        processor.queueInput(ByteBuffer.allocateDirect(2).order(ByteOrder.nativeOrder()).putShort(0, 1000))
+        assertEquals(2000.toShort(), processor.output.getShort(0))
+    }
+
     @Test
     fun playersUseTheirOwnMetadataAndLivePreferencesWithoutApplyingAttenuationTwice() {
         var enabled = true

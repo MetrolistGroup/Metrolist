@@ -2,6 +2,7 @@ package com.metrolist.android.playback
 
 import androidx.annotation.OptIn
 import androidx.media3.common.C
+import androidx.media3.common.Timeline
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.audio.BaseAudioProcessor
 import androidx.media3.common.util.UnstableApi
@@ -24,8 +25,30 @@ internal class NormalizationAudioProcessor(
     var normalizationGain: Float = 1f
         private set
 
+    @Volatile private var streamResource: PlaybackResource? = null
+
+    @Volatile private var streamGain = 1f
+
     fun refreshGain() {
         normalizationGain = gain(resource)
+        streamGain =
+            (if (streamResource == null || streamResource === resource) normalizationGain else gain(streamResource)).coerceAtLeast(1f)
+    }
+
+    override fun onFlush(streamMetadata: AudioProcessor.StreamMetadata) {
+        // The next item's PCM can reach the sink before the playlist transition reaches the app.
+        val nextStreamResource =
+            streamMetadata.periodUid?.takeUnless { streamMetadata.timeline.isEmpty }?.let { uid ->
+                val windowIndex = streamMetadata.timeline.getPeriodByUid(uid, Timeline.Period()).windowIndex
+                streamMetadata.timeline
+                    .getWindow(windowIndex, Timeline.Window())
+                    .mediaItem.localConfiguration
+                    ?.tag as? PlaybackResource
+            }
+        if (streamResource !== nextStreamResource) {
+            streamResource = nextStreamResource
+            refreshGain()
+        }
     }
 
     override fun onConfigure(inputAudioFormat: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat {
@@ -38,7 +61,7 @@ internal class NormalizationAudioProcessor(
         // An empty replaceOutputBuffer() can return the shared EMPTY_BUFFER that is also our input.
         if (!inputBuffer.hasRemaining()) return
         val output = replaceOutputBuffer(inputBuffer.remaining())
-        val boost = normalizationGain.coerceAtLeast(1f)
+        val boost = streamGain
         if (boost == 1f) {
             output.put(inputBuffer)
         } else {
