@@ -251,7 +251,7 @@ A successful run prints `PASS isolated Secret Service`. KDE Wallet, macOS Keycha
 
 ## Render backend
 
-The hidden desktop Devtools page has a Render backend setting and a Restart app action. Auto keeps the platform defaults, including OpenGL on Linux and Metal on macOS. Launchers and Gradle run tasks leave `SKIKO_RENDER_API` unset unless the user supplies it, so their defaults do not block the preference. Direct3D appears only on Windows, Metal only on macOS, and OpenGL is hidden on Windows ARM64. Software is available on each desktop platform.
+The hidden desktop Devtools page has a Render backend setting and a Restart app action. Auto keeps the platform defaults, including OpenGL on Linux and Metal on macOS. Launchers and Gradle run tasks leave `SKIKO_RENDER_API` unset unless the user supplies it, so their defaults do not block the preference. Direct3D appears only on Windows, Metal only on macOS, and OpenGL is hidden on Windows ARM64. Software is available on each desktop platform. Skiko maps `SOFTWARE` to `SOFTWARE_COMPAT` on macOS and `SOFTWARE_FAST` elsewhere. In Linux playback measurements, COMPAT costs about three times the CPU per frame because it copies each frame through Java2D.
 
 The preference takes effect on restart, before AWT and Skiko initialize. An explicit `SKIKO_RENDER_API` or `-Dskiko.renderApi` takes priority. Skiko uses its own fallback when a selected renderer cannot initialize. With logging enabled, the first painted window logs the requested and actual APIs as `Skiko render API: requested=... actual=...`. Include that line when reporting backend comparisons.
 
