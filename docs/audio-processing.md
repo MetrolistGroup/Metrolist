@@ -10,8 +10,6 @@ MetroEQ band gains and AutoEQ imports support -30 to +30 dB. The separate output
 - Desktop decodes through FFmpeg. `AudioRenderer` applies EQ and gain before silence skipping, then normalization and user volume at output.
 - iOS attaches `MTAudioProcessingTap` through `AVAudioMix` before starting a prepared player. Each tap owns its processing state. HLS fallback bypasses the tap, so MetroEQ, independent pitch and the meter are unavailable for that stream. Speed remains available.
 
-iOS limits audio-track loading for tap installation to five seconds. A timeout or installation failure starts the item without the tap and disables normalization and independent pitch for that item. Late track-load callbacks cannot install a tap after the timeout. Preload reuse requires a ready item, an installed tap when the transport supports one, and an unexpired resource.
-
 Android's System equalizer opens the installed audio-effects panel for the current audio session. Each new player opens its own effects session; releasing an outgoing player closes only that session. Panel availability depends on the device and route. Changing hardware audio processing requires restart because the sink reads it at construction.
 
 ## Tempo and pitch
