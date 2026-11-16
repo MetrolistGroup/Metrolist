@@ -937,4 +937,8 @@
     <string name="downloads_empty_hint">As músicas descarregadas aparecem aqui.</string>
     <string name="remove_all_downloads">Remover todos as músicas descarregadas</string>
     <string name="lyrics_song_artist">Compositor</string>
+    <string name="lyrics_capability_line_syllable">Linha a linha e sílaba a sílaba</string>
+    <string name="lyrics_capability_line_syllable_unsynced">Linha, sílaba e assíncrona</string>
+    <string name="lyrics_capability_line_unsynced">Linha e assíncrona</string>
+    <string name="lyrics_capability_line">Linha a linha</string>
 </resources>
