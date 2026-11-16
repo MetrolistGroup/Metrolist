@@ -957,7 +957,6 @@ class LyricsRepository(
                     translationLines,
                     sourceWordsPerLine,
                     allowNotNeeded = !forceAiTranslation,
-                    allowLegacyTranslation = !allowRemoteTranslation,
                 )
             val aiResult =
                 if (cachedTranslation != null) {
@@ -1206,28 +1205,18 @@ class LyricsRepository(
         sourceLines: List<String>,
         sourceWordsPerLine: List<List<String>?>,
         allowNotNeeded: Boolean,
-        allowLegacyTranslation: Boolean = false,
     ): CachedLyricsTranslation? {
         val entity = databaseDao?.lyrics(videoId)?.firstOrNull() ?: return null
-        val configKeys =
-            if (allowLegacyTranslation && configKey.endsWith("|passages-v1|false")) {
-                val previousKey = configKey.removeSuffix("|passages-v1|false")
-                listOf(configKey, previousKey, "$previousKey|vocals-v1|false")
-            } else {
-                listOf(configKey)
-            }
-        return configKeys.firstNotNullOfOrNull { key ->
-            readCachedTranslation(
-                entity,
-                targetLanguage,
-                translationStyle,
-                sourceHash,
-                key,
-                sourceLines,
-                sourceWordsPerLine,
-                allowNotNeeded = allowNotNeeded && key == configKey,
-            )
-        }
+        return readCachedTranslation(
+            entity,
+            targetLanguage,
+            translationStyle,
+            sourceHash,
+            configKey,
+            sourceLines,
+            sourceWordsPerLine,
+            allowNotNeeded = allowNotNeeded,
+        )
     }
 
     internal fun readCachedTranslation(
@@ -1242,7 +1231,7 @@ class LyricsRepository(
     ): CachedLyricsTranslation? {
         val configMatches =
             entity.translationConfigKey == configKey ||
-                (!entity.translationNotNeeded && entity.translationConfigKey in legacyTranslationConfigKeys(configKey))
+                (!entity.translationNotNeeded && entity.translationConfigKey in completedTranslationConfigKeys(configKey))
         val valid =
             entity.translationLanguage == targetLanguage &&
                 entity.translationMode == translationStyle &&
@@ -1444,10 +1433,28 @@ class LyricsRepository(
         )
     }
 
-    private fun legacyTranslationConfigKeys(configKey: String): List<String> =
-        LEGACY_AI_TRANSLATION_CACHE_VERSIONS.map { version ->
-            configKey.replaceFirst("$AI_TRANSLATION_CACHE_VERSION|", "$version|")
+    private fun completedTranslationConfigKeys(configKey: String): List<String> {
+        // Detection policy changes invalidate negative decisions, not completed translations.
+        val baseKey = configKey.removeSuffix("|passages-v1|false").removeSuffix("|passages-v1|true")
+        val keys =
+            if (baseKey != configKey) {
+                listOf(
+                    baseKey,
+                    "$baseKey|passages-v1|false",
+                    "$baseKey|passages-v1|true",
+                    "$baseKey|vocals-v1|false",
+                    "$baseKey|vocals-v1|true",
+                )
+            } else {
+                listOf(configKey)
+            }
+        return keys.flatMap { key ->
+            listOf(key) +
+                LEGACY_AI_TRANSLATION_CACHE_VERSIONS.map { version ->
+                    key.replaceFirst("$AI_TRANSLATION_CACHE_VERSION|", "$version|")
+                }
         }
+    }
 
     internal fun buildTranslationConfigKey(): String =
         listOf(

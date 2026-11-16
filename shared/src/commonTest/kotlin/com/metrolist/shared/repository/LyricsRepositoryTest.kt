@@ -2751,6 +2751,43 @@ class LyricsRepositoryTest {
     }
 
     @Test
+    fun completedTranslationIgnoresDetectionPolicyButStillChecksSourceTargetModeAndProviderConfig() {
+        HttpClient(MockEngine { error("Unexpected translation request") }).use { client ->
+            val repository = LyricsRepository(FakeLyricsFetcher(emptyMap()), LyricsTranslationClient(client))
+            val entity =
+                LyricsEntity(
+                    id = "song",
+                    lyrics = "Hello",
+                    translatedLyrics = "METROLIST_TRANSLATION_V2:{\"lines\":[\"Bonjour\"]}",
+                    translationLanguage = "fr",
+                    translationMode = "Literal",
+                    translationSourceHash = "source",
+                )
+            for (version in listOf("v2", "v3", "v4", "v5")) {
+                for (suffix in listOf("", "|vocals-v1|false", "|vocals-v1|true", "|passages-v1|false", "|passages-v1|true")) {
+                    val saved = entity.copy(translationConfigKey = "$version|config$suffix")
+                    for (forced in listOf(false, true)) {
+                        val key = "v5|config|passages-v1|$forced"
+                        assertEquals(
+                            listOf("Bonjour"),
+                            repository.readCachedTranslation(saved, "fr", "Literal", "source", key)?.result?.translatedLines,
+                        )
+                        assertNull(repository.readCachedTranslation(saved, "zh-CN", "Literal", "source", key))
+                        assertNull(repository.readCachedTranslation(saved, "fr", "Transcribed", "source", key))
+                        assertNull(repository.readCachedTranslation(saved, "fr", "Literal", "changed", key))
+                        assertNull(repository.readCachedTranslation(saved, "fr", "Literal", "source", "v5|other|passages-v1|$forced"))
+                        assertEquals(
+                            saved.translationConfigKey == key,
+                            repository.readCachedTranslation(saved.copy(translationNotNeeded = true), "fr", "Literal", "source", key) !=
+                                null,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun romanizeWordsPreservesWordTimestampsAndTiming() =
         runBlocking {
             val originalWords =

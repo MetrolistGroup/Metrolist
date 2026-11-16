@@ -228,7 +228,6 @@ class LyricsPersistenceTest {
                         "{\"lines\":[\"Au revoir\"]}",
                         """{"lines":["","Good night"]}""",
                         "{\"lines\":[\"Bonne nuit\"]}",
-                        "{\"lines\":[\"Salut\",\"Bonne nuit\"]}",
                         """{"lines":["",""]}""",
                         "{\"lines\":[\"Salut\",\"À bientôt\"]}",
                     ),
@@ -250,16 +249,10 @@ class LyricsPersistenceTest {
                         "song",
                         "source",
                         "LrcLib",
-                        translatedLyrics = """METROLIST_TRANSLATION_V2:{"lines":["Bonjour","Old translation"]}""",
-                        translationLanguage = "fr",
-                        translationMode = "Literal",
-                        translationSourceHash = "Bonjour\nGoodbye".hashCode().toString(),
-                        translationConfigKey =
-                            repository.buildTranslationConfigKey().replaceFirst("v5|", "v4|") + "|vocals-v1|false",
                     ),
                 )
                 val offline = repository.enrichLyricsEntries("song", original, allowRemoteTranslation = false)
-                assertEquals("Old translation", offline.single().backgroundTranslatedText)
+                assertNull(offline.single().backgroundTranslatedText)
                 assertEquals(0, requests)
                 val translated = repository.enrichLyricsEntries("song", original)
                 assertNull(translated.single().translatedText)
@@ -275,15 +268,15 @@ class LyricsPersistenceTest {
                 assertEquals("Bonne nuit", repository.enrichLyricsEntries("song", changed).single().backgroundTranslatedText)
                 assertEquals(4, requests)
                 val forced = repository.enrichLyricsEntries("song", changed, forceAiTranslation = true)
-                assertEquals("Salut", forced.single().translatedText)
+                assertNull(forced.single().translatedText)
                 assertEquals("Bonne nuit", forced.single().backgroundTranslatedText)
                 assertEquals(forced, repository.enrichLyricsEntries("song", changed, forceAiTranslation = true))
-                assertEquals(5, requests)
+                assertEquals(4, requests)
 
                 val unnecessary = listOf(original.single().copy(backgroundText = "Au revoir"))
                 assertEquals(unnecessary, repository.enrichLyricsEntries("song", unnecessary))
                 assertEquals(unnecessary, repository.enrichLyricsEntries("song", unnecessary))
-                assertEquals(6, requests)
+                assertEquals(5, requests)
                 assertEquals(
                     "À bientôt",
                     repository
@@ -291,12 +284,69 @@ class LyricsPersistenceTest {
                         .single()
                         .backgroundTranslatedText,
                 )
-                assertEquals(7, requests)
+                assertEquals(6, requests)
                 assertTrue(responses.isEmpty())
             } finally {
                 client.close()
                 database.close()
                 Settings.replaceSharedForTest(null)
+                Files.deleteIfExists(path)
+            }
+        }
+
+    @Test
+    fun forcedTranslationsAreReusedAfterReopeningInAutomaticAndManualModes() =
+        runBlocking {
+            val path = Files.createTempFile("reopened-translations", ".db")
+            Files.delete(path)
+            var database = getDesktopDatabaseBuilder(path.toFile()).build()
+            Settings.replaceSharedForTest(Settings(MapSettings()))
+            var requests = 0
+            val client =
+                HttpClient(
+                    MockEngine {
+                        requests++
+                        respond("""{"choices":[{"message":{"content":"{\"lines\":[\"Bonjour\"]}"}}]}""")
+                    },
+                )
+            try {
+                Settings.shared.lyricsAiTranslationEnabled = true
+                Settings.shared.lyricsAiProvider = "OpenRouter"
+                Settings.shared.lyricsAiTargetLanguage = "fr"
+                Settings.shared.lyricsAiApiKey = "test-key"
+                Settings.shared.lyricsRomanizationEnabled = false
+                val raw = "[00:01.00]Hello"
+                database.dao().saveLyrics(LyricsEntity("song", raw, "LrcLib"))
+                var repository = LyricsRepository(NoOpLyricsFetcher, LyricsTranslationClient(client), database.dao())
+                val translated = repository.enrichLyricsEntries("song", LyricsUtils.parseLyrics(raw), forceAiTranslation = true)
+                assertEquals("Bonjour", translated.single().translatedText)
+                assertEquals(1, requests)
+                database.close()
+                database = getDesktopDatabaseBuilder(path.toFile()).build()
+                repository = LyricsRepository(NoOpLyricsFetcher, LyricsTranslationClient(client), database.dao())
+                for (activation in listOf("Automatic", "Manual")) {
+                    Settings.shared.lyricsAiActivationMode = activation
+                    for (remote in listOf(false, true)) {
+                        assertEquals(
+                            translated,
+                            repository.enrichLyricsEntries("song", LyricsUtils.parseLyrics(raw), allowRemoteTranslation = remote),
+                        )
+                        assertEquals(1, requests)
+                    }
+                }
+                val saved = requireNotNull(database.dao().cachedLyrics("song"))
+                for (suffix in listOf("", "|vocals-v1|false")) {
+                    database.dao().upsert(
+                        saved.copy(translationConfigKey = repository.buildTranslationConfigKey().replaceFirst("v5|", "v4|") + suffix),
+                    )
+                    Settings.shared.lyricsAiActivationMode = "Automatic"
+                    assertEquals(translated, repository.enrichLyricsEntries("song", LyricsUtils.parseLyrics(raw)))
+                    assertEquals(1, requests)
+                }
+            } finally {
+                Settings.replaceSharedForTest(null)
+                client.close()
+                database.close()
                 Files.deleteIfExists(path)
             }
         }
