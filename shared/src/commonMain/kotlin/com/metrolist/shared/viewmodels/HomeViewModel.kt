@@ -1839,6 +1839,7 @@ internal fun HomeViewModel.HomeUiState.withLatestLibraryAndSpeedDialState(
         userPlaylists = latestState.userPlaylists,
         speedDialItems = latestState.speedDialItems,
         speedDialPinnedIds = latestState.speedDialPinnedIds,
+        speedDialSurprisePinned = latestState.speedDialSurprisePinned,
     )
 
 internal fun isCurrentHomeLibraryRevision(
@@ -1913,10 +1914,13 @@ internal fun homeSelectedChipCacheAfterAssemblyFailure(
 internal fun homeSelectedChipCacheAfterOfflineCancellation(
     cachedSelectedChipContent: HomeViewModel.HomeUiState?,
     interruptedState: HomeViewModel.HomeUiState,
-): HomeViewModel.HomeUiState? =
-    cachedSelectedChipContent
-        ?.takeIf { it.selectedChip == interruptedState.selectedChip }
-        ?.asOfflineSnapshot()
+): HomeViewModel.HomeUiState? {
+    val selectedChip = interruptedState.selectedChip ?: return null
+    val publishedContent =
+        interruptedState.takeIf { it.hasHomeFeedContent() }
+            ?: cachedSelectedChipContent?.takeIf { it.selectedChip == selectedChip }
+    return publishedContent?.asOfflineSnapshot()
+}
 
 internal fun homeContinuationAfterAssemblyFailure(
     currentContinuation: String?,
