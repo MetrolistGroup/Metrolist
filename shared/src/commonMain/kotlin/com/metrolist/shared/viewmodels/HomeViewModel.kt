@@ -575,7 +575,10 @@ class HomeViewModel(
                             val interruptedPrimary = publishedPrimaryAllContent
                             val interruptedState = _uiState.value
                             if (interruptedPrimary?.first == cancelledGeneration) {
-                                val latestPrimary = interruptedPrimary.second.withLatestLibraryAndSpeedDialState(interruptedState)
+                                val latestPrimary =
+                                    interruptedPrimary.second
+                                        .withLatestLibraryAndSpeedDialState(interruptedState)
+                                        .withSpeedDialPins(latestSpeedDialPins, speedDialRecommendationItems)
                                 cachedAllContent =
                                     homeCacheAfterOfflineCancellation(
                                         cachedAllContent,
@@ -942,6 +945,7 @@ class HomeViewModel(
                             return@supervisorScope
                         }
                         val currentState = _uiState.value
+                        val failedAllPending = !isFiltered && !primaryContentPublished && cachedAllContent == null
                         val primaryFailureSnapshot =
                             primaryContentSnapshot?.copy(
                                 userPlaylists = currentState.userPlaylists,
@@ -950,7 +954,7 @@ class HomeViewModel(
                                 isRevalidating = false,
                                 isContentLoading = false,
                                 isLoadingMore = false,
-                                isAllContentPending = false,
+                                isAllContentPending = failedAllPending,
                                 continuation =
                                     homeContinuationAfterAssemblyFailure(
                                         currentContinuation = currentState.continuation,
@@ -966,7 +970,8 @@ class HomeViewModel(
                                 isRevalidating = false,
                                 isContentLoading = false,
                                 isLoadingMore = false,
-                                isAllContentPending = if (!isFiltered) false else currentState.isAllContentPending,
+                                isAllContentPending =
+                                    if (!isFiltered) failedAllPending else currentState.isAllContentPending,
                                 continuation =
                                     homeContinuationAfterAssemblyFailure(
                                         currentContinuation = currentState.continuation,
@@ -977,12 +982,14 @@ class HomeViewModel(
                             )
                         _uiState.value = failedState
                         if (!isFiltered) {
-                            allContentReloadRequired = false
+                            allContentReloadRequired = failedAllPending
                             if (publishedPrimaryAllContent?.first == generation) publishedPrimaryAllContent = null
                             cachedAllContent =
                                 homeCacheAfterAssemblyFailure(
                                     cachedAllContent,
-                                    primaryFailureSnapshot ?: failedState,
+                                    (primaryFailureSnapshot ?: failedState)
+                                        .withLatestLibraryAndSpeedDialState(currentState)
+                                        .withSpeedDialPins(latestSpeedDialPins, speedDialRecommendationItems),
                                     primaryContentPublished,
                                 )
                             if (primaryContentPublished) {
