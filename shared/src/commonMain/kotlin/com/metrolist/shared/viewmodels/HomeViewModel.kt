@@ -587,6 +587,21 @@ class HomeViewModel(
                                     lastKnownLocaleSignature = "${locale.hl}:${locale.gl}"
                                 }
                             }
+                            val interruptedState = _uiState.value
+                            if (isFilteredHome(
+                                    interruptedState.selectedChip?.params,
+                                    interruptedState.selectedChip?.browseId ?: "FEmusic_home",
+                                )
+                            ) {
+                                cachedSelectedChipContent =
+                                    homeSelectedChipCacheAfterOfflineCancellation(
+                                        cachedSelectedChipContent,
+                                        interruptedState,
+                                    )
+                                cachedSelectedChipContent?.selectedChip?.let { chip ->
+                                    cachedSelectedChipContent?.let { cacheChipContent(chip, it) }
+                                }
+                            }
                             contentLoadGeneration++
                             cancelPagination()
                             loadJob?.cancel()
@@ -962,6 +977,7 @@ class HomeViewModel(
                         _uiState.value = failedState
                         if (!isFiltered) {
                             allContentReloadRequired = false
+                            if (publishedPrimaryAllContent?.first == generation) publishedPrimaryAllContent = null
                             cachedAllContent =
                                 homeCacheAfterAssemblyFailure(
                                     cachedAllContent,
@@ -1870,6 +1886,14 @@ internal fun homeSelectedChipCacheAfterAssemblyFailure(
     } else {
         cachedSelectedChipContent
     }
+
+internal fun homeSelectedChipCacheAfterOfflineCancellation(
+    cachedSelectedChipContent: HomeViewModel.HomeUiState?,
+    interruptedState: HomeViewModel.HomeUiState,
+): HomeViewModel.HomeUiState? =
+    cachedSelectedChipContent
+        ?.takeIf { it.selectedChip == interruptedState.selectedChip }
+        ?.asOfflineSnapshot()
 
 internal fun homeContinuationAfterAssemblyFailure(
     currentContinuation: String?,
