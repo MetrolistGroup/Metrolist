@@ -72,6 +72,19 @@ internal fun videoDecoderConfiguration(
         VideoDecoderConfiguration(hardwareAcceleration = "auto", threadCount = optimalThreads)
     }
 
+internal fun applyVideoDecoderConfiguration(
+    looping: Boolean,
+    optimalThreads: String,
+    options: MutableMap<String, String>,
+    videoOptions: MutableMap<String, String>,
+): Int {
+    val configuration = videoDecoderConfiguration(looping, optimalThreads)
+    configuration.hardwareAcceleration?.let { options["hwaccel"] = it }
+    videoOptions["threads"] = configuration.threadCount
+    videoOptions["flags"] = "low_delay"
+    return 1
+}
+
 actual class VideoFrame(
     val width: Int,
     val height: Int,
@@ -115,11 +128,13 @@ actual class VideoPlayer actual constructor(
     private val looping: Boolean,
 ) {
     private fun FFmpegFrameGrabber.configureVideoDecoder() {
-        val configuration = videoDecoderConfiguration(looping, OPTIMAL_VIDEO_THREADS)
-        configuration.hardwareAcceleration?.let { options["hwaccel"] = it }
-        videoOptions["threads"] = configuration.threadCount
-        videoOptions["flags"] = "low_delay"
-        imageScalingFlags = 1
+        imageScalingFlags =
+            applyVideoDecoderConfiguration(
+                looping,
+                OPTIMAL_VIDEO_THREADS,
+                options,
+                videoOptions,
+            )
     }
 
     private var grabber: FFmpegFrameGrabber? = null

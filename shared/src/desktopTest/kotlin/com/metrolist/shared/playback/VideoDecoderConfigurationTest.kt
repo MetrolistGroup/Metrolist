@@ -6,17 +6,27 @@ import kotlin.test.assertEquals
 class VideoDecoderConfigurationTest {
     @Test
     fun loopingVideoUsesSingleThreadedSoftwareDecoding() {
-        assertEquals(
-            VideoDecoderConfiguration(hardwareAcceleration = null, threadCount = "1"),
-            videoDecoderConfiguration(looping = true, optimalThreads = "8"),
-        )
+        val options = mutableMapOf<String, String>()
+        val videoOptions = mutableMapOf<String, String>()
+
+        val imageScalingFlags = applyVideoDecoderConfiguration(true, "8", options, videoOptions)
+
+        assertEquals(null, options["hwaccel"])
+        assertEquals("1", videoOptions["threads"])
+        assertEquals("low_delay", videoOptions["flags"])
+        assertEquals(1, imageScalingFlags)
     }
 
     @Test
     fun regularVideoKeepsHardwareAccelerationAndOptimalThreads() {
-        assertEquals(
-            VideoDecoderConfiguration(hardwareAcceleration = "auto", threadCount = "8"),
-            videoDecoderConfiguration(looping = false, optimalThreads = "8"),
-        )
+        val options = mutableMapOf<String, String>()
+        val videoOptions = mutableMapOf<String, String>()
+
+        val imageScalingFlags = applyVideoDecoderConfiguration(false, "8", options, videoOptions)
+
+        assertEquals("auto", options["hwaccel"])
+        assertEquals("8", videoOptions["threads"])
+        assertEquals("low_delay", videoOptions["flags"])
+        assertEquals(1, imageScalingFlags)
     }
 }
