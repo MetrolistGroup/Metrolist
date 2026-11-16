@@ -974,10 +974,12 @@ val desktopClasses = layout.buildDirectory.dir("classes/kotlin/desktop/main")
 
 tasks.register("verifyDesktopJarIntegrity") {
     group = "verification"
-    description = "Verifies every compiled shared class and JAR entry used by the desktop runtime."
+    description = "Verifies shared desktop classes, license resources and the absence of retired romanization assets."
     dependsOn(desktopJar)
     inputs.file(desktopJar.flatMap { it.archiveFile })
     inputs.dir(desktopClasses)
+    val licenseDirectory = layout.projectDirectory.dir("src/commonMain/composeResources/files/licenses/glyphmind").asFile
+    inputs.dir(licenseDirectory)
 
     doLast {
         val jarFile = inputs.files.files.single { it.isFile && it.extension == "jar" }
@@ -995,6 +997,21 @@ tasks.register("verifyDesktopJarIntegrity") {
         ZipFile(jarFile).use { archive ->
             val entries = archive.entries().asSequence().toList()
             val entryNames = entries.mapTo(mutableSetOf()) { it.name }
+            check(entryNames.none { it == "romanization/mandarin.bin" || it.startsWith("com/atilika/kuromoji/") }) {
+                "Shared desktop JAR contains retired romanization assets"
+            }
+            val notice = licenseDirectory.resolve("NOTICE.md").readText()
+            val referencedLicenses = Regex("`(licenses/[^`]+)`").findAll(notice).map { it.groupValues[1] }.toList() + "LICENSE"
+            check(referencedLicenses.all { licenseDirectory.resolve(it).isFile }) { "Glyphmind NOTICE references missing license files" }
+            val resourcePrefix = "composeResources/com.metrolist.shared.generated.resources/files/licenses/glyphmind/"
+            val missingLicenses =
+                licenseDirectory
+                    .walkTopDown()
+                    .filter { it.isFile }
+                    .map { it.relativeTo(licenseDirectory).invariantSeparatorsPath }
+                    .filter { "$resourcePrefix$it" !in entryNames }
+                    .toList()
+            check(missingLicenses.isEmpty()) { "Shared desktop JAR is missing glyphmind license resources: $missingLicenses" }
             val missingClasses = compiledClasses - entryNames
             if (missingClasses.isNotEmpty()) {
                 throw GradleException(

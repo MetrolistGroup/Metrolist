@@ -276,7 +276,7 @@ Normal build tasks run their integrity checks automatically. If one fails, inspe
 
 - Android string generation rejects referenced keys missing from the shared catalog. APK verification requires the Compose `strings.commonMain.cvr` asset.
 - Desktop checks require compiled application classes, readable JARs, the correct platform's natives and the Java 25 runtime with its CDS archive and launcher options. They reject QuickJS, reflection and pinyin dependencies. See [desktop.md](desktop.md) and [kotlin-reflect.md](kotlin-reflect.md).
-- Desktop integrity checks reject retired romanization assets. See [romanization.md](romanization.md).
+- `:shared:verifyDesktopJarIntegrity` checks the shared desktop JAR for retired romanization assets and retained glyphmind licenses. `:desktopApp:verifyReleaseDistributableJars` checks all final packaged JARs. See [romanization.md](romanization.md).
 
 ## Desktop smoke test
 
@@ -316,7 +316,7 @@ Preserve these rules when changing workflows:
 - Give each distinct task graph its own `prepare-ci-gradle` cache scope. Android debug and release, and iOS tests and packaging, must not overwrite each other's caches.
 - Do not persist the configuration cache for builds that read credentials during configuration, including Android debug and iOS jobs. Release Android and desktop packaging use `--no-configuration-cache` to avoid serializing secrets into a cache entry.
 - Pull requests may restore caches but must not save them. Keep native cache keys specific to runner architecture, OS and toolchain. iOS caches `~/.konan` separately for tests and packaging, with a dependency fingerprint so changed dependencies can save an updated cache. Fallback restores must keep the full OS, architecture, Kotlin, Xcode and task-graph prefix. Releases reuse verified tests through the gate; manual IPA builds run tests and packaging. Windows caches NuGet packages by SDK and project dependencies. Rust toolchain caches include the pinned version, OS and architecture. Linux WebView compilation keys include the actual distribution and native library versions.
-- Runtime task caching fingerprints the full packaging JDK, OS, host architecture, module options and CDS JVM flags. Do not cache a jlink output using only a Java major version. Manual packaging runs the integrity checks after restoration. Gated releases set `metrolist.verifyPackaging=false`; Linux verification still checks shared JAR integrity and rejects retired romanization assets.
+- Runtime task caching fingerprints the full packaging JDK, OS, host architecture, module options and CDS JVM flags. Do not cache a jlink output using only a Java major version. Manual packaging runs the integrity checks after restoration. Gated releases set `metrolist.verifyPackaging=false`; Linux x64 verification runs `:shared:verifyDesktopJarIntegrity`, which checks compiled classes, retained glyphmind licenses and retired romanization assets in the shared JAR. It does not run `:desktopApp:verifyReleaseDistributableJars` against a release package.
 - Release Android skips `lintVitalRelease` with `-x` because debug verification already runs lint. Do not replace this with `checkReleaseBuilds = false`, which unregisters the task.
 - Measure cache changes on hosted runners with cold and repeated warm runs. Local timings do not establish CI speedups.
 

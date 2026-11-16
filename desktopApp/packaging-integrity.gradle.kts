@@ -216,6 +216,7 @@ private class VerifyReleaseDistributableAction(
     private val appDirectory: File,
     private val desktopClasses: File,
     private val sharedClasses: File,
+    private val glyphmindLicenses: File,
     private val expectedSqlitePrefix: String,
     private val keptNativePrefixes: List<String>,
     private val expectedFfmpegPrefix: String,
@@ -289,6 +290,15 @@ private class VerifyReleaseDistributableAction(
         check(packagedEntries.none { it == "romanization/mandarin.bin" || it.startsWith("com/atilika/kuromoji/") }) {
             "Release distributable contains retired romanization assets"
         }
+        val resourcePrefix = "composeResources/com.metrolist.shared.generated.resources/files/licenses/glyphmind/"
+        val missingLicenses =
+            glyphmindLicenses
+                .walkTopDown()
+                .filter { it.isFile }
+                .map { it.relativeTo(glyphmindLicenses).invariantSeparatorsPath }
+                .filter { "$resourcePrefix$it" !in packagedEntries }
+                .toList()
+        check(missingLicenses.isEmpty()) { "Release distributable is missing glyphmind license resources: $missingLicenses" }
         if (requiredArm64WebView != null && requiredArm64WebView !in packagedEntries) {
             throw GradleException("Release distributable is missing the ARM64 WebView native library $requiredArm64WebView")
         }
@@ -378,6 +388,8 @@ val verifyReleaseDistributableJars =
         inputs.dir(appDirectory)
         inputs.dir(desktopClasses)
         inputs.dir(sharedClasses)
+        val glyphmindLicenses = project(":shared").layout.projectDirectory.dir("src/commonMain/composeResources/files/licenses/glyphmind")
+        inputs.dir(glyphmindLicenses)
 
         val expectedSqlitePrefix = "org/sqlite/native/$sqliteNativePath/"
         val nucleusPlatform = jnaPlatform.replace("x86-64", "x64")
@@ -412,6 +424,7 @@ val verifyReleaseDistributableJars =
                 appDirectory = appDirectory.get().asFile,
                 desktopClasses = desktopClasses.get().asFile,
                 sharedClasses = sharedClasses.get().asFile,
+                glyphmindLicenses = glyphmindLicenses.asFile,
                 expectedSqlitePrefix = expectedSqlitePrefix,
                 keptNativePrefixes = keptNativePrefixes,
                 expectedFfmpegPrefix = expectedFfmpegPrefix,
