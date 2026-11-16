@@ -239,7 +239,7 @@
     <string name="open_github_profile">開啟GitHub個人資料</string>
     <string name="sponsor_developer">贊助開發者</string>
     <string name="credits_license_name">授權</string>
-    <string name="credits_license_desc">Metrolist 依據 GPL-3.0 授權。</string>
+    <string name="credits_license_desc">Metrolist 依據 GPL-3.0 授權</string>
     <string name="devmode_already_active" translatable="true">開發模式已啟用</string>
     <string name="discord_enable_rich_presence">啟用 Discord Rich Presence</string>
     <string name="discord_listen_to_metrolist">用 Metrolist 收聽</string>
@@ -767,4 +767,16 @@
     <string name="restore_hidden_item_message">再次顯示「%1$s」？</string>
     <string name="unblock_artist_title">確定要解除封鎖這位藝人嗎？</string>
     <string name="song_details">歌曲詳細資訊</string>
+    <string name="unblock_artist_message">允許「%1$s」再次在佇列，推薦的歌曲與統計中出現嗎？</string>
+    <string name="credits_leads_section">領頭開發人員</string>
+    <string name="device_connect_peer_details">%1$s\n%2$s</string>
+    <string name="devtools_render_backend">渲染後端</string>
+    <string name="devtools_render_backend_description">重啟應用程式以套用變更。</string>
+    <string name="devtools_render_backend_auto">自動</string>
+    <string name="devtools_render_backend_direct3d">Direct3D</string>
+    <string name="devtools_render_backend_opengl">OpenGL</string>
+    <string name="devtools_render_backend_software">軟體</string>
+    <string name="devtools_render_backend_metal">Metal</string>
+    <string name="theme_palette_content">內容</string>
+    <string name="theme_palette_style">調色板樣式</string>
 </resources>
