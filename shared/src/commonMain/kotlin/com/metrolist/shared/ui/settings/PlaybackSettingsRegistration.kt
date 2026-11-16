@@ -319,6 +319,12 @@ internal fun SettingsUiRegistryBuilder.registerPlaybackSettings(host: SharedSett
                 checked = settings.autoLoadMore,
             ) { settings.autoLoadMore = it }
             switch(
+                id = "classicRecommendations",
+                title = stringResource(Res.string.classic_recommendations),
+                description = stringResource(Res.string.classic_recommendations_desc),
+                checked = settings.classicRecommendations,
+            ) { settings.classicRecommendations = it }
+            switch(
                 id = "rememberShuffleRepeat",
                 title = stringResource(Res.string.remember_shuffle_and_repeat),
                 description = stringResource(Res.string.remember_shuffle_and_repeat_desc),

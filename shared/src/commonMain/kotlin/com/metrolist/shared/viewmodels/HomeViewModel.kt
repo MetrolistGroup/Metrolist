@@ -650,7 +650,12 @@ class HomeViewModel(
                         val apiKeepListening = findSectionSongs(sections, "FEmusic_listen_again")
                         val apiForgottenFavorites = findSectionSongs(sections, "FEmusic_forgotten_favorites")
 
-                        val quickPicks = personalizedSection(apiQuickPicks, localQuickPicks, isFiltered).distinctBy(::canonicalHomeItemId)
+                        val quickPicks =
+                            if (Settings.shared.classicRecommendations && !isFiltered) {
+                                classicQuickPicks(localQuickPicks, localForgottenFavorites).ifEmpty { apiQuickPicks }
+                            } else {
+                                personalizedSection(apiQuickPicks, localQuickPicks, isFiltered)
+                            }.distinctBy(::canonicalHomeItemId)
                         val keepListening =
                             personalizedSection(
                                 apiKeepListening,
@@ -982,7 +987,7 @@ class HomeViewModel(
                 findSectionsByBrowseId(allSections, "FEmusic_charts")
                     .flatMap { it.items.filterIsInstance<AlbumItem>() }
                     .distinctBy(::canonicalHomeItemId),
-            quickPicks = apiQuickPicks.ifEmpty { quickPicks }.distinctBy(::canonicalHomeItemId),
+            quickPicks = preferredQuickPicks(apiQuickPicks, quickPicks).distinctBy(::canonicalHomeItemId),
             newReleases = newReleasesFrom(allSections).distinctBy(::canonicalHomeItemId),
             keepListening = apiKeepListening.ifEmpty { keepListening }.distinctBy(::canonicalHomeItemId),
             forgottenFavorites = apiForgottenFavorites.ifEmpty { forgottenFavorites }.distinctBy(::canonicalHomeItemId),
@@ -1324,7 +1329,7 @@ class HomeViewModel(
                     .flatMap { it.items.filterIsInstance<AlbumItem>() }
                     .distinctBy { it.id }
                     .ifEmpty { albumCharts },
-            quickPicks = apiQuickPicks.ifEmpty { quickPicks },
+            quickPicks = preferredQuickPicks(apiQuickPicks, quickPicks),
             newReleases = newReleasesFrom(cachedSections).ifEmpty { newReleases },
             keepListening = apiKeepListening.ifEmpty { keepListening },
             forgottenFavorites = apiForgottenFavorites.ifEmpty { forgottenFavorites },
@@ -1863,3 +1868,22 @@ internal fun HomeViewModel.HomeUiState.withoutHiddenHomeItems(filter: HomeConten
             },
         sections = filter.filterSections(sections),
     )
+
+/**
+ * Classic (13.x) Quick picks: songs related to what you played recently plus a few forgotten
+ * favourites, all from the local listening history, shuffled.
+ */
+internal fun classicQuickPicks(
+    localQuickPicks: List<SongItem>,
+    localForgottenFavorites: List<SongItem>,
+): List<SongItem> =
+    (localQuickPicks + localForgottenFavorites.take(8))
+        .distinctBy { it.id }
+        .shuffled()
+        .take(20)
+
+private fun preferredQuickPicks(
+    apiQuickPicks: List<SongItem>,
+    current: List<SongItem>,
+): List<SongItem> =
+    if (Settings.shared.classicRecommendations) current.ifEmpty { apiQuickPicks } else apiQuickPicks.ifEmpty { current }

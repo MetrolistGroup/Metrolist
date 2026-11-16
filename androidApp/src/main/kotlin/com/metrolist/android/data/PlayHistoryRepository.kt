@@ -10,6 +10,7 @@ import com.metrolist.shared.db.RemoteHistoryDate
 import com.metrolist.shared.db.daos.DatabaseDao
 import com.metrolist.shared.db.deleteHistoryEntries
 import com.metrolist.shared.db.entities.Event
+import com.metrolist.shared.db.entities.RelatedSongMap
 import com.metrolist.shared.db.historyAlbumStatistics
 import com.metrolist.shared.db.historyArtistStatistics
 import com.metrolist.shared.db.historySongStatistics
@@ -29,7 +30,9 @@ import com.metrolist.shared.model.HistorySortMode
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.SortDirection
 import com.metrolist.shared.settings.BlockedContent
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
@@ -41,6 +44,7 @@ import java.util.Locale
 import kotlin.time.Instant
 
 private const val HISTORY_LOG_TAG = "PlayHistory"
+private const val RELATED_SONGS_LIMIT = 20
 
 data class HistoryEntry(
     val id: Long,
@@ -313,6 +317,32 @@ class PlayHistoryRepository(
             playTimeMs,
             song.artists.size,
         )
+        if (Settings.shared.classicRecommendations) recordRelatedSongs(song.id)
+    }
+
+    /** Stores the songs YouTube relates to [songId], feeding the classic local Quick picks. */
+    private suspend fun recordRelatedSongs(songId: String) {
+        try {
+            if (dao.hasRelatedSongs(songId)) return
+            val related =
+                GlobalYouTubeRepository.instance
+                    .startRadioQueue(songId)
+                    .songs
+                    .filter { it.id.isNotBlank() && it.id != songId }
+                    .distinctBy { it.id }
+                    .take(RELATED_SONGS_LIMIT)
+            if (related.isEmpty()) return
+            database.withDatabaseTransaction {
+                related.forEach { relatedSong ->
+                    dao.upsertHistorySong(relatedSong)
+                    dao.insert(RelatedSongMap(songId = songId, relatedSongId = relatedSong.id))
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.tag(HISTORY_LOG_TAG).w("related songs fetch failed type=%s", e::class.simpleName)
+        }
     }
 
     suspend fun getSongListeningStats(songId: String): SongListeningStats =

@@ -95,6 +95,7 @@ internal fun List<SettingsGroupRegistration>.prioritized(page: SettingsPageId): 
                 SettingsPageId.PLAYER to "queue" -> {
                     listOf(
                         "autoLoadMore",
+                        "classicRecommendations",
                         "autoDownloadOnLike",
                         "persistentQueue",
                         "promptContinuePlayback",

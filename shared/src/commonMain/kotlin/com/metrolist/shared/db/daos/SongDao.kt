@@ -12,6 +12,7 @@ import androidx.room3.Upsert
 import com.metrolist.shared.constants.AlbumSortType
 import com.metrolist.shared.constants.ArtistSortType
 import com.metrolist.shared.constants.SongSortType
+import com.metrolist.shared.db.entities.RelatedSongMap
 import com.metrolist.shared.db.entities.Album
 import com.metrolist.shared.db.entities.AlbumArtistMap
 import com.metrolist.shared.db.entities.AlbumEntity
@@ -632,6 +633,12 @@ interface SongDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(song: SongEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(map: RelatedSongMap): Long
+
+    @Query("SELECT EXISTS(SELECT 1 FROM related_song_map WHERE songId = :songId)")
+    suspend fun hasRelatedSongs(songId: String): Boolean
 
     @Update
     suspend fun update(song: SongEntity)

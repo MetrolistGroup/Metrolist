@@ -1,5 +1,6 @@
 package com.metrolist.shared.model
 
+import com.metrolist.shared.settings.Settings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -20,6 +21,11 @@ class RadioRecommendationHistory {
         isCurrent: () -> Boolean,
         loadMore: suspend (String) -> RadioQueuePage,
     ): RadioQueuePage? {
+        if (Settings.shared.classicRecommendations) {
+            // Classic (13.x) behaviour: keep YouTube's own order and don't skip songs recommended before.
+            if (!isCurrent()) return null
+            return firstPage.copy(songs = filter(firstPage.songs).filter { it.id.isNotBlank() }.distinctBy(SongItem::id))
+        }
         val previous = recentIds.value.withIndex().associate { it.value to it.index }
         val seenContinuations = mutableSetOf<String>()
         var page = firstPage

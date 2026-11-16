@@ -661,6 +661,7 @@ class Settings(
     var swipeToSong by preference(SwipeToSongKey, false)
     var swipeToRemoveSong by preference(SwipeToRemoveSongKey, false)
     var autoLoadMore by preference(true)
+    var classicRecommendations by preference(false)
     var disableLoadMoreWhenRepeatAll by preference(false)
     var preventDuplicateTracksInQueue by preference(false)
     var innerTubeCookie by preference("")
