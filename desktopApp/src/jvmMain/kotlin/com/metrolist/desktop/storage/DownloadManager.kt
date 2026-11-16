@@ -679,7 +679,25 @@ object DownloadManager {
         songs: List<SongItem>,
     ) {
         synchronized(metadataLock) { DownloadedPlaylists.stop(playlistId) }
-        deleteDownloads(songs.map(SongItem::id))
+        scope.launch {
+            val retainedIds = retainedPlaylistDownloadIds() ?: return@launch
+            deleteDownloadsAndAwait(songs.map(SongItem::id).filterNot { it in retainedIds })
+        }
+    }
+
+    private suspend fun retainedPlaylistDownloadIds(): Set<String>? {
+        val activeDatabase = database ?: return null
+        return try {
+            DownloadedPlaylists
+                .ids()
+                .flatMap { DownloadedPlaylists.songs(it, activeDatabase) }
+                .mapTo(mutableSetOf(), SongItem::id)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            AppLogger.warning("DownloadManager", "Could not resolve remaining downloaded playlists", error)
+            null
+        }
     }
 
     private fun downloadMissing(
