@@ -256,7 +256,7 @@
     <string name="open_github_profile">GitHub profilini aç</string>
     <string name="sponsor_developer">Geliştiriciye destek ol</string>
     <string name="credits_license_name">Lisans</string>
-    <string name="credits_license_desc">Metrolist, GPL-3.0 ile lisanslanmıştır.</string>
+    <string name="credits_license_desc">Metrolist, GPL-3.0 ile lisanslanmıştır</string>
     <string name="devmode_already_active">Geliştirici modu zaten etkin</string>
     <string name="discord_enable_rich_presence">Discord Rich Presence’ı etkinleştir</string>
     <string name="discord_listen_to_metrolist">Metrolist dinliyor</string>
@@ -608,7 +608,7 @@
     <string name="device_connect_no_devices">Ağda henüz cihaz bulunamadı.</string>
     <string name="device_connect_rescan">Yeniden tara</string>
     <string name="device_connect_account_mismatch">Farklı hesap</string>
-    <string name="device_connect_permission_needed">Yerel ağda cihaz bulma için yakındaki cihazlar izni gereklidir</string>
+    <string name="device_connect_permission_needed">Yerel ağda cihaz bulma için yakındaki cihazlar izni gereklidir.</string>
     <string name="device_connect_grant_permission">İzin ver</string>
     <string name="side_menu_welcome">Metrolist’e hoş geldiniz</string>
     <string name="action_cannot_be_undone">Bu işlem geri alınamaz.</string>
@@ -778,7 +778,7 @@
     <string name="lyrics_romanization_display">Görünüm</string>
     <string name="lyrics_romanization_enable">Şarkı sözleri Latin harfleriyle</string>
     <string name="lyrics_romanization_enable_description">Japonca, Korece veya Rusça gibi dillerdeki şarkı sözlerinin okunuşunu Latin harfleriyle gösterir</string>
-    <string name="lyrics_romanization_languages_description">Yalnızca hanzi içeren Çince satırlar, doğru pinyin için yapay zekâ latinleştirme moduna ihtiyaç duyar.</string>
+    <string name="lyrics_romanization_languages_description">Yalnızca hanzi içeren Çince satırlar, doğru pinyin için yapay zekâ latinleştirme moduna ihtiyaç duyar</string>
     <string name="manual">Manuel</string>
     <string name="metadata_refreshed">Meta veriler yenilendi</string>
     <string name="microphone_unavailable">Mikrofon kullanılamıyor</string>
@@ -1043,7 +1043,7 @@
     <string name="token_login_title">Giriş jetonu</string>
     <string name="token_login_show_token">Belirteci göster</string>
     <string name="token_login_sensitive_warning_title">Bu jeton hassas veriler içeriyor.</string>
-    <string name="token_adv_login_description">Bu gelişmiş bir giriş yöntemidir. Web portalına alternatif olarak, giriş jetonunuzu doğrudan buraya girebilir veya güncelleyebilirsiniz. Örneğin bu işlem, birden fazla cihazda giriş yapmayı hızlandırabilir. Uygulamanın ayrıştıramadığı geçersiz jeton biçimlerinin kabul edilmeyeceğini lütfen unutmayın. Jetonu paylaşmayın.</string>
+    <string name="token_adv_login_description">Bu gelişmiş bir giriş yöntemidir. Web portalına alternatif olarak, giriş jetonunuzu doğrudan buraya girebilir veya güncelleyebilirsiniz. Örneğin bu işlem, birden fazla cihazda giriş yapmayı hızlandırabilir. Uygulamanın ayrıştıramadığı geçersiz jeton biçimlerinin kabul edilmeyeceğini lütfen unutmayın. \n\nJetonu paylaşmayın.</string>
     <string name="token_login_error_missing_auth_cookie">Boş olmayan bir SAPISID, __Secure-1PAPISID veya __Secure-3PAPISID çerezi ekleyin.</string>
     <string name="account_picker_title">Bir YouTube kanalı seçin</string>
     <string name="account_picker_subtitle">Bu Google hesabında birden fazla kanal var. Kullanmak istediğinizi seçin.</string>
@@ -2266,8 +2266,8 @@
     <string name="loudness_level_quiet">Kısık (-19 dB)</string>
     <string name="lyrics_share_limit">En fazla %1$d satır seçebilirsiniz.</string>
     <string name="lyrics_share_selected_count">%1$d / %2$d seçildi</string>
-    <string name="lyrics_share_text_size">Metin boyutu: %%1$d</string>
-    <string name="lyrics_share_content_scale">İçerik ölçeği: %%1$d</string>
+    <string name="lyrics_share_text_size">Metin boyutu: %%%1$d</string>
+    <string name="lyrics_share_content_scale">İçerik ölçeği: %%%1$d</string>
     <string name="lyrics_share_scroll_options">Görselinizi özelleştirmek için önizlemenin altına kaydırın.</string>
     <string name="lyrics_share_auto_fit">Otomatik sığdırmaya sıfırla</string>
     <string name="no_other_devices_nearby">Yakında başka cihaz yok</string>
@@ -2593,4 +2593,6 @@
     <string name="ai_setup_key_limits">Anahtar limitlerini gözden geçir</string>
     <string name="lyrics_curated_by">(%1$s tarafından gönderildi)</string>
     <string name="listen_together_host_action">Oda sahibi</string>
+    <string name="cast_stream_port_unavailable">Yayın aktarımı için 57643 TCP bağlantı noktası açılamadı. Bu ağın kullanılabilir olduğunu ve başka bir uygulamanın aynı bağlantı noktasını kullanmadığını kontrol edin.</string>
+    <string name="cast_stream_unreachable">Hoparlör ses akışını talep etmedi. Güvenlik duvarınızın hoparlörden gelen 57643 TCP bağlantı noktasına izin verdiğini ve her iki cihazın da aynı ağda bulunduğunu kontrol edin.</string>
 </resources>
