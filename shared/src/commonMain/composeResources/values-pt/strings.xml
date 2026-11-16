@@ -46,7 +46,7 @@
     <string name="edit">Editar</string>
     <string name="start_radio">Iniciar rádio</string>
     <string name="play">Reproduzir</string>
-    <string name="pause">Pausa</string>
+    <string name="pause">Pausar</string>
     <string name="play_next">Seguinte</string>
     <string name="add_to_queue">Adicionar à fila</string>
     <string name="remove_from_library">Remover da biblioteca</string>
@@ -915,4 +915,16 @@
     <string name="sleep_timer_minute">Minuto</string>
     <string name="sleep_timer_advanced_options">Opções avançadas</string>
     <string name="sleep_timer_set_default">Definir como padrão</string>
+    <string name="density_extra_large">Muito grande (150%)</string>
+    <string name="density_large">Grande (125%)</string>
+    <string name="density_slightly_large">Acima do tamanho Nativo (115%)</string>
+    <string name="density_native">Nativo (100%)</string>
+    <string name="density_slightly_compact">Menor que o tamanho nativo (85%)</string>
+    <string name="density_compact">Compacto (75%)</string>
+    <string name="density_very_compact">Muito compacto (65%)</string>
+    <string name="density_ultra_compact">Extremamente compacto (55℅)</string>
+    <string name="loudness_level">Nível de Volume</string>
+    <string name="loudness_level_aggressive">Agressivo (-7 dB)</string>
+    <string name="loudness_level_loud">Barulhento (-11 dB)</string>
+    <string name="loudness_level_balanced">Balanceado (-14 dB)</string>
 </resources>
