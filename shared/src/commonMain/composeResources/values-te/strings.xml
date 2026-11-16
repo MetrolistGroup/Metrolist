@@ -860,4 +860,12 @@
     <string name="restore_stage_verifying_database">పునరుద్ధరించిన డేటాబేస్‌ను తెరుస్తున్నాము</string>
     <string name="restore_stage_applying_settings">పునరుద్ధరించిన సెట్టింగ్‌లను వర్తింపజేస్తోంది</string>
     <string name="restore_stage_restarting_app">యాప్ ని పునఃప్రారంభిస్తున్నాము</string>
+    <string name="backup_sensitive_message">బ్యాకప్‌లలో మీ ఎ.పి.ఐ (API) తాళాలు, ఖాతా వివరాలు, అనుమతించే కుకీలు, సెషన్ టోకేన్ లు, మరియు ఇంకా రహస్యమైన వివరాలు ఉంటాయి. ఈ ఫైల్ ఉంటే ఎవ్వరైనా మీ ఖాతాలు వాడగలరు. సురక్షితంగా దాచుకోండి. ఎవరికీ ఇవ్వవద్దు.</string>
+    <string name="scrobble_now_playing">ఇప్పుడు వింటున్న</string>
+    <string name="widget_playlists_description">చిన్న-ప్లేయర్ నియంత్రణలతో ప్లేలిస్ట్ షార్ట్‌కట్‌లు</string>
+    <string name="choose_something_below">కింద ఉన్నది ఏదో ఎంచుకోండి</string>
+    <string name="content_filters_filtering">వడపోత</string>
+    <string name="hide_video_songs">వీడియో పాటలు దాచండి</string>
+    <string name="hide_video_songs_desc">వెతుకులాటలో మరియు ప్లేలిస్ట్‌లో పాటకు వీడియో రూపాంతరం దాచండి</string>
+    <string name="hide_non_musical_videos">పాట-లేన వీడియోలు దాచండి</string>
 </resources>
