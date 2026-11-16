@@ -12,6 +12,8 @@ Android mini-player and expanded-player artwork slots request crop explicitly th
 
 Android full-player artwork uses software bitmaps so Compose and image decoding can share pixels. Export code copies hardware images when a software canvas requires it.
 
+Official YouTube artwork hosts keep system DNS results, including VPN mappings; arbitrary artwork hosts still require public addresses. HTTPS certificate checks and response-size limits remain in place.
+
 When skipping in the expanded player, keep the displayed track and decoded cover until the next cover or mini-player preview is ready. First open shows metadata immediately. Failed or missing covers advance to the new track without keeping old metadata. Keep the background fades and crossfade the title and artist together. Android's pause control follows playback intent between tracks, including a pause requested during loading.
 
 ## Android artwork blur
