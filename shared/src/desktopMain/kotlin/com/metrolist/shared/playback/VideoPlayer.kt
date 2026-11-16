@@ -57,6 +57,21 @@ enum class VideoColorRange {
     FULL,
 }
 
+internal data class VideoDecoderConfiguration(
+    val hardwareAcceleration: String?,
+    val threadCount: String,
+)
+
+internal fun videoDecoderConfiguration(
+    looping: Boolean,
+    optimalThreads: String,
+): VideoDecoderConfiguration =
+    if (looping) {
+        VideoDecoderConfiguration(hardwareAcceleration = null, threadCount = "1")
+    } else {
+        VideoDecoderConfiguration(hardwareAcceleration = "auto", threadCount = optimalThreads)
+    }
+
 actual class VideoFrame(
     val width: Int,
     val height: Int,
@@ -99,6 +114,14 @@ actual class VideoPlayer actual constructor(
     private val onRenderedFirstFrame: () -> Unit,
     private val looping: Boolean,
 ) {
+    private fun FFmpegFrameGrabber.configureVideoDecoder() {
+        val configuration = videoDecoderConfiguration(looping, OPTIMAL_VIDEO_THREADS)
+        configuration.hardwareAcceleration?.let { options["hwaccel"] = it }
+        videoOptions["threads"] = configuration.threadCount
+        videoOptions["flags"] = "low_delay"
+        imageScalingFlags = 1
+    }
+
     private var grabber: FFmpegFrameGrabber? = null
     private var seekableSource: SeekableMediaSource? = null
 
@@ -395,19 +418,13 @@ actual class VideoPlayer actual constructor(
             val useInput = grabberInput != null && (grabberInput !is LoopingVideoInput || grabberInput.prepare())
             if (useInput) {
                 FFmpegFrameGrabber(grabberInput as InputStream).apply {
-                    options["hwaccel"] = "auto"
                     options["probesize"] = "500000"
                     options["analyzeduration"] = "500000"
-                    videoOptions["threads"] = OPTIMAL_VIDEO_THREADS
-                    videoOptions["flags"] = "low_delay"
-                    imageScalingFlags = 1
+                    configureVideoDecoder()
                 }
             } else {
                 FFmpegFrameGrabber(url).apply {
-                    options["hwaccel"] = "auto"
-                    videoOptions["threads"] = OPTIMAL_VIDEO_THREADS
-                    videoOptions["flags"] = "low_delay"
-                    imageScalingFlags = 1
+                    configureVideoDecoder()
                     if (url.startsWith("http://") || url.startsWith("https://")) {
                         options["reconnect"] = "1"
                         options["reconnect_streamed"] = "1"
@@ -444,12 +461,9 @@ actual class VideoPlayer actual constructor(
         streamSourceDescription = if (source is HttpRangeInputStream) "HTTP Range (Direct Chunked)" else "SABR Video Stream"
         return prepare(positionProvider, source, null) {
             FFmpegFrameGrabber(input).apply {
-                options["hwaccel"] = "auto"
                 options["probesize"] = "500000"
                 options["analyzeduration"] = "500000"
-                videoOptions["threads"] = OPTIMAL_VIDEO_THREADS
-                videoOptions["flags"] = "low_delay"
-                imageScalingFlags = 1
+                configureVideoDecoder()
             }
         }
     }
