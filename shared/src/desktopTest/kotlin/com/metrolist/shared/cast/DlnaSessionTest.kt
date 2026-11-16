@@ -18,15 +18,15 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.net.InetSocketAddress
-import java.net.Socket
+import java.net.ServerSocket
 import java.net.URI
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFails
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -222,6 +222,7 @@ class DlnaSessionTest {
                 val manager = manager(scope, Settings(MapSettings()))
                 try {
                     assertTrue(manager.cast(receiver.device, media, 0L, true, 1f))
+                    val originalUrl = URI(receiver.mediaUrl)
                     val replacing = CompletableDeferred<Unit>()
                     val replacement =
                         launch {
@@ -233,17 +234,91 @@ class DlnaSessionTest {
                     replacement.join()
                     assertTrue(replacement.isCancelled)
                     val url = URI(receiver.mediaUrl)
-                    assertFails { Socket(url.host, url.port).use { } }
+                    assertEquals(originalUrl.port, url.port)
+                    assertEquals(404, headStatus(url))
+                    assertEquals(200, headStatus(originalUrl))
                     receiver.onPlay = {}
                     assertTrue(manager.replaceMedia(media, 0L, true, 1f))
                     val nextUrl = URI(receiver.mediaUrl)
-                    Socket(nextUrl.host, nextUrl.port).use { }
+                    assertEquals(originalUrl.port, nextUrl.port)
+                    assertEquals(200, headStatus(nextUrl))
+                    assertEquals(404, headStatus(originalUrl))
                 } finally {
                     manager.release()
                     scope.cancel()
                 }
             }
         }
+
+    @Test
+    fun occupiedStreamPortReportsTheBindFailure() =
+        runBlocking {
+            Receiver().use { receiver ->
+                ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { occupied ->
+                    val scope = CoroutineScope(coroutineContext + SupervisorJob())
+                    val manager =
+                        JvmCastManager(
+                            scope,
+                            { error("No discovery") },
+                            { listOf(InetAddress.getLoopbackAddress()) },
+                            "test",
+                            Settings(MapSettings()),
+                            streamPort = occupied.localPort,
+                        )
+                    try {
+                        assertFalse(manager.cast(receiver.device, media, 0L, true, 1f))
+                        assertEquals(CastError.STREAM_PORT_UNAVAILABLE, manager.state.value.error)
+                        assertTrue(receiver.actions.isEmpty())
+                    } finally {
+                        manager.release()
+                        scope.cancel()
+                    }
+                }
+            }
+        }
+
+    @Test
+    fun missingStreamRequestReportsFirewallHintAndLateRequestClearsIt() =
+        runBlocking {
+            Receiver().use { receiver ->
+                val scope = CoroutineScope(coroutineContext + SupervisorJob())
+                val manager =
+                    JvmCastManager(
+                        scope,
+                        { error("No discovery") },
+                        { listOf(InetAddress.getLoopbackAddress()) },
+                        "test",
+                        Settings(MapSettings()),
+                        streamPort = 0,
+                        streamRequestTimeoutMs = 50L,
+                    )
+                try {
+                    assertTrue(manager.cast(receiver.device, media, 0L, true, 1f))
+                    // A blocked Sonos stream reports STOPPED rather than PLAYING.
+                    receiver.playing = false
+                    withTimeout(5_000L) { manager.state.first { it.error == CastError.STREAM_UNREACHABLE } }
+                    assertTrue(manager.state.value.isConnected)
+                    assertEquals(200, headStatus(URI(receiver.mediaUrl)))
+                    withTimeout(5_000L) { manager.state.first { it.error == null } }
+                    assertTrue(manager.state.value.isConnected)
+                } finally {
+                    manager.release()
+                    scope.cancel()
+                }
+            }
+        }
+
+    private fun headStatus(uri: URI): Int {
+        val connection = uri.toURL().openConnection() as HttpURLConnection
+        return try {
+            connection.requestMethod = "HEAD"
+            connection.connectTimeout = 2_000
+            connection.readTimeout = 2_000
+            connection.responseCode
+        } finally {
+            connection.disconnect()
+        }
+    }
 
     private fun manager(
         scope: CoroutineScope,
@@ -254,6 +329,7 @@ class DlnaSessionTest {
         { listOf(InetAddress.getLoopbackAddress()) },
         "test",
         settings,
+        streamPort = 0,
     )
 
     private class Receiver(

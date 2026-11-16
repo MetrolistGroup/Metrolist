@@ -387,7 +387,7 @@ Legacy database conversion removes dangling children covered by cascading foreig
 
 ### Casting
 
-Android and desktop share the JVM cast sessions. Connecting and replacing media preserve receiver volume for Google Cast, DLNA/Sonos and FCast; only explicit adjustments send volume commands. Receiver reports supply remote volume state.
+Android and desktop share the JVM cast sessions. Connecting and replacing media preserve receiver volume for Google Cast, DLNA/Sonos and FCast; only explicit adjustments send volume commands. Receiver reports supply remote volume state. Song changes replace media in the existing session. The stream proxy keeps TCP port `57643` and changes its URL token for each song. See the [Linux firewall setup](install/linux.md#sonos-and-dlna-with-firewalld) for SSDP reply and stream rules.
 
 ### Discord
 

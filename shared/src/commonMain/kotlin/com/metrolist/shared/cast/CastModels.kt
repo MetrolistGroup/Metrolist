@@ -31,6 +31,8 @@ enum class CastError {
     UNSUPPORTED_STREAM,
     CONNECTION_FAILED,
     PLAYBACK_FAILED,
+    STREAM_PORT_UNAVAILABLE,
+    STREAM_UNREACHABLE,
 }
 
 data class CastState(

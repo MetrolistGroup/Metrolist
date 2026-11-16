@@ -15,6 +15,7 @@ import okio.sink
 import java.io.BufferedInputStream
 import java.io.Closeable
 import java.net.InetAddress
+import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketException
@@ -88,15 +89,37 @@ internal fun runCastProxyWorker(
 internal class CastProxyServer(
     private val receiverAddress: InetAddress,
     private val localAddress: InetAddress,
-    private val media: CastMedia,
+    media: CastMedia,
     private val writeTimeoutMillis: Long = 30_000L,
+    streamPort: Int = 0,
 ) : Closeable {
-    private val upstreamUrl = validatedGoogleVideoUrl(media.resource.url)
-    private val contentLength = requireNotNull(media.resource.contentLengthBytes).also { require(it > 0L) }
-    private val token = ByteArray(24).also(SecureRandom()::nextBytes).let(Base64.getUrlEncoder().withoutPadding()::encodeToString)
+    private class Stream(
+        val media: CastMedia,
+    ) {
+        val upstreamUrl = validatedGoogleVideoUrl(media.resource.url)
+        val contentLength = requireNotNull(media.resource.contentLengthBytes).also { require(it > 0L) }
+        val token = ByteArray(24).also(SecureRandom()::nextBytes).let(Base64.getUrlEncoder().withoutPadding()::encodeToString)
+
+        val sockets = ConcurrentHashMap.newKeySet<Socket>()
+        val calls = ConcurrentHashMap.newKeySet<Call>()
+
+        @Volatile var active = true
+
+        @Volatile var requested = false
+    }
+
+    @Volatile private var currentStream = Stream(media)
+    private val streams = ConcurrentHashMap<String, Stream>().apply { put(currentStream.token, currentStream) }
     private val server =
-        runCatching { ServerSocket(0, PROXY_BACKLOG, localAddress) }
-            .getOrElse { ServerSocket(0, PROXY_BACKLOG) }
+        ServerSocket().apply {
+            try {
+                reuseAddress = true
+                bind(InetSocketAddress(localAddress, streamPort), PROXY_BACKLOG)
+            } catch (error: Exception) {
+                close()
+                throw error
+            }
+        }
     private val workers =
         ThreadPoolExecutor(
             4,
@@ -151,10 +174,31 @@ internal class CastProxyServer(
             }
         }
 
-    fun mediaUrl(): String {
+    fun mediaUrl(): String = mediaUrl(currentStream)
+
+    fun stageMedia(media: CastMedia): String {
+        val stream = Stream(media)
+        streams[stream.token] = stream
+        return mediaUrl(stream)
+    }
+
+    fun commitMedia(url: String) {
+        val token = URI(url).rawPath.substringAfterLast('/')
+        currentStream = requireNotNull(streams[token])
+        streams.keys.filter { it != token }.forEach { oldToken -> streams.remove(oldToken)?.let(::closeStream) }
+    }
+
+    fun discardMedia(url: String) {
+        streams.remove(URI(url).rawPath.substringAfterLast('/'))?.let(::closeStream)
+    }
+
+    val hasMediaRequest: Boolean
+        get() = currentStream.requested
+
+    private fun mediaUrl(stream: Stream): String {
         val rawHost = requireNotNull(localAddress.hostAddress).substringBefore('%')
         val host = if (rawHost.contains(':')) "[$rawHost]" else rawHost
-        return "http://$host:$port/media/$token"
+        return "http://$host:$port/media/${stream.token}"
     }
 
     private fun isAllowedClient(clientAddress: InetAddress): Boolean {
@@ -175,35 +219,44 @@ internal class CastProxyServer(
             val parts = requestLine.split(' ')
             val method = parts.getOrNull(0)
             val path = parts.getOrNull(1)?.substringBefore('?')
-            if ((method != "GET" && method != "HEAD") || path != "/media/$token") {
+            val stream = path?.takeIf { it.startsWith("/media/") }?.removePrefix("/media/")?.let(streams::get)
+            if ((method != "GET" && method != "HEAD") || stream == null) {
                 writeError(it, 404, "Not Found")
                 return
             }
-            val headers = linkedMapOf<String, String>()
-            var totalHeaderBytes = requestLine.length
-            while (true) {
-                val line = readAsciiLine(input, 8_192) ?: return
-                totalHeaderBytes += line.length
-                if (totalHeaderBytes > 32_768) {
-                    writeError(it, 431, "Request Header Fields Too Large")
+            stream.sockets.add(it)
+            try {
+                if (!stream.active) return
+                val headers = linkedMapOf<String, String>()
+                var totalHeaderBytes = requestLine.length
+                while (true) {
+                    val line = readAsciiLine(input, 8_192) ?: return
+                    totalHeaderBytes += line.length
+                    if (totalHeaderBytes > 32_768) {
+                        writeError(it, 431, "Request Header Fields Too Large")
+                        return
+                    }
+                    if (line.isEmpty()) break
+                    val separator = line.indexOf(':')
+                    if (separator > 0) headers[line.substring(0, separator).trim().lowercase()] = line.substring(separator + 1).trim()
+                }
+
+                stream.requested = true
+                val contentLength = stream.contentLength
+                val requestedRange = headers["range"]
+                val range = if (requestedRange == null) ByteRange(0L, contentLength - 1L) else parseByteRange(requestedRange, contentLength)
+                if (range == null) {
+                    writeRangeNotSatisfiable(it, stream.contentLength)
                     return
                 }
-                if (line.isEmpty()) break
-                val separator = line.indexOf(':')
-                if (separator > 0) headers[line.substring(0, separator).trim().lowercase()] = line.substring(separator + 1).trim()
+                if (method == "HEAD") {
+                    writeHeaders(downstreamSink(it), if (requestedRange == null) 200 else 206, range, requestedRange != null, stream)
+                    return
+                }
+                proxyRange(it, range, requestedRange != null, stream)
+            } finally {
+                stream.sockets.remove(it)
             }
-
-            val requestedRange = headers["range"]
-            val range = if (requestedRange == null) ByteRange(0L, contentLength - 1L) else parseByteRange(requestedRange, contentLength)
-            if (range == null) {
-                writeRangeNotSatisfiable(it)
-                return
-            }
-            if (method == "HEAD") {
-                writeHeaders(it, if (requestedRange == null) 200 else 206, range, requestedRange != null)
-                return
-            }
-            proxyRange(it, range, requestedRange != null)
         }
     }
 
@@ -211,20 +264,22 @@ internal class CastProxyServer(
         socket: Socket,
         range: ByteRange,
         partialResponse: Boolean,
+        stream: Stream,
     ) {
         val builder =
             Request
                 .Builder()
-                .url(upstreamUrl)
+                .url(stream.upstreamUrl)
                 .get()
                 .header("Range", "bytes=${range.start}-${range.endInclusive}")
-        media.resource.headers.forEach { (name, value) ->
+        stream.media.resource.headers.forEach { (name, value) ->
             if (!name.equals("Range", ignoreCase = true)) builder.header(name, value)
         }
         val call = client.newCall(builder.build())
         calls.add(call)
+        stream.calls.add(call)
         try {
-            if (closed) {
+            if (closed || !stream.active) {
                 call.cancel()
                 return
             }
@@ -243,7 +298,7 @@ internal class CastProxyServer(
                 }
                 socket.soTimeout = 0
                 val output = downstreamSink(socket)
-                writeHeaders(output, if (partialResponse) 206 else 200, range, partialResponse)
+                writeHeaders(output, if (partialResponse) 206 else 200, range, partialResponse, stream)
                 body.byteStream().use { source ->
                     val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                     var remaining = range.length
@@ -258,6 +313,7 @@ internal class CastProxyServer(
             }
         } finally {
             calls.remove(call)
+            stream.calls.remove(call)
         }
     }
 
@@ -265,20 +321,15 @@ internal class CastProxyServer(
         socket.sink().apply { timeout().timeout(writeTimeoutMillis, TimeUnit.MILLISECONDS) }.buffer()
 
     private fun writeHeaders(
-        socket: Socket,
-        status: Int,
-        range: ByteRange,
-        partial: Boolean,
-    ) = writeHeaders(downstreamSink(socket), status, range, partial)
-
-    private fun writeHeaders(
         output: BufferedSink,
         status: Int,
         range: ByteRange,
         partial: Boolean,
+        stream: Stream,
     ) {
+        val contentLength = stream.contentLength
         val reason = if (status == 206) "Partial Content" else "OK"
-        val contentType = requireNotNull(media.resource.mimeType).substringBefore(';').trim()
+        val contentType = requireNotNull(stream.media.resource.mimeType).substringBefore(';').trim()
         val headers =
             buildString {
                 append("HTTP/1.1 $status $reason\r\n")
@@ -295,7 +346,10 @@ internal class CastProxyServer(
         output.flush()
     }
 
-    private fun writeRangeNotSatisfiable(socket: Socket) {
+    private fun writeRangeNotSatisfiable(
+        socket: Socket,
+        contentLength: Long,
+    ) {
         val output = downstreamSink(socket)
         output.write(
             "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */$contentLength\r\nConnection: close\r\n\r\n"
@@ -312,6 +366,12 @@ internal class CastProxyServer(
         val output = downstreamSink(socket)
         output.write("HTTP/1.1 $status $reason\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".toByteArray(Charsets.US_ASCII))
         output.flush()
+    }
+
+    private fun closeStream(stream: Stream) {
+        stream.active = false
+        stream.sockets.forEach(::closeClient)
+        stream.calls.forEach(Call::cancel)
     }
 
     private fun closeClient(socket: Socket) {

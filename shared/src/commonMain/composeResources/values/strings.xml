@@ -3011,6 +3011,8 @@
     <string name="cast_connection_failed">Could not connect to the casting device.</string>
     <!-- Translators: Error message about playback in the casting. -->
     <string name="cast_playback_failed">The casting device could not complete that playback action.</string>
+    <string name="cast_stream_port_unavailable">Could not open TCP port 57643 for casting. Check that this network is available and no other app is using the port.</string>
+    <string name="cast_stream_unreachable">The speaker has not requested the audio stream. Check that your firewall allows incoming TCP port 57643 from the speaker and that both devices are on the same network.</string>
     <!-- Translators: Label for FCast in the Cast device dialog. -->
     <string name="fcast" translatable="false">FCast</string>
     <!-- Translators: Label for google cast in the Cast device dialog. -->
