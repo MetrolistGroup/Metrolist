@@ -946,8 +946,13 @@ class HomeViewModel(
                         }
                         val currentState = _uiState.value
                         val failedAllPending = !isFiltered && !primaryContentPublished && cachedAllContent == null
+                        val retainedPrimaryContent =
+                            publishedPrimaryAllContent
+                                ?.takeIf { it.first == generation }
+                                ?.second
+                                ?: primaryContentSnapshot
                         val primaryFailureSnapshot =
-                            primaryContentSnapshot?.copy(
+                            retainedPrimaryContent?.copy(
                                 userPlaylists = currentState.userPlaylists,
                                 isLoading = false,
                                 isRefreshing = false,
@@ -1523,6 +1528,10 @@ class HomeViewModel(
         latestSpeedDialItemMetadata += updated.id to updated
         speedDialRecommendationItems = speedDialRecommendationItems.withUpdatedSongItems(updated)
         _uiState.update { it.withUpdatedSongMetadata(updated) }
+        publishedPrimaryAllContent =
+            publishedPrimaryAllContent?.let { (generation, snapshot) ->
+                generation to snapshot.withUpdatedSongMetadata(updated)
+            }
         cachedAllContent = cachedAllContent?.withUpdatedSongMetadata(updated)
         cachedSelectedChipContent = cachedSelectedChipContent?.withUpdatedSongMetadata(updated)
         chipContentCache = chipContentCache.mapValues { it.value.withUpdatedSongMetadata(updated) }
@@ -1858,19 +1867,13 @@ internal fun shouldReloadIncompleteAllContent(
 
 internal fun HomeViewModel.HomeUiState.withLatestLibraryAndSpeedDialState(
     latestState: HomeViewModel.HomeUiState,
-): HomeViewModel.HomeUiState {
-    var latestSnapshot =
-        copy(
-            userPlaylists = latestState.userPlaylists,
-            speedDialItems = latestState.speedDialItems,
-            speedDialPinnedIds = latestState.speedDialPinnedIds,
-            speedDialSurprisePinned = latestState.speedDialSurprisePinned,
-        )
-    latestState.loadedHomeSongs().forEach { song ->
-        latestSnapshot = latestSnapshot.withUpdatedSongMetadata(song)
-    }
-    return latestSnapshot
-}
+): HomeViewModel.HomeUiState =
+    copy(
+        userPlaylists = latestState.userPlaylists,
+        speedDialItems = latestState.speedDialItems,
+        speedDialPinnedIds = latestState.speedDialPinnedIds,
+        speedDialSurprisePinned = latestState.speedDialSurprisePinned,
+    )
 
 internal fun isCurrentHomeLibraryRevision(
     snapshotRevision: Long,
