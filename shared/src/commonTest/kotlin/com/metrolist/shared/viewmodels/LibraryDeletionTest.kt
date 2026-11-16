@@ -3,8 +3,12 @@ package com.metrolist.shared.viewmodels
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.PlaylistItem
+import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.SortDirection
 import com.metrolist.shared.playlist.LibraryDeletionTracker
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.ui.screens.LibrarySortType
+import com.metrolist.shared.ui.screens.sortLibraryItems
 import com.russhwolf.settings.MapSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -22,6 +26,22 @@ class LibraryDeletionTest {
     fun setUp() {
         Settings.replaceSharedForTest(Settings(MapSettings()))
         LibraryDeletionTracker.clear()
+    }
+
+    @Test
+    fun savedTrackDatesOverrideStaleRemoteDatesAfterLocalChanges() {
+        val saved =
+            listOf(
+                SongItem("old", "Alpha", null, emptyList(), null, libraryAddedAt = 100, libraryUpdatedAt = 100),
+                SongItem("new", "Zulu", null, emptyList(), null, libraryAddedAt = 200, libraryUpdatedAt = 300),
+            )
+        val remote = saved.map { it.copy(title = "Remote ${it.title}", libraryAddedAt = 50, libraryUpdatedAt = null) }
+        val merged = mergeLibraryItems(saved, remote)
+        for (sort in listOf(LibrarySortType.RECENTLY_ADDED, LibrarySortType.LAST_UPDATED)) {
+            assertEquals(listOf("new", "old"), sortLibraryItems(merged, sort, "", SortDirection.DESCENDING).map { it.id })
+            assertEquals(listOf("old", "new"), sortLibraryItems(merged, sort, "", SortDirection.ASCENDING).map { it.id })
+        }
+        assertEquals(remote.map { it.title }, merged.map { it.title })
     }
 
     @Test

@@ -92,6 +92,13 @@ private fun YTItem.withDownloadedState(downloadedKeys: Set<String>): YTItem =
 
 private fun YTItem.withLibraryMetadata(local: YTItem?): YTItem =
     when {
+        this is SongItem && local is SongItem -> {
+            copy(
+                libraryAddedAt = local.libraryAddedAt ?: libraryAddedAt,
+                libraryUpdatedAt = local.libraryUpdatedAt ?: libraryUpdatedAt,
+            )
+        }
+
         this is ArtistItem && local is ArtistItem -> {
             copy(
                 songCount = local.songCount ?: songCount,
