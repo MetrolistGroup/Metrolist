@@ -1417,6 +1417,7 @@ class PlayerViewModel(
         isCustomQuery: Boolean = false,
         cacheOnly: Boolean = false,
     ) {
+        if (_uiState.value.isVideoModeActive && !isCustomQuery) return
         val requestKey =
             "$songId\u0000$title\u0000$artist\u0000$isCustomQuery\u0000$forceAiTranslation\u0000" +
                 "${Settings.shared.lyricsProviderOrder}\u0000${Settings.shared.lyricsEnabledProviders}\u0000${Settings.shared.preferWordSyncedLyrics}"
