@@ -1797,7 +1797,7 @@ object PlayerState {
         scope.launch {
             combine(player.currentPosition, player.bufferedPosition, player.duration) { position, buffered, duration ->
                 Triple(position, buffered, duration)
-            }.collectLatest { (playerPosition, buffered, playerDuration) ->
+            }.collect { (playerPosition, buffered, playerDuration) ->
                 if (!castManager.state.value.isConnected) {
                     val position = pendingResumePosition?.second ?: playerPosition
                     val duration = if (pendingResumePosition != null) (queue.currentItem()?.duration ?: 0L) * 1000L else playerDuration
