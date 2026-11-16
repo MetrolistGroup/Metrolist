@@ -12,6 +12,8 @@ A failed start retains the enable preference and offers retry. Discovery failure
 
 Desktop renews mDNS sessions every 10 minutes, closing the old sockets and listeners before opening replacements. TXT lookups use a bounded worker queue and temporary resolvers. Discovery thread failures stop the session and report an error for retry.
 
+Desktop opens at most one IPv4 and one IPv6 mDNS instance per LAN interface, preferring ULA over link-local IPv6. It excludes virtual, tunnel and peer-to-peer adapters. Each instance has a separate host and service name, including its address family. An incomplete record gets one fallback TXT lookup per service appearance. Later TXT updates still arrive through JmDNS's collector.
+
 ## Direct connections
 
 Connect by IP address accepts the listener's current ephemeral port with `IPv4:port` or `[IPv6]:port`. It supports private IPv4, shared IPv4 space `100.64.0.0/10` and local IPv6. Public addresses and hostnames are blocked. Multicast discovery is unnecessary, but the firewall/VPN must permit peer traffic. Re-enter the endpoint after losing a manual connection.
@@ -55,3 +57,20 @@ Unresolved account IDs cannot pair. Exchange the `resolved` flag without an acco
 ## Verification
 
 Run affected [platform checks](checks.md#platform-checks), including Device Connect protocol, crypto, admission, outbox, chunk and controller tests. Native checks need two clients for mutual approval, reconnect, direct IP, transfer, pull-back, clock correction and queue reordering with duplicate songs. iOS stubs are not a working peer implementation.
+
+The opt-in `DeviceDiscoveryCpuMeasurementTest` opens real multicast sockets. Set `METROLIST_MEASURE_DISCOVERY=1` and `JAVA_TOOL_OPTIONS=-Djava.awt.headless=true`, then run `:shared:desktopTest --tests '*DeviceDiscoveryCpuMeasurementTest'`. It samples JVM thread CPU time once per second for 25 seconds with discovery off and again after five seconds of discovery. It then checks that two desktop controllers resolve each other's TXT records. This measures discovery and registration without the UI, server or playback.
+
+On a dual-stack LAN, set `METROLIST_TEST_IPV6_DISCOVERY=1` and run `:shared:desktopTest --tests '*DeviceDiscoveryIpv6InteropTest'` headless. This checks that a dual-stack controller and an IPv6-only peer resolve each other's IPv6 endpoints and TXT records through real multicast sockets.
+
+Linux measurements on one Ethernet interface with IPv4, ULA and link-local IPv6, using the same sampler before and after the fix:
+
+| Source | Discovery | mDNS instances | JVM threads | Thread CPU in 25 seconds | CPU, one core = 100% |
+| --- | --- | --- | --- | --- | --- |
+| `origin/main` at `36bb564b4` | Off | 0 | 9 | 6 ms | 0.0271% |
+| `origin/main` at `36bb564b4` | On | 3 | 23 | 34,705 ms | 138.7905% |
+| Fixed | Off | 0 | 9 | 7 ms | 0.0286% |
+| Fixed | On | 2 | 19 | 6 ms | 0.0243% |
+
+Fallback TXT lookups during startup and measurement fell from 127,294 to 2, one per address family. Before the fix, most CPU time came from JmDNS callbacks and the TXT-fetch worker. A fallback lookup starts another resolver even when data is cached, as shown in [JmDNS's lookup path](https://github.com/jmdns/jmdns/blob/v3.6.5/src/main/java/javax/jmdns/impl/JmDNSImpl.java#L761-L776). Limiting concurrent requests alone did not stop callbacks from starting another lookup after the previous one finished.
+
+Windows and macOS idle CPU measurements remain unverified. The reporter will check the nightly Windows build.

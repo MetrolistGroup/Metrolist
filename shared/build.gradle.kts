@@ -599,6 +599,12 @@ tasks.named<Test>("desktopTest") {
     filter { reflectionFreeTestSuites.forEach(::excludeTestsMatching) }
     systemProperty("metrolist.test.withoutReflection", "true")
     systemProperty("io.ktor.development", "true")
+    // Track opt-in flags so cached test environments cannot silently enable or skip LAN tests.
+    listOf("METROLIST_MEASURE_DISCOVERY", "METROLIST_TEST_IPV6_DISCOVERY").forEach { flag ->
+        val value = providers.environmentVariable(flag).orElse("0")
+        inputs.property(flag, value)
+        environment(flag, value.get())
+    }
     environment(
         "XDG_DATA_HOME",
         layout.buildDirectory
