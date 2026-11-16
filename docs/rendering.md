@@ -71,7 +71,7 @@ Use the theme's MotionScheme and respect system animation duration scale. Keep e
 
 Shared dialogs and button popups use the theme's fast effects spec for opacity and fast spatial spec for a 0.95-to-1 scale. They do not register shared bounds or hide the opening control. Animation values are read in `graphicsLayer`, without frame-by-frame composition or measurement. Page transitions and bottom-sheet slides use their own motion. Android's devices sheet reserves its expanded height before discovery, so it slides to that height without a second resize.
 
-Popup input guards belong to each popup session. Completion and cancellation release them in `finally`; disposal clears the session. A superseded animation cannot release a newer request's guard. The closing popup is removed after its animation, while sheets keep their own dismissal lifetime.
+Popup input guards belong to each popup session. Completion and cancellation release them in `finally`; disposal clears the session. A superseded animation cannot release a newer request's guard. The closing popup is removed after its animation, while sheets keep their own dismissal lifetime. Sheets dispose their modal window once they move out of view, even while PopupContent retains the parent through its exit animation. Dismissal observation stays active when a new presentation reuses that retained sheet state. Programmatic hide calls keep the parent menu alive until Details or Equalizer takes over. A held drag can still reverse at the hidden anchor.
 
 The portrait player's canvas controls fade and expand or shrink. Its queue toolbar fades and slides; title and seek rows follow canvas and fullscreen-lyrics state. Queue-toolbar alpha uses drawing modulation so Screen-blended controls can sample the artwork.
 

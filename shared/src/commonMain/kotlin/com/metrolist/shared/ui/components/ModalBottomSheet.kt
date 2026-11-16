@@ -87,12 +87,24 @@ fun ModalBottomSheet(
     val requestedVisible = popupSheetVisibility(isVisible, sheetState.isVisible)
     val scope = rememberCoroutineScope()
     val onDismiss = rememberUpdatedState(onDismissRequest)
+    val visibilityRequest = rememberUpdatedState(requestedVisible)
     val dismissSheet: suspend () -> Unit = {
-        if (sheetState.hide()) onDismiss.value()
+        sheetState.dismiss()
     }
     val dismiss: () -> Unit = {
         scope.launch { dismissSheet() }
     }
+    val window = remember(sheetState) { ModalSheetWindowState() }
+    LaunchedEffect(sheetState, requestedVisible) {
+        if (requestedVisible) sheetState.show() else sheetState.hide()
+    }
+    LaunchedEffect(sheetState) {
+        sheetState.observeDismissals {
+            if (visibilityRequest.value) onDismiss.value()
+        }
+    }
+    if (!window.shouldMount(requestedVisible, sheetState.isVisible)) return
+
     val nestedScrollConnection =
         remember(sheetState) {
             object : NestedScrollConnection {
@@ -125,7 +137,6 @@ fun ModalBottomSheet(
                     available: Velocity,
                 ): Velocity {
                     sheetState.settle(available.y)
-                    if (!sheetState.isVisible) onDismiss.value()
                     return available
                 }
             }
@@ -177,14 +188,13 @@ fun ModalBottomSheet(
                                             Modifier
                                                 .nestedScroll(nestedScrollConnection)
                                                 .mouseWheelScroll(horizontal = false) { delta ->
-                                                    sheetState.scrollWheelBy(delta, scope) { onDismiss.value() }
+                                                    sheetState.scrollWheelBy(delta, scope)
                                                 }.draggable(
                                                     state = sheetState,
                                                     orientation = Orientation.Vertical,
                                                     startDragImmediately = sheetState.isAnimationRunning,
                                                     onDragStopped = { velocity ->
                                                         sheetState.settle(velocity)
-                                                        if (!sheetState.isVisible) onDismiss.value()
                                                     },
                                                 )
                                         } else {
@@ -246,9 +256,6 @@ fun ModalBottomSheet(
                 }
             }
         }
-    }
-    LaunchedEffect(sheetState, requestedVisible) {
-        if (requestedVisible) sheetState.show() else sheetState.hide()
     }
 }
 
