@@ -2611,4 +2611,13 @@
     <string name="density_massive">200 % – Gigantesque</string>
     <string name="density_huge">175 % – Énorme</string>
     <string name="density_extra_large">150 % – Hyper élevée</string>
+    <string name="lyrics_romanization_show_original">Afficher les paroles originales</string>
+    <string name="lyrics_romanization_show_original_description">Affiche les paroles originales sous les paroles romanisées</string>
+    <string name="lyrics_romanization_show_romanization">Afficher les paroles romanisées</string>
+    <string name="lyrics_romanization_show_romanization_description">Affiche les paroles romanisées sous les paroles originales</string>
+    <string name="listen_together_location_poland">Pologne</string>
+    <string name="listen_together_location_custom">Personnalisé</string>
+    <string name="listen_together_custom_server_name">Serveur personnalisé</string>
+    <string name="listen_together_custom_server_maintainer">Utilisateur</string>
+    <string name="learn_more">En savoir plus</string>
 </resources>
