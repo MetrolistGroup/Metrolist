@@ -588,7 +588,13 @@ class AudioCacheManager(
                                 copiedFile,
                                 "audio/webm",
                                 publicStorage = true,
-                                metadata = AudioExportMetadata(candidate.title, candidate.artist, candidate.album),
+                                metadata =
+                                    AudioExportMetadata(
+                                        candidate.title,
+                                        candidate.artist,
+                                        candidate.album,
+                                        downloadedArtwork.exportArtwork(candidate.thumbnailUrl),
+                                    ),
                                 export = export,
                             )
                         val size = source.length()
@@ -763,7 +769,14 @@ class AudioCacheManager(
                                 copiedFile,
                                 entry.mimeType,
                                 publicStorage = targetShared || targetCustom,
-                                metadata = AudioExportMetadata(entry.title, entry.artist, entry.album),
+                                metadata =
+                                    AudioExportMetadata(
+                                        entry.title,
+                                        entry.artist,
+                                        entry.album,
+                                        artwork =
+                                            if (targetShared || targetCustom) downloadedArtwork.exportArtwork(entry.thumbnailUrl) else null,
+                                    ),
                             )
 
                         val extension = extensionForMimeType(mimeType)
@@ -943,7 +956,13 @@ class AudioCacheManager(
                     tempFile,
                     mimeType,
                     publicStorage = isShared(kind) || isCustom(kind),
-                    metadata = AudioExportMetadata(song.title, song.artists.joinToString(", ") { it.name }, song.album?.name),
+                    metadata =
+                        AudioExportMetadata(
+                            song.title,
+                            song.artists.joinToString(", ") { it.name },
+                            song.album?.name,
+                            artwork = if (isShared(kind) || isCustom(kind)) downloadedArtwork.exportArtwork(song.thumbnail) else null,
+                        ),
                 )
 
             currentCoroutineContext().ensureActive()

@@ -38,7 +38,7 @@ Storage screens count indexed audio once. Clearing the song cache removes indexe
 
 ## Formats
 
-Android shared-folder exports remux WebM/Opus to tagged Ogg Opus and AAC to tagged M4A without re-encoding. Conversion or tagging failure must not publish raw source files. Private storage keeps the original representation. Shared-cache migrations retain originals until replacement files and format metadata commit.
+Android shared-folder exports remux WebM/Opus to tagged Ogg Opus and AAC to tagged M4A without re-encoding. New exports embed the retained PNG artwork when it is available, along with title, artist and album tags. Conversion or tagging failure must not publish raw source files. Private storage keeps the original representation. Shared-cache migrations retain originals until replacement files and format metadata commit.
 
 Desktop downloads transcode to tagged AAC/M4A before publication. Temporary JavaCPP tag strings, rational values and frame views are released at their call sites; partially initialized encoders and metadata dictionaries also have cleanup owners.
 

@@ -2,8 +2,10 @@ package com.metrolist.android.playback
 
 import android.media.MediaExtractor
 import android.media.MediaFormat
+import okio.ByteString.Companion.toByteString
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
 import java.io.File
 import java.io.OutputStream
 import java.nio.ByteBuffer
@@ -13,6 +15,13 @@ internal data class AudioExportMetadata(
     val title: String,
     val artist: String,
     val album: String?,
+    val artwork: AudioExportArtwork? = null,
+)
+
+internal data class AudioExportArtwork(
+    val png: ByteArray,
+    val width: Int,
+    val height: Int,
 )
 
 internal fun prepareStoredAudio(
@@ -108,6 +117,23 @@ internal fun opusTagsPacket(metadata: AudioExportMetadata): ByteArray {
             add("TITLE=${metadata.title}")
             add("ARTIST=${metadata.artist}")
             metadata.album?.takeIf(String::isNotBlank)?.let { add("ALBUM=$it") }
+            metadata.artwork?.let { artwork ->
+                val picture = ByteArrayOutputStream()
+                DataOutputStream(picture).use { output ->
+                    val mime = "image/png".encodeToByteArray()
+                    output.writeInt(3)
+                    output.writeInt(mime.size)
+                    output.write(mime)
+                    output.writeInt(0)
+                    output.writeInt(artwork.width)
+                    output.writeInt(artwork.height)
+                    output.writeInt(32)
+                    output.writeInt(0)
+                    output.writeInt(artwork.png.size)
+                    output.write(artwork.png)
+                }
+                add("METADATA_BLOCK_PICTURE=${picture.toByteArray().toByteString().base64()}")
+            }
         }.map(String::encodeToByteArray)
     return ByteArrayOutputStream()
         .apply {
@@ -122,7 +148,7 @@ internal fun opusTagsPacket(metadata: AudioExportMetadata): ByteArray {
         }.toByteArray()
 }
 
-private class OggPageWriter(
+internal class OggPageWriter(
     private val output: OutputStream,
     private val serialNumber: Int = ThreadLocalRandom.current().nextInt(),
 ) {
@@ -134,26 +160,39 @@ private class OggPageWriter(
         beginningOfStream: Boolean = false,
         endOfStream: Boolean = false,
     ) {
-        require(packet.size < MAX_OGG_PACKET_BYTES)
-        val segmentCount = packet.size / 255 + 1
-        val page =
-            ByteArrayOutputStream()
-                .apply {
-                    write(OGG_CAPTURE)
-                    write(0)
-                    write((if (beginningOfStream) 2 else 0) or (if (endOfStream) 4 else 0))
-                    writeLittleEndian(granulePosition)
-                    writeLittleEndian(serialNumber)
-                    writeLittleEndian(sequenceNumber++)
-                    writeLittleEndian(0)
-                    write(segmentCount)
-                    repeat(segmentCount - 1) { write(255) }
-                    write(packet.size % 255)
-                    write(packet)
-                }.toByteArray()
-        val checksum = oggCrc(page)
-        repeat(4) { index -> page[22 + index] = (checksum ushr (index * 8)).toByte() }
-        output.write(page)
+        val totalSegments = packet.size / 255 + 1
+        var segmentOffset = 0
+        var packetOffset = 0
+        while (segmentOffset < totalSegments) {
+            val segmentCount = minOf(255, totalSegments - segmentOffset)
+            val lastPage = segmentOffset + segmentCount == totalSegments
+            val payloadSize = if (lastPage) packet.size - packetOffset else segmentCount * 255
+            val page =
+                ByteArrayOutputStream()
+                    .apply {
+                        write(OGG_CAPTURE)
+                        write(0)
+                        write(
+                            (if (segmentOffset > 0) 1 else 0) or
+                                (if (beginningOfStream && segmentOffset == 0) 2 else 0) or
+                                (if (endOfStream && lastPage) 4 else 0),
+                        )
+                        writeLittleEndian(if (lastPage) granulePosition else -1L)
+                        writeLittleEndian(serialNumber)
+                        writeLittleEndian(sequenceNumber++)
+                        writeLittleEndian(0)
+                        write(segmentCount)
+                        repeat(segmentCount) { index ->
+                            write(if (lastPage && index == segmentCount - 1) packet.size % 255 else 255)
+                        }
+                        write(packet, packetOffset, payloadSize)
+                    }.toByteArray()
+            val checksum = oggCrc(page)
+            repeat(4) { index -> page[22 + index] = (checksum ushr (index * 8)).toByte() }
+            output.write(page)
+            segmentOffset += segmentCount
+            packetOffset += payloadSize
+        }
     }
 }
 
@@ -191,6 +230,5 @@ private val OGG_CAPTURE = "OggS".encodeToByteArray()
 private val OPUS_HEAD = "OpusHead".encodeToByteArray()
 private val OPUS_TAGS = "OpusTags".encodeToByteArray()
 private const val OGG_CRC_POLYNOMIAL = 0x04c11db7
-private const val MAX_OGG_PACKET_BYTES = 255 * 255
 private const val OPUS_SAMPLE_RATE = 48_000L
 private const val DEFAULT_PACKET_DURATION_US = 20_000L
