@@ -51,26 +51,13 @@ nix run path:./build/distribution/nix
 
 The root flake reads the committed `packaging/release.json`, so `nix run github:MetrolistGroup/Metrolist` installs the latest stable release. After each stable release, copy the generated `release.json` to `packaging/release.json` and commit it. Missing metadata fails with generation instructions rather than a fake hash. Verify login, Secret Service, audio and desktop integration on both architectures.
 
-## Flatpak and Flathub
+## Flatpak
 
-The [local source manifest](../flatpak/cc.metrolist.Metrolist.yaml) builds the committed `main` branch of the local checkout with Gradle and network access (`make flatpak-bundle`). Its JDK module stays unstripped because jlink rejects modified JDK libraries. The [release template](../packaging/flatpak/cc.metrolist.Metrolist.json.in) extracts checksum-pinned AppImages without Gradle or build-time network. Both use GNOME 51; keep the runtime pins in step.
+Metrolist is distributed as a Flatpak only through [flatpark](https://github.com/flatpark/flatpark), which repackages the release AppImage as `com.metrolist.desktop` and diffs its permissions against [our source manifest](../flatpak/com.metrolist.desktop.yaml). Keep that manifest's path, app ID and permissions current. Metrolist is not submitted to Flathub.
 
-After generation:
+The source manifest builds the committed `main` branch of the local checkout with Gradle and network access (`make flatpak-bundle`). Its JDK module stays unstripped because jlink rejects modified JDK libraries. It uses GNOME 51, matching flatpark.
 
-```sh
-flatpak-builder --show-manifest build/distribution/flatpak/cc.metrolist.Metrolist.json
-flatpak-builder-lint manifest build/distribution/flatpak/cc.metrolist.Metrolist.json
-appstreamcli validate --no-net build/distribution/flatpak/cc.metrolist.Metrolist.metainfo.xml
-desktop-file-validate build/distribution/flatpak/cc.metrolist.Metrolist.desktop
-flatpak-builder --user --install-deps-from=flathub --force-clean \
-  build/flatpak-release build/distribution/flatpak/cc.metrolist.Metrolist.json
-```
-
-Permissions cover X11, IPC, DRI, PulseAudio, network, Secret Service, the app's MPRIS name, the tray watcher and tray item name (`org.kde.StatusNotifierItem-2-1`, the app runs as PID 2 in the sandbox), Downloads and Music. Neither manifest grants the whole home directory or session bus. Inside the sandbox the Wayland scale probes cannot reach the compositor and fall back to environment variables, the download folder chooser sees only Downloads and Music, and Omarchy detection relies on `OMARCHY_PATH`. Check login, credentials, local files, downloads, audio, tray, MPRIS and GPU rendering in the sandbox.
-
-Metainfo uses release date/notes. `packaging/flatpak/screenshots.json` accepts objects with public HTTPS `url` and `caption`. The first image is default. An empty list does not generate substitute screenshots.
-
-The Flatpak ID is `cc.metrolist.Metrolist` because Flathub rejects IDs ending in `.desktop` and verifies the ID against a domain the project controls; serve Flathub's token at `https://metrolist.cc/.well-known/org.flathub.VerifiedApps.txt`. Internal identifiers (Kotlin package, keyring service, Sentry release names, macOS bundle ID) stay `com.metrolist.desktop`. Flathub submission needs public source/assets, desktop screenshots, ID ownership confirmation and a complete offline source build, or an approved binary-build exception. The repository lint passes only after building with `--mirror-screenshots-url=https://dl.flathub.org/media --compose-url-policy=full` and running `flatpak build-update-repo`, as Flathub's pipeline does. The local network-enabled manifest does not satisfy the [source-build requirement](https://docs.flathub.org/docs/for-app-authors/requirements#building-from-source). Do not change the installed app ID without a data migration plan.
+Permissions cover X11, IPC, DRI, PulseAudio, network, Secret Service, the app's MPRIS name, the tray watcher and tray item name (`org.kde.StatusNotifierItem-2-1`, the app runs as PID 2 in the sandbox), Downloads and Music. The manifest grants neither the whole home directory nor the session bus. Inside the sandbox the Wayland scale probes cannot reach the compositor and fall back to environment variables, the download folder chooser sees only Downloads and Music, and Omarchy detection relies on `OMARCHY_PATH`. Check login, credentials, local files, downloads, audio, tray, MPRIS and GPU rendering in the sandbox.
 
 ## Optional external proposals
 
@@ -81,9 +68,8 @@ Generation needs no extra secret. External proposals need `PACKAGING_PR_TOKEN` p
 | `WINGET_REPOSITORY` | WinGet staging repository or fork |
 | `HOMEBREW_REPOSITORY` | Homebrew tap |
 | `NIX_REPOSITORY` | Generated flake |
-| `FLATPAK_REPOSITORY` | Flatpak packaging |
 
-The token needs Contents/Pull requests write permission and source visibility access. The script refuses writes while the source repository is private. Flatpak also requires screenshots and `FLATPAK_BINARY_EXCEPTION=true` after explicit Flathub approval. No AUR publishing token is consumed.
+The token needs Contents/Pull requests write permission and source visibility access. The script refuses writes while the source repository is private. No AUR publishing token is consumed.
 
 `scripts/propose_distribution.py` creates or updates `build/metrolist-VERSION` and opens a draft PR against the destination's default branch. It never force-pushes or merges. WinGet staging PRs need a separate upstream submission.
 
@@ -95,7 +81,7 @@ python3 scripts/test_build_appimage.py
 python3 .github/tests/test_release_workflows.py
 python3 .github/tests/test_repository_checks.py
 bash -n scripts/build_appimage.sh
-shellcheck scripts/build_appimage.sh packaging/flatpak/cc.metrolist.Metrolist
+shellcheck scripts/build_appimage.sh
 actionlint .github/workflows/ci.yml .github/workflows/release.yml .github/workflows/verify-repository-checks.yml
 ```
 

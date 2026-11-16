@@ -157,7 +157,7 @@ Linux cannot validate DMG packaging or Rosetta. Before release, inspect Finder b
 
 ### Flatpak
 
-The local manifest is `flatpak/cc.metrolist.Metrolist.yaml`, with app ID `cc.metrolist.Metrolist`. It builds the committed `main` branch with its submodules, so commit changes before building.
+The local manifest is `flatpak/com.metrolist.desktop.yaml`, with app ID `com.metrolist.desktop`. It builds the committed `main` branch with its submodules, so commit changes before building.
 
 ```sh
 make flatpak-deps
@@ -166,7 +166,7 @@ make flatpak-run-installed
 make flatpak-bundle
 ```
 
-`make flatpak-run` uses the build directory without installation. Keep the manifest's GNOME runtime version and `FLATPAK_RUNTIME_VERSION` in `Makefile` synchronized. The [distribution reference](distribution.md#flatpak-and-flathub) covers the separate offline recipe and Flathub requirements.
+`make flatpak-run` uses the build directory without installation. Keep the manifest's GNOME runtime version and `FLATPAK_RUNTIME_VERSION` in `Makefile` synchronized. The [distribution reference](distribution.md#flatpak) covers flatpark, which ships the Flatpak users install.
 
 ## Runtime and CDS
 

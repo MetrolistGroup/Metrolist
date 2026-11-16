@@ -381,8 +381,6 @@ jobs:
             repository: ${{ vars.HOMEBREW_REPOSITORY }}
           - kind: nix
             repository: ${{ vars.NIX_REPOSITORY }}
-          - kind: flatpak
-            repository: ${{ vars.FLATPAK_REPOSITORY }}
     env:
       PACKAGING_PR_TOKEN: ${{ secrets.PACKAGING_PR_TOKEN }}
       PACKAGING_REPOSITORY: ${{ matrix.repository }}
@@ -406,7 +404,6 @@ jobs:
           GH_TOKEN: ${{ secrets.PACKAGING_PR_TOKEN }}
           PACKAGE_KIND: ${{ matrix.kind }}
           APP_VERSION: ${{ needs.prepare.outputs.version }}
-          FLATPAK_BINARY_EXCEPTION: ${{ vars.FLATPAK_BINARY_EXCEPTION }}
         run: >-
           python3 scripts/propose_distribution.py "$PACKAGE_KIND"
           --generated distribution --repository "$PACKAGING_REPOSITORY" --version "$APP_VERSION"

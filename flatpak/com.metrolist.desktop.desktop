@@ -2,8 +2,8 @@
 Type=Application
 Name=Metrolist
 Comment=Stream and manage your YouTube Music library
-Exec=cc.metrolist.Metrolist %u
-Icon=cc.metrolist.Metrolist
+Exec=com.metrolist.desktop %u
+Icon=com.metrolist.desktop
 Terminal=false
 Categories=AudioVideo;Player;Music;
 StartupWMClass=Metrolist

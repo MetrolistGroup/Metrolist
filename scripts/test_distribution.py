@@ -10,7 +10,6 @@ import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
-import xml.etree.ElementTree as ET
 
 from generate_distribution import generate, release_assets, REPOSITORY
 from propose_distribution import propose, run
@@ -40,11 +39,11 @@ class DistributionTest(unittest.TestCase):
             'assets': [{'name': name} for name in names],
         }
 
-    def generate(self, screenshots=()):
-        generate(self.assets, self.release, self.output, screenshots)
+    def generate(self):
+        generate(self.assets, self.release, self.output)
 
     def test_rendered_recipes_use_verified_assets_and_actual_notes(self):
-        self.generate([{'url': 'https://example.org/desktop.png', 'caption': 'Music library'}])
+        self.generate()
         installer = next((self.output / 'winget').rglob('*.installer.yaml')).read_text()
         self.assertIn('--silent --launch=false', installer)
         self.assertIn('metrolist-installer-windows-x64-14.0.0.exe', installer)
@@ -56,16 +55,7 @@ class DistributionTest(unittest.TestCase):
         for asset in data['linux'].values():
             self.assertEqual(asset['sha256'], hashlib.sha256((self.assets / asset['name']).read_bytes()).hexdigest())
             self.assertTrue(asset['hash'].startswith('sha256-'))
-        flatpak = json.loads((self.output / 'flatpak/cc.metrolist.Metrolist.json').read_text())
-        self.assertNotIn('build-options', flatpak)
-        sources = flatpak['modules'][0]['sources']
-        self.assertEqual([source['only-arches'] for source in sources if 'url' in source], [['x86_64'], ['aarch64']])
-        self.assertNotIn('--own-name=org.mpris.MediaPlayer2.*', flatpak['finish-args'])
-        tree = ET.parse(self.output / 'flatpak/cc.metrolist.Metrolist.metainfo.xml')
-        self.assertEqual(tree.find('./releases/release/description/p').text, 'Fix playback & <login>.')
-        self.assertEqual(tree.find('./releases/release').get('date'), '2026-10-31')
-        self.assertEqual(tree.find('./screenshots/screenshot').get('type'), 'default')
-        self.assertIn('not approved for Flathub', (self.output / 'flatpak/SUBMISSION-NOTES.txt').read_text())
+        self.assertFalse((self.output / 'flatpak').exists())
         self.assertFalse((self.output / 'aur/PKGBUILD').exists())
         if shutil.which('ruby'):
             subprocess.run(['ruby', '-c', str(self.output / 'homebrew/Casks/metrolist.rb')], check=True, capture_output=True)
@@ -103,11 +93,6 @@ class DistributionTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'already exists'):
             self.generate()
         self.assertEqual(sentinel.read_text(), 'user work')
-
-    def test_invalid_screenshot_does_not_leave_partial_output(self):
-        with self.assertRaises(ValueError):
-            self.generate([{'url': 'file:///private.png', 'caption': 'Library'}])
-        self.assertFalse(self.output.exists())
 
     def test_missing_token_or_repository_does_not_call_external_tools(self):
         with patch('propose_distribution.run') as run:
@@ -200,15 +185,6 @@ class DistributionTest(unittest.TestCase):
         self.assertIn("# Updated recipe", run("git", "show", f"{branch}:Casks/metrolist.rb", cwd=remote))
         self.assertEqual(run("git", "show", f"{branch}:unrelated", cwd=remote), "keep this file")
         self.assertEqual(run("git", "rev-list", "--count", f"main..{branch}", cwd=remote), "2")
-
-    def test_flatpak_requires_exception_and_screenshots(self):
-        self.generate()
-        with patch.dict(os.environ, {'GH_TOKEN': 'test', 'FLATPAK_BINARY_EXCEPTION': ''}), patch('propose_distribution.run', return_value='false') as run:
-            propose('flatpak', self.output, 'owner/flatpak', self.version)
-            self.assertEqual(run.call_count, 1)
-        with patch.dict(os.environ, {'GH_TOKEN': 'test', 'FLATPAK_BINARY_EXCEPTION': 'true'}), patch('propose_distribution.run', return_value='false'):
-            with self.assertRaisesRegex(ValueError, 'screenshots'):
-                propose('flatpak', self.output, 'owner/flatpak', self.version)
 
 
 if __name__ == '__main__':

@@ -12,7 +12,7 @@ test('translation changes keep Flatpak validation idle', () => {
 });
 
 test('Flatpak inputs and workflow changes require validation', () => {
-  for (const path of ['flatpak/cc.metrolist.Metrolist.yaml', 'Makefile',
+  for (const path of ['flatpak/com.metrolist.desktop.yaml', 'Makefile',
     '.github/workflows/verify-repository-checks.yml', '.github/scripts/flatpak-paths.cjs',
     '.github/scripts/flatpak-paths.test.cjs']) {
     assert.equal(needsFlatpak([path]), true, path);
@@ -33,7 +33,7 @@ test('moving a manifest outside flatpak still runs validation', t => {
   const git = args => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' }).trim();
   git(['init', '--quiet']);
   mkdirSync(join(root, 'flatpak'));
-  writeFileSync(join(root, 'flatpak/manifest.yaml'), 'app-id: cc.metrolist.Metrolist\n');
+  writeFileSync(join(root, 'flatpak/manifest.yaml'), 'app-id: com.metrolist.desktop\n');
   git(['add', '.']);
   const base = git(['write-tree']);
   renameSync(join(root, 'flatpak/manifest.yaml'), join(root, 'manifest.yaml'));

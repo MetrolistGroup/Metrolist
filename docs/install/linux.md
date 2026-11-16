@@ -48,6 +48,18 @@ nix profile install github:MetrolistGroup/Metrolist
 
 To use it from a NixOS or Home Manager configuration, add `github:MetrolistGroup/Metrolist` as an input and include `inputs.metrolist.packages.${pkgs.stdenv.hostPlatform.system}.default` in your packages. The flake follows the latest stable release; run `nix flake update metrolist` or `nix profile upgrade` to update.
 
+## Flatpak
+
+[flatpark](https://flatpark.org/apps/com.metrolist.desktop/) repackages the release AppImage as the Flatpak `com.metrolist.desktop` for x86_64 and aarch64:
+
+```sh
+flatpak --user remote-add --if-not-exists flatpark https://dl.flatpark.org/flatpark.flatpakrepo
+flatpak --user install flatpark com.metrolist.desktop
+flatpak run com.metrolist.desktop
+```
+
+Inside the sandbox, the download folder can only be Downloads or Music. Update with `flatpak update`.
+
 ## Update and uninstall
 
 Back up, quit, then replace the AppImage with a verified download of the same architecture. Deleting an AppImage leaves profile data and music outside it. Sign out first to remove saved sessions, and preserve backups before clearing data.

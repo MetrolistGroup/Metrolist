@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>cc.metrolist.Metrolist</id>
+  <id>com.metrolist.desktop</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>Metrolist</name>
@@ -20,7 +20,7 @@
     </ul>
   </description>
 
-  <launchable type="desktop-id">cc.metrolist.Metrolist.desktop</launchable>
+  <launchable type="desktop-id">com.metrolist.desktop.desktop</launchable>
 
   <url type="homepage">https://github.com/MetrolistGroup/Metrolist</url>
   <url type="bugtracker">https://github.com/MetrolistGroup/Metrolist/issues</url>
