@@ -942,4 +942,12 @@
     <string name="lyrics_capability_line_unsynced">Linha a linha e assíncrona</string>
     <string name="lyrics_capability_line">Linha a linha</string>
     <string name="lyrics_capability_unsynced">Assíncrona</string>
+    <string name="lyrics_youtube_captions">Legendas do YouTube</string>
+    <string name="edit_playlist_cover">Editar a capa da playlist</string>
+    <string name="edit_playlist_cover_note">A tua conta do YouTube precisa de um número de telefone atribuído e verificado para mudar a capa da playlist</string>
+    <string name="edit_playlist_cover_note_wait">Apôs selecção da imagen, aguarde um momento para a nova capa da playlist aparecer</string>
+    <string name="choose_from_library">Escolher usando a galeria</string>
+    <string name="sleep_timer_finish_current_song">Parar o temporizador quando a música atual terminar</string>
+    <string name="lyrics_curated_by">(Submetido por %1$s)</string>
+    <string name="clear_music_video_cache_desc" tools:ignore="MissingTranslation">Remove todos os videoclipes em cache</string>
 </resources>
