@@ -288,6 +288,7 @@ fun playlistOrderControlsText() =
                 PlaylistSongSort.ALBUM to stringResource(Res.string.album),
                 PlaylistSongSort.DURATION to stringResource(Res.string.duration),
                 PlaylistSongSort.YEAR to stringResource(Res.string.sort_by_year),
+                PlaylistSongSort.LISTENING_TIME to stringResource(Res.string.history_sort_listening_time),
             ),
         sortOptions = stringResource(Res.string.sort_options),
         ascending = stringResource(Res.string.playlist_direction_ascending),

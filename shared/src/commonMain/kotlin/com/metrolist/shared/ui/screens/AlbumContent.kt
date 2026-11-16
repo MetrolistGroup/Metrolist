@@ -54,6 +54,7 @@ import com.metrolist.shared.model.SortDirection
 import com.metrolist.shared.model.filterForPlaylistSearch
 import com.metrolist.shared.model.indexOfPlaylistOccurrence
 import com.metrolist.shared.model.sortedForPlaylist
+import com.metrolist.shared.state.SongMetadataState
 import com.metrolist.shared.ui.components.AlbumHeader
 import com.metrolist.shared.ui.components.CollectionHeaderHorizontalPadding
 import com.metrolist.shared.ui.components.CollectionHeaderNavigation
@@ -75,7 +76,13 @@ import com.metrolist.shared.utils.isDesktop
 import org.jetbrains.compose.resources.stringResource
 
 private val AlbumSortOptions =
-    setOf(PlaylistSongSort.ORIGINAL, PlaylistSongSort.TITLE, PlaylistSongSort.ARTIST, PlaylistSongSort.DURATION)
+    setOf(
+        PlaylistSongSort.ORIGINAL,
+        PlaylistSongSort.TITLE,
+        PlaylistSongSort.ARTIST,
+        PlaylistSongSort.DURATION,
+        PlaylistSongSort.LISTENING_TIME,
+    )
 
 data class AlbumContentText(
     val play: String,
@@ -154,9 +161,10 @@ fun AlbumContent(
         }
     }
     NavigationBackHandler(enabled = isSearchOpen, onBack = toggleSearch)
+    val listeningTimes = if (sort == PlaylistSongSort.LISTENING_TIME) SongMetadataState.listeningTimes else emptyMap()
     val sortedSongs =
-        remember(songs, sortAvailable, sort, sortDirection) {
-            if (sortAvailable) songs.sortedForPlaylist(sort, sortDirection) else songs
+        remember(songs, sortAvailable, sort, sortDirection, listeningTimes) {
+            if (sortAvailable) songs.sortedForPlaylist(sort, sortDirection, listeningTimes = listeningTimes) else songs
         }
     val displayedSongs =
         remember(sortedSongs, effectiveQuery) {

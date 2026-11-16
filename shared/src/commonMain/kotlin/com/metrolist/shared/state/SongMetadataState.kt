@@ -38,6 +38,8 @@ object SongMetadataState {
     )
 
     private var snapshot by mutableStateOf(MetadataSnapshot())
+    var listeningTimes by mutableStateOf<Map<String, Long>>(emptyMap())
+        private set
     private val snapshotLock = SynchronizedObject()
     private val _revision = MutableStateFlow(0L)
     val revision: StateFlow<Long> = _revision.asStateFlow()
@@ -55,10 +57,25 @@ object SongMetadataState {
             synchronized(snapshotLock) {
                 this.database = database
                 snapshot = MetadataSnapshot()
+                listeningTimes = emptyMap()
                 ++bindingGeneration
             }
         collectionJob =
             scope.launch {
+                launch {
+                    database
+                        .dao()
+                        .songPlayTimes()
+                        .map { rows -> rows.associate { it.id to it.totalPlayTime } }
+                        .distinctUntilChanged()
+                        .collect { times ->
+                            synchronized(snapshotLock) {
+                                if (generation == bindingGeneration && this@SongMetadataState.database === database) {
+                                    listeningTimes = times
+                                }
+                            }
+                        }
+                }
                 combine(
                     database.dao().allSongsWithCustomMetadata().displayMetadataChanges(),
                     database
@@ -91,6 +108,7 @@ object SongMetadataState {
                 if (generation == bindingGeneration && this.database === database) {
                     this.database = null
                     snapshot = MetadataSnapshot()
+                    listeningTimes = emptyMap()
                     _revision.value++
                 }
             }

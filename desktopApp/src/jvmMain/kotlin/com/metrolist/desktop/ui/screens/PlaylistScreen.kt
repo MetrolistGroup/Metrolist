@@ -95,6 +95,7 @@ import com.metrolist.shared.generated.resources.remove_from_playlist
 import com.metrolist.shared.generated.resources.retry
 import com.metrolist.shared.generated.resources.song_already_in_playlist
 import com.metrolist.shared.model.PlaylistItem
+import com.metrolist.shared.model.PlaylistSongSort
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.canEdit
 import com.metrolist.shared.model.filterForPlaylistSearch
@@ -164,9 +165,26 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
     var searchQuery by remember(playlistInfo?.id) { mutableStateOf("") }
     val selection = rememberSelectionState(playlistInfo?.id)
     val metadataRevision by SongMetadataState.revision.collectAsState()
+    val listeningTimes = if (sortMode == PlaylistSongSort.LISTENING_TIME) SongMetadataState.listeningTimes else emptyMap()
     val displayedSongs =
-        remember(songs, sortMode, sortDirection, reorderMode, searchQuery, metadataRevision, PlaylistAlbumState.playlistHasMore) {
-            val ordered = if (reorderMode || PlaylistAlbumState.playlistHasMore) songs else songs.sortedForPlaylist(sortMode, sortDirection)
+        remember(
+            songs,
+            sortMode,
+            sortDirection,
+            reorderMode,
+            searchQuery,
+            metadataRevision,
+            listeningTimes,
+            PlaylistAlbumState.playlistHasMore,
+        ) {
+            val ordered =
+                if (reorderMode ||
+                    PlaylistAlbumState.playlistHasMore
+                ) {
+                    songs
+                } else {
+                    songs.sortedForPlaylist(sortMode, sortDirection, listeningTimes = listeningTimes)
+                }
             ordered.filterForPlaylistSearch(searchQuery)
         }
 
@@ -420,13 +438,26 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
             text = playlistContentText(),
             onPlayAll = {
                 PlaylistAlbumState.withCompletePlaylist { all ->
-                    val queue = all.sortedForPlaylist(sortMode, sortDirection).filterForPlaylistSearch(searchQuery)
+                    val queue =
+                        all
+                            .sortedForPlaylist(
+                                sortMode,
+                                sortDirection,
+                                listeningTimes = listeningTimes,
+                            ).filterForPlaylistSearch(searchQuery)
                     queue.firstOrNull { !it.isUnavailable }?.let { PlayerState.playTrack(it, queue) }
                 }
             },
             onShuffle = {
                 PlaylistAlbumState.withCompletePlaylist { all ->
-                    PlayerState.shuffleQueue(all.sortedForPlaylist(sortMode, sortDirection).filterForPlaylistSearch(searchQuery))
+                    PlayerState.shuffleQueue(
+                        all
+                            .sortedForPlaylist(
+                                sortMode,
+                                sortDirection,
+                                listeningTimes = listeningTimes,
+                            ).filterForPlaylistSearch(searchQuery),
+                    )
                 }
             },
             isFavorite = PlaylistAlbumState.isPlaylistBookmarked,
@@ -442,7 +473,10 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
                     selection.toggle(occurrenceKey(song))
                 } else {
                     PlaylistAlbumState.withCompletePlaylist { all ->
-                        PlayerState.playTrack(song, if (reorderMode) all else all.sortedForPlaylist(sortMode, sortDirection))
+                        PlayerState.playTrack(
+                            song,
+                            if (reorderMode) all else all.sortedForPlaylist(sortMode, sortDirection, listeningTimes = listeningTimes),
+                        )
                     }
                 }
             },

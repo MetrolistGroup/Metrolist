@@ -30,6 +30,7 @@ internal data class AutoPlaylistPresentationInput(
     val topDirection: SortDirection,
     val reorder: Boolean,
     val likedSongRecency: List<String> = emptyList(),
+    val listeningTimes: Map<String, Long> = emptyMap(),
     val downloadFilter: DownloadPlaylistFilterState = DownloadPlaylistFilterState(),
 )
 
@@ -60,12 +61,22 @@ internal suspend fun prepareAutoPlaylistSongs(
                 }
 
                 "liked" -> {
-                    val ordered = if (reorder) songs else songs.sortedForLikedPlaylist(playlistSort, playlistDirection, likedSongRecency)
+                    val ordered =
+                        if (reorder) {
+                            songs
+                        } else {
+                            songs.sortedForLikedPlaylist(
+                                playlistSort,
+                                playlistDirection,
+                                likedSongRecency,
+                                listeningTimes,
+                            )
+                        }
                     ordered.filterForPlaylistSearch(query)
                 }
 
                 "uploaded" -> {
-                    songs.sortedForPlaylist(playlistSort, playlistDirection).filterForPlaylistSearch(query)
+                    songs.sortedForPlaylist(playlistSort, playlistDirection, listeningTimes = listeningTimes).filterForPlaylistSearch(query)
                 }
 
                 else -> {

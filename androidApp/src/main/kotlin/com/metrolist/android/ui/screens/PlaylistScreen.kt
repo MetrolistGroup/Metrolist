@@ -119,6 +119,7 @@ import com.metrolist.shared.generated.resources.save
 import com.metrolist.shared.generated.resources.share_playlist
 import com.metrolist.shared.generated.resources.suggestions
 import com.metrolist.shared.model.PlaylistPresentationOptions
+import com.metrolist.shared.model.PlaylistSongSort
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.canEdit
 import com.metrolist.shared.model.filterForPlaylistSearch
@@ -132,6 +133,7 @@ import com.metrolist.shared.settings.HiddenLibraryItems
 import com.metrolist.shared.settings.SavedPlaylistSongSorting
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.SongLikeState
+import com.metrolist.shared.state.SongMetadataState
 import com.metrolist.shared.ui.components.AddSongSheetContent
 import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.CollectionLoadingPlaceholder
@@ -395,7 +397,15 @@ fun PlaylistScreen(
         showRenameDialog = false
     }
     // Observe options during composition so control changes also schedule this effect.
-    val presentationOptions = PlaylistPresentationOptions(sortType, sortDirection, reorderMode, searchQuery)
+    val listeningTimes =
+        if (sortType == PlaylistSongSort.LISTENING_TIME &&
+            page?.hasMore != true
+        ) {
+            SongMetadataState.listeningTimes
+        } else {
+            emptyMap()
+        }
+    val presentationOptions = PlaylistPresentationOptions(sortType, sortDirection, reorderMode, searchQuery, listeningTimes)
     SideEffect {
         viewModel.presentationOptions.value = presentationOptions
     }
@@ -410,7 +420,10 @@ fun PlaylistScreen(
         val options = presentationOptions
         val title = playlistInfo?.title
         viewModel.withAllSongs { all ->
-            val queue = withContext(Dispatchers.Default) { preparePlaylistPresentation(all, options).songs }
+            val queue =
+                withContext(
+                    Dispatchers.Default,
+                ) { preparePlaylistPresentation(all, options.copy(listeningTimes = SongMetadataState.listeningTimes)).songs }
             if (queue.isNotEmpty()) playerConnection?.shuffleQueue(queue, title, finite = true)
         }
     }
@@ -669,7 +682,15 @@ fun PlaylistScreen(
                             val options = presentationOptions.copy(query = "")
                             val title = playlistInfo?.title
                             viewModel.withPlaybackSongs(options) { all, playbackPage ->
-                                val queue = withContext(Dispatchers.Default) { preparePlaylistPresentation(all, options).songs }
+                                val queue =
+                                    withContext(
+                                        Dispatchers.Default,
+                                    ) {
+                                        preparePlaylistPresentation(
+                                            all,
+                                            options.copy(listeningTimes = SongMetadataState.listeningTimes),
+                                        ).songs
+                                    }
                                 val startIndex = queue.indexOfPlaylistOccurrence(song)
                                 if (startIndex >= 0) {
                                     playerConnection?.playQueue(queue, startIndex, title, finite = true, playlistPage = playbackPage)
@@ -849,7 +870,12 @@ fun PlaylistScreen(
                     onDownload = {
                         viewModel.withAllSongs {
                             downloadSongs(
-                                it.sortedForPlaylist(sortType, sortDirection).filterForPlaylistSearch(searchQuery),
+                                it
+                                    .sortedForPlaylist(
+                                        sortType,
+                                        sortDirection,
+                                        listeningTimes = listeningTimes,
+                                    ).filterForPlaylistSearch(searchQuery),
                             )
                         }
                     },
@@ -867,7 +893,7 @@ fun PlaylistScreen(
                     onPlayNext = {
                         viewModel.withAllSongs { all ->
                             all
-                                .sortedForPlaylist(sortType, sortDirection)
+                                .sortedForPlaylist(sortType, sortDirection, listeningTimes = SongMetadataState.listeningTimes)
                                 .filterForPlaylistSearch(searchQuery)
                                 .let { playerConnection?.addToQueue(it, playNext = true) }
                         }
@@ -875,7 +901,7 @@ fun PlaylistScreen(
                     onAddToQueue = {
                         viewModel.withAllSongs { all ->
                             all
-                                .sortedForPlaylist(sortType, sortDirection)
+                                .sortedForPlaylist(sortType, sortDirection, listeningTimes = SongMetadataState.listeningTimes)
                                 .filterForPlaylistSearch(searchQuery)
                                 .let { playerConnection?.addToQueue(it) }
                         }

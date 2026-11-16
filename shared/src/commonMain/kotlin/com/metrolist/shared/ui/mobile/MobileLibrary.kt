@@ -636,6 +636,7 @@ internal fun MobileSongCollectionScreen(
     }
 
     val likedSongRecency = SongLikeState.likedSongRecency
+    val listeningTimes = if (playlistSort == PlaylistSongSort.LISTENING_TIME) SongMetadataState.listeningTimes else emptyMap()
     val playlistEntries = remember(playlistReorder.entries, blocked) { playlistReorder.entries.filterNot { blocked.isBlocked(it.first) } }
     val baseSongs =
         remember(localPlaylistId, playlistEntries, loadedSongs, blocked) {
@@ -645,6 +646,7 @@ internal fun MobileSongCollectionScreen(
         remember(
             baseSongs,
             likedSongRecency,
+            listeningTimes,
             isLikedCollection,
             isTopCollection,
             topDirection,
@@ -669,9 +671,9 @@ internal fun MobileSongCollectionScreen(
             } else if (isTopCollection) {
                 baseSongs.sortedForTopPlaylist(topDirection)
             } else if (localPlaylistId != null && !playlistReorderMode) {
-                baseSongs.sortedForPlaylist(playlistSort, playlistSortDirection)
+                baseSongs.sortedForPlaylist(playlistSort, playlistSortDirection, listeningTimes = listeningTimes)
             } else if (isLikedCollection && !playlistReorderMode) {
-                baseSongs.sortedForLikedPlaylist(playlistSort, playlistSortDirection, likedSongRecency)
+                baseSongs.sortedForLikedPlaylist(playlistSort, playlistSortDirection, likedSongRecency, listeningTimes)
             } else {
                 baseSongs
             }

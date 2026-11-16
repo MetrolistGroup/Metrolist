@@ -53,6 +53,7 @@ import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.ArtistPageResult
 import com.metrolist.shared.model.EpisodeItem
 import com.metrolist.shared.model.PlaylistItem
+import com.metrolist.shared.model.PlaylistSongSort
 import com.metrolist.shared.model.PodcastPage
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
@@ -581,11 +582,20 @@ internal fun MobilePlaylistScreen(
             val data = playlistData
             val loadedSongs = remember(data) { data.playlistSongs() }
             val metadataRevision by SongMetadataState.revision.collectAsState()
+            val listeningTimes = if (sorting.sort == PlaylistSongSort.LISTENING_TIME) SongMetadataState.listeningTimes else emptyMap()
             val sourceSongs = if (reorder.entries.isNotEmpty()) reorder.entries.map { it.first } else loadedSongs
             val songs =
-                remember(sourceSongs, blockedVersion, sorting, reorderMode, metadataRevision) {
+                remember(sourceSongs, blockedVersion, sorting, reorderMode, metadataRevision, listeningTimes) {
                     val visible = BlockedContent.filterSongs(sourceSongs)
-                    if (reorderMode) visible else visible.sortedForPlaylist(sorting.sort, sorting.direction)
+                    if (reorderMode) {
+                        visible
+                    } else {
+                        visible.sortedForPlaylist(
+                            sorting.sort,
+                            sorting.direction,
+                            listeningTimes = listeningTimes,
+                        )
+                    }
                 }
             val playlist =
                 remember(data, fallbackTitle, songs) {
@@ -757,14 +767,25 @@ internal fun MobilePlaylistScreen(
                 text = playlistContentText(),
                 onPlayAll = {
                     loadRemaining { complete ->
-                        val queue = complete.sortedForPlaylist(sorting.sort, sorting.direction).filterForPlaylistSearch(selectionQuery)
+                        val queue =
+                            complete
+                                .sortedForPlaylist(
+                                    sorting.sort,
+                                    sorting.direction,
+                                    listeningTimes = listeningTimes,
+                                ).filterForPlaylistSearch(selectionQuery)
                         queue.firstOrNull { !it.isUnavailable }?.let { playbackController.play(it, queue) }
                     }
                 },
                 onShuffle = {
                     loadRemaining { complete ->
                         playbackController.shuffleQueue(
-                            complete.sortedForPlaylist(sorting.sort, sorting.direction).filterForPlaylistSearch(selectionQuery),
+                            complete
+                                .sortedForPlaylist(
+                                    sorting.sort,
+                                    sorting.direction,
+                                    listeningTimes = listeningTimes,
+                                ).filterForPlaylistSearch(selectionQuery),
                         )
                     }
                 },
@@ -775,7 +796,16 @@ internal fun MobilePlaylistScreen(
                         selection.toggle(displayedRows[index].second)
                     } else {
                         loadRemaining { complete ->
-                            val queue = if (reorderMode) songs else complete.sortedForPlaylist(sorting.sort, sorting.direction)
+                            val queue =
+                                if (reorderMode) {
+                                    songs
+                                } else {
+                                    complete.sortedForPlaylist(
+                                        sorting.sort,
+                                        sorting.direction,
+                                        listeningTimes = listeningTimes,
+                                    )
+                                }
                             val target = queue.indexOfPlaylistOccurrence(song)
                             if (target >= 0) playbackController.playQueue(queue, target)
                         }
@@ -795,7 +825,16 @@ internal fun MobilePlaylistScreen(
                         onDone = selection::exit,
                         onSelectAll = {
                             loadRemaining { complete ->
-                                val ordered = if (reorderMode) complete else complete.sortedForPlaylist(sorting.sort, sorting.direction)
+                                val ordered =
+                                    if (reorderMode) {
+                                        complete
+                                    } else {
+                                        complete.sortedForPlaylist(
+                                            sorting.sort,
+                                            sorting.direction,
+                                            listeningTimes = listeningTimes,
+                                        )
+                                    }
                                 selection.toggleAll(
                                     ordered.playlistSearchIndices(selectionQuery).mapTo(mutableSetOf()) { index ->
                                         ordered[index].playlistOccurrenceKey(index)

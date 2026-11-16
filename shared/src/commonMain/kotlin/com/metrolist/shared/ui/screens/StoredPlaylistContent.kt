@@ -151,6 +151,7 @@ fun StoredPlaylistContent(
     var pendingRemoval by remember(id) { mutableStateOf<Set<String>?>(null) }
     var confirmClear by remember { mutableStateOf(false) }
     val metadataRevision by SongMetadataState.revision.collectAsState()
+    val listeningTimes = if (playlistSort == PlaylistSongSort.LISTENING_TIME) SongMetadataState.listeningTimes else emptyMap()
     val likedSongRecency = SongLikeState.likedSongRecency
     val orderedSongs =
         remember(
@@ -158,6 +159,7 @@ fun StoredPlaylistContent(
             likedSongRecency,
             downloadFilterState,
             metadataRevision,
+            listeningTimes,
             collectionMetadata,
             playCounts,
             collectionDirection,
@@ -180,6 +182,7 @@ fun StoredPlaylistContent(
                             playlistSort,
                             playlistSortDirection,
                             likedSongRecency,
+                            listeningTimes,
                         )
                 }
 
@@ -215,6 +218,7 @@ fun StoredPlaylistContent(
                             playlistSort,
                             playlistSortDirection,
                             SongLikeState.likedSongRecency,
+                            listeningTimes,
                         ) ?: return@launch
                 } else {
                     orderedSongs

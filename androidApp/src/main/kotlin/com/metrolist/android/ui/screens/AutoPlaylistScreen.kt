@@ -138,6 +138,7 @@ import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.BuiltinPlaylist
 import com.metrolist.shared.model.CollectionSort
 import com.metrolist.shared.model.PlaylistItem
+import com.metrolist.shared.model.PlaylistSongSort
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.SortDirection
 import com.metrolist.shared.model.TopPlaylistPeriod
@@ -337,12 +338,14 @@ fun AutoPlaylistScreen(
     val isLikedCollection = currentType == "liked"
     val isTopCollection = currentType == "top100"
     val metadataRevision by SongMetadataState.revision.collectAsState()
+    val listeningTimes = if (playlistSort == PlaylistSongSort.LISTENING_TIME) SongMetadataState.listeningTimes else emptyMap()
 
     fun presentationInput() =
         AutoPlaylistPresentationInput(
             type = currentType,
             songs = songs,
             metadataRevision = metadataRevision,
+            listeningTimes = listeningTimes,
             collectionEntries = collectionEntries,
             query = collectionQuery,
             collectionSort = collectionSort,
