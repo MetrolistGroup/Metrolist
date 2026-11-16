@@ -688,6 +688,9 @@ class HomeViewModel(
                         val hydratedPrimarySections =
                             rawHomeSections.withLocalSongMetadata(primaryLocalSongMetadata).withoutNonMusicalVideos()
                         var userPlaylistsSnapshot = userPlaylistsDeferred.await()
+                        if (!isCurrentHomeLibraryRevision(userPlaylistsSnapshot.revision, librarySnapshotRevision)) {
+                            userPlaylistsSnapshot = fetchUserPlaylists()
+                        }
                         var userPlaylists = userPlaylistsSnapshot.playlists
                         val chartSections = findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_charts")
                         _uiState.update { state ->
@@ -938,7 +941,7 @@ class HomeViewModel(
                             )
                         _uiState.value = failedState
                         if (!isFiltered) {
-                            if (primaryContentPublished) allContentReloadRequired = false
+                            allContentReloadRequired = false
                             cachedAllContent =
                                 homeCacheAfterAssemblyFailure(
                                     cachedAllContent,
