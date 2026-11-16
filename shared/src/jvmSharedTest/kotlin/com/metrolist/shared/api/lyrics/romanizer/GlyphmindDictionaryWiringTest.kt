@@ -51,6 +51,11 @@ class GlyphmindDictionaryWiringTest {
                 assertEquals(1, fixture.cleanupCalls)
                 assertTrue(fixture.prepare())
                 assertEquals(1, requests)
+                HttpClient(MockEngine { error("An installed pack must load without a request") }).use { offline ->
+                    val restarted = createDictionaryRomanizer(fixture.storage.absolutePath, offline)
+                    assertTrue(LyricsRomanizer.prepare("你好", setOf("Chinese"), romanizer = { restarted }, removeLegacyDictionary = {}))
+                    assertEquals("nǐ hǎo", restarted.romanizeMandarin("你好"))
+                }
                 assertTrue(PlaybackEventLog.events.value.isEmpty())
             }
         }
