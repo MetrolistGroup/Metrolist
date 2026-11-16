@@ -28,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.ui.components.CollectionPreviews
-import kotlin.math.abs
 import kotlin.uuid.Uuid
 
 val LocalAlbumArtworkSource = staticCompositionLocalOf<String?> { null }
@@ -74,6 +73,18 @@ internal fun albumArtworkKey(
     source: String,
 ): String = "album-artwork-$albumId:$source"
 
+internal fun albumArtworkOverlayBounds(
+    bounds: Rect,
+    resting: Rect,
+    visible: Rect,
+): Rect =
+    Rect(
+        visible.left + minOf(0f, bounds.left - resting.left),
+        visible.top + minOf(0f, bounds.top - resting.top),
+        visible.right + maxOf(0f, bounds.right - resting.right),
+        visible.bottom + maxOf(0f, bounds.bottom - resting.bottom),
+    )
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 private class ScrollContainerOverlayClip(
     private val overlay: NavOverlayCoordinates,
@@ -96,15 +107,10 @@ private class ScrollContainerOverlayClip(
             root.localBoundingBoxOf(resting).let { visible ->
                 if (mask == null) visible else visible.intersect(full.copy(left = full.left + mask.left, right = full.left + mask.right))
             }
-        val distance =
-            maxOf(
-                abs(bounds.left - full.left),
-                abs(bounds.top - full.top),
-                abs(bounds.right - full.right),
-                abs(bounds.bottom - full.bottom),
-            )
         val content = overlay.contentCoordinates?.takeIf { it.isAttached }?.let { root.localBoundingBoxOf(it) }
-        val clip = content?.let { visible.inflate(distance).intersect(it) } ?: visible.inflate(distance)
+        // Vertical spring motion must not uncover artwork hidden by the carousel's horizontal mask.
+        val expanded = albumArtworkOverlayBounds(bounds, full, visible)
+        val clip = content?.let { expanded.intersect(it) } ?: expanded
         if (clip.isEmpty) return Path()
         if (mask == null) return Path().apply { addRect(clip) }
         val radius = with(density) { CornerRadius(cornerRadius().toPx()) }
