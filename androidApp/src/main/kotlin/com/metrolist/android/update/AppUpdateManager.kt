@@ -49,6 +49,8 @@ data class GitHubRelease(
     val assets: List<GitHubReleaseAsset> = emptyList(),
 ) {
     val version: String get() = tagName.removePrefix("v")
+    val isPublishedStable: Boolean
+        get() = !draft && !prerelease && ReleaseVersion.parse(tagName)?.prerelease?.isEmpty() == true
     val apk: GitHubReleaseAsset?
         get() {
             val candidates =
@@ -208,7 +210,11 @@ object AppUpdateManager {
                     if (!crashRecovery) Settings.shared.cachedUpdateReleasesJson = json.encodeToString(publicReleases)
                     val now = System.currentTimeMillis()
                     if (!crashRecovery) Settings.shared.lastUpdateCheckTimestamp = now
-                    val update = publicReleases.firstOrNull { compareVersions(it.version, currentVersion) > 0 }
+                    val update =
+                        publicReleases.firstOrNull { release ->
+                            (crashRecovery || release.isPublishedStable) &&
+                                compareVersions(release.version, currentVersion) > 0
+                        }
                     if (!crashRecovery) Settings.shared.cachedAvailableUpdateJson = update?.let { json.encodeToString(it) }.orEmpty()
                     mutableState.value = if (update == null) AppUpdateState.UpToDate(now) else AppUpdateState.Available(update)
                     if (update != null && notify && !crashRecovery) notifyAvailable(context, update)
@@ -384,7 +390,7 @@ object AppUpdateManager {
     private fun cachedAvailableRelease(): GitHubRelease? =
         runCatching { json.decodeFromString<GitHubRelease>(Settings.shared.cachedAvailableUpdateJson) }
             .getOrNull()
-            ?.takeIf { compareVersions(it.version, currentVersion) > 0 }
+            ?.takeIf { it.isPublishedStable && compareVersions(it.version, currentVersion) > 0 }
 
     private fun cachedReleases(): List<GitHubRelease> =
         runCatching { json.decodeFromString<List<GitHubRelease>>(Settings.shared.cachedUpdateReleasesJson) }
