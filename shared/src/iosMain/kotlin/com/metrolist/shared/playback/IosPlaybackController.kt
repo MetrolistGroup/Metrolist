@@ -1083,7 +1083,10 @@ internal class IosPlaybackController(
                             }
                         }
                     if (requestId != videoModeRequestId || player.currentSong.value?.id != song.id) return@launch
-                    if (!resource.hasDirectVideo || resource.musicVideoId != null) return@launch
+                    if (!resource.hasDirectVideo || resource.musicVideoId != null) {
+                        failedVideoResourceId = videoSong.id
+                        return@launch
+                    }
                     videoPositionMap.value = resolvedVideo.positionMap
                     videoPlaybackResource.value = resource
                     failedVideoResourceId = null
