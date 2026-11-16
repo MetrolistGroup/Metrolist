@@ -1389,7 +1389,7 @@ class HomeViewModel(
         val locale = GlobalYouTube.innerTube.locale
         val currentSignature = "${locale.hl}:${locale.gl}"
         val cached = cachedAllContent?.takeIf { lastKnownLocaleSignature == currentSignature }
-        val reloadIncompleteFeed = shouldReloadIncompleteAllContent(allContentReloadRequired, _uiState.value, cached != null)
+        val reloadIncompleteFeed = shouldReloadIncompleteAllContent(allContentReloadRequired, _uiState.value)
         if (cached != null && !reloadIncompleteFeed) {
             allContentReloadRequired = false
             val restored =
@@ -1410,6 +1410,19 @@ class HomeViewModel(
                     }
             _uiState.value = restored.withoutBlockedContent()
             saveLastHomePage(restored)
+        } else if (cached != null) {
+            val restored =
+                homeContentForAllSelection(_uiState.value, cached).copy(
+                    isLoading = false,
+                    isRefreshing = false,
+                    isRevalidating = false,
+                    isContentLoading = false,
+                    isLoadingMore = false,
+                    error = null,
+                )
+            _uiState.value = restored.withoutBlockedContent()
+            saveLastHomePage(restored)
+            loadHomeData(isRefresh = true)
         } else {
             cachedAllContent = null
             lastKnownLocaleSignature = currentSignature
@@ -1758,7 +1771,7 @@ class HomeViewModel(
                 (isRestoringCache || isLoading || isRefreshing || isContentLoading || isAllContentPending) &&
                     !hasHomeFeedContent()
 
-        fun hasNoHomeContent(): Boolean = chips.isEmpty() && !hasHomeFeedContent()
+        fun hasNoHomeContent(): Boolean = !hasHomeFeedContent()
 
         fun hasHomeFeedContent(): Boolean =
             trending.isNotEmpty() || albumCharts.isNotEmpty() ||
@@ -1862,8 +1875,7 @@ internal fun isCacheableAllContent(
 internal fun shouldReloadIncompleteAllContent(
     reloadRequired: Boolean,
     state: HomeViewModel.HomeUiState,
-    hasCachedAllContent: Boolean,
-): Boolean = state.isAllContentPending || (reloadRequired && !hasCachedAllContent)
+): Boolean = state.isAllContentPending || reloadRequired
 
 internal fun HomeViewModel.HomeUiState.withLatestLibraryAndSpeedDialState(
     latestState: HomeViewModel.HomeUiState,
