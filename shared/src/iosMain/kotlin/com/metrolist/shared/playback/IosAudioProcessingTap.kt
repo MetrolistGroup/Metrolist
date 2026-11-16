@@ -6,9 +6,6 @@ import com.metrolist.shared.equalizer.EqualizerProfiles
 import com.metrolist.shared.equalizer.MAX_AUDIO_BOOST_DB
 import com.metrolist.shared.equalizer.MIN_AUDIO_PREAMP_DB
 import com.metrolist.shared.equalizer.ParametricEqualizer
-import com.metrolist.shared.utils.Logger
-import com.metrolist.shared.youtube.playback.PlaybackEventKind
-import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.COpaquePointerVar
 import kotlinx.cinterop.CPointer
@@ -26,8 +23,11 @@ import kotlinx.cinterop.set
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.value
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import platform.AVFoundation.AVAsset
 import platform.AVFoundation.AVAssetTrack
@@ -43,6 +43,7 @@ import platform.CoreAudioTypes.kAudioFormatFlagIsFloat
 import platform.CoreFoundation.CFRelease
 import platform.CoreMedia.CMItemCount
 import platform.CoreMedia.CMItemCountVar
+import platform.Foundation.NSError
 import platform.MediaToolbox.MTAudioProcessingTapCallbacks
 import platform.MediaToolbox.MTAudioProcessingTapCreate
 import platform.MediaToolbox.MTAudioProcessingTapFlags
@@ -62,7 +63,39 @@ internal class IosAudioTapState(
     val normalizationGain: StateFlow<Float>,
     val pitch: StateFlow<Float>,
     val pitchAvailable: MutableStateFlow<Boolean>,
+    val requestLog: IosPlaybackRequestLog,
 ) {
+    @Volatile var pitchInitStatus = 0
+
+    @Volatile var pitchInitFailed = false
+
+    @Volatile var pitchRenderStatus = 0
+    private val diagnosticsJob =
+        scope.launch {
+            var initLogged = false
+            var renderLogged = false
+            while (isActive) {
+                delay(250L)
+                if (!initLogged && (pitchInitFailed || pitchInitStatus != 0)) {
+                    initLogged = true
+                    requestLog.event(
+                        "iOS pitch AudioUnit initialization failed",
+                        if (pitchInitStatus !=
+                            0
+                        ) {
+                            mapOf("osStatus" to pitchInitStatus.toString())
+                        } else {
+                            mapOf("reason" to "unit-unavailable")
+                        },
+                    )
+                }
+                if (!renderLogged && pitchRenderStatus != 0) {
+                    renderLogged = true
+                    requestLog.event("iOS pitch AudioUnit render failed", mapOf("osStatus" to pitchRenderStatus.toString()))
+                }
+            }
+        }
+
     @Volatile private var configuration = EqualizerProfiles.configuration
     private val configurationJob =
         scope.launch {
@@ -91,6 +124,7 @@ internal class IosAudioTapState(
 
     fun close() {
         configurationJob.cancel()
+        diagnosticsJob.cancel()
         pitchUnit?.close()
         pitchUnit = null
     }
@@ -104,45 +138,60 @@ internal fun installIosAudioProcessingTap(
     normalizationGain: StateFlow<Float>,
     pitch: StateFlow<Float>,
     pitchAvailable: MutableStateFlow<Boolean>,
+    requestLog: IosPlaybackRequestLog,
     onReady: (Boolean) -> Unit,
-) {
-    asset.loadTracksWithMediaType(AVMediaTypeAudio) { tracks, error ->
-        val track = tracks?.firstOrNull() as? AVAssetTrack
-        if (error != null || track == null) {
-            PlaybackEventLog.error(
-                kind = PlaybackEventKind.PLAYER,
-                message = "AVFoundation could not load an audio track for normalization",
-                details =
-                    buildMap {
-                        error?.let {
-                            it.domain?.let { domain -> put("errorDomain", domain) }
-                            put("errorCode", it.code.toString())
-                        }
-                    },
+): Job =
+    scope.launch {
+        requestLog.event("iOS audio tap track load begin")
+        val loaded =
+            awaitIosPlaybackCallback<Pair<AVAssetTrack?, NSError?>> { complete ->
+                asset.loadTracksWithMediaType(AVMediaTypeAudio) { tracks, error ->
+                    complete((tracks?.firstOrNull() as? AVAssetTrack) to error)
+                }
+            }
+        val track = loaded?.first
+        val error = loaded?.second
+        val reason =
+            when {
+                loaded == null -> "track-load-timeout"
+                error != null -> "track-load-failed"
+                track == null -> "no-audio-track"
+                else -> null
+            }
+        if (reason != null) {
+            requestLog.event(
+                "iOS audio tap bypassed for item",
+                buildMap {
+                    put("reason", reason)
+                    error?.let {
+                        put("errorDomain", it.domain.orEmpty())
+                        put("errorCode", it.code.toString())
+                    }
+                },
             )
             pitchAvailable.value = false
+            requestLog.event("iOS audio tap ready", mapOf("installed" to "false", "reason" to reason))
             onReady(false)
-            return@loadTracksWithMediaType
+            return@launch
         }
-        val tap =
-            createIosAudioProcessingTap(scope, normalizationGain, pitch, pitchAvailable) ?: run {
-                PlaybackEventLog.error(
-                    PlaybackEventKind.PLAYER,
-                    "AVFoundation could not create an audio processing tap",
-                )
-                pitchAvailable.value = false
-                onReady(false)
-                return@loadTracksWithMediaType
-            }
+        requestLog.event("iOS audio tap track load end")
+        val tap = createIosAudioProcessingTap(scope, normalizationGain, pitch, pitchAvailable, requestLog)
+        if (tap == null) {
+            requestLog.event("iOS audio tap bypassed for item", mapOf("reason" to "tap-creation-failed"))
+            pitchAvailable.value = false
+            requestLog.event("iOS audio tap ready", mapOf("installed" to "false", "reason" to "tap-creation-failed"))
+            onReady(false)
+            return@launch
+        }
         val parameters = AVMutableAudioMixInputParameters.audioMixInputParametersWithTrack(track)
         parameters.setAudioTapProcessor(tap)
         val mix = AVMutableAudioMix()
         mix.setInputParameters(listOf(parameters))
         item.setAudioMix(mix)
         CFRelease(tap)
+        requestLog.event("iOS audio tap ready", mapOf("installed" to "true"))
         onReady(true)
     }
-}
 
 @OptIn(ExperimentalForeignApi::class)
 private fun createIosAudioProcessingTap(
@@ -150,8 +199,9 @@ private fun createIosAudioProcessingTap(
     normalizationGain: StateFlow<Float>,
     pitch: StateFlow<Float>,
     pitchAvailable: MutableStateFlow<Boolean>,
+    requestLog: IosPlaybackRequestLog,
 ): MTAudioProcessingTapRef? {
-    val state = IosAudioTapState(scope, normalizationGain, pitch, pitchAvailable)
+    val state = IosAudioTapState(scope, normalizationGain, pitch, pitchAvailable, requestLog)
     val stableState = StableRef.create(state)
     return memScoped {
         val callbacks = alloc<MTAudioProcessingTapCallbacks>()
@@ -171,6 +221,7 @@ private fun createIosAudioProcessingTap(
                 tapOut = tapOut.ptr,
             )
         if (status != 0) {
+            requestLog.event("iOS audio tap creation failed", mapOf("osStatus" to status.toString()))
             state.close()
             stableState.dispose()
             null
@@ -224,18 +275,20 @@ private fun prepareIosAudioTap(
             "tapBytesPerFrame" to format.mBytesPerFrame.toString(),
         )
     state.scope.launch {
-        PlaybackEventLog.info(PlaybackEventKind.PLAYER, "iOS audio tap prepared", details = details)
+        state.requestLog.event("iOS audio tap prepared", details)
     }
     state.pitchUnit?.close()
     state.pitchUnit = null
     state.pitchAvailable.value = false
     if (state.supportsFloat32) {
         state.pitchUnit =
-            IosPitchAudioUnit.create(processingFormat, frames) { count, buffers, framesOut, flagsOut ->
+            IosPitchAudioUnit.create(processingFormat, frames, onFailure = { status ->
+                if (state.pitchInitStatus == 0) state.pitchInitStatus = status
+            }) { count, buffers, framesOut, flagsOut ->
                 MTAudioProcessingTapGetSourceAudio(tap, count.toLong(), buffers, flagsOut, null, framesOut)
             }
         state.pitchAvailable.value = state.pitchUnit != null
-        if (state.pitchUnit == null) Logger.e("MusicPlayer", "Unable to initialize iOS pitch audio unit")
+        if (state.pitchUnit == null) state.pitchInitFailed = true
     }
 }
 
@@ -281,6 +334,7 @@ private fun processIosAudioTap(
             MTAudioProcessingTapGetSourceAudio(tap, numberFrames, buffers, sourceFlags, null, framesOut)
         }
     if (status != 0) {
+        if (state.pitchRenderStatus == 0) state.pitchRenderStatus = status
         state.pitchAvailable.value = false
         state.pitchUnit?.close()
         state.pitchUnit = null

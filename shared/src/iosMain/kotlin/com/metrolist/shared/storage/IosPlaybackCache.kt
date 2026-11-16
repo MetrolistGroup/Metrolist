@@ -79,15 +79,22 @@ internal class IosPlaybackCache(
 
     suspend fun initialize() = withContext(Dispatchers.Default) { runCatching { initializedDirectory } }
 
-    fun acquire(resource: PlaybackResource): IosPlaybackCapture? {
+    fun acquire(
+        resource: PlaybackResource,
+        onAdmission: (String) -> Unit = {},
+    ): IosPlaybackCapture? {
+        fun rejected(reason: String): IosPlaybackCapture? {
+            onAdmission(reason)
+            return null
+        }
         val remuxOpus = resource.isWebmOpus()
         val required = resource.requiresIosAudioCapture
         val publish = Settings.shared.songCacheEnabled && Settings.shared.maxSongCacheSize != 0 && !remuxOpus && !resource.isSabr
-        if ((!publish && !required) ||
-            (!resource.isSabr && (!resource.isDirectFile || !isTrustedAudioDownloadUrl(resource.url))) ||
+        if (!publish && !required) return rejected("not-needed")
+        if ((!resource.isSabr && (!resource.isDirectFile || !isTrustedAudioDownloadUrl(resource.url))) ||
             (!remuxOpus && !isIosPlayableAudioMimeType(resource.mimeType))
         ) {
-            return null
+            return rejected("unsupported-representation")
         }
         captures
             .filter { it.canRetireFor(resource) }
@@ -95,10 +102,11 @@ internal class IosPlaybackCache(
                 expired.mayPublish = false
                 discard(expired)
             }
-        if (captures.any { it.failedFor(resource) }) return null
+        if (captures.any { it.failedFor(resource) }) return rejected("previous-capture-failed")
         captures.lastOrNull { it.matches(resource) && (it.mayPublish || (required && !publish && it.users > 0)) }?.let {
             it.bind(resource)
             it.users++
+            onAdmission("reused")
             return it
         }
         val configured = Settings.shared.maxSongCacheSize.toLong() * AUDIO_RANGE_BYTES
@@ -112,9 +120,9 @@ internal class IosPlaybackCache(
             } else {
                 minOf(configured, MAX_CAPTURE_BYTES)
             }
-        val captureDirectory = runCatching { initializedDirectory }.getOrNull() ?: return null
+        val captureDirectory = runCatching { initializedDirectory }.getOrNull() ?: return rejected("directory-unavailable")
         val knownLength = (resource.sabrBootstrap?.contentLengthBytes ?: resource.contentLengthBytes)?.takeIf { it > 0L }
-        if (knownLength != null && knownLength !in MINIMUM_AUDIO_BYTES..budget) return null
+        if (knownLength != null && knownLength !in MINIMUM_AUDIO_BYTES..budget) return rejected("content-length-outside-budget")
         var reservation: Long
         while (true) {
             val pending = captures.sumOf { it.pendingBytes }
@@ -125,7 +133,14 @@ internal class IosPlaybackCache(
             ) {
                 break
             }
-            val unused = captures.firstOrNull { it.users == 0 } ?: return null
+            val unused =
+                captures.firstOrNull { it.users == 0 } ?: return rejected(
+                    when {
+                        available < MINIMUM_AUDIO_BYTES || available < reservation -> "insufficient-disk-space"
+                        captures.size >= 4 -> "capture-slots-in-use"
+                        else -> "capture-budget-in-use"
+                    },
+                )
             discard(unused)
         }
         return runCatching {
@@ -134,14 +149,15 @@ internal class IosPlaybackCache(
             val file =
                 NSFileHandle.fileHandleForUpdatingAtPath(path) ?: run {
                     files.removeItemAtPath(path, error = null)
-                    return null
+                    return rejected("file-open-failed")
                 }
             IosPlaybackCapture(resource, reservation, path, file, client, scope, onFilesChanged, remuxOpus).also {
                 it.mayPublish = publish
                 it.users++
                 captures.add(it)
+                onAdmission("created")
             }
-        }.getOrNull()
+        }.getOrElse { rejected("capture-creation-failed") }
     }
 
     fun release(capture: IosPlaybackCapture?) {

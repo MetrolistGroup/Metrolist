@@ -23,11 +23,17 @@ import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import com.metrolist.shared.youtube.playback.withFreshClientPlaybackNonce
 import kotlinx.cinterop.BetaInteropApi
+import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.ObjCObjectVar
 import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
 import kotlinx.cinterop.usePinned
+import kotlinx.cinterop.value
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -66,6 +72,9 @@ import platform.AVFAudio.AVAudioSessionInterruptionOptionShouldResume
 import platform.AVFAudio.AVAudioSessionInterruptionTypeBegan
 import platform.AVFAudio.AVAudioSessionInterruptionTypeEnded
 import platform.AVFAudio.AVAudioSessionInterruptionTypeKey
+import platform.AVFAudio.AVAudioSessionMediaServicesWereLostNotification
+import platform.AVFAudio.AVAudioSessionMediaServicesWereResetNotification
+import platform.AVFAudio.AVAudioSessionModeDefault
 import platform.AVFAudio.AVAudioSessionPortDescription
 import platform.AVFAudio.AVAudioSessionRouteChangeNotification
 import platform.AVFAudio.AVAudioSessionRouteChangeReasonKey
@@ -94,6 +103,7 @@ import platform.AVFoundation.CMTimeRangeValue
 import platform.AVFoundation.addPeriodicTimeObserverForInterval
 import platform.AVFoundation.audioTimePitchAlgorithm
 import platform.AVFoundation.automaticallyWaitsToMinimizeStalling
+import platform.AVFoundation.cancelPendingSeeks
 import platform.AVFoundation.currentItem
 import platform.AVFoundation.currentTime
 import platform.AVFoundation.duration
@@ -101,8 +111,12 @@ import platform.AVFoundation.error
 import platform.AVFoundation.loadedTimeRanges
 import platform.AVFoundation.pause
 import platform.AVFoundation.play
+import platform.AVFoundation.playbackBufferEmpty
+import platform.AVFoundation.playbackBufferFull
+import platform.AVFoundation.playbackLikelyToKeepUp
 import platform.AVFoundation.prerollAtRate
 import platform.AVFoundation.rate
+import platform.AVFoundation.reasonForWaitingToPlay
 import platform.AVFoundation.removeTimeObserver
 import platform.AVFoundation.replaceCurrentItemWithPlayerItem
 import platform.AVFoundation.seekToTime
@@ -148,6 +162,7 @@ import platform.darwin.NSObjectProtocol
 import kotlin.coroutines.resume
 import kotlin.math.abs
 import kotlin.math.roundToLong
+import kotlin.time.Clock
 import kotlin.time.TimeSource
 
 internal sealed interface IosPlaybackOverlapEvent {
@@ -174,7 +189,7 @@ internal sealed interface IosPlaybackOverlapEvent {
 @OptIn(ExperimentalForeignApi::class)
 class MusicPlayer internal constructor(
     initialPlayer: AVPlayer? = null,
-    private val activateAudioSession: () -> Unit = { AVAudioSession.sharedInstance().setActive(true, error = null) },
+    private val activateAudioSession: (() -> Unit)? = null,
     private val outputVolume: () -> Float,
 ) {
     constructor() : this(outputVolume = { AVAudioSession.sharedInstance().outputVolume })
@@ -259,13 +274,71 @@ class MusicPlayer internal constructor(
             field = value
             sampleChanges.trySend(Unit)
         }
+    private var requestLog = IosPlaybackRequestLog(0L, null)
+    private var startWatchdog: Job? = null
+    private var firstProgressLogged = false
+    private var itemReadyLogged = false
+    private var startPositionMs = 0L
+
+    internal fun beginPlaybackRequest(
+        log: IosPlaybackRequestLog,
+        positionMs: Long,
+        startPlaying: Boolean,
+    ) {
+        requestLog = log
+        needsUserActionAfterMediaReset = false
+        firstProgressLogged = false
+        itemReadyLogged = false
+        startPositionMs = positionMs
+        startWatchdog?.cancel()
+        startWatchdog =
+            if (startPlaying) {
+                scope.launch {
+                    delay(15_000L)
+                    if (requestLog === log && !firstProgressLogged) {
+                        val item = player.currentItem
+                        log.event(
+                            "iOS playback start stalled",
+                            buildMap {
+                                put("playerStatus", player.status.toString())
+                                put("itemStatus", item?.status.toString())
+                                put("itemVideoId", _currentSong.value?.id.orEmpty())
+                                put("timeControlStatus", player.timeControlStatus.toString())
+                                put("reasonForWaitingToPlay", player.reasonForWaitingToPlay.orEmpty())
+                                put("bufferEmpty", item?.playbackBufferEmpty.toString())
+                                put("bufferFull", item?.playbackBufferFull.toString())
+                                put("likelyToKeepUp", item?.playbackLikelyToKeepUp.toString())
+                                put("bufferedPositionMs", _bufferedPosition.value.toString())
+                                put("loadedTimeRanges", loadedRanges.joinToString())
+                                put("positionMs", nativePositionMs().toString())
+                                put("tapReady", audioProcessingReady.toString())
+                                put("tapInstalled", audioTapInstalled.toString())
+                                put(
+                                    "resourceAccepted",
+                                    (_currentPlaybackResource.value?.videoId == log.videoId && !isQueueTransitionPending).toString(),
+                                )
+                                item?.error?.let {
+                                    put("errorDomain", it.domain.orEmpty())
+                                    put("errorCode", it.code.toString())
+                                }
+                            },
+                        )
+                    }
+                }
+            } else {
+                null
+            }
+    }
+
     private var wasPlayingBeforeInterruption = false
+    private var needsUserActionAfterMediaReset = false
     private val pauseOnMute = PauseOnMuteController()
     private val itemStateObserverTokens = mutableListOf<NSObjectProtocol>()
     private var endObserverToken: NSObjectProtocol? = null
     private var failObserverToken: NSObjectProtocol? = null
     private var interruptionObserverToken: NSObjectProtocol? = null
     private var routeChangeObserverToken: NSObjectProtocol? = null
+    private val mediaServicesObserverTokens = mutableListOf<NSObjectProtocol>()
     private val remoteTargets = mutableListOf<Pair<MPRemoteCommand, Any>>()
     private var publishedDurationMs = -1L
     private var metadataDurationSeconds: Long? = null
@@ -276,8 +349,10 @@ class MusicPlayer internal constructor(
     private var isQueueTransitionPending = false
     private var resourceReloadGeneration = 0L
     private var isResourceReloadSeekPending = false
+    private var audioTapJob: Job? = null
     private var audioProcessingReady = true
     private var audioTapInstalled = false
+    private var audioProcessingBypassed = false
     private var audioTapGain = MutableStateFlow(1f)
     private val activePitchAvailability = MutableStateFlow(MutableStateFlow(false))
 
@@ -295,15 +370,22 @@ class MusicPlayer internal constructor(
         val item: AVPlayerItem,
         val asset: AVAsset,
         val queueIndex: Int,
+        val log: IosPlaybackRequestLog,
         val capture: IosPlaybackCapture? = null,
         var audioProcessingReady: Boolean = true,
         var audioTapInstalled: Boolean = false,
+        var audioProcessingBypassed: Boolean = false,
         val audioTapGain: MutableStateFlow<Float> = MutableStateFlow(1f),
         val pitchAvailability: MutableStateFlow<Boolean> = MutableStateFlow(canUseIosAudioProcessingTap(resource, resource.url)),
         var observations: List<IosKeyValueObservation> = emptyList(),
         var positionObserver: Any? = null,
+        var tapJob: Job? = null,
+        var readinessJob: Job? = null,
+        var resultLogged: Boolean = false,
     ) {
         fun closeObservations() {
+            tapJob?.cancel()
+            readinessJob?.cancel()
             observations.forEach { it.close() }
             observations = emptyList()
             positionObserver?.let(player::removeTimeObserver)
@@ -317,6 +399,7 @@ class MusicPlayer internal constructor(
         val metadataDurationSeconds: Long?,
         val durationMs: Long,
         val audioTapInstalled: Boolean,
+        val audioProcessingBypassed: Boolean,
         val audioTapGain: MutableStateFlow<Float>,
         val pitchAvailability: MutableStateFlow<Boolean>,
         val capture: IosPlaybackCapture?,
@@ -498,6 +581,10 @@ class MusicPlayer internal constructor(
                             } else {
                                 PlaybackReadiness.BUFFERING
                             }
+                        if (!itemReadyLogged && currentItem.status == AVPlayerItemStatusReadyToPlay && !isQueueTransitionPending) {
+                            itemReadyLogged = true
+                            requestLog.event("iOS AVPlayer item ready")
+                        }
                         if (currentItem.status == AVPlayerItemStatusReadyToPlay && isRendering) resourceReloadFallback = null
                         val durSec = CMTimeGetSeconds(currentItem.duration)
                         val actualDurMs = if (durSec.isFinite() && durSec > 0) (durSec * 1000).toLong() else 0L
@@ -520,6 +607,13 @@ class MusicPlayer internal constructor(
                         }
                         _bufferedPosition.value = loadedPlaybackBufferEndMs(currentMs, durationMs, loadedRanges)
                         if (currentSec != null && !isResourceReloadSeekPending && !isPositionSeekPending) {
+                            if (!firstProgressLogged && isRendering && wantsPlayback && !isQueueTransitionPending &&
+                                currentMs > startPositionMs
+                            ) {
+                                firstProgressLogged = true
+                                startWatchdog?.cancel()
+                                requestLog.event("iOS playback first position progress", mapOf("positionMs" to currentMs.toString()))
+                            }
                             _currentPosition.value = currentMs.coerceAtMost(_duration.value.takeIf { it > 0L } ?: Long.MAX_VALUE)
                             skipDetectedSilence(currentMs)
                             if (!isPositionSeekPending) updatePreparedPlayback(currentMs, nativeEndMs.takeIf { it > 0L } ?: durationMs)
@@ -601,18 +695,78 @@ class MusicPlayer internal constructor(
         return durationMs
     }
 
-    private fun configureAudioSession(activate: Boolean = true) {
+    @OptIn(BetaInteropApi::class)
+    private fun configureAudioSession(
+        activate: Boolean = true,
+        restore: Boolean = false,
+    ) {
         runCatching {
             val session = AVAudioSession.sharedInstance()
+
+            fun checkResult(
+                operation: String,
+                action: (CPointer<ObjCObjectVar<NSError?>>) -> Boolean,
+            ): Boolean =
+                memScoped {
+                    val error = alloc<ObjCObjectVar<NSError?>>()
+                    error.value = null
+                    val success = action(error.ptr)
+                    val failure = error.value
+                    if (!success || failure != null) {
+                        requestLog.event(
+                            "iOS audio session $operation failed",
+                            mapOf(
+                                "success" to success.toString(),
+                                "errorDomain" to failure?.domain.orEmpty(),
+                                "errorCode" to failure?.code.toString(),
+                            ),
+                        )
+                    }
+                    success && failure == null
+                }
             // Reapplying the category to an active session can reconfigure the audio route on resume.
-            if (session.category != AVAudioSessionCategoryPlayback) {
-                session.setCategory(AVAudioSessionCategoryPlayback, error = null)
+            if (restore || session.category != AVAudioSessionCategoryPlayback) {
+                checkResult("category setup") { error ->
+                    session.setCategory(AVAudioSessionCategoryPlayback, mode = AVAudioSessionModeDefault, options = 0UL, error = error)
+                }
             }
             if (activate) {
-                activateAudioSession()
-                logAudioSession("iOS audio session activated")
+                val injectedActivation = activateAudioSession
+                val activated =
+                    if (injectedActivation != null) {
+                        injectedActivation()
+                        true
+                    } else {
+                        checkResult("activation") { session.setActive(true, error = it) }
+                    }
+                if (activated) logAudioSession("iOS audio session activated")
             }
+        }.onFailure {
+            requestLog.event("iOS audio session configuration threw", mapOf("errorType" to it::class.simpleName.orEmpty()))
         }
+    }
+
+    private fun resetMediaServices() {
+        val song = _currentSong.value
+        val resource = _currentPlaybackResource.value
+        pause()
+        needsUserActionAfterMediaReset = true
+        cancelPreparedPlayback()
+        resourceReloadGeneration++
+        isResourceReloadSeekPending = false
+        resourceReloadFallback = null
+        cleanupItemObservers()
+        player.replaceCurrentItemWithPlayerItem(null)
+        playbackCapture = null
+        player = newPlayer()
+        audioTapInstalled = false
+        audioProcessingReady = true
+        activePitchAvailability.value = MutableStateFlow(false)
+        configureAudioSession(activate = false, restore = true)
+        // Apple requires a user action before reactivating after a media-services reset.
+        val restored =
+            song != null && resource != null && play(song, resource.url, resource.headers, resource, preservePlaybackInstance = true)
+        requestLog.event("iOS media services reset; player objects recreated", mapOf("itemRestored" to restored.toString()))
     }
 
     private fun logAudioSession(
@@ -625,6 +779,7 @@ class MusicPlayer internal constructor(
             message,
             details =
                 buildMap {
+                    put("requestGeneration", requestLog.generation.toString())
                     put("category", session.category.orEmpty())
                     put("mode", session.mode.orEmpty())
                     put("categoryOptions", session.categoryOptions.toString())
@@ -657,14 +812,22 @@ class MusicPlayer internal constructor(
             ) { notification ->
                 val userInfo = notification?.userInfo ?: return@addObserverForName
                 val typeNumber = userInfo[AVAudioSessionInterruptionTypeKey] as? NSNumber ?: return@addObserverForName
+                val optionsNumber = userInfo[AVAudioSessionInterruptionOptionKey] as? NSNumber
+                val options = optionsNumber?.unsignedLongValue ?: 0UL
+                requestLog.event(
+                    "iOS audio interruption",
+                    mapOf(
+                        "phase" to if (typeNumber.unsignedLongValue == AVAudioSessionInterruptionTypeBegan) "begin" else "end",
+                        "type" to typeNumber.unsignedLongValue.toString(),
+                        "options" to options.toString(),
+                    ),
+                )
                 if (typeNumber.unsignedLongValue == AVAudioSessionInterruptionTypeBegan) {
                     if (wantsPlayback) {
                         pause()
                         wasPlayingBeforeInterruption = true
                     }
                 } else if (typeNumber.unsignedLongValue == AVAudioSessionInterruptionTypeEnded) {
-                    val optionsNumber = userInfo[AVAudioSessionInterruptionOptionKey] as? NSNumber
-                    val options = optionsNumber?.unsignedLongValue ?: 0UL
                     val shouldResume = (options and AVAudioSessionInterruptionOptionShouldResume) != 0UL
                     if (wasPlayingBeforeInterruption) {
                         wasPlayingBeforeInterruption = false
@@ -674,6 +837,21 @@ class MusicPlayer internal constructor(
                     }
                 }
             }
+
+        mediaServicesObserverTokens +=
+            center.addObserverForName(
+                AVAudioSessionMediaServicesWereLostNotification,
+                null,
+                NSOperationQueue.mainQueue,
+            ) {
+                requestLog.event("iOS media services lost")
+            }
+        mediaServicesObserverTokens +=
+            center.addObserverForName(
+                AVAudioSessionMediaServicesWereResetNotification,
+                null,
+                NSOperationQueue.mainQueue,
+            ) { resetMediaServices() }
 
         routeChangeObserverToken =
             center.addObserverForName(
@@ -709,23 +887,51 @@ class MusicPlayer internal constructor(
         startPlaying: Boolean = true,
         startPositionMs: Long = 0L,
     ): Boolean {
+        val shouldStartPlayback = startPlaying && !needsUserActionAfterMediaReset
         pauseOnMute.cancelResume()
         val wasPlaying = wantsPlayback
         val positionMs = if (preservePlaybackInstance) currentPositionMs() else startPositionMs.coerceAtLeast(0L)
+        this.startPositionMs = positionMs
         if (!preservePlaybackInstance) _loadError.value = null
 
         val nsUrl =
             NSURL.URLWithString(url) ?: run {
+                requestLog.event("iOS player rejected resource", mapOf("reason" to "invalid-playback-url"))
                 if (!preservePlaybackInstance) _loadError.value = "invalid-playback-url"
                 return false
             }
         if (preservePlaybackInstance) _loadError.value = null
         audioCaptureFailure = null
-        val reusablePrepared =
-            preparedPlayback?.takeIf {
-                !preservePlaybackInstance && it.song.id == song.id && it.resource.url == url &&
-                    it.resource.headers == headers
+        val prepared = preparedPlayback
+        val reuseRejection =
+            when {
+                preservePlaybackInstance -> {
+                    "resource-replacement"
+                }
+
+                prepared == null -> {
+                    "no-preload"
+                }
+
+                prepared.song.id != song.id -> {
+                    "song-mismatch"
+                }
+
+                else -> {
+                    iosPreparedPlaybackRejection(
+                        prepared.resource,
+                        resource,
+                        url,
+                        headers,
+                        prepared.item.status == AVPlayerItemStatusReadyToPlay,
+                        prepared.item.status == AVPlayerItemStatusFailed,
+                        prepared.audioTapInstalled,
+                        Clock.System.now(),
+                    )
+                }
             }
+        requestLog.event("iOS preload reuse decision", mapOf("reason" to (reuseRejection ?: "reused")))
+        val reusablePrepared = prepared?.takeIf { reuseRejection == null }
 
         if (!preservePlaybackInstance) {
             silenceAnalysisJob?.cancel()
@@ -737,6 +943,7 @@ class MusicPlayer internal constructor(
             isResourceReloadSeekPending = false
             resourceReloadFallback = null
             if (reusablePrepared != null) {
+                reusablePrepared.log.generation = requestLog.generation
                 reusablePrepared.closeObservations()
                 reusablePrepared.player.pause()
                 preparedPlayback = null
@@ -761,6 +968,7 @@ class MusicPlayer internal constructor(
                             metadataDurationSeconds = metadataDurationSeconds,
                             durationMs = _duration.value,
                             audioTapInstalled = audioTapInstalled,
+                            audioProcessingBypassed = audioProcessingBypassed,
                             audioTapGain = audioTapGain,
                             pitchAvailability = activePitchAvailability.value,
                             capture = playbackCapture?.also { it.users++ },
@@ -784,9 +992,22 @@ class MusicPlayer internal constructor(
             loadNowPlayingArtwork(song)
         }
 
-        val capture = if (reusablePrepared != null) reusablePrepared.capture else resource?.let { playbackCache?.acquire(it) }
+        val capture =
+            if (reusablePrepared != null) {
+                requestLog.event(
+                    "iOS capture admission",
+                    mapOf(
+                        "reason" to "preload-reused",
+                        "accepted" to (reusablePrepared.capture != null).toString(),
+                    ),
+                )
+                reusablePrepared.capture
+            } else {
+                resource?.let { acquireCapture(it, requestLog) }
+            }
         if (resource != null && resource.requiresIosAudioCapture && capture == null) {
-            audioCaptureFailure = IosAudioCaptureFailure(resource, if (preservePlaybackInstance) wasPlaying else startPlaying)
+            requestLog.event("iOS player rejected resource", mapOf("reason" to "required-capture-unavailable"))
+            audioCaptureFailure = IosAudioCaptureFailure(resource, if (preservePlaybackInstance) wasPlaying else shouldStartPlayback)
             val fallback = resourceReloadFallback
             if (preservePlaybackInstance && fallback != null) {
                 if (resource.isSabr) sabrPreparationFailures.tryEmit(checkNotNull(audioCaptureFailure))
@@ -809,49 +1030,44 @@ class MusicPlayer internal constructor(
             previousPlayer.replaceCurrentItemWithPlayerItem(null)
             player = reusablePrepared.player
             preparedPlayback = null
-            val generation = resourceReloadGeneration
-            isPositionSeekPending = true
-            player.seekToTime(
-                CMTimeMakeWithSeconds(0.0, 600),
-                toleranceBefore = CMTimeMakeWithSeconds(0.0, 600),
-                toleranceAfter = CMTimeMakeWithSeconds(0.0, 600),
-            ) {
-                if (generation == resourceReloadGeneration) {
-                    isPositionSeekPending = false
-                    sampleChanges.trySend(Unit)
-                }
-            }
+            if (positionMs == 0L) seekForStart(0L, reload = false, phase = "preload-promotion", resumeAfterSeek = false)
         } else {
             player.replaceCurrentItemWithPlayerItem(playerItem)
         }
         if (playbackCapture === capture) playbackCache?.release(capture) else playbackCapture = capture
+        audioProcessingBypassed = reusablePrepared?.audioProcessingBypassed ?: false
         audioTapInstalled = reusablePrepared?.audioTapInstalled ?: false
         audioTapGain = reusablePrepared?.audioTapGain ?: MutableStateFlow(1f)
         activePitchAvailability.value = reusablePrepared?.pitchAvailability ?: MutableStateFlow(canUseIosAudioProcessingTap(resource, url))
         audioProcessingReady = reusablePrepared?.audioProcessingReady ?: !canUseIosAudioProcessingTap(resource, url)
         if (reusablePrepared == null && !audioProcessingReady) {
-            installIosAudioProcessingTap(
-                scope,
-                asset,
-                playerItem,
-                audioTapGain,
-                playbackPitch,
-                activePitchAvailability.value,
-            ) { installed ->
-                scope.launch(Dispatchers.Main.immediate) {
-                    // currentItem may return a different Kotlin wrapper, so compare the native items.
-                    if (player.currentItem != playerItem) return@launch
-                    audioTapInstalled = installed
-                    audioProcessingReady = true
-                    applyPlaybackVolume()
-                    if (wantsPlayback && !isResourceReloadSeekPending) {
-                        configureAudioSession()
-                        player.play()
-                        if (_playbackSpeed.value != 1f) player.rate = _playbackSpeed.value
+            audioTapJob =
+                installIosAudioProcessingTap(
+                    scope,
+                    asset,
+                    playerItem,
+                    audioTapGain,
+                    playbackPitch,
+                    activePitchAvailability.value,
+                    requestLog,
+                ) { installed ->
+                    scope.launch(Dispatchers.Main.immediate) {
+                        // currentItem may return a different Kotlin wrapper, so compare the native items.
+                        if (player.currentItem != playerItem) return@launch
+                        audioTapInstalled = installed
+                        audioProcessingBypassed = !installed
+                        audioProcessingReady = true
+                        applyPlaybackVolume()
+                        if (wantsPlayback && !isResourceReloadSeekPending) {
+                            configureAudioSession()
+                            player.play()
+                            if (_playbackSpeed.value != 1f) player.rate = _playbackSpeed.value
+                        }
                     }
                 }
-            }
         }
+        requestLog.event("iOS resource accepted", mapOf("tapReady" to audioProcessingReady.toString()))
+        if (audioProcessingReady) requestLog.event("iOS audio tap ready", mapOf("installed" to audioTapInstalled.toString()))
         observePlayerItem(playerItem)
         resource?.let { startSilenceAnalysis(song, it) }
         if (preservePlaybackInstance) {
@@ -865,28 +1081,15 @@ class MusicPlayer internal constructor(
         if (!preservePlaybackInstance) isQueueTransitionPending = false
         applyPlaybackVolume()
         if (!preservePlaybackInstance) {
-            wantsPlayback = startPlaying
-            _isPlaying.value = startPlaying
+            wantsPlayback = shouldStartPlayback
+            _isPlaying.value = shouldStartPlayback
         }
         if (preservePlaybackInstance || positionMs > 0L) {
-            val generation = ++resourceReloadGeneration
-            val instanceId = playbackInstanceId
+            ++resourceReloadGeneration
             if (positionMs > 0L) {
                 isResourceReloadSeekPending = true
                 player.pause()
-                val targetTime = CMTimeMakeWithSeconds(positionMs.toDouble() / 1000.0, 600)
-                val zeroCMTime = CMTimeMakeWithSeconds(0.0, 600)
-                player.seekToTime(targetTime, toleranceBefore = zeroCMTime, toleranceAfter = zeroCMTime) {
-                    if (generation == resourceReloadGeneration) {
-                        isResourceReloadSeekPending = false
-                        sampleChanges.trySend(Unit)
-                        if (wantsPlayback && playbackInstanceId == instanceId && audioProcessingReady) {
-                            configureAudioSession()
-                            player.play()
-                            if (_playbackSpeed.value != 1f) player.rate = _playbackSpeed.value
-                        }
-                    }
-                }
+                seekForStart(positionMs, reload = true, phase = "start-position")
             } else if (wasPlaying && audioProcessingReady) {
                 configureAudioSession()
                 player.play()
@@ -896,18 +1099,77 @@ class MusicPlayer internal constructor(
             }
             _currentPosition.value = positionMs
         } else {
-            if (startPlaying && audioProcessingReady) {
+            if (shouldStartPlayback && audioProcessingReady) {
                 configureAudioSession()
                 player.play()
                 if (_playbackSpeed.value != 1f) player.rate = _playbackSpeed.value
             } else {
                 player.pause()
             }
-            wantsPlayback = startPlaying
-            _isPlaying.value = startPlaying
+            wantsPlayback = shouldStartPlayback
+            _isPlaying.value = shouldStartPlayback
         }
         updateNowPlayingInfo()
         return true
+    }
+
+    private fun acquireCapture(
+        resource: PlaybackResource,
+        log: IosPlaybackRequestLog,
+    ): IosPlaybackCapture? {
+        val cache = playbackCache
+        if (cache == null) {
+            log.event("iOS capture admission", mapOf("accepted" to "false", "reason" to "cache-unavailable"))
+            return null
+        }
+        return cache.acquire(resource) { reason ->
+            log.event(
+                "iOS capture admission",
+                mapOf(
+                    "accepted" to (reason == "created" || reason == "reused").toString(),
+                    "reason" to reason,
+                    "required" to resource.requiresIosAudioCapture.toString(),
+                ),
+            )
+        }
+    }
+
+    private fun seekForStart(
+        positionMs: Long,
+        reload: Boolean,
+        phase: String,
+        resumeAfterSeek: Boolean = true,
+    ) {
+        val source = player
+        val item = source.currentItem
+        val generation = resourceReloadGeneration
+        val log = requestLog
+        if (reload) isResourceReloadSeekPending = true else isPositionSeekPending = true
+        log.event("iOS startup seek begin", mapOf("phase" to phase, "positionMs" to positionMs.toString()))
+        scope.launch(Dispatchers.Main.immediate) {
+            val finished =
+                awaitIosPlaybackCallback<Boolean> { complete ->
+                    val time = CMTimeMakeWithSeconds(positionMs.toDouble() / 1000.0, 600)
+                    val zero = CMTimeMakeWithSeconds(0.0, 600)
+                    source.seekToTime(time, toleranceBefore = zero, toleranceAfter = zero) { complete(it) }
+                }
+            log.event("iOS startup seek result", mapOf("phase" to phase, "result" to (finished?.toString() ?: "timeout")))
+            if (generation != resourceReloadGeneration || source != player || item != player.currentItem) return@launch
+            if (finished == null) item?.cancelPendingSeeks()
+            if (reload) isResourceReloadSeekPending = false else isPositionSeekPending = false
+            if (finished != true) {
+                val seconds = CMTimeGetSeconds(source.currentTime())
+                if (seconds.isFinite() && seconds >= 0.0) startPositionMs = (seconds * 1000).toLong()
+            }
+            sampleChanges.trySend(Unit)
+            if (resumeAfterSeek && wantsPlayback && audioProcessingReady) {
+                configureAudioSession()
+                player.play()
+                if (_playbackSpeed.value != 1f) player.rate = _playbackSpeed.value
+            } else if (wantsPlayback && _playbackSpeed.value != 1f) {
+                player.rate = _playbackSpeed.value
+            }
+        }
     }
 
     internal fun replacePlaybackResource(
@@ -991,6 +1253,7 @@ class MusicPlayer internal constructor(
                         }
                         audioProcessingReady = prepared.audioProcessingReady
                         audioTapInstalled = prepared.audioTapInstalled
+                        audioProcessingBypassed = prepared.audioProcessingBypassed
                         audioTapGain = prepared.audioTapGain
                         activePitchAvailability.value = prepared.pitchAvailability
                         resourceReloadGeneration++
@@ -1037,6 +1300,7 @@ class MusicPlayer internal constructor(
     }
 
     fun pause() {
+        startWatchdog?.cancel()
         failedPlaybackWanted = false
         _currentPosition.value = currentPositionMs()
         pauseOnMute.cancelResume()
@@ -1073,11 +1337,18 @@ class MusicPlayer internal constructor(
 
     fun resume() {
         pauseOnMute.cancelResume()
-        if (isQueueTransitionPending) return
+        if (isQueueTransitionPending) {
+            requestLog.event("iOS playback resume rejected", mapOf("reason" to "queue-transition-pending"))
+            return
+        }
         if (_currentPlaybackResource.value == null || _loadError.value != null) {
+            requestLog.event("iOS playback resume deferred", mapOf("reason" to "resource-unavailable"))
             _currentSong.value?.let { emitQueuePlayback(it) }
             return
         }
+        requestLog.event("iOS playback resume accepted")
+        needsUserActionAfterMediaReset = false
+        beginPlaybackRequest(requestLog, currentPositionMs(), startPlaying = true)
         if (isResourceReloadSeekPending || !audioProcessingReady) {
             wantsPlayback = true
             _isPlaying.value = true
@@ -1107,6 +1378,7 @@ class MusicPlayer internal constructor(
     }
 
     fun stop() {
+        startWatchdog?.cancel()
         pendingEofPlaybackInstanceId = null
         didEmitEof = false
         pauseOnMute.cancelResume()
@@ -1142,8 +1414,7 @@ class MusicPlayer internal constructor(
         cancelActiveCrossfade()
         lastSilenceSkipEndMs = 0L
         val resumeAfterReloadSeek = isResourceReloadSeekPending && wantsPlayback
-        val seekGeneration = ++resourceReloadGeneration
-        val seekPlaybackInstanceId = playbackInstanceId
+        ++resourceReloadGeneration
         isResourceReloadSeekPending = false
         didEmitEof = false
         pendingEofPlaybackInstanceId = null
@@ -1153,27 +1424,7 @@ class MusicPlayer internal constructor(
             toPositionMs = position,
             continuePlaying = wantsPlayback,
         )
-        isPositionSeekPending = true
-        val seconds = position.toDouble() / 1000.0
-        val targetTime = CMTimeMakeWithSeconds(seconds, 600)
-        val zeroCMTime = CMTimeMakeWithSeconds(0.0, 600)
-        player.seekToTime(
-            targetTime,
-            toleranceBefore = zeroCMTime,
-            toleranceAfter = zeroCMTime,
-        ) { _ ->
-            if (seekGeneration == resourceReloadGeneration && seekPlaybackInstanceId == playbackInstanceId) {
-                isPositionSeekPending = false
-                sampleChanges.trySend(Unit)
-                if (resumeAfterReloadSeek && wantsPlayback) {
-                    configureAudioSession()
-                    player.play()
-                }
-                if (wantsPlayback && _playbackSpeed.value != 1f) {
-                    player.rate = _playbackSpeed.value
-                }
-            }
-        }
+        seekForStart(position, reload = false, phase = "seek", resumeAfterSeek = resumeAfterReloadSeek)
         _currentPosition.value = position
         updateNowPlayingInfo()
     }
@@ -1189,9 +1440,19 @@ class MusicPlayer internal constructor(
         val resource = _currentPlaybackResource.value
         val nextResource = preparedPlayback?.resource
         val currentNormalizationGain =
-            playbackNormalizationGain(resource?.loudnessDb, normalizationEnabled, level, resource?.perceptualLoudnessDb)
+            playbackNormalizationGain(
+                resource?.loudnessDb,
+                normalizationEnabled && !audioProcessingBypassed,
+                level,
+                resource?.perceptualLoudnessDb,
+            )
         val nextNormalizationGain =
-            playbackNormalizationGain(nextResource?.loudnessDb, normalizationEnabled, level, nextResource?.perceptualLoudnessDb)
+            playbackNormalizationGain(
+                nextResource?.loudnessDb,
+                normalizationEnabled && preparedPlayback?.audioProcessingBypassed != true,
+                level,
+                nextResource?.perceptualLoudnessDb,
+            )
         audioTapGain.value = currentNormalizationGain.coerceAtLeast(1f)
         preparedPlayback?.audioTapGain?.value = nextNormalizationGain.coerceAtLeast(1f)
         val progress =
@@ -1252,9 +1513,16 @@ class MusicPlayer internal constructor(
         resource: PlaybackResource,
         queueIndex: Int,
     ): PreparedPlayback? {
-        val url = NSURL.URLWithString(resource.url) ?: return null
-        val capture = playbackCache?.acquire(resource)
+        val log = IosPlaybackRequestLog(requestLog.generation, song.id)
+        log.event("iOS preload begin")
+        val url =
+            NSURL.URLWithString(resource.url) ?: run {
+                log.event("iOS preload result", mapOf("reason" to "invalid-url"))
+                return null
+            }
+        val capture = acquireCapture(resource, log)
         if (resource.requiresIosAudioCapture && capture == null) {
+            log.event("iOS preload result", mapOf("reason" to "required-capture-unavailable"))
             if (resource.isSabr) sabrPreparationFailures.tryEmit(IosAudioCaptureFailure(resource, wantsPlayback))
             return null
         }
@@ -1281,13 +1549,18 @@ class MusicPlayer internal constructor(
                 item,
                 asset,
                 queueIndex,
+                log,
                 capture = capture,
                 audioProcessingReady = !canUseIosAudioProcessingTap(resource, resource.url),
             )
         prepared.observations =
             listOf(
                 IosKeyValueObservation(nextPlayer, listOf("timeControlStatus", "rate"), scope) { sampleChanges.trySend(Unit) },
-                IosKeyValueObservation(item, listOf("status", "duration"), scope) { sampleChanges.trySend(Unit) },
+                IosKeyValueObservation(item, listOf("status", "duration"), scope) {
+                    log.event("iOS preload item status", mapOf("status" to item.status.toString()))
+                    logPreparedPlaybackResult(prepared)
+                    sampleChanges.trySend(Unit)
+                },
             )
         prepared.positionObserver =
             nextPlayer.addPeriodicTimeObserverForInterval(CMTimeMakeWithSeconds(1.0, 1000), null) {
@@ -1295,35 +1568,86 @@ class MusicPlayer internal constructor(
             }
         sampleChanges.trySend(Unit)
         if (!prepared.audioProcessingReady) {
-            installIosAudioProcessingTap(
-                scope,
-                asset,
-                item,
-                prepared.audioTapGain,
-                playbackPitch,
-                prepared.pitchAvailability,
-            ) { installed ->
-                scope.launch(Dispatchers.Main.immediate) {
-                    prepared.audioTapInstalled = installed
-                    prepared.audioProcessingReady = true
-                    applyPlaybackVolume()
-                    if (preparedPlayback === prepared) {
-                        sampleChanges.trySend(Unit)
-                    }
-                    if (player.currentItem == item) {
-                        audioTapInstalled = installed
-                        audioProcessingReady = true
+            prepared.tapJob =
+                installIosAudioProcessingTap(
+                    scope,
+                    asset,
+                    item,
+                    prepared.audioTapGain,
+                    playbackPitch,
+                    prepared.pitchAvailability,
+                    log,
+                ) { installed ->
+                    scope.launch(Dispatchers.Main.immediate) {
+                        prepared.audioTapInstalled = installed
+                        prepared.audioProcessingBypassed = !installed
+                        prepared.audioProcessingReady = true
+                        logPreparedPlaybackResult(prepared)
                         applyPlaybackVolume()
-                        if (wantsPlayback && !isResourceReloadSeekPending) {
-                            configureAudioSession()
-                            player.play()
-                            if (_playbackSpeed.value != 1f) player.rate = _playbackSpeed.value
+                        if (preparedPlayback === prepared) {
+                            sampleChanges.trySend(Unit)
+                        }
+                        if (player.currentItem == item) {
+                            audioTapInstalled = installed
+                            audioProcessingBypassed = !installed
+                            audioProcessingReady = true
+                            applyPlaybackVolume()
+                            if (wantsPlayback && !isResourceReloadSeekPending) {
+                                configureAudioSession()
+                                player.play()
+                                if (_playbackSpeed.value != 1f) player.rate = _playbackSpeed.value
+                            }
                         }
                     }
                 }
-            }
         }
+        prepared.readinessJob =
+            scope.launch {
+                delay(if (resource.isSabr) IOS_SABR_PREPARATION_TIMEOUT_MS else IOS_PLAYBACK_CALLBACK_TIMEOUT_MS)
+                if (!prepared.resultLogged) {
+                    prepared.resultLogged = true
+                    log.event(
+                        "iOS preload result",
+                        mapOf(
+                            "reason" to "readiness-timeout",
+                            "tapInstalled" to prepared.audioTapInstalled.toString(),
+                        ),
+                    )
+                }
+            }
+        logPreparedPlaybackResult(prepared)
         return prepared
+    }
+
+    private fun logPreparedPlaybackResult(prepared: PreparedPlayback) {
+        if (prepared.resultLogged) return
+        val reason =
+            when {
+                prepared.item.status == AVPlayerItemStatusFailed -> {
+                    "item-failed"
+                }
+
+                prepared.item.status == AVPlayerItemStatusReadyToPlay && prepared.audioProcessingReady -> {
+                    if (prepared.audioProcessingBypassed) "tap-bypassed" else "ready"
+                }
+
+                else -> {
+                    return
+                }
+            }
+        prepared.resultLogged = true
+        prepared.readinessJob?.cancel()
+        prepared.log.event(
+            "iOS preload result",
+            buildMap {
+                put("reason", reason)
+                put("tapInstalled", prepared.audioTapInstalled.toString())
+                prepared.item.error?.let {
+                    put("errorDomain", it.domain.orEmpty())
+                    put("errorCode", it.code.toString())
+                }
+            },
+        )
     }
 
     internal fun cancelCrossfadeTransition() {
@@ -1386,6 +1710,7 @@ class MusicPlayer internal constructor(
 
     private fun cancelPreparedPlayback() {
         preparedPlayback?.let { prepared ->
+            IosPlaybackRequestLog(requestLog.generation, prepared.song.id).event("iOS preload cancelled")
             prepared.closeObservations()
             cancelCrossfadeReporting(prepared)
             prepared.player.pause()
@@ -1474,6 +1799,19 @@ class MusicPlayer internal constructor(
         durationMs: Long,
     ) {
         val prepared = preparedPlayback ?: return
+        if (prepared.resource.expiresAt?.let { it <= Clock.System.now() } == true ||
+            (
+                prepared.audioProcessingReady && canUseIosAudioProcessingTap(prepared.resource, prepared.resource.url) &&
+                    !prepared.audioTapInstalled
+            )
+        ) {
+            IosPlaybackRequestLog(requestLog.generation, prepared.song.id).event(
+                "iOS preload reuse rejected",
+                mapOf("reason" to if (prepared.audioProcessingBypassed) "tap-bypassed" else "resource-expired"),
+            )
+            cancelPreparedPlayback()
+            return
+        }
         if (prepared.item.status == AVPlayerItemStatusFailed && prepared.resource.isSabr) {
             sabrPreparationFailures.tryEmit(IosAudioCaptureFailure(prepared.resource, wantsPlayback, prepared.capture?.failure))
             prepared.capture?.markFailed()
@@ -1555,7 +1893,22 @@ class MusicPlayer internal constructor(
 
     private fun finishPreparedPlaybackTransition(requireIncomingPlaying: Boolean = false): Boolean {
         val prepared = preparedPlayback ?: return false
-        if (prepared.item.status != AVPlayerItemStatusReadyToPlay ||
+        val reuseRejection =
+            iosPreparedPlaybackRejection(
+                prepared.resource,
+                prepared.resource,
+                prepared.resource.url,
+                prepared.resource.headers,
+                prepared.item.status == AVPlayerItemStatusReadyToPlay,
+                prepared.item.status == AVPlayerItemStatusFailed,
+                prepared.audioTapInstalled,
+                Clock.System.now(),
+            )
+        IosPlaybackRequestLog(requestLog.generation, prepared.song.id).event(
+            "iOS preload reuse decision",
+            mapOf("reason" to (reuseRejection ?: "reused"), "source" to "automatic-transition"),
+        )
+        if (reuseRejection != null ||
             (requireIncomingPlaying && prepared.player.timeControlStatus != AVPlayerTimeControlStatusPlaying)
         ) {
             cancelPreparedPlayback()
@@ -1602,6 +1955,7 @@ class MusicPlayer internal constructor(
         if (playbackCapture === prepared.capture) playbackCache?.release(prepared.capture) else playbackCapture = prepared.capture
         audioProcessingReady = prepared.audioProcessingReady
         audioTapInstalled = prepared.audioTapInstalled
+        audioProcessingBypassed = prepared.audioProcessingBypassed
         audioTapGain = prepared.audioTapGain
         activePitchAvailability.value = prepared.pitchAvailability
         preparedPlayback = null
@@ -1625,6 +1979,9 @@ class MusicPlayer internal constructor(
         }
         val incomingSeconds = CMTimeGetSeconds(player.currentTime())
         _currentPosition.value = if (!incomingSeconds.isNaN() && incomingSeconds > 0.0) (incomingSeconds * 1000).toLong() else 0L
+        beginPlaybackRequest(prepared.log, _currentPosition.value, wantsPlayback)
+        requestLog.event("iOS playback request accepted", mapOf("source" to "automatic-preload-promotion"))
+        requestLog.event("iOS audio tap ready", mapOf("installed" to audioTapInstalled.toString()))
         _duration.value =
             preferredPlaybackDurationMs(
                 metadataDurationSeconds,
@@ -1704,16 +2061,8 @@ class MusicPlayer internal constructor(
         if (silence.endMs - positionMs < 100L) return
         lastSilenceSkipEndMs = silence.endMs
         playbackReporter.onSeek(currentPlayerInstanceId, positionMs, silence.endMs, continuePlaying = wantsPlayback)
-        val target = CMTimeMakeWithSeconds(silence.endMs.toDouble() / 1000.0, 600)
-        val zero = CMTimeMakeWithSeconds(0.0, 600)
-        val generation = ++resourceReloadGeneration
-        isPositionSeekPending = true
-        player.seekToTime(target, toleranceBefore = zero, toleranceAfter = zero) {
-            if (generation == resourceReloadGeneration) {
-                isPositionSeekPending = false
-                sampleChanges.trySend(Unit)
-            }
-        }
+        ++resourceReloadGeneration
+        seekForStart(silence.endMs, reload = false, phase = "silence-skip", resumeAfterSeek = false)
         _currentPosition.value = silence.endMs
     }
 
@@ -1831,6 +2180,9 @@ class MusicPlayer internal constructor(
     fun getAudioSessionId(): Int = 0
 
     fun release() {
+        startWatchdog?.cancel()
+        mediaServicesObserverTokens.forEach { NSNotificationCenter.defaultCenter.removeObserver(it) }
+        mediaServicesObserverTokens.clear()
         volumeObservation?.close()
         volumeObservation = null
         cancelPreparedPlayback()
@@ -1864,6 +2216,7 @@ class MusicPlayer internal constructor(
         player.replaceCurrentItemWithPlayerItem(fallback.item)
         observePlayerItem(fallback.item)
         audioTapInstalled = fallback.audioTapInstalled
+        audioProcessingBypassed = fallback.audioProcessingBypassed
         audioTapGain = fallback.audioTapGain
         activePitchAvailability.value = fallback.pitchAvailability
         _currentPlaybackResource.value = fallback.resource
@@ -1874,22 +2227,9 @@ class MusicPlayer internal constructor(
         didEmitEof = false
         pendingEofPlaybackInstanceId = null
         val instanceId = playbackInstanceId
-        val generation = ++resourceReloadGeneration
+        ++resourceReloadGeneration
         if (positionMs > 0L) {
-            isResourceReloadSeekPending = true
-            val targetTime = CMTimeMakeWithSeconds(positionMs.toDouble() / 1000.0, 600)
-            val zeroCMTime = CMTimeMakeWithSeconds(0.0, 600)
-            player.seekToTime(targetTime, toleranceBefore = zeroCMTime, toleranceAfter = zeroCMTime) {
-                if (generation == resourceReloadGeneration) {
-                    isResourceReloadSeekPending = false
-                    sampleChanges.trySend(Unit)
-                    if (wantsPlayback && playbackInstanceId == instanceId) {
-                        configureAudioSession()
-                        player.play()
-                        if (_playbackSpeed.value != 1f) player.rate = _playbackSpeed.value
-                    }
-                }
-            }
+            seekForStart(positionMs, reload = true, phase = "restore-resource")
         } else {
             isResourceReloadSeekPending = false
             if (wantsPlayback) {
@@ -1990,6 +2330,7 @@ class MusicPlayer internal constructor(
                 clientName = failedResource?.clientName,
                 details =
                     buildMap {
+                        put("requestGeneration", requestLog.generation.toString())
                         error?.let {
                             it.domain?.let { domain -> put("errorDomain", domain) }
                             put("errorCode", it.code.toString())
@@ -2197,6 +2538,8 @@ class MusicPlayer internal constructor(
     }
 
     private fun cleanupItemObservers() {
+        audioTapJob?.cancel()
+        audioTapJob = null
         playbackObservation?.close()
         playbackObservation = null
         isPositionSeekPending = false

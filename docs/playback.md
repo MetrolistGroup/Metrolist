@@ -24,6 +24,8 @@ Other crossfades keep separate players and their gain ramps. Same-album gapless 
 
 On Android, `MusicService.seekTo` cancels an active crossfade and leaves an unstarted preload queued.
 
+iOS logs request acceptance or rejection, resolution, capture admission, tap readiness, native item readiness and first position progress with the request generation. A request with no progress after fifteen seconds adds one native-state snapshot. Tap loading and seeks on the active player have five-second deadlines. Audio-session setup and activation failures include the NSError domain and code. After a media-services reset, iOS restores the session configuration and recreates the player and item, then waits for a user action before activating audio again. See [Apple's reset guidance](https://developer.apple.com/library/archive/qa/qa1749/_index.html).
+
 ## Seek diagnostics
 
 Export the playback log immediately after a jump. Android's 500-event buffer records `Android seek requested.` separately from `Android native position discontinuity.`. Compare source, player ID, queue request and playback instance with preparation and recovery events.

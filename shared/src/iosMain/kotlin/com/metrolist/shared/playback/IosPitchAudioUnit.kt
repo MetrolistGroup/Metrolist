@@ -256,9 +256,14 @@ internal class IosPitchAudioUnit private constructor(
         fun create(
             format: CPointer<AudioStreamBasicDescription>,
             maxFrames: Int,
+            onFailure: (Int) -> Unit = {},
             readSource: (Int, CPointer<AudioBufferList>, CPointer<CMItemCountVar>, CPointer<MTAudioProcessingTapFlagsVar>) -> Int,
         ): IosPitchAudioUnit? =
             memScoped {
+                fun failed(status: Int): Boolean {
+                    if (status != 0) onFailure(status)
+                    return status != 0
+                }
                 val description = alloc<AudioComponentDescription>()
                 description.componentType = kAudioUnitType_FormatConverter
                 description.componentSubType = kAudioUnitSubType_NewTimePitch
@@ -267,7 +272,7 @@ internal class IosPitchAudioUnit private constructor(
                 description.componentFlagsMask = 0u
                 val component = AudioComponentFindNext(null, description.ptr) ?: return@memScoped null
                 val output = alloc<AudioComponentInstanceVar>()
-                if (AudioComponentInstanceNew(component, output.ptr) != 0) return@memScoped null
+                if (failed(AudioComponentInstanceNew(component, output.ptr))) return@memScoped null
                 val unit = output.value ?: return@memScoped null
                 val processor = IosPitchAudioUnit(unit, format, maxFrames, readSource)
                 val unitFormat = alloc<AudioStreamBasicDescription>()
@@ -285,44 +290,48 @@ internal class IosPitchAudioUnit private constructor(
                 callback.inputProcRefCon = processor.reference.asCPointer()
                 val maximum = alloc<UIntVar>()
                 maximum.value = maxFrames.toUInt()
-                if (AudioUnitSetProperty(
-                        unit,
-                        kAudioUnitProperty_StreamFormat,
-                        kAudioUnitScope_Input,
-                        0u,
-                        unitFormat.ptr,
-                        sizeOf<AudioStreamBasicDescription>().toUInt(),
-                    ) !=
-                    0 ||
-                    AudioUnitSetProperty(
-                        unit,
-                        kAudioUnitProperty_StreamFormat,
-                        kAudioUnitScope_Output,
-                        0u,
-                        unitFormat.ptr,
-                        sizeOf<AudioStreamBasicDescription>().toUInt(),
-                    ) !=
-                    0 ||
-                    AudioUnitSetProperty(
-                        unit,
-                        kAudioUnitProperty_MaximumFramesPerSlice,
-                        kAudioUnitScope_Global,
-                        0u,
-                        maximum.ptr,
-                        sizeOf<UIntVar>().toUInt(),
-                    ) !=
-                    0 ||
-                    AudioUnitSetProperty(
-                        unit,
-                        kAudioUnitProperty_SetRenderCallback,
-                        kAudioUnitScope_Input,
-                        0u,
-                        callback.ptr,
-                        sizeOf<AURenderCallbackStruct>().toUInt(),
-                    ) !=
-                    0 ||
-                    AudioUnitSetParameter(unit, kNewTimePitchParam_Rate, kAudioUnitScope_Global, 0u, 1f, 0u) != 0 ||
-                    AudioUnitInitialize(unit) != 0
+                if (failed(
+                        AudioUnitSetProperty(
+                            unit,
+                            kAudioUnitProperty_StreamFormat,
+                            kAudioUnitScope_Input,
+                            0u,
+                            unitFormat.ptr,
+                            sizeOf<AudioStreamBasicDescription>().toUInt(),
+                        ),
+                    ) ||
+                    failed(
+                        AudioUnitSetProperty(
+                            unit,
+                            kAudioUnitProperty_StreamFormat,
+                            kAudioUnitScope_Output,
+                            0u,
+                            unitFormat.ptr,
+                            sizeOf<AudioStreamBasicDescription>().toUInt(),
+                        ),
+                    ) ||
+                    failed(
+                        AudioUnitSetProperty(
+                            unit,
+                            kAudioUnitProperty_MaximumFramesPerSlice,
+                            kAudioUnitScope_Global,
+                            0u,
+                            maximum.ptr,
+                            sizeOf<UIntVar>().toUInt(),
+                        ),
+                    ) ||
+                    failed(
+                        AudioUnitSetProperty(
+                            unit,
+                            kAudioUnitProperty_SetRenderCallback,
+                            kAudioUnitScope_Input,
+                            0u,
+                            callback.ptr,
+                            sizeOf<AURenderCallbackStruct>().toUInt(),
+                        ),
+                    ) ||
+                    failed(AudioUnitSetParameter(unit, kNewTimePitchParam_Rate, kAudioUnitScope_Global, 0u, 1f, 0u)) ||
+                    failed(AudioUnitInitialize(unit))
                 ) {
                     processor.close()
                     return@memScoped null
@@ -330,7 +339,9 @@ internal class IosPitchAudioUnit private constructor(
                 val latency = alloc<DoubleVar>()
                 val latencySize = alloc<UIntVar>()
                 latencySize.value = sizeOf<DoubleVar>().toUInt()
-                if (AudioUnitGetProperty(unit, kAudioUnitProperty_Latency, kAudioUnitScope_Global, 0u, latency.ptr, latencySize.ptr) != 0 ||
+                if (failed(
+                        AudioUnitGetProperty(unit, kAudioUnitProperty_Latency, kAudioUnitScope_Global, 0u, latency.ptr, latencySize.ptr),
+                    ) ||
                     !latency.value.isFinite() || latency.value < 0.0
                 ) {
                     processor.close()
