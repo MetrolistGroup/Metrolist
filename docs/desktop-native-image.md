@@ -143,6 +143,8 @@ The starting point was the r2 report on local branch `research/r2-jvm-startup-ru
 
 ## Measurements
 
+The published CPU numbers used `SOFTWARE_COMPAT`, which spends most playback CPU on a Java2D image copy, so they overstate app cost. The runner keeps this renderer because the checked-in Native Image metadata does not cover Skiko's `AbstractDirectSoftwareRenderer`, `LinuxSoftwareRenderer` or `WindowsSoftwareRenderer`; switching to `SOFTWARE_FAST` needs those registrations and a native smoke check.
+
 These are screening results on a shared Ryzen 9 7950X3D host with 32 logical CPUs and 30.22 GiB RAM, Linux x64. The native toolchain is Oracle GraalVM 25.0.4, GCC 16.2.1, with the default `x86-64-v3` target and no PGO. Older x64 CPUs need a compatibility build and their own checks. The control uses the release package's processed jars, linked Temurin 25.0.5 runtime, packaged C1/G1 options and dynamic AppCDS. Warm controls mapped their dynamic CDS archives. Both runtimes use a 32 MiB initial heap and 384 MiB maximum heap.
 
 The Serial/`-Os` comparison uses base `eeb29db1413acf0a8d6d57e20361c3cdd86f1318` plus the two app lock commits. The following values are means across the two idle runs or the single playback run. First-paint cells retain both samples. RSS and PSS are MiB. CPU is a percentage of one logical core, so 100% means one busy core.
