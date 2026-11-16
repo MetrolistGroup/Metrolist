@@ -77,8 +77,6 @@ import com.metrolist.shared.generated.resources.settings_artist_source_itunes
 import com.metrolist.shared.generated.resources.settings_artist_source_lastfm
 import com.metrolist.shared.generated.resources.settings_artist_source_youtube
 import com.metrolist.shared.generated.resources.settings_diagnostic_logs_summary
-import com.metrolist.shared.generated.resources.settings_home_section_dynamic
-import com.metrolist.shared.generated.resources.settings_home_section_items
 import com.metrolist.shared.generated.resources.settings_log_directory_summary
 import com.metrolist.shared.generated.resources.settings_open_log_folder
 import com.metrolist.shared.generated.resources.settings_playback_speed_locked_listen_together
@@ -95,18 +93,16 @@ import com.metrolist.shared.state.applyContentRegion
 import com.metrolist.shared.state.contentCountryCodes
 import com.metrolist.shared.ui.components.Dialog
 import com.metrolist.shared.ui.navigation.Screen
-import com.metrolist.shared.ui.screens.HomeShelfBuilder
-import com.metrolist.shared.ui.screens.homeContentText
 import com.metrolist.shared.ui.settings.LyricsSettingsPreview
 import com.metrolist.shared.ui.settings.SettingsChangeEffect
 import com.metrolist.shared.ui.settings.SettingsChoice
-import com.metrolist.shared.ui.settings.SettingsHomeSection
 import com.metrolist.shared.ui.settings.SettingsHostAction
 import com.metrolist.shared.ui.settings.SettingsHostChoice
 import com.metrolist.shared.ui.settings.SettingsPageId
 import com.metrolist.shared.ui.settings.SettingsPlatform
 import com.metrolist.shared.ui.settings.SharedSettingsHost
 import com.metrolist.shared.ui.settings.SharedSettingsScreen
+import com.metrolist.shared.ui.settings.settingsHomeSections
 import com.metrolist.shared.ui.settings.settingsPageSubtitle
 import com.metrolist.shared.ui.utils.rememberFileSizeFormatter
 import kotlinx.coroutines.CancellationException
@@ -186,21 +182,7 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
                     )
                 }.sortedBy(SettingsChoice::label)
                 .toList()
-    val homeSections =
-        HomeShelfBuilder.build(HomeState.uiState, homeContentText(), 1000.dp, includeHidden = true).map { section ->
-            SettingsHomeSection(
-                id = section.key,
-                preferenceKey = section.visibilityKey,
-                title = section.title,
-                description =
-                    if (section.items.isNotEmpty()) {
-                        stringResource(Res.string.settings_home_section_items, section.items.size)
-                    } else {
-                        stringResource(Res.string.settings_home_section_dynamic)
-                    },
-                visible = Settings.shared.shouldShowHomeSection(section.visibilityKey, section.title),
-            )
-        }
+    val homeSections = settingsHomeSections(HomeState.uiState)
     val scope = rememberCoroutineScope()
     var installedFontOptions by remember { mutableStateOf<Set<FontOption>?>(null) }
     var downloadingFont by remember { mutableStateOf<FontOption?>(null) }

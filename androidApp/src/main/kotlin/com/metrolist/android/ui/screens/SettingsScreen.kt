@@ -105,6 +105,7 @@ import com.metrolist.shared.ui.settings.SettingsPageId
 import com.metrolist.shared.ui.settings.SettingsPlatform
 import com.metrolist.shared.ui.settings.SharedSettingsHost
 import com.metrolist.shared.ui.settings.SharedSettingsScreen
+import com.metrolist.shared.ui.settings.settingsHomeSections
 import com.metrolist.shared.ui.utils.rememberFileSizeFormatter
 import com.metrolist.shared.viewmodels.PlayerViewModel
 import kotlinx.coroutines.CancellationException
@@ -134,6 +135,7 @@ fun SettingsScreen(
     val playerConnection = LocalPlayerConnection.current
     val audioCacheManager: AudioCacheManager = koinInject()
     val homeViewModel: HomeViewModel = koinViewModel()
+    val homeState by homeViewModel.shared.uiState.collectAsState()
     val searchViewModel: SearchViewModel = koinViewModel()
     val searchState by searchViewModel.shared.uiState.collectAsState()
     val historyRemovalFailed = stringResource(Res.string.search_history_removal_failed)
@@ -388,6 +390,8 @@ fun SettingsScreen(
                     onClose = onNavigateBack,
                     onOpenArtist = onNavigateToArtist,
                     onSpotifySignIn = { showSpotifyLogin = true },
+                    homeSections = settingsHomeSections(homeState),
+                    onHomeSectionVisibilityChanged = SharedPreferences.shared::toggleHomeSectionVisibility,
                     bottomContentPadding = miniPlayerInset,
                     storageSummary =
                         if (isCalculatingCacheSize) {
