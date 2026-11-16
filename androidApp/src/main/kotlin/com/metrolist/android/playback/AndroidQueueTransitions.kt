@@ -291,6 +291,7 @@ internal class AndroidQueueTransitions(
                             queueSongId = nextSong.id,
                             positionMs = playbackPositionMs,
                             playbackSong = playbackSong,
+                            sourceSong = sourceSong,
                             onFailure = preloadFailureHandler(resource, playbackSong, wantNextVideo),
                         )
                     }
@@ -308,6 +309,7 @@ internal class AndroidQueueTransitions(
                                 queueSongId = nextSong.id,
                                 positionMs = playbackPositionMs,
                                 playbackSong = playbackSong,
+                                sourceSong = sourceSong,
                                 onFailure = preloadFailureHandler(resource, playbackSong, wantNextVideo),
                             )
                         }

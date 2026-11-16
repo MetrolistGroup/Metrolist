@@ -27,6 +27,7 @@ import com.metrolist.innertubex.sabr.SabrProtocolException
 import com.metrolist.shared.api.musicvideo.MusicVideoResolver
 import com.metrolist.shared.deviceconnect.DcLocalPlaybackState
 import com.metrolist.shared.model.AlbumTiny
+import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.SearchResultPage
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playback.PlaybackSeekSource
@@ -687,7 +688,13 @@ class ExoPlaybackPlayerTest {
             Settings.shared.audioNormalization = true
             val first = song()
             val second = first.copy(id = "second")
-            val selected = second.copy(id = "selected-audio", title = "Selected audio")
+            val selected =
+                second.copy(
+                    id = "selected-audio",
+                    title = "Selected audio",
+                    canonicalTitle = "Selected audio",
+                    canonicalArtists = second.artists,
+                )
             player.setQueue(listOf(first, second, first.copy(id = "third")), preparePlayback = false)
             val occurrenceKey =
                 player.queueState.value.entries[1]
@@ -783,6 +790,100 @@ class ExoPlaybackPlayerTest {
             } finally {
                 collector.cancel()
                 source.close()
+            }
+        }
+
+    @Test
+    fun cancellingAPlayingCounterpartPreservesQueueMetadataEditsAndClears() =
+        runBlocking {
+            val audio = downloadedResource()
+            val canonicalArtist = ArtistTiny("audio-artist", "Canonical artist")
+            for ((editBeforePreparation, clearEdits) in listOf(false to false, false to true, true to true)) {
+                player.releaseAndAwaitScope()
+                Dispatchers.resetMain()
+                player = ExoPlaybackPlayer(RuntimeEnvironment.getApplication())
+                val first = song()
+                val second = first.copy(id = "second", customTitle = "Old title", customArtist = "Old artist", queueSourceTitle = "Album")
+                val selected =
+                    second.copy(
+                        id = "selected-audio",
+                        title = "Old title",
+                        artists = listOf(canonicalArtist.copy(name = "Old artist")),
+                        canonicalTitle = "Canonical audio",
+                        canonicalArtists = listOf(canonicalArtist),
+                    )
+                val edited =
+                    second.copy(
+                        customTitle = if (clearEdits) null else "Latest title",
+                        customArtist = if (clearEdits) null else "Latest artist",
+                        queueSourceTitle = "Added manually",
+                    )
+                player.setQueue(listOf(first, second), preparePlayback = false)
+                val occurrenceKey =
+                    player.queueState.value.entries[1]
+                        .key
+                assertTrue(player.prepareAndPlay(first, audio, resumePlayback = false))
+                val native = underlyingPlayer().also(::awaitPlaybackReady)
+                if (editBeforePreparation) player.updateQueueItems(mapOf(1 to edited))
+                val resource = audio.copy(videoId = selected.id)
+                val token =
+                    checkNotNull(
+                        player.prepareNextTrack(
+                            resource,
+                            startPaused = true,
+                            queueSongId = second.id,
+                            playbackSong = selected,
+                            sourceSong = second,
+                        ),
+                    )
+                if (!editBeforePreparation) player.updateQueueItems(mapOf(1 to edited))
+                assertTrue(player.isPreloadedPlaybackActive(token))
+                assertEquals(
+                    occurrenceKey,
+                    player.queueState.value.entries[1]
+                        .key,
+                )
+                val oldPosition =
+                    Player.PositionInfo(
+                        null,
+                        0,
+                        native.getMediaItemAt(0),
+                        null,
+                        0,
+                        20_000L,
+                        20_000L,
+                        C.INDEX_UNSET,
+                        C.INDEX_UNSET,
+                    )
+                val newPosition = Player.PositionInfo(null, 1, native.getMediaItemAt(1), null, 1, 0L, 0L, C.INDEX_UNSET, C.INDEX_UNSET)
+                native.seekTo(1, 750L)
+                awaitPlaybackReady(native)
+                player.startPreloadedNextAtEof = { player.cancelNext() }
+
+                ReflectionHelpers
+                    .getField<Player.Listener>(player, "playbackListener")
+                    .onPositionDiscontinuity(oldPosition, newPosition, Player.DISCONTINUITY_REASON_AUTO_TRANSITION)
+                shadowOf(Looper.getMainLooper()).idle()
+
+                val promoted = checkNotNull(player.currentSong.value)
+                assertEquals(selected.id, promoted.id)
+                assertEquals(edited.customTitle, promoted.customTitle)
+                assertEquals(edited.customArtist, promoted.customArtist)
+                assertEquals(if (clearEdits) "Canonical audio" else "Latest title", promoted.title)
+                assertEquals(if (clearEdits) "Canonical artist" else "Latest artist", promoted.artists.single().name)
+                assertEquals("Canonical audio", promoted.canonicalTitle)
+                assertEquals(listOf(canonicalArtist), promoted.canonicalArtists)
+                assertEquals(edited.queueSourceTitle, promoted.queueSourceTitle)
+                assertEquals(promoted, player.songQueue.value[1])
+                assertEquals(1, player.currentMediaItemIndex.value)
+                assertEquals(
+                    occurrenceKey,
+                    player.queueState.value.entries[1]
+                        .key,
+                )
+                assertEquals(token.playerInstanceId, player.currentPlaybackInstanceId)
+                assertSame(resource, player.currentPlaybackResource.value)
+                assertFalse(player.isPreloadedPlaybackActive(token))
             }
         }
 
