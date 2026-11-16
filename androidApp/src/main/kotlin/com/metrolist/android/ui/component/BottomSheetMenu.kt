@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -113,7 +114,7 @@ fun AdaptiveModalBottomSheet(
                     .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)),
         )
     },
-    contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.windowInsets },
+    contentWindowInsets: @Composable () -> WindowInsets = { WindowInsets.safeDrawing },
     properties: ModalBottomSheetProperties = ModalBottomSheetDefaults.properties,
     gesturesEnabled: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
@@ -216,7 +217,7 @@ fun AnimatedBottomSheet(
                     .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)),
         )
     },
-    contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.windowInsets },
+    contentWindowInsets: @Composable () -> WindowInsets = { WindowInsets.safeDrawing },
     properties: ModalBottomSheetProperties = ModalBottomSheetDefaults.properties,
     content: @Composable ColumnScope.() -> Unit,
 ) {

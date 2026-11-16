@@ -1406,7 +1406,15 @@ fun MetrolistApp(
                                             },
                                         ),
                             ) {
-                                Column(Modifier.fillMaxSize()) {
+                                Column(
+                                    Modifier.fillMaxSize().then(
+                                        if (activeImport != null) {
+                                            Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                                        } else {
+                                            Modifier
+                                        },
+                                    ),
+                                ) {
                                     PlaylistImportProgressCard()
                                     Scaffold(
                                         containerColor = Color.Transparent,
