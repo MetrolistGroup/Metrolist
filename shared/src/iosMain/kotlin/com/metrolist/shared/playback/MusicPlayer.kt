@@ -101,6 +101,7 @@ import platform.AVFoundation.AVPlayerTimeControlStatusWaitingToPlayAtSpecifiedRa
 import platform.AVFoundation.AVURLAsset
 import platform.AVFoundation.CMTimeRangeValue
 import platform.AVFoundation.addPeriodicTimeObserverForInterval
+import platform.AVFoundation.asset
 import platform.AVFoundation.audioTimePitchAlgorithm
 import platform.AVFoundation.automaticallyWaitsToMinimizeStalling
 import platform.AVFoundation.cancelPendingSeeks
@@ -190,6 +191,8 @@ internal sealed interface IosPlaybackOverlapEvent {
 class MusicPlayer internal constructor(
     initialPlayer: AVPlayer? = null,
     private val activateAudioSession: (() -> Unit)? = null,
+    private val seek: ((AVPlayer, Long, (Boolean) -> Unit) -> Unit)? = null,
+    private val currentAudioTapInstaller: ((AVPlayerItem, (Boolean) -> Unit) -> Job)? = null,
     private val outputVolume: () -> Float,
 ) {
     constructor() : this(outputVolume = { AVAudioSession.sharedInstance().outputVolume })
@@ -398,6 +401,7 @@ class MusicPlayer internal constructor(
         val resource: PlaybackResource?,
         val metadataDurationSeconds: Long?,
         val durationMs: Long,
+        val audioProcessingReady: Boolean,
         val audioTapInstalled: Boolean,
         val audioProcessingBypassed: Boolean,
         val audioTapGain: MutableStateFlow<Float>,
@@ -607,13 +611,7 @@ class MusicPlayer internal constructor(
                         }
                         _bufferedPosition.value = loadedPlaybackBufferEndMs(currentMs, durationMs, loadedRanges)
                         if (currentSec != null && !isResourceReloadSeekPending && !isPositionSeekPending) {
-                            if (!firstProgressLogged && isRendering && wantsPlayback && !isQueueTransitionPending &&
-                                currentMs > startPositionMs
-                            ) {
-                                firstProgressLogged = true
-                                startWatchdog?.cancel()
-                                requestLog.event("iOS playback first position progress", mapOf("positionMs" to currentMs.toString()))
-                            }
+                            observeStartupProgress(currentMs, isRendering)
                             _currentPosition.value = currentMs.coerceAtMost(_duration.value.takeIf { it > 0L } ?: Long.MAX_VALUE)
                             skipDetectedSilence(currentMs)
                             if (!isPositionSeekPending) updatePreparedPlayback(currentMs, nativeEndMs.takeIf { it > 0L } ?: durationMs)
@@ -967,6 +965,7 @@ class MusicPlayer internal constructor(
                             resource = _currentPlaybackResource.value,
                             metadataDurationSeconds = metadataDurationSeconds,
                             durationMs = _duration.value,
+                            audioProcessingReady = audioProcessingReady,
                             audioTapInstalled = audioTapInstalled,
                             audioProcessingBypassed = audioProcessingBypassed,
                             audioTapGain = audioTapGain,
@@ -1041,30 +1040,7 @@ class MusicPlayer internal constructor(
         activePitchAvailability.value = reusablePrepared?.pitchAvailability ?: MutableStateFlow(canUseIosAudioProcessingTap(resource, url))
         audioProcessingReady = reusablePrepared?.audioProcessingReady ?: !canUseIosAudioProcessingTap(resource, url)
         if (reusablePrepared == null && !audioProcessingReady) {
-            audioTapJob =
-                installIosAudioProcessingTap(
-                    scope,
-                    asset,
-                    playerItem,
-                    audioTapGain,
-                    playbackPitch,
-                    activePitchAvailability.value,
-                    requestLog,
-                ) { installed ->
-                    scope.launch(Dispatchers.Main.immediate) {
-                        // currentItem may return a different Kotlin wrapper, so compare the native items.
-                        if (player.currentItem != playerItem) return@launch
-                        audioTapInstalled = installed
-                        audioProcessingBypassed = !installed
-                        audioProcessingReady = true
-                        applyPlaybackVolume()
-                        if (wantsPlayback && !isResourceReloadSeekPending) {
-                            configureAudioSession()
-                            player.play()
-                            if (_playbackSpeed.value != 1f) player.rate = _playbackSpeed.value
-                        }
-                    }
-                }
+            prepareCurrentAudioProcessing(asset, playerItem)
         }
         requestLog.event("iOS resource accepted", mapOf("tapReady" to audioProcessingReady.toString()))
         if (audioProcessingReady) requestLog.event("iOS audio tap ready", mapOf("installed" to audioTapInstalled.toString()))
@@ -1113,6 +1089,50 @@ class MusicPlayer internal constructor(
         return true
     }
 
+    private fun prepareCurrentAudioProcessing(
+        asset: AVAsset,
+        playerItem: AVPlayerItem,
+    ) {
+        val onReady: (Boolean) -> Unit = { installed ->
+            scope.launch(Dispatchers.Main.immediate) {
+                // currentItem may return a different Kotlin wrapper, so compare the native items.
+                if (player.currentItem != playerItem) return@launch
+                audioTapInstalled = installed
+                audioProcessingBypassed = !installed
+                audioProcessingReady = true
+                applyPlaybackVolume()
+                if (wantsPlayback && !isResourceReloadSeekPending) {
+                    configureAudioSession()
+                    player.play()
+                    if (_playbackSpeed.value != 1f) player.rate = _playbackSpeed.value
+                }
+            }
+        }
+        audioTapJob = currentAudioTapInstaller?.invoke(playerItem, onReady) ?: installIosAudioProcessingTap(
+            scope,
+            asset,
+            playerItem,
+            audioTapGain,
+            playbackPitch,
+            activePitchAvailability.value,
+            requestLog,
+            onReady,
+        )
+    }
+
+    internal fun observeStartupProgress(
+        positionMs: Long,
+        isRendering: Boolean,
+    ) {
+        if (!firstProgressLogged && isRendering && wantsPlayback && !isQueueTransitionPending &&
+            !isResourceReloadSeekPending && !isPositionSeekPending && positionMs > startPositionMs
+        ) {
+            firstProgressLogged = true
+            startWatchdog?.cancel()
+            requestLog.event("iOS playback first position progress", mapOf("positionMs" to positionMs.toString()))
+        }
+    }
+
     private fun acquireCapture(
         resource: PlaybackResource,
         log: IosPlaybackRequestLog,
@@ -1149,15 +1169,22 @@ class MusicPlayer internal constructor(
         scope.launch(Dispatchers.Main.immediate) {
             val finished =
                 awaitIosPlaybackCallback<Boolean> { complete ->
-                    val time = CMTimeMakeWithSeconds(positionMs.toDouble() / 1000.0, 600)
-                    val zero = CMTimeMakeWithSeconds(0.0, 600)
-                    source.seekToTime(time, toleranceBefore = zero, toleranceAfter = zero) { complete(it) }
+                    val injectedSeek = seek
+                    if (injectedSeek != null) {
+                        injectedSeek(source, positionMs, complete)
+                    } else {
+                        val time = CMTimeMakeWithSeconds(positionMs.toDouble() / 1000.0, 600)
+                        val zero = CMTimeMakeWithSeconds(0.0, 600)
+                        source.seekToTime(time, toleranceBefore = zero, toleranceAfter = zero) { complete(it) }
+                    }
                 }
             log.event("iOS startup seek result", mapOf("phase" to phase, "result" to (finished?.toString() ?: "timeout")))
             if (generation != resourceReloadGeneration || source != player || item != player.currentItem) return@launch
             if (finished == null) item?.cancelPendingSeeks()
             if (reload) isResourceReloadSeekPending = false else isPositionSeekPending = false
-            if (finished != true) {
+            if (finished == true) {
+                startPositionMs = positionMs
+            } else {
                 val seconds = CMTimeGetSeconds(source.currentTime())
                 if (seconds.isFinite() && seconds >= 0.0) startPositionMs = (seconds * 1000).toLong()
             }
@@ -1166,7 +1193,7 @@ class MusicPlayer internal constructor(
                 configureAudioSession()
                 player.play()
                 if (_playbackSpeed.value != 1f) player.rate = _playbackSpeed.value
-            } else if (wantsPlayback && _playbackSpeed.value != 1f) {
+            } else if (wantsPlayback && audioProcessingReady && _playbackSpeed.value != 1f) {
                 player.rate = _playbackSpeed.value
             }
         }
@@ -2215,6 +2242,7 @@ class MusicPlayer internal constructor(
         cleanupItemObservers()
         player.replaceCurrentItemWithPlayerItem(fallback.item)
         observePlayerItem(fallback.item)
+        audioProcessingReady = fallback.audioProcessingReady
         audioTapInstalled = fallback.audioTapInstalled
         audioProcessingBypassed = fallback.audioProcessingBypassed
         audioTapGain = fallback.audioTapGain
@@ -2228,11 +2256,13 @@ class MusicPlayer internal constructor(
         pendingEofPlaybackInstanceId = null
         val instanceId = playbackInstanceId
         ++resourceReloadGeneration
+        isResourceReloadSeekPending = positionMs > 0L
+        if (!audioProcessingReady) prepareCurrentAudioProcessing(fallback.item.asset, fallback.item)
         if (positionMs > 0L) {
             seekForStart(positionMs, reload = true, phase = "restore-resource")
         } else {
             isResourceReloadSeekPending = false
-            if (wantsPlayback) {
+            if (wantsPlayback && audioProcessingReady) {
                 configureAudioSession()
                 player.play()
                 if (_playbackSpeed.value != 1f) player.rate = _playbackSpeed.value
