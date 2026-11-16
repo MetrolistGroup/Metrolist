@@ -2658,4 +2658,5 @@
     <string name="chip_content_description">Чип: %1$s</string>
     <string name="settings_library_grid_columns">Столбцы библиотеки</string>
     <string name="playlist_picker_library_order">Порядок библиотеки</string>
+    <string name="blocked_songs">Заблокированные песни</string>
 </resources>
