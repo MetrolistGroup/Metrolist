@@ -97,9 +97,14 @@ class PrismBackupImportTest {
             library.withPrismArtistPreferences(
                 "<map><string name=\"favorites\"><![CDATA[[{\"id\":\"UCartist\",\"name\":\"Artist &quot;\"}]]]></string></map>",
             )
+        val mixedContent =
+            library.withPrismArtistPreferences(
+                """<map><string name="favorites">[{"id":"UCmixed","name":"Artist <![CDATA[</string>]]> Name"}]</string></map>""",
+            )
 
         assertEquals("UC&1" to "Artist 🎵", numeric.artists.single().let { it.id to it.name })
         assertEquals("UCartist" to "Artist &quot;", cdata.artists.single().let { it.id to it.name })
+        assertEquals("UCmixed" to "Artist </string> Name", mixedContent.artists.single().let { it.id to it.name })
     }
 
     @Test

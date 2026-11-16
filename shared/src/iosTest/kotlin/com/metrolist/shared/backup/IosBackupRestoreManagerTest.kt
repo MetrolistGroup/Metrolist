@@ -174,6 +174,21 @@ class IosBackupRestoreManagerTest {
         }
 
     @Test
+    fun prismFavoritesPreserveMixedTextAndCdata() {
+        val library = ForeignLibrary(ForeignLibraryFamily.PRISM, emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+        val xml = """<map><string name="favorites">[{"id":"UCmixed","name":"Artist <![CDATA[</string>]]> Name"}]</string></map>"""
+
+        assertEquals(
+            "Artist </string> Name",
+            library
+                .withPrismArtistPreferences(xml)
+                .artists
+                .single()
+                .name,
+        )
+    }
+
+    @Test
     fun rejectsZip64LocatorBeforeImportOrRestoreOpensArchive() =
         runTest {
             Dispatchers.setMain(StandardTestDispatcher(testScheduler))
@@ -193,25 +208,42 @@ class IosBackupRestoreManagerTest {
                     this[22] = 0x05
                     this[23] = 0x06
                 }
+            val zip64WithLongComment =
+                ByteArray(20 + 22 + 65_516).apply {
+                    this[0] = 0x50
+                    this[1] = 0x4b
+                    this[2] = 0x06
+                    this[3] = 0x07
+                    this[20] = 0x50
+                    this[21] = 0x4b
+                    this[22] = 0x05
+                    this[23] = 0x06
+                    this[40] = 0xec.toByte()
+                    this[41] = 0xff.toByte()
+                }
             try {
                 fs.write(archive) { write(zip64WithEmptyOrdinaryDirectory) }
+                val longCommentArchive = directory / "zip64-long-comment.zip"
+                fs.write(longCommentArchive) { write(zip64WithLongComment) }
                 val database = getIosDatabaseBuilder(target.toString()).build()
                 try {
                     val manager = IosBackupRestoreManager(target.toString(), Settings(MapSettings()))
-                    val importFailure = manager.importForeignBackup(archive.toString(), database).exceptionOrNull()
-                    assertNotNull(importFailure)
-                    assertTrue(importFailure.causeMessages().contains("ZIP64"))
-
                     var databaseClosed = false
-                    val restoreFailure =
-                        manager
-                            .restore(
-                                archive.toString(),
-                                closeDatabase = { databaseClosed = true },
-                                reopenDatabase = {},
-                            ).exceptionOrNull()
-                    assertNotNull(restoreFailure)
-                    assertTrue(restoreFailure.causeMessages().contains("ZIP64"))
+                    for (path in listOf(archive, longCommentArchive)) {
+                        val importFailure = manager.importForeignBackup(path.toString(), database).exceptionOrNull()
+                        assertNotNull(importFailure)
+                        assertTrue(importFailure.causeMessages().contains("ZIP64"))
+
+                        val restoreFailure =
+                            manager
+                                .restore(
+                                    path.toString(),
+                                    closeDatabase = { databaseClosed = true },
+                                    reopenDatabase = {},
+                                ).exceptionOrNull()
+                        assertNotNull(restoreFailure)
+                        assertTrue(restoreFailure.causeMessages().contains("ZIP64"))
+                    }
                     assertFalse(databaseClosed)
                 } finally {
                     database.close()

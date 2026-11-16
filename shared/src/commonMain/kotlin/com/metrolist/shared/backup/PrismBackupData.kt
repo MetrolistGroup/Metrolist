@@ -24,15 +24,15 @@ private val PRISM_PAGE = Regex("files/offline/pages/[A-Za-z0-9_-]+\\.json")
 internal fun isPrismBackupDataEntry(entry: String): Boolean =
     entry in setOf(PRISM_LOCAL_LIBRARY, PRISM_REMOTE_LIBRARY) || PRISM_PAGE.matches(entry)
 
+internal expect fun extractPrismFavoritesXmlText(xml: String): String?
+
 internal fun ForeignLibrary.withPrismArtistPreferences(xml: String?): ForeignLibrary {
     if (family != ForeignLibraryFamily.PRISM || xml == null) return this
     if (xml.contains("<!DOCTYPE", ignoreCase = true)) throw UnsupportedForeignLibraryException()
     val favorites =
         runCatching {
-            val value = findPrismFavoritesValue(xml) ?: return this
-            val cdata = Regex("""^<!\[CDATA\[(.*)]]>$""", RegexOption.DOT_MATCHES_ALL).matchEntire(value.trim())?.groupValues?.get(1)
-            val json = cdata ?: decodePrismXmlEntities(value)
-            Json.parseToJsonElement(json).jsonArray.map { item ->
+            val favoritesJson = extractPrismFavoritesXmlText(xml) ?: return this
+            Json.parseToJsonElement(favoritesJson).jsonArray.map { item ->
                 val artist = item.jsonObject
                 ForeignBookmark(
                     id = artist.getValue("id").jsonPrimitive.content,
@@ -44,89 +44,6 @@ internal fun ForeignLibrary.withPrismArtistPreferences(xml: String?): ForeignLib
         }.getOrDefault(emptyList())
     return copy(artists = favorites.asReversed() + artists)
 }
-
-private fun findPrismFavoritesValue(xml: String): String? {
-    val attributeName = Regex("""\bname\s*=\s*(['"])(.*?)\1""")
-    var searchFrom = 0
-    while (searchFrom < xml.length) {
-        val open = xml.indexOf("<string", searchFrom)
-        if (open < 0) return null
-        val nameEnd = open + "<string".length
-        if (nameEnd < xml.length && !xml[nameEnd].isWhitespace() && xml[nameEnd] != '>') {
-            searchFrom = nameEnd
-            continue
-        }
-        val tagEnd = findPrismXmlTagEnd(xml, nameEnd) ?: return null
-        val attributes = xml.substring(nameEnd, tagEnd)
-        if (attributeName.find(attributes)?.groupValues?.get(2) == "favorites") {
-            val valueStart = tagEnd + 1
-            val close = xml.indexOf("</string>", valueStart)
-            return close.takeIf { it >= 0 }?.let { xml.substring(valueStart, it) }
-        }
-        searchFrom = tagEnd + 1
-    }
-    return null
-}
-
-private fun findPrismXmlTagEnd(
-    xml: String,
-    from: Int,
-): Int? {
-    var quote: Char? = null
-    for (index in from until xml.length) {
-        val char = xml[index]
-        if (quote != null) {
-            if (char == quote) quote = null
-        } else if (char == '\'' || char == '"') {
-            quote = char
-        } else if (char == '>') {
-            return index
-        }
-    }
-    return null
-}
-
-private val PRISM_XML_ENTITY = Regex("""&(#x[0-9a-fA-F]+|#[0-9]+|lt|gt|quot|apos|amp);""")
-
-private fun decodePrismXmlEntities(value: String): String =
-    PRISM_XML_ENTITY.replace(value) { match ->
-        when (val entity = match.groupValues[1]) {
-            "lt" -> {
-                "<"
-            }
-
-            "gt" -> {
-                ">"
-            }
-
-            "quot" -> {
-                "\""
-            }
-
-            "apos" -> {
-                "'"
-            }
-
-            "amp" -> {
-                "&"
-            }
-
-            else -> {
-                val codePoint = if (entity.startsWith("#x")) entity.substring(2).toIntOrNull(16) else entity.substring(1).toIntOrNull()
-                if (codePoint == null || codePoint !in 0..0x10ffff || codePoint in 0xd800..0xdfff) {
-                    match.value
-                } else if (codePoint <= 0xffff) {
-                    codePoint.toChar().toString()
-                } else {
-                    val supplementary = codePoint - 0x10000
-                    buildString {
-                        append((0xd800 + (supplementary shr 10)).toChar())
-                        append((0xdc00 + (supplementary and 0x3ff)).toChar())
-                    }
-                }
-            }
-        }
-    }
 
 internal fun ForeignLibrary.withPrismBackupData(readEntry: (String) -> String?): ForeignLibrary {
     if (family != ForeignLibraryFamily.PRISM) return this
