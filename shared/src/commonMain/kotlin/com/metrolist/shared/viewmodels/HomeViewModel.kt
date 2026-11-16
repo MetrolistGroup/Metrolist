@@ -152,7 +152,7 @@ internal fun HomeViewModel.HomeUiState.primaryHomeContentLoaded(
         isLoading = false,
         isRefreshing = false,
         isRevalidating = false,
-        isContentLoading = selectedChip != null,
+        isContentLoading = false,
         isLoadingMore = false,
         error = null,
         isAllContentPending = selectedChip == null,
@@ -905,6 +905,7 @@ class HomeViewModel(
                         val currentState = _uiState.value
                         val primaryFailureSnapshot =
                             primaryContentSnapshot?.copy(
+                                userPlaylists = currentState.userPlaylists,
                                 isLoading = false,
                                 isRefreshing = false,
                                 isRevalidating = false,
@@ -949,13 +950,15 @@ class HomeViewModel(
                                 lastKnownLocaleSignature = "${locale.hl}:${locale.gl}"
                             }
                         } else if (primaryContentPublished) {
-                            cachedSelectedChipContent =
+                            val failedChipSnapshot =
                                 homeSelectedChipCacheAfterAssemblyFailure(
                                     cachedSelectedChipContent,
                                     primaryFailureSnapshot,
                                     failedState,
                                     primaryContentPublished,
                                 )
+                            cachedSelectedChipContent = failedChipSnapshot
+                            failedChipSnapshot?.selectedChip?.let { chip -> cacheChipContent(chip, failedChipSnapshot) }
                         }
                     } finally {
                         if (generation == contentLoadGeneration) {
@@ -1176,7 +1179,6 @@ class HomeViewModel(
             cacheableAllContentSnapshot(
                 state,
                 allContentReloadRequired,
-                hasCachedAllContent = cachedAllContent != null,
             ) ?: return
         val locale = GlobalYouTube.innerTube.locale
         lastKnownLocaleSignature = "${locale.hl}:${locale.gl}"
@@ -1766,9 +1768,8 @@ internal fun homeContentForAllSelection(
 internal fun isCacheableAllContent(
     state: HomeViewModel.HomeUiState,
     reloadRequired: Boolean = false,
-    hasCachedAllContent: Boolean = false,
 ): Boolean =
-    (!reloadRequired || hasCachedAllContent) &&
+    !reloadRequired &&
         !state.isAllContentPending &&
         !isFilteredHome(state.selectedChip?.params, state.selectedChip?.browseId ?: "FEmusic_home")
 
@@ -1794,9 +1795,8 @@ internal fun shouldLoadMoreHomeContent(state: HomeViewModel.HomeUiState): Boolea
 internal fun cacheableAllContentSnapshot(
     state: HomeViewModel.HomeUiState,
     reloadRequired: Boolean = false,
-    hasCachedAllContent: Boolean = false,
 ): HomeViewModel.HomeUiState? =
-    if (!isCacheableAllContent(state, reloadRequired, hasCachedAllContent)) {
+    if (!isCacheableAllContent(state, reloadRequired)) {
         null
     } else {
         state.copy(
@@ -1825,6 +1825,7 @@ internal fun homeSelectedChipCacheAfterAssemblyFailure(
 ): HomeViewModel.HomeUiState? =
     if (primaryContentPublished) {
         (primaryContentSnapshot ?: failedState).copy(
+            userPlaylists = failedState.userPlaylists,
             isLoading = false,
             isRefreshing = false,
             isRevalidating = false,
