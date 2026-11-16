@@ -973,11 +973,15 @@ class HomeViewModel(
                                 isAllContentPending =
                                     if (!isFiltered) failedAllPending else currentState.isAllContentPending,
                                 continuation =
-                                    homeContinuationAfterAssemblyFailure(
-                                        currentContinuation = currentState.continuation,
-                                        primaryContinuation = primaryContinuation,
-                                        primaryContentPublished = primaryContentPublished,
-                                    ),
+                                    if (failedAllPending) {
+                                        null
+                                    } else {
+                                        homeContinuationAfterAssemblyFailure(
+                                            currentContinuation = currentState.continuation,
+                                            primaryContinuation = primaryContinuation,
+                                            primaryContentPublished = primaryContentPublished,
+                                        )
+                                    },
                                 error = e.message,
                             )
                         _uiState.value = failedState
@@ -1813,10 +1817,30 @@ internal fun homeContentForAllSelection(
     currentState: HomeViewModel.HomeUiState,
     cachedAllContent: HomeViewModel.HomeUiState?,
 ): HomeViewModel.HomeUiState =
-    (cachedAllContent ?: currentState).copy(
-        selectedChip = null,
-        isAllContentPending = cachedAllContent == null,
-    )
+    cachedAllContent?.copy(selectedChip = null, isAllContentPending = false)
+        ?: currentState.copy(
+            data = null,
+            discoverySections = emptyList(),
+            trending = emptyList(),
+            albumCharts = emptyList(),
+            quickPicks = emptyList(),
+            newReleases = emptyList(),
+            keepListening = emptyList(),
+            forgottenFavorites = emptyList(),
+            communityPlaylist = emptyList(),
+            moodsAndGenres = emptyList(),
+            recentlyPlayed = emptyList(),
+            recapPlaylists = emptyList(),
+            podcasts = emptyList(),
+            similarRecommendations = emptyList(),
+            continuation = null,
+            sections = emptyList(),
+            chipFeeds = emptyList(),
+            selectedChip = null,
+            isContentLoading = true,
+            isLoadingMore = false,
+            isAllContentPending = true,
+        )
 
 internal fun isCacheableAllContent(
     state: HomeViewModel.HomeUiState,
@@ -1834,13 +1858,19 @@ internal fun shouldReloadIncompleteAllContent(
 
 internal fun HomeViewModel.HomeUiState.withLatestLibraryAndSpeedDialState(
     latestState: HomeViewModel.HomeUiState,
-): HomeViewModel.HomeUiState =
-    copy(
-        userPlaylists = latestState.userPlaylists,
-        speedDialItems = latestState.speedDialItems,
-        speedDialPinnedIds = latestState.speedDialPinnedIds,
-        speedDialSurprisePinned = latestState.speedDialSurprisePinned,
-    )
+): HomeViewModel.HomeUiState {
+    var latestSnapshot =
+        copy(
+            userPlaylists = latestState.userPlaylists,
+            speedDialItems = latestState.speedDialItems,
+            speedDialPinnedIds = latestState.speedDialPinnedIds,
+            speedDialSurprisePinned = latestState.speedDialSurprisePinned,
+        )
+    latestState.loadedHomeSongs().forEach { song ->
+        latestSnapshot = latestSnapshot.withUpdatedSongMetadata(song)
+    }
+    return latestSnapshot
+}
 
 internal fun isCurrentHomeLibraryRevision(
     snapshotRevision: Long,
