@@ -69,7 +69,7 @@ Gradient artwork lives in `assets/app-icons/gradient/`; the alternate icons are 
 
 Use the theme's MotionScheme and respect system animation duration scale. Keep enter and exit transitions mounted until they finish. Interrupted transitions must resume from their current state.
 
-Shared dialogs and button popups use the theme's fast effects spec for opacity and fast spatial spec for a 0.95-to-1 scale. They do not register shared bounds or hide the opening control. Animation values are read in `graphicsLayer`, without frame-by-frame composition or measurement. Page transitions and bottom-sheet slides use their own motion.
+Shared dialogs and button popups use the theme's fast effects spec for opacity and fast spatial spec for a 0.95-to-1 scale. They do not register shared bounds or hide the opening control. Animation values are read in `graphicsLayer`, without frame-by-frame composition or measurement. Page transitions and bottom-sheet slides use their own motion. Android's devices sheet reserves its expanded height before discovery, so it slides to that height without a second resize.
 
 Popup input guards belong to each popup session. Completion and cancellation release them in `finally`; disposal clears the session. A superseded animation cannot release a newer request's guard. The closing popup is removed after its animation, while sheets keep their own dismissal lifetime.
 
