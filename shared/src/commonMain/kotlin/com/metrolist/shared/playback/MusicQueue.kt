@@ -377,9 +377,7 @@ class MusicQueue {
         isShuffled = !isShuffled
         displayedEntries =
             prefix +
-            if (isShuffled && legacyShuffle) {
-                upcoming.shuffled()
-            } else if (isShuffled) {
+            if (isShuffled) {
                 val (recommendations, explicit) = upcoming.partition { it.song.queueSourceTitle.isRecommendationGeneratedQueueSource() }
                 explicit.shuffled() + recommendations
             } else {

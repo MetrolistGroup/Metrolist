@@ -34,6 +34,46 @@ class MusicQueueTest {
     }
 
     @Test
+    fun legacyShuffleKeepsAutoplayOutsideTheCollectionAcrossRepeatedToggles() {
+        val duplicate = song("duplicate")
+        val explicit = listOf(song("first"), duplicate, duplicate, song("last"))
+        val generated =
+            listOf(
+                song("radio").copy(queueSourceTitle = QUEUE_SOURCE_RECOMMENDED),
+                song("mix").copy(queueSourceTitle = QUEUE_SOURCE_AUTO_MIX),
+            )
+        val queue = MusicQueue().apply { setQueue(explicit + generated, 2) }
+        val current =
+            queue.state.value.entries[2]
+                .key
+
+        repeat(10) {
+            queue.toggleShuffle(legacyShuffle = true)
+            assertEquals(
+                current,
+                queue.state.value.entries[queue.currentIndex.value]
+                    .key,
+            )
+            assertEquals(generated, queue.items.value.takeLast(generated.size))
+            assertEquals(
+                explicit.groupingBy { it }.eachCount(),
+                queue.items.value
+                    .take(explicit.size)
+                    .groupingBy { it }
+                    .eachCount(),
+            )
+            queue.toggleShuffle(legacyShuffle = true)
+            assertEquals(explicit + generated, queue.items.value)
+            assertEquals(2, queue.currentIndex.value)
+            assertEquals(
+                current,
+                queue.state.value.entries[2]
+                    .key,
+            )
+        }
+    }
+
+    @Test
     fun legacyShuffleRoundTripPreservesSelectionIncludingNoCurrentSong() {
         val songs = listOf(song("first"), song("second"), song("third"))
         for (index in -1..songs.lastIndex) {
