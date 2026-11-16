@@ -93,6 +93,7 @@ import com.metrolist.android.ui.menu.PlaylistMenu
 import com.metrolist.android.ui.menu.SongMenu
 import com.metrolist.android.viewmodels.AutoPlaylistPresentationInput
 import com.metrolist.android.viewmodels.prepareAutoPlaylistSongs
+import com.metrolist.android.viewmodels.withSongSorting
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.collectionPlayCounts
 import com.metrolist.shared.db.entities.CachedAudioEntity
@@ -339,14 +340,12 @@ fun AutoPlaylistScreen(
     val isLikedCollection = currentType == "liked"
     val isTopCollection = currentType == "top100"
     val metadataRevision by SongMetadataState.revision.collectAsState()
-    val listeningTimes = if (playlistSort == PlaylistSongSort.LISTENING_TIME) SongMetadataState.listeningTimes else emptyMap()
 
     fun presentationInput() =
         AutoPlaylistPresentationInput(
             type = currentType,
             songs = songs,
             metadataRevision = metadataRevision,
-            listeningTimes = listeningTimes,
             collectionEntries = collectionEntries,
             query = collectionQuery,
             collectionSort = collectionSort,
@@ -355,9 +354,11 @@ fun AutoPlaylistScreen(
             playlistSort = playlistSort,
             playlistDirection = playlistSortDirection,
             topDirection = topDirection,
-            reorder = likedReorderMode,
             likedSongRecency = if (isLikedCollection) SongLikeState.likedSongRecency else emptyList(),
             downloadFilter = downloadFilterState,
+        ).withSongSorting(
+            locked = Settings.shared.playlistEditLock,
+            listeningTimes = { SongMetadataState.listeningTimes },
         )
 
     var preparedSongs by remember(currentType) { mutableStateOf<List<SongItem>>(emptyList()) }
