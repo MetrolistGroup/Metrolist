@@ -516,6 +516,10 @@ class HomeViewModel(
                                 currentState = currentState,
                                 cachedAllContent = cachedAllContent,
                                 cachedSelectedChipContent = cachedSelectedChipContent,
+                                pendingAllContent =
+                                    publishedPrimaryAllContent
+                                        ?.takeIf { it.first == contentLoadGeneration }
+                                        ?.second,
                             )
                     }
                     if (!filtersNeedRefresh) return@collectLatest
@@ -938,6 +942,10 @@ class HomeViewModel(
                         if (!isFiltered) preloadMoreSections()
                     } catch (e: CancellationException) {
                         throw e
+                    } catch (e: HomeLibraryRevisionChangedException) {
+                        if (generation == contentLoadGeneration) {
+                            loadHomeData(params = params, browseId = browseId, isRefresh = isRefresh)
+                        }
                     } catch (e: Exception) {
                         if (generation != contentLoadGeneration ||
                             sessionKey != GlobalYouTube.innerTube.sessionSnapshot().homeCacheSessionKey()
@@ -998,6 +1006,7 @@ class HomeViewModel(
                                     cachedAllContent,
                                     (primaryFailureSnapshot ?: failedState)
                                         .withLatestLibraryAndSpeedDialState(currentState)
+                                        .withLatestSongMetadataFrom(currentState)
                                         .withSpeedDialPins(latestSpeedDialPins, speedDialRecommendationItems),
                                     primaryContentPublished,
                                 )
@@ -1006,10 +1015,13 @@ class HomeViewModel(
                                 lastKnownLocaleSignature = "${locale.hl}:${locale.gl}"
                             }
                         } else if (primaryContentPublished) {
+                            val latestChipPrimarySnapshot =
+                                cachedSelectedChipContent?.takeIf { it.selectedChip == currentState.selectedChip }
+                                    ?: primaryFailureSnapshot
                             val failedChipSnapshot =
                                 homeSelectedChipCacheAfterAssemblyFailure(
                                     cachedSelectedChipContent,
-                                    primaryFailureSnapshot,
+                                    latestChipPrimarySnapshot?.withLatestSongMetadataFrom(currentState),
                                     failedState,
                                     primaryContentPublished,
                                 )
@@ -1887,6 +1899,11 @@ internal fun HomeViewModel.HomeUiState.withLatestLibraryAndSpeedDialState(
         speedDialSurprisePinned = latestState.speedDialSurprisePinned,
     )
 
+internal fun HomeViewModel.HomeUiState.withLatestSongMetadataFrom(latestState: HomeViewModel.HomeUiState): HomeViewModel.HomeUiState =
+    latestState.loadedHomeSongs().fold(this) { snapshot, song ->
+        snapshot.withUpdatedSongMetadata(song)
+    }
+
 internal fun isCurrentHomeLibraryRevision(
     snapshotRevision: Long,
     publishedRevision: Long,
@@ -1977,8 +1994,28 @@ internal fun homeContentAfterBlockedContentChange(
     currentState: HomeViewModel.HomeUiState,
     cachedAllContent: HomeViewModel.HomeUiState?,
     cachedSelectedChipContent: HomeViewModel.HomeUiState?,
+    pendingAllContent: HomeViewModel.HomeUiState? = null,
 ): HomeViewModel.HomeUiState =
-    homeContentForCurrentSelection(currentState, cachedAllContent, cachedSelectedChipContent).withoutBlockedContent()
+    (
+        when {
+            currentState.selectedChip == null && pendingAllContent != null -> {
+                pendingAllContent
+            }
+
+            currentState.selectedChip == null && currentState.isAllContentPending -> {
+                pendingAllContent ?: currentState
+            }
+
+            currentState.selectedChip == null &&
+                (currentState.isLoading || currentState.isRefreshing || currentState.isContentLoading || currentState.isRevalidating) -> {
+                cachedAllContent ?: currentState
+            }
+
+            else -> {
+                homeContentForCurrentSelection(currentState, cachedAllContent, cachedSelectedChipContent)
+            }
+        }
+    ).withoutBlockedContent()
 
 internal fun HomeViewModel.HomeUiState.withoutBlockedContent(): HomeViewModel.HomeUiState {
     val snapshot = BlockedContent.snapshot()
