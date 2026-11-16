@@ -246,6 +246,7 @@ import java.awt.Desktop
 import java.awt.EventQueue
 import java.awt.Frame
 import java.awt.GraphicsEnvironment
+import java.awt.Toolkit
 import java.awt.desktop.AppReopenedListener
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
@@ -672,6 +673,8 @@ private fun configureLinuxWindowIdentity() {
     if (!OsUtil.isLinux) return
     System.setProperty("awt.app.id", "Metrolist")
     runCatching {
+        // XToolkit's constructor names the X11 class after the creating thread, so create it here and then rename it.
+        Toolkit.getDefaultToolkit()
         val xToolkit = Class.forName("sun.awt.X11.XToolkit")
         xToolkit.getDeclaredField("awtAppClassName").apply {
             isAccessible = true
