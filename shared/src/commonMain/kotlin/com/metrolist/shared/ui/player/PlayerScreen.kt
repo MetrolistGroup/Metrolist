@@ -812,7 +812,7 @@ fun PlayerScreen(
         Settings.shared.preferWordSyncedLyrics,
     ) {
         if (shouldLoadLyrics && currentSong != null) {
-            viewModel.loadLyrics(currentSong)
+            viewModel.loadLyrics(currentSong, forceAiTranslation = uiState.manualAiTranslationEnabled)
         }
     }
 
