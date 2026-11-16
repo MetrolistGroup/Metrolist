@@ -2905,6 +2905,7 @@
     <string name="remember_shuffle_and_repeat_desc">Remember shuffle and repeat mode when restarting the app</string>
     <!-- Translators: Imperative action label for export playlist in the media item menus and playlist screen. -->
     <string name="export_playlist">Export playlist</string>
+    <string name="sync_playlist">Sync playlist</string>
     <!-- Translators: Error message about export in the collection export dialog. -->
     <string name="export_failed">Failed to export playlist</string>
     <!-- Translators: Option or section label for auto download on like in the settings. -->

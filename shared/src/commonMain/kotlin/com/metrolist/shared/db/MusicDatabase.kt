@@ -43,7 +43,10 @@ import com.metrolist.shared.db.entities.SortedSongArtistMap
 import com.metrolist.shared.db.entities.SpeedDialItem
 import com.metrolist.shared.scrobble.PendingScrobble
 
-const val DATABASE_VERSION = 66
+const val DATABASE_VERSION = 67
+
+internal val MIGRATION_66_67_SQL =
+    listOf("ALTER TABLE playlist ADD COLUMN remoteHeader TEXT")
 
 internal val MIGRATION_65_66_SQL =
     listOf(

@@ -4,9 +4,13 @@ import androidx.lifecycle.ViewModelStore
 import androidx.room3.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.metrolist.shared.db.MusicDatabase
+import com.metrolist.shared.db.cacheRemotePlaylist
 import com.metrolist.shared.db.entities.PlaylistEntity
 import com.metrolist.shared.db.entities.PlaylistSongMap
 import com.metrolist.shared.db.entities.SongEntity
+import com.metrolist.shared.model.PlaylistItem
+import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.playlistTotalDuration
 import com.metrolist.shared.settings.Settings
 import com.russhwolf.settings.MapSettings
 import kotlinx.coroutines.CompletableDeferred
@@ -20,6 +24,7 @@ import kotlinx.coroutines.test.setMain
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.setResourceReaderAndroidContext
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -32,6 +37,78 @@ import org.robolectric.annotation.Config
 @Config(manifest = Config.NONE, sdk = [33])
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalResourceApi::class)
 class PlaylistReorderTest {
+    @Test
+    fun openingStoredRemotePlaylistsDoesNotRequestThemAgain() =
+        runTest {
+            Settings.replaceSharedForTest(Settings(MapSettings()))
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val db =
+                Room
+                    .inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), MusicDatabase::class.java)
+                    .setDriver(AndroidSQLiteDriver())
+                    .build()
+            val store = ViewModelStore()
+            try {
+                for (id in listOf("PLfirst", "PLsecond")) {
+                    db.cacheRemotePlaylist(
+                        id,
+                        PlaylistItem(
+                            id,
+                            id,
+                            null,
+                            author = "Creator $id",
+                            authorId = "UC$id",
+                            authorThumbnail = "avatar",
+                            viewCount = "100 views",
+                        ),
+                        listOf(SongItem(id, id, null, emptyList(), null, duration = 123)),
+                    )
+                }
+                var requests = 0
+                val model =
+                    PlaylistViewModel(
+                        playlistId = "PLfirst",
+                        database = db,
+                        applicationScope = backgroundScope,
+                        repositoryProvider = {
+                            requests++
+                            error("Stored playlists must open without a request")
+                        },
+                    )
+                store.put("playlist", model)
+                awaitPlaylistState {
+                    !model.isLoading.value && model.songs.value
+                        .singleOrNull()
+                        ?.id == "PLfirst"
+                }
+                model.loadPlaylist("PLsecond")
+                awaitPlaylistState {
+                    !model.isLoading.value && model.songs.value
+                        .singleOrNull()
+                        ?.id == "PLsecond"
+                }
+                model.loadPlaylist("PLfirst")
+                awaitPlaylistState {
+                    !model.isLoading.value && model.songs.value
+                        .singleOrNull()
+                        ?.id == "PLfirst"
+                }
+                assertEquals(0, requests)
+                assertEquals("Creator PLfirst", model.playlistInfo.value?.author)
+                assertEquals("UCPLfirst", model.playlistInfo.value?.authorId)
+                assertEquals("avatar", model.playlistInfo.value?.authorThumbnail)
+                assertEquals("100 views", model.playlistInfo.value?.viewCount)
+                assertNull(model.page.value)
+                assertTrue(model.hasCompleteStoredSnapshot.value)
+                assertEquals(123L, playlistTotalDuration(model.durationSongs.value, hasMoreSongs = !model.hasCompleteStoredSnapshot.value))
+            } finally {
+                store.clear()
+                db.close()
+                Dispatchers.resetMain()
+                Settings.replaceSharedForTest(null)
+            }
+        }
+
     @Before
     fun initializeResources() {
         setResourceReaderAndroidContext(RuntimeEnvironment.getApplication())

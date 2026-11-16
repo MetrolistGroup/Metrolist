@@ -265,6 +265,8 @@ All add-to-playlist pickers share a sort preference independent of library sorti
 
 Playlist membership lookups and complete playlist loads share an account-bound five-minute cache. Acknowledged adds update it without extending expiry; removals, copies and failed edits invalidate it. Offline or incomplete results cannot establish that a song is absent. Local additions commit at most 100 songs at a time and report each committed prefix. Appends use the highest stored position, so gaps are valid.
 
+Complete saved remote playlists, including empty playlists and OLAK album playlists, open from Room on Android, desktop and iOS. Use **Sync playlist** in the playlist menu to fetch a new snapshot. Incomplete playlists finish loading and caching their pages. Editable snapshots also need server occurrence IDs before reuse. Desktop picker additions update cached membership even outside the current page, including acknowledged songs in a partial batch. The next read reconciles server occurrence IDs before removal or reorder. Dynamic YouTube mixes still refresh on open. Offline opening keeps the downloaded-song filter; recovery from a failed batch reorder can force a refresh.
+
 Song editor Save and Reset keep the editor open until persistence succeeds and disable dismissal while saving. Reset clears title and artist overrides, restores stored original metadata offline and preserves artist links.
 
 Artist Top tracks shows the first five songs of the songs shelf; the header arrow opens the full list. The library shelf uses a Material 3 gallery carousel. Videos use a carousel of masked 16:9 cards, shared by Home, browse and search shelves when every item is a video. Classification uses item metadata plus the artist page's section hints. Artist carousels apply each artist outline to the changing carousel mask rather than intersecting it with a fixed outline.
@@ -368,6 +370,8 @@ iOS lyrics support long-press selection and the shared image editor. Images are 
 ## Persistence
 
 The database uses [Room 3](https://developer.android.com/jetpack/androidx/releases/room3) with the Android system SQLite driver, the desktop JDBC driver and the iOS bundled driver. All platforms share the migration chain. Schema 62 and the historical Room 2 exports keep their identities, and migration tests build fixtures from those exports on every platform. Do not replace old exports. Keep migrations compatible with existing installs. Schema 59 uses numeric boolean defaults for Android SQLite before 3.23.
+
+Schema 67 stores complete remote playlist headers, including creator names, channel links, avatars, views and runtime. Older snapshots fetch once to fill the missing header before reuse. Android finishes this refresh without scrolling when all songs were already stored, and keeps the old snapshot if a page fails. Cached Android playlists use every stored song when computing total runtime.
 
 Pending scrobbles are rows in `pending_scrobble`. The first queue operation migrates valid entries from `pendingScrobblesJson` and clears it only after the insert succeeds; malformed entries move to `corruptPendingScrobblesJson`. Acknowledging a submission deletes only its row.
 

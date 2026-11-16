@@ -1,5 +1,6 @@
 package com.metrolist.shared.db
 
+import androidx.sqlite.execSQL
 import com.metrolist.innertubex.InnerTube
 import com.metrolist.innertubex.InnerTubeHttpException
 import com.metrolist.shared.api.LibraryItemsResult
@@ -11,7 +12,10 @@ import com.metrolist.shared.db.entities.PlaylistEntity
 import com.metrolist.shared.db.entities.PlaylistSongMap
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.canEdit
+import com.metrolist.shared.model.isSyncablePlaylistId
 import com.metrolist.shared.playlist.LibraryDeletionTracker
+import com.metrolist.shared.playlist.PlaylistChanges
 import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -22,6 +26,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
@@ -40,6 +45,164 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PlaylistSyncTest {
+    @Test
+    fun creatorMetadataSurvivesMigrationCachingAndDatabaseReopen() =
+        runBlocking {
+            val path = Files.createTempFile("playlist-header", ".db")
+            createHistoricalLibrary(path.toString(), 66, JdbcSQLiteDriver())
+            JdbcSQLiteDriver().open(path.toString()).use {
+                it.execSQL("UPDATE playlist SET browseId = 'PLcommunity', remoteSongCount = 1, isAutoSync = 1, isEditable = 0")
+            }
+            val header =
+                PlaylistItem(
+                    id = "PLcommunity",
+                    title = "Community playlist",
+                    thumbnail = "remote-cover",
+                    author = "Creator",
+                    authorId = "UCcreator",
+                    authorThumbnail = "creator-avatar",
+                    viewCount = "1,234 views",
+                    durationText = "4 minutes",
+                    subtitle = "Creator playlist",
+                    description = "Description",
+                    playEndpointParams = "play-params",
+                    radioEndpointParams = "radio-params",
+                )
+            var database = getDesktopDatabaseBuilder(path.toFile()).build()
+            try {
+                assertNull(database.cachedRemotePlaylistSections("PLcommunity"))
+                assertEquals(
+                    listOf("song"),
+                    database
+                        .dao()
+                        .playlistSongs("playlist")
+                        .first()
+                        .map { it.song.id },
+                )
+                database.cacheRemotePlaylist(
+                    "playlist",
+                    header,
+                    listOf(SongItem("song", "Song", null, emptyList(), null, duration = 240)),
+                )
+                database.close()
+                database = getDesktopDatabaseBuilder(path.toFile()).build()
+                assertEquals(header, database.dao().findPlaylistEntity("PLcommunity")!!.remoteHeader)
+                for (id in listOf("playlist", "PLcommunity", "VLPLcommunity")) {
+                    val restored = database.cachedRemotePlaylistSections(id)!!.getValue("header").single()
+                    assertEquals(header.copy(songCount = "1"), restored)
+                }
+                database.syncRemotePlaylists(listOf(PlaylistItem("PLcommunity", "Renamed", null, songCount = "1")))
+                assertEquals(
+                    header.copy(title = "Renamed", songCount = "1"),
+                    database.cachedRemotePlaylistSections("PLcommunity")!!.getValue("header").single(),
+                )
+            } finally {
+                database.close()
+                Files.deleteIfExists(path)
+            }
+        }
+
+    @Test
+    fun albumPlaylistSnapshotsCanBeReusedAndManuallySynced() =
+        runBlocking {
+            val path = Files.createTempFile("album-playlist-snapshot", ".db")
+            Files.delete(path)
+            val database = getDesktopDatabaseBuilder(path.toFile()).build()
+            val playlistId = "OLAK5uy_album"
+            var requests = 0
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        requests++
+                        val payload = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
+                        assertEquals("VL$playlistId", payload["browseId"]?.jsonPrimitive?.content)
+                        respond(
+                            """{"header":{"musicDetailHeaderRenderer":{"title":{"simpleText":"Updated album"}}},"contents":{"sectionListRenderer":{"contents":[{"musicPlaylistShelfRenderer":{"contents":[{"musicResponsiveListItemRenderer":{"flexColumns":[{"musicResponsiveListItemFlexColumnRenderer":{"text":{"runs":[{"text":"Updated song"}]}}}],"playlistItemData":{"videoId":"updated"}}}]}}]}}}""",
+                            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    },
+                ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+            try {
+                database.cacheRemotePlaylist(
+                    playlistId,
+                    PlaylistItem(playlistId, "Album", null),
+                    listOf(SongItem("cached", "Cached song", null, emptyList(), null)),
+                )
+                repeat(3) {
+                    for (id in listOf(playlistId, "VL$playlistId")) {
+                        val cached = database.cachedRemotePlaylistSections(id)!!
+                        val header = cached.getValue("header").single() as PlaylistItem
+                        assertTrue(header.id.isSyncablePlaylistId())
+                        assertFalse(header.canEdit)
+                        assertEquals(listOf("cached"), cached.playlistSongs().map { it.id })
+                    }
+                }
+                assertEquals(0, requests)
+                database.refreshStoredPlaylist(YouTubeRepository(InnerTube(client, retryDelay = {})), "VL$playlistId")
+                assertEquals(1, requests)
+                val refreshed = database.cachedRemotePlaylistSections(playlistId)!!
+                assertEquals("Updated album", (refreshed.getValue("header").single() as PlaylistItem).title)
+                assertEquals(listOf("updated"), refreshed.playlistSongs().map { it.id })
+                assertEquals(1, requests)
+            } finally {
+                client.close()
+                database.close()
+                Files.deleteIfExists(path)
+            }
+        }
+
+    @Test
+    fun storedSnapshotsKeepDuplicateOccurrencesAndEmptyPlaylistsUntilExplicitSync() =
+        runBlocking {
+            val path = Files.createTempFile("playlist-snapshot", ".db")
+            Files.delete(path)
+            val database = getDesktopDatabaseBuilder(path.toFile()).build()
+            var requests = 0
+            val client =
+                HttpClient(
+                    MockEngine {
+                        requests++
+                        respond(
+                            """{"header":{"musicDetailHeaderRenderer":{"title":{"simpleText":"Updated"}}},"contents":{"sectionListRenderer":{"contents":[{"musicPlaylistShelfRenderer":{"contents":[]}}]}}}""",
+                            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    },
+                ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+            try {
+                database.dao().upsert(PlaylistEntity(id = "LPsaved", name = "Saved", browseId = "PLsaved", remoteSongCount = 2))
+                assertNull(database.cachedRemotePlaylistSections("PLsaved"))
+                val song = SongItem("duplicate", "Song", null, emptyList(), null)
+                val header = PlaylistItem("PLsaved", "Saved", null)
+                database.cacheRemotePlaylist(
+                    "LPsaved",
+                    header,
+                    listOf(song.copy(playlistSetVideoId = "one"), song.copy(playlistSetVideoId = "two")),
+                )
+                repeat(3) {
+                    for (id in listOf("LPsaved", "PLsaved", "VLPLsaved")) {
+                        val cached = database.cachedRemotePlaylistSections(id)!!
+                        assertEquals(listOf("one", "two"), cached.playlistSongs().map { it.playlistSetVideoId })
+                    }
+                }
+                assertEquals(0, requests)
+                val repository = YouTubeRepository(InnerTube(client, retryDelay = {}))
+                val changed = async(start = CoroutineStart.UNDISPATCHED) { PlaylistChanges.flow.first() }
+                database.refreshStoredPlaylist(repository, "LPsaved")
+                assertEquals("PLsaved", changed.await())
+                assertEquals(1, requests)
+                val empty = database.cachedRemotePlaylistSections("PLsaved")!!
+                assertTrue(empty.playlistSongs().isEmpty())
+                assertEquals("Updated", (empty["header"]!!.single() as PlaylistItem).title)
+                assertEquals(1, requests)
+                database.dao().upsert(database.dao().findPlaylistEntity("PLsaved")!!.copy(remoteSongCount = 10))
+                assertNull(database.cachedRemotePlaylistSections("PLsaved"))
+            } finally {
+                client.close()
+                database.close()
+                Files.deleteIfExists(path)
+            }
+        }
+
     @Test
     fun remoteRefreshUpdatesEveryStoredCopyWithoutMergingItsSongs() =
         runBlocking {

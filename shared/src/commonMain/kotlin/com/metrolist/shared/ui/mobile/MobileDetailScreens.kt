@@ -35,13 +35,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.metrolist.shared.api.PlaylistNotFoundException
-import com.metrolist.shared.api.PlaylistPage
 import com.metrolist.shared.api.playlistSongs
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.cacheRemotePlaylist
 import com.metrolist.shared.db.cachedRemotePlaylistSections
 import com.metrolist.shared.db.entities.toSongItem
-import com.metrolist.shared.db.loadAndCachePlaylistPage
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.error
 import com.metrolist.shared.generated.resources.error_occurred
@@ -107,6 +105,7 @@ import com.metrolist.shared.viewmodels.AboutArtistViewModel
 import com.metrolist.shared.viewmodels.ArtistSubscriptionState
 import com.metrolist.shared.viewmodels.PlaylistPageLoader
 import com.metrolist.shared.viewmodels.artistCatalogTitles
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -420,9 +419,8 @@ internal fun MobilePlaylistScreen(
     var pageFailed by remember(loader) { mutableStateOf(false) }
     var editingPrepared by remember(loader) { mutableStateOf(false) }
     var cachedSections by remember(loader) { mutableStateOf<Map<String, List<YTItem>>?>(null) }
-    var syncedPage by remember(loader) { mutableStateOf<PlaylistPage?>(null) }
     var storedRemote by remember(loader) { mutableStateOf(false) }
-    val playlistData = syncedPage?.sections ?: page?.sections ?: cachedSections
+    val playlistData = page?.sections ?: cachedSections
     val selection = rememberSelectionState(playlistId)
     var selectionQuery by remember(playlistId) { mutableStateOf("") }
     val playbackState by remember(playbackController) {
@@ -481,22 +479,13 @@ internal fun MobilePlaylistScreen(
         loadError = null
         try {
             val started = TimeSource.Monotonic.markNow()
-            cachedSections = withContext(Dispatchers.Default) { database.cachedRemotePlaylistSections(playlistId) }
+            cachedSections =
+                withContext(Dispatchers.Default) {
+                    if (PlaybackNetworkStateStore.current.connected) database.cachedRemotePlaylistSections(playlistId) else null
+                }
             Logger.d("MobilePlaylist", "cached lookup ms=${started.elapsedNow().inWholeMilliseconds} hit=${cachedSections != null}")
             if (cachedSections != null) {
                 isLoading = false
-                editMutex.withLock {
-                    val refreshStarted = TimeSource.Monotonic.markNow()
-                    val refreshed =
-                        withContext(Dispatchers.Default) {
-                            database.loadAndCachePlaylistPage(GlobalYouTubeRepository.instance, playlistId)
-                        }
-                    Logger.d(
-                        "MobilePlaylist",
-                        "full refresh ms=${refreshStarted.elapsedNow().inWholeMilliseconds} songs=${refreshed.songs.size}",
-                    )
-                    if (!refreshed.isOffline) syncedPage = refreshed
-                }
             } else {
                 val fetchStarted = TimeSource.Monotonic.markNow()
                 withContext(Dispatchers.Default) { loader.loadFirst() }
@@ -526,7 +515,6 @@ internal fun MobilePlaylistScreen(
         } catch (error: Exception) {
             if (error is PlaylistNotFoundException) {
                 cachedSections = null
-                syncedPage = null
                 loadError = missingPlaylistText
             } else if (cachedSections == null) {
                 loadError = errorText
@@ -555,7 +543,7 @@ internal fun MobilePlaylistScreen(
             try {
                 val complete =
                     reorder.entries.takeIf { it.isNotEmpty() }?.map { it.first }
-                        ?: syncedPage?.songs ?: cachedSections?.playlistSongs()
+                        ?: cachedSections?.playlistSongs()
                         ?: withContext(Dispatchers.Default) { loader.complete().songs }
                 pageFailed = false
                 action(BlockedContent.filterSongs(complete))
@@ -619,7 +607,7 @@ internal fun MobilePlaylistScreen(
                     try {
                         editMutex.withLock {
                             if (!editingPrepared) {
-                                val complete = syncedPage?.songs ?: cachedSections?.playlistSongs() ?: loader.complete().songs
+                                val complete = cachedSections?.playlistSongs() ?: loader.complete().songs
                                 database.cacheRemotePlaylist(playlistId, playlist, complete)
                                 val stored = checkNotNull(database.dao().findPlaylistEntity(playlistId))
                                 reorder.update(
@@ -727,7 +715,7 @@ internal fun MobilePlaylistScreen(
                         modifier = Modifier.padding(vertical = 8.dp),
                     )
                 },
-                durationSongs = (syncedPage ?: page)?.takeUnless { it.isOffline }?.songs.orEmpty(),
+                durationSongs = page?.takeUnless { it.isOffline }?.songs ?: cachedSections?.playlistSongs().orEmpty(),
                 hasMoreSongs = page?.hasMore == true,
                 hiddenSongCount = loadedSongs.size - songs.size,
                 paginationContent = {

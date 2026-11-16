@@ -407,6 +407,7 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
                                         id,
                                         PlaylistAlbumState.pendingPlaylistThumbnail,
                                         addToHistory = false,
+                                        forceRefresh = true,
                                     )
                                 }
                             },

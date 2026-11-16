@@ -188,6 +188,7 @@ fun PlaylistScreen(
     val preview = remember(playlistId) { CollectionPreviews.playlist(playlistId) }
     val songs by viewModel.songs
     val durationSongs by viewModel.durationSongs
+    val hasCompleteStoredSnapshot by viewModel.hasCompleteStoredSnapshot
     val playlistTrackCount by viewModel.playlistTrackCount
     val suggestions by viewModel.suggestions
     val downloadedSongIds by viewModel.downloadedSongIds
@@ -616,7 +617,8 @@ fun PlaylistScreen(
                     durationSongs =
                         durationSongs
                             .takeIf {
-                                page?.let { !it.isOffline } ?: (playlistInfo?.isLocal == true || playlistInfo?.id == "liked")
+                                page?.let { !it.isOffline }
+                                    ?: (hasCompleteStoredSnapshot || playlistInfo?.isLocal == true || playlistInfo?.id == "liked")
                             }.orEmpty(),
                     hasMoreSongs = page?.hasMore == true,
                     hiddenSongCount = (playlistTrackCount - songs.size).coerceAtLeast(0),

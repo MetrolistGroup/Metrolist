@@ -70,5 +70,6 @@ internal fun getDesktopDatabaseBuilder(dbFile: File): RoomDatabase.Builder<Music
             MIGRATION_63_64,
             MIGRATION_64_65,
             MIGRATION_65_66,
+            MIGRATION_66_67,
         )
 }

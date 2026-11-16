@@ -8,6 +8,7 @@ import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.QueryRecordingDriver
 import com.metrolist.shared.db.cacheRemotePlaylist
+import com.metrolist.shared.db.cachedRemotePlaylistSections
 import com.metrolist.shared.db.entities.ArtistEntity
 import com.metrolist.shared.db.entities.PlaylistEntity
 import com.metrolist.shared.db.entities.PlaylistSongMap
@@ -15,6 +16,7 @@ import com.metrolist.shared.db.entities.SongArtistMap
 import com.metrolist.shared.db.entities.SongEntity
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.db.getDesktopDatabaseBuilder
+import com.metrolist.shared.db.loadAndCachePlaylistPage
 import com.metrolist.shared.db.syncRemotePlaylists
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.ArtistTiny
@@ -1821,6 +1823,78 @@ class PlaylistMutationsTest {
                     .first()
                     .isEmpty(),
             )
+        }
+
+    @Test
+    fun addedRemoteOccurrencesReloadTheirServerIdsBeforeReorderAndRemoval() = checkAddedRemoteOccurrence(remoteOnly = false)
+
+    @Test
+    fun remoteOnlyAddsReloadTheStoredSnapshotBeforeReorderAndRemoval() = checkAddedRemoteOccurrence(remoteOnly = true)
+
+    private fun checkAddedRemoteOccurrence(remoteOnly: Boolean) =
+        withDatabase { database ->
+            val song = createSongItem("same", "Song", "original")
+            database.cacheRemotePlaylist("PLadd", PlaylistItem("PLadd", "Playlist", null, isEditable = true), listOf(song))
+            val serverIds = mutableListOf("original")
+            val edits = mutableListOf<String>()
+            val engine =
+                MockEngine { request ->
+                    if (request.url.encodedPath.endsWith("/browse/edit_playlist")) {
+                        val action =
+                            Json
+                                .parseToJsonElement(
+                                    (request.body as TextContent).text,
+                                ).jsonObject["actions"]!!
+                                .jsonArray
+                                .single()
+                                .jsonObject
+                        val type = action["action"]!!.jsonPrimitive.content
+                        edits += type
+                        if (type == "ACTION_ADD_VIDEO") {
+                            serverIds += "added"
+                        } else {
+                            assertEquals("added", action["setVideoId"]!!.jsonPrimitive.content)
+                        }
+                        respondJson(PLAYLIST_EDIT_SUCCEEDED)
+                    } else {
+                        val rows =
+                            serverIds.joinToString(",") { id ->
+                                """{"musicResponsiveListItemRenderer":{"playlistItemData":{"videoId":"same","playlistSetVideoId":"$id"},
+                        "flexColumns":[{"musicResponsiveListItemFlexColumnRenderer":{"text":{"simpleText":"Song"}}}]}}"""
+                            }
+                        respondJson(
+                            """{"header":{"musicEditablePlaylistDetailHeaderRenderer":{"header":{"musicDetailHeaderRenderer":{"title":{"simpleText":"Playlist"}}}}},
+                        "contents":{"sectionListRenderer":{"contents":[{"musicPlaylistShelfRenderer":{"contents":[$rows]}}]}}}""",
+                        )
+                    }
+                }
+            val repository = authenticatedRepository(engine)
+            if (remoteOnly) {
+                repository.addToPlaylist("PLadd", song.id, allowDuplicate = true).getOrThrow()
+                assertEquals(1, database.dao().findPlaylistEntity("PLadd")!!.remoteSongCount)
+                assertEquals(listOf("original"), database.dao().playlistSongMaps("PLadd", 0).map { it.setVideoId })
+            } else {
+                addSongToStoredPlaylist(database, repository, "PLadd", song, allowDuplicate = true).getOrThrow()
+                assertEquals(2, database.dao().findPlaylistEntity("PLadd")!!.remoteSongCount)
+                assertNull(
+                    database
+                        .dao()
+                        .playlistSongMaps("PLadd", 0)
+                        .last()
+                        .setVideoId,
+                )
+                assertNull(database.cachedRemotePlaylistSections("PLadd"))
+            }
+
+            database.loadAndCachePlaylistPage(repository, "PLadd")
+            assertTrue(database.cachedRemotePlaylistSections("PLadd") != null)
+            val rows = database.dao().playlistSongs("PLadd").first()
+            assertEquals(listOf("original", "added"), rows.map { it.map.setVideoId })
+            moveSongInStoredPlaylist(database, repository, "PLadd", rows[1].map.id, rows[0].map.id).getOrThrow()
+            assertEquals(listOf("added", "original"), database.dao().playlistSongMaps("PLadd", 0).map { it.setVideoId })
+            removeSongsFromStoredPlaylist(database, repository, "PLadd", listOf(rows[1].toSongItem())).getOrThrow()
+            assertEquals(listOf("original"), database.dao().playlistSongMaps("PLadd", 0).map { it.setVideoId })
+            assertEquals(3, edits.size)
         }
 
     @Test

@@ -542,6 +542,7 @@ fun playlistMediaMenuModel(
     additionalActions: List<PlayerMenuAction> = emptyList(),
 ): MediaMenuModel {
     val exportPlaylistLabel = stringResource(Res.string.export_playlist)
+    val syncPlaylistAction = rememberPlaylistSyncAction(playlist, onDismiss)
     val selectSongsLabel = stringResource(Res.string.select_songs)
     val renameLabel = stringResource(Res.string.rename)
     val renameDesc = stringResource(Res.string.rename_playlist_description)
@@ -576,6 +577,7 @@ fun playlistMediaMenuModel(
                     onExport?.let {
                         action(MetrolistIcons.Outlined.Share, exportPlaylistLabel, onDismiss, it)
                     },
+                    syncPlaylistAction,
                 ),
                 listOfNotNull(
                     onSelect?.let {
