@@ -769,7 +769,7 @@
     <string name="library_offline_songs">Офлайн песни</string>
     <string name="library_top_songs">Ваши топ песни</string>
     <string name="library_uploaded_songs">Ваши загруженные песни</string>
-    <string name="listen_together_add_custom_server">Добавить пользовательский сервер</string>
+    <string name="listen_together_add_custom_server">Добавить свой сервер</string>
     <string name="listen_together_add_queue_title">Добавить %1$s?</string>
     <string name="listen_together_server">Сервер</string>
     <string name="listen_together_servers">Сервера</string>
@@ -2668,4 +2668,20 @@
     <string name="density_massive">Гигантский (200%)</string>
     <string name="density_huge">Огромный (175%)</string>
     <string name="density_extra_large">Очень крупный (150%)</string>
+    <string name="lyrics_romanization_larger_text">Крупнее: Романизация или текст песни</string>
+    <string name="lyrics_romanization_larger_text_description">Выберите, что отображать крупнее при одновременном показе текста песни и романизации.</string>
+    <string name="lyrics_romanization_show_original">Показывать оригинал</string>
+    <string name="lyrics_romanization_show_original_description">Отображать строку оригинала ниже</string>
+    <string name="lyrics_romanization_show_romanization">Показывать романизацию</string>
+    <string name="lyrics_romanization_show_romanization_description">Отображать романизацию под текстом песни</string>
+    <string name="sync_playlist">Синхронизировать плейлист</string>
+    <string name="cast_stream_port_unavailable">Не удалось открыть TCP-порт 57643 для трансляции. Убедитесь, что эта сеть доступна и порт не используется другим приложением.</string>
+    <string name="cast_stream_unreachable">Колонка не запросила аудиопоток. Убедитесь, что брандмауэр разрешает входящие подключения от колонки на TCP-порт 57643 и оба устройства находятся в одной сети.</string>
+    <string name="listen_together_location_poland">Польша</string>
+    <string name="listen_together_location_custom">Свой</string>
+    <string name="listen_together_custom_server_name">Свой сервер</string>
+    <string name="listen_together_custom_server_maintainer">Пользователь</string>
+    <string name="desktop_tray_toggle_on_click_desc_mac">Щелчок правой кнопкой мыши по значку в трее откроет или скроет окно Metrolist</string>
+    <string name="desktop_omarchy_unsupported">Metrolist не работает на Omarchy. Используйте другой дистрибутив Linux, Windows 10 и выше или macOS.</string>
+    <string name="learn_more">Узнать больше</string>
 </resources>
