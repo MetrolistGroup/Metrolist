@@ -10,6 +10,7 @@ import com.metrolist.shared.network.bodyAsBytesLimited
 import com.metrolist.shared.network.createHttpClient
 import com.metrolist.shared.youtube.playback.PlaybackEventKind
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
+import io.ktor.client.HttpClient
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.prepareGet
 import io.ktor.http.isSuccess
@@ -27,22 +28,7 @@ internal expect fun removeLegacyJapaneseDictionary()
 object LyricsRomanizer {
     private val rules = GlyphmindRomanizer()
     private val httpClient by lazy { createHttpClient() }
-    private val stored by lazy {
-        GlyphmindRomanizer(
-            DictionaryPacks(glyphmindStorageDirectory()) { pack ->
-                httpClient
-                    .prepareGet(pack.url) {
-                        timeout {
-                            requestTimeoutMillis = 60_000
-                            socketTimeoutMillis = 30_000
-                        }
-                    }.execute { response ->
-                        check(response.status.isSuccess()) { "Dictionary request failed: ${response.status}" }
-                        checkNotNull(response.bodyAsBytesLimited(pack.size.toInt())) { "Dictionary exceeds pinned size" }
-                    }
-            },
-        )
-    }
+    private val stored by lazy { createDictionaryRomanizer(glyphmindStorageDirectory(), httpClient) }
 
     private fun engine(): GlyphmindRomanizer =
         try {
@@ -60,11 +46,13 @@ object LyricsRomanizer {
     internal suspend fun prepare(
         fullText: String,
         enabledLanguages: Set<String>,
+        romanizer: () -> GlyphmindRomanizer = { stored },
+        removeLegacyDictionary: () -> Unit = ::removeLegacyJapaneseDictionary,
     ): Boolean =
         withContext(Dispatchers.Default) {
             try {
-                stored.prepareDictionariesIfNeeded(fullText, enabledLanguages).also { ready ->
-                    if (ready) removeLegacyJapaneseDictionary()
+                romanizer().prepareDictionariesIfNeeded(fullText, enabledLanguages).also { ready ->
+                    if (ready) removeLegacyDictionary()
                 }
             } catch (error: CancellationException) {
                 throw error
@@ -108,6 +96,25 @@ object LyricsRomanizer {
 
     fun romanizeKana(text: String): String = rules.romanizeKana(text)
 }
+
+internal fun createDictionaryRomanizer(
+    storageDirectory: String,
+    httpClient: HttpClient,
+): GlyphmindRomanizer =
+    GlyphmindRomanizer(
+        DictionaryPacks(storageDirectory) { pack ->
+            httpClient
+                .prepareGet(pack.url) {
+                    timeout {
+                        requestTimeoutMillis = 60_000
+                        socketTimeoutMillis = 30_000
+                    }
+                }.execute { response ->
+                    check(response.status.isSuccess()) { "Dictionary request failed: ${response.status}" }
+                    checkNotNull(response.bodyAsBytesLimited(pack.size.toInt())) { "Dictionary exceeds pinned size" }
+                }
+        },
+    )
 
 internal suspend fun prepareRomanizationDictionaries(
     fullText: String,

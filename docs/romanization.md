@@ -44,4 +44,8 @@ Completed cached translations survive detector-policy changes when source, targe
 
 Run shared iOS compilation and simulator tests on macOS because Metrolist's other native interop dependencies require Apple SDKs. Glyphmind itself publishes all Apple klibs on Linux. Its repository owns the tokenizer oracle, romanizer regression tests, pack installation failure tests and held-out model check.
 
+Metrolist's `GlyphmindDictionaryWiringTest` runs on desktop and Android host tests with temporary storage and Ktor MockEngine. It covers HTTP status and size checks, a verified install, cancellation and cleanup of the legacy directory.
+
+The bundled upstream `NOTICE.md` and `LICENSE` stay at `files/licenses/glyphmind/`; the retained third-party texts sit in its `licenses/` subdirectory, matching the notice. Shared JAR verification checks those references and packaged files; release verification checks the retained files in the final package.
+
 JitPack serves the library as `com.github.nyxiereal.glyphmind:glyphmind:0.1.0`. The JitPack repository in `settings.gradle.kts` is scoped to that group.
