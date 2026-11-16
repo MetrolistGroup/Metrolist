@@ -6,6 +6,11 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
+import io.ktor.utils.io.ByteReadChannel
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -54,6 +59,146 @@ class AiModelCatalogTest {
                         .id,
                 )
                 assertEquals(2, requests)
+            }
+        }
+
+    @Test
+    fun concurrentValidationSharesProviderAndPricingRequests() =
+        runBlocking {
+            val preset = AiProviderPresets.find("OpenAI")!!
+            val pricingStarted = CompletableDeferred<Unit>()
+            val releasePricing = CompletableDeferred<Unit>()
+            var providerRequests = 0
+            var pricingRequests = 0
+            HttpClient(
+                MockEngine { request ->
+                    if (request.url.host == "models.dev") {
+                        pricingRequests++
+                        pricingStarted.complete(Unit)
+                        releasePricing.await()
+                        respond("""{"openai":{"models":{"chat":{"cost":{"input":0.1,"output":0.2}}}}}""")
+                    } else {
+                        providerRequests++
+                        respond("""{"data":[{"id":"chat"}]}""")
+                    }
+                },
+            ).use { client ->
+                val catalog = AiModelCatalog(client)
+                val first = async { catalog.validatedModel(preset, "key", preset.endpoint, "chat") }
+                pricingStarted.await()
+                val others =
+                    List(7) { async(start = CoroutineStart.UNDISPATCHED) { catalog.models(preset, "key", preset.endpoint).getOrThrow() } }
+                releasePricing.complete(Unit)
+                assertEquals("chat", first.await())
+                assertTrue(others.awaitAll().all { it.single().inputUsdPerMTok == 0.1 })
+                assertEquals(1, providerRequests)
+                assertEquals(1, pricingRequests)
+                catalog.models(preset, "key", preset.endpoint, refresh = true).getOrThrow()
+                catalog.models(preset, "other-key", preset.endpoint).getOrThrow()
+                assertEquals(3, providerRequests)
+                assertEquals(1, pricingRequests)
+            }
+        }
+
+    @Test
+    fun pricingCatalogIsSharedAcrossProvidersAndIgnoresUnusedMetadata() =
+        runBlocking {
+            var pricingRequests = 0
+            HttpClient(
+                MockEngine { request ->
+                    if (request.url.host == "models.dev") {
+                        pricingRequests++
+                        respond(
+                            """{"unused":{"description":{"nested":[1,2,3]}},
+                            "openai":{"documentation":{"nested":[1,2,3]},"models":{
+                            "chat":{"name":"Chat","cost":{"input":0.1,"output":0.2,"extra":[1,2]},"limit":{"context":1000},"unused":{"nested":[1,2,3]}},
+                            "expired":{"expiration_date":"2020-01-01"},
+                            "image":{"modalities":{"output":["image"]}}}},
+                            "groq":{"models":{"chat":{"cost":{"input":0.2,"output":0.3}}}}}""",
+                        )
+                    } else {
+                        respond("""{"data":[{"id":"chat"},{"id":"expired"},{"id":"image"}]}""")
+                    }
+                },
+            ).use { client ->
+                val catalog = AiModelCatalog(client)
+                for ((provider, cost) in listOf("OpenAI" to 0.1, "Groq" to 0.2)) {
+                    val preset = AiProviderPresets.find(provider)!!
+                    val models = catalog.models(preset, "key", preset.endpoint).getOrThrow()
+                    assertEquals(cost, models.first { it.id == "chat" }.inputUsdPerMTok)
+                    if (provider == "OpenAI") assertEquals(listOf("chat"), models.map { it.id })
+                }
+                assertEquals(1, pricingRequests)
+            }
+        }
+
+    @Test
+    fun oversizedCatalogsDoNotInvalidateSavedModels() =
+        runBlocking {
+            val preset = AiProviderPresets.find("OpenAI")!!
+            HttpClient(
+                MockEngine {
+                    val body = " ".repeat(AiModelCatalog.MODEL_RESPONSE_LIMIT_BYTES) + """{"data":[{"id":"replacement"}]}"""
+                    respond(body, headers = headersOf(HttpHeaders.ContentLength, body.length.toString()))
+                },
+            ).use { client ->
+                val catalog = AiModelCatalog(client)
+                assertTrue(catalog.models(preset, "key", preset.endpoint).isFailure)
+                assertEquals("saved", catalog.validatedModel(preset, "key", preset.endpoint, "saved"))
+            }
+        }
+
+    @Test
+    fun oversizedPricingWithoutContentLengthKeepsProviderModels() =
+        runBlocking {
+            val preset = AiProviderPresets.find("OpenAI")!!
+            HttpClient(
+                MockEngine { request ->
+                    if (request.url.host == "models.dev") {
+                        respond(ByteReadChannel(" ".repeat(AiModelCatalog.MODEL_RESPONSE_LIMIT_BYTES) + """{"openai":{"models":{}}}"""))
+                    } else {
+                        respond("""{"data":[{"id":"chat"}]}""")
+                    }
+                },
+            ).use { client ->
+                val catalog = AiModelCatalog(client)
+                assertEquals(listOf("chat"), catalog.models(preset, "key", preset.endpoint).getOrThrow().map { it.id })
+            }
+        }
+
+    @Test
+    fun cancellingACatalogLoadAllowsTheNextCallToRetry() =
+        runBlocking {
+            val preset = AiProviderPresets.find("OpenAI")!!
+            val started = CompletableDeferred<Unit>()
+            val cancelled = CompletableDeferred<Unit>()
+            var pricingRequests = 0
+            HttpClient(
+                MockEngine { request ->
+                    if (request.url.host == "models.dev") {
+                        pricingRequests++
+                        if (pricingRequests == 1) {
+                            started.complete(Unit)
+                            try {
+                                CompletableDeferred<Unit>().await()
+                            } finally {
+                                cancelled.complete(Unit)
+                            }
+                        }
+                        respond("""{"openai":{"models":{"chat":{}}}}""")
+                    } else {
+                        respond("""{"data":[{"id":"chat"}]}""")
+                    }
+                },
+            ).use { client ->
+                val catalog = AiModelCatalog(client)
+                val first = async { catalog.models(preset, "key", preset.endpoint) }
+                started.await()
+                first.cancel()
+                first.join()
+                cancelled.await()
+                assertEquals(listOf("chat"), catalog.models(preset, "key", preset.endpoint).getOrThrow().map { it.id })
+                assertEquals(2, pricingRequests)
             }
         }
 
