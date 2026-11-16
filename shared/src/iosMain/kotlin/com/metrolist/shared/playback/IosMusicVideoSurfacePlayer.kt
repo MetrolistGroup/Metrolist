@@ -94,7 +94,7 @@ internal class IosMusicVideoSurfacePlayer(
         isForeground: Boolean,
     ) {
         if (closed) return
-        foreground = isForeground
+        setForeground(isForeground)
         if (expectingProgress != playing) {
             expectingProgress = playing
             watchdog.reset()
@@ -108,8 +108,19 @@ internal class IosMusicVideoSurfacePlayer(
         }
     }
 
+    fun setForeground(isForeground: Boolean) {
+        if (closed || foreground == isForeground) return
+        foreground = isForeground
+        if (!isForeground) {
+            expectingProgress = false
+            watchdog.reset()
+            player.pause()
+        }
+    }
+
     fun applyPendingSeek() {
-        if (closed || !foreground || seekInFlight || player.currentItem?.status != AVPlayerItemStatusReadyToPlay) return
+        val itemReady = player.currentItem?.status == AVPlayerItemStatusReadyToPlay
+        if (closed || !canApplyMusicVideoSeek(foreground, seekInFlight, itemReady)) return
         val sinceLastSeekMs = seekCooldownStartedAt?.elapsedNow()?.inWholeMilliseconds
         if (sinceLastSeekMs != null && sinceLastSeekMs < SEEK_RETRY_COOLDOWN_MS) return
         val currentMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong()

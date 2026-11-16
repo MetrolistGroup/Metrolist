@@ -77,10 +77,12 @@ internal actual fun MobileMusicVideoSurface(
         val center = NSNotificationCenter.defaultCenter
         val activeObserver =
             center.addObserverForName(UIApplicationDidBecomeActiveNotification, null, NSOperationQueue.mainQueue) {
+                video.setForeground(true)
                 foreground = true
             }
         val inactiveObserver =
             center.addObserverForName(UIApplicationWillResignActiveNotification, null, NSOperationQueue.mainQueue) {
+                video.setForeground(false)
                 foreground = false
             }
         onDispose {
