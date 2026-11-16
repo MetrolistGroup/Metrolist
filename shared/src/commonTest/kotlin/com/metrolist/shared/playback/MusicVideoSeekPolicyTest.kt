@@ -58,4 +58,18 @@ class MusicVideoSeekPolicyTest {
         assertTrue(isMaterialMusicVideoTargetChange(targetDeltaMs = 8_000L, expectedPlaybackAdvanceMs = 1_000L, toleranceMs = 1_500L))
         assertTrue(isMaterialMusicVideoTargetChange(targetDeltaMs = -4_000L, expectedPlaybackAdvanceMs = 1_000L, toleranceMs = 1_500L))
     }
+
+    @Test
+    fun repeatedSlowDriftCorrectionsStopUntilTheNextUserSeek() {
+        val policy = MusicVideoDriftRetryPolicy(slowSeekThresholdMs = 1_500L, maximumSlowSeeks = 2)
+
+        assertTrue(policy.shouldRetry(isUserSeek = false))
+        policy.recordSeek(2_000L)
+        assertTrue(policy.shouldRetry(isUserSeek = false))
+        policy.recordSeek(2_000L)
+        assertFalse(policy.shouldRetry(isUserSeek = false))
+        assertTrue(policy.shouldRetry(isUserSeek = true))
+        policy.reset()
+        assertTrue(policy.shouldRetry(isUserSeek = false))
+    }
 }

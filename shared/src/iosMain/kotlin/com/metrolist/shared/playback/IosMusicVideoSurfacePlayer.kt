@@ -41,6 +41,7 @@ internal class IosMusicVideoSurfacePlayer(
     private var surfaceGeneration = 0L
     private var attachedSurfaceGeneration: Long? = null
     private val seekLifecycle = MusicVideoSeekLifecycle()
+    private val driftRetryPolicy = MusicVideoDriftRetryPolicy(SEEK_POST_SEEK_DRIFT_TOLERANCE_MS, MAX_SLOW_SEEK_CORRECTIONS)
     private var latestTargetPositionMs = 0L
     private var latestTargetUpdatedAt: TimeMark? = null
     private var userSeekPending = false
@@ -118,6 +119,7 @@ internal class IosMusicVideoSurfacePlayer(
         val targetUpdateElapsedMs = latestTargetUpdatedAt?.elapsedNow()?.inWholeMilliseconds ?: 0L
         val expectedPlaybackAdvanceMs = if (expectingProgress) (targetUpdateElapsedMs * playbackSpeed).toLong() else 0L
         if (isMaterialMusicVideoTargetChange(targetDeltaMs, expectedPlaybackAdvanceMs, SEEK_USER_TARGET_CHANGE_TOLERANCE_MS)) {
+            driftRetryPolicy.reset()
             userSeekPending = true
             seekLifecycle.markUnsynchronized()
         }
@@ -141,10 +143,12 @@ internal class IosMusicVideoSurfacePlayer(
             cancelPendingSeek()
             userSeekPending = false
             seekCooldownStartedAt = null
+            driftRetryPolicy.reset()
             player.pause()
         } else if (!wasForeground && isForeground) {
             userSeekPending = false
             seekCooldownStartedAt = null
+            driftRetryPolicy.reset()
         }
     }
 
@@ -162,10 +166,15 @@ internal class IosMusicVideoSurfacePlayer(
             seekLifecycle.markSynchronized()
             return
         }
+        if (!driftRetryPolicy.shouldRetry(userSeekPending)) {
+            seekLifecycle.markSynchronized()
+            return
+        }
         userSeekPending = false
         val currentSeekGeneration = seekLifecycle.beginSeek() ?: return
         val target = CMTimeMakeWithSeconds(targetPositionMs / 1000.0, 600)
         val zero = CMTimeMakeWithSeconds(0.0, 600)
+        val seekStartedAt = TimeSource.Monotonic.markNow()
         player.seekToTime(target, toleranceBefore = zero, toleranceAfter = zero) { finished ->
             if (!seekLifecycle.isCurrentSeek(currentSeekGeneration)) return@seekToTime
             if (!seekLifecycle.completeSeek(currentSeekGeneration, finished)) {
@@ -179,6 +188,7 @@ internal class IosMusicVideoSurfacePlayer(
                 }
                 return@seekToTime
             }
+            driftRetryPolicy.recordSeek(seekStartedAt.elapsedNow().inWholeMilliseconds)
             completedSeekGeneration++
             seekCooldownStartedAt = TimeSource.Monotonic.markNow()
             if (userSeekPending) {
@@ -240,6 +250,7 @@ internal class IosMusicVideoSurfacePlayer(
         const val SEEK_POST_SEEK_DRIFT_TOLERANCE_MS = 1_500L
         const val SEEK_USER_TARGET_CHANGE_TOLERANCE_MS = 1_500L
         const val SEEK_RETRY_COOLDOWN_MS = 2_000L
+        const val MAX_SLOW_SEEK_CORRECTIONS = 2
     }
 
     private fun cancelPendingSeek() {

@@ -59,3 +59,20 @@ internal fun isMaterialMusicVideoTargetChange(
     expectedPlaybackAdvanceMs: Long,
     toleranceMs: Long,
 ): Boolean = kotlin.math.abs(targetDeltaMs - expectedPlaybackAdvanceMs) > toleranceMs
+
+internal class MusicVideoDriftRetryPolicy(
+    private val slowSeekThresholdMs: Long,
+    private val maximumSlowSeeks: Int,
+) {
+    private var consecutiveSlowSeeks = 0
+
+    fun recordSeek(durationMs: Long) {
+        consecutiveSlowSeeks = if (durationMs > slowSeekThresholdMs) consecutiveSlowSeeks + 1 else 0
+    }
+
+    fun shouldRetry(isUserSeek: Boolean): Boolean = isUserSeek || consecutiveSlowSeeks < maximumSlowSeeks
+
+    fun reset() {
+        consecutiveSlowSeeks = 0
+    }
+}
