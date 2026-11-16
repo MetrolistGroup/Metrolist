@@ -168,10 +168,19 @@ fun lyricsCuratorUrl(
 private fun isUnisonLyrics(
     provider: String?,
     lyricSource: String?,
-): Boolean =
-    provider.equals("Unison", ignoreCase = true) ||
-        provider.equals("Lyprio/UNISON", ignoreCase = true) ||
-        (provider?.substringBefore('/').equals("Lyprio", ignoreCase = true) && lyricSource.equals("Unison", ignoreCase = true))
+): Boolean {
+    val sourceName = lyricSource?.trim()
+    val providerId = provider?.trim()
+    val lyprioSuffix = providerId?.substringAfter('/', "")?.trim()
+    val providerIsLyprio = providerId?.substringBefore('/', "")?.equals("Lyprio", ignoreCase = true) == true
+
+    return providerId.equals("Unison", ignoreCase = true) ||
+        providerId.equals("Lyprio/UNISON", ignoreCase = true) ||
+        (providerIsLyprio && lyprioSuffix?.startsWith("UNISON", ignoreCase = true) == true) ||
+        sourceName.equals("Unison", ignoreCase = true) ||
+        sourceName.equals("UNISON_OFFLINE", ignoreCase = true) ||
+        (sourceName?.startsWith("Unison", ignoreCase = true) == true)
+}
 
 private val UNISON_VIDEO_ID = Regex("[A-Za-z0-9_-]{11}")
 private val UNISON_CURATOR_ID = Regex("[A-Za-z0-9][A-Za-z0-9._~-]*")
