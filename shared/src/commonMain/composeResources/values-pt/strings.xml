@@ -950,4 +950,7 @@
     <string name="sleep_timer_finish_current_song">Parar o temporizador quando a música atual terminar</string>
     <string name="lyrics_curated_by">(Submetido por %1$s)</string>
     <string name="clear_music_video_cache_desc" tools:ignore="MissingTranslation">Remove todos os videoclipes em cache</string>
+    <string name="player_canvas_desc">Reproduzir is videos de canvas do Spotify e YouTube a traz dos controlos do reprodutor. Usa mais dados móveis.</string>
+    <string name="disable_animated_artwork_on_mobile_data">Enquanto estiver a usar dados moveis desabilitar capas animadas.</string>
+    <string name="disable_animated_artwork_on_mobile_data_desc">Mostrar capas estáticas enquanto estiver a usar dados móveis, mesmo que as animações estejam em cache</string>
 </resources>
