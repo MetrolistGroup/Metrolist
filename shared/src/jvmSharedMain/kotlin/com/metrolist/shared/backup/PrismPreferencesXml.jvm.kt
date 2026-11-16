@@ -20,9 +20,9 @@ internal actual fun extractPrismFavoritesXmlText(xml: String): String? {
             isNamespaceAware = false
             isXIncludeAware = false
             isExpandEntityReferences = false
-            setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
-            setFeature("http://xml.org/sax/features/external-general-entities", false)
-            setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+            setFeatureIfSupported(XMLConstants.FEATURE_SECURE_PROCESSING, true)
+            setFeatureIfSupported("http://xml.org/sax/features/external-general-entities", false)
+            setFeatureIfSupported("http://xml.org/sax/features/external-parameter-entities", false)
         }
     val builder =
         factory.newDocumentBuilder().apply {
@@ -42,4 +42,11 @@ internal actual fun extractPrismFavoritesXmlText(xml: String): String? {
         if (element.getAttribute("name") == "favorites") return element.textContent
     }
     return null
+}
+
+private fun DocumentBuilderFactory.setFeatureIfSupported(
+    name: String,
+    value: Boolean,
+) {
+    runCatching { setFeature(name, value) }
 }
