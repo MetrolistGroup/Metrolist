@@ -818,6 +818,7 @@ private fun runDesktopApp(args: Array<String>) {
         property = System.getProperty("skiko.renderApi"),
     )?.let { System.setProperty("skiko.renderApi", it) }
     if (OsUtil.isMac) {
+        System.setProperty("apple.awt.enableTemplateImages", "true")
         if (System.getProperty("skiko.renderApi") == null && System.getenv("SKIKO_RENDER_API") == null) {
             System.setProperty("skiko.renderApi", "METAL")
         }
@@ -1556,6 +1557,11 @@ private fun runDesktopApp(args: Array<String>) {
             }
         }
 
-        if (integrationsReady) ComposeTrayManager.TrayIcon()
+        // System tray icon (stock Compose Tray on macOS, ComposeNativeTray on Linux/Windows)
+        if (integrationsReady) {
+            with(ComposeTrayManager) {
+                TrayIcon()
+            }
+        }
     }
 }

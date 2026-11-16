@@ -5,10 +5,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.window.ApplicationScope
 import androidx.compose.ui.window.WindowState
 import com.metrolist.desktop.state.app.DesktopNavigation
 import com.metrolist.desktop.state.app.UiState
@@ -33,8 +32,6 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.ui.navigation.Screen
 import com.metrolist.shared.utils.OsUtil
-import dev.nucleusframework.composenativetray.lib.mac.MacOSMenuBarThemeDetector
-import dev.nucleusframework.composenativetray.tray.api.Tray
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -46,8 +43,16 @@ import java.awt.EventQueue
 import java.awt.Frame
 import java.awt.Window
 import kotlin.time.Duration.Companion.milliseconds
+import androidx.compose.ui.window.Tray as StockTray
+import dev.nucleusframework.composenativetray.tray.api.Tray as NativeTray
 
 object ComposeTrayManager {
+    init {
+        if (OsUtil.isMac) {
+            System.setProperty("apple.awt.enableTemplateImages", "true")
+        }
+    }
+
     private var windowState: WindowState? = null
     private var mainWindow: Window? = null
     private var onQuit: (() -> Unit)? = null
@@ -136,35 +141,15 @@ object ComposeTrayManager {
     }
 
     @Composable
-    private fun rememberMacOsMenuBarIsDark(): Boolean {
-        var isDark by remember {
-            mutableStateOf(runCatching { MacOSMenuBarThemeDetector.isDark() }.getOrDefault(true))
-        }
-        DisposableEffect(Unit) {
-            val listener =
-                java.util.function.Consumer<Boolean> { dark ->
-                    isDark = dark
-                }
-            runCatching { MacOSMenuBarThemeDetector.registerListener(listener) }
-            onDispose {
-                runCatching { MacOSMenuBarThemeDetector.removeListener(listener) }
-            }
-        }
-        return isDark
-    }
-
-    @Composable
-    fun TrayIcon() {
+    fun ApplicationScope.TrayIcon() {
         if (!trayEnabled.value) return
         val mediaControls by PlayerState.mediaControls.collectAsState()
         val isPlaying = PlayerState.isPlaying
         val currentTrack = PlayerState.currentTrack
         val isListenTogetherGuest = ListenTogetherState.isListenTogetherGuest()
 
-        val isMacDarkMenu = if (OsUtil.isMac) rememberMacOsMenuBarIsDark() else true
-
         @Suppress("DEPRECATION")
-        val icon = painterResource(if (isMacDarkMenu) "logo.png" else "logo_dark.png")
+        val icon = painterResource("logo.png")
 
         val strUnknownTitle = stringResource(Res.string.tray_unknown_title)
         val strUnknown = stringResource(Res.string.tray_unknown)
@@ -190,81 +175,141 @@ object ComposeTrayManager {
                 }
             } ?: "Metrolist"
 
-        Tray(
-            icon = icon,
-            tooltip = tooltip,
-            primaryAction = {
-                if (Settings.shared.desktopTrayToggleOnClick) {
-                    if (isWindowVisible.value) {
-                        hideWindow()
-                    } else {
-                        showWindow()
-                    }
+        val currentArtistLabel =
+            currentTrack?.let { track ->
+                val artistStr = track.artists.joinToString { it.displayName }.takeIf { it.isNotBlank() } ?: strUnknown
+                String.format(strTrayByTemplate, artistStr)
+            }
+        val currentArtistId = currentTrack?.artists?.firstOrNull { !it.id.isNullOrBlank() }?.id
+        val currentTitleLabel = currentTrack?.title?.takeIf { it.isNotBlank() } ?: strUnknownTitle
+        val playPauseLabel = if (isPlaying) strPause else strPlay
+        val windowToggleLabel = if (isWindowVisible.value) strHideWindow else strShowWindow
+        val onTrayAction: () -> Unit = {
+            if (Settings.shared.desktopTrayToggleOnClick) {
+                if (isWindowVisible.value) {
+                    hideWindow()
+                } else {
+                    showWindow()
                 }
-            },
-            menuContent = {
-                currentTrack?.let { track ->
-                    val titleLabel = track.title.takeIf { it.isNotBlank() } ?: strUnknownTitle
-                    val artistStr = track.artists.joinToString { it.displayName }.takeIf { it.isNotBlank() } ?: strUnknown
-                    val artistLabel = String.format(strTrayByTemplate, artistStr)
-                    Item(label = titleLabel) { showWindow() }
-                    val artistId = track.artists.firstOrNull { !it.id.isNullOrBlank() }?.id
-                    Item(label = artistLabel, isEnabled = artistId != null) {
-                        artistId?.let {
-                            showWindow()
-                            EventQueue.invokeLater { DesktopNavigation.navigate(Screen.Artist(it)) }
-                        }
-                    }
-                    Divider()
-                }
+            }
+        }
 
-                if (!isListenTogetherGuest) {
+        if (OsUtil.isMac) {
+            StockTray(
+                icon = icon,
+                tooltip = tooltip,
+                onAction = onTrayAction,
+                menu = {
+                    currentTrack?.let {
+                        Item(
+                            text = currentTitleLabel,
+                            onClick = { showWindow() },
+                        )
+                        Item(
+                            text = currentArtistLabel ?: "",
+                            enabled = currentArtistId != null,
+                            onClick = {
+                                currentArtistId?.let {
+                                    showWindow()
+                                    EventQueue.invokeLater { DesktopNavigation.navigate(Screen.Artist(it)) }
+                                }
+                            },
+                        )
+                        Separator()
+                    }
+
+                    if (!isListenTogetherGuest) {
+                        Item(
+                            text = playPauseLabel,
+                            enabled = mediaControls.playPause,
+                            onClick = { PlayerState.togglePlay() },
+                        )
+
+                        if (currentTrack != null) {
+                            Item(
+                                text = strNextTrack,
+                                enabled = mediaControls.next,
+                                onClick = { PlayerState.skipNext() },
+                            )
+
+                            Item(
+                                text = strPreviousTrack,
+                                enabled = mediaControls.previous,
+                                onClick = { PlayerState.skipPrevious() },
+                            )
+                        }
+
+                        Separator()
+                    }
+
+                    Item(text = windowToggleLabel, onClick = { toggleWindow() })
+                    Item(text = strShowMiniplayer, onClick = { PlayerState.showMiniplayer = true })
+                    Separator()
                     Item(
-                        label = if (isPlaying) strPause else strPlay,
-                        isEnabled = mediaControls.playPause,
-                    ) {
-                        PlayerState.togglePlay()
+                        text = strSettings,
+                        onClick = {
+                            UiState.showSettings = true
+                            if (!isWindowVisible.value) {
+                                showWindow()
+                            }
+                        },
+                    )
+                    Separator()
+                    Item(text = strQuitMetrolist, onClick = { onQuit?.invoke() })
+                },
+            )
+        } else {
+            NativeTray(
+                icon = icon,
+                tooltip = tooltip,
+                primaryAction = onTrayAction,
+                menuContent = {
+                    currentTrack?.let {
+                        Item(label = currentTitleLabel) { showWindow() }
+                        Item(label = currentArtistLabel ?: "", isEnabled = currentArtistId != null) {
+                            currentArtistId?.let {
+                                showWindow()
+                                EventQueue.invokeLater { DesktopNavigation.navigate(Screen.Artist(it)) }
+                            }
+                        }
+                        Divider()
                     }
 
-                    if (currentTrack != null) {
-                        Item(label = strNextTrack, isEnabled = mediaControls.next) {
-                            PlayerState.skipNext()
+                    if (!isListenTogetherGuest) {
+                        Item(
+                            label = playPauseLabel,
+                            isEnabled = mediaControls.playPause,
+                        ) {
+                            PlayerState.togglePlay()
                         }
 
-                        Item(label = strPreviousTrack, isEnabled = mediaControls.previous) {
-                            PlayerState.skipPrevious()
+                        if (currentTrack != null) {
+                            Item(label = strNextTrack, isEnabled = mediaControls.next) {
+                                PlayerState.skipNext()
+                            }
+
+                            Item(label = strPreviousTrack, isEnabled = mediaControls.previous) {
+                                PlayerState.skipPrevious()
+                            }
                         }
+
+                        Divider()
                     }
 
+                    Item(label = windowToggleLabel) { toggleWindow() }
+                    Item(label = strShowMiniplayer) { PlayerState.showMiniplayer = true }
                     Divider()
-                }
-
-                Item(
-                    label = if (isWindowVisible.value) strHideWindow else strShowWindow,
-                ) {
-                    toggleWindow()
-                }
-
-                Item(label = strShowMiniplayer) {
-                    PlayerState.showMiniplayer = true
-                }
-
-                Divider()
-
-                Item(label = strSettings) {
-                    UiState.showSettings = true
-                    if (!isWindowVisible.value) {
-                        showWindow()
+                    Item(label = strSettings) {
+                        UiState.showSettings = true
+                        if (!isWindowVisible.value) {
+                            showWindow()
+                        }
                     }
-                }
-
-                Divider()
-
-                Item(label = strQuitMetrolist) {
-                    onQuit?.invoke()
-                }
-            },
-        )
+                    Divider()
+                    Item(label = strQuitMetrolist) { onQuit?.invoke() }
+                },
+            )
+        }
         DisposableEffect(Unit) {
             onDispose { trayDisposed.complete(Unit) }
         }
