@@ -1438,6 +1438,9 @@ class YouTubeRepository(
                 } else {
                     getPlaylistPlaybackPage(albumItem.playlistId ?: return loadLocal()).copy(album = albumItem)
                 }
+            if (initialTracks.songs.isEmpty() && !initialTracks.hasMore) {
+                loadLocal()?.let { return it }
+            }
             val tracks =
                 (
                     if (loadAllPages) {
