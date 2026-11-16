@@ -2618,4 +2618,21 @@
     <string name="density_massive">Masivo (200%)</string>
     <string name="density_huge">Enorme (175%)</string>
     <string name="density_extra_large">Extra grande (150%)</string>
+    <string name="lyrics_romanization_larger_text">Texto más grande: Romanización o letra de la canción</string>
+    <string name="lyrics_romanization_larger_text_description">Elige si la letra de la canción o la transcripción en alfabeto latino se muestren en letra más grande cuando ambas aparezcan en pantalla.</string>
+    <string name="lyrics_romanization_show_original">Mostrar original</string>
+    <string name="lyrics_romanization_show_original_description">Muestra la línea original a continuación</string>
+    <string name="lyrics_romanization_show_romanization">Mostrar romanización</string>
+    <string name="lyrics_romanization_show_romanization_description">Mostrar la romanización debajo de la letra</string>
+    <string name="playlist_lock">Cerrar</string>
+    <string name="sync_playlist">Sincronizar lista de reproducción</string>
+    <string name="cast_stream_port_unavailable">No se pudo abrir el puerto TCP 57643 para la transmisión. Verifica que esta red esté disponible y que ninguna otra aplicación esté utilizando ese puerto.</string>
+    <string name="cast_stream_unreachable">El altavoz no ha solicitado la transmisión de audio. Verifica que tu firewall permita el tráfico entrante en el puerto TCP 57643 desde el altavoz y que ambos dispositivos estén en la misma red.</string>
+    <string name="listen_together_location_poland">Polonia</string>
+    <string name="listen_together_location_custom">Personalizado</string>
+    <string name="listen_together_custom_server_name">Servidor personalizado</string>
+    <string name="listen_together_custom_server_maintainer">Usuario</string>
+    <string name="desktop_tray_toggle_on_click_desc_mac">Al hacer clic con el botón derecho del ratón en el ícono de la bandeja, se abrirá o se cerrará la ventana de Metrolist</string>
+    <string name="desktop_omarchy_unsupported">Metrolist no funciona en Omarchy. Usa otra distribución de Linux, Windows 10 o una versión posterior, o macOS.</string>
+    <string name="learn_more">Más información</string>
 </resources>
