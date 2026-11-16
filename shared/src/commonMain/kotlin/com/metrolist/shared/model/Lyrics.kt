@@ -173,13 +173,19 @@ private fun isUnisonLyrics(
     val providerId = provider?.trim()
     val lyprioSuffix = providerId?.substringAfter('/', "")?.trim()
     val providerIsLyprio = providerId?.substringBefore('/', "")?.equals("Lyprio", ignoreCase = true) == true
+    val isExactUnisonAlias =
+        providerId.equals("Unison", ignoreCase = true) ||
+            providerId.equals("Lyprio/UNISON", ignoreCase = true) ||
+            providerId.equals("Lyprio/UNISON_OFFLINE", ignoreCase = true) ||
+            sourceName.equals("Unison", ignoreCase = true) ||
+            sourceName.equals("UNISON_OFFLINE", ignoreCase = true)
+    val isLyprioUnisonVariant =
+        providerIsLyprio && (
+            lyprioSuffix.equals("UNISON", ignoreCase = true) ||
+                lyprioSuffix.equals("UNISON_OFFLINE", ignoreCase = true)
+        )
 
-    return providerId.equals("Unison", ignoreCase = true) ||
-        providerId.equals("Lyprio/UNISON", ignoreCase = true) ||
-        (providerIsLyprio && lyprioSuffix?.startsWith("UNISON", ignoreCase = true) == true) ||
-        sourceName.equals("Unison", ignoreCase = true) ||
-        sourceName.equals("UNISON_OFFLINE", ignoreCase = true) ||
-        (sourceName?.startsWith("Unison", ignoreCase = true) == true)
+    return isExactUnisonAlias || isLyprioUnisonVariant
 }
 
 private val UNISON_VIDEO_ID = Regex("[A-Za-z0-9_-]{11}")

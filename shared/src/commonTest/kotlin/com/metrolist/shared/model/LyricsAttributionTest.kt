@@ -35,13 +35,17 @@ class LyricsAttributionTest {
     @Test
     fun lyprioVariantProviderNamesAndUnisonSourceNamesShareTheSameLinks() {
         for (provider in listOf("Lyprio/UNISON_OFFLINE", "lyprio/unison_offline")) {
-            assertEquals("https://unison.betterlyrics.org/song/Ugr4KKK_SqY", lyricsProviderUrl(provider, "Ugr4KKK_SqY", "Unison"))
-            assertEquals("https://unison.betterlyrics.org/curator/curator_1", lyricsCuratorUrl(provider, "curator_1", "Unison"))
+            assertEquals("https://unison.betterlyrics.org/song/Ugr4KKK_SqY", lyricsProviderUrl(provider, "Ugr4KKK_SqY"))
+            assertEquals("https://unison.betterlyrics.org/curator/curator_1", lyricsCuratorUrl(provider, "curator_1"))
         }
-        for (source in listOf("UNISON_OFFLINE", "Unison Offline", "Unison")) {
+        for (source in listOf("UNISON_OFFLINE", "Unison")) {
             assertEquals("https://unison.betterlyrics.org/song/Ugr4KKK_SqY", lyricsProviderUrl("Lyprio", "Ugr4KKK_SqY", source))
             assertEquals("https://unison.betterlyrics.org/curator/curator_1", lyricsCuratorUrl("Lyprio", "curator_1", source))
         }
+        assertNull(lyricsProviderUrl("Lyprio/UNISONIC", "Ugr4KKK_SqY"))
+        assertNull(lyricsCuratorUrl("Lyprio/UNISONIC", "curator_1"))
+        assertNull(lyricsProviderUrl("Lyprio", "Ugr4KKK_SqY", "Unisonic"))
+        assertNull(lyricsCuratorUrl("Lyprio", "curator_1", "Unisonic"))
     }
 
     @Test
