@@ -844,18 +844,22 @@ class DefaultStreamResolver(
                 }
             }
         var preferredTimedOut = deferredProfiles.isNotEmpty()
-        // When web PO tokens were just rejected, tokenless VISIONOS 0.1 is the client that keeps playing; try it first.
-        // Video needs tokenized streams, so music videos fall back to their audio until tokens work again.
+        // Prefer tokenless audio after rejected web tokens without bypassing video-capable clients.
         val tokenlessStream =
-            if (WebPoTokenHealth.tokensRejected() && !isLive && !extractHints.sabrFirst &&
+            if (WebPoTokenHealth.tokensRejected() && !extractHints.wantVideo && !isLive && !extractHints.sabrFirst &&
                 extractHints.playbackClientOverrideId == null &&
                 extractHints.isUploaded != true && WebPoTokenHealth.TOKENLESS_AUDIO_PROFILE !in excludedClients
             ) {
-                withTimeoutOrNull(TOKENLESS_AUDIO_TIMEOUT_MS) {
-                    extract(
-                        excludedClients,
-                        extractHints.copy(playbackClientOverrideId = WebPoTokenHealth.TOKENLESS_AUDIO_CLIENT, wantVideo = false),
-                    )
+                try {
+                    withTimeoutOrNull(TOKENLESS_AUDIO_TIMEOUT_MS) {
+                        extract(
+                            excludedClients,
+                            extractHints.copy(playbackClientOverrideId = WebPoTokenHealth.TOKENLESS_AUDIO_CLIENT, wantVideo = false),
+                        )
+                    }
+                } catch (error: StreamResolveException) {
+                    YtLogger.w(TAG, "tokenless audio preference failed; trying the remaining clients")
+                    null
                 }.also { if (it == null) lastSelectionFailure = null }
             } else {
                 null

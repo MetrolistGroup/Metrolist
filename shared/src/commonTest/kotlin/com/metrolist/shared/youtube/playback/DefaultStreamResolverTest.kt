@@ -744,6 +744,91 @@ class DefaultStreamResolverTest {
         }
 
     @Test
+    fun failedTokenlessPreferenceStillResolvesPlaybackAndDownloadAudio() =
+        runBlocking {
+            WebPoTokenHealth.recordRejection()
+            val attempts = mutableListOf<ContentHints>()
+            val extractor =
+                RecordingStreamExtractor(
+                    listOf("WEB_REMIX" to "WEB_REMIX__po"),
+                    onExtract = { hints ->
+                        attempts += hints
+                        if (hints.playbackClientOverrideId == WebPoTokenHealth.TOKENLESS_AUDIO_CLIENT) {
+                            throw StreamResolveException(StreamResolveException.Reason.NETWORK, "player:VISIONOS failed with HTTP 400")
+                        }
+                    },
+                )
+            val client = HttpClient(MockEngine { respondOk() })
+            val resolver = DefaultStreamResolver(extractor, InnerTube(client), networkStateFlow = null)
+            try {
+                val hints = ContentHints(isExplicit = true, endpointParams = "params")
+                val downloadHints = hints.withStreamCapabilities(allowHls = false, allowSabr = true, allowBoundedRange = true)
+                assertEquals("WEB_REMIX__po", resolver.resolve("playback", hints, AudioQuality.HIGH).profileId)
+                assertEquals(
+                    "WEB_REMIX__po",
+                    resolver.resolveRemote("download", downloadHints, AudioQuality.HIGH).profileId,
+                )
+                assertEquals(
+                    listOf(
+                        hints.copy(playbackClientOverrideId = WebPoTokenHealth.TOKENLESS_AUDIO_CLIENT),
+                        hints,
+                        downloadHints.copy(playbackClientOverrideId = WebPoTokenHealth.TOKENLESS_AUDIO_CLIENT),
+                        downloadHints,
+                    ),
+                    attempts,
+                )
+            } finally {
+                resolver.close()
+                client.close()
+            }
+        }
+
+    @Test
+    fun rejectedWebTokensKeepVideoAndCanvasRequestsOnVideoCapableClients() =
+        runBlocking {
+            WebPoTokenHealth.recordRejection()
+            val attempts = mutableListOf<ContentHints>()
+            val extractor = RecordingStreamExtractor(includeVideo = true, onExtract = { attempts += it })
+            val client = HttpClient(MockEngine { respondOk() })
+            val resolver = DefaultStreamResolver(extractor, InnerTube(client), networkStateFlow = null)
+            try {
+                val hints = ContentHints(wantVideo = true, maxVideoHeight = 720)
+                assertTrue(resolver.resolve("video", hints).hasVideo)
+                val canvasHints = hints.withStreamCapabilities(allowHls = false, allowSabr = true, allowBoundedRange = true)
+                assertTrue(resolver.resolveRemote("canvas", canvasHints, AudioQuality.AUTO).hasVideo)
+                assertEquals(listOf(hints, canvasHints), attempts)
+            } finally {
+                resolver.close()
+                client.close()
+            }
+        }
+
+    @Test
+    fun cancellingTheTokenlessPreferenceDoesNotTryOtherClients() =
+        runBlocking {
+            WebPoTokenHealth.recordRejection()
+            val started = CompletableDeferred<Unit>()
+            val attempts = mutableListOf<ContentHints>()
+            val extractor =
+                RecordingStreamExtractor(onExtract = { hints ->
+                    attempts += hints
+                    started.complete(Unit)
+                    awaitCancellation()
+                })
+            val client = HttpClient(MockEngine { respondOk() })
+            val resolver = DefaultStreamResolver(extractor, InnerTube(client), networkStateFlow = null)
+            try {
+                val resolution = async { resolver.resolve("playback") }
+                started.await()
+                resolution.cancelAndJoin()
+                assertEquals(listOf(WebPoTokenHealth.TOKENLESS_AUDIO_CLIENT), attempts.map { it.playbackClientOverrideId })
+            } finally {
+                resolver.close()
+                client.close()
+            }
+        }
+
+    @Test
     fun failedDefaultSabrProfileFallsBackToDirectClient() =
         runBlocking {
             val extractor =

@@ -62,6 +62,8 @@ Providers advertise capabilities. Do not substitute a generic sidecar token for 
 
 A CDN 403 for an explicitly untokenized `_nopo` profile excludes that profile without discarding unrelated cached attestation. Tokenized or unidentified profiles invalidate attestation. Retain provider cooldowns, bounded mint deadlines and account/visitor validation.
 
+After a web-token rejection, audio requests try tokenless VISIONOS first. A failed probe continues through the normal clients. Video and YouTube canvas requests keep their video requirement and skip this audio-only preference.
+
 Token callbacks keep request-local results. A canceled Kotlin caller does not cancel a WebView promise; late results cannot overwrite another request. Check this with `node --test scripts/test_page_bound_po_token.mjs`.
 
 ## SABR
