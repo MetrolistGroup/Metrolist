@@ -912,6 +912,7 @@ internal fun LandscapePlayerContent(
                 .landscapePlayerInsets(),
     ) {
         val compactHeight = maxHeight < 520.dp
+        val centerControls = !isTv && maxHeight >= 600.dp
         val primaryControlSize = if (compactHeight) 64.dp else 104.dp
         val horizontalPadding = if (compactHeight) 16.dp else LandscapePlayerHorizontalPadding
         val verticalPadding = if (compactHeight) 8.dp else LandscapePlayerVerticalPadding
@@ -1328,6 +1329,8 @@ internal fun LandscapePlayerContent(
                         verticalArrangement =
                             if (isTv) {
                                 Arrangement.spacedBy(if (compactHeight) 4.dp else 16.dp, Alignment.CenterVertically)
+                            } else if (centerControls) {
+                                Arrangement.Center
                             } else {
                                 Arrangement.Top
                             },
@@ -1464,7 +1467,11 @@ internal fun LandscapePlayerContent(
                                 isLive = uiState.isLive,
                             )
 
-                            if (!isTv) Spacer(Modifier.weight(1f))
+                            if (centerControls) {
+                                Spacer(Modifier.height(24.dp))
+                            } else if (!isTv) {
+                                Spacer(Modifier.weight(1f))
+                            }
                             if (isTv) Spacer(modifier = Modifier.height(2.dp))
 
                             AnimatedVisibility(
@@ -1590,7 +1597,7 @@ internal fun LandscapePlayerContent(
                                     }
                                 }
                             }
-                            if (!isTv) Spacer(Modifier.weight(1f))
+                            if (!isTv && !centerControls) Spacer(Modifier.weight(1f))
                         }
                         if (isTv) {
                             Column(Modifier.fillMaxWidth()) { progressAndControls() }
