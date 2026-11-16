@@ -2608,4 +2608,6 @@
     <string name="ai_setup_privacy_settings">Abrir ajustes de privacidad</string>
     <string name="ai_setup_sign_in_again">Volver a iniciar sesión</string>
     <string name="ai_setup_key_limits">Revisar los límites de la clave</string>
+    <string name="blocked_songs_desc">Restaura canciones que no te hayan gustado o que hayas bloqueado</string>
+    <string name="blocked_songs_empty">No canciones bloqueadas</string>
 </resources>
