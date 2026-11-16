@@ -40,8 +40,10 @@ class SongLibraryIndicatorTest {
                 assertTrue(SongMetadataState.isInLibrary(staleToken.copy(id = "remote-only")))
                 dao.inLibrary(saved.id, null)
                 withTimeout(5_000) {
-                    SongMetadataState.revision.first { !SongMetadataState.isInLibrary(staleToken) }
+                    SongMetadataState.revision.first { !SongMetadataState.isInLibrary(remote) }
                 }
+                // A cached row without inLibrary keeps the badge from a valid remote token.
+                assertTrue(SongMetadataState.isInLibrary(staleToken))
                 dao.inLibrary(saved.id, saved.inLibrary)
                 withTimeout(5_000) {
                     SongMetadataState.revision.first { SongMetadataState.isInLibrary(remote) }

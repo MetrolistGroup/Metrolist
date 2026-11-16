@@ -158,7 +158,8 @@ object SongMetadataState {
 
     fun isInLibrary(song: SongItem): Boolean {
         val current = synchronized(snapshotLock) { snapshot }
-        return current.libraryMemberships[song.id] ?: (song.libraryRemoveToken != null)
+        // History and playlist caching create rows without inLibrary, so only a saved row adds to the remote token.
+        return current.libraryMemberships[song.id] == true || song.libraryRemoveToken != null
     }
 }
 

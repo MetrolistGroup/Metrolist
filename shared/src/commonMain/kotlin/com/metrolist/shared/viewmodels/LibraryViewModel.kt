@@ -210,6 +210,12 @@ class LibraryViewModel(
         searchRequest.value = request.copy(revision = request.revision + 1L)
     }
 
+    // Desktop keeps download dates outside Room, so search pages need the same hydration as library rows.
+    private suspend fun List<SongItem>.withDownloadDates(): List<SongItem> {
+        val dates = downloadedSongDates?.first() ?: return this
+        return map { it.copy(downloadedAt = dates[it.id]) }
+    }
+
     fun loadMoreContentMatches() {
         val request = loadedSearchRequest ?: return
         if (!localActive.value || !_contentSearchHasMore.value || searchPageJob?.isActive == true) return
@@ -225,6 +231,7 @@ class LibraryViewModel(
                                 descending = request.descending,
                             )
                         }.orEmpty()
+                        .withDownloadDates()
                 if (loadedSearchRequest == request && searchRequest.value == request) {
                     _contentMatchedSongs.value += page
                     _contentSearchHasMore.value = page.size == LIBRARY_SEARCH_PAGE_SIZE
@@ -332,7 +339,16 @@ class LibraryViewModel(
                     .debounce(LIBRARY_SEARCH_DEBOUNCE_MILLIS.milliseconds)
                     .distinctUntilChanged()
                     .collectLatest { request ->
-                        val page = database?.let { contentMatchedSongs(it, request.query, descending = request.descending) }.orEmpty()
+                        val page =
+                            database
+                                ?.let {
+                                    contentMatchedSongs(
+                                        it,
+                                        request.query,
+                                        descending = request.descending,
+                                    )
+                                }.orEmpty()
+                                .withDownloadDates()
                         if (searchRequest.value == request) {
                             loadedSearchRequest = request
                             _contentMatchedSongs.value = page
