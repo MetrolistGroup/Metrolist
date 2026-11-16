@@ -24,10 +24,9 @@ class PlaylistImportBatchTest {
                 val imported = mutableListOf<String>()
                 var running = false
                 val result =
-                    executePlaylistBatch(playlists, "Import playlists", {}) { data, destination, _ ->
+                    executePlaylistBatch(playlists, "Import playlists", {}) { data, _ ->
                         assertFalse(running)
                         running = true
-                        assertSame(PlaylistImportManager.Destination.NewSynced, destination)
                         assertEquals(provider, data.provider)
                         assertEquals(provider.displayName, data.source)
                         assertEquals(listOf("${data.title} song"), data.tracks.map { it.title })
@@ -60,7 +59,7 @@ class PlaylistImportBatchTest {
                     cause = IllegalStateException("Save failed"),
                 )
             val result =
-                executePlaylistBatch(playlists, "Import playlists", progress::add) { data, _, update ->
+                executePlaylistBatch(playlists, "Import playlists", progress::add) { data, update ->
                     attempted += data.title
                     update(ImportProgressState.ResolvingTracks(0, data.tracks.size, data.title, "Artist"))
                     if (data.title == "Second") {
@@ -87,7 +86,7 @@ class PlaylistImportBatchTest {
             val playlists = preparePlaylistBatch(loadedPlaylists(), "Apple Music", ImportSourceType.APPLE_MUSIC)
             val failure = IllegalStateException("Load failed")
             val result =
-                executePlaylistBatch(playlists, "Import playlists", {}) { data, _, _ ->
+                executePlaylistBatch(playlists, "Import playlists", {}) { data, _ ->
                     if (data.title == "First") throw failure
                     Result.success(completed(data))
                 }
@@ -104,7 +103,7 @@ class PlaylistImportBatchTest {
             val cancellation = CancellationException("Cancelled")
             val result =
                 runCatching {
-                    executePlaylistBatch(playlists, "Import playlists", progress::add) { data, _, _ ->
+                    executePlaylistBatch(playlists, "Import playlists", progress::add) { data, _ ->
                         attempted += data.title
                         if (data.title == "Second") throw cancellation
                         Result.success(completed(data))

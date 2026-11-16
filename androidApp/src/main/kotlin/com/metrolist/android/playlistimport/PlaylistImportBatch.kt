@@ -37,8 +37,7 @@ internal suspend fun executePlaylistBatch(
     playlists: List<ImportedPlaylistData>,
     title: String,
     onStateUpdate: (ImportProgressState) -> Unit,
-    importPlaylist: suspend (ImportedPlaylistData, PlaylistImportManager.Destination, (ImportProgressState) -> Unit) ->
-    Result<ImportProgressState.Completed>,
+    importPlaylist: suspend (ImportedPlaylistData, (ImportProgressState) -> Unit) -> Result<ImportProgressState.Completed>,
 ): PlaylistImportBatchResult {
     val completed = mutableListOf<ImportProgressState.Completed>()
     val failures = mutableListOf<Pair<String, Throwable>>()
@@ -47,7 +46,7 @@ internal suspend fun executePlaylistBatch(
         try {
             currentCoroutineContext().ensureActive()
             val result =
-                importPlaylist(playlist, PlaylistImportManager.Destination.NewSynced) { state ->
+                importPlaylist(playlist) { state ->
                     // Keep the service request running until every playlist has been attempted.
                     if (state !is ImportProgressState.Completed && state !is ImportProgressState.Failed &&
                         state !is ImportProgressState.Cancelled
