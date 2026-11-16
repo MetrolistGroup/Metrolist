@@ -556,4 +556,5 @@
     <string name="view_song_info">Переглянути інформацію про пісню</string>
     <string name="loudness_value">%1$s дБ</string>
     <string name="lyrics_song_artist">Автор пісні</string>
+    <string name="recap">Підсумок</string>
 </resources>
