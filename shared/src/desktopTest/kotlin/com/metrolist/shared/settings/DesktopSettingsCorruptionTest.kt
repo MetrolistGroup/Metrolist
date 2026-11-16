@@ -1,6 +1,7 @@
 package com.metrolist.shared.settings
 
 import com.metrolist.shared.youtube.playback.PlaybackEventKind
+import com.metrolist.shared.youtube.playback.PlaybackEventLevel
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import java.io.File
 import java.io.IOException
@@ -19,6 +20,20 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DesktopSettingsCorruptionTest {
+    @Test
+    fun desktopSettingsWriteFailuresAreCapturedWithoutThrowableMessages() {
+        PlaybackEventLog.clear()
+
+        captureDesktopSettingsFailure(IllegalStateException("private-setting-value"))
+
+        val event = PlaybackEventLog.events.value.single()
+        assertEquals(PlaybackEventLevel.ERROR, event.level)
+        assertTrue(event.message.contains("Failed to persist desktop settings"))
+        assertTrue(event.message.contains("IllegalStateException"))
+        assertFalse(event.message.contains("private-setting-value"))
+        PlaybackEventLog.clear()
+    }
+
     @Test
     fun corruptPendingFallsBackToMainWithoutKeepingPartiallyParsedValues() =
         withProfile { root ->
