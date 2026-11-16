@@ -95,7 +95,7 @@ fun LyricsMenu(
     var editText by remember(lyricsUiState.rawLyrics) { mutableStateOf(TextFieldValue(lyricsUiState.rawLyrics.orEmpty())) }
     val snackbarHostState = remember { SnackbarHostState() }
     val copiedMessage = stringResource(Res.string.copied)
-    val romanizeAsMain = Settings.shared.lyricsRomanizeAsMain
+    val romanizeAsMain = Settings.shared.isLyricsRomanizationActive && Settings.shared.lyricsRomanizeAsMain
     val toggleChecked =
         if (romanizeAsMain) {
             Settings.shared.lyricsShowOriginalLyrics

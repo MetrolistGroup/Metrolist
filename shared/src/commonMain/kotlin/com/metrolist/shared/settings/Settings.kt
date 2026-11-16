@@ -532,7 +532,7 @@ class Settings(
     var lyricsRomanizeAsMain by preference(false)
     var lyricsShowOriginalLyrics by preference(LyricsShowOriginalLyricsKey, true)
     val isLyricsRomanizationActive: Boolean
-        get() = lyricsRomanizationEnabled || lyricsRomanizeAsMain
+        get() = lyricsRomanizationEnabled
     var lyricsSyllableRomanizationEnabled by preference(true)
     var lyricsRomanizeCyrillicByLine by preference(false)
     var lyricsRomanizeLanguages by preference(

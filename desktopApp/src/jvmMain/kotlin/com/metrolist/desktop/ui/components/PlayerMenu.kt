@@ -320,7 +320,7 @@ fun LyricsActionsMenuCard(
                 )
             }
 
-            val romanizeAsMain = Settings.shared.lyricsRomanizeAsMain
+            val romanizeAsMain = Settings.shared.isLyricsRomanizationActive && Settings.shared.lyricsRomanizeAsMain
             val toggleChecked =
                 if (romanizeAsMain) {
                     Settings.shared.lyricsShowOriginalLyrics

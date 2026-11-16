@@ -490,7 +490,8 @@ internal fun SettingsUiRegistryBuilder.registerLyricsSettings(host: SharedSettin
                         SettingsChoice("lyrics", stringResource(Res.string.lyrics)),
                         SettingsChoice("romanization", stringResource(Res.string.lyrics_romanize_title)),
                     )
-                val largerTextChoiceId = if (settings.lyricsRomanizeAsMain) "romanization" else "lyrics"
+                val romanizeAsMain = settings.isLyricsRomanizationActive && settings.lyricsRomanizeAsMain
+                val largerTextChoiceId = if (romanizeAsMain) "romanization" else "lyrics"
                 choice(
                     id = "romanizationLargerText",
                     title = stringResource(Res.string.lyrics_romanization_larger_text),
@@ -505,7 +506,7 @@ internal fun SettingsUiRegistryBuilder.registerLyricsSettings(host: SharedSettin
                         settings.lyricsRomanizationEnabled = true
                     }
                 }
-                if (settings.lyricsRomanizeAsMain) {
+                if (romanizeAsMain) {
                     switch(
                         id = "showSecondaryLyrics",
                         title = stringResource(Res.string.lyrics_romanization_show_original),

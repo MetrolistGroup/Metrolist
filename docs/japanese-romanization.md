@@ -1,5 +1,11 @@
 # Japanese romanization
 
+## Display options
+
+Romanization generation and rendering are gated by `lyricsRomanizationEnabled` (`Settings.shared.isLyricsRomanizationActive`). Keeping `lyricsRomanizationEnabled` as the gate prevents older or imported backups with `lyricsRomanizationEnabled = false` and `lyricsRomanizeAsMain = true` from turning romanization back on automatically.
+
+When romanization is enabled, the **Larger text** choice (`lyricsRomanizeAsMain`) selects whether the primary lyrics line shows the original script (`false`, default) or the romanized text (`true`), and the lyrics menu toggle switches between showing romanization below the original lyrics and showing original lyrics below the romanization (`lyricsShowOriginalLyrics`, which defaults to `true`). When a line has no romanization available (or the romanized text matches the original text), rendering falls back to the original line text and word timings as the primary line so no lyrics are hidden.
+
 ## Android and desktop
 
 Kuromoji 0.9.0 supplies tokenizer classes. The build strips dictionary `.bin` resources from the engine JAR; `:shared:verifyKuromojiPackaging` requires an engine below 1 MiB with no dictionary payload.
