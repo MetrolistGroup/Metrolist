@@ -53,24 +53,24 @@ The root flake reads the committed `packaging/release.json`, so `nix run github:
 
 ## Flatpak and Flathub
 
-The [local source manifest](../flatpak/com.metrolist.desktop.yaml) builds the checkout with Gradle and network access. The [release template](../packaging/flatpak/com.metrolist.desktop.json.in) extracts checksum-pinned AppImages without Gradle or build-time network. Read each manifest's runtime pin; they are separate build paths.
+The [local source manifest](../flatpak/cc.metrolist.Metrolist.yaml) builds the committed `main` branch of the local checkout with Gradle and network access (`make flatpak-bundle`). Its JDK module stays unstripped because jlink rejects modified JDK libraries. The [release template](../packaging/flatpak/cc.metrolist.Metrolist.json.in) extracts checksum-pinned AppImages without Gradle or build-time network. Both use GNOME 51; keep the runtime pins in step.
 
 After generation:
 
 ```sh
-flatpak-builder --show-manifest build/distribution/flatpak/com.metrolist.desktop.json
-flatpak-builder-lint manifest build/distribution/flatpak/com.metrolist.desktop.json
-appstreamcli validate --no-net build/distribution/flatpak/com.metrolist.desktop.metainfo.xml
-desktop-file-validate build/distribution/flatpak/com.metrolist.desktop.desktop
+flatpak-builder --show-manifest build/distribution/flatpak/cc.metrolist.Metrolist.json
+flatpak-builder-lint manifest build/distribution/flatpak/cc.metrolist.Metrolist.json
+appstreamcli validate --no-net build/distribution/flatpak/cc.metrolist.Metrolist.metainfo.xml
+desktop-file-validate build/distribution/flatpak/cc.metrolist.Metrolist.desktop
 flatpak-builder --user --install-deps-from=flathub --force-clean \
-  build/flatpak-release build/distribution/flatpak/com.metrolist.desktop.json
+  build/flatpak-release build/distribution/flatpak/cc.metrolist.Metrolist.json
 ```
 
-Permissions cover X11, IPC, DRI, PulseAudio, network, Secret Service, the app's MPRIS name, Downloads and Music. Neither manifest grants the whole home directory or session bus. Check login, credentials, local files, downloads, audio and GPU rendering in the sandbox.
+Permissions cover X11, IPC, DRI, PulseAudio, network, Secret Service, the app's MPRIS name, the tray watcher and tray item name (`org.kde.StatusNotifierItem-2-1`, the app runs as PID 2 in the sandbox), Downloads and Music. Neither manifest grants the whole home directory or session bus. Inside the sandbox the Wayland scale probes cannot reach the compositor and fall back to environment variables, the download folder chooser sees only Downloads and Music, and Omarchy detection relies on `OMARCHY_PATH`. Check login, credentials, local files, downloads, audio, tray, MPRIS and GPU rendering in the sandbox.
 
 Metainfo uses release date/notes. `packaging/flatpak/screenshots.json` accepts objects with public HTTPS `url` and `caption`. The first image is default. An empty list does not generate substitute screenshots.
 
-Flathub submission needs public source/assets, desktop screenshots, ID ownership confirmation and a complete offline source build, or an approved binary-build exception. The local network-enabled manifest does not satisfy the [source-build requirement](https://docs.flathub.org/docs/for-app-authors/requirements#building-from-source). Do not change the installed app ID without a data migration plan.
+The Flatpak ID is `cc.metrolist.Metrolist` because Flathub rejects IDs ending in `.desktop` and verifies the ID against a domain the project controls; serve Flathub's token at `https://metrolist.cc/.well-known/org.flathub.VerifiedApps.txt`. Internal identifiers (Kotlin package, keyring service, Sentry release names, macOS bundle ID) stay `com.metrolist.desktop`. Flathub submission needs public source/assets, desktop screenshots, ID ownership confirmation and a complete offline source build, or an approved binary-build exception. The repository lint step needs mirrored screenshots, as Flathub's builder produces with `--mirror-screenshots-url`. The local network-enabled manifest does not satisfy the [source-build requirement](https://docs.flathub.org/docs/for-app-authors/requirements#building-from-source). Do not change the installed app ID without a data migration plan.
 
 ## Optional external proposals
 
@@ -95,7 +95,7 @@ python3 scripts/test_build_appimage.py
 python3 .github/tests/test_release_workflows.py
 python3 .github/tests/test_repository_checks.py
 bash -n scripts/build_appimage.sh
-shellcheck scripts/build_appimage.sh packaging/flatpak/com.metrolist.desktop
+shellcheck scripts/build_appimage.sh packaging/flatpak/cc.metrolist.Metrolist
 actionlint .github/workflows/ci.yml .github/workflows/release.yml .github/workflows/verify-repository-checks.yml
 ```
 

@@ -56,12 +56,12 @@ class DistributionTest(unittest.TestCase):
         for asset in data['linux'].values():
             self.assertEqual(asset['sha256'], hashlib.sha256((self.assets / asset['name']).read_bytes()).hexdigest())
             self.assertTrue(asset['hash'].startswith('sha256-'))
-        flatpak = json.loads((self.output / 'flatpak/com.metrolist.desktop.json').read_text())
+        flatpak = json.loads((self.output / 'flatpak/cc.metrolist.Metrolist.json').read_text())
         self.assertNotIn('build-options', flatpak)
         sources = flatpak['modules'][0]['sources']
         self.assertEqual([source['only-arches'] for source in sources if 'url' in source], [['x86_64'], ['aarch64']])
         self.assertNotIn('--own-name=org.mpris.MediaPlayer2.*', flatpak['finish-args'])
-        tree = ET.parse(self.output / 'flatpak/com.metrolist.desktop.metainfo.xml')
+        tree = ET.parse(self.output / 'flatpak/cc.metrolist.Metrolist.metainfo.xml')
         self.assertEqual(tree.find('./releases/release/description/p').text, 'Fix playback & <login>.')
         self.assertEqual(tree.find('./releases/release').get('date'), '2026-10-31')
         self.assertEqual(tree.find('./screenshots/screenshot').get('type'), 'default')

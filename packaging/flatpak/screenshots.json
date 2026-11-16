@@ -1,1 +1,5 @@
-[]
+[
+  {"url": "https://raw.githubusercontent.com/MetrolistGroup/Metrolist/main/flatpak/screenshots/home.png", "caption": "Home with Speed dial and personalized mixes"},
+  {"url": "https://raw.githubusercontent.com/MetrolistGroup/Metrolist/main/flatpak/screenshots/playlist.png", "caption": "A playlist with synced lyrics in the side panel"},
+  {"url": "https://raw.githubusercontent.com/MetrolistGroup/Metrolist/main/flatpak/screenshots/lyrics.png", "caption": "The player with word-by-word lyrics"}
+]

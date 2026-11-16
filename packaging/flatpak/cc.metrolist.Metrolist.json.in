@@ -1,0 +1,47 @@
+{
+  "app-id": "cc.metrolist.Metrolist",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "51",
+  "sdk": "org.gnome.Sdk",
+  "command": "cc.metrolist.Metrolist",
+  "finish-args": [
+    "--share=network",
+    "--share=ipc",
+    "--socket=x11",
+    "--socket=pulseaudio",
+    "--device=dri",
+    "--talk-name=org.freedesktop.secrets",
+    "--own-name=org.mpris.MediaPlayer2.metrolist",
+    "--talk-name=org.kde.StatusNotifierWatcher",
+    "--own-name=org.kde.StatusNotifierItem-2-1",
+    "--filesystem=xdg-download",
+    "--filesystem=xdg-music"
+  ],
+  "modules": [
+    {
+      "name": "metrolist",
+      "buildsystem": "simple",
+      "build-commands": [
+        "chmod +x Metrolist.AppImage",
+        "./Metrolist.AppImage --appimage-extract",
+        "test -x squashfs-root/AppRun",
+        "mkdir -p /app/metrolist /app/bin",
+        "cp -a squashfs-root/. /app/metrolist/",
+        "install -Dm755 cc.metrolist.Metrolist /app/bin/cc.metrolist.Metrolist",
+        "install -Dm644 cc.metrolist.Metrolist.desktop /app/share/applications/cc.metrolist.Metrolist.desktop",
+        "install -Dm644 cc.metrolist.Metrolist.metainfo.xml /app/share/metainfo/cc.metrolist.Metrolist.metainfo.xml",
+        "install -Dm644 cc.metrolist.Metrolist.png /app/share/icons/hicolor/512x512/apps/cc.metrolist.Metrolist.png",
+        "install -Dm644 cc.metrolist.Metrolist.svg /app/share/icons/hicolor/scalable/apps/cc.metrolist.Metrolist.svg"
+      ],
+      "sources": [
+        {"type": "file", "url": "@LINUX_X64_URL@", "sha256": "@LINUX_X64_SHA256@", "dest-filename": "Metrolist.AppImage", "only-arches": ["x86_64"]},
+        {"type": "file", "url": "@LINUX_ARM64_URL@", "sha256": "@LINUX_ARM64_SHA256@", "dest-filename": "Metrolist.AppImage", "only-arches": ["aarch64"]},
+        {"type": "file", "path": "cc.metrolist.Metrolist"},
+        {"type": "file", "path": "cc.metrolist.Metrolist.desktop"},
+        {"type": "file", "path": "cc.metrolist.Metrolist.metainfo.xml"},
+        {"type": "file", "path": "cc.metrolist.Metrolist.png"},
+        {"type": "file", "path": "cc.metrolist.Metrolist.svg"}
+      ]
+    }
+  ]
+}

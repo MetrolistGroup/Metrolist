@@ -28,5 +28,5 @@ jobs:
           sudo apt-get install -y flatpak-builder
       - name: Validate manifest and packaging targets
         run: |
-          flatpak-builder --show-manifest flatpak/com.metrolist.desktop.yaml > /dev/null
+          flatpak-builder --show-manifest flatpak/cc.metrolist.Metrolist.yaml > /dev/null
           make --dry-run flatpak-deps flatpak-build flatpak-install flatpak-bundle

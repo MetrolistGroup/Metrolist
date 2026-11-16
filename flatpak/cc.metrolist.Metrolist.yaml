@@ -1,8 +1,8 @@
-app-id: com.metrolist.desktop
+app-id: cc.metrolist.Metrolist
 runtime: org.gnome.Platform
 runtime-version: "51"
 sdk: org.gnome.Sdk
-command: com.metrolist.desktop
+command: cc.metrolist.Metrolist
 
 build-options:
   env:
@@ -18,12 +18,18 @@ finish-args:
   - --device=dri
   - --talk-name=org.freedesktop.secrets
   - --own-name=org.mpris.MediaPlayer2.metrolist
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --own-name=org.kde.StatusNotifierItem-2-1
   - --filesystem=xdg-download:rw
   - --filesystem=xdg-music:rw
 
 modules:
   - name: openjdk
     buildsystem: simple
+    # jlink rejects a JDK whose native libraries were stripped after installation.
+    build-options:
+      no-debuginfo: true
+      strip: false
     sources:
       - type: archive
         only-arches: [x86_64]
@@ -46,23 +52,24 @@ modules:
         PATH: /app/jdk/bin:/usr/bin:/bin
         JAVA_HOME: /app/jdk
     sources:
-      - type: dir
+      # Committed tree and submodules only; ignored local leftovers stay out of the build.
+      - type: git
         path: ..
-        skip-if-not-changed: false
+        branch: main
       - type: file
-        path: com.metrolist.desktop.desktop
+        path: cc.metrolist.Metrolist.desktop
       - type: file
-        path: com.metrolist.desktop.metainfo.xml
+        path: cc.metrolist.Metrolist.metainfo.xml
       - type: file
-        path: com.metrolist.desktop.png
+        path: cc.metrolist.Metrolist.png
       - type: file
-        path: com.metrolist.desktop.svg
+        path: cc.metrolist.Metrolist.svg
     build-commands:
       - ./gradlew clean :desktopApp:verifyReleaseDistributableJars --no-daemon --no-build-cache --no-configuration-cache
       - mkdir -p /app
       - cp -r desktopApp/build/compose/binaries/main-release/app/Metrolist/* /app/
       - |
-        cat > /app/bin/com.metrolist.desktop <<'LAUNCHER'
+        cat > /app/bin/cc.metrolist.Metrolist <<'LAUNCHER'
         #!/bin/sh
         export SKIKO_WAYLAND="${SKIKO_WAYLAND:-1}"
         export GDK_BACKEND="${GDK_BACKEND:-x11}"
@@ -74,15 +81,15 @@ modules:
         DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
         exec "$DIR/Metrolist" "$@"
         LAUNCHER
-      - chmod +x /app/bin/com.metrolist.desktop
+      - chmod +x /app/bin/cc.metrolist.Metrolist
       - mkdir -p /app/share/metainfo
       - |
         APP_VERSION="$(grep '^appVersion=' gradle.properties | cut -d= -f2)"
         BUILD_DATE="$(date +%Y-%m-%d)"
         sed -e "s/@VERSION@/$APP_VERSION/" -e "s/@DATE@/$BUILD_DATE/" \
-          com.metrolist.desktop.metainfo.xml > /app/share/metainfo/com.metrolist.desktop.metainfo.xml
-      - install -Dm644 com.metrolist.desktop.desktop /app/share/applications/com.metrolist.desktop.desktop
-      - install -Dm644 com.metrolist.desktop.png /app/share/icons/hicolor/512x512/apps/com.metrolist.desktop.png
-      - install -Dm644 com.metrolist.desktop.svg /app/share/icons/hicolor/scalable/apps/com.metrolist.desktop.svg
+          cc.metrolist.Metrolist.metainfo.xml > /app/share/metainfo/cc.metrolist.Metrolist.metainfo.xml
+      - install -Dm644 cc.metrolist.Metrolist.desktop /app/share/applications/cc.metrolist.Metrolist.desktop
+      - install -Dm644 cc.metrolist.Metrolist.png /app/share/icons/hicolor/512x512/apps/cc.metrolist.Metrolist.png
+      - install -Dm644 cc.metrolist.Metrolist.svg /app/share/icons/hicolor/scalable/apps/cc.metrolist.Metrolist.svg
     cleanup:
       - /jdk

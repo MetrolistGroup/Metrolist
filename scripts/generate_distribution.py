@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = "MetrolistGroup/Metrolist"
-APP_ID = "com.metrolist.desktop"
+APP_ID = "cc.metrolist.Metrolist"
 
 
 def release_assets(version):

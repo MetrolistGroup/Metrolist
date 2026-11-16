@@ -33,7 +33,7 @@ def propose(kind, generated, repository, version):
         if os.environ.get("FLATPAK_BINARY_EXCEPTION") != "true":
             print("Skipping Flatpak: no confirmed Flathub binary-build exception")
             return
-        tree = ET.parse(generated / "flatpak/com.metrolist.desktop.metainfo.xml")
+        tree = ET.parse(generated / "flatpak/cc.metrolist.Metrolist.metainfo.xml")
         if tree.find("./screenshots/screenshot/image") is None:
             raise ValueError("Flathub proposals require desktop screenshots")
     source = generated / kind

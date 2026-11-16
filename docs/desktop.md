@@ -157,7 +157,7 @@ Linux cannot validate DMG packaging or Rosetta. Before release, inspect Finder b
 
 ### Flatpak
 
-The local manifest is `flatpak/com.metrolist.desktop.yaml`, with app ID `com.metrolist.desktop`. It builds the working tree and needs initialized submodules.
+The local manifest is `flatpak/cc.metrolist.Metrolist.yaml`, with app ID `cc.metrolist.Metrolist`. It builds the committed `main` branch with its submodules, so commit changes before building.
 
 ```sh
 make flatpak-deps
