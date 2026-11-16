@@ -319,6 +319,7 @@ kotlin {
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(libs.filekit.dialogs)
+                implementation(libs.dbus.java.core)
                 implementation(libs.koin.core)
                 implementation(libs.koin.compose)
 

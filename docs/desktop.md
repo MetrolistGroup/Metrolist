@@ -8,7 +8,7 @@ Desktop account buttons keep their avatar visible while the popup transforms. Po
 
 ## Backup file dialogs
 
-Linux backup, restore and playlist-file imports open their Swing or AWT dialogs on the Swing event dispatch thread. Onboarding restore uses the same picker. Other platforms keep FileKit. File reads and backup work run off the UI thread.
+Linux backup, restore and playlist-file imports keep FileKit when the XDG file-chooser portal is available, so Flatpak can grant access to files outside its sandbox. When the portal is unavailable, Swing and AWT fallback dialogs run on the Swing event dispatch thread. Onboarding restore uses the same picker. Other platforms keep FileKit. File reads and backup work run off the UI thread.
 
 ## Fullscreen player
 

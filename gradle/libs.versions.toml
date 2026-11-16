@@ -29,6 +29,7 @@ datastore = "1.3.0"
 composeReorderable = "3.1.0"
 swipe = "1.3.0"
 filekit = "0.17.0"
+dbusJava = "5.2.2"
 
 shimmer = "1.5.0"
 desugaring = "2.1.5"
@@ -70,6 +71,7 @@ sharesheet = { module = "dev.nucleusframework:nucleus.share", version.ref = "nuc
 compose-desktop = { module = "org.jetbrains.compose.desktop:desktop", version.ref = "compose" }
 foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose" }
 filekit-dialogs = { module = "io.github.vinceglb:filekit-dialogs", version.ref = "filekit" }
+dbus-java-core = { module = "com.github.hypfvieh:dbus-java-core", version.ref = "dbusJava" }
 jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 darkmodedetector = { module = "dev.nucleusframework:nucleus.darkmode-detector", version.ref = "nucleusframework" }
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
