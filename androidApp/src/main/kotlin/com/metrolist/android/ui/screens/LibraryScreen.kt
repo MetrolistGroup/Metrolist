@@ -87,6 +87,7 @@ import com.metrolist.android.ui.menu.SongMenu
 import com.metrolist.android.ui.utils.playSong
 import com.metrolist.android.utils.startActivitySafely
 import com.metrolist.android.viewmodels.LibraryViewModel
+import com.metrolist.shared.constants.ThumbnailCornerRadius
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.KIND_CACHE
 import com.metrolist.shared.db.entities.toSongItem
@@ -149,6 +150,7 @@ import com.metrolist.shared.ui.screens.LibraryFilter
 import com.metrolist.shared.ui.screens.libraryAutoPlaylists
 import com.metrolist.shared.ui.screens.libraryContentText
 import com.metrolist.shared.ui.screens.rememberLibrarySearchScrollState
+import com.metrolist.shared.ui.theme.gridCellShape
 import com.metrolist.shared.ui.tv.tvFocusHighlight
 import com.metrolist.shared.utils.ShareUrls
 import kotlinx.coroutines.flow.Flow
@@ -544,6 +546,7 @@ fun LibraryScreen(
                             onSwipeLeft = { queue(item, playNext = false) },
                             onSwipeRight = { queue(item, playNext = true) },
                             enabled = playerConnection != null && Settings.shared.swipeToSong && searchQuery.isNotBlank(),
+                            shape = if (isGridView) gridCellShape() else RoundedCornerShape(ThumbnailCornerRadius),
                             content = content,
                         )
                     } else {

@@ -47,6 +47,8 @@ For Android lookahead crashes, repeat portrait/landscape rotation, background/re
 
 ### Collections and pages
 
+In Android Library, search tracks, albums and playlists in list and grid views with swipe actions enabled and disabled. Item corners and spacing must stay the same when the query becomes nonblank. Check swipe actions and clearing the query.
+
 On Android, desktop and iOS, hide a library item, hide an artist or podcast from Home, block an artist, dislike a song and block a Listen Together user. Each restore page gets one hint with an Open settings action. Use the action to open the named list, then restore the item. Check the existing player and navigation transitions. Hide or block another item for the same page, then relaunch and repeat. The hint must not return. Repeat with existing hidden or blocked items and unset hint flags, and check that the next action shows the hint. Hide from Home must keep its Undo snackbar.
 
 Open community playlists and YouTube mixes from Home on a slow connection. Edit appears only for owned or editable local playlists, including in the overflow menu. The playlist page keeps the tapped cover through loading, pagination, refresh and Back, while custom covers and local mosaics keep priority. Check that the description and track-count line expand and fade as album descriptions do, including when no preview is cached and with system animations disabled.
