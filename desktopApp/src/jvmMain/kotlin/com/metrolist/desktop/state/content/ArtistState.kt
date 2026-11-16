@@ -387,7 +387,15 @@ object ArtistState {
         artistSubscription
             .toggle(
                 AppState.scope,
-                request = { database.setArtistSubscribed(GlobalYouTubeRepository.instance, artistInfo.id, artistInfo.title, it) },
+                request = {
+                    database.setArtistSubscribed(
+                        GlobalYouTubeRepository.instance,
+                        artistInfo.id,
+                        artistInfo.title,
+                        it,
+                        artistInfo.thumbnail,
+                    )
+                },
                 onError = { AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred)) },
             )?.let { artistSubscriptionJob = it }
     }

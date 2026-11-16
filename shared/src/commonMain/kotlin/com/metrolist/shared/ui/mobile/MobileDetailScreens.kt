@@ -367,6 +367,7 @@ internal fun MobileArtistScreen(
                         artistId,
                         artist?.title ?: fallbackTitle.orEmpty(),
                         it,
+                        artist?.thumbnail,
                     )
                 },
                 onError = { onError(errorText) },

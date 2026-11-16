@@ -52,7 +52,7 @@ class ArtistSubscribeStatePersistenceTest {
                     assertNotNull(
                         state.toggle(
                             this,
-                            request = { database.setArtistSubscribed(repository, "artist", "Artist", it) },
+                            request = { database.setArtistSubscribed(repository, "artist", "Artist", it, "page.jpg") },
                             onError = { error("Subscription should succeed") },
                         ),
                     ).join()
@@ -61,6 +61,7 @@ class ArtistSubscribeStatePersistenceTest {
                     val saved = assertNotNull(database.dao().getArtistById("artist"))
                     assertEquals("Artist", saved.name)
                     assertNotNull(saved.bookmarkedAt)
+                    assertEquals("page.jpg", saved.thumbnailUrl)
                     val complete = saved.copy(thumbnailUrl = "cover.jpg")
                     database.dao().upsert(complete)
 
@@ -73,7 +74,7 @@ class ArtistSubscribeStatePersistenceTest {
                     assertNotNull(
                         reloaded.toggle(
                             this,
-                            request = { database.setArtistSubscribed(repository, "artist", "Different song artist", it) },
+                            request = { database.setArtistSubscribed(repository, "artist", "Different song artist", it, "other.jpg") },
                             onError = { error("Unsubscription should succeed") },
                         ),
                     ).join()

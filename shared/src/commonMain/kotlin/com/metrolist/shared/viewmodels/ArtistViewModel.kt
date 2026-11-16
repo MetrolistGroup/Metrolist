@@ -148,7 +148,7 @@ class ArtistViewModel(
         val result =
             mutationScope.async(Dispatchers.Main.immediate) {
                 subscription.requestToggle(requested) {
-                    database.setArtistSubscribed(GlobalYouTubeRepository.instance, artist.id, artist.title, it)
+                    database.setArtistSubscribed(GlobalYouTubeRepository.instance, artist.id, artist.title, it, artist.thumbnail)
                 }
             }
         scope.launch { if (!result.await()) onError() }
