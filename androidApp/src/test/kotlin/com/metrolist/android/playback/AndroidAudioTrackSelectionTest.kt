@@ -343,6 +343,30 @@ class AndroidAudioTrackSelectionTest {
     }
 
     @Test
+    fun downloadedVideoKeepsItsLocalRecordingForInitialPlaybackAndPreload() =
+        runTest {
+            val source = videoSong()
+            val downloadedAudio = PlaybackResource(source.id, "file://downloaded-video", emptyMap(), null, null)
+            for (positionMs in listOf(0L, 4_000L)) {
+                val selection =
+                    resolveAndroidAudioTrackSelection(
+                        source,
+                        positionMs,
+                        wantVideo = false,
+                        cachedAudio = downloadedAudio,
+                        sourceIsDownloaded = true,
+                    ) { error("A downloaded recording must not resolve another version online") }
+
+                assertEquals(AndroidAudioTrackSelection(source, positionMs, downloadedAudio), selection)
+            }
+            val missingDownload =
+                resolveAndroidAudioTrackSelection(source, 0L, wantVideo = false, sourceIsDownloaded = true) {
+                    MusicTrackResult.Found(audioSong())
+                }
+            assertEquals("track", missingDownload.song.id)
+        }
+
+    @Test
     fun cachedVideoStillSelectsCounterpartForInitialPlaybackAndPreload() =
         runTest {
             val source = videoSong()

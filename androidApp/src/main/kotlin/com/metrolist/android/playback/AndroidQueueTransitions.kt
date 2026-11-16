@@ -260,6 +260,7 @@ internal class AndroidQueueTransitions(
                         positionMs = 0L,
                         wantVideo = wantNextVideo,
                         cachedAudio = cachedAudio,
+                        sourceIsDownloaded = cachedAudio != null && audioCacheManager.isDownloaded(sourceSong.id),
                         allowCounterpartLookup =
                             PlaybackNetworkStateStore.current.connected && !AndroidDeviceConnect.manager.remote.isActive &&
                                 !AndroidListenTogetherManager.isGuestPlaybackLocked,

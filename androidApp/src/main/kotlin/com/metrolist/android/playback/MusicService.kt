@@ -1704,6 +1704,7 @@ class MusicService :
                         positionMs = targetPosition,
                         wantVideo = wantVideo,
                         cachedAudio = cachedAudio,
+                        sourceIsDownloaded = cachedAudio != null && audioCacheManager.isDownloaded(sourceSong.id),
                         allowCounterpartLookup =
                             PlaybackNetworkStateStore.current.connected && !AndroidListenTogetherManager.isGuestPlaybackLocked,
                         isCounterpartAllowed = { !BlockedContent.isBlocked(it) },

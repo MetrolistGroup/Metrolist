@@ -150,13 +150,16 @@ internal suspend fun resolveAndroidAudioTrackSelection(
     positionMs: Long,
     wantVideo: Boolean,
     cachedAudio: PlaybackResource? = null,
+    sourceIsDownloaded: Boolean = false,
     allowCounterpartLookup: Boolean = true,
     isCounterpartAllowed: (SongItem) -> Boolean = { true },
     lookupTimeoutMs: Long = ANDROID_MUSIC_TRACK_LOOKUP_TIMEOUT_MS,
     resolveMusicTrack: suspend (SongItem) -> MusicTrackResult,
 ): AndroidAudioTrackSelection {
     val sourceSelection = AndroidAudioTrackSelection(sourceSong, positionMs.coerceAtLeast(0L), cachedAudio)
-    if (wantVideo || !allowCounterpartLookup || !sourceSong.canSwitchToAudioTrack) {
+    if (wantVideo || !allowCounterpartLookup || !sourceSong.canSwitchToAudioTrack ||
+        (sourceIsDownloaded && cachedAudio?.videoId == sourceSong.id)
+    ) {
         return sourceSelection
     }
 
