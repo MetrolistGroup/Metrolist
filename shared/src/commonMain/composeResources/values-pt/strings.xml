@@ -979,4 +979,7 @@
     <string name="integration_off">Desligar</string>
     <string name="integration_on_account">%1$s · Ligado</string>
     <string name="integration_on_signed_out">Ligado · Sem sessão iniciada</string>
+    <string name="discord_integration_description">Mostrar a música que reproduzes no teu perfil do Discord</string>
+    <string name="device_connect_peer_details">%1$s\n%2$s</string>
+    <string name="listen_together_server_label">%1$s · %2$s</string>
 </resources>
