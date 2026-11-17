@@ -341,6 +341,9 @@ class PlayHistoryRepository(
                     .take(RELATED_SONGS_LIMIT)
             if (related.isEmpty()) return
             database.withDatabaseTransaction {
+                // Recheck inside the transaction: overlapping qualified plays of the
+                // same seed could both pass the check above before either write.
+                if (dao.hasRelatedSongs(songId)) return@withDatabaseTransaction
                 related.forEach { relatedSong ->
                     dao.upsertHistorySong(relatedSong)
                     dao.insert(RelatedSongMap(songId = songId, relatedSongId = relatedSong.id))

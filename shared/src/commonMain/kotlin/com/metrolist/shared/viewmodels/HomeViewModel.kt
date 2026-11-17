@@ -70,6 +70,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlinx.serialization.json.Json
@@ -270,7 +271,14 @@ class HomeViewModel(
         scope.launch {
             snapshotFlow { Settings.shared.classicRecommendations }
                 .drop(1)
-                .collect { rebuildQuickPicks() }
+                .collect {
+                    // A load started before this change may still publish Quick picks
+                    // selected with the old value; wait for it to settle first.
+                    withTimeoutOrNull(10_000) {
+                        snapshotFlow { _uiState.value.isContentLoading }.first { loading -> !loading }
+                    }
+                    rebuildQuickPicks()
+                }
         }
         scope.launch {
             val cacheStart = TimeSource.Monotonic.markNow()
@@ -968,7 +976,8 @@ class HomeViewModel(
     private suspend fun rebuildQuickPicks() {
         val state = _uiState.value
         if (state.isContentLoading) return
-        val isFiltered = isFilteredHome(state.selectedChip?.params, state.selectedChip?.browseId ?: "FEmusic_home")
+        val selectedChip = state.selectedChip
+        val isFiltered = isFilteredHome(selectedChip?.params, selectedChip?.browseId ?: "FEmusic_home")
         val apiQuickPicks = findSectionSongs(state.data.orEmpty(), "FEmusic_quickpicks")
         val localQuickPicks =
             database
@@ -988,7 +997,25 @@ class HomeViewModel(
             } else {
                 personalizedSection(apiQuickPicks, localQuickPicks, isFiltered)
             }.distinctBy(::canonicalHomeItemId)
-        _uiState.update { it.copy(quickPicks = quickPicks) }
+        val filteredQuickPicks = BlockedContent.filterSongs(quickPicks, BlockedContent.snapshot())
+        _uiState.update { current ->
+            if (current.selectedChip == selectedChip) {
+                current.copy(quickPicks = filteredQuickPicks)
+            } else {
+                current
+            }
+        }
+        // Mirror the rebuild into the caches and the persisted snapshot so
+        // pagination and chip round trips keep the rebuilt picks.
+        val updated = _uiState.value
+        if (updated.selectedChip != selectedChip || updated.quickPicks != filteredQuickPicks) return
+        if (isFiltered) {
+            cachedSelectedChipContent = updated
+            updated.selectedChip?.let { chip -> cacheChipContent(chip, updated) }
+        } else {
+            cacheAllContentState(updated)
+        }
+        saveLastHomePage(updated)
     }
 
     private fun HomeUiState.withMergedSections(
