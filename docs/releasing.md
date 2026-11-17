@@ -30,6 +30,8 @@ All three builds must succeed before publication. The rolling `nightly` tag move
 
 Notes link the built commit and list up to 50 first-parent commits since the previous nightly tag target. Nightly builds override `appVersion` with the commit as semver build metadata, such as `14.0.0+abc1234`, so the app and release notes show the exact commit. Build metadata keeps update checks treating a nightly as equal to its base release, where a `-suffix` would mark it older and offer the stable release as an update. The reusable Android and native workflows take this through their `app-version` input, which sets `ORG_GRADLE_PROJECT_appVersion`. Android uses the same signing, Last.fm and Lyprio secrets as stable releases; signing must be available to push runs. Signing secrets stay in the Android job. Nightlies do not send Sentry reports, offer Sentry consent, or upload or finalize Sentry releases. Saved reporting consent is preserved for stable releases. Mapping files and native build evidence remain workflow artifacts.
 
+Apps on the nightly update channel, the default for nightly builds and a switch in Updates settings, read the nightly from the same hourly release list request. A nightly counts as new when its platform asset's SHA-256 digest differs from the one the app last confirmed as installed; a nightly built from the running commit confirms its digest. After a crash, Android and desktop also offer the nightly on the stable channel when no newer release exists. Desktop opens the platform's nightly download, since the in-app installer only handles stable Windows releases.
+
 ## Stable releases
 
 `release.yml` runs on `v*.*.*` tags. The tag must be exactly `vMAJOR.MINOR.PATCH` and equal the suffix-free `appVersion`.

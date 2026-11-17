@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroup
@@ -86,6 +87,7 @@ import com.metrolist.android.R
 import com.metrolist.android.ui.screens.settings.UpdateDetailsScreen
 import com.metrolist.android.update.AppUpdateManager
 import com.metrolist.android.update.AppUpdateState
+import com.metrolist.android.update.GitHubRelease
 import com.metrolist.android.utils.CrashHandler
 import com.metrolist.android.utils.CrashLogUploader
 import com.metrolist.android.utils.CrashPaste
@@ -108,7 +110,11 @@ import com.metrolist.shared.generated.resources.crash_updates_action
 import com.metrolist.shared.generated.resources.crash_updates_check
 import com.metrolist.shared.generated.resources.crash_updates_checking
 import com.metrolist.shared.generated.resources.crash_updates_error
+import com.metrolist.shared.generated.resources.crash_updates_install
 import com.metrolist.shared.generated.resources.crash_updates_no_updates
+import com.metrolist.shared.generated.resources.crash_updates_prompt_later
+import com.metrolist.shared.generated.resources.crash_updates_prompt_text
+import com.metrolist.shared.generated.resources.crash_updates_prompt_title
 import com.metrolist.shared.generated.resources.crash_upload
 import com.metrolist.shared.generated.resources.crash_upload_disclosure
 import com.metrolist.shared.generated.resources.crash_upload_failed
@@ -188,7 +194,29 @@ class CrashActivity : ComponentActivity() {
                     var showUpdate by remember { mutableStateOf(false) }
                     val clipboard = LocalClipboard.current
                     val scope = rememberCoroutineScope()
-                    LaunchedEffect(Unit) { AppUpdateManager.check(this@CrashActivity, crashRecovery = true) }
+                    var updatePrompt by remember { mutableStateOf<GitHubRelease?>(null) }
+                    LaunchedEffect(Unit) {
+                        updatePrompt = AppUpdateManager.check(this@CrashActivity, crashRecovery = true)
+                    }
+                    updatePrompt?.let { release ->
+                        AlertDialog(
+                            onDismissRequest = { updatePrompt = null },
+                            title = { Text(stringResource(Res.string.crash_updates_prompt_title)) },
+                            text = { Text(stringResource(Res.string.crash_updates_prompt_text, release.version)) },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    updatePrompt = null
+                                    showUpdate = true
+                                    scope.launch { AppUpdateManager.download(this@CrashActivity, release, crashRecovery = true) }
+                                }) { Text(stringResource(Res.string.crash_updates_install)) }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { updatePrompt = null }) {
+                                    Text(stringResource(Res.string.crash_updates_prompt_later))
+                                }
+                            },
+                        )
+                    }
                     if (showLogs) {
                         CrashLogsScreen(CrashHandler.store(this), onClose = {
                             if (intent.action == CrashHandler.ACTION_LOGS) finish() else showLogs = false

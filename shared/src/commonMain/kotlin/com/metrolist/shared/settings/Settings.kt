@@ -584,6 +584,8 @@ class Settings(
 
     var checkForUpdates by preference(true)
     var updateNotifications by preference(true)
+    var updateChannel by preference("")
+    var installedNightlyDigest by preference("")
     var lastUpdateCheckTimestamp by preference(0L)
     var lastUpdateCheckAttemptTimestamp by preference(0L)
     var lastRunAppVersion by preference("")
@@ -1348,6 +1350,7 @@ class Settings(
                     "cachedAvailableUpdateJson",
                     "cachedUpdateReleasesJson",
                     "pendingUpdateReleaseJson",
+                    "installedNightlyDigest",
                     "lastUpdateCheckTime",
                     DevtoolsUnlockedKey,
                     DevtoolsPlaybackClientKey,

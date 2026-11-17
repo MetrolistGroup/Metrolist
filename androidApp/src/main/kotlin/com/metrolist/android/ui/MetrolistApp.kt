@@ -387,6 +387,7 @@ import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
 import coil3.compose.AsyncImage as CoilAsyncImage
 import com.metrolist.android.ui.screens.settings.IntegrationsScreen as SettingsIntegrationsScreen
@@ -575,8 +576,8 @@ fun MetrolistApp(
             if (available == null) {
                 Settings.shared.updatePromptVersion = ""
                 Settings.shared.launchesSinceUpdatePrompt = 0
-            } else if (Settings.shared.updatePromptVersion != available.version) {
-                Settings.shared.updatePromptVersion = available.version
+            } else if (Settings.shared.updatePromptVersion != available.updateKey) {
+                Settings.shared.updatePromptVersion = available.updateKey
                 Settings.shared.launchesSinceUpdatePrompt = 0
                 updatePrompt = available
             } else {
@@ -595,6 +596,14 @@ fun MetrolistApp(
             }
             if (!wasUpdated || installedReleaseNotes != null || AppUpdateManager.releases.value.isNotEmpty()) {
                 Settings.shared.lastRunAppVersion = BuildConfig.VERSION_NAME
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            // Hourly keeps nightly users current while staying far below GitHub's unauthenticated rate limit.
+            while (true) {
+                delay(1.hours)
+                if (Settings.shared.checkForUpdates) AppUpdateManager.checkAtStartup(context, networkEnabled = true)
             }
         }
 

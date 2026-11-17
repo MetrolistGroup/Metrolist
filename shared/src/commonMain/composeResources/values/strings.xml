@@ -1675,6 +1675,10 @@
     <string name="updates_auto_check">Automatically check for updates</string>
     <!-- Translators: Imperative action label for notifications in the update settings. -->
     <string name="updates_notifications">Update notifications</string>
+    <!-- Translators: Switch label in the update settings for receiving nightly (daily development) builds instead of stable releases. -->
+    <string name="updates_nightly_builds">Nightly builds</string>
+    <!-- Translators: Description under the nightly builds switch in the update settings. -->
+    <string name="updates_nightly_builds_desc">Get a new build after every change. Nightly builds may be unstable.</string>
     <!-- Translators: Heading for the app sharing section in the update settings. -->
     <string name="updates_share_app">Share app</string>
     <!-- Translators: Action label to share the installed Android app APK from the update settings. -->
@@ -5340,6 +5344,9 @@
     <string name="crash_menu_reload" translatable="false">Reload</string>
     <string name="crash_retry" translatable="false">Retry</string>
     <string name="crash_updates_action" translatable="false">Update</string>
+    <string name="crash_updates_prompt_title" translatable="false">A newer build is available</string>
+    <string name="crash_updates_prompt_text" translatable="false">Metrolist %1$s may already fix this crash. Install it now?</string>
+    <string name="crash_updates_prompt_later" translatable="false">Not now</string>
     <string name="crash_updates_changelog" translatable="false">Changelog</string>
     <string name="crash_updates_check" translatable="false">Check for updates</string>
     <string name="crash_updates_checking" translatable="false">Checking for updates…</string>
