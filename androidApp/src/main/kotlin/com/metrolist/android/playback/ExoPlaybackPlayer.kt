@@ -54,7 +54,6 @@ import com.metrolist.shared.deviceconnect.DcLocalPlaybackState
 import com.metrolist.shared.deviceconnect.DeviceConnectControllerClock
 import com.metrolist.shared.equalizer.AudioSpectrumMeter
 import com.metrolist.shared.equalizer.EqualizerProfiles
-import com.metrolist.shared.model.MUSIC_VIDEO_TYPE_LIVE
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.isLive
 import com.metrolist.shared.playback.MusicQueue
@@ -91,6 +90,7 @@ import com.metrolist.shared.youtube.playback.PlaybackBandwidthMeter
 import com.metrolist.shared.youtube.playback.PlaybackEventKind
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import com.metrolist.shared.youtube.playback.PlaybackResource
+import com.metrolist.shared.youtube.playback.matchingLiveState
 import com.metrolist.shared.youtube.playback.sabrAudioPlaybackChunks
 import com.metrolist.shared.youtube.playback.toPlaybackLogDetails
 import com.metrolist.shared.youtube.playback.withClientPlaybackNonce
@@ -2355,12 +2355,7 @@ class ExoPlaybackPlayer(
         minimumPositionMs = candidate.currentPosition.coerceAtLeast(0L)
         _currentPosition.value = minimumPositionMs
         _bufferedPosition.value = candidate.bufferedPosition.coerceAtLeast(0L)
-        val effectiveSong =
-            if (resource.isLive && !song.isLive) {
-                song.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE, duration = null)
-            } else {
-                song
-            }
+        val effectiveSong = song.matchingLiveState(resource)
         _duration.value =
             playbackDurationMs(
                 backendDurationMs = candidate.duration,
@@ -2391,7 +2386,7 @@ class ExoPlaybackPlayer(
         }
         _isPlaying.value = candidate.isPlaying
         queue.next()
-        if (effectiveSong.id != queueSong.id || (effectiveSong.isLive && !queueSong.isLive)) queue.replaceCurrent(effectiveSong)
+        if (effectiveSong.id != queueSong.id || effectiveSong.isLive != queueSong.isLive) queue.replaceCurrent(effectiveSong)
         sabrPlaybackCache.start(effectiveSong.id, resource, activeAudioSource, candidate.isPlaying, newPlayback = true)
         onPreloadedPlaybackCommitted?.invoke(effectiveSong, resource)
         currentSongValue = effectiveSong
@@ -2986,12 +2981,7 @@ class ExoPlaybackPlayer(
                     } else {
                         song
                     }
-                val committedSong =
-                    if (preparedResource.isLive && !baseSong.isLive) {
-                        baseSong.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE, duration = null)
-                    } else {
-                        baseSong
-                    }
+                val committedSong = baseSong.matchingLiveState(preparedResource)
                 sabrPlaybackCache.release(previousAudioSource)
                 previousAudioSource?.closePlaybackSource()
                 previousVideoSource?.closePlaybackSource()
@@ -3056,7 +3046,7 @@ class ExoPlaybackPlayer(
                 }
                 eofInstance = currentInstance
                 lastEofInstance = 0L
-                if (!stageQueueReplacement && (replaceCurrentQueueItem || (preparedResource.isLive && currentQueueSong?.isLive != true))) {
+                if (!stageQueueReplacement && (replaceCurrentQueueItem || committedSong.isLive != (currentQueueSong?.isLive == true))) {
                     queue.replaceCurrent(committedSong)
                 }
                 Timber.tag(MUSIC_VIDEO_TAG).d(

@@ -91,7 +91,6 @@ import com.metrolist.shared.discord.resolveDiscordButtonLabel
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.playback_unable_to_play_queued_track
 import com.metrolist.shared.generated.resources.search_no_results
-import com.metrolist.shared.model.MUSIC_VIDEO_TYPE_LIVE
 import com.metrolist.shared.model.RadioQueueChip
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.canSwitchToAudioTrack
@@ -137,6 +136,7 @@ import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import com.metrolist.shared.youtube.playback.StreamResolver
+import com.metrolist.shared.youtube.playback.matchingLiveState
 import com.metrolist.shared.youtube.playback.playbackErrorResource
 import com.metrolist.shared.youtube.playback.toPlaybackLogDetails
 import kotlinx.coroutines.CancellationException
@@ -1834,12 +1834,7 @@ class MusicService :
                                 ?.let(SongMetadataState::apply)
                         } ?: return@withQueueLoading false
                     val mergedSong = mergeSelectedQueueSong(playbackSong, sourceSong, currentQueueSong)
-                    playbackSong =
-                        if (resource.isLive && !mergedSong.isLive) {
-                            mergedSong.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE, duration = null)
-                        } else {
-                            mergedSong
-                        }
+                    playbackSong = mergedSong.matchingLiveState(resource)
                     var prepareFailure: Throwable? = null
                     if (wantVideo && resource.hasVideo) {
                         videoMode.markQueueTarget(playbackSong.id)

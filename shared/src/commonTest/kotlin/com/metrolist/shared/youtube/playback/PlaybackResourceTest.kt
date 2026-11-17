@@ -2,10 +2,14 @@ package com.metrolist.shared.youtube.playback
 
 import com.metrolist.innertubex.sabr.SabrBootstrap
 import com.metrolist.innertubex.sabr.SabrFormatId
+import com.metrolist.shared.model.MUSIC_VIDEO_TYPE_LIVE
+import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.isLive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class PlaybackResourceTest {
@@ -75,5 +79,25 @@ class PlaybackResourceTest {
         for (url in listOf("sabr://video", "file:///audio", "/cache/audio", "content://downloads/audio")) {
             assertNull(direct.copy(url = url).networkUrl)
         }
+    }
+
+    @Test
+    fun queueLiveStateFollowsTheResolvedStream() {
+        val song = SongItem("video", "Track", null, emptyList(), null, duration = 353L)
+
+        fun resource(
+            isLive: Boolean,
+            duration: Long?,
+        ) = PlaybackResource("video", "https://example.test/a", emptyMap(), null, null, durationSeconds = duration, isLive = isLive)
+
+        val live = song.matchingLiveState(resource(isLive = true, duration = null))
+        assertTrue(live.isLive)
+        assertEquals(MUSIC_VIDEO_TYPE_LIVE, live.musicVideoType)
+        // A track wrongly marked live becomes seekable again once a finite recording plays.
+        val restored = live.matchingLiveState(resource(isLive = false, duration = 353L))
+        assertFalse(restored.isLive)
+        assertEquals(353L, restored.duration)
+        assertSame(song, song.matchingLiveState(resource(isLive = false, duration = 353L)))
+        assertSame(live, live.matchingLiveState(resource(isLive = false, duration = null)))
     }
 }

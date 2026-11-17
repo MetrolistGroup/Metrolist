@@ -122,6 +122,7 @@ import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import com.metrolist.shared.youtube.playback.WebPoTokenHealth
 import com.metrolist.shared.youtube.playback.formatPlaybackLogDetails
+import com.metrolist.shared.youtube.playback.matchingLiveState
 import com.metrolist.shared.youtube.playback.playbackErrorResource
 import com.metrolist.shared.youtube.playback.throwableDiagnostics
 import com.metrolist.shared.youtube.playback.toPlaybackLogDetails
@@ -2904,17 +2905,13 @@ object PlayerState {
                 } else {
                     val resource = withContext(Dispatchers.IO) { fetchSelectedPlaybackResource(playableTrack, generation) }
                     if (resource != null && isCurrentPlaybackTransition(generation)) {
-                        val liveTrack =
-                            if (resource.isLive && !playableTrack.isLive) {
-                                val updated = playableTrack.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE, duration = null)
-                                queue.replaceCurrent(updated)
-                                withContext(Dispatchers.Main) {
-                                    updateCurrentTrack(updated, startArtworkFetch = false)
-                                }
-                                updated
-                            } else {
-                                playableTrack
+                        val liveTrack = playableTrack.matchingLiveState(resource)
+                        if (liveTrack !== playableTrack) {
+                            queue.replaceCurrent(liveTrack)
+                            withContext(Dispatchers.Main) {
+                                updateCurrentTrack(liveTrack, startArtworkFetch = false)
                             }
+                        }
                         val played =
                             withContext(Dispatchers.IO) {
                                 player.playPending(liveTrack, resource, pendingTransitionId, preparePaused)
@@ -3055,14 +3052,8 @@ object PlayerState {
             } else {
                 val resource = fetchPlaybackResource(playableTrack, showError = true)
                 if (resource != null && isCurrent()) {
-                    val liveTrack =
-                        if (resource.isLive && !playableTrack.isLive) {
-                            val updated = playableTrack.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE, duration = null)
-                            (stagedQueue ?: queue).replaceCurrent(updated)
-                            updated
-                        } else {
-                            playableTrack
-                        }
+                    val liveTrack = playableTrack.matchingLiveState(resource)
+                    if (liveTrack !== playableTrack) (stagedQueue ?: queue).replaceCurrent(liveTrack)
                     if (!prepareTrack(liveTrack, resource)) {
                         withContext(Dispatchers.Main) {
                             if (isCurrent()) video.setResolving(false)
