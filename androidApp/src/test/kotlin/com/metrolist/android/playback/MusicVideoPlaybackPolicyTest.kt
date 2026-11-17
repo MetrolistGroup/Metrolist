@@ -98,10 +98,25 @@ class MusicVideoPlaybackPolicyTest {
             for (videoMode in listOf(false, true)) {
                 val wantVideo = shouldRequestQueueVideo(isVideoSong = video.isVideoSong, isVideoModeActive = videoMode)
                 assertEquals(videoMode, wantVideo)
-                assertEquals(!videoMode, shouldResolveMusicTrackCounterpart(sourceIsVideoSong = video.isVideoSong, wantVideo = wantVideo))
+                assertEquals(
+                    !videoMode,
+                    shouldResolveMusicTrackCounterpart(
+                        sourceIsVideoSong = video.isVideoSong,
+                        wantVideo = wantVideo,
+                        videoPlaybackEnabled = true,
+                    ),
+                )
             }
         }
         assertFalse(shouldRequestQueueVideo(isVideoSong = false, isVideoModeActive = false))
+    }
+
+    @Test
+    fun disabledMusicVideosKeepTheRequestedVideosAudio() {
+        assertFalse(shouldResolveMusicTrackCounterpart(sourceIsVideoSong = true, wantVideo = false, videoPlaybackEnabled = false))
+        assertFalse(canSwapToAudioCounterpart(videoPlaybackEnabled = false, networkConnected = true))
+        assertTrue(canSwapToAudioCounterpart(videoPlaybackEnabled = true, networkConnected = true))
+        assertFalse(canSwapToAudioCounterpart(videoPlaybackEnabled = true, networkConnected = true, remotePlaybackActive = true))
     }
 
     @Test

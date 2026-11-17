@@ -262,8 +262,12 @@ internal class AndroidQueueTransitions(
                         cachedAudio = cachedAudio,
                         sourceIsDownloaded = cachedAudio != null && audioCacheManager.isDownloaded(sourceSong.id),
                         allowCounterpartLookup =
-                            PlaybackNetworkStateStore.current.connected && !AndroidDeviceConnect.manager.remote.isActive &&
-                                !AndroidListenTogetherManager.isGuestPlaybackLocked,
+                            canSwapToAudioCounterpart(
+                                videoPlaybackEnabled = Settings.shared.musicVideoPlaybackEnabled,
+                                networkConnected = PlaybackNetworkStateStore.current.connected,
+                                remotePlaybackActive = AndroidDeviceConnect.manager.remote.isActive,
+                                guestPlaybackLocked = AndroidListenTogetherManager.isGuestPlaybackLocked,
+                            ),
                         isCounterpartAllowed = { !BlockedContent.isBlocked(it) },
                         resolveMusicTrack = musicVideoResolver::resolveMusicTrack,
                     )
