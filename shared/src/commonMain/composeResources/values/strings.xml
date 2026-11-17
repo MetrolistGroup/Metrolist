@@ -132,6 +132,8 @@
     <!-- Translators: Imperative action label for add to queue in the multiple app screens. -->
     <string name="add_to_queue">Add to queue</string>
     <!-- Translators: Imperative action label for remove from library in the multiple app screens. -->
+    <!-- Translators: Song menu action that saves the song to the library. -->
+    <string name="add_to_library">Add to library</string>
     <string name="remove_from_library">Remove from library</string>
     <!-- Translators: Imperative action that downloads media for offline playback. -->
     <string name="action_download">Download</string>

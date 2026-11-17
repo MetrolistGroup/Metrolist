@@ -19,6 +19,7 @@ import androidx.compose.ui.text.AnnotatedString
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.action_download
 import com.metrolist.shared.generated.resources.action_like
+import com.metrolist.shared.generated.resources.add_to_library
 import com.metrolist.shared.generated.resources.add_to_playlist
 import com.metrolist.shared.generated.resources.add_to_queue
 import com.metrolist.shared.generated.resources.add_to_queue_desc
@@ -79,6 +80,7 @@ import com.metrolist.shared.settings.ArtistNameAliases
 import com.metrolist.shared.settings.HiddenHomeItems
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.settings.displayTitle
+import com.metrolist.shared.state.SongLibraryState
 import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.CollectionPreviews
 import com.metrolist.shared.ui.components.Material3MenuGroup
@@ -206,8 +208,21 @@ fun songMediaMenuModel(
     leadingPrimaryActions: List<PlayerMenuAction> = emptyList(),
     trailingPrimaryActions: List<PlayerMenuAction> = emptyList(),
     deleteUploadAction: PlayerMenuAction? = null,
+    showLibraryAction: Boolean = !isGuest,
 ): MediaMenuModel {
     val unlikeLabel = stringResource(Res.string.unlike)
+    val libraryAction =
+        if (showLibraryAction && SongLibraryState.canToggle(song)) {
+            val inLibrary = SongLibraryState.isInLibrary(song)
+            action(
+                if (inLibrary) MetrolistIcons.Outlined.LibraryMusic else MetrolistIcons.Outlined.LibraryAdd,
+                stringResource(if (inLibrary) Res.string.remove_from_library else Res.string.add_to_library),
+                onDismiss,
+                { SongLibraryState.toggle(song) },
+            )
+        } else {
+            null
+        }
     val likeLabel = stringResource(Res.string.action_like)
     val playLabel = stringResource(Res.string.play)
     val moveUpLabel = stringResource(Res.string.move_up)
@@ -296,6 +311,7 @@ fun songMediaMenuModel(
                 listOfNotNull(
                     download.takeIf { isPlayerMenu },
                     pinAction(isPinned, onDismiss, onTogglePin),
+                    libraryAction,
                     hideAction(onDismiss, onHideFromLibrary),
                     dislikeMenuAction(isDisliked, onDismiss, onDislike),
                     blockArtistMenuAction(onDismiss, onBlockArtist),
