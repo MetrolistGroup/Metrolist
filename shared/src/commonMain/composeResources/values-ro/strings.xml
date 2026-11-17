@@ -33,7 +33,7 @@
     <string name="filter_downloaded">Descărcate</string>
     <string name="filter_all">Toate</string>
     <string name="filter_videos">Videoclipuri</string>
-    <string name="filter_community_playlists">Playlisturi comunitare</string>
+    <string name="filter_community_playlists">Playlisturi ale comunității</string>
     <string name="filter_featured_playlists">Playlisturi recomandate</string>
     <string name="other_versions">Alte versiuni</string>
     <string name="liked_songs">Melodii apreciate</string>
@@ -58,7 +58,7 @@
     <string name="completed_downloads">Descărcări finalizate</string>
     <string name="download_completion_summary">%1$d descărcate, %2$d eșuate</string>
     <plurals name="download_notification_progress">
-        <item quantity="one">Descărcate %1$d din %2$d melodie, %3$d eșuată</item>
+        <item quantity="one">Descărcat %1$d din %2$d melodie, %3$d eșuată</item>
         <item quantity="few">Descărcate %1$d din %2$d melodii, %3$d eșuate</item>
         <item quantity="other">Descărcate %1$d din %2$d de melodii, %3$d eșuate</item>
     </plurals>
