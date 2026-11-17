@@ -394,6 +394,7 @@ class ExoPlaybackPlayer(
     private val playerInstanceIds = WeakHashMap<Player, Long>()
     private val pendingVolumeLogs = mutableMapOf<Player, Job>()
     private val systemAudioEffects = SystemAudioEffects(this.context)
+    private var sharedAudioSessionId = Util.generateAudioSessionIdV21(this.context)
     private var exo = createPlayer()
     private val _playbackState = MutableStateFlow(exo.playbackState)
     private val tempoPitchLock = Any()
@@ -410,6 +411,7 @@ class ExoPlaybackPlayer(
     private fun createPlayer(
         bufferForPlaybackMs: Int = 2_000,
         role: AndroidPlaybackPlayerRole = AndroidPlaybackPlayerRole.PRIMARY,
+        audioSessionId: Int = sharedAudioSessionId,
     ): ExoPlayer {
         val normalization = NormalizationAudioProcessor { it.normalizationGain() }
         lateinit var createdPlayer: ExoPlayer
@@ -446,6 +448,7 @@ class ExoPlaybackPlayer(
             .build()
             .apply {
                 createdPlayer = this
+                setAudioSessionId(audioSessionId)
                 setHandleAudioBecomingNoisy(true)
                 normalizationProcessors[this] = normalization
                 silenceSupport[this] = silence
@@ -2676,6 +2679,7 @@ class ExoPlaybackPlayer(
                     createPlayer(
                         bufferForPlaybackMs = SWITCH_READY_BUFFER_MS.toInt(),
                         role = AndroidPlaybackPlayerRole.SECONDARY,
+                        audioSessionId = if (freshAudioSession) Util.generateAudioSessionIdV21(context) else sharedAudioSessionId,
                     )
                 } else {
                     previousPlayer
@@ -2927,6 +2931,8 @@ class ExoPlaybackPlayer(
                     val surface = activeVideoSurface
                     removeVideoSurface(previousPlayer, surface)
                     detachPlayerListeners(previousPlayer)
+                    // Keep the shared effects session open while the outgoing player releases.
+                    if (!freshAudioSession) systemAudioEffects.attach(candidate)
                     replaceAudioOutput(
                         outgoing = previousPlayer,
                         incoming = candidate,
@@ -2934,6 +2940,7 @@ class ExoPlaybackPlayer(
                         promoteIncoming = {
                             offloadSleepStallTracker.reset()
                             exo = candidate
+                            if (freshAudioSession) sharedAudioSessionId = candidate.audioSessionId
                             currentResource = preparedResource
                             activeAudioSource = nextAudioSource
                             activeVideoSource = nextVideoSource
