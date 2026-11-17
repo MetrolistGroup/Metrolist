@@ -1087,7 +1087,10 @@ class PlayerConnection(
     private fun skipToPreviousInternal(local: Boolean = false) {
         if (deferUntilConnected { skipToPreviousInternal(local) }) return
         val player = musicService?.player ?: return
-        player.skipToPrevious(if (local && !_castState.value.isConnected) localSongChangeStartsPlayback() else player.wantsPlayback)
+        player.skipToPrevious(
+            repeatAll = _repeatMode.value == Player.REPEAT_MODE_ALL,
+            resumePlayback = if (local && !_castState.value.isConnected) localSongChangeStartsPlayback() else player.wantsPlayback,
+        )
     }
 
     fun skipToQueueItem(index: Int) {

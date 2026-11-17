@@ -70,6 +70,14 @@ class MusicVideoPlaybackPolicyTest {
     }
 
     @Test
+    fun previousOnFirstItemWrapsToLastOnlyWithRepeatAll() {
+        assertTrue(shouldWrapToLastItem(repeatAll = true, playbackPositionMs = 1_000L, currentQueueIndex = 0, lastQueueIndex = 4))
+        assertFalse(shouldWrapToLastItem(repeatAll = false, playbackPositionMs = 1_000L, currentQueueIndex = 0, lastQueueIndex = 4))
+        assertFalse(shouldWrapToLastItem(repeatAll = true, playbackPositionMs = 5_000L, currentQueueIndex = 0, lastQueueIndex = 4))
+        assertFalse(shouldWrapToLastItem(repeatAll = true, playbackPositionMs = 1_000L, currentQueueIndex = 0, lastQueueIndex = 0))
+    }
+
+    @Test
     fun disabledVideoPlaybackKeepsVideoSongsPlayableAsAudio() {
         assertFalse(shouldRequestQueueVideo(isVideoSong = true, videoPlaybackEnabled = false))
         assertFalse(shouldRequestQueueVideo(isVideoSong = false, isVideoModeActive = true, videoPlaybackEnabled = false))

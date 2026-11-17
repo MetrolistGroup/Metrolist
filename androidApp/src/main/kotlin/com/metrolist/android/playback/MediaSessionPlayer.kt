@@ -886,7 +886,7 @@ class MediaSessionPlayer(
         if (interceptDeviceConnect(DcPlaybackCommand(DcPlaybackAction.PREVIOUS))) return
         val remoteState = remotePlaybackState?.value?.takeIf { it.isConnected }
         if (remoteState == null) {
-            musicPlayer.skipToPrevious()
+            musicPlayer.skipToPrevious(repeatAll = repeatMode.value == Player.REPEAT_MODE_ALL, resumePlayback = musicPlayer.wantsPlayback)
         } else if (shouldRestartCurrentItem(remoteState.positionMs, musicPlayer.currentMediaItemIndex.value)) {
             onRemoteSeek(0L)
         } else {

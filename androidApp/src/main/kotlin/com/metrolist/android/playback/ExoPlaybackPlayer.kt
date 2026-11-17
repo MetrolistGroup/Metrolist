@@ -199,6 +199,27 @@ internal fun shouldRestartCurrentItem(
     currentQueueIndex: Int,
 ): Boolean = playbackPositionMs >= RESTART_CURRENT_ITEM_THRESHOLD_MS || currentQueueIndex <= 0
 
+internal fun shouldWrapToLastItem(
+    repeatAll: Boolean,
+    playbackPositionMs: Long,
+    currentQueueIndex: Int,
+    lastQueueIndex: Int,
+): Boolean = repeatAll && currentQueueIndex == 0 && lastQueueIndex > 0 && playbackPositionMs < RESTART_CURRENT_ITEM_THRESHOLD_MS
+
+internal fun AndroidPlaybackPlayer.skipToPrevious(
+    repeatAll: Boolean,
+    resumePlayback: Boolean,
+) {
+    val lastIndex = songQueue.value.lastIndex
+    if (currentSong.value?.isLive != true &&
+        shouldWrapToLastItem(repeatAll, currentPosition.value, currentMediaItemIndex.value, lastIndex)
+    ) {
+        skipToQueueItem(lastIndex, resumePlayback = resumePlayback)
+    } else {
+        skipToPrevious(resumePlayback)
+    }
+}
+
 internal fun MusicQueue.selectFirstIfUnselected(): Boolean {
     if (currentSong() != null || items.value.isEmpty()) return false
     skipTo(0)
