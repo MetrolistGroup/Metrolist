@@ -468,6 +468,10 @@ internal fun handleShortcut(
             triggerSearchShortcut()
             true
         }
+        keyCodeMatches(keyCode, Key.H, AwtKeyEvent.VK_H) -> {
+            PlayerState.currentTrack?.let { PlayerState.toggleLike(it) }
+            true
+        }
 
         keyCodeMatches(keyCode, Key.Spacebar, AwtKeyEvent.VK_SPACE) -> {
             PlayerState.togglePlay()
