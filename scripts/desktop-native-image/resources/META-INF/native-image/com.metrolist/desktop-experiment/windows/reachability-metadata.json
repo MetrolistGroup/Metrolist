@@ -4660,6 +4660,27 @@
           "com.sun.jna.platform.win32.Wtsapi32"
         ]
       }
+    },
+    {
+      "type": {
+        "proxy": [
+          "io.github.vinceglb.filekit.dialogs.platform.windows.jna.Shell32"
+        ]
+      }
+    },
+    {
+      "type": "io.github.vinceglb.filekit.dialogs.platform.windows.jna.Shell32",
+      "allPublicMethods": true
+    },
+    {
+      "type": "io.github.vinceglb.filekit.dialogs.platform.windows.jna.ShTypes$COMDLG_FILTERSPEC",
+      "allDeclaredFields": true,
+      "allPublicConstructors": true
+    },
+    {
+      "type": "io.github.vinceglb.filekit.dialogs.platform.windows.jna.ShTypes$PROPERTYKEY",
+      "allDeclaredFields": true,
+      "allPublicConstructors": true
     }
   ],
   "resources": [
