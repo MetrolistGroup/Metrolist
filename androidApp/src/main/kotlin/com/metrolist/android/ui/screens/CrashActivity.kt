@@ -16,7 +16,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -75,11 +74,9 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
-import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -115,7 +112,6 @@ import com.metrolist.shared.generated.resources.crash_updates_no_updates
 import com.metrolist.shared.generated.resources.crash_upload
 import com.metrolist.shared.generated.resources.crash_upload_disclosure
 import com.metrolist.shared.generated.resources.crash_upload_failed
-import com.metrolist.shared.generated.resources.crash_uploaded
 import com.metrolist.shared.generated.resources.crash_uploading
 import com.metrolist.shared.ui.LocalIsTv
 import com.metrolist.shared.ui.components.ContainedLoadingIndicator
@@ -217,7 +213,6 @@ class CrashActivity : ComponentActivity() {
                             onLogs = { showLogs = true },
                             onUpdate = { showUpdate = true },
                             onRetryUpload = crashViewModel::upload,
-                            onOpenPaste = ::openPaste,
                             onShare = { paste ->
                                 shareCrashLog(
                                     crashLogWithPaste(
@@ -270,14 +265,6 @@ class CrashActivity : ComponentActivity() {
             startActivity(Intent.createChooser(shareIntent, getString(R.string.crash_share_title)))
         }
     }
-
-    private fun openPaste(url: String) {
-        try {
-            startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
-        } catch (e: Exception) {
-            Timber.w(e, "Could not open crash paste")
-        }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -291,7 +278,6 @@ private fun CrashScreen(
     onLogs: () -> Unit,
     onUpdate: () -> Unit,
     onRetryUpload: () -> Unit,
-    onOpenPaste: (String) -> Unit,
     onShare: (CrashPaste?) -> Unit,
 ) {
     val verticalScrollState = rememberScrollState()
@@ -404,7 +390,6 @@ private fun CrashScreen(
             CrashUploadStatus(
                 state = uploadState,
                 onRetry = onRetryUpload,
-                onOpenPaste = onOpenPaste,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -439,8 +424,9 @@ private fun CrashScreen(
 private fun CrashUploadStatus(
     state: CrashUploadState,
     onRetry: () -> Unit,
-    onOpenPaste: (String) -> Unit,
 ) {
+    // The paste ID and URL sit at the top of the log itself, so screenshots of the log carry them.
+    if (state is CrashUploadState.Uploaded) return
     Surface(
         modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
         shape = RoundedCornerShape(16.dp),
@@ -488,24 +474,7 @@ private fun CrashUploadStatus(
             }
 
             is CrashUploadState.Uploaded -> {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(Res.string.crash_uploaded),
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(Res.string.crash_paste_id, state.paste.id),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        text = state.paste.url,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        textDecoration = TextDecoration.Underline,
-                        modifier = Modifier.clickable { onOpenPaste(state.paste.url) },
-                    )
-                }
+                Unit
             }
         }
     }

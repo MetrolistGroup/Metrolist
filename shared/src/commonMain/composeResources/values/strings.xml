@@ -1800,8 +1800,6 @@
     <string name="crash_upload_disclosure" translatable="false">Crash logs can contain sensitive device and account details. Review the log before uploading it to the public paste service.</string>
     <!-- Translators: Progress or status message for uploading in the crash reporting. -->
     <string name="crash_uploading" translatable="false">Uploading crash log…</string>
-    <!-- Translators: Confirmation message about uploaded in the crash reporting. -->
-    <string name="crash_uploaded" translatable="false">Crash log uploaded</string>
     <!-- Translators: Error message about upload in the crash reporting. -->
     <string name="crash_upload_failed" translatable="false">Could not upload the crash log. You can still share it manually.</string>
     <!-- Translators: Label for paste ID in the crash reporting. %1$s is the uploaded paste identifier. -->
