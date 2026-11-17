@@ -1,6 +1,5 @@
 package com.metrolist.shared.model
 
-import com.metrolist.shared.settings.Settings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -17,12 +16,14 @@ class RadioRecommendationHistory {
 
     suspend fun select(
         firstPage: RadioQueuePage,
+        classic: Boolean,
         filter: (List<SongItem>) -> List<SongItem>,
         isCurrent: () -> Boolean,
         loadMore: suspend (String) -> RadioQueuePage,
     ): RadioQueuePage? {
-        if (Settings.shared.classicRecommendations) {
+        if (classic) {
             // Classic (13.x) behaviour: keep YouTube's own order and don't skip songs recommended before.
+            currentCoroutineContext().ensureActive()
             if (!isCurrent()) return null
             return firstPage.copy(songs = filter(firstPage.songs).filter { it.id.isNotBlank() }.distinctBy(SongItem::id))
         }
@@ -39,7 +40,7 @@ class RadioRecommendationHistory {
             val fresh = eligible.filterNot { it.id in previous }
             continuation = page.continuation?.takeIf(seenContinuations::add)
             if (fresh.isNotEmpty()) {
-                return firstPage.copy(songs = varyRadioRecommendations(fresh), continuation = continuation)
+                return firstPage.copy(songs = varyRadioRecommendations(fresh, classic), continuation = continuation)
             }
             if (fallback.isEmpty()) fallback = eligible
             if (fallback.isNotEmpty()) repeatedPages++
@@ -57,7 +58,7 @@ class RadioRecommendationHistory {
         currentCoroutineContext().ensureActive()
         if (!isCurrent()) return null
         return firstPage.copy(
-            songs = varyRadioRecommendations(filter(fallback)).sortedBy { previous[it.id] ?: -1 },
+            songs = varyRadioRecommendations(filter(fallback), classic).sortedBy { previous[it.id] ?: -1 },
             continuation = continuation,
         )
     }

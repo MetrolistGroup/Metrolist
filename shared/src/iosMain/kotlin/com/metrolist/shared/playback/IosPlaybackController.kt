@@ -5,6 +5,7 @@ import com.metrolist.innertubex.extraction.ContentHints
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.Event
+import com.metrolist.shared.db.entities.RelatedSongMap
 import com.metrolist.shared.db.upsertHistorySong
 import com.metrolist.shared.db.withDatabaseTransaction
 import com.metrolist.shared.deviceconnect.DcScrobbleSession
@@ -87,6 +88,8 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
+
+private const val RELATED_SONGS_LIMIT = 20
 
 internal class IosPlaybackController(
     private val player: MusicPlayer,
@@ -773,7 +776,7 @@ internal class IosPlaybackController(
                                 if (radioContinuation != null) {
                                     continueRadioIfNeeded(seedId)
                                 } else {
-                                    bootstrapRecommendations(seedId, currentRadioPlaylistId ?: "RDAMVM$seedId", currentRadioParams)
+                                    bootstrapRecommendations(seedId, currentRadioPlaylistId, currentRadioParams)
                                 }
                                 radioJob?.join()
                             }
@@ -793,7 +796,7 @@ internal class IosPlaybackController(
             ) { idx, q, _, _ -> idx to q }.collect { (idx, q) ->
                 if (deferredRadioBootstrap && canAutoLoadMore && radioJob?.isActive != true) {
                     currentRadioSeedId?.let { seedId ->
-                        bootstrapRecommendations(seedId, currentRadioPlaylistId ?: "RDAMVM$seedId", currentRadioParams)
+                        bootstrapRecommendations(seedId, currentRadioPlaylistId, currentRadioParams)
                     }
                 }
                 if (q.isNotEmpty() && idx >= q.size - 3) {
@@ -1291,14 +1294,16 @@ internal class IosPlaybackController(
 
     private fun bootstrapRecommendations(
         seedSongId: String,
-        playlistId: String = "RDAMVM$seedSongId",
+        playlistId: String? = null,
         params: String? = null,
         selectedChipId: String? = null,
     ) {
         radioJob?.cancel()
+        // Classic recommendations ask /next with the video id alone; explicit chip choices keep their playlist.
+        val requestPlaylistId = playlistId ?: if (Settings.shared.classicRecommendations) null else "RDAMVM$seedSongId"
         if (selectedChipId == null) {
             currentRadioSeedId = seedSongId
-            currentRadioPlaylistId = playlistId
+            currentRadioPlaylistId = requestPlaylistId
             currentRadioParams = params
             radioContinuation = null
             suggestedTracks.value = emptyList()
@@ -1316,7 +1321,7 @@ internal class IosPlaybackController(
                         loadRadioRecommendations(
                             repository().startRadioQueue(
                                 videoId = seedSongId,
-                                playlistId = playlistId,
+                                playlistId = requestPlaylistId,
                                 params = params,
                             ),
                             seedSongId,
@@ -1324,7 +1329,7 @@ internal class IosPlaybackController(
                             finiteQueue = selectedChipId == null && isFiniteQueue,
                         ) ?: return@launch
                     currentRadioSeedId = seedSongId
-                    currentRadioPlaylistId = playlistId
+                    currentRadioPlaylistId = requestPlaylistId
                     currentRadioParams = params
                     if (selectedChipId != null) isFiniteQueue = false
                     deferredRadioBootstrap = false
@@ -1383,6 +1388,7 @@ internal class IosPlaybackController(
     ): RadioQueuePage? =
         recommendationHistory.select(
             firstPage = firstPage,
+            classic = Settings.shared.classicRecommendations,
             isCurrent = {
                 val allowed = canAutoLoadMore || (isBootstrap && !finiteQueue)
                 if (!allowed && isBootstrap) deferredRadioBootstrap = true
@@ -1539,6 +1545,34 @@ internal class IosPlaybackController(
         } catch (error: Exception) {
             logIosPlaybackError("Failed to record local play for ${song.id}", error)
             Logger.w("IosPlaybackController", "Failed to record local play id=${song.id}")
+        }
+        if (Settings.shared.classicRecommendations) recordRelatedSongs(song.id)
+    }
+
+    /** Stores the songs YouTube relates to [songId], feeding the classic local Quick picks. */
+    private suspend fun recordRelatedSongs(songId: String) {
+        try {
+            val dao = database.dao()
+            if (dao.hasRelatedSongs(songId)) return
+            val related =
+                repository()
+                    .startRadioQueue(songId)
+                    .songs
+                    .filter { it.id.isNotBlank() && it.id != songId }
+                    .distinctBy { it.id }
+                    .take(RELATED_SONGS_LIMIT)
+            if (related.isEmpty()) return
+            database.withDatabaseTransaction {
+                related.forEach { relatedSong ->
+                    dao.upsertHistorySong(relatedSong)
+                    dao.insert(RelatedSongMap(songId = songId, relatedSongId = relatedSong.id))
+                }
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            logIosPlaybackError("Failed to record related songs for $songId", error)
+            Logger.w("IosPlaybackController", "Failed to record related songs id=$songId")
         }
     }
 
@@ -1930,7 +1964,7 @@ internal class IosPlaybackController(
             if (radioSeed != null) {
                 bootstrapRecommendations(
                     seedSongId = radioSeed,
-                    playlistId = radioPlaylist ?: "RDAMVM$radioSeed",
+                    playlistId = radioPlaylist,
                     params = radioParams,
                 )
             }

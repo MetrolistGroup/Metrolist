@@ -33,7 +33,10 @@ import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -103,6 +106,8 @@ class PlayHistoryRepository(
     private val database: MusicDatabase,
     private val dao: DatabaseDao,
 ) {
+    private val relatedSongsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     private data class SqlFilter(
         val sql: String,
         val args: List<Any?> = emptyList(),
@@ -317,7 +322,10 @@ class PlayHistoryRepository(
             playTimeMs,
             song.artists.size,
         )
-        if (Settings.shared.classicRecommendations) recordRelatedSongs(song.id)
+        // Keep the optional network fetch out of the ordered history writes.
+        if (Settings.shared.classicRecommendations) {
+            relatedSongsScope.launch { recordRelatedSongs(song.id) }
+        }
     }
 
     /** Stores the songs YouTube relates to [songId], feeding the classic local Quick picks. */

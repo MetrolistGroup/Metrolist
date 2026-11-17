@@ -496,6 +496,7 @@
     <string name="auto_load_more_desc">Automatically add similar songs to radio and mix queues when they near the end</string>
     <string name="classic_recommendations">Classic recommendations</string>
     <string name="classic_recommendations_desc">Build Quick picks from your own listening history and play your personal YouTube up next in order, like Metrolist 13</string>
+    <string name="classic_recommendations_desc_desktop">Play your personal YouTube up next in order, like Metrolist 13</string>
     <!-- Translators: Imperative action label for skip silence in the settings. -->
     <string name="skip_silence">Skip silence</string>
     <!-- Translators: Option or section label for audio normalization in the settings. -->

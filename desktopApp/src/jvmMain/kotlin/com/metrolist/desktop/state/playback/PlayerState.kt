@@ -368,6 +368,7 @@ internal fun directPlaybackQueue(
             radioSongs
                 .filterNot { it.id == target.id || isBlocked(it) }
                 .distinctBy(SongItem::id),
+            classic = Settings.shared.classicRecommendations,
         )
 
 internal fun retainedAnimatedCoverUrl(
@@ -3674,6 +3675,7 @@ object PlayerState {
         val page =
             recommendationHistory.select(
                 firstPage = firstPage,
+                classic = Settings.shared.classicRecommendations,
                 filter = { songs -> songs.filter { it.id != seedId && !isSongBlocked(it) } },
                 isCurrent = { isCurrentPlaybackTransition(generation) },
                 loadMore = { repository.continueRadioQueue(it) },

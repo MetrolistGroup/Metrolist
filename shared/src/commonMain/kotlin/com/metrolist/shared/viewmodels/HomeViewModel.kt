@@ -268,6 +268,11 @@ class HomeViewModel(
         AuthManager().restorePersistedSession()
         val restoreGeneration = contentLoadGeneration
         scope.launch {
+            snapshotFlow { Settings.shared.classicRecommendations }
+                .drop(1)
+                .collect { rebuildQuickPicks() }
+        }
+        scope.launch {
             val cacheStart = TimeSource.Monotonic.markNow()
             val restoredState = withContext(Dispatchers.Default) { loadLastHomePage() }
             if (restoredState != null && restoreGeneration == contentLoadGeneration &&
@@ -960,6 +965,32 @@ class HomeViewModel(
         saveLastHomePage(merged)
     }
 
+    private suspend fun rebuildQuickPicks() {
+        val state = _uiState.value
+        if (state.isContentLoading) return
+        val isFiltered = isFilteredHome(state.selectedChip?.params, state.selectedChip?.browseId ?: "FEmusic_home")
+        val apiQuickPicks = findSectionSongs(state.data.orEmpty(), "FEmusic_quickpicks")
+        val localQuickPicks =
+            database
+                .dao()
+                .quickPicks()
+                .first()
+                .map { it.toSongItem() }
+        val localForgottenFavorites =
+            database
+                .dao()
+                .forgottenFavorites()
+                .first()
+                .map { it.toSongItem() }
+        val quickPicks =
+            if (Settings.shared.classicRecommendations && !isFiltered) {
+                classicQuickPicks(localQuickPicks, localForgottenFavorites).ifEmpty { apiQuickPicks }
+            } else {
+                personalizedSection(apiQuickPicks, localQuickPicks, isFiltered)
+            }.distinctBy(::canonicalHomeItemId)
+        _uiState.update { it.copy(quickPicks = quickPicks) }
+    }
+
     private fun HomeUiState.withMergedSections(
         newSections: List<HomeSection>,
         nextContinuation: String?,
@@ -987,7 +1018,12 @@ class HomeViewModel(
                 findSectionsByBrowseId(allSections, "FEmusic_charts")
                     .flatMap { it.items.filterIsInstance<AlbumItem>() }
                     .distinctBy(::canonicalHomeItemId),
-            quickPicks = preferredQuickPicks(apiQuickPicks, quickPicks).distinctBy(::canonicalHomeItemId),
+            quickPicks =
+                if (isFilteredHome(selectedChip?.params, selectedChip?.browseId ?: "FEmusic_home")) {
+                    apiQuickPicks.ifEmpty { quickPicks }
+                } else {
+                    preferredQuickPicks(apiQuickPicks, quickPicks)
+                }.distinctBy(::canonicalHomeItemId),
             newReleases = newReleasesFrom(allSections).distinctBy(::canonicalHomeItemId),
             keepListening = apiKeepListening.ifEmpty { keepListening }.distinctBy(::canonicalHomeItemId),
             forgottenFavorites = apiForgottenFavorites.ifEmpty { forgottenFavorites }.distinctBy(::canonicalHomeItemId),
@@ -1886,4 +1922,8 @@ private fun preferredQuickPicks(
     apiQuickPicks: List<SongItem>,
     current: List<SongItem>,
 ): List<SongItem> =
-    if (Settings.shared.classicRecommendations) current.ifEmpty { apiQuickPicks } else apiQuickPicks.ifEmpty { current }
+    if (Settings.shared.classicRecommendations) {
+        current.ifEmpty { apiQuickPicks }
+    } else {
+        apiQuickPicks.ifEmpty { current }
+    }

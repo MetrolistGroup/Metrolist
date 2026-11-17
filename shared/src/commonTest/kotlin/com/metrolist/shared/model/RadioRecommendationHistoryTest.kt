@@ -21,11 +21,11 @@ class RadioRecommendationHistoryTest {
             val history = RadioRecommendationHistory()
             val firstPage = page("seed", "a", "b", continuation = "next")
             val filter: (List<SongItem>) -> List<SongItem> = { songs -> songs.filterNot { it.id == "seed" } }
-            val first = history.select(firstPage, filter, { true }) { error("Fresh first page must not prefetch") }!!
+            val first = history.select(firstPage, false, filter, { true }) { error("Fresh first page must not prefetch") }!!
             history.remember(first.songs)
             val requests = mutableListOf<String>()
             val second =
-                history.select(firstPage, filter, { true }) {
+                history.select(firstPage, false, filter, { true }) {
                     requests += it
                     page("a", "c", "d", continuation = "later")
                 }!!
@@ -43,6 +43,7 @@ class RadioRecommendationHistoryTest {
             val selected =
                 history.select(
                     page("seed", "blocked", "", "recent", continuation = "next"),
+                    false,
                     { songs -> buildRadioQueueRecommendations(songs, setOf("seed"), "generated", { it.id == "blocked" }) },
                     { true },
                 ) { page("recent", "new", "new", "blocked") }!!
@@ -60,6 +61,7 @@ class RadioRecommendationHistoryTest {
             val selected =
                 history.select(
                     page("newer", "older", continuation = "0").copy(chips = listOf(chip)),
+                    false,
                     { it },
                     { true },
                 ) { page("newer", continuation = (++requests).toString()) }!!
@@ -77,7 +79,7 @@ class RadioRecommendationHistoryTest {
                 history.remember(listOf(song("recent")))
                 var requests = 0
                 val selected =
-                    history.select(page("recent", continuation = "same"), { it }, { true }) {
+                    history.select(page("recent", continuation = "same"), false, { it }, { true }) {
                         requests++
                         if (fail) error("offline")
                         page("recent", continuation = "same")
@@ -92,18 +94,18 @@ class RadioRecommendationHistoryTest {
     fun discardedResultsDoNotEnterHistoryAndStaleSearchesStop() =
         runTest {
             val history = RadioRecommendationHistory()
-            history.select(page("uncommitted"), { it }, { true }) { error("No continuation") }
-            val selected = history.select(page("uncommitted", "other"), { it }, { true }) { error("No continuation") }!!
+            history.select(page("uncommitted"), false, { it }, { true }) { error("No continuation") }
+            val selected = history.select(page("uncommitted", "other"), false, { it }, { true }) { error("No continuation") }!!
             assertEquals(setOf("uncommitted", "other"), selected.songs.map(SongItem::id).toSet())
             history.remember(selected.songs)
             var current = true
             assertNull(
-                history.select(page("other", continuation = "next"), { it }, { current }) {
+                history.select(page("other", continuation = "next"), false, { it }, { current }) {
                     current = false
                     page("stale", continuation = "unused")
                 },
             )
-            assertNull(history.select(page("other"), { error("Stale filter") }, { false }) { error("Stale request") })
+            assertNull(history.select(page("other"), false, { error("Stale filter") }, { false }) { error("Stale request") })
         }
 
     @Test
@@ -114,6 +116,7 @@ class RadioRecommendationHistoryTest {
                 val selected =
                     RadioRecommendationHistory().select(
                         page("seed", continuation = "0"),
+                        false,
                         { songs -> songs.filterNot { it.id == "seed" } },
                         { true },
                     ) {
@@ -131,7 +134,7 @@ class RadioRecommendationHistoryTest {
             val history = RadioRecommendationHistory()
             history.remember(listOf(song("recent")))
             assertFailsWith<CancellationException> {
-                history.select(page("recent", continuation = "next"), { it }, { true }) { throw CancellationException() }
+                history.select(page("recent", continuation = "next"), false, { it }, { true }) { throw CancellationException() }
             }
         }
 
@@ -142,7 +145,7 @@ class RadioRecommendationHistoryTest {
             history.remember((0 until 500).map { song(it.toString()) })
             history.remember(listOf(song("0")))
             history.remember(listOf(song("500")))
-            val selected = history.select(page("0", "1", "500"), { it }, { true }) { error("No continuation") }!!
+            val selected = history.select(page("0", "1", "500"), false, { it }, { true }) { error("No continuation") }!!
             assertEquals(listOf("1"), selected.songs.map(SongItem::id))
         }
 }

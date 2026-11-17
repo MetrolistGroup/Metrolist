@@ -88,6 +88,7 @@ internal class DesktopQueueRadio(
                 val page =
                     recommendationHistory.select(
                         firstPage = firstPage,
+                        classic = Settings.shared.classicRecommendations,
                         filter = { songs ->
                             buildRadioQueueRecommendations(
                                 songs,

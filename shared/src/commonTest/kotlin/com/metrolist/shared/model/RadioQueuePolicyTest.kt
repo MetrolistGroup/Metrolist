@@ -2,11 +2,13 @@ package com.metrolist.shared.model
 
 import com.metrolist.shared.playback.MusicQueue
 import com.metrolist.shared.playback.MusicQueueSnapshot
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class RadioQueuePolicyTest {
@@ -51,11 +53,53 @@ class RadioQueuePolicyTest {
     @Test
     fun repeatedRadioQueuesCanVaryWithoutLosingSongs() {
         val songs = listOf(song("a"), song("b"), song("c"), song("d"))
-        val varied = varyRadioRecommendations(songs, Random(1))
+        val varied = varyRadioRecommendations(songs, classic = false, random = Random(1))
 
         assertNotEquals(songs, varied)
         assertEquals(songs.toSet(), varied.toSet())
     }
+
+    @Test
+    fun classicRadioKeepsYoutubeOrderWithoutLosingSongs() {
+        val songs = listOf(song("a"), song("b"), song("c"), song("d"))
+
+        assertEquals(songs, varyRadioRecommendations(songs, classic = true, random = Random(1)))
+    }
+
+    @Test
+    fun classicRadioKeepsFirstPageOrderAndPreviouslyRecommendedSongs() =
+        runTest {
+            val history = RadioRecommendationHistory()
+            val firstPage = RadioQueuePage(listOf(song("a"), song("b")), emptyList(), continuation = "next")
+            val filter: (List<SongItem>) -> List<SongItem> = { it }
+
+            val first =
+                history.select(firstPage, classic = true, filter = filter, isCurrent = { true }) {
+                    error("Classic recommendations must not load more")
+                }!!
+            history.remember(first.songs)
+            val second =
+                history.select(firstPage, classic = true, filter = filter, isCurrent = { true }) {
+                    error("Classic recommendations must not load more")
+                }!!
+
+            assertEquals(listOf("a", "b"), first.songs.map(SongItem::id))
+            assertEquals(listOf("a", "b"), second.songs.map(SongItem::id))
+            assertEquals("next", second.continuation)
+        }
+
+    @Test
+    fun classicRadioStopsWhenTheSearchIsStale() =
+        runTest {
+            val history = RadioRecommendationHistory()
+            val firstPage = RadioQueuePage(listOf(song("a")), emptyList())
+
+            assertNull(
+                history.select(firstPage, classic = true, filter = { it }, isCurrent = { false }) {
+                    error("Stale searches must not load more")
+                },
+            )
+        }
 
     @Test
     fun recommendationsExcludeSeedBlockedAndDuplicateSongs() {

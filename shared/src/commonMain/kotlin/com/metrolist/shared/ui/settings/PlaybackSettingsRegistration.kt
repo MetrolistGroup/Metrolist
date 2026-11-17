@@ -321,7 +321,14 @@ internal fun SettingsUiRegistryBuilder.registerPlaybackSettings(host: SharedSett
             switch(
                 id = "classicRecommendations",
                 title = stringResource(Res.string.classic_recommendations),
-                description = stringResource(Res.string.classic_recommendations_desc),
+                description =
+                    stringResource(
+                        if (host.platform == SettingsPlatform.DESKTOP) {
+                            Res.string.classic_recommendations_desc_desktop
+                        } else {
+                            Res.string.classic_recommendations_desc
+                        },
+                    ),
                 checked = settings.classicRecommendations,
             ) { settings.classicRecommendations = it }
             switch(
