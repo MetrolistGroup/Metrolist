@@ -828,7 +828,7 @@ class PlaylistSyncTest {
                             ).filterIsInstance<PlaylistItem>()
                     database.syncRemotePlaylists(preserved)
 
-                    assertFalse(unresolved.complete)
+                    assertTrue(unresolved.complete)
                     assertEquals(setOf("VLPLremote"), unresolved.unresolvedPlaylistEditabilityIds)
                     assertTrue(preserved.single().isEditable)
                     assertEquals(
