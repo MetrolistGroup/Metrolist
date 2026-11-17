@@ -554,7 +554,6 @@ private fun FullscreenVideoControls(
 ) {
     var isDragging by remember { mutableStateOf(false) }
     var dragProgress by remember { mutableStateOf(0f) }
-    val position = rememberPlaybackSecondPosition()
     val duration by PlayerState.player.duration.collectAsState(0L)
     val isLive = playerIsLiveStream()
     val isListenTogetherGuest = ListenTogetherState.isListenTogetherGuest()
@@ -614,7 +613,7 @@ private fun FullscreenVideoControls(
                 } else {
                     PlayerProgressTime(
                         positionProvider = {
-                            if (isDragging) (dragProgress * duration).toLong() else pendingSeek?.targetMs ?: position.value
+                            if (isDragging) (dragProgress * duration).toLong() else pendingSeek?.targetMs ?: smoothPosition.longValue
                         },
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White.copy(alpha = 0.9f),

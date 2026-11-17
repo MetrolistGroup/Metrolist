@@ -37,7 +37,13 @@ class VideoRendererLifecycleTest {
                         val expected = pixels(picture)
                         assertEquals(255.toByte(), expected[3])
                         planes.forEach { it.erase(0x40202020).notifyPixelsChanged() }
-                        record(frame).use { reused -> assertFalse(expected.contentEquals(pixels(reused))) }
+                        record(frame).use { repainted -> assertContentEquals(expected, pixels(repainted), "Repainted $format frame") }
+                        val next = frame(format, planes, iteration)
+                        try {
+                            record(next).use { reused -> assertFalse(expected.contentEquals(pixels(reused))) }
+                        } finally {
+                            next.close()
+                        }
                         assertContentEquals(expected, pixels(picture), "Decoder reused $format pixels")
                         frame.close()
                         planes.forEach { it.reset() }

@@ -358,7 +358,8 @@ internal fun BraccatoWordAnimation(
             }
             return@LaunchedEffect
         }
-        animateLyricsFrames(animationVisibility) { frameWallTimeMs = it }
+        // The position is snapshot state, so a paused line still redraws when it moves; wall-clock frames would only idle.
+        if (isPlaying) animateLyricsFrames(animationVisibility) { frameWallTimeMs = it }
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {

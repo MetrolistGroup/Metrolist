@@ -18,7 +18,6 @@ import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.FilterTileMode
-import org.jetbrains.skia.Image
 import org.jetbrains.skia.Paint
 import org.jetbrains.skia.Rect
 import org.jetbrains.skia.RuntimeEffect
@@ -175,8 +174,8 @@ internal fun drawVideoFrame(
                         val y = requireNotNull(frame.planeY)
                         val uv = requireNotNull(frame.planeUV)
                         RuntimeShaderBuilder(nv12Effect).use { builder ->
-                            y.withVideoShader { yShader ->
-                                uv.withVideoShader { uvShader ->
+                            frame.withVideoShader(y) { yShader ->
+                                frame.withVideoShader(uv) { uvShader ->
                                     builder.child("yTex", yShader)
                                     builder.child("uvTex", uvShader)
                                     builder.uniform("colorSpace", csUniform)
@@ -197,9 +196,9 @@ internal fun drawVideoFrame(
                         val u = requireNotNull(frame.planeU)
                         val v = requireNotNull(frame.planeV)
                         RuntimeShaderBuilder(yuv420pEffect).use { builder ->
-                            y.withVideoShader { yShader ->
-                                u.withVideoShader { uShader ->
-                                    v.withVideoShader { vShader ->
+                            frame.withVideoShader(y) { yShader ->
+                                frame.withVideoShader(u) { uShader ->
+                                    frame.withVideoShader(v) { vShader ->
                                         builder.child("yTex", yShader)
                                         builder.child("uTex", uShader)
                                         builder.child("vTex", vShader)
@@ -219,16 +218,14 @@ internal fun drawVideoFrame(
 
                     VideoPixelFormat.BGRA -> {
                         val bitmap = requireNotNull(frame.bgraBitmap)
-                        Image.makeFromBitmap(bitmap).use { image ->
-                            canvas.drawImageRect(
-                                image,
-                                Rect.makeWH(srcW, srcH),
-                                Rect.makeXYWH(offsetX.toFloat(), offsetY.toFloat(), dstW.toFloat(), dstH.toFloat()),
-                                linearSampling,
-                                null,
-                                true,
-                            )
-                        }
+                        canvas.drawImageRect(
+                            frame.planeImage(bitmap),
+                            Rect.makeWH(srcW, srcH),
+                            Rect.makeXYWH(offsetX.toFloat(), offsetY.toFloat(), dstW.toFloat(), dstH.toFloat()),
+                            linearSampling,
+                            null,
+                            true,
+                        )
                     }
                 }
             }
@@ -239,11 +236,12 @@ internal fun drawVideoFrame(
     }
 }
 
-private inline fun Bitmap.withVideoShader(block: (Shader) -> Unit) {
+private inline fun VideoFrame.withVideoShader(
+    plane: Bitmap,
+    block: (Shader) -> Unit,
+) {
     // Copy mutable decoder pixels while drawSafely holds the frame lock. Recorded draws retain the image.
-    Image.makeFromBitmap(this).use { image ->
-        image.makeShader(filterClamp, filterClamp, linearSampling).use(block)
-    }
+    planeImage(plane).makeShader(filterClamp, filterClamp, linearSampling).use(block)
 }
 
 private inline fun Canvas.withVideoTransform(

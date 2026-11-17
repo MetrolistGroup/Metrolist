@@ -61,7 +61,11 @@ The cache applies Compose's `BlurEffect` filter, including its radius-to-sigma c
 
 On GPU backends the raster path can differ from the GPU filter by one channel step from rounding. `ArtworkBlurTest` compares the raster path with the Compose/Skia RenderNode pipeline across sizes, densities, edges, backdrops and scrims.
 
-Wavy, Squiggly and Now Playing bars advance their phase from monotonic time at 30 updates per second. A phase write schedules its own rendering; waiting on the frame clock first schedules another render of the previous phase. Lifecycle and window visibility suspend hidden work. Visible unfocused windows keep animating.
+Wavy, Squiggly and Now Playing bars advance their phase from monotonic time at 30 updates per second. A phase write schedules its own rendering; waiting on the frame clock first schedules another render of the previous phase. The animated gradient background steps on the same clock's 50 ms grid, like Liquid, so its repaints can share frames with other ticks on that clock. Lifecycle and window visibility suspend hidden work. Visible unfocused windows keep animating.
+
+## Desktop software rendering
+
+Skiko's `SOFTWARE_*` backends rasterise the whole window on the CPU for every repaint, including each seek bar step. `softwareRendering` records the backend the main window actually got. When it is set, the Liquid background uses the 128 px blur cache in place of the artwork shader, which costs about 95 ms per 1080 by 720 frame on one core, and static artwork backdrops draw the shader once into a raster snapshot until artwork, size or style change. GPU backends keep the per-frame shader.
 
 ## Icons and attribution
 
@@ -85,7 +89,7 @@ Player expansion clips both content layers to the moving container. Check revers
 
 Animated artwork and lyrics run only while their content is visible. Hidden players must release frame work while keeping playback. Check resumption at the current position after backgrounding, minimizing or switching workspaces. Hyprland window handling is in [desktop rendering](desktop.md#hyprland-rendering).
 
-Desktop seek bars update their progress value once per pixel of travel, based on duration, measured width and playback speed, within 16 to 250 ms. Time labels update when the displayed second changes. WAVY and SQUIGGLY tracks keep their playing animation; lyrics have their own frame rate. Bottom-bar titles and artists scroll once per track, like the mobile mini-players; the expanded player title scrolls continuously. Desktop marquees move in whole pixels at most 30 times a second on the playback animation clock, and stop while the window is hidden. Each step repaints the whole window.
+Desktop seek bars update their progress value once per pixel of travel, based on duration, measured width and playback speed, within 16 to 250 ms. Time labels read the same clock as the seek bar and update when the displayed second changes, so a label change shares a repaint with a progress step. WAVY and SQUIGGLY tracks keep their playing animation; lyrics have their own frame rate. Bottom-bar titles and artists scroll once per track, like the mobile mini-players; the expanded player title scrolls continuously. Desktop marquees move in whole pixels at most 30 times a second on the playback animation clock, and stop while the window is hidden. Each step repaints the whole window.
 
 The expressive mini-player title and artist stay on one line and show an ellipsis when space runs out, before and after their marquee pass, including with custom fonts.
 
@@ -97,7 +101,7 @@ Lyrics and player lyric captions disable standard font ligatures so letters such
 
 Scrolling Add buttons keep trailing padding outside the animated label so expansion and collapse keep an inset. Their width, label fade and scroll-driven slide animate.
 
-Animation visibility is separate from playback ownership. Pausing or hiding a view must not alter the queue or playback clock. Test line changes, word timing, scrolling, selection and returning from a covered player with the affected style.
+Expressive and Braccato active lines request wall-clock frames only while playing. Their positions are snapshot state, so a paused line still redraws after a seek. Animation visibility is separate from playback ownership. Pausing or hiding a view must not alter the queue or playback clock. Test line changes, word timing, scrolling, selection and returning from a covered player with the affected style.
 
 Player lyric captions have a separate alignment setting, centered by default. They reserve two line heights and center shorter text vertically. Keep the text crossfade without a size transform and measure the full content height so incoming lines, translations and romanization remain visible.
 
