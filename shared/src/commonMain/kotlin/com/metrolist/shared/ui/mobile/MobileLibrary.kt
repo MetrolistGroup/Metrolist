@@ -78,7 +78,6 @@ import com.metrolist.shared.generated.resources.retry
 import com.metrolist.shared.generated.resources.stored_remove_selected_message
 import com.metrolist.shared.generated.resources.stored_remove_selected_title
 import com.metrolist.shared.model.AlbumItem
-import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.BuiltinPlaylist
 import com.metrolist.shared.model.CollectionMeta
 import com.metrolist.shared.model.CollectionSort
@@ -532,22 +531,11 @@ internal fun MobileSongCollectionScreen(
 
                             "downloaded" -> {
                                 database.dao().cachedAudioByKind(KIND_DOWNLOAD).collect { entries ->
+                                    val storedSongs = database.dao().getSongsByIds(entries.map { it.songId }).associateBy { it.id }
                                     collectionEntries = entries
                                     loadedSongs =
                                         entries.filter(::isAvailableDownload).map { entry ->
-                                            SongItem(
-                                                id = entry.songId,
-                                                title = entry.title,
-                                                thumbnail = entry.thumbnailUrl,
-                                                artists =
-                                                    entry.artist.split(",").mapNotNull { name ->
-                                                        name.trim().takeIf { it.isNotBlank() && it != "Unknown" }?.let {
-                                                            ArtistTiny(id = null, name = it)
-                                                        }
-                                                    },
-                                                album = null,
-                                                duration = null,
-                                            )
+                                            entry.toSongItem(storedSongs[entry.songId])
                                         }
                                     isLoading = false
                                 }
@@ -567,22 +555,11 @@ internal fun MobileSongCollectionScreen(
 
                             "cached" -> {
                                 database.dao().cachedAudioByKind(KIND_CACHE).collect { entries ->
+                                    val storedSongs = database.dao().getSongsByIds(entries.map { it.songId }).associateBy { it.id }
                                     collectionEntries = entries
                                     loadedSongs =
                                         entries.map { entry ->
-                                            SongItem(
-                                                id = entry.songId,
-                                                title = entry.title,
-                                                thumbnail = entry.thumbnailUrl,
-                                                artists =
-                                                    entry.artist.split(",").mapNotNull { name ->
-                                                        name.trim().takeIf { it.isNotBlank() && it != "Unknown" }?.let {
-                                                            ArtistTiny(id = null, name = it)
-                                                        }
-                                                    },
-                                                album = null,
-                                                duration = null,
-                                            )
+                                            entry.toSongItem(storedSongs[entry.songId])
                                         }
                                     isLoading = false
                                 }

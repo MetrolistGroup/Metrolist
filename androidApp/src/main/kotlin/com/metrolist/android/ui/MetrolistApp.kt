@@ -2638,6 +2638,7 @@ fun getEntryProvider(
                         type = collectionType,
                         onBackClick = { navigator.goBack() },
                         onArtistClick = { navigator.navigate(Screen.Artist(it)) },
+                        onAlbumClick = { navigator.navigate(Screen.Album(it)) },
                         onOpenDownloadQueue = { navigator.navigate(Screen.Downloads) },
                     )
                 }
@@ -2667,6 +2668,7 @@ fun getEntryProvider(
                 type = autoPlaylist.type,
                 onBackClick = { navigator.goBack() },
                 onArtistClick = { artistId -> navigator.navigate(Screen.Artist(artistId)) },
+                onAlbumClick = { albumId -> navigator.navigate(Screen.Album(albumId)) },
                 onOpenDownloadQueue = { navigator.navigate(Screen.Downloads) },
             )
         }
