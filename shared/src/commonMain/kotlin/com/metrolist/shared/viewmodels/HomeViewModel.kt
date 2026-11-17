@@ -519,7 +519,10 @@ class HomeViewModel(
                                 pendingAllContent =
                                     publishedPrimaryAllContent
                                         ?.takeIf { it.first == contentLoadGeneration }
-                                        ?.second,
+                                        ?.second
+                                        ?.withLatestLibraryAndSpeedDialState(currentState)
+                                        ?.withLatestSongMetadataFrom(currentState)
+                                        ?.withSpeedDialPins(latestSpeedDialPins, speedDialRecommendationItems),
                             )
                     }
                     if (!filtersNeedRefresh) return@collectLatest
@@ -953,7 +956,10 @@ class HomeViewModel(
                             return@supervisorScope
                         }
                         val currentState = _uiState.value
-                        val failedAllPending = !isFiltered && !primaryContentPublished && cachedAllContent == null
+                        val failedAllPending =
+                            !isFiltered &&
+                                !primaryContentPublished &&
+                                (cachedAllContent == null || allContentReloadRequired || cachedAllContent?.isAllContentPending == true)
                         val retainedPrimaryContent =
                             publishedPrimaryAllContent
                                 ?.takeIf { it.first == generation }
@@ -1016,8 +1022,11 @@ class HomeViewModel(
                             }
                         } else if (primaryContentPublished) {
                             val latestChipPrimarySnapshot =
-                                cachedSelectedChipContent?.takeIf { it.selectedChip == currentState.selectedChip }
-                                    ?: primaryFailureSnapshot
+                                cachedSelectedChipContent
+                                    ?.takeIf { it.selectedChip == currentState.selectedChip }
+                                    ?.let { cached ->
+                                        homeChipSnapshotWithRecoveredContinuation(cached, primaryFailureSnapshot)
+                                    } ?: primaryFailureSnapshot
                             val failedChipSnapshot =
                                 homeSelectedChipCacheAfterAssemblyFailure(
                                     cachedSelectedChipContent,
@@ -1973,6 +1982,18 @@ internal fun homeSelectedChipCacheAfterAssemblyFailure(
         cachedSelectedChipContent
     }
 
+internal fun homeChipSnapshotWithRecoveredContinuation(
+    selectedChipSnapshot: HomeViewModel.HomeUiState,
+    primaryFailureSnapshot: HomeViewModel.HomeUiState?,
+): HomeViewModel.HomeUiState =
+    if (primaryFailureSnapshot ==
+        null
+    ) {
+        selectedChipSnapshot
+    } else {
+        selectedChipSnapshot.copy(continuation = primaryFailureSnapshot.continuation)
+    }
+
 internal fun homeSelectedChipCacheAfterOfflineCancellation(
     cachedSelectedChipContent: HomeViewModel.HomeUiState?,
     interruptedState: HomeViewModel.HomeUiState,
@@ -1999,7 +2020,7 @@ internal fun homeContentAfterBlockedContentChange(
     (
         when {
             currentState.selectedChip == null && pendingAllContent != null -> {
-                pendingAllContent
+                pendingAllContent.withCurrentHomeLoadState(currentState)
             }
 
             currentState.selectedChip == null && currentState.isAllContentPending -> {
@@ -2008,7 +2029,7 @@ internal fun homeContentAfterBlockedContentChange(
 
             currentState.selectedChip == null &&
                 (currentState.isLoading || currentState.isRefreshing || currentState.isContentLoading || currentState.isRevalidating) -> {
-                cachedAllContent ?: currentState
+                (cachedAllContent ?: currentState).withCurrentHomeLoadState(currentState)
             }
 
             else -> {
@@ -2016,6 +2037,16 @@ internal fun homeContentAfterBlockedContentChange(
             }
         }
     ).withoutBlockedContent()
+
+internal fun HomeViewModel.HomeUiState.withCurrentHomeLoadState(currentState: HomeViewModel.HomeUiState): HomeViewModel.HomeUiState =
+    copy(
+        isLoading = currentState.isLoading,
+        isRefreshing = currentState.isRefreshing,
+        isRevalidating = currentState.isRevalidating,
+        isContentLoading = currentState.isContentLoading,
+        isLoadingMore = currentState.isLoadingMore,
+        isAllContentPending = currentState.isAllContentPending,
+    )
 
 internal fun HomeViewModel.HomeUiState.withoutBlockedContent(): HomeViewModel.HomeUiState {
     val snapshot = BlockedContent.snapshot()
