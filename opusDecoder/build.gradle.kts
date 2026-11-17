@@ -28,6 +28,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
+
+    lint {
+        ignoreTestSources = true
+    }
 }
 
 // AGP's externalNativeBuild never reaches the Gradle build cache, so CI would rebuild libopus on every run.

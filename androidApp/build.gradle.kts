@@ -318,6 +318,8 @@ android {
 
     lint {
         baseline = file("lint-baseline.xml")
+        // Test sources are not shipped; analyzing them doubled lint time in CI.
+        ignoreTestSources = true
         // Android lint cannot resolve Compose Multiplatform variants or generated resource accessors from :shared.
         disable += "MissingTranslation"
         disable += "MissingQuantity"
