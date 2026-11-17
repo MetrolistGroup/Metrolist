@@ -4439,6 +4439,8 @@
     <string name="tray_tooltip_playing">Playing: %1$s • %2$s</string>
     <!-- Translators: Label for tooltip paused in the desktop system tray. %1$s is the song title; %2$s is the artist name. -->
     <string name="tray_tooltip_paused">Paused: %1$s • %2$s</string>
+    <!-- Translators: Desktop window title while a song is loaded. %1$s is the song title; %2$s is the artist name. -->
+    <string name="window_title_now_playing">%1$s • %2$s</string>
     <!-- Translators: Imperative action label for pause in the desktop system tray. -->
     <string name="tray_pause">Pause</string>
     <!-- Translators: Imperative action label for play in the desktop system tray. -->

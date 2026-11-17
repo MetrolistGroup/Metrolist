@@ -181,6 +181,7 @@ import com.metrolist.shared.generated.resources.liked_songs
 import com.metrolist.shared.generated.resources.ok
 import com.metrolist.shared.generated.resources.playback_error
 import com.metrolist.shared.generated.resources.technical_information
+import com.metrolist.shared.generated.resources.window_title_now_playing
 import com.metrolist.shared.generated.resources.youtube_session_expired_message
 import com.metrolist.shared.generated.resources.youtube_session_expired_title
 import com.metrolist.shared.scrobble.ScrobbleSessions
@@ -191,6 +192,7 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.defaultOpenTabRoot
 import com.metrolist.shared.settings.defaultOpenTabScreen
 import com.metrolist.shared.settings.desktopDefaultOpenTab
+import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.settings.flushDesktopCredentialWarnings
 import com.metrolist.shared.settings.flushDesktopSettings
 import com.metrolist.shared.settings.recoverDesktopCredentials
@@ -1263,9 +1265,15 @@ private fun runDesktopApp(args: Array<String>) {
             }
         }
 
+        val appTitle = if (BuildConfig.DEBUG) "Metrolist Debug" else "Metrolist"
+        val windowTitle =
+            PlayerState.currentTrack?.takeIf { it.title.isNotBlank() }?.let { track ->
+                val artists = track.artists.joinToString { it.displayName }
+                if (artists.isBlank()) track.title else stringResource(Res.string.window_title_now_playing, track.title, artists)
+            } ?: appTitle
         Window(
             onCloseRequest = { minimizeToTrayOrClose() },
-            title = if (BuildConfig.DEBUG) "Metrolist Debug" else "Metrolist",
+            title = windowTitle,
             state = windowState,
             undecorated = isLinux && !useSystemWindowFrame,
             transparent = false,
