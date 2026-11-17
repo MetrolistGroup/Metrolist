@@ -1247,6 +1247,16 @@ class MusicService :
             )
             return
         }
+        if (isCorruptCachedAudioFailure(player.currentPlaybackResource.value, failure.cause)) {
+            val removed = audioCacheManager.removeCorruptCache(videoId)
+            PlaybackEventLog.warn(
+                PlaybackEventKind.RECOVERY,
+                "Android cached audio could not be parsed.",
+                videoId = videoId,
+                details = mapOf("cacheRemoved" to removed.toString()),
+                error = failure.cause,
+            )
+        }
         transitions.cancelAndroidCrossfade()
         transitions.cancelNextTrackPreload()
         if (!PlaybackRecoveryPolicy.canRecover(failure)) {

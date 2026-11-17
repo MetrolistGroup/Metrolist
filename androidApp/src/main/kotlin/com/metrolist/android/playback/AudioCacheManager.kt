@@ -16,6 +16,7 @@ import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import androidx.core.net.toUri
+import androidx.media3.common.ParserException
 import androidx.media3.exoplayer.offline.Download
 import coil3.annotation.ExperimentalCoilApi
 import coil3.decode.BlackholeDecoder
@@ -144,7 +145,7 @@ internal fun cacheableAudioResource(
     now: Instant = Clock.System.now(),
 ): PlaybackResource? =
     resource?.takeIf {
-        (it.isDirectFile || it.isSabr) && it.profileId != "cached-audio" && !it.url.startsWith("file:") &&
+        (it.isDirectFile || it.isSabr) && it.profileId != CACHED_AUDIO_PROFILE_ID && !it.url.startsWith("file:") &&
             (it.expiresAt?.let { expiry -> expiry > now + 60.seconds } != false)
     }
 
@@ -318,7 +319,7 @@ class AudioCacheManager(
                 expiresAt = null,
                 contentLengthBytes = fileSize.takeIf { it >= 0L },
                 clientName = "local",
-                profileId = "cached-audio",
+                profileId = CACHED_AUDIO_PROFILE_ID,
                 requireBoundedRange = false,
                 allowPlaybackTrackingFallback = !song.isLocal && !song.isUploaded && !song.isPodcast && !song.id.startsWith("local_"),
             ).withCachedFormat(database.dao().format(songId).first())
@@ -449,6 +450,9 @@ class AudioCacheManager(
         }
 
     suspend fun removeDownload(songId: String): Boolean = removeAudio(songId, KIND_DOWNLOAD)
+
+    // A corrupt cached file fails on every play; dropping it lets the next play stream and cache again.
+    suspend fun removeCorruptCache(songId: String): Boolean = removeAudio(songId, KIND_CACHE)
 
     suspend fun removeCache(
         songId: String,
@@ -1732,3 +1736,12 @@ internal class DownloadSpaceBudget(
 }
 
 internal class InsufficientAudioStorageException : IOException("Insufficient space for audio download")
+
+internal const val CACHED_AUDIO_PROFILE_ID = "cached-audio"
+
+internal fun isCorruptCachedAudioFailure(
+    resource: PlaybackResource?,
+    error: Throwable?,
+): Boolean =
+    resource?.profileId == CACHED_AUDIO_PROFILE_ID &&
+        generateSequence(error) { it.cause?.takeUnless { cause -> cause === it } }.any { it is ParserException }
