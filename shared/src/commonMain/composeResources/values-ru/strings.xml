@@ -15,14 +15,14 @@
     <string name="history">История прослушивания</string>
     <string name="mood_and_genres">Настроения и жанры</string>
     <string name="account">Аккаунт</string>
-    <string name="quick_picks">Быстрый выбор</string>
+    <string name="quick_picks">Рекомендуем</string>
     <string name="forgotten_favorites">Забытые избранные</string>
     <string name="keep_listening">Продолжайте слушать</string>
     <string name="similar_to">Похоже на</string>
     <string name="new_releases">Новые релизы</string>
     <string name="podcasts_for_you">Подкасты для вас</string>
     <string name="recap">Итоги</string>
-    <string name="home_unavailable">Главная недоступна</string>
+    <string name="home_unavailable">Главная страница недоступна</string>
     <string name="today">Сегодня</string>
     <string name="yesterday">Вчера</string>
     <string name="this_week">На этой неделе</string>
@@ -65,7 +65,7 @@
         <item quantity="other">Скачано %1$d из %2$d песен, %3$d не удалось скачать</item>
     </plurals>
     <string name="download_pause_all">Приостановить все</string>
-    <string name="download_resume_all">Продолжить всё</string>
+    <string name="download_resume_all">Продолжить все</string>
     <string name="download_cancel_all">Отменить все</string>
     <string name="remove_download">Удалить из скачанных</string>
     <string name="add_to_playlist">Добавить в плейлист</string>
@@ -190,7 +190,7 @@
     <string name="music_video_quality_resolution" tools:ignore="MissingTranslation" translatable="false">%1$sp</string>
     <string name="music_video_resolution" tools:ignore="MissingTranslation">Качество видео</string>
     <string name="music_video_resolution_desc" tools:ignore="MissingTranslation">Измените качество для этого клипа</string>
-    <string name="music_video_resolution_current" tools:ignore="MissingTranslation">Сейчас играет</string>
+    <string name="music_video_resolution_current" tools:ignore="MissingTranslation">Текущее разрешение</string>
     <string name="music_video_cache" tools:ignore="MissingTranslation">Кэш клипа</string>
     <string name="clear_music_video_cache" tools:ignore="MissingTranslation">Очистить кэш клипов</string>
     <string name="clear_music_video_cache_desc" tools:ignore="MissingTranslation">Удалить кэшированные сопоставления разрешений треков с видео</string>
@@ -268,7 +268,7 @@
     <string name="open_github_profile">Открыть GitHub</string>
     <string name="sponsor_developer">Спонсировать разработчика</string>
     <string name="credits_license_name">Лицензия</string>
-    <string name="credits_license_desc">Metrolist распространяется под лицензией GPL-3.0.</string>
+    <string name="credits_license_desc">Metrolist распространяется под лицензией GPL-3.0</string>
     <string name="devmode_already_active" translatable="true">Режим разработчика уже активен</string>
     <string name="discord_enable_rich_presence">Discord Rich Presence</string>
     <string name="discord_listen_to_metrolist">Слушает в Metrolist</string>
@@ -706,7 +706,7 @@
     <string name="device_has_no_microphone">Это устройство не имеет микрофона.</string>
     <string name="discord_unknown_album">Неизвестный альбом</string>
     <string name="disliked_song">Не понравившаяся песня</string>
-    <string name="dislike_song">Не нравится песня</string>
+    <string name="dislike_song">Не нравится</string>
     <string name="done">Готово</string>
     <string name="download_not_found">Скачивание не найдено</string>
     <string name="drag_to_reorder">Перетащите для изменения порядка</string>
@@ -769,7 +769,7 @@
     <string name="library_offline_songs">Офлайн песни</string>
     <string name="library_top_songs">Ваши топ песни</string>
     <string name="library_uploaded_songs">Ваши загруженные песни</string>
-    <string name="listen_together_add_custom_server">Добавьте пользовательский сервер</string>
+    <string name="listen_together_add_custom_server">Добавить свой сервер</string>
     <string name="listen_together_add_queue_title">Добавить %1$s?</string>
     <string name="listen_together_server">Сервер</string>
     <string name="listen_together_servers">Сервера</string>
@@ -846,10 +846,10 @@
     <string name="refreshing">Обновление</string>
     <string name="remove">Удалить</string>
     <string name="remove_all">Удалить все</string>
-    <string name="removed_dislike">Дизлайк удалён</string>
+    <string name="removed_dislike">Отметка "Не нравится" убрана</string>
     <string name="removed_download">Скачивание удалено</string>
     <string name="removed_from_library">Удалено из библиотеки</string>
-    <string name="remove_dislike">Удалить дизлайк</string>
+    <string name="remove_dislike">Убрать отметку "Не нравится"</string>
     <string name="remove_from_device">Удалить с устройства</string>
     <string name="remove_from_favorites">Удалить из Любимых</string>
     <string name="remove_from_recent_question">Удалить из недавних?</string>
@@ -927,7 +927,7 @@
     <string name="suggestions">Предложения</string>
     <string name="title">Название</string>
     <string name="token_login">Токен авторизации</string>
-    <string name="top_results">Топовые результаты</string>
+    <string name="top_results">Лучшие результаты</string>
     <string name="total_listening">Общее прослушивание</string>
     <string name="total_time_listening">Общее время прослушивания</string>
     <string name="track">Трек</string>
@@ -1063,10 +1063,10 @@
         <item quantity="other">Удалено %1$d песен из плейлиста</item>
     </plurals>
     <plurals name="seconds_short">
-        <item quantity="one">%1$d с</item>
-        <item quantity="few">%1$d с</item>
-        <item quantity="many">%1$d с</item>
-        <item quantity="other">%1$d с</item>
+        <item quantity="one">%1$d с</item>
+        <item quantity="few">%1$d с</item>
+        <item quantity="many">%1$d с</item>
+        <item quantity="other">%1$d с</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d песня</item>
@@ -1243,8 +1243,8 @@
     <string name="discord_activity_competing">Соревнуется</string>
     <string name="discord_activity_name">Имя активности</string>
     <string name="discord_advanced_mode">Расширенный режим</string>
-    <string name="speed_dial">Быстрый набор</string>
-    <string name="pin_to_speed_dial">Закрепить в Быстрый набор</string>
+    <string name="speed_dial">Быстрый выбор</string>
+    <string name="pin_to_speed_dial">Закрепить в Быстрый выбор</string>
     <string name="unpin_from_speed_dial">Открепить из Быстрого набора</string>
     <string name="view_podcast">Просмотреть подкаст</string>
     <string name="auto_playlist">Автоплейлист</string>
@@ -1850,7 +1850,7 @@
     <string name="device_connect_device_type_and_model">%1$s · %2$s</string>
     <string name="device_connect_available">Доступно</string>
     <string name="settings_disable_wayland_fix_description">Выключает автоматическое определение масштабирования для сессий Wayland. Требуется перезапуск.</string>
-    <string name="device_connect_signed_out_pairing">Вышли: сравните код сопряжения на обоих устройствах перед подтверждением</string>
+    <string name="device_connect_signed_out_pairing">Вы вышли из аккаунта. Сравните код сопряжения на обоих устройствах перед подтверждением.</string>
     <string name="device_connect_paired">Сопряжено</string>
     <string name="shortcut_toggle_device_connect">Переключить панель подключения устройств</string>
     <string name="device_connect_unshareable_queue">Эта очередь содержит локальные файлы и недоступна для обмена.</string>
@@ -1881,7 +1881,7 @@
     <string name="tempo_and_pitch">Темп и высота тона</string>
     <string name="playback_pitch">Высота тона (полутоны)</string>
     <string name="widget_recognizer_name">Распознаватель музыки</string>
-    <string name="widget_recognizer_description">Узнавайте, какая музыка играет рядом, прямо с главного экрана</string>
+    <string name="widget_recognizer_description">Узнавайте, какая музыка играет рядом, с главного экрана</string>
     <string name="widget_recognizer_tap_to_search">Нажмите, чтобы распознать трек</string>
     <string name="widget_recognizer_processing">Определяем…</string>
     <string name="widget_recognizer_no_match">Совпадений не найдено. Повторите попытку</string>
@@ -2125,12 +2125,12 @@
     <string name="settings_resume_prompt_summary">Спрашивать перед возобновлением сохранённой очереди при запуске приложения</string>
     <string name="settings_player_layout_summary">Изменить расположение обложек и элементов управления воспроизведением</string>
     <string name="settings_filter_q_summary">Q определяет ширину или резонанс выбранного фильтра</string>
-    <string name="settings_reset_to_default">Сбросить</string>
+    <string name="settings_reset_to_default">Сбросить по умолчанию</string>
     <plurals name="downloads_failed_banner">
-        <item quantity="one">%1$d загрузка провалена</item>
-        <item quantity="few">%1$d загрузки провалено</item>
-        <item quantity="many">%1$d загрузок провалено</item>
-        <item quantity="other">%1$d загрузок провалено</item>
+        <item quantity="one">Не удалось скачать %1$d песню</item>
+        <item quantity="few">Не удалось скачать %1$d песни</item>
+        <item quantity="many">Не удалось скачать %1$d песен</item>
+        <item quantity="other">Не удалось скачать %1$d песен</item>
     </plurals>
     <plurals name="download_queue_pending">
         <item quantity="one">%1$d песня в очереди скачивания</item>
@@ -2140,14 +2140,14 @@
     </plurals>
     <string name="download_paused">Остановлено</string>
     <string name="downloads_empty">В процессе загрузок нет</string>
-    <string name="downloads_empty_hint">Песни которые вы сохранили для офлайн прослушивания будут появляться здесь пока они скачиваются.</string>
+    <string name="downloads_empty_hint">Песни, которые вы сохраняете для офлайн-прослушивания, будут появляться здесь во время скачивания.</string>
     <string name="remove_all_downloads">Удалить все скачивания</string>
     <string name="lyrics_song_artist">Исполнитель песни</string>
-    <string name="lyrics_capability_line_syllable">Линия и слог</string>
-    <string name="lyrics_capability_line_syllable_unsynced">Линия, слог и несинхронизированное</string>
-    <string name="lyrics_capability_line_unsynced">Линия и несинхронизированное</string>
-    <string name="lyrics_capability_line">Линия</string>
-    <string name="lyrics_capability_unsynced">Несинхронизированное</string>
+    <string name="lyrics_capability_line_syllable">Построчно и по слогам</string>
+    <string name="lyrics_capability_line_syllable_unsynced">Построчно, по слогам и без синхронизации</string>
+    <string name="lyrics_capability_line_unsynced">Построчно и без синхронизации</string>
+    <string name="lyrics_capability_line">Построчно</string>
+    <string name="lyrics_capability_unsynced">Без синхронизации</string>
     <string name="lyrics_youtube_captions">Субтитры YouTube</string>
     <string name="edit_playlist_cover">Изменить обложку альбома</string>
     <string name="edit_playlist_cover_note">Чтобы изменить обложку плейлиста, ваша учетная запись должна быть привязана к номеру телефона и подтверждена в YouTube Music</string>
@@ -2465,10 +2465,10 @@
         <item quantity="other">Импортировать плейлисты</item>
     </plurals>
     <plurals name="import_playlists_notice">
-        <item quantity="one">Импорт %1$s из %2$d плейлиста. Импорт будет выполняться в фоновом режиме, по завершении вы получите уведомление.</item>
-        <item quantity="few">Импорт %1$s из %2$d плейлистов. Импорт будет выполняться в фоновом режиме, по завершении вы получите уведомление.</item>
-        <item quantity="many">Импорт %1$s из %2$d плейлистов. Импорт будет выполняться в фоновом режиме, по завершении вы получите уведомление.</item>
-        <item quantity="other">Импорт %1$s из %2$d плейлистов. Импорт будет выполняться в фоновом режиме, по завершении вы получите уведомление.</item>
+        <item quantity="one">Импорт %1$s из %2$d плейлиста будет выполняться в фоновом режиме. По завершении вы получите уведомление.</item>
+        <item quantity="few">Импорт %1$s из %2$d плейлистов будет выполняться в фоновом режиме. По завершении вы получите уведомление.</item>
+        <item quantity="many">Импорт %1$s из %2$d плейлистов будет выполняться в фоновом режиме. По завершении вы получите уведомление.</item>
+        <item quantity="other">Импорт %1$s из %2$d плейлистов будет выполняться в фоновом режиме. По завершении вы получите уведомление.</item>
     </plurals>
     <string name="settings_storage_summary">%1$s использовано • %2$s свободно</string>
     <string name="live">Прямой эфир</string>
@@ -2533,7 +2533,7 @@
     <string name="auto_playlist_uploaded_subtitle">Ваши загруженные песни</string>
     <string name="import_status_matching_tracks">Сопоставляем трек %1$d из %2$d: %3$s…</string>
     <string name="canvas">Заставка Canvas</string>
-    <string name="library_grid_columns">Количество столбцов в сетке библиотеки</string>
+    <string name="library_grid_columns">Столбцы библиотеки</string>
     <string name="metroeq_profiles">Сохраненные профили</string>
     <string name="metroeq_preset_treble">Усиление высоких частот</string>
     <string name="metroeq_preset_flat">Плоский</string>
@@ -2645,4 +2645,41 @@
     <string name="channel_switch_browse_hint">Откройте меню с аватаром на странице YouTube Music, выберите свой канал, а затем выберите %1$s.</string>
     <string name="lyrics_curated_by">(прислано %1$s)</string>
     <string name="hidden_home_items_desc">Отображать и от-скрывать исполнителей и подкасты, скрытые на главной странице. Вручную закреплённые элементы "Быстрого набора" остаются видимыми.</string>
+    <string name="active_lyrics_alignment">Выравнивание текущей строки текста песни</string>
+    <string name="desktop_minimize_to_tray">Сворачивать в трей</string>
+    <string name="desktop_minimize_to_tray_desc">При закрытии окна Metrolist будет сворачиваться в трей вместо завершения работы</string>
+    <string name="desktop_tray_toggle_on_click">Показывать или скрывать при нажатии на значок в трее</string>
+    <string name="desktop_tray_toggle_on_click_desc">Щелчок левой кнопкой мыши по значку в трее откроет или скроет окно Metrolist</string>
+    <string name="playlist_order_original">Порядок плейлиста</string>
+    <string name="album_order_original">Порядок альбома</string>
+    <string name="canvas_cache">Кэш Canvas</string>
+    <string name="chip_content_description">Чип: %1$s</string>
+    <string name="settings_library_grid_columns">Столбцы библиотеки</string>
+    <string name="playlist_picker_library_order">Порядок библиотеки</string>
+    <string name="blocked_songs">Заблокированные песни</string>
+    <string name="blocked_songs_desc">Восстановить заблокированные песни и песни с отметкой "Не нравится"</string>
+    <string name="blocked_songs_empty">Нет заблокированных песен</string>
+    <string name="content_undo_hint">Это действие можно отменить здесь: %1$s.</string>
+    <string name="content_undo_path">%1$s &gt; %2$s &gt; %3$s</string>
+    <string name="account_keyring_required">Для восстановления аккаунта Metrolist нужен доступ к системной связке ключей. Разблокируйте её. Metrolist повторит попытку автоматически.</string>
+    <string name="account_linux_keyring_required">Для восстановления аккаунта Metrolist нужна системная связка ключей. Установите libsecret-tools или соответствующий пакет вашего дистрибутива, содержащий команду secret-tool, и убедитесь, что связка ключей запущена и разблокирована. Metrolist повторит попытку автоматически.</string>
+    <string name="density_massive">Гигантский (200%)</string>
+    <string name="density_huge">Огромный (175%)</string>
+    <string name="density_extra_large">Очень крупный (150%)</string>
+    <string name="lyrics_romanization_larger_text">Крупнее: Романизация или текст песни</string>
+    <string name="lyrics_romanization_larger_text_description">Выберите, что отображать крупнее при одновременном показе текста песни и романизации.</string>
+    <string name="lyrics_romanization_show_original">Показывать оригинал</string>
+    <string name="lyrics_romanization_show_original_description">Отображать строку оригинала ниже</string>
+    <string name="lyrics_romanization_show_romanization">Показывать романизацию</string>
+    <string name="lyrics_romanization_show_romanization_description">Отображать романизацию под текстом песни</string>
+    <string name="sync_playlist">Синхронизировать плейлист</string>
+    <string name="cast_stream_port_unavailable">Не удалось открыть TCP-порт 57643 для трансляции. Убедитесь, что эта сеть доступна и порт не используется другим приложением.</string>
+    <string name="cast_stream_unreachable">Колонка не запросила аудиопоток. Убедитесь, что брандмауэр разрешает входящие подключения от колонки на TCP-порт 57643 и оба устройства находятся в одной сети.</string>
+    <string name="listen_together_location_poland">Польша</string>
+    <string name="listen_together_location_custom">Свой</string>
+    <string name="listen_together_custom_server_name">Свой сервер</string>
+    <string name="listen_together_custom_server_maintainer">Пользователь</string>
+    <string name="desktop_tray_toggle_on_click_desc_mac">Щелчок правой кнопкой мыши по значку в трее откроет или скроет окно Metrolist</string>
+    <string name="desktop_omarchy_unsupported">Metrolist не работает на Omarchy. Используйте другой дистрибутив Linux, Windows 10 и выше или macOS.</string>
+    <string name="learn_more">Узнать больше</string>
 </resources>

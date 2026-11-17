@@ -2092,7 +2092,6 @@
     <string name="sponsorblock_skipped">Segmento promocional omitido</string>
     <string name="episode_played">Reproducido</string>
     <string name="lastfm_service_error">El inicio de sesión en Last.fm no está disponible. Inténtalo de nuevo más tarde.</string>
-
     <string name="settings_appearance_overview">Tema, fuentes y aspecto del reproductor</string>
     <string name="settings_android_auto_overview">Listas para el coche y destino de adición rápida</string>
     <string name="settings_about_overview">Colaboradores, enlaces de la comunidad y licencias</string>
@@ -2159,4 +2158,24 @@
     <string name="settings_resume_prompt_summary">Pregunta antes de reanudar la cola guardada al iniciar la aplicación</string>
     <string name="settings_player_layout_summary">Cambia la disposición de las imágenes y los controles de reproducción</string>
     <string name="settings_filter_q_summary">Q controla la anchura o la resonancia del filtro seleccionado</string>
+    <string name="settings_reset_to_default">Restaurar a por defecto</string>
+    <plurals name="download_queue_pending">
+        <item quantity="one">%1$d canción en la fila de descarga</item>
+        <item quantity="many">%1$d canciones en la fila de descarga</item>
+        <item quantity="other">%1$d canciones en la fila de descarga</item>
+    </plurals>
+    <string name="download_paused">Pausado</string>
+    <string name="downloads_empty">No hay descargas en progreso</string>
+    <string name="downloads_empty_hint">Las canciones que guardes para escuchar offline aparecerán aquí mientras de descargan.</string>
+    <string name="remove_all_downloads">Eliminar todas las descargas</string>
+    <string name="lyrics_song_artist">Artista/s</string>
+    <string name="lyrics_capability_line_syllable">Línea y sílaba</string>
+    <string name="lyrics_capability_line_syllable_unsynced">Línea, silaba y desincronizado</string>
+    <string name="lyrics_capability_line_unsynced">Línea y desincronizado</string>
+    <string name="lyrics_capability_line">Línea</string>
+    <string name="lyrics_capability_unsynced">Desincronizado</string>
+    <string name="lyrics_youtube_captions">Subtítulos de YouTube</string>
+    <string name="edit_playlist_cover">Editar carátula de la playlist</string>
+    <string name="edit_playlist_cover_note">Tu cuenta debe estar vinculada a un numero telefónico y verificada en YouTube Music para cambiar la carátula de la playlist</string>
+    <string name="edit_playlist_cover_note_wait">Después de seleccionar una imagen espera un momento para que la nueva carátula aparezca en tu playlist</string>
 </resources>

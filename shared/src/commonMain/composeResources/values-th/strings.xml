@@ -429,7 +429,6 @@
     <string name="lastfm_service_error">ไม่สามารถลงชื่อเข้าใช้ Last.fm ได้ โปรดลองอีกครั้งในภายหลัง</string>
     <string name="song_cache_location_custom">โฟลเดอร์ที่กำหนดเอง</string>
     <string name="song_cache_location_custom_desc">โฟลเดอร์ที่กำหนดเองซึ่งเลือกผ่าน Storage Access Framework</string>
-
     <string name="settings_appearance_overview">ธีม แบบอักษร และรูปลักษณ์เครื่องเล่น</string>
     <string name="settings_android_auto_overview">เพลย์ลิสต์ในรถและปลายทางสำหรับเพิ่มเพลงด่วน</string>
     <string name="settings_about_overview">ผู้ร่วมพัฒนา ลิงก์ชุมชน และใบอนุญาต</string>
@@ -496,4 +495,8 @@
     <string name="settings_resume_prompt_summary">ถามก่อนเล่นคิวที่บันทึกไว้ต่อเมื่อเริ่มแอป</string>
     <string name="settings_player_layout_summary">เปลี่ยนการจัดวางปกและส่วนควบคุมการเล่น</string>
     <string name="settings_filter_q_summary">Q ควบคุมความกว้างหรือการสั่นพ้องของตัวกรองที่เลือก</string>
+    <string name="offline_mode">โหมดออฟไลน์</string>
+    <string name="new_releases">เวอร์ชั่นใหม่</string>
+    <string name="podcasts_for_you">พอดแคสต์สำหรับคุณ</string>
+    <string name="recap">สรุป</string>
 </resources>
