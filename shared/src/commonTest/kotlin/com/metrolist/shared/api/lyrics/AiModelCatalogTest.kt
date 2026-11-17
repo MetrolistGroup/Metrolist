@@ -594,6 +594,18 @@ class AiModelCatalogTest {
                             ).exceptionOrNull()
                     assertTrue(failure is IllegalArgumentException)
                 }
+                val paidWithoutKey =
+                    translation
+                        .translateLyricsLines(
+                            lines = listOf("Hello"),
+                            provider = kilo.id,
+                            targetLanguage = "es",
+                            mode = "Literal",
+                            apiKey = "",
+                            baseUrl = kilo.endpoint,
+                            model = "anthropic/claude-opus-5.5",
+                        ).exceptionOrNull()
+                assertTrue(paidWithoutKey is IllegalArgumentException)
                 assertEquals(2, requests)
             }
         }
@@ -605,13 +617,22 @@ class AiModelCatalogTest {
             HttpClient(
                 MockEngine {
                     respond(
-                        """{"data":[{"id":"kilo-auto/free","pricing":{"prompt":"0","completion":"0"}},{"id":"cohere/north-mini-code:free","pricing":{"prompt":"0","completion":"0"}}]}""",
+                        """{"data":[{"id":"kilo-auto/free","pricing":{"prompt":"0","completion":"0"}},{"id":"cohere/north-mini-code:free","pricing":{"prompt":"0","completion":"0"}},{"id":"anthropic/claude-opus-5.5","pricing":{"prompt":"0.000003","completion":"0.000015"}},{"id":"google/lyria-3-pro-preview","pricing":{"prompt":"0","completion":"0"}}]}""",
                     )
                 },
             ).use { client ->
+                val catalog = AiModelCatalog(client)
                 assertEquals(
                     "kilo-auto/free",
-                    AiModelCatalog(client).validatedModel(kilo, "", kilo.endpoint, "retired/model:free"),
+                    catalog.validatedModel(kilo, "", kilo.endpoint, "retired/model:free"),
+                )
+                assertEquals(
+                    "kilo-auto/free",
+                    catalog.validatedModel(kilo, "", kilo.endpoint, "anthropic/claude-opus-5.5", freeOnly = true),
+                )
+                assertEquals(
+                    "kilo-auto/free",
+                    catalog.validatedModel(kilo, "", kilo.endpoint, "google/lyria-3-pro-preview", freeOnly = true),
                 )
             }
         }

@@ -270,7 +270,7 @@ internal fun AiModelPicker(
                     is ModelsState.Loaded -> {
                         val shown =
                             current.models
-                                .filter { !freeOnly || (it.free && (preset.keyless || it.id.endsWith(":free"))) }
+                                .filter { model -> !freeOnly || preset.allowsFreeModel(model) }
                                 .filter {
                                     typed.isEmpty() ||
                                         it.id.contains(

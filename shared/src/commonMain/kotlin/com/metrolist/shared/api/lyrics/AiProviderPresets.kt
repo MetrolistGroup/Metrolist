@@ -31,6 +31,28 @@ data class AiProviderPreset(
             endpoint
                 .replace(Regex("/(chat/completions|messages)$"), "/models")
                 .replace(Regex("/models/[^/]+:generateContent$"), "/models")
+
+    fun isKeylessFreeModel(modelId: String): Boolean =
+        keyless &&
+            (
+                modelId == defaultModel ||
+                    modelId.endsWith(":free") ||
+                    modelId.endsWith("-free") ||
+                    modelId.startsWith("openrouter/") ||
+                    modelId.startsWith("kilo/") ||
+                    '/' !in modelId
+            )
+
+    fun allowsFreeModel(
+        model: AiModelInfo,
+        includeDefault: Boolean = false,
+    ): Boolean =
+        model.free &&
+            if (keyless) {
+                isKeylessFreeModel(model.id)
+            } else {
+                model.id.endsWith(":free") || (includeDefault && model.id == defaultModel)
+            }
 }
 
 object AiProviderPresets {

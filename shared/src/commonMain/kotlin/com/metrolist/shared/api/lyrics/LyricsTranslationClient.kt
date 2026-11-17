@@ -90,7 +90,14 @@ class LyricsTranslationClient(
     private fun missingAiKey(
         provider: String,
         apiKey: String,
-    ) = apiKey.isBlank() && AiProviderPresets.find(provider)?.keyless != true
+        model: String = "",
+    ): Boolean {
+        if (apiKey.isNotBlank()) return false
+        val preset = AiProviderPresets.find(provider) ?: return true
+        if (!preset.keyless) return true
+        val effectiveModel = model.ifBlank { preset.defaultModel }
+        return effectiveModel.isNotBlank() && !preset.isKeylessFreeModel(effectiveModel)
+    }
 
     private fun HttpRequestBuilder.aiTimeout() {
         timeout {
@@ -192,7 +199,7 @@ class LyricsTranslationClient(
         onModelSelected: (String) -> Unit = {},
     ): Result<LyricsAiResult> =
         try {
-            if (missingAiKey(provider, apiKey)) return Result.failure(IllegalArgumentException("AI API key is required"))
+            if (missingAiKey(provider, apiKey, model)) return Result.failure(IllegalArgumentException("AI API key is required"))
             val lineCount = lines.size
             val effectiveSystemPrompt =
                 systemPrompt.takeIf { it.isNotBlank() }
@@ -310,7 +317,7 @@ class LyricsTranslationClient(
         temperature: Double,
         onModelSelected: (String) -> Unit = {},
     ): Result<String> {
-        if (missingAiKey(provider, apiKey)) return Result.failure(IllegalArgumentException("AI API key is required"))
+        if (missingAiKey(provider, apiKey, model)) return Result.failure(IllegalArgumentException("AI API key is required"))
         return when (AiProviderPresets.protocolFor(provider, baseUrl, model)) {
             AiProtocol.ANTHROPIC -> {
                 requestAnthropicCompatible(
@@ -1472,7 +1479,7 @@ class LyricsTranslationClient(
                 }
 
                 else -> {
-                    if (missingAiKey(provider, apiKey)) throw IllegalArgumentException("missing credentials")
+                    if (missingAiKey(provider, apiKey, translationModel)) throw IllegalArgumentException("missing credentials")
                     val detection =
                         if (activationMode == "Automatic") {
                             shouldTranslateLyrics(
