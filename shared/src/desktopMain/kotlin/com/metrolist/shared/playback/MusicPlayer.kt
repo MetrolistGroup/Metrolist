@@ -1321,6 +1321,14 @@ class MusicPlayer(
                 currentPlaybackInstanceId == nextExpectedCurrentInstanceId && primaryVideoId == nextExpectedCurrentVideoId
         }
 
+    fun startNextPlayback(token: PlaybackPreloadToken): Boolean =
+        synchronized(playerLock) {
+            if (!isPreloadedNextActive(token) || nextPlayerFailed) return false
+            nextStartsPaused = false
+            if (audioPlayer.wantsPlayback) nextPlayer?.resume()
+            true
+        }
+
     fun swapToNext(
         token: PlaybackPreloadToken,
         resource: PlaybackResource? = null,

@@ -54,7 +54,9 @@ PipeWire and PulseAudio hosts need their distribution's ALSA integration. On Arc
 
 For microcuts, export the playback event log immediately. Output-underrun records describe the buffer and time between writes; they do not identify the cause by themselves.
 
-At the end of a track, desktop waits for the remaining PCM buffer duration plus 250 ms. Pausing suspends this wait. If a mixer never reports an empty buffer, the track still completes so normal and gapless playback can advance. Crossfade keeps its existing fade and handoff.
+At the end of a track, desktop waits for the remaining PCM buffer duration plus 250 ms. Pausing suspends this wait. If a mixer never reports an empty buffer, the track still completes so normal and gapless playback can advance.
+
+Crossfade starts the prepared next player muted while the outgoing track keeps playing. Both gains follow the outgoing playback clock, with user volume, normalization and sleep-timer gain applied to each track. Pausing stops both players and holds the fade. The next track becomes current when the fade completes or the outgoing track ends; promotion then closes the outgoing player. Cancelling the fade stops the incoming player and restores the outgoing gain. Same-album gapless playback skips the fade.
 
 ## Linux login
 

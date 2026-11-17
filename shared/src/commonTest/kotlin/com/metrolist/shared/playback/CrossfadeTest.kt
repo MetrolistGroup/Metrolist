@@ -4,7 +4,6 @@ import com.metrolist.shared.model.AlbumTiny
 import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.LoudnessLevel
-import kotlin.math.nextDown
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -55,7 +54,7 @@ class CrossfadeTest {
         assertTrue(stalled < 1f)
         val completed = playbackCrossfadeProgress(175_000L, 180_000L, stoppedPosition, outgoingHasEnded = true)
         assertEquals(1f, completed)
-        assertEquals(0f to 1f, playbackFadeThroughGains(completed))
+        assertEquals(0f to 1f, playbackCrossfadeGains(completed))
     }
 
     @Test
@@ -72,46 +71,6 @@ class CrossfadeTest {
         assertEquals(0L, playbackCrossfadeDurationMs(false, false, false, 10_000L, 180_000L, 180_000L))
         assertEquals(4_000L, playbackCrossfadeDurationMs(true, false, true, 10_000L, 4_000L, 12_000L))
         assertEquals(15_000L, playbackCrossfadeDurationMs(true, false, false, 30_000L, 90_000L, 90_000L))
-    }
-
-    @Test
-    fun gainsStaySmoothAndIncomingReachesFullVolumeOnlyAtTheEnd() {
-        assertEquals(1f to 0f, playbackFadeThroughGains(0f))
-        for (invalidProgress in listOf(Float.NaN, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY)) {
-            assertEquals(1f to 0f, playbackFadeThroughGains(invalidProgress))
-        }
-        val midpoint = playbackFadeThroughGains(0.5f)
-        assertEquals(0f to 0f, midpoint)
-        assertTrue(playbackFadeThroughGains(1f.nextDown()).second < 1f)
-        assertEquals(0f to 1f, playbackFadeThroughGains(1f))
-    }
-
-    @Test
-    fun gainsFadeOutThenInWithAGentleStopAtTheMidpoint() {
-        val startStep = playbackFadeThroughGains(0.05f)
-        val endStep = playbackFadeThroughGains(0.95f)
-        assertTrue(startStep.second < 0.05f)
-        assertTrue(endStep.first < 0.05f)
-        assertEquals(0.5f, playbackFadeThroughGains(0.2475f).first, 0.00001f)
-        assertEquals(0.5f, playbackFadeThroughGains(0.7525f).second, 0.00001f)
-        var previousOutgoing = 1f
-        var previousIncoming = 0f
-        for (i in 1..20) {
-            val (outgoing, incoming) = playbackFadeThroughGains(i / 20f)
-            assertTrue(outgoing <= previousOutgoing)
-            assertTrue(incoming >= previousIncoming)
-            assertTrue(outgoing == 0f || incoming == 0f)
-            previousOutgoing = outgoing
-            previousIncoming = incoming
-        }
-    }
-
-    @Test
-    fun queuePromotionStartsAsSoonAsTheIncomingFadeBegins() {
-        assertFalse(shouldPromotePlaybackCrossfade(0f))
-        assertFalse(shouldPromotePlaybackCrossfade(Float.NaN))
-        assertTrue(shouldPromotePlaybackCrossfade(Float.MIN_VALUE))
-        assertTrue(shouldPromotePlaybackCrossfade(playbackFadeThroughGains(0.75f).second))
     }
 
     @Test
@@ -149,13 +108,13 @@ class CrossfadeTest {
         val volume = 0.8f
         val sleep = 0.5f
         for (progress in listOf(0f, 0.25f, 0.5f, 0.75f, 1f)) {
-            val (outFade, inFade) = playbackFadeThroughGains(progress)
+            val (outFade, inFade) = playbackCrossfadeGains(progress)
             assertEquals(volume * sleep * outgoing * outFade, playbackOutputGain(volume, sleep, outFade, outgoing), 0.000001f)
             assertEquals(volume * sleep * incoming * inFade, playbackOutputGain(volume, sleep, inFade, incoming), 0.000001f)
         }
         assertEquals(
             playbackOutputGain(volume, sleep, 1f, incoming),
-            playbackOutputGain(volume, sleep, playbackFadeThroughGains(1f).second, incoming),
+            playbackOutputGain(volume, sleep, playbackCrossfadeGains(1f).second, incoming),
         )
         assertEquals(0.3565004f, playbackOutputGain(0.4f, 1f, 1f, incoming), absoluteTolerance = 0.000001f)
     }
