@@ -553,3 +553,78 @@ private const val MAX_HTTP_LINE_BYTES = 8_192
 private const val HTTP_TIMEOUT_MS = 8_000
 private const val POLL_INTERVAL_MS = 1_000L
 private const val MAX_CONSECUTIVE_POLL_ERRORS = 5
+
+internal data class SonosZone(
+    val coordinatorId: String,
+    val name: String,
+    val location: String,
+)
+
+/**
+ * Lists each visible Sonos group once, at its coordinator. Every grouped, bonded or satellite speaker answers SSDP,
+ * but only the coordinator accepts transport commands; the others fail with UPnP error 800.
+ */
+internal fun parseSonosZoneGroups(zoneGroupState: String): List<SonosZone> =
+    parseXml(zoneGroupState.toByteArray(Charsets.UTF_8)).elements("ZoneGroup").mapNotNull { group ->
+        val coordinator = group.getAttribute("Coordinator").takeIf(String::isNotEmpty) ?: return@mapNotNull null
+        val members = group.childElements("ZoneGroupMember")
+        val leader = members.firstOrNull { it.getAttribute("UUID") == coordinator } ?: return@mapNotNull null
+        if (leader.getAttribute("Invisible") == "1") return@mapNotNull null
+        val names =
+            members
+                .filter { it.getAttribute("Invisible") != "1" }
+                .map { it.getAttribute("ZoneName").trim() }
+                .filter(String::isNotEmpty)
+                .distinct()
+        SonosZone("uuid:$coordinator", names.joinToString(" + ").ifEmpty { coordinator }, leader.getAttribute("Location"))
+    }
+
+/** Replaces discovered Sonos speakers with their group coordinators, or returns null when the topology is unavailable. */
+internal suspend fun sonosGroupDevices(speakers: List<CastDevice>): List<CastDevice>? =
+    withContext(Dispatchers.IO) {
+        speakers.firstNotNullOfOrNull { speaker ->
+            runCatching {
+                val location = validatedLocalHttpUri(checkNotNull(speaker.endpoint))
+                val control = validatedLocalHttpUri(location.resolve(SONOS_TOPOLOGY_CONTROL_PATH).toString())
+                val response =
+                    localHttpRequest(
+                        uri = control,
+                        method = "POST",
+                        headers =
+                            mapOf(
+                                "Content-Type" to "text/xml; charset=utf-8",
+                                "SOAPACTION" to "\"$SONOS_TOPOLOGY_SERVICE#GetZoneGroupState\"",
+                            ),
+                        body = SONOS_TOPOLOGY_REQUEST.toByteArray(Charsets.UTF_8),
+                    )
+                check(response.status in 200..299) { "Sonos topology request failed with HTTP ${response.status}" }
+                val state = parseXml(response.body).text("ZoneGroupState") ?: error("Missing ZoneGroupState")
+                parseSonosZoneGroups(state).mapNotNull { zone ->
+                    runCatching {
+                        val uri = validatedLocalHttpUri(zone.location)
+                        CastDevice(
+                            id = "dlna:${zone.coordinatorId}",
+                            name = zone.name,
+                            protocol = CastProtocol.SONOS,
+                            host = uri.host,
+                            port = uri.port.takeIf { it >= 0 } ?: 80,
+                            endpoint = zone.location,
+                        )
+                    }.getOrNull()
+                }
+            }.getOrNull()
+        }
+    }
+
+private fun Element.childElements(localName: String): List<Element> {
+    val namespaced = getElementsByTagNameNS("*", localName)
+    val nodes = if (namespaced.length > 0) namespaced else getElementsByTagName(localName)
+    return (0 until nodes.length).mapNotNull { nodes.item(it) as? Element }
+}
+
+private const val SONOS_TOPOLOGY_CONTROL_PATH = "/ZoneGroupTopology/Control"
+private const val SONOS_TOPOLOGY_SERVICE = "urn:schemas-upnp-org:service:ZoneGroupTopology:1"
+private const val SONOS_TOPOLOGY_REQUEST =
+    """<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" """ +
+        """s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><u:GetZoneGroupState """ +
+        """xmlns:u="$SONOS_TOPOLOGY_SERVICE"></u:GetZoneGroupState></s:Body></s:Envelope>"""

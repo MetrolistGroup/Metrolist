@@ -650,9 +650,16 @@ class JvmCastManager(
                     }.awaitAll()
                     .filterNotNull()
             }
+        val sonos = discovered.filter { it.protocol == CastProtocol.SONOS }
+        val visible =
+            sonos
+                .takeIf { it.isNotEmpty() }
+                ?.let { sonosGroupDevices(it) }
+                ?.let { groups -> discovered.filterNot { it.protocol == CastProtocol.SONOS } + groups }
+                ?: discovered
         synchronized(devicesLock) {
             if (!settings.castEnabled || !discovering.get() || generation != discoveryGeneration.get()) return
-            devicesById.replaceDlnaDevices(discovered)
+            devicesById.replaceDlnaDevices(visible)
             publishDevices()
         }
     }

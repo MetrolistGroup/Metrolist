@@ -391,7 +391,7 @@ Legacy database conversion removes dangling children covered by cascading foreig
 
 ### Casting
 
-Android and desktop share the JVM cast sessions. Connecting and replacing media preserve receiver volume for Google Cast, DLNA/Sonos and FCast; only explicit adjustments send volume commands. Receiver reports supply remote volume state. Song changes replace media in the existing session. The stream proxy keeps TCP port `57643` and changes its URL token for each song. See the [Linux firewall setup](install/linux.md#sonos-and-dlna-with-firewalld) for SSDP reply and stream rules.
+Android and desktop share the JVM cast sessions. Connecting and replacing media preserve receiver volume for Google Cast, DLNA/Sonos and FCast; only explicit adjustments send volume commands. Receiver reports supply remote volume state. Song changes replace media in the existing session. The stream proxy keeps TCP port `57643` and changes its URL token for each song. See the [Linux firewall setup](install/linux.md#sonos-and-dlna-with-firewalld) for SSDP reply and stream rules. Discovery lists each Sonos group once, at its coordinator from `ZoneGroupTopology`, because grouped, bonded and satellite speakers reject transport commands. Unreadable DLNA device descriptions are logged once per location in the playback log.
 
 ### Discord
 
