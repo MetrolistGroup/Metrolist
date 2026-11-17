@@ -55,6 +55,8 @@ Settings and server management require the switch but not a username. Creating o
 
 Room invitations use `https://metrolist.cc/listen?code=<code>` or `https://metrolist.cc/party?r=<code>`. Media share and copy actions use `https://music.youtube.com` through `ShareUrls`. Loopback and Workers preview hosts do not open media or room invitations.
 
+Android video start positions are read from the normalized media target, including timestamps inside Metrolist `/open?url=` wrappers. A wrapper-level timestamp does not override the target. Direct Metrolist `/watch` links retain `#t=` fragments.
+
 Android and iOS validate eight-character room codes in HTTPS invitations and `metrolist://listen-together/<code>`. Android also accepts shared text. Active-room changes require confirmation; dismissing keeps the current room. Invitations prefill the join form.
 
 Packaged Windows launches register `metrolist://` per user and forward URLs to an existing instance. Both `metrolist://listen?code=ABCDEFGH` and `metrolist://listen-together/ABCDEFGH` reach the invitation handler. Development runs do not register. Relaunch after moving a portable directory to update its path. Installer registration and uninstall cleanup need companion MetrolistManager support.

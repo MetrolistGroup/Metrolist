@@ -26,6 +26,40 @@ class YouTubeUrlParsingTest {
     fun tearDown() = Settings.replaceSharedForTest(previousSettings)
 
     @Test
+    fun wrappedVideoLinksPreserveTargetStartPosition() {
+        val wrapped = "https://metrolist.cc/open?url=https%3A%2F%2Fyoutu.be%2FR93xV3v718s%3Ft%3D143s"
+        assertEquals(143_000L, parseYouTubeStartPositionMs(wrapped))
+        assertEquals(143_000L, parseYouTubeStartPositionMs(wrapped.replace("https://metrolist.cc/", "metrolist://")))
+    }
+
+    @Test
+    fun wrapperTimestampDoesNotOverrideTargetTimestamp() {
+        val wrapped = "https://metrolist.cc/open?url=https%3A%2F%2Fyoutu.be%2FR93xV3v718s%3Ft%3D143s&t=999"
+        assertEquals(143_000L, parseYouTubeStartPositionMs(wrapped))
+    }
+
+    @Test
+    fun wrappedVideoLinksPreserveTargetFragmentTimestamp() {
+        assertEquals(
+            120_000L,
+            parseYouTubeStartPositionMs("https://metrolist.cc/open?url=https%3A%2F%2Fyoutu.be%2FR93xV3v718s%23t%3D2m"),
+        )
+    }
+
+    @Test
+    fun metrolistWatchLinksPreserveFragmentTimestamp() {
+        assertEquals(120_000L, parseYouTubeStartPositionMs("https://metrolist.cc/watch?v=R93xV3v718s#t=2m"))
+    }
+
+    @Test
+    fun wrappedNonVideoTargetDoesNotHaveStartPosition() {
+        assertEquals(
+            0L,
+            parseYouTubeStartPositionMs("https://metrolist.cc/open?url=https%3A%2F%2Fexample.org%2Fwatch%3Fv%3DR93xV3v718s%26t%3D143"),
+        )
+    }
+
+    @Test
     fun podcastBrowseLinksUseValidatedHostsAndDistinctIds() {
         listOf(
             "https://music.youtube.com/browse/MPSP_show?si=shared",
