@@ -86,7 +86,9 @@ fun PlayerLyricsSettingsPreview(
         Settings.shared.lyricsEnabledProviders,
         Settings.shared.preferWordSyncedLyrics,
     ) {
-        if (state.isPlaying && !state.isVideoModeActive) state.currentSong?.let { viewModel.loadLyrics(it) }
+        if (state.isPlaying && !state.isVideoModeActive) {
+            state.currentSong?.let { viewModel.loadLyrics(it, forceAiTranslation = state.manualAiTranslationEnabled) }
+        }
     }
     LyricsSettingsPreview(
         modifier = modifier,
