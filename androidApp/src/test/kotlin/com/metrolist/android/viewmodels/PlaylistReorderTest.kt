@@ -126,9 +126,17 @@ class PlaylistReorderTest {
     @Test
     fun clearingViewModelAlsoCommitsTheLastDragPreview() = checkOverlappingCommits(clearViewModel = true, commitSecondMove = false)
 
+    @Test
+    fun repeatedStoredPositionsDoNotMoveAnotherOccurrence() = checkOverlappingCommits(repeatedPositions = true)
+
+    @Test
+    fun negativeStoredPositionsRemainReorderable() = checkOverlappingCommits(repeatedPositions = true, positionOffset = -1)
+
     private fun checkOverlappingCommits(
         clearViewModel: Boolean = false,
         commitSecondMove: Boolean = true,
+        repeatedPositions: Boolean = false,
+        positionOffset: Int = 0,
     ) = runTest {
         Settings.replaceSharedForTest(Settings(MapSettings()))
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
@@ -146,7 +154,13 @@ class PlaylistReorderTest {
             listOf("a", "b", "c", "d").forEachIndexed { index, id ->
                 db.dao().insert(SongEntity(id = id, title = id))
                 db.dao().insert(
-                    PlaylistSongMap(id = index + 1, playlistId = playlist.id, songId = id, position = index, setVideoId = "set-$id"),
+                    PlaylistSongMap(
+                        id = index + 1,
+                        playlistId = playlist.id,
+                        songId = id,
+                        position = (if (repeatedPositions) (index - 1).coerceAtLeast(0) else index) + positionOffset,
+                        setVideoId = "set-$id",
+                    ),
                 )
             }
             val lookupStarted = CompletableDeferred<Unit>()

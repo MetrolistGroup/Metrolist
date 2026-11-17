@@ -282,6 +282,74 @@ class PlaylistMutationsTest {
         }
 
     @Test
+    fun localSuccessorReorderSeparatesRestoredOccurrencesWithRepeatedPositions() =
+        verifyRepeatedPositionReorder { database, playlistId, ids, toEnd ->
+            moveSongInLocalPlaylist(
+                database,
+                playlistId,
+                if (toEnd) ids[0] else ids[1],
+                successorMappingId = if (toEnd) null else ids[0],
+            ).getOrThrow()
+        }
+
+    @Test
+    fun storedSuccessorReorderSeparatesRestoredOccurrencesWithRepeatedPositions() =
+        verifyRepeatedPositionReorder { database, playlistId, ids, toEnd ->
+            moveSongInStoredPlaylist(
+                database,
+                authenticatedRepository(MockEngine { error("Local reorder must not use the network") }),
+                playlistId,
+                if (toEnd) ids[0] else ids[1],
+                if (toEnd) null else ids[0],
+            ).getOrThrow()
+        }
+
+    @Test
+    fun targetReorderSeparatesRestoredOccurrencesWithRepeatedPositions() =
+        verifyRepeatedPositionReorder { database, playlistId, ids, toEnd ->
+            moveSongInLocalPlaylist(
+                database,
+                playlistId,
+                fromMappingId = if (toEnd) ids[0] else ids[1],
+                toMappingId = if (toEnd) ids[2] else ids[0],
+            ).getOrThrow()
+        }
+
+    private fun verifyRepeatedPositionReorder(move: suspend (MusicDatabase, String, List<Int>, Boolean) -> Unit) =
+        withDatabase { database ->
+            database.dao().insert(SongEntity("same", "Song"))
+            for (positionOffset in listOf(0, -1)) {
+                for (toEnd in listOf(true, false)) {
+                    val playlist = createStoredLocalPlaylist(database, "Restored repeated positions").getOrThrow()
+                    listOf(0, 0, 1).forEachIndexed { index, position ->
+                        database.dao().insert(
+                            PlaylistSongMap(
+                                playlistId = playlist.id,
+                                songId = "same",
+                                position = position + positionOffset,
+                                setVideoId = "set-$index",
+                            ),
+                        )
+                    }
+                    val original = database.dao().playlistSongMaps(playlist.id, Int.MIN_VALUE)
+                    val ids = original.map { it.id }
+                    assertTrue(moveSongInLocalPlaylist(database, playlist.id, ids[0], successorMappingId = -1).isFailure)
+                    assertEquals(original, database.dao().playlistSongMaps(playlist.id, Int.MIN_VALUE))
+                    assertTrue(moveSongInLocalPlaylist(database, playlist.id, fromMappingId = -1, toMappingId = ids[0]).isFailure)
+                    assertEquals(original, database.dao().playlistSongMaps(playlist.id, Int.MIN_VALUE))
+                    move(database, playlist.id, ids, toEnd)
+                    val reordered = database.dao().playlistSongMaps(playlist.id, Int.MIN_VALUE)
+                    assertEquals(
+                        if (toEnd) listOf(ids[1], ids[2], ids[0]) else listOf(ids[1], ids[0], ids[2]),
+                        reordered.map { it.id },
+                    )
+                    assertEquals(listOf(0, 1, 2), reordered.map { it.position })
+                    assertEquals(original.associate { it.id to it.setVideoId }, reordered.associate { it.id to it.setVideoId })
+                }
+            }
+        }
+
+    @Test
     fun localReorderPersistsTheFinalDragSuccessorWithoutChangingOccurrenceIds() =
         withDatabase { database ->
             val playlist = createStoredLocalPlaylist(database, "Duplicates").getOrThrow()
