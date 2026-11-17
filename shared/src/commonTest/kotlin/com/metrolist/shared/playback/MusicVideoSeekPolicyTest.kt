@@ -40,6 +40,17 @@ class MusicVideoSeekPolicyTest {
     }
 
     @Test
+    fun hiddenSurfaceCanInvalidatePreviouslySynchronizedPosition() {
+        val lifecycle = MusicVideoSeekLifecycle()
+        lifecycle.setForeground(true)
+        lifecycle.markSynchronized()
+
+        lifecycle.markUnsynchronized()
+
+        assertFalse(lifecycle.positionSynchronized)
+    }
+
+    @Test
     fun cancellationAndFailedCompletionNeverRevealTheVideo() {
         val lifecycle = MusicVideoSeekLifecycle()
         lifecycle.setForeground(true)

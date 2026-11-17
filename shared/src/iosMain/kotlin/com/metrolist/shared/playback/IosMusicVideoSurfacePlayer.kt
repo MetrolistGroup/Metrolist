@@ -109,6 +109,8 @@ internal class IosMusicVideoSurfacePlayer(
         if (!surfaceVisible) {
             expectingProgress = false
             watchdog.reset()
+            cancelPendingSeek()
+            seekLifecycle.markUnsynchronized()
             player.pause()
             return
         }
