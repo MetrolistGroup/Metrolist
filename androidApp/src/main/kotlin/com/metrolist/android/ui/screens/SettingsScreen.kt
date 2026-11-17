@@ -555,6 +555,14 @@ fun SettingsScreen(
                                 }
                             }
 
+                            SettingsChangeEffect.AUTO_DOWNLOAD_SAVED_COLLECTIONS -> {
+                                if (value == true) {
+                                    requireDownloadNotifications { SharedPreferences.shared.autoDownloadSavedCollections = true }
+                                } else {
+                                    SharedPreferences.shared.autoDownloadSavedCollections = false
+                                }
+                            }
+
                             SettingsChangeEffect.CONTENT,
                             SettingsChangeEffect.RESTART,
                             SettingsChangeEffect.PLAYBACK_SPEED,

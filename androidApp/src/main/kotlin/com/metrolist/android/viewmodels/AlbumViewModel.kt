@@ -70,7 +70,7 @@ class AlbumViewModel(
             result
                 .onSuccess { liked ->
                     if (selectedAlbumId.value == album.id) _isFavorite.value = liked
-                    if (shouldAutoDownloadLikedAlbum(liked, Settings.shared.autoDownloadOnLike, songs.size)) {
+                    if (shouldAutoDownloadLikedAlbum(liked, Settings.shared.autoDownloadSavedCollections, songs.size)) {
                         applicationScope.launch(Dispatchers.IO) {
                             try {
                                 val allSongs = cursor?.let { GlobalYouTubeRepository.instance.completePlaylistPage(it).songs } ?: songs

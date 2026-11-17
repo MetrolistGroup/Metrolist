@@ -575,6 +575,7 @@ class Settings(
     var downloadLocation by preference("INTERNAL")
     var customDownloadPath by preference("")
     var autoDownloadOnLike by preference(false)
+    var autoDownloadSavedCollections by preference(false)
     var keepDownloadedPlaylistsJson by preference(KeepDownloadedPlaylistsJsonKey, "")
     var desktopStoppedDownloadIdsJson by preference(DesktopStoppedDownloadIdsJsonKey, "")
     var androidLastStorageAudit by preference(AndroidLastStorageAuditKey, 0L)

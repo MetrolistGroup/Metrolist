@@ -691,7 +691,7 @@ class PlaylistViewModel(
                 if (_playlistId.value != id) return@launch
                 if (result.isSuccess) {
                     _isFavorite.value = bookmarked
-                    if (bookmarked && Settings.shared.autoDownloadOnLike) {
+                    if (bookmarked && Settings.shared.autoDownloadSavedCollections) {
                         try {
                             val songs =
                                 mutationMutex.withLock {
