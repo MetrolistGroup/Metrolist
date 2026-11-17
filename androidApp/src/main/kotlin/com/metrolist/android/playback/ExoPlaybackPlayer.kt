@@ -1,5 +1,6 @@
 package com.metrolist.android.playback
 
+import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
 import android.media.AudioDeviceInfo
@@ -9,6 +10,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.Process
 import android.os.SystemClock
 import android.view.Surface
 import android.view.SurfaceHolder
@@ -294,6 +296,23 @@ internal enum class AndroidPlaybackPlayerRole(
     SECONDARY(false),
 }
 
+// Users who deny the take-audio-focus app op to mix with other apps could play in v13. Media3 refuses to play
+// when the focus request fails, so skip its focus handling for them.
+internal fun appMayTakeAudioFocus(context: Context): Boolean =
+    runCatching {
+        val appOps = context.getSystemService(AppOpsManager::class.java) ?: return true
+        val mode =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                appOps.unsafeCheckOpNoThrow(OPSTR_TAKE_AUDIO_FOCUS, Process.myUid(), context.packageName)
+            } else {
+                @Suppress("DEPRECATION")
+                appOps.checkOpNoThrow(OPSTR_TAKE_AUDIO_FOCUS, Process.myUid(), context.packageName)
+            }
+        mode != AppOpsManager.MODE_IGNORED && mode != AppOpsManager.MODE_ERRORED
+    }.getOrDefault(true)
+
+private const val OPSTR_TAKE_AUDIO_FOCUS = "android:take_audio_focus"
+
 internal fun transferPlaybackAudioFocus(
     retirePrimary: () -> Unit,
     enablePromotedPlayer: () -> Unit,
@@ -422,7 +441,7 @@ class ExoPlaybackPlayer(
             .Builder(context)
             .setRenderersFactory(silence.renderersFactory)
             .setLoadControl(createPlaybackLoadControl(bufferForPlaybackMs))
-            .setAudioAttributes(playbackAudioAttributes, role.handlesAudioFocus)
+            .setAudioAttributes(playbackAudioAttributes, role.handlesAudioFocus && appMayTakeAudioFocus(context))
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
             .apply {
@@ -2400,7 +2419,7 @@ class ExoPlaybackPlayer(
                 },
                 enablePromotedPlayer = {
                     applyPlaybackGains()
-                    candidate.setAudioAttributes(playbackAudioAttributes, true)
+                    candidate.setAudioAttributes(playbackAudioAttributes, appMayTakeAudioFocus(context))
                     candidate.playWhenReady = shouldPlay
                 },
             )
@@ -2923,7 +2942,7 @@ class ExoPlaybackPlayer(
                             attachPlayerListeners(candidate)
                             setVideoTrackEnabled(candidate, shouldEnableVideoTrackAfterWarmup(preparedResource.hasVideo, surface != null))
                             applyVideoSurface(candidate, surface)
-                            candidate.setAudioAttributes(playbackAudioAttributes, true)
+                            candidate.setAudioAttributes(playbackAudioAttributes, appMayTakeAudioFocus(context))
                             applyPlaybackGains()
                             candidate.playWhenReady = continuePlaying
                         },
