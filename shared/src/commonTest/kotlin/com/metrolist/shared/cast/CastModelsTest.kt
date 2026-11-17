@@ -51,6 +51,24 @@ class CastModelsTest {
     }
 
     @Test
+    fun stoppedReceiverCanResetItsPositionAfterPlayingNearTheEnd() {
+        assertTrue(castPlaybackEndedNearDuration(true, true, 0L, 180_000L, lastPlayingPositionMs = 179_000L))
+    }
+
+    @Test
+    fun stoppedReceiverMidSongDoesNotEndTheTrack() {
+        assertFalse(castPlaybackEndedNearDuration(true, true, 0L, 180_000L, lastPlayingPositionMs = 42_000L, pollIntervalMs = 3_000L))
+    }
+
+    @Test
+    fun stoppedReceiverAllowsOnePlayingPollIntervalBeforeTheEnd() {
+        assertTrue(castPlaybackEndedNearDuration(true, true, 0L, 180_000L, lastPlayingPositionMs = 177_000L, pollIntervalMs = 3_000L))
+        assertFalse(castPlaybackEndedNearDuration(true, true, 0L, 180_000L, lastPlayingPositionMs = 177_000L))
+        assertFalse(castPlaybackEndedNearDuration(false, true, 0L, 180_000L, lastPlayingPositionMs = 177_000L, pollIntervalMs = 3_000L))
+        assertFalse(castPlaybackEndedNearDuration(true, false, 177_000L, 180_000L, pollIntervalMs = 3_000L))
+    }
+
+    @Test
     fun castEndIsHandledOncePerRemoteMediaGeneration() {
         val ended =
             CastState(

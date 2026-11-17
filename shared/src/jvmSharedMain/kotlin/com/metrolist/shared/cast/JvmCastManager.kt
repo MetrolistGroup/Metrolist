@@ -273,9 +273,10 @@ class JvmCastManager(
         positionMs: Long,
         autoplay: Boolean,
         volume: Float,
+        shouldCommit: () -> Boolean = { true },
     ): Boolean =
         operationLock.withLock {
-            if (!settings.castEnabled) return@withLock false
+            if (!settings.castEnabled || !shouldCommit()) return@withLock false
             val activeSession = session ?: return@withLock false
             val device = _state.value.device ?: return@withLock false
             if (!isCastable(media, device.protocol)) {
@@ -289,6 +290,12 @@ class JvmCastManager(
                 val replacementUrl = activeProxy.stageMedia(media).also { stagedUrl = it }
                 sessionStateJob?.cancelAndJoin()
                 sessionStateJob = null
+                if (!shouldCommit()) {
+                    activeProxy.discardMedia(replacementUrl)
+                    stagedUrl = null
+                    observeSessionState(activeSession, device, mediaGeneration)
+                    return@withLock false
+                }
                 activeSession.load(
                     mediaUrl = replacementUrl,
                     media = media,

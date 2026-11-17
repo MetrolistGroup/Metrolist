@@ -30,6 +30,8 @@ import java.net.URI
 import java.util.Locale
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 internal data class DlnaDescriptor(
     val id: String,
@@ -75,6 +77,11 @@ internal class DlnaSession(
     override val state: StateFlow<CastSessionState> = _state.asStateFlow()
     private lateinit var descriptor: DlnaDescriptor
     private var pollingJob: Job? = null
+    private var lastPoll: TimeMark? = null
+
+    @Volatile private var lastPlayingPositionMs: Long? = null
+
+    @Volatile private var stopRequested = false
 
     @Volatile
     private var mediaGeneration = 0L
@@ -99,6 +106,9 @@ internal class DlnaSession(
         } else {
             descriptor = fetchDlnaDescriptor(descriptorLocation)
         }
+        lastPoll = null
+        lastPlayingPositionMs = null
+        stopRequested = false
         val mimeType = requireNotNull(media.resource.mimeType).substringBefore(';').trim()
         val duration = formatDlnaTime(media.durationMs)
         val didl =
@@ -166,6 +176,7 @@ internal class DlnaSession(
 
     override suspend fun play() =
         withContext(Dispatchers.IO) {
+            stopRequested = false
             soap(
                 descriptor.avTransportUrl,
                 descriptor.avTransportType,
@@ -184,6 +195,7 @@ internal class DlnaSession(
 
     override suspend fun seekTo(positionMs: Long) =
         withContext(Dispatchers.IO) {
+            lastPlayingPositionMs = null
             soap(
                 descriptor.avTransportUrl,
                 descriptor.avTransportType,
@@ -216,11 +228,14 @@ internal class DlnaSession(
 
     override suspend fun stop() =
         withContext(Dispatchers.IO) {
+            stopRequested = true
             soap(descriptor.avTransportUrl, descriptor.avTransportType, "Stop", "<InstanceID>0</InstanceID>", logFailure = false)
             Unit
         }
 
     private fun pollState() {
+        val pollIntervalMs = lastPoll?.elapsedNow()?.inWholeMilliseconds?.coerceAtLeast(POLL_INTERVAL_MS) ?: POLL_INTERVAL_MS
+        lastPoll = TimeSource.Monotonic.markNow()
         val pollGeneration = mediaGeneration
         val position =
             soap(
@@ -244,6 +259,7 @@ internal class DlnaSession(
         val volume = readVolume(logFailure = false) ?: current.volume
         val isPlaying = transportState == "PLAYING" || transportState == "TRANSITIONING"
         val isBuffering = transportState == "TRANSITIONING"
+        if (transportState == "PLAYING") lastPlayingPositionMs = positionMs
         _state.value =
             CastSessionState(
                 connected = true,
@@ -253,11 +269,16 @@ internal class DlnaSession(
                 durationMs = durationMs,
                 volume = volume,
                 hasEnded =
-                    castPlaybackEndedNearDuration(
-                        current.isPlaying,
-                        transportState == "STOPPED",
-                        positionMs,
-                        durationMs,
+                    !stopRequested && (
+                        (current.hasEnded && transportState == "STOPPED") ||
+                            castPlaybackEndedNearDuration(
+                                current.isPlaying && !current.isBuffering && lastPlayingPositionMs != null,
+                                transportState == "STOPPED",
+                                positionMs,
+                                durationMs,
+                                lastPlayingPositionMs = lastPlayingPositionMs ?: positionMs,
+                                pollIntervalMs = pollIntervalMs,
+                            )
                     ),
                 mediaGeneration = pollGeneration,
             )
