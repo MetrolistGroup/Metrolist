@@ -641,6 +641,7 @@ class HomeViewModel(
         onComplete: () -> Unit = {},
     ) {
         val isFiltered = isFilteredHome(params, browseId)
+        val hadIncompleteAllContent = allContentReloadRequired || cachedAllContent?.isAllContentPending == true
         if (!isFiltered) allContentReloadRequired = true
         val loadStartedAt = TimeSource.Monotonic.markNow()
         val generation = ++contentLoadGeneration
@@ -958,8 +959,11 @@ class HomeViewModel(
                         val currentState = _uiState.value
                         val failedAllPending =
                             !isFiltered &&
-                                !primaryContentPublished &&
-                                (cachedAllContent == null || allContentReloadRequired || cachedAllContent?.isAllContentPending == true)
+                                shouldKeepIncompleteAllContentPendingAfterFailure(
+                                    primaryContentPublished = primaryContentPublished,
+                                    cachedAllContent = cachedAllContent,
+                                    hadIncompleteAllContent = hadIncompleteAllContent,
+                                )
                         val retainedPrimaryContent =
                             publishedPrimaryAllContent
                                 ?.takeIf { it.first == generation }
@@ -1897,6 +1901,12 @@ internal fun shouldReloadIncompleteAllContent(
     reloadRequired: Boolean,
     state: HomeViewModel.HomeUiState,
 ): Boolean = state.isAllContentPending || reloadRequired
+
+internal fun shouldKeepIncompleteAllContentPendingAfterFailure(
+    primaryContentPublished: Boolean,
+    cachedAllContent: HomeViewModel.HomeUiState?,
+    hadIncompleteAllContent: Boolean,
+): Boolean = !primaryContentPublished && (cachedAllContent == null || hadIncompleteAllContent || cachedAllContent.isAllContentPending)
 
 internal fun HomeViewModel.HomeUiState.withLatestLibraryAndSpeedDialState(
     latestState: HomeViewModel.HomeUiState,
