@@ -71,6 +71,7 @@ import com.metrolist.desktop.state.app.UiState
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.clear
 import com.metrolist.shared.generated.resources.close
+import com.metrolist.shared.generated.resources.action_like
 import com.metrolist.shared.generated.resources.keyboard_shortcuts
 import com.metrolist.shared.generated.resources.keyboard_shortcuts_sheet
 import com.metrolist.shared.generated.resources.no_shortcuts_matching
