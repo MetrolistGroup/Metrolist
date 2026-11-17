@@ -45,7 +45,8 @@ class DistributionTest(unittest.TestCase):
     def test_rendered_recipes_use_verified_assets_and_actual_notes(self):
         self.generate()
         installer = next((self.output / 'winget').rglob('*.installer.yaml')).read_text()
-        self.assertIn('--silent --launch=false', installer)
+        self.assertIn('Silent: --silent\n', installer)
+        self.assertIn('Custom: --launch=false', installer)
         self.assertIn('metrolist-installer-windows-x64-14.0.0.exe', installer)
         self.assertNotIn('Metrolist-Desktop-windows.zip', installer)
         data = json.loads((self.output / 'nix/packaging/release.json').read_text())
