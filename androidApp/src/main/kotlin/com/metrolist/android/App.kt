@@ -363,7 +363,11 @@ class App :
         }
         get<CoroutineScope>().launch {
             MusicRecognitionService.status.collect {
-                TileService.requestListeningState(this@App, ComponentName(this@App, MusicRecognizerTileService::class.java))
+                try {
+                    TileService.requestListeningState(this@App, ComponentName(this@App, MusicRecognizerTileService::class.java))
+                } catch (_: IllegalArgumentException) {
+                    // Secondary profiles such as MIUI's Dual Apps (user 999) cannot host Quick Settings tiles.
+                }
             }
         }
         get<CoroutineScope>().launch {
