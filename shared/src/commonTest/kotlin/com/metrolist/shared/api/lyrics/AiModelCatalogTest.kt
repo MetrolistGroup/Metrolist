@@ -5,6 +5,7 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.CompletableDeferred
@@ -13,7 +14,10 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -547,6 +551,11 @@ class AiModelCatalogTest {
                     assertEquals(expectedAuth, request.headers[HttpHeaders.Authorization])
                     assertEquals("ai-gateway.kilo.ai", request.url.host)
                     assertEquals("/api/v1/chat/completions", request.url.encodedPath)
+                    val payload = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
+                    val reasoning = payload["reasoning"]?.jsonObject
+                    assertEquals(false, reasoning?.get("enabled")?.jsonPrimitive?.booleanOrNull)
+                    assertEquals("none", reasoning?.get("effort")?.jsonPrimitive?.contentOrNull)
+                    assertEquals(true, reasoning?.get("exclude")?.jsonPrimitive?.booleanOrNull)
                     respond("""{"choices":[{"message":{"content":"{\"lines\":[\"Hola\"]}"},"finish_reason":"stop"}]}""")
                 },
             ).use { client ->
@@ -634,6 +643,38 @@ class AiModelCatalogTest {
                     "kilo-auto/free",
                     catalog.validatedModel(kilo, "", kilo.endpoint, "google/lyria-3-pro-preview", freeOnly = true),
                 )
+            }
+        }
+
+    @Test
+    fun kiloRetriesWithoutReasoningWhenGatewayRejectsReasoning() =
+        runBlocking {
+            val kilo = AiProviderPresets.find("Kilo")!!
+            var attempts = 0
+            HttpClient(
+                MockEngine { request ->
+                    attempts++
+                    val payload = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
+                    if ("reasoning" in payload) {
+                        respond("""{"error":{"message":"reasoning unsupported"}}""", HttpStatusCode.BadRequest)
+                    } else {
+                        respond("""{"choices":[{"message":{"content":"{\"lines\":[\"Hola\"]}"},"finish_reason":"stop"}]}""")
+                    }
+                },
+            ).use { client ->
+                val result =
+                    LyricsTranslationClient(client)
+                        .translateLyricsLines(
+                            lines = listOf("Hello"),
+                            provider = kilo.id,
+                            targetLanguage = "es",
+                            mode = "Literal",
+                            apiKey = "",
+                            baseUrl = kilo.endpoint,
+                            model = kilo.defaultModel,
+                        ).getOrThrow()
+                assertEquals(listOf("Hola"), result.translatedLines)
+                assertEquals(4, attempts)
             }
         }
 }

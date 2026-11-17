@@ -511,12 +511,17 @@ class LyricsTranslationClient(
             )
             put("temperature", JsonPrimitive(temperature))
             put("max_tokens", JsonPrimitive(maxTokens))
-            if (includeReasoning && (provider.equals("OpenRouter", ignoreCase = true) || baseUrl.contains("openrouter.ai"))) {
+            val isOpenRouter = provider.equals("OpenRouter", ignoreCase = true) || baseUrl.contains("openrouter.ai")
+            val isKilo = provider.equals("Kilo", ignoreCase = true) || baseUrl.contains("ai-gateway.kilo.ai")
+            if (includeReasoning && (isOpenRouter || isKilo)) {
                 put(
                     "reasoning",
                     buildJsonObject {
-                        // These presets support disabling reasoning to leave the output budget available for translation.
-                        if (AiProviderPresets.openRouterOfflineModels.any { it.id == model }) put("enabled", JsonPrimitive(false))
+                        // Disable reasoning when supported so free models do not exhaust max_tokens before emitting JSON.
+                        if (isKilo || AiProviderPresets.openRouterOfflineModels.any { it.id == model }) {
+                            put("enabled", JsonPrimitive(false))
+                        }
+                        if (isKilo) put("effort", JsonPrimitive("none"))
                         put("exclude", JsonPrimitive(true))
                     },
                 )
