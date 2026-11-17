@@ -64,6 +64,6 @@ The build pins Kotlin and the Compose compiler to 2.4.21. Kotlin 2.5 [disables](
 
 `gradle.properties` does not set the internal property because KGP reports its use. Do not disable `kotlin.internal.jvm.enableKmpClasspathMetadataForIncrementalCompilation`; [Kotlin PR 7638](https://github.com/JetBrains/kotlin/pull/7638) explains why common fragments need that metadata. Fresh CI checkouts compile non-incrementally. Clean `:shared` if a local build misbehaves after changing an expect/actual pair.
 
-Room 3 requires KSP with Kotlin code generation ([Room 3 release notes](https://developer.android.com/jetpack/androidx/releases/room3#3.0.3)). [KSP2](https://github.com/google/ksp/blob/2.3.13/docs/ksp2.md) runs separately from the Kotlin compiler. Room KSP runs only in shared production source sets; `androidApp` does not apply KSP.
+Room 3 requires KSP with Kotlin code generation ([Room 3 release notes](https://developer.android.com/jetpack/androidx/releases/room3#3.0.3)). [KSP2](https://github.com/google/ksp/blob/2.3.14/docs/ksp2.md) runs separately from the Kotlin compiler. Room KSP runs only in shared production source sets; `androidApp` does not apply KSP.
 
 Kotlin's [release-cache options](https://kotlinlang.org/docs/native-improving-compilation-time.html#enable-caches-for-release-binaries) trade some compiler optimizations for build speed.

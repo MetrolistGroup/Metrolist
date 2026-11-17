@@ -150,10 +150,8 @@ class MusicAudioSinkTest {
             val outputUs = Util.sampleCountToDurationUs(presentedFrames, 48_000)
             val skippedFrames = processors.skippedOutputFrameCount
             assertEquals(skipSilence, skippedFrames > 0L)
-            assertEquals(
-                30_000_000L + processors.getMediaDuration(outputUs) + Util.sampleCountToDurationUs(skippedFrames, 48_000),
-                sink.getCurrentPositionUs(false),
-            )
+            // Playback has not reached the silent region yet, so its buffered skipped frames must not advance the position.
+            assertEquals(30_000_000L + processors.getMediaDuration(outputUs), sink.getCurrentPositionUs(false))
         } finally {
             sink.reset()
             sink.release()

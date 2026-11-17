@@ -158,5 +158,5 @@ dependencies {
     // AndroidX annotations reference MigrationStatus in their class-file metadata.
     compileOnly(libs.kotlin.annotations.jvm)
     testImplementation(libs.junit4)
-    testImplementation("org.robolectric:robolectric:4.17")
+    testImplementation("org.robolectric:robolectric:4.18")
 }
