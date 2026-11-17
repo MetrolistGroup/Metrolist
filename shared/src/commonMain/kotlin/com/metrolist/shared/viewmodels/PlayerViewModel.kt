@@ -317,7 +317,13 @@ class PlayerViewModel(
                     lyricsQueryArtist = if (isNewSong) null else _uiState.value.lyricsQueryArtist,
                     lyricsOffsetMs = if (isNewSong) 0 else _uiState.value.lyricsOffsetMs,
                     lyricsProviderSearch = if (isNewSong) null else _uiState.value.lyricsProviderSearch,
-                    manualAiTranslationEnabled = if (isNewSong) false else _uiState.value.manualAiTranslationEnabled,
+                    manualAiTranslationEnabled =
+                        manualAiTranslationForSongChange(
+                            isNewSong = isNewSong,
+                            newSongId = song?.id,
+                            counterpartTrackId = _uiState.value.counterpartTrackId,
+                            currentValue = _uiState.value.manualAiTranslationEnabled,
+                        ),
                     lyricsTranslationProgress = if (isNewSong) LyricsTranslationProgress() else _uiState.value.lyricsTranslationProgress,
                     mvVideoId = if (isNewSong) null else _uiState.value.mvVideoId,
                     mvPositionMap = if (isNewSong) null else _uiState.value.mvPositionMap,
@@ -2209,6 +2215,13 @@ class PlayerViewModel(
         private const val TAG = "PlayerViewModel"
     }
 }
+
+internal fun manualAiTranslationForSongChange(
+    isNewSong: Boolean,
+    newSongId: String?,
+    counterpartTrackId: String?,
+    currentValue: Boolean,
+): Boolean = if (isNewSong) newSongId != null && newSongId == counterpartTrackId && currentValue else currentValue
 
 internal fun computeSeekTarget(
     currentMs: Long,
