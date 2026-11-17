@@ -417,6 +417,7 @@ private fun shortcutCategories(
                     ShortcutItem(stringResource(Res.string.shortcut_toggle_expanded), listOf(listOf("T"))),
                     ShortcutItem(stringResource(Res.string.shortcut_toggle_shuffle), listOf(listOf("S"))),
                     ShortcutItem(stringResource(Res.string.shortcut_cycle_repeat), listOf(listOf("R"))),
+                    ShortcutItem(stringResource(Res.string.action_like), listOf(listOf("H"))),
                 ),
         ),
         ShortcutCategory(
