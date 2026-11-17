@@ -343,7 +343,7 @@ fun PlaylistContent(
                     } else {
                         160.dp
                     }
-                LaunchedEffect(isSearchOpen, activeListState, isWide, loadingHeader) {
+                LaunchedEffect(isSearchOpen, activeListState, isWide, loadingHeader, displayedSongs.size) {
                     if (isSearchOpen && !isWide) {
                         activeListState.animateScrollToItem(listOfNotNull(header).size + 1)
                     }
@@ -735,7 +735,8 @@ fun PlaylistContent(
                             }
 
                             item {
-                                Spacer(Modifier.height(32.dp))
+                                // Keep the search row at the top even when results do not fill the viewport.
+                                Spacer(if (isSearchOpen) Modifier.fillParentMaxHeight() else Modifier.height(32.dp))
                             }
                         }
                         LazyListScrollbar(
