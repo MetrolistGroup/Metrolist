@@ -564,8 +564,15 @@ object DownloadManager {
                             }
                             return@execute null
                         }
+                        val range =
+                            if (response.status.value == 206) {
+                                parseHttpByteRange(response.headers["Content-Range"])
+                                    ?.takeIf { it.start == 0L && it.end == it.total - 1 } ?: return@execute null
+                            } else {
+                                null
+                            }
                         val limit = if (isImage) MAX_THUMBNAIL_BYTES else MAX_AUDIO_BYTES
-                        val totalBytes = response.headers["Content-Length"]?.toLongOrNull()?.takeIf { it > 0 }
+                        val totalBytes = range?.total ?: response.headers["Content-Length"]?.toLongOrNull()?.takeIf { it > 0 }
                         totalBytes?.let { if (it > limit) return@execute null }
                         val destination =
                             fileInDownloadDir(
