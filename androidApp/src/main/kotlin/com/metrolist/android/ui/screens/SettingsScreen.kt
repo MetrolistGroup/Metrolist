@@ -354,6 +354,8 @@ fun SettingsScreen(
                     context.startActivity(intent)
                     return
                 } catch (_: ActivityNotFoundException) {
+                } catch (_: SecurityException) {
+                    // Some vendor settings apps do not export this screen.
                 }
             }
         }
