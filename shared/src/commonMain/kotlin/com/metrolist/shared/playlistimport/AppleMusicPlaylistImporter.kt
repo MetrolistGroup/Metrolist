@@ -94,11 +94,11 @@ object AppleMusicPlaylistImporter {
                             header("User-Agent", UA)
                         }
                     }
-                val body = response.bodyAsTextLimited(MAX_JSON_RESPONSE_BYTES) ?: break
-                if (!response.status.isSuccess()) break
+                if (!response.status.isSuccess()) throw ImportException(ImportErrorKey.IncompleteSource)
+                val body = response.bodyAsTextLimited(MAX_JSON_RESPONSE_BYTES) ?: throw ImportException(ImportErrorKey.IncompleteSource)
 
                 val root = json.parseToJsonElement(body).jsonObject
-                val dataArray = root["data"]?.jsonArray ?: break
+                val dataArray = root["data"] as? JsonArray ?: throw ImportException(ImportErrorKey.IncompleteSource)
                 for (item in dataArray) {
                     val id = item.jsonObject["id"]?.jsonPrimitive?.content ?: continue
                     val attrs = item.jsonObject["attributes"]?.jsonObject ?: continue
@@ -149,11 +149,11 @@ object AppleMusicPlaylistImporter {
                             header("User-Agent", UA)
                         }
                     }
-                val body = response.bodyAsTextLimited(MAX_JSON_RESPONSE_BYTES) ?: break
-                if (!response.status.isSuccess()) break
+                if (!response.status.isSuccess()) throw ImportException(ImportErrorKey.IncompleteSource)
+                val body = response.bodyAsTextLimited(MAX_JSON_RESPONSE_BYTES) ?: throw ImportException(ImportErrorKey.IncompleteSource)
 
                 val root = json.parseToJsonElement(body).jsonObject
-                val dataArray = root["data"]?.jsonArray ?: break
+                val dataArray = root["data"] as? JsonArray ?: throw ImportException(ImportErrorKey.IncompleteSource)
                 for (trackItem in dataArray) {
                     val attrs = trackItem.jsonObject["attributes"]?.jsonObject ?: continue
                     val trackName = attrs["name"]?.jsonPrimitive?.content?.trim() ?: continue
@@ -322,11 +322,11 @@ object AppleMusicPlaylistImporter {
                         header("User-Agent", UA)
                     }
                 }
-            val body = response.bodyAsTextLimited(MAX_JSON_RESPONSE_BYTES) ?: break
-            if (!response.status.isSuccess()) break
+            if (!response.status.isSuccess()) throw ImportException(ImportErrorKey.IncompleteSource)
+            val body = response.bodyAsTextLimited(MAX_JSON_RESPONSE_BYTES) ?: throw ImportException(ImportErrorKey.IncompleteSource)
 
             val root = json.parseToJsonElement(body).jsonObject
-            val dataArray = root["data"]?.jsonArray ?: break
+            val dataArray = root["data"] as? JsonArray ?: throw ImportException(ImportErrorKey.IncompleteSource)
             for (trackItem in dataArray) {
                 val attrs = trackItem.jsonObject["attributes"]?.jsonObject ?: continue
                 val trackName = attrs["name"]?.jsonPrimitive?.content?.trim() ?: continue
