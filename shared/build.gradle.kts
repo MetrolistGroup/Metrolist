@@ -274,6 +274,7 @@ kotlin {
         }
         minSdk = 24
         androidResources.enable = true
+        lint { ignoreTestSources = true }
         withHostTest {}
         withDeviceTestBuilder {
             sourceSetTreeName = "test"

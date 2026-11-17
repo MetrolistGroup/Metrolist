@@ -78,8 +78,8 @@ on:
 jobs:
   build:
     name: APK
-    runs-on: ${{ inputs.variant == 'release' && 'blacksmith-8vcpu-ubuntu-2604' || 'blacksmith-4vcpu-ubuntu-2604' }}
-    timeout-minutes: 15
+    runs-on: blacksmith-8vcpu-ubuntu-2604
+    timeout-minutes: 20
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -214,7 +214,10 @@ jobs:
               tasks+=(':androidApp:assembleDebug')
             fi
           fi
-          ./gradlew "${tasks[@]}" --no-daemon "${extra_args[@]}"
+          # gradle.properties caps local builds at 4 workers and 4 GiB; the CI runner has 8 vCPUs.
+          ./gradlew "${tasks[@]}" --no-daemon --max-workers="$(nproc)" \
+            "-Dorg.gradle.jvmargs=-Xmx8g -XX:MaxMetaspaceSize=1g -XX:+UseParallelGC -Dfile.encoding=UTF-8" \
+            "${extra_args[@]}"
 
       - name: Upload lint report
         if: failure() && inputs.variant == 'debug'
