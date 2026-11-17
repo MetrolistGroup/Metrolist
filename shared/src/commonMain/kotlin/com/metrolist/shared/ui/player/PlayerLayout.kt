@@ -1682,7 +1682,6 @@ private fun FocusedPlayerActionIconButton(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun PlayerActionRow(
-    contentColor: Color,
     isLyricsVisible: Boolean,
     isLyricsExpanded: Boolean,
     onToggleLyricsExpanded: () -> Unit,
@@ -1698,11 +1697,12 @@ internal fun PlayerActionRow(
             if (LocalIsTv.current) {
                 FilledTonalToggleButtonDefaults.colors()
             } else {
+                // Match the share button these replace while lyrics are visible.
                 FilledTonalToggleButtonDefaults.colors(
-                    containerColor = Color.Transparent,
-                    checkedContainerColor = Color.Transparent,
-                    contentColor = contentColor,
-                    checkedContentColor = contentColor,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             }
         val expandDescription = stringResource(Res.string.expand)
@@ -1716,7 +1716,7 @@ internal fun PlayerActionRow(
             expandedRatio = 1f,
             horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = modifier.height(40.dp),
+            modifier = modifier.height(40.dp).playerControlBlend(),
         ) {
             customItem(
                 buttonGroupContent = {

@@ -2011,7 +2011,6 @@ fun PlayerScreen(
                                             )
                                         } else {
                                             PlayerActionRow(
-                                                contentColor = textBackgroundColor,
                                                 isLyricsVisible = uiState.isLyricsVisible,
                                                 isLyricsExpanded = uiState.isLyricsExpanded,
                                                 onToggleLyricsExpanded = {
