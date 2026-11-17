@@ -93,6 +93,8 @@ For artwork menus, check Home shelves (including Keep listening and New releases
 
 ### Artist pages
 
+On Android, enable Swipe song gesture, expand an artist's Top songs or Songs shelf, and swipe a row left to add it to the queue and right to play it next. Repeat after loading more rows and on expanded video shelves shown as song lists. Check that taps, menus and the swipe return animation still work. Disable the setting and repeat; rows must not swipe. Unavailable songs and Listen Together guests must not allow queue swipes. Album and single cards keep their existing gestures.
+
 Open an uncached artist from Home, Search, an album and each name in the player with a slow connection. The loading page keeps known names and artwork, shows a shimmering header, actions, latest release and five track rows, and keeps Back and More usable. Check ID-only links, failed requests and Retry, then refresh a loaded page. Loaded content stays visible during refresh. Compare the loading and loaded header and row positions at narrow and wide widths, with large text and RTL. TalkBack and VoiceOver announce Loading once without exposing placeholder content; Back and More stay accessible. Check hidden and resumed pages and reduced motion.
 
 Resize artist pages to narrow, wide and short windows in light and dark themes. The hero artwork ends above the artist name, with the name, controls and releases on an opaque theme surface. Scroll the latest release completely into view and back to the hero, including with animated artwork and large text. The image stays inside its header while scrolling. Repeat on Android and the shared iOS host.
