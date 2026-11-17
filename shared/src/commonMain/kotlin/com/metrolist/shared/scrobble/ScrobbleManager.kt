@@ -569,7 +569,8 @@ class ScrobbleManager internal constructor(
 
                         else -> {
                             val attempts = pending.attemptCount + 1
-                            PendingScrobbleStore.upsert(
+                            PendingScrobbleStore.replaceIfUnchanged(
+                                pending,
                                 pending.copy(
                                     attemptCount = attempts,
                                     nextAttemptAtMs = nextAttemptAt(attempts, apiFailure?.retryAfterMs, pending.id.hashCode()),

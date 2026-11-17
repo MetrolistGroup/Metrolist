@@ -69,6 +69,16 @@ object PendingScrobbleStore {
             revision.update { it + 1L }
         }
 
+    internal suspend fun replaceIfUnchanged(
+        previous: PendingScrobble,
+        updated: PendingScrobble,
+    ) = mutex.withLock {
+        val dao = dao()
+        if (dao.get(previous.id) != previous) return@withLock
+        dao.upsert(listOf(updated))
+        revision.update { it + 1L }
+    }
+
     suspend fun remove(id: String) =
         mutex.withLock {
             dao().remove(id)
