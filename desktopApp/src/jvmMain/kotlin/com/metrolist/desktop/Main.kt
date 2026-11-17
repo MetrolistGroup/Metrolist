@@ -857,6 +857,8 @@ private fun runDesktopApp(args: Array<String>) {
     )?.let { System.setProperty("skiko.renderApi", it) }
     if (OsUtil.isMac) {
         System.setProperty("apple.awt.enableTemplateImages", "true")
+        // Without this AppKit keeps the Aqua (light) title bar even in Dark Mode.
+        System.setProperty("apple.awt.application.appearance", "system")
         if (System.getProperty("skiko.renderApi") == null && System.getenv("SKIKO_RENDER_API") == null) {
             System.setProperty("skiko.renderApi", "METAL")
         }
