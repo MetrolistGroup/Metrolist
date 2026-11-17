@@ -692,7 +692,6 @@
     <string name="sponsorblock_skipped">已跳过推广片段</string>
     <string name="episode_played">已播放</string>
     <string name="lastfm_service_error">暂时无法登录 Last.fm。请稍后重试。</string>
-
     <string name="settings_appearance_overview">主题、字体和播放器外观</string>
     <string name="settings_android_auto_overview">车载播放列表和快速添加的目标列表</string>
     <string name="settings_about_overview">贡献者、社区链接和许可证</string>
@@ -759,4 +758,32 @@
     <string name="settings_resume_prompt_summary">应用启动时，在继续播放已保存的队列前询问</string>
     <string name="settings_player_layout_summary">更改封面和播放控件的布局</string>
     <string name="settings_filter_q_summary">Q 控制所选滤波器的带宽或共振</string>
+    <string name="discord_enable_rich_presence"></string>
+    <string name="discord_rich_presence"></string>
+    <string name="sleep_timer_minute"></string>
+    <string name="sleep_timer_finish_current_song"></string>
+    <string name="credits_android_developer"></string>
+    <string name="sleep_timer_set_default"></string>
+    <string name="restore_hidden_item_title"></string>
+    <string name="downloads_empty"></string>
+    <string name="unblock_artist_message"></string>
+    <string name="advanced"></string>
+    <string name="credits_android_lead"></string>
+    <string name="show_again"></string>
+    <string name="playlist_cover_update_failed"></string>
+    <string name="credits_multiplatform_developer"></string>
+    <string name="download_paused"></string>
+    <plurals name="downloads_failed_banner">
+    </plurals>
+    <string name="sleep_timer_advanced_options"></string>
+    <string name="credits_windows_developer"></string>
+    <string name="lyrics_curated_by"></string>
+    <string name="lyrics_song_artist"></string>
+    <plurals name="download_queue_pending">
+    </plurals>
+    <string name="downloads_empty_hint"></string>
+    <string name="remove_all_downloads"></string>
+    <string name="restore_hidden_item_message"></string>
+    <string name="sleep_timer_hour"></string>
+    <string name="unblock_artist_title"></string>
 </resources>
