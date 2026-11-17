@@ -76,6 +76,7 @@ import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.CollectionHeaderNavigation
 import com.metrolist.shared.ui.components.LoadingScreen
 import com.metrolist.shared.ui.components.PopupContent
+import com.metrolist.shared.ui.components.UnavailableSongSnackbar
 import com.metrolist.shared.ui.components.lyrics.LyricsTranslationSnackbar
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.listentogether.ListenTogetherBlockedUsersScreen
@@ -110,6 +111,7 @@ fun AppContentHost(
     }
     val navigator = LocalNavigator.current
     HiddenHomeItemsSnackbar(AppState.snackbarHostState)
+    UnavailableSongSnackbar(AppState.snackbarHostState)
     ContentUndoHintsSnackbar(AppState.snackbarHostState) { page ->
         PlayerState.closeFullscreenPlayer()
         val settingsPage = page.settingsPage

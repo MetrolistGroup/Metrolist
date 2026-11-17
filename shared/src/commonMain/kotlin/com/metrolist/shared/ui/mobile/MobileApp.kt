@@ -205,6 +205,7 @@ import com.metrolist.shared.ui.components.PopupVisibility
 import com.metrolist.shared.ui.components.RefreshIndicator
 import com.metrolist.shared.ui.components.SongSwipeActions
 import com.metrolist.shared.ui.components.SwipeBackLayout
+import com.metrolist.shared.ui.components.UnavailableSongSnackbar
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.lyrics.LyricsTranslationSnackbar
 import com.metrolist.shared.ui.components.rememberBottomSheetState
@@ -339,6 +340,7 @@ fun MobileApp(
     // The expanded player sheet covers the scaffold, so its own host takes over snackbars while it is open.
     var playerSheetCoversSnackbars by remember { mutableStateOf(false) }
     HiddenHomeItemsSnackbar(snackbarHostState)
+    UnavailableSongSnackbar(snackbarHostState)
     ListenTogetherGlobalEvents(listenTogetherManager) { snackbarHostState.showSnackbar(it) }
     val onSwipeFeedback: (String) -> Unit = { message ->
         snackbarHostState.currentSnackbarData?.dismiss()

@@ -415,7 +415,8 @@ internal object YouTubeItemParser {
             musicVideoType = renderer.musicVideoType() ?: title.inferredMusicVideoType(renderer.hasVideoThumbnail()),
             playCountText = playCountText,
             isNew = flags.newRelease,
-            isUnavailable = isUnavailable(renderer, title, duration),
+            // Greyed album tracks keep their duration but drop every watch endpoint; only episodes may play without one.
+            isUnavailable = isUnavailable(renderer, title, duration = null),
         )
     }
 
