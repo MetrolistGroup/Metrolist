@@ -786,4 +786,6 @@
     <string name="restore_hidden_item_message"></string>
     <string name="sleep_timer_hour"></string>
     <string name="unblock_artist_title"></string>
+    <string name="choose_from_library"></string>
+    <string name="remove_custom_image"></string>
 </resources>
