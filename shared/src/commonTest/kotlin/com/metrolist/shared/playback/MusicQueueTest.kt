@@ -858,5 +858,23 @@ class MusicQueueTest {
         assertEquals(listOf(0, 1), queue.snapshot().originalIndices)
     }
 
+    @Test
+    fun shuffledQueueMixesLaterPagesIntoUpcomingSongs() {
+        val loaded = (0 until 50).map { song("loaded$it") }
+        val later = (0 until 50).map { song("later$it") }
+        val queue = MusicQueue().apply { setQueue(loaded, 10) }
+        queue.toggleShuffle()
+        val history = queue.items.value.take(queue.currentIndex.value + 1)
+
+        queue.appendPage(later)
+
+        val items = queue.items.value
+        assertEquals(history, items.take(history.size))
+        assertEquals((loaded + later).toSet(), items.toSet())
+        assertEquals(100, items.size)
+        val upcoming = items.drop(history.size)
+        assertTrue(upcoming.indexOfFirst { it in later } < upcoming.indexOfLast { it in loaded })
+    }
+
     private fun song(id: String) = SongItem(id, id, null, emptyList(), null)
 }

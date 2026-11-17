@@ -429,7 +429,8 @@ internal class AndroidQueueCoordinator(
                         val additions = BlockedContent.filterPlayableSongs(next.songs.drop(previous.songs.size))
                         appendPlaylistSongs(additions)
                     } while (playlistPage?.hasMore == true &&
-                        shouldLoadPlaylistPage(player.currentMediaItemIndex.value, player.songQueue.value.size)
+                        // Shuffle can only mix songs that are already loaded, so it loads the whole playlist.
+                        (player.isShuffleEnabled || shouldLoadPlaylistPage(player.currentMediaItemIndex.value, player.songQueue.value.size))
                     )
                 } catch (e: CancellationException) {
                     throw e
@@ -696,6 +697,9 @@ internal class AndroidQueueCoordinator(
                     onSave()
                 }
             }
+        }
+        scope.launch {
+            player.shuffleEnabled.collect { if (it) schedulePlaylistPage() }
         }
         scope.launch {
             combine(
