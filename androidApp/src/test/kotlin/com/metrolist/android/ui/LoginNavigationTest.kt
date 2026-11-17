@@ -7,6 +7,24 @@ import org.junit.Test
 
 class LoginNavigationTest {
     @Test
+    fun youTubeSignInFollowsGoogleInterstitialsAndRegionalAccountHosts() {
+        for (url in listOf(
+            "https://gds.google.com/web/recoveryoptions",
+            "https://accounts.google.co.uk/accounts/SetSID",
+            "https://accounts.google.de/",
+        )) {
+            assertEquals(true, isTrustedLoginUrl(url, "https://music.youtube.com"))
+        }
+        for (url in listOf(
+            "https://accounts.google.evil.test",
+            "https://google.com.evil.test",
+            "https://accounts.google.co.uk.evil.test",
+        )) {
+            assertEquals(false, isTrustedLoginUrl(url, "https://music.youtube.com"))
+        }
+    }
+
+    @Test
     fun unrelatedAndLookalikeSitesCannotLaunchAnExternalApp() {
         for (url in listOf("https://example.org/login", "https://accounts.google.com.evil.test", "https://evilgoogle.com")) {
             assertEquals(LoginNavigationAction.BLOCK, loginNavigationAction(url, "https", false))
