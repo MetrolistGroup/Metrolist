@@ -3484,6 +3484,8 @@
     <string name="spotify_import_destination_description">Create a synced YouTube Music playlist or add these songs to one you can edit.</string>
     <!-- Translators: Imperative action label for create new playlist in the Spotify playlist import. -->
     <string name="spotify_import_create_new_playlist">Create a new YouTube Music playlist</string>
+    <!-- Translators: Import destination option that saves the imported songs in a new playlist stored only in Metrolist. -->
+    <string name="spotify_import_create_new_local_playlist">Create a new local playlist</string>
     <!-- Translators: Label for existing playlists in the Spotify playlist import. -->
     <string name="spotify_import_existing_playlists">Existing playlists</string>
     <!-- Translators: Progress or status message for playlist progress; retained for translation compatibility but not currently referenced by app code. %1$d is the current playlist number; %2$d is the total playlist count. -->
