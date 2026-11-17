@@ -14,7 +14,7 @@ fun normalizeMetrolistShareUrl(text: String): String {
         if (afterScheme.startsWith("open?", ignoreCase = true)) {
             val decoded =
                 runCatching {
-                    Url("https://metrolist.internal/?$afterScheme").parameters["url"]
+                    Url("https://metrolist.internal/?${afterScheme.substringAfter('?')}").parameters["url"]
                 }.getOrNull() ?: afterScheme.substringAfter("url=")
             return normalizeMetrolistShareUrl(decoded)
         }

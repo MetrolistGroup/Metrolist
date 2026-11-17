@@ -113,6 +113,20 @@ class YouTubeUrlParsingTest {
     }
 
     @Test
+    fun decodesCustomOpenTargetBeforeParsing() {
+        val target = "https://music.youtube.com/watch?v=R93xV3v718s&t=143s"
+        val encoded = "https%3A%2F%2Fmusic.youtube.com%2Fwatch%3Fv%3DR93xV3v718s%26t%3D143s"
+        for (link in listOf(
+            "metrolist://open?url=$encoded",
+            "METROLIST://OPEN?url=$encoded&source=share",
+            "metrolist://open?source=share&url=$encoded",
+        )) {
+            assertEquals(target, normalizeMetrolistShareUrl(link), link)
+            assertEquals("R93xV3v718s", assertIs<YouTubeUrlParser.ParsedUrl.Video>(parseYouTubeUrl(link)).id)
+        }
+    }
+
+    @Test
     fun parsesMetrolistCustomSchemeNineDigitId() {
         val parsed = parseYouTubeUrl("metrolist://watch?v=123456789")
         assertEquals("123456789", assertIs<YouTubeUrlParser.ParsedUrl.Video>(parsed).id)
