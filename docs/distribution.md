@@ -26,9 +26,13 @@ The workflow keeps `distribution-recipes` for 30 days. Cleanup removes only inte
 
 Run `winget validate --manifest PATH` on Windows, then test clean install, upgrade and uninstall before submission. Do not request elevation or purge user data.
 
+After each stable release, the `winget` job in `release.yml` runs [winget-releaser](https://github.com/vedantmgoyal9/winget-releaser), which copies the previous version's manifests from `microsoft/winget-pkgs`, points them at the new installer and opens the upstream PR from the `MetrolistGroup/winget-pkgs` fork. It needs the `WINGET_TOKEN` secret, a classic PAT with `public_repo` and `workflow` scopes, and skips without it. Keep these templates in step with the published manifests, because the generator still renders them for review.
+
 ## Homebrew
 
 [MetrolistGroup/homebrew-tap](https://github.com/MetrolistGroup/homebrew-tap) publishes the `metrolist` cask for macOS and a Linux formula that unpacks the release AppImage. Its scheduled workflow points both at the latest stable release using the release's `SHA256SUMS`, then runs `brew style`, `brew audit` and an install on macOS and Linux, so no release token is needed. Asset names and `SHA256SUMS` entries for the DMGs and AppImages must stay stable for it. `packaging/homebrew/metrolist.rb.in` remains the generator's cask template; keep it in step with the tap. Preserve Gatekeeper and user data.
+
+The `homebrew` job in `release.yml` sends a `metrolist-release` repository dispatch to the tap so it updates right after publication instead of at the next poll. It needs the `HOMEBREW_TAP_TOKEN` secret, a fine-grained token with Contents write access to the tap, and skips without it.
 
 Run `brew style --cask PATH` and `brew audit --cask --online TOKEN` in the tap. Test both architectures and follow [unsigned-app installation](install/macos.md#install-and-verify).
 
@@ -55,6 +59,8 @@ The root flake reads the committed `packaging/release.json`, so `nix run github:
 
 Metrolist is distributed as a Flatpak only through [flatpark](https://github.com/flatpark/flatpark), which repackages the release AppImage as `com.metrolist.desktop` and diffs its permissions against [our source manifest](../flatpak/com.metrolist.desktop.yaml). Keep that manifest's path, app ID and permissions current. Metrolist is not submitted to Flathub.
 
+The `flatpark` job in `release.yml` runs [flatpark/publish-action](https://github.com/flatpark/publish-action) after publication, so flatpark picks up the release within minutes instead of at its twice-daily sweep. It needs no secret.
+
 The source manifest builds the committed `main` branch of the local checkout with Gradle and network access (`make flatpak-bundle`). Its JDK module stays unstripped because jlink rejects modified JDK libraries. It uses GNOME 51, matching flatpark.
 
 Permissions cover X11, IPC, DRI, PulseAudio, network, Secret Service, the app's MPRIS name, the tray watcher and tray item name (`org.kde.StatusNotifierItem-2-1`, the app runs as PID 2 in the sandbox), Downloads and Music. The manifest grants neither the whole home directory nor the session bus. Inside the sandbox the Wayland scale probes cannot reach the compositor and fall back to environment variables, the download folder chooser sees only Downloads and Music, and Omarchy detection relies on `OMARCHY_PATH`. Check login, credentials, local files, downloads, audio, tray, MPRIS and GPU rendering in the sandbox.
@@ -65,13 +71,11 @@ Generation needs no extra secret. External proposals need `PACKAGING_PR_TOKEN` p
 
 | Variable | Destination |
 | --- | --- |
-| `WINGET_REPOSITORY` | WinGet staging repository or fork |
-| `HOMEBREW_REPOSITORY` | Homebrew tap |
 | `NIX_REPOSITORY` | Generated flake |
 
 The token needs Contents/Pull requests write permission and source visibility access. The script refuses writes while the source repository is private. No AUR publishing token is consumed.
 
-`scripts/propose_distribution.py` creates or updates `build/metrolist-VERSION` and opens a draft PR against the destination's default branch. It never force-pushes or merges. WinGet staging PRs need a separate upstream submission.
+`scripts/propose_distribution.py` creates or updates `build/metrolist-VERSION` and opens a draft PR against the destination's default branch. It never force-pushes or merges.
 
 ## Verification
 
