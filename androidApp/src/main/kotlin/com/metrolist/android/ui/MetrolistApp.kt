@@ -43,6 +43,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -351,6 +352,7 @@ import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.navigation.rememberNavigationMotion
 import com.metrolist.shared.ui.navigation.rememberNavigationState
 import com.metrolist.shared.ui.navigation.toEntries
+import com.metrolist.shared.ui.navigation.visibleSidebarScreens
 import com.metrolist.shared.ui.navigation.withPointerInput
 import com.metrolist.shared.ui.playback.LocalPlaybackController
 import com.metrolist.shared.ui.player.LocalPlayerPlatform
@@ -733,7 +735,8 @@ fun MetrolistApp(
         val useDesktopMiniPlayer =
             shouldUseDesktopMiniPlayer(useDesktopUi, LocalConfiguration.current.smallestScreenWidthDp, Settings.shared.miniPlayerType)
         val captionHeight = WindowInsets.captionBar.getTop(LocalDensity.current)
-        val hasDesktopCaption = shouldUseDesktopCaption(Build.VERSION.SDK_INT, captionHeight, useDesktopLayout)
+        val statusBarHeight = WindowInsets.statusBars.getTop(LocalDensity.current)
+        val hasDesktopCaption = shouldUseDesktopCaption(Build.VERSION.SDK_INT, captionHeight, useDesktopLayout, statusBarHeight)
         val shouldShowNavigationBar =
             (useDesktopUi || currentRoute in topLevelRoutes) &&
                 !(currentRoute == Screen.Search && searchResultsVisible)
@@ -1460,8 +1463,17 @@ fun MetrolistApp(
                                                         Text(stringResource(Res.string.offline_mode))
                                                     }
                                                 }
+                                                // The desktop rail already lists these destinations, so the app bar must not repeat them.
+                                                val railScreens =
+                                                    if (useDesktopUi) {
+                                                        visibleSidebarScreens(
+                                                            Settings.shared.sidebarNavItems,
+                                                        )
+                                                    } else {
+                                                        emptyList()
+                                                    }
                                                 val topBarActions: @Composable RowScope.() -> Unit = {
-                                                    if (navigationState.topLevelRoute == Screen.Home) {
+                                                    if (navigationState.topLevelRoute == Screen.Home && Screen.History !in railScreens) {
                                                         TopBarIconButton(
                                                             floating = useFloatingTopBar,
                                                             onClick = { navigator.navigate(Screen.History) },
@@ -1510,7 +1522,7 @@ fun MetrolistApp(
                                                             )
                                                         }
                                                     }
-                                                    if (Settings.shared.listenTogetherEnabled) {
+                                                    if (Settings.shared.listenTogetherEnabled && Screen.ListenTogether !in railScreens) {
                                                         TopBarIconButton(
                                                             floating = useFloatingTopBar,
                                                             onClick = { navigator.navigate(Screen.ListenTogether) },
