@@ -35,6 +35,9 @@ private const val LAST_LINE_HOLD_MS = 800L
 private const val BACKWARD_SEEK_THRESHOLD_MS = 80L
 private const val FORWARD_SEEK_THRESHOLD_MS = 1000L
 
+// Matches the engine's minimum overlap look-ahead; shorter overlaps are timing noise, not shared vocals.
+private const val LINE_OVERLAP_MIN_MS = 250L
+
 internal fun calculateScrollDuration(scrollLookAheadMs: Long): Long = minOf(SCROLL_ANIMATION_MAX_DURATION_MS, scrollLookAheadMs)
 
 internal fun calculateScrollDelayIncrement(scrollDurationMs: Long): Float = scrollDurationMs * SCROLL_DELAY_INCREMENT_RATIO
@@ -88,6 +91,17 @@ internal data class LyricsSyncSnapshot(
     val isSeek: Boolean,
 )
 
+private fun LyricsEntry.timelineStartMs(): Long {
+    val wordsStartMs =
+        min(
+            words?.filter { it.endTime > it.startTime }?.minOfOrNull { (it.startTime * 1000.0).roundToLong() }
+                ?: Long.MAX_VALUE,
+            romanizedWords?.filter { it.endTime > it.startTime }?.minOfOrNull { (it.startTime * 1000.0).roundToLong() }
+                ?: Long.MAX_VALUE,
+        )
+    return if (wordsStartMs != Long.MAX_VALUE) min(time, wordsStartMs) else time
+}
+
 internal fun buildLyricsTimelineItems(
     processedItems: List<LyricsListItem>,
     lyrics: List<LyricsEntry>,
@@ -117,14 +131,7 @@ internal fun buildLyricsTimelineItems(
                 val lineIdx = item.index
                 val words = entry.words
                 val romanWords = entry.romanizedWords
-                val wordsStartMs =
-                    min(
-                        words?.filter { it.endTime > it.startTime }?.minOfOrNull { (it.startTime * 1000.0).roundToLong() }
-                            ?: Long.MAX_VALUE,
-                        romanWords?.filter { it.endTime > it.startTime }?.minOfOrNull { (it.startTime * 1000.0).roundToLong() }
-                            ?: Long.MAX_VALUE,
-                    )
-                val startMs = if (wordsStartMs != Long.MAX_VALUE) min(entry.time, wordsStartMs) else entry.time
+                val startMs = entry.timelineStartMs()
                 val wordsEndMs =
                     max(
                         words?.maxOfOrNull { (it.endTime * 1000.0).roundToLong() } ?: Long.MIN_VALUE,
@@ -147,11 +154,20 @@ internal fun buildLyricsTimelineItems(
                         }
                     }
                 val nextIndicator = processedItems.getOrNull(listIdx + 1) as? LyricsListItem.Indicator
+                val nextLineStartMs = lyrics.getOrNull(lineIdx + 1)?.timelineStartMs()
                 val endMs =
-                    if (nextIndicator != null) {
-                        min(rawEndMs, (nextIndicator.gapStartMs - LYRICS_GAP_START_LAG_MS).coerceAtLeast(startMs))
-                    } else {
-                        rawEndMs
+                    when {
+                        nextIndicator != null -> {
+                            min(rawEndMs, (nextIndicator.gapStartMs - LYRICS_GAP_START_LAG_MS).coerceAtLeast(startMs))
+                        }
+
+                        nextLineStartMs != null && rawEndMs > nextLineStartMs && rawEndMs - nextLineStartMs < LINE_OVERLAP_MIN_MS -> {
+                            nextLineStartMs
+                        }
+
+                        else -> {
+                            rawEndMs
+                        }
                     }
                 val hasBg =
                     !entry.backgroundText.isNullOrBlank() ||
@@ -450,7 +466,7 @@ internal class LyricsSyncEngine(
             var writeIdx = 0
             for (i in rawActiveIndices.indices) {
                 val idx = rawActiveIndices[i]
-                if (!(idx > 0 && idx < minCurrentActive)) {
+                if (idx >= minCurrentActive) {
                     rawActiveIndices[writeIdx++] = idx
                 }
             }

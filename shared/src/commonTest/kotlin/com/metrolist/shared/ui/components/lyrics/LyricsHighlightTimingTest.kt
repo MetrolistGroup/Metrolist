@@ -204,4 +204,41 @@ class LyricsHighlightTimingTest {
             }
         }
     }
+
+    @Test
+    fun wordByWordFirstLineDoesNotReactivateAfterTheNextLineTakesOver() {
+        val lyrics =
+            listOf(
+                LyricsEntry(time = 1_557L, text = "First", endTime = 5_142L),
+                LyricsEntry(time = 5_900L, text = "Second", endTime = 7_900L),
+                LyricsEntry(time = 7_877L, text = "Third", endTime = 9_973L),
+            )
+        val items = buildLyricsTimelineItems(buildLyricsListItems(lyrics, null, emptyList()), lyrics)
+        val engine = LyricsSyncEngine(items, items.first().listIndex)
+        var primary = -1
+        for (timeMs in 4_000L..6_000L step 16L) {
+            val snapshot = engine.update(timeMs, shouldFollowPlayback = true, isWordByWord = true)
+            assertTrue(snapshot.primaryLineIndex >= primary, "line $primary fell back to ${snapshot.primaryLineIndex} at $timeMs ms")
+            primary = snapshot.primaryLineIndex
+        }
+        assertEquals(1, primary)
+    }
+
+    @Test
+    fun briefSourceOverlapDoesNotKeepTheEndedLineLit() {
+        val lyrics =
+            listOf(
+                LyricsEntry(time = 5_900L, text = "First", endTime = 7_900L),
+                LyricsEntry(time = 7_877L, text = "Second", endTime = 9_973L),
+                LyricsEntry(time = 9_964L, text = "Third", endTime = 11_613L),
+            )
+        val items = buildLyricsTimelineItems(buildLyricsListItems(lyrics, null, emptyList()), lyrics)
+        val engine = LyricsSyncEngine(items, items.first().listIndex)
+        var snapshot = engine.update(6_000L, shouldFollowPlayback = true, isWordByWord = true)
+        for (timeMs in 6_016L..8_500L step 16L) {
+            snapshot = engine.update(timeMs, shouldFollowPlayback = true, isWordByWord = true)
+        }
+        assertEquals(listOf(1), snapshot.activeLineIndices)
+        assertEquals(7_900L, items.first().sourceEndTimeMs)
+    }
 }
