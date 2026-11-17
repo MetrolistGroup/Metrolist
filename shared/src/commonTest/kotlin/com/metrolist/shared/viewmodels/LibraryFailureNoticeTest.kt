@@ -19,7 +19,9 @@ import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
@@ -30,6 +32,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 
 class LibraryFailureNoticeTest {
     @Test
@@ -61,6 +64,7 @@ class LibraryFailureNoticeTest {
                                         "SAPISID=test"
                                 },
                             ),
+                        syncRetryDelays = emptyList(),
                     )
                 model.setActive(true)
                 withTimeout(5_000) { model.uiState.first { it.error } }
@@ -84,4 +88,51 @@ class LibraryFailureNoticeTest {
                 Settings.replaceSharedForTest(null)
             }
         }
+
+    @Test
+    fun transientRefreshFailureRetriesQuietly() =
+        runBlocking {
+            Settings.replaceSharedForTest(Settings(MapSettings()))
+            YouTubeSyncState.clear()
+            val failingRequests = atomic(0)
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        val body = (request.body as TextContent).text
+                        // InnerTube retries each request itself; fail every attempt of the first refresh only.
+                        val fail = "FEmusic_liked_albums" in body && failingRequests.incrementAndGet() <= INNERTUBE_ATTEMPTS
+                        respond(
+                            AccountLibraryFailureTest.EMPTY_LIBRARY,
+                            if (fail) HttpStatusCode.ServiceUnavailable else HttpStatusCode.OK,
+                            headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    },
+                ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+            try {
+                val model =
+                    LibraryViewModel(
+                        scope,
+                        repository = YouTubeRepository(InnerTube(client, retryDelay = {}).apply { cookie = "SAPISID=test" }),
+                        syncRetryDelays = listOf(10.milliseconds),
+                    )
+                val errors = scope.async { model.uiState.first { it.error } }
+                model.setActive(true)
+                withTimeout(5_000) { while (Settings.shared.lastLibraryRefreshEpoch == 0L) delay(10) }
+                assertTrue(failingRequests.value > INNERTUBE_ATTEMPTS)
+                assertFalse(errors.isCompleted)
+                assertFalse(model.uiState.value.error)
+                assertFalse("library" in YouTubeSyncState.failures.value)
+                errors.cancel()
+            } finally {
+                scope.coroutineContext.job.cancelAndJoin()
+                client.close()
+                YouTubeSyncState.clear()
+                Settings.replaceSharedForTest(null)
+            }
+        }
+
+    private companion object {
+        const val INNERTUBE_ATTEMPTS = 3
+    }
 }

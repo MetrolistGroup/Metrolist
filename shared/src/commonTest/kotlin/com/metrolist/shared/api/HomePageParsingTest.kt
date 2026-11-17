@@ -272,6 +272,36 @@ class HomePageParsingTest {
         }
 
     @Test
+    fun failedEditabilityLookupKeepsTheLibraryComplete() =
+        runBlocking {
+            val engine =
+                MockEngine { request ->
+                    val browseId =
+                        Json
+                            .parseToJsonElement(
+                                (request.body as TextContent).text,
+                            ).jsonObject["browseId"]
+                            ?.jsonPrimitive
+                            ?.content
+                    respond(
+                        PLAYLIST_LIBRARY_RESPONSE,
+                        if (browseId == "VLPL_user") HttpStatusCode.InternalServerError else HttpStatusCode.OK,
+                        headersOf(HttpHeaders.ContentType, "application/json"),
+                    )
+                }
+            val client = HttpClient(engine) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+            try {
+                val repository = YouTubeRepository(InnerTube(client, retryDelay = {}).apply { cookie = "SAPISID=session" })
+                val result = repository.getCompleteLibraryItemsResult()
+                assertTrue(result.complete)
+                assertEquals(setOf("VLPL_user"), result.unresolvedPlaylistEditabilityIds)
+                assertTrue(result.items.any { it.id == "VLPL_user" })
+            } finally {
+                client.close()
+            }
+        }
+
+    @Test
     fun ordinaryPlaylistHeaderDoesNotClaimEditability() =
         runBlocking {
             val engine =

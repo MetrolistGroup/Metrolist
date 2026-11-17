@@ -9,6 +9,7 @@ import com.metrolist.desktop.storage.DownloadState
 import com.metrolist.shared.auth.YouTubeSyncState
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.PlaylistEntity
+import com.metrolist.shared.db.preserveKnownPlaylistEditability
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.UserPlaylist
@@ -226,7 +227,9 @@ object LibraryContentState {
                                 return@launch
                             }
                             YouTubeSyncState.succeeded("playlists")
-                            result.items.filterIsInstance<PlaylistItem>()
+                            database
+                                .preserveKnownPlaylistEditability(result.items, result.unresolvedPlaylistEditabilityIds)
+                                .filterIsInstance<PlaylistItem>()
                         } else {
                             emptyList()
                         }

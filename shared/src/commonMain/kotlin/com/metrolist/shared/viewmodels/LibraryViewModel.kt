@@ -39,6 +39,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -61,11 +62,16 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 const val LIBRARY_REFRESH_TTL_MILLIS = 5 * 60 * 1000L
 const val LIBRARY_SEARCH_DEBOUNCE_MILLIS = 300L
 internal const val LIBRARY_SEARCH_PAGE_SIZE = 200
+
+// A refresh makes ~100 requests; retry the whole sync quietly before reporting a blip as a failure.
+private val LIBRARY_SYNC_RETRY_DELAYS = listOf(5.seconds, 15.seconds, 45.seconds)
 
 fun shouldRefreshLibrary(
     nowEpochMillis: Long,
@@ -155,6 +161,7 @@ class LibraryViewModel(
     private val downloadedSongIds: Flow<Set<String>>? = null,
     private val repository: YouTubeRepository = GlobalYouTubeRepository.instance,
     private val downloadedSongDates: Flow<Map<String, Long>>? = null,
+    private val syncRetryDelays: List<Duration> = LIBRARY_SYNC_RETRY_DELAYS,
 ) {
     private val _uiState = MutableStateFlow(LibraryUiState(isLoading = database != null))
     private var downloadedKeys: Set<String> = emptySet()
@@ -180,6 +187,7 @@ class LibraryViewModel(
     private var hasRefreshedAfterHomeLoaded = false
     private var refreshInProgress = false
     private var countResolutionJob: Job? = null
+    private var syncRetryJob: Job? = null
     private var pendingRefresh = false
     private var refreshGeneration = 0L
     private var playlistDeletionVersion = 0L
@@ -359,7 +367,14 @@ class LibraryViewModel(
             localReloads.trySend(Unit)
         }
 
-    fun refresh(force: Boolean = true) {
+    fun refresh(force: Boolean = true) = refresh(force, retryAttempt = 0)
+
+    private fun refresh(
+        force: Boolean,
+        retryAttempt: Int,
+    ) {
+        syncRetryJob?.cancel()
+        syncRetryJob = null
         val accountKey = currentLibraryAccountKey()
         val accountChanged =
             observedAccountKey != accountKey ||
@@ -476,13 +491,13 @@ class LibraryViewModel(
                     "Refresh complete=$completeRefresh music=${musicResult.items.size} " +
                         "musicComplete=${musicResult.complete} podcastsOk=${podcastsResult.isSuccess} episodesOk=${episodesResult.isSuccess}",
                 )
-                _uiState.update { it.copy(isLoading = false, isRefreshing = false, error = !completeRefresh) }
                 if (completeRefresh) {
+                    _uiState.update { it.copy(isLoading = false, isRefreshing = false, error = false) }
                     Settings.shared.lastLibraryRefreshEpoch = Clock.System.now().toEpochMilliseconds()
                     Settings.shared.lastLibraryRefreshAccount = accountKey
                     YouTubeSyncState.succeeded("library")
                 } else {
-                    YouTubeSyncState.failed("library") { if (currentLibraryAccountKey() == accountKey) refresh(force = true) }
+                    onRefreshFailed(accountKey, retryAttempt)
                 }
                 localReloads.trySend(Unit)
                 countResolutionJob =
@@ -547,8 +562,7 @@ class LibraryViewModel(
             } catch (e: Exception) {
                 if (generation == refreshGeneration && currentLibraryAccountKey() == accountKey) {
                     YtLogger.e("LibrarySync", "Refresh failed type=${e::class.simpleName}")
-                    _uiState.update { it.copy(isLoading = false, isRefreshing = false, error = true) }
-                    YouTubeSyncState.failed("library") { if (currentLibraryAccountKey() == accountKey) refresh(force = true) }
+                    onRefreshFailed(accountKey, retryAttempt)
                 }
             } finally {
                 refreshInProgress = false
@@ -558,6 +572,26 @@ class LibraryViewModel(
                 }
             }
         }
+    }
+
+    private fun onRefreshFailed(
+        accountKey: String,
+        retryAttempt: Int,
+    ) {
+        val retryDelay = syncRetryDelays.getOrNull(retryAttempt)
+        _uiState.update {
+            it.copy(isLoading = retryDelay != null && it.items.isEmpty(), isRefreshing = false, error = retryDelay == null)
+        }
+        if (retryDelay == null) {
+            YouTubeSyncState.failed("library") { if (currentLibraryAccountKey() == accountKey) refresh(force = true) }
+            return
+        }
+        syncRetryJob =
+            scope.launch {
+                delay(retryDelay)
+                syncRetryJob = null
+                if (currentLibraryAccountKey() == accountKey) refresh(force = true, retryAttempt = retryAttempt + 1)
+            }
     }
 
     fun refreshAfterHomeLoaded() {

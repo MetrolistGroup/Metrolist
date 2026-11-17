@@ -626,7 +626,7 @@ class YouTubeRepository(
         val uploadedIds = uploadedSongs?.mapTo(mutableSetOf()) { it.id }
         return LibraryItemsResult(
             items = items.filterNot { it is SongItem && it.isUploaded && uploadedIds != null && it.id !in uploadedIds },
-            complete = results.all { it.getOrNull()?.complete == true } && unresolvedPlaylistEditabilityIds.isEmpty(),
+            complete = results.all { it.getOrNull()?.complete == true },
             unresolvedPlaylistEditabilityIds = unresolvedPlaylistEditabilityIds,
             uploadedSongs = uploadedSongs,
         )
@@ -2155,7 +2155,7 @@ class YouTubeRepository(
                             }
                     }
                 requireCurrentSession(requestSession)
-                return LibraryItemsResult(items, result.complete && unresolvedIds.isEmpty(), unresolvedIds).also(request::complete)
+                return LibraryItemsResult(items, result.complete, unresolvedIds).also(request::complete)
             } catch (error: Throwable) {
                 request.completeExceptionally(error)
                 throw error
