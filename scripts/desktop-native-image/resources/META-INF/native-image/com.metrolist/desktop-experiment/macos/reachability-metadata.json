@@ -130,6 +130,20 @@
       "jniAccessible": true,
       "allDeclaredMethods": true,
       "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.LibC",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.unix.LibC"
+        ]
+      }
     }
   ]
 }
