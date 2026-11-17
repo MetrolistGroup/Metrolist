@@ -42,6 +42,8 @@ internal class IosMusicVideoSurfacePlayer(
     private var attachedSurfaceGeneration: Long? = null
     private val seekLifecycle = MusicVideoSeekLifecycle()
     private val driftRetryPolicy = MusicVideoDriftRetryPolicy(SEEK_POST_SEEK_DRIFT_TOLERANCE_MS, MAX_SLOW_SEEK_CORRECTIONS)
+    var driftRecoveryFailed = false
+        private set
     private var latestTargetPositionMs = 0L
     private var latestTargetUpdatedAt: TimeMark? = null
     private var userSeekPending = false
@@ -120,6 +122,7 @@ internal class IosMusicVideoSurfacePlayer(
         val expectedPlaybackAdvanceMs = if (expectingProgress) (targetUpdateElapsedMs * playbackSpeed).toLong() else 0L
         if (isMaterialMusicVideoTargetChange(targetDeltaMs, expectedPlaybackAdvanceMs, SEEK_USER_TARGET_CHANGE_TOLERANCE_MS)) {
             driftRetryPolicy.reset()
+            driftRecoveryFailed = false
             userSeekPending = true
             seekLifecycle.markUnsynchronized()
         }
@@ -144,11 +147,13 @@ internal class IosMusicVideoSurfacePlayer(
             userSeekPending = false
             seekCooldownStartedAt = null
             driftRetryPolicy.reset()
+            driftRecoveryFailed = false
             player.pause()
         } else if (!wasForeground && isForeground) {
             userSeekPending = false
             seekCooldownStartedAt = null
             driftRetryPolicy.reset()
+            driftRecoveryFailed = false
         }
     }
 
@@ -167,7 +172,7 @@ internal class IosMusicVideoSurfacePlayer(
             return
         }
         if (!driftRetryPolicy.shouldRetry(userSeekPending)) {
-            seekLifecycle.markSynchronized()
+            driftRecoveryFailed = true
             return
         }
         userSeekPending = false

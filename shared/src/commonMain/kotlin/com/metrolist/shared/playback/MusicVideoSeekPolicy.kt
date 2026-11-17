@@ -66,11 +66,14 @@ internal class MusicVideoDriftRetryPolicy(
 ) {
     private var consecutiveSlowSeeks = 0
 
+    val exhausted: Boolean
+        get() = consecutiveSlowSeeks >= maximumSlowSeeks
+
     fun recordSeek(durationMs: Long) {
         consecutiveSlowSeeks = if (durationMs > slowSeekThresholdMs) consecutiveSlowSeeks + 1 else 0
     }
 
-    fun shouldRetry(isUserSeek: Boolean): Boolean = isUserSeek || consecutiveSlowSeeks < maximumSlowSeeks
+    fun shouldRetry(isUserSeek: Boolean): Boolean = isUserSeek || !exhausted
 
     fun reset() {
         consecutiveSlowSeeks = 0

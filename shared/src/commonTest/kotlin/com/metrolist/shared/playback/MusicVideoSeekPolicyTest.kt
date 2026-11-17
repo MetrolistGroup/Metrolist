@@ -68,6 +68,7 @@ class MusicVideoSeekPolicyTest {
         assertTrue(policy.shouldRetry(isUserSeek = false))
         policy.recordSeek(2_000L)
         assertFalse(policy.shouldRetry(isUserSeek = false))
+        assertTrue(policy.exhausted)
         assertTrue(policy.shouldRetry(isUserSeek = true))
         policy.reset()
         assertTrue(policy.shouldRetry(isUserSeek = false))

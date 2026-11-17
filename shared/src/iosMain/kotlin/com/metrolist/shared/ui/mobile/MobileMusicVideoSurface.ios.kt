@@ -123,6 +123,10 @@ internal actual fun MobileMusicVideoSurface(
                 controller.reportVideoPlaybackFailure()
                 break
             }
+            if (video.driftRecoveryFailed) {
+                controller.reportVideoPlaybackFailure()
+                break
+            }
             if (foreground) video.applyPendingSeek()
             if (video.ready && video.positionSynchronized) {
                 firstFrameRendered = true
