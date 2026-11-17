@@ -4,6 +4,7 @@ import io.ktor.http.Url
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 object UniversalPlaylistParser {
@@ -117,9 +118,9 @@ object UniversalPlaylistParser {
                             value
                                 .mapNotNull { item ->
                                     if (item is JsonObject) {
-                                        item["name"]?.let { runCatching { it.jsonPrimitive.content }.getOrNull() }
+                                        item["name"]?.let { runCatching { it.jsonPrimitive.contentOrNull }.getOrNull() }
                                     } else {
-                                        runCatching { item.jsonPrimitive.content }.getOrNull()
+                                        runCatching { item.jsonPrimitive.contentOrNull }.getOrNull()
                                     }
                                 }.takeIf(List<String>::isNotEmpty)
                                 ?.joinToString(", ")
@@ -130,7 +131,7 @@ object UniversalPlaylistParser {
                         }
 
                         else -> {
-                            runCatching { value.jsonPrimitive.content.trim() }.getOrNull()?.takeIf(String::isNotBlank)
+                            runCatching { value.jsonPrimitive.contentOrNull?.trim() }.getOrNull()?.takeIf(String::isNotBlank)
                         }
                     }
                 }.orEmpty()
@@ -158,7 +159,7 @@ object UniversalPlaylistParser {
     ): String? =
         keys.firstNotNullOfOrNull { key ->
             obj[key]
-                ?.let { runCatching { it.jsonPrimitive.content.trim() }.getOrNull() }
+                ?.let { runCatching { it.jsonPrimitive.contentOrNull?.trim() }.getOrNull() }
                 ?.takeIf(String::isNotBlank)
         }
 
