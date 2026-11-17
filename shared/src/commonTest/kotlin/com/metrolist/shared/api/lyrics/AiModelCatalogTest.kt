@@ -492,6 +492,11 @@ class AiModelCatalogTest {
         )
         assertEquals("https://generativelanguage.googleapis.com/v1beta/models", AiProviderPresets.find("Gemini")!!.modelsEndpoint)
         assertEquals("https://opencode.ai/zen/go/v1/models", AiProviderPresets.find("OpenCodeGo")!!.modelsEndpoint)
+        val kilo = AiProviderPresets.find("Kilo")!!
+        assertEquals("https://ai-gateway.kilo.ai/api/v1/models", kilo.modelsEndpoint)
+        assertEquals("kilo-auto/free", kilo.defaultModel)
+        assertTrue(kilo.keyless)
+        assertTrue(kilo.publicModelList)
         assertEquals("OpenAI-compatible", AiProviderPresets.find("Custom")!!.id)
 
         val zen = AiProviderPresets.find("OpenCodeZen")!!.endpoint
@@ -526,6 +531,87 @@ class AiModelCatalogTest {
                 assertEquals(
                     "retired-model",
                     catalog.validatedModel(compatible, "key", AiProviderPresets.LEGACY_GEMINI_ENDPOINT, "retired-model"),
+                )
+            }
+        }
+
+    @Test
+    fun keylessKiloTranslatesWithoutAuthorizationHeader() =
+        runBlocking {
+            val kilo = AiProviderPresets.find("Kilo")!!
+            var expectedAuth: String? = null
+            var requests = 0
+            HttpClient(
+                MockEngine { request ->
+                    requests++
+                    assertEquals(expectedAuth, request.headers[HttpHeaders.Authorization])
+                    assertEquals("ai-gateway.kilo.ai", request.url.host)
+                    assertEquals("/api/v1/chat/completions", request.url.encodedPath)
+                    respond("""{"choices":[{"message":{"content":"{\"lines\":[\"Hola\"]}"},"finish_reason":"stop"}]}""")
+                },
+            ).use { client ->
+                val translation = LyricsTranslationClient(client)
+                val result =
+                    translation
+                        .translateLyricsLines(
+                            lines = listOf("Hello"),
+                            provider = kilo.id,
+                            targetLanguage = "es",
+                            mode = "Literal",
+                            apiKey = "",
+                            baseUrl = kilo.endpoint,
+                            model = kilo.defaultModel,
+                        ).getOrThrow()
+                assertEquals(listOf("Hola"), result.translatedLines)
+
+                expectedAuth = "Bearer sk-kilo"
+                val keyedResult =
+                    translation
+                        .translateLyricsLines(
+                            lines = listOf("Hello"),
+                            provider = kilo.id,
+                            targetLanguage = "es",
+                            mode = "Literal",
+                            apiKey = "sk-kilo",
+                            baseUrl = kilo.endpoint,
+                            model = kilo.defaultModel,
+                        ).getOrThrow()
+                assertEquals(listOf("Hola"), keyedResult.translatedLines)
+                assertEquals(2, requests)
+
+                for (requiredProvider in listOf("OpenAI", "OpenAI-compatible")) {
+                    val preset = AiProviderPresets.find(requiredProvider)!!
+                    val failure =
+                        translation
+                            .translateLyricsLines(
+                                lines = listOf("Hello"),
+                                provider = preset.id,
+                                targetLanguage = "es",
+                                mode = "Literal",
+                                apiKey = "",
+                                baseUrl = preset.endpoint,
+                                model = preset.defaultModel,
+                            ).exceptionOrNull()
+                    assertTrue(failure is IllegalArgumentException)
+                }
+                assertEquals(2, requests)
+            }
+        }
+
+    @Test
+    fun kiloMissingFreeModelFallsBackToKiloAutoFree() =
+        runBlocking {
+            val kilo = AiProviderPresets.find("Kilo")!!
+            HttpClient(
+                MockEngine {
+                    respond(
+                        """{"data":[{"id":"kilo-auto/free","pricing":{"prompt":"0","completion":"0"}},{"id":"cohere/north-mini-code:free","pricing":{"prompt":"0","completion":"0"}}]}""",
+                    )
+                },
+            ).use { client ->
+                assertEquals(
+                    "kilo-auto/free",
+                    AiModelCatalog(client).validatedModel(kilo, "", kilo.endpoint, "retired/model:free"),
                 )
             }
         }

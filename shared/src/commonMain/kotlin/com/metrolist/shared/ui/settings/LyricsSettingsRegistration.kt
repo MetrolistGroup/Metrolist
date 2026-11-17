@@ -373,7 +373,13 @@ internal fun SettingsUiRegistryBuilder.registerLyricsSettings(host: SharedSettin
                             if (oauthConnected) {
                                 stringResource(Res.string.ai_openrouter_oauth_active)
                             } else {
-                                stringResource(if (apiKey.isBlank()) Res.string.required else Res.string.configured)
+                                stringResource(
+                                    when {
+                                        apiKey.isNotBlank() -> Res.string.configured
+                                        preset.keyless -> Res.string.ai_api_key_optional
+                                        else -> Res.string.required
+                                    },
+                                )
                             },
                         value = apiKey,
                         enabled = !oauthConnected,
@@ -404,8 +410,9 @@ internal fun SettingsUiRegistryBuilder.registerLyricsSettings(host: SharedSettin
             }
             if (preset.isAi && !directProvider) {
                 val apiKey = settings.lyricsAiApiKeyFor(provider)
-                val modelsReady = oauthConnected || apiKey.isNotBlank() || preset.publicModelList
+                val modelsReady = oauthConnected || apiKey.isNotBlank() || preset.publicModelList || preset.keyless
                 val (modelKey, modelUrl) = settings.lyricsAiCredentials(provider)
+                val freeOnly = preset.keyless && modelKey.isBlank()
                 group("models", stringResource(Res.string.ai_models)) {
                     custom(
                         id = "translationModel",
@@ -421,6 +428,7 @@ internal fun SettingsUiRegistryBuilder.registerLyricsSettings(host: SharedSettin
                             apiKey = modelKey,
                             baseUrl = modelUrl,
                             allowBlank = false,
+                            freeOnly = freeOnly,
                             enabled = modelsReady,
                         ) { settings.lyricsAiModel = it }
                     }
@@ -441,7 +449,12 @@ internal fun SettingsUiRegistryBuilder.registerLyricsSettings(host: SharedSettin
                     value = settings.lyricsAiSystemPrompt,
                     enabled =
                         preset.isAi && !directProvider &&
-                            (oauthConnected || settings.lyricsAiApiKeyFor(provider).isNotBlank() || preset.publicModelList),
+                            (
+                                oauthConnected ||
+                                    settings.lyricsAiApiKeyFor(provider).isNotBlank() ||
+                                    preset.publicModelList ||
+                                    preset.keyless
+                            ),
                     multiline = true,
                 ) { settings.lyricsAiSystemPrompt = it }
             }

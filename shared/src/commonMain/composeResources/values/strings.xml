@@ -1845,6 +1845,7 @@
     <string name="ai_prompt_line_count_description">Optional. Use {lineCount} to include the exact input line count in your prompt.</string>
     <!-- Translators: Option or section label for provider default in the AI lyrics translation settings. -->
     <string name="brand_opencode_zen" translatable="false">OpenCode Zen</string>
+    <string name="brand_kilo" translatable="false">Kilo</string>
     <string name="brand_opencode_go" translatable="false">OpenCode Go</string>
     <string name="brand_groq" translatable="false">Groq</string>
     <string name="brand_deepseek" translatable="false">DeepSeek</string>
@@ -1921,6 +1922,8 @@
     <!-- Translators: Option or section label for same provider default in the AI lyrics translation settings. -->
     <!-- Translators: Field or option label for API key in the AI lyrics translation settings. -->
     <string name="ai_api_key_label">API key</string>
+    <!-- Translators: Field description for an optional API key when free models work without one. -->
+    <string name="ai_api_key_optional">Optional, free models work without a key</string>
     <!-- Translators: Field or option label for system prompt in the AI lyrics translation settings. -->
     <string name="ai_system_prompt_label">System prompt</string>
     <!-- Translators: Imperative action label for translation enable in the AI lyrics translation settings. -->

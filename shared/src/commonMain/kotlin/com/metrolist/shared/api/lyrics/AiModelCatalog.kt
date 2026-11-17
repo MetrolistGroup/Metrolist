@@ -371,8 +371,16 @@ class AiModelCatalog(
             models: List<AiModelInfo>,
             freeOnly: Boolean = false,
         ): String? {
-            val candidates = filterAndSort(models).filter { !freeOnly || (it.free && it.id.endsWith(":free")) }
-            val preferred = if (freeOnly) AiProviderPresets.FREE_LYRICS_AI_MODEL else preset.defaultModel
+            val candidates =
+                filterAndSort(models).filter {
+                    !freeOnly || (it.free && (it.id.endsWith(":free") || it.id == preset.defaultModel))
+                }
+            val preferred =
+                if (freeOnly && preset.id == "OpenRouter") {
+                    AiProviderPresets.FREE_LYRICS_AI_MODEL
+                } else {
+                    preset.defaultModel
+                }
             return candidates.firstOrNull { it.id == preferred }?.id ?: candidates.firstOrNull()?.id
         }
 
