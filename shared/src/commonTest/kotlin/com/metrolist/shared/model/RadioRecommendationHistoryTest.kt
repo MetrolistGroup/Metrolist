@@ -129,6 +129,55 @@ class RadioRecommendationHistoryTest {
         }
 
     @Test
+    fun classicKeepsFirstPageWithoutPrefetching() =
+        runTest {
+            val selected =
+                RadioRecommendationHistory().select(page("a", "b", continuation = "next"), true, { it }, { true }) {
+                    error("Classic first page must not prefetch")
+                }!!
+            assertEquals(listOf("a", "b"), selected.songs.map(SongItem::id))
+            assertEquals("next", selected.continuation)
+        }
+
+    @Test
+    fun classicFollowsContinuationPastFullyFilteredPages() =
+        runTest {
+            val requests = mutableListOf<String>()
+            val selected =
+                RadioRecommendationHistory().select(
+                    page("seed", "blocked", continuation = "next"),
+                    true,
+                    { songs -> songs.filterNot { it.id == "seed" || it.id == "blocked" } },
+                    { true },
+                ) {
+                    requests += it
+                    page("b", "a", "b", continuation = "later")
+                }!!
+            assertEquals(listOf("next"), requests)
+            assertEquals(listOf("b", "a"), selected.songs.map(SongItem::id))
+            assertEquals("later", selected.continuation)
+        }
+
+    @Test
+    fun classicReturnsEmptyAfterExhaustingFilteredPages() =
+        runTest {
+            var requests = 0
+            val selected =
+                RadioRecommendationHistory().select(
+                    page("seed", continuation = "next"),
+                    true,
+                    { songs -> songs.filterNot { it.id == "seed" } },
+                    { true },
+                ) {
+                    requests++
+                    page("seed")
+                }!!
+            assertEquals(1, requests)
+            assertEquals(emptyList(), selected.songs)
+            assertNull(selected.continuation)
+        }
+
+    @Test
     fun cancellationPropagates() =
         runTest {
             val history = RadioRecommendationHistory()

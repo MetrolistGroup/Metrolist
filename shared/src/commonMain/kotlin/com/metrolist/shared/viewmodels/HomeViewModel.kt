@@ -275,7 +275,10 @@ class HomeViewModel(
                     // A load started before this change may still publish Quick picks
                     // selected with the old value; wait for it to settle first.
                     withTimeoutOrNull(10_000) {
-                        snapshotFlow { _uiState.value.isContentLoading }.first { loading -> !loading }
+                        _uiState.first { state ->
+                            !state.isLoading && !state.isRefreshing && !state.isRevalidating &&
+                                !state.isContentLoading && !state.isLoadingMore
+                        }
                     }
                     rebuildQuickPicks()
                 }
@@ -975,7 +978,11 @@ class HomeViewModel(
 
     private suspend fun rebuildQuickPicks() {
         val state = _uiState.value
-        if (state.isContentLoading) return
+        if (state.isLoading || state.isRefreshing || state.isRevalidating ||
+            state.isContentLoading || state.isLoadingMore
+        ) {
+            return
+        }
         val selectedChip = state.selectedChip
         val isFiltered = isFilteredHome(selectedChip?.params, selectedChip?.browseId ?: "FEmusic_home")
         val apiQuickPicks = findSectionSongs(state.data.orEmpty(), "FEmusic_quickpicks")

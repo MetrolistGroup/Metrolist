@@ -23,9 +23,30 @@ class RadioRecommendationHistory {
     ): RadioQueuePage? {
         if (classic) {
             // Classic (13.x) behaviour: keep YouTube's own order and don't skip songs recommended before.
+            val seenContinuations = mutableSetOf<String>()
+            var page = firstPage
+            var continuation: String? = firstPage.continuation
+            for (pageIndex in 0 until 10) {
+                currentCoroutineContext().ensureActive()
+                if (!isCurrent()) return null
+                val eligible = filter(page.songs).filter { it.id.isNotBlank() }.distinctBy(SongItem::id)
+                if (eligible.isNotEmpty()) {
+                    return firstPage.copy(songs = eligible, continuation = continuation)
+                }
+                val token = page.continuation?.takeIf(seenContinuations::add) ?: break
+                page =
+                    try {
+                        loadMore(token)
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: Exception) {
+                        break
+                    }
+                continuation = page.continuation
+            }
             currentCoroutineContext().ensureActive()
             if (!isCurrent()) return null
-            return firstPage.copy(songs = filter(firstPage.songs).filter { it.id.isNotBlank() }.distinctBy(SongItem::id))
+            return firstPage.copy(songs = emptyList(), continuation = continuation)
         }
         val previous = recentIds.value.withIndex().associate { it.value to it.index }
         val seenContinuations = mutableSetOf<String>()
