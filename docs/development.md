@@ -333,6 +333,8 @@ Manual search opens a title and artist dialog, then a provider picker. All provi
 
 The shared full-screen editor opens the active lyrics as MLX v2 JSON behind a timestamped text field: `[mm:ss.cc] text`, or three fractional digits for millisecond sources. Word-synced lines use inline tags such as `[00:08.20] <00:08.20>word <00:08.51>tags`. `\n`, `\r`, `\\`, `\<` and `\>` are escapes. Timing buttons shift selected lines by half a second.
 
+Voxen Advanced and Pro lyrics keep their word timing and singer tags, including background vocals and custom numbered singers. Pasting these two-line formats converts them to the editor's inline tags. Opening or closing the editor without a text or timing change does not rewrite saved lyrics.
+
 Unchanged JSON lines keep every field, including provider extensions. Editing a line timestamp shifts its word and syllable intervals together. Editing a word tag changes that word's start and keeps its end when still valid. New words end at the next word or the line end, otherwise after half a second. Removing all tags removes foreground word timing and timed romanization. Text edits clear stale foreground translations and romanization; background vocals stay intact. The editor uses source timing even when the player retimed lyrics for a video.
 
 The first change creates a User fork in the song lyrics row, separate from the provider and translation caches. User lyrics win over refetches and provider selection. Autosave waits 500 ms and flushes on close or backgrounding. Invalid timestamps are reported by line number and saved as a draft beside the recoverable JSON. Revert deletes the fork and draft.
