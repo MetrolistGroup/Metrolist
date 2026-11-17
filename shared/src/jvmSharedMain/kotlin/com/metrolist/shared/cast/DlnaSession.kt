@@ -506,8 +506,8 @@ internal expect fun disallowDlnaDoctype(
 private fun parseXml(bytes: ByteArray): Document {
     require(!bytes.toString(Charsets.UTF_8).contains("<!DOCTYPE", ignoreCase = true))
     val factory = DocumentBuilderFactory.newInstance()
+    // XInclude is off by default; Android's factory throws on setXIncludeAware, even when disabling it.
     factory.isNamespaceAware = true
-    factory.isXIncludeAware = false
     factory.isExpandEntityReferences = false
     disallowDlnaDoctype(factory, bytes)
     return factory
