@@ -240,16 +240,21 @@ private fun tableColumns(
     }
 
 private fun normalizeLegacySpeedDial(connection: SQLiteConnection) {
-    val hasLegacyTable =
-        connection.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'speed_dial_item'").use { it.step() }
-    if (hasLegacyTable) connection.execSQL("ALTER TABLE speed_dial_item RENAME TO speed_dial")
-    val hasIndex =
-        connection.prepare("PRAGMA table_info(speed_dial)").use { statement ->
-            var found = false
-            while (statement.step()) {
-                if (statement.getText(1) == "index") found = true
-            }
-            found
+    fun tableExists(name: String) =
+        connection.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = '$name'").use { it.step() }
+    if (tableExists("speed_dial_item")) {
+        if (tableExists("speed_dial")) {
+            // Some upgraded databases have both tables; keep current pins and add legacy ones that are missing.
+            val shared =
+                (tableColumns(connection, "speed_dial_item") intersect tableColumns(connection, "speed_dial"))
+                    .joinToString { "`$it`" }
+            connection.execSQL("INSERT OR IGNORE INTO speed_dial ($shared) SELECT $shared FROM speed_dial_item")
+            connection.execSQL("DROP TABLE speed_dial_item")
+        } else {
+            connection.execSQL("ALTER TABLE speed_dial_item RENAME TO speed_dial")
         }
-    if (!hasIndex) connection.execSQL("ALTER TABLE speed_dial ADD COLUMN `index` INTEGER NOT NULL DEFAULT 0")
+    }
+    if ("index" !in tableColumns(connection, "speed_dial")) {
+        connection.execSQL("ALTER TABLE speed_dial ADD COLUMN `index` INTEGER NOT NULL DEFAULT 0")
+    }
 }
