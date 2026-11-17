@@ -7,6 +7,7 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import com.russhwolf.settings.Settings
 import java.security.KeyStore
+import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.BadPaddingException
 import javax.crypto.Cipher
 import javax.crypto.IllegalBlockSizeException
@@ -31,6 +32,9 @@ internal class AndroidSecureSettings(
 
     @Volatile
     private var key: SecretKey? = null
+
+    // Secrets the Keystore could not encrypt stay readable for this process instead of crashing the caller.
+    private val unsaved = ConcurrentHashMap<String, String>()
 
     init {
         migratePlaintextSecrets()
@@ -68,19 +72,23 @@ internal class AndroidSecureSettings(
     }
 
     override val keys: Set<String>
-        get() = delegate.keys + preferences.all.keys
+        get() = delegate.keys + preferences.all.keys + unsaved.keys
 
     override val size: Int
         get() = keys.size
 
     override fun clear() {
         delegate.clear()
+        unsaved.clear()
         preferences.edit().clear().commit()
     }
 
     override fun remove(key: String) {
         delegate.remove(key)
-        if (key in secureSettingsKeys) preferences.edit().remove(key).commit()
+        if (key in secureSettingsKeys) {
+            unsaved.remove(key)
+            preferences.edit().remove(key).commit()
+        }
     }
 
     override fun hasKey(key: String): Boolean = if (key in secureSettingsKeys) getStringOrNull(key) != null else delegate.hasKey(key)
@@ -93,7 +101,14 @@ internal class AndroidSecureSettings(
             delegate.putString(key, value)
             return
         }
-        putSecret(key, value)
+        try {
+            putSecret(key, value)
+        } catch (_: Exception) {
+            // Keep any older plaintext copy until encryption works again.
+            unsaved[key] = value
+            return
+        }
+        unsaved.remove(key)
         delegate.remove(key)
     }
 
@@ -104,7 +119,9 @@ internal class AndroidSecureSettings(
 
     override fun getStringOrNull(key: String): String? =
         if (key in secureSettingsKeys) {
-            preferences.getString(key, null)?.let { decrypt(key, it) }
+            unsaved[key]
+                ?: preferences.getString(key, null)?.let { decrypt(key, it) }
+                ?: delegate.getStringOrNull(key)
         } else {
             delegate.getStringOrNull(key)
         }
