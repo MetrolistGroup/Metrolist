@@ -42,8 +42,9 @@ data class AiModelInfo(
     val outputUsdPerMTok: Double? = null,
     val contextLength: Int? = null,
     val tokensPerSecond: Double? = null,
+    val isFree: Boolean? = null,
 ) {
-    val free: Boolean get() = inputUsdPerMTok == 0.0 && outputUsdPerMTok == 0.0
+    val free: Boolean get() = (isFree != false) && inputUsdPerMTok == 0.0 && outputUsdPerMTok == 0.0
 }
 
 class AiModelCatalog(
@@ -299,6 +300,7 @@ class AiModelCatalog(
                         inputUsdPerMTok = pricing?.number("prompt")?.times(1_000_000),
                         outputUsdPerMTok = pricing?.number("completion")?.times(1_000_000),
                         contextLength = entry["context_length"]?.jsonPrimitive?.intOrNull,
+                        isFree = entry["isFree"]?.jsonPrimitive?.booleanOrNull,
                     )
                 }
 
@@ -377,7 +379,7 @@ class AiModelCatalog(
         ): String? {
             val candidates =
                 filterAndSort(models).filter { model ->
-                    !freeOnly || preset.allowsFreeModel(model, includeDefault = true)
+                    !freeOnly || preset.allowsFreeModel(model)
                 }
             val preferred =
                 if (freeOnly && preset.id == "OpenRouter") {

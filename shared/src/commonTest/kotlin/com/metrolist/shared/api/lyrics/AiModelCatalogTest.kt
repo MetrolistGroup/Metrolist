@@ -544,14 +544,22 @@ class AiModelCatalogTest {
         runBlocking {
             val kilo = AiProviderPresets.find("Kilo")!!
             var expectedAuth: String? = null
+            var expectedModel = kilo.defaultModel
             var requests = 0
             HttpClient(
                 MockEngine { request ->
+                    assertEquals("ai-gateway.kilo.ai", request.url.host)
+                    if (request.url.encodedPath == "/api/v1/models") {
+                        assertNull(request.headers[HttpHeaders.Authorization])
+                        return@MockEngine respond(
+                            """{"data":[{"id":"kilo-auto/free","pricing":{"prompt":"0","completion":"0"},"isFree":true},{"id":"stealth/glyph-cluster","pricing":{"prompt":"0","completion":"0"},"isFree":true},{"id":"cohere/north-mini-code:free","pricing":{"prompt":"0","completion":"0"},"isFree":false},{"id":"openrouter/auto","pricing":{"prompt":"0","completion":"0"},"isFree":false},{"id":"anthropic/claude-opus-5.5","pricing":{"prompt":"0.000003","completion":"0.000015"},"isFree":false}]}""",
+                        )
+                    }
                     requests++
                     assertEquals(expectedAuth, request.headers[HttpHeaders.Authorization])
-                    assertEquals("ai-gateway.kilo.ai", request.url.host)
                     assertEquals("/api/v1/chat/completions", request.url.encodedPath)
                     val payload = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
+                    assertEquals(expectedModel, payload["model"]?.jsonPrimitive?.contentOrNull)
                     val reasoning = payload["reasoning"]?.jsonObject
                     assertEquals(false, reasoning?.get("enabled")?.jsonPrimitive?.booleanOrNull)
                     assertEquals("none", reasoning?.get("effort")?.jsonPrimitive?.contentOrNull)
@@ -573,6 +581,34 @@ class AiModelCatalogTest {
                         ).getOrThrow()
                 assertEquals(listOf("Hola"), result.translatedLines)
 
+                val blankModelResult =
+                    translation
+                        .translateLyricsLines(
+                            lines = listOf("Hello"),
+                            provider = kilo.id,
+                            targetLanguage = "es",
+                            mode = "Literal",
+                            apiKey = "",
+                            baseUrl = "",
+                            model = "",
+                        ).getOrThrow()
+                assertEquals(listOf("Hola"), blankModelResult.translatedLines)
+
+                expectedModel = "stealth/glyph-cluster"
+                val catalogFreeResult =
+                    translation
+                        .translateLyricsLines(
+                            lines = listOf("Hello"),
+                            provider = kilo.id,
+                            targetLanguage = "es",
+                            mode = "Literal",
+                            apiKey = "",
+                            baseUrl = kilo.endpoint,
+                            model = "stealth/glyph-cluster",
+                        ).getOrThrow()
+                assertEquals(listOf("Hola"), catalogFreeResult.translatedLines)
+
+                expectedModel = kilo.defaultModel
                 expectedAuth = "Bearer sk-kilo"
                 val keyedResult =
                     translation
@@ -586,7 +622,7 @@ class AiModelCatalogTest {
                             model = kilo.defaultModel,
                         ).getOrThrow()
                 assertEquals(listOf("Hola"), keyedResult.translatedLines)
-                assertEquals(2, requests)
+                assertEquals(4, requests)
 
                 for (requiredProvider in listOf("OpenAI", "OpenAI-compatible")) {
                     val preset = AiProviderPresets.find(requiredProvider)!!
@@ -603,8 +639,25 @@ class AiModelCatalogTest {
                             ).exceptionOrNull()
                     assertTrue(failure is IllegalArgumentException)
                 }
-                val paidWithoutKey =
-                    translation
+                for (rejectedModel in listOf("anthropic/claude-opus-5.5", "openrouter/auto", "cohere/north-mini-code:free")) {
+                    val paidWithoutKey =
+                        translation
+                            .translateLyricsLines(
+                                lines = listOf("Hello"),
+                                provider = kilo.id,
+                                targetLanguage = "es",
+                                mode = "Literal",
+                                apiKey = "",
+                                baseUrl = kilo.endpoint,
+                                model = rejectedModel,
+                            ).exceptionOrNull()
+                    assertTrue(paidWithoutKey is IllegalArgumentException)
+                }
+                assertEquals(4, requests)
+            }
+            HttpClient(MockEngine { respond("", HttpStatusCode.ServiceUnavailable) }).use { client ->
+                val failure =
+                    LyricsTranslationClient(client)
                         .translateLyricsLines(
                             lines = listOf("Hello"),
                             provider = kilo.id,
@@ -612,10 +665,30 @@ class AiModelCatalogTest {
                             mode = "Literal",
                             apiKey = "",
                             baseUrl = kilo.endpoint,
-                            model = "anthropic/claude-opus-5.5",
+                            model = "stealth/glyph-cluster",
                         ).exceptionOrNull()
-                assertTrue(paidWithoutKey is IllegalArgumentException)
-                assertEquals(2, requests)
+                assertTrue(failure != null && failure !is IllegalArgumentException)
+            }
+            var requestedGeminiPath: String? = null
+            HttpClient(
+                MockEngine { request ->
+                    requestedGeminiPath = request.url.encodedPath
+                    respond("""{"candidates":[{"content":{"parts":[{"text":"{\"lines\":[\"Hola\"]}"}]}}]}""")
+                },
+            ).use { client ->
+                val result =
+                    LyricsTranslationClient(client)
+                        .translateLyricsLines(
+                            lines = listOf("Hello"),
+                            provider = "Gemini",
+                            targetLanguage = "es",
+                            mode = "Literal",
+                            apiKey = "AIza-test",
+                            baseUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+                            model = "",
+                        ).getOrThrow()
+                assertEquals(listOf("Hola"), result.translatedLines)
+                assertEquals("/v1beta/models/gemini-2.5-flash:generateContent", requestedGeminiPath)
             }
         }
 
@@ -626,7 +699,7 @@ class AiModelCatalogTest {
             HttpClient(
                 MockEngine {
                     respond(
-                        """{"data":[{"id":"kilo-auto/free","pricing":{"prompt":"0","completion":"0"}},{"id":"cohere/north-mini-code:free","pricing":{"prompt":"0","completion":"0"}},{"id":"anthropic/claude-opus-5.5","pricing":{"prompt":"0.000003","completion":"0.000015"}},{"id":"google/lyria-3-pro-preview","pricing":{"prompt":"0","completion":"0"}}]}""",
+                        """{"data":[{"id":"kilo-auto/free","pricing":{"prompt":"0","completion":"0"},"isFree":true},{"id":"stealth/glyph-cluster","pricing":{"prompt":"0","completion":"0"},"isFree":true},{"id":"cohere/north-mini-code:free","pricing":{"prompt":"0","completion":"0"},"isFree":true},{"id":"openrouter/auto","pricing":{"prompt":"0","completion":"0"},"isFree":false},{"id":"anthropic/claude-opus-5.5","pricing":{"prompt":"0.000003","completion":"0.000015"},"isFree":false},{"id":"google/lyria-3-pro-preview","pricing":{"prompt":"0","completion":"0"},"isFree":false}]}""",
                     )
                 },
             ).use { client ->
@@ -634,6 +707,14 @@ class AiModelCatalogTest {
                 assertEquals(
                     "kilo-auto/free",
                     catalog.validatedModel(kilo, "", kilo.endpoint, "retired/model:free"),
+                )
+                assertEquals(
+                    "stealth/glyph-cluster",
+                    catalog.validatedModel(kilo, "", kilo.endpoint, "stealth/glyph-cluster", freeOnly = true),
+                )
+                assertEquals(
+                    "kilo-auto/free",
+                    catalog.validatedModel(kilo, "", kilo.endpoint, "openrouter/auto", freeOnly = true),
                 )
                 assertEquals(
                     "kilo-auto/free",

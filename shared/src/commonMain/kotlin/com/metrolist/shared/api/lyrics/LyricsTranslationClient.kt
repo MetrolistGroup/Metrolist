@@ -87,16 +87,28 @@ class LyricsTranslationClient(
         ).map { verifiedModel }
     }
 
-    private fun missingAiKey(
+    private suspend fun validateAiCredentials(
         provider: String,
         apiKey: String,
         model: String = "",
-    ): Boolean {
-        if (apiKey.isNotBlank()) return false
-        val preset = AiProviderPresets.find(provider) ?: return true
-        if (!preset.keyless) return true
+        baseUrl: String = "",
+    ): Throwable? {
+        if (apiKey.isNotBlank()) return null
+        val preset = AiProviderPresets.find(provider) ?: return IllegalArgumentException("AI API key is required")
+        if (!preset.keyless) return IllegalArgumentException("AI API key is required")
         val effectiveModel = model.ifBlank { preset.defaultModel }
-        return effectiveModel.isNotBlank() && !preset.isKeylessFreeModel(effectiveModel)
+        if (effectiveModel.isBlank() || preset.isKeylessFreeModel(effectiveModel)) return null
+        val catalogResult = modelCatalog.models(preset, apiKey, baseUrl.ifBlank { preset.endpoint })
+        val models =
+            catalogResult.getOrNull()
+                ?: return catalogResult.exceptionOrNull()
+                    ?: IllegalArgumentException("AI API key is required")
+        val catalogModel = models.firstOrNull { it.id == effectiveModel }
+        return if (catalogModel != null && preset.allowsFreeModel(catalogModel)) {
+            null
+        } else {
+            IllegalArgumentException("AI API key is required")
+        }
     }
 
     private fun HttpRequestBuilder.aiTimeout() {
@@ -199,7 +211,9 @@ class LyricsTranslationClient(
         onModelSelected: (String) -> Unit = {},
     ): Result<LyricsAiResult> =
         try {
-            if (missingAiKey(provider, apiKey, model)) return Result.failure(IllegalArgumentException("AI API key is required"))
+            val preset = AiProviderPresets.find(provider)
+            val effectiveModel = if (preset?.keyless == true) model.ifBlank { preset.defaultModel } else model
+            validateAiCredentials(provider, apiKey, effectiveModel, baseUrl)?.let { return Result.failure(it) }
             val lineCount = lines.size
             val effectiveSystemPrompt =
                 systemPrompt.takeIf { it.isNotBlank() }
@@ -256,7 +270,7 @@ class LyricsTranslationClient(
                     provider = provider,
                     apiKey = apiKey,
                     baseUrl = baseUrl,
-                    model = model,
+                    model = effectiveModel,
                     systemPrompt = effectiveSystemPrompt.replace("{lineCount}", lineCount.toString()),
                     userPrompt = userPrompt,
                     schemaName = schemaName,
@@ -317,7 +331,7 @@ class LyricsTranslationClient(
         temperature: Double,
         onModelSelected: (String) -> Unit = {},
     ): Result<String> {
-        if (missingAiKey(provider, apiKey, model)) return Result.failure(IllegalArgumentException("AI API key is required"))
+        validateAiCredentials(provider, apiKey, model, baseUrl)?.let { return Result.failure(it) }
         return when (AiProviderPresets.protocolFor(provider, baseUrl, model)) {
             AiProtocol.ANTHROPIC -> {
                 requestAnthropicCompatible(
@@ -529,8 +543,14 @@ class LyricsTranslationClient(
             if (responseFormat != null) put("response_format", responseFormat)
         }
 
+        val fallbackUrl =
+            AiProviderPresets
+                .find(provider)
+                ?.takeIf { it.keyless }
+                ?.endpoint
+                ?: "https://openrouter.ai/api/v1/chat/completions"
         return requestWithStructuredFallback(
-            url = baseUrl.ifBlank { "https://openrouter.ai/api/v1/chat/completions" },
+            url = baseUrl.ifBlank { fallbackUrl },
             bodies =
                 listOf(
                     body(openAiResponseFormat(schemaName, schema)),
@@ -1484,7 +1504,9 @@ class LyricsTranslationClient(
                 }
 
                 else -> {
-                    if (missingAiKey(provider, apiKey, translationModel)) throw IllegalArgumentException("missing credentials")
+                    validateAiCredentials(provider, apiKey, translationModel, baseUrl)?.let {
+                        throw if (it is IllegalArgumentException) IllegalArgumentException("missing credentials") else it
+                    }
                     val detection =
                         if (activationMode == "Automatic") {
                             shouldTranslateLyrics(
