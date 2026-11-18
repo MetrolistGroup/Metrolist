@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_lock_set_title">הגדר סיסמא</string>
+    <string name="settings_lock_enter_title">הזן סיסמא</string>
+    <string name="settings_lock_change_title">שינוי סיסמא</string>
+    <string name="settings_lock_password">סיסמא</string>
+    <string name="settings_lock_confirm_password">אימות סיסמא</string>
+    <string name="settings_lock_current_password">סיסמא נוכחית</string>
+    <string name="settings_lock_new_password">סיסמא חדשה</string>
+    <string name="settings_lock_change_button">שנה סיסמא</string>
+    <string name="settings_lock_confirm_button">אישור</string>
+    <string name="settings_lock_cancel_button">ביטול</string>
+    <string name="settings_lock_mismatch">הסיסמאות אינן תואמות</string>
+    <string name="settings_lock_empty">הסיסמא לא יכולה להיות ריקה</string>
+    <string name="settings_lock_wrong">סיסמא שגויה</string>
+</resources>

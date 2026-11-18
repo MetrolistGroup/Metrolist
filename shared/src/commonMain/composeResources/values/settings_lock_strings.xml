@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_lock_set_title">Set a password</string>
+    <string name="settings_lock_enter_title">Enter password</string>
+    <string name="settings_lock_change_title">Change password</string>
+    <string name="settings_lock_password">Password</string>
+    <string name="settings_lock_confirm_password">Confirm password</string>
+    <string name="settings_lock_current_password">Current password</string>
+    <string name="settings_lock_new_password">New password</string>
+    <string name="settings_lock_change_button">Change password</string>
+    <string name="settings_lock_confirm_button">Confirm</string>
+    <string name="settings_lock_cancel_button">Cancel</string>
+    <string name="settings_lock_mismatch">Passwords do not match</string>
+    <string name="settings_lock_empty">Password cannot be empty</string>
+    <string name="settings_lock_wrong">Wrong password</string>
+</resources>

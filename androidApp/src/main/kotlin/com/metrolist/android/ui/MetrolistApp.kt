@@ -1641,6 +1641,8 @@ fun MetrolistApp(
                                                             authManager,
                                                             context,
                                                             coroutineScope,
+                                                            pendingSearchQuery,
+                                                            pendingRoomCode,
                                                             floatingActionsBottomInset,
                                                             homeScrollToTopEvents,
                                                             libraryScrollToTopEvents,
@@ -1651,9 +1653,8 @@ fun MetrolistApp(
                                                                 authManager,
                                                                 context,
                                                                 coroutineScope,
-                                                                { pendingSearchQuery },
-                                                                { pendingSearchQuery = null },
-                                                                { pendingRoomCode },
+                                                                pendingSearchQuery,
+                                                                pendingRoomCode,
                                                                 floatingActionsBottomInset,
                                                                 homeScrollToTopEvents,
                                                                 libraryScrollToTopEvents,
@@ -2417,10 +2418,8 @@ fun getEntryProvider(
     authManager: AuthManager,
     context: Context,
     scope: CoroutineScope,
-    // Getters: nav3 keeps a retained entry's content across provider changes, so entries must read the current value.
-    pendingSearchQuery: () -> String?,
-    onSearchQueryConsumed: () -> Unit,
-    pendingRoomCode: () -> String?,
+    pendingSearchQuery: String?,
+    pendingRoomCode: String?,
     floatingActionsBottomInset: State<Dp>,
     homeScrollToTopEvents: SharedFlow<Long>,
     libraryScrollToTopEvents: SharedFlow<Long>,
@@ -2514,8 +2513,7 @@ fun getEntryProvider(
             SearchScreen(
                 navigator = navigator,
                 floatingActionsBottomInset = floatingActionsBottomInset,
-                initialQuery = pendingSearchQuery(),
-                onInitialQueryConsumed = onSearchQueryConsumed,
+                initialQuery = pendingSearchQuery,
                 onSearchResultsVisible = onSearchResultsVisible,
             )
         }
@@ -2711,7 +2709,7 @@ fun getEntryProvider(
 
         entry<Screen.ListenTogether>(metadata = navTabMetadata) {
             ListenTogetherScreen(
-                initialRoomCode = pendingRoomCode(),
+                initialRoomCode = pendingRoomCode,
                 onNavigateBack = { navigator.goBack() },
                 onNavigateToSettings = { navigator.navigate(Screen.ListenTogetherSettings) },
             )
@@ -2751,30 +2749,34 @@ fun getEntryProvider(
         }
 
         entry<Screen.Settings>(metadata = navTabMetadata) {
-            SettingsScreen(
-                onNavigateBack = {
-                    val target = resolveAndPersistStartupScreen()
-                    navigator.state.startRoute = target
-                    navigator.goBack()
-                    if (!navigator.state.topLevelRoute.isVisibleNavigationScreen()) navigator.navigate(target)
-                },
-                onNavigateToDownloads = { navigator.navigate(Screen.AutoPlaylist("downloaded")) },
-                onNavigateToArtist = { artistId -> navigator.navigate(Screen.Artist(artistId)) },
-            )
+            SettingsPasswordGate(onDenied = { navigator.goBack() }) {
+                SettingsScreen(
+                    onNavigateBack = {
+                        val target = resolveAndPersistStartupScreen()
+                        navigator.state.startRoute = target
+                        navigator.goBack()
+                        if (!navigator.state.topLevelRoute.isVisibleNavigationScreen()) navigator.navigate(target)
+                    },
+                    onNavigateToDownloads = { navigator.navigate(Screen.AutoPlaylist("downloaded")) },
+                    onNavigateToArtist = { artistId -> navigator.navigate(Screen.Artist(artistId)) },
+                )
+            }
         }
 
         entry<Screen.SettingsPage>(metadata = navTabMetadata) { route ->
-            SettingsScreen(
-                initialPage = route.page,
-                onNavigateBack = {
-                    val target = resolveAndPersistStartupScreen()
-                    navigator.state.startRoute = target
-                    navigator.goBack()
-                    if (!navigator.state.topLevelRoute.isVisibleNavigationScreen()) navigator.navigate(target)
-                },
-                onNavigateToDownloads = { navigator.navigate(Screen.AutoPlaylist("downloaded")) },
-                onNavigateToArtist = { navigator.navigate(Screen.Artist(it)) },
-            )
+            SettingsPasswordGate(onDenied = { navigator.goBack() }) {
+                SettingsScreen(
+                    initialPage = route.page,
+                    onNavigateBack = {
+                        val target = resolveAndPersistStartupScreen()
+                        navigator.state.startRoute = target
+                        navigator.goBack()
+                        if (!navigator.state.topLevelRoute.isVisibleNavigationScreen()) navigator.navigate(target)
+                    },
+                    onNavigateToDownloads = { navigator.navigate(Screen.AutoPlaylist("downloaded")) },
+                    onNavigateToArtist = { navigator.navigate(Screen.Artist(it)) },
+                )
+            }
         }
 
         entry<Screen.Statistics>(metadata = navTabMetadata) {
