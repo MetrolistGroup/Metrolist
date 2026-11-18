@@ -183,7 +183,7 @@ Tapping a search result inside a playlist, album or stored collection queues the
 
 **Keep paused when changing songs** is off by default. When on, local skips and selections keep an existing pause; a first song still plays. End-of-track transitions, Cast and remote commands are unaffected.
 
-Start radio for the current song keeps its audio, position and play state while replacing the queue. A different seed starts from the beginning. On Android, Start radio turns repeat off so recommendations can populate the queue.
+Start radio for the current song keeps its audio and position while replacing the queue. It resumes a paused song unless **Keep paused when changing songs** is on; the system media Start radio action always resumes it. While casting, the receiver keeps its playback state. A different seed starts from the beginning. On Android, Start radio turns repeat off so recommendations can populate the queue.
 
 Desktop manual Next can promote an already prepared successor with the chosen play/pause intent. Active crossfades and podcasts use ordinary advancement so cancellation and resume positions apply.
 

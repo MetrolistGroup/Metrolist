@@ -440,7 +440,10 @@ internal class AndroidQueueCoordinator(
             }
     }
 
-    fun playMix(seed: SongItem) {
+    fun playMix(
+        seed: SongItem,
+        startPlaying: Boolean,
+    ) {
         if (seed.isUnavailable || BlockedContent.isBlocked(seed)) return
         val title = context.getString(R.string.song_mix_title, seed.title)
         val current = player.currentSong.value?.takeIf { it.id == seed.id }
@@ -456,6 +459,8 @@ internal class AndroidQueueCoordinator(
                 ),
             )
         ) {
+            // The target keeps a retained seed's play state, so send the play intent separately.
+            if (startPlaying) AndroidDeviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PLAY))
             return
         }
         _repeatMode.value = Player.REPEAT_MODE_OFF
@@ -469,10 +474,11 @@ internal class AndroidQueueCoordinator(
                     queue.toggleShuffle(legacyShuffle = Settings.shared.useLegacyShuffle)
                 }
                 player.restoreQueue(queue.snapshot())
+                if (startPlaying && !castState().isConnected && !player.wantsPlayback) player.resume()
                 _shuffleModeEnabled.value = player.isShuffleEnabled
             }
         } else {
-            playQueue(songs = listOf(seed), queueTitle = title, finite = false, fromRemote = true)
+            playQueue(songs = listOf(seed), queueTitle = title, finite = false, fromRemote = true, startPlaying = startPlaying)
         }
         isRadioQueue = true
         radioQueuePlaylistId = "RDAMVM${seed.id}"

@@ -2677,9 +2677,12 @@ class MusicService :
 
     fun extendPlaylistBeforeSkip(resumePlayback: Boolean? = null): Boolean = queueCoordinator.extendPlaylistBeforeSkip(resumePlayback)
 
-    fun playMix(seed: SongItem) {
+    fun playMix(
+        seed: SongItem,
+        startPlaying: Boolean,
+    ) {
         playbackBenchmark.cancel()
-        queueCoordinator.playMix(seed)
+        queueCoordinator.playMix(seed, startPlaying)
     }
 
     fun updatePendingRestorePosition(position: Long) = queueCoordinator.updatePendingRestorePosition(position)
@@ -3161,7 +3164,7 @@ class MusicService :
                     if (AndroidListenTogetherManager.isGuestPlaybackLocked) {
                         return Futures.immediateFuture(SessionResult(SessionError.ERROR_PERMISSION_DENIED))
                     }
-                    player.currentSong.value?.let(::playMix)
+                    player.currentSong.value?.let { playMix(it, startPlaying = true) }
                 }
 
                 else -> {
