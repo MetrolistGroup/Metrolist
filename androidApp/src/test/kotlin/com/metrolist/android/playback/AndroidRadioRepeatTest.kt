@@ -7,6 +7,7 @@ import androidx.room3.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.metrolist.shared.api.musicvideo.MusicVideoResolver
 import com.metrolist.shared.db.MusicDatabase
+import com.metrolist.shared.model.MUSIC_VIDEO_TYPE_LIVE
 import com.metrolist.shared.model.RadioQueuePage
 import com.metrolist.shared.model.SearchResultPage
 import com.metrolist.shared.model.SongItem
@@ -54,6 +55,10 @@ class AndroidRadioRepeatTest {
     fun currentSongRadioCanKeepPausedPlaybackPaused() = checkRepeatModes(startRadio = true, currentSongId = "seed", startPlaying = false)
 
     @Test
+    fun playingLiveCurrentSongRadioDoesNotSeekToDefaultPosition() =
+        checkRepeatModes(startRadio = true, currentSongId = "seed", currentPlaybackRequested = true, liveSong = true)
+
+    @Test
     fun differentSongRadioStartsFromZero() = checkRepeatModes(startRadio = true, currentSongId = "other")
 
     @Test
@@ -72,6 +77,8 @@ class AndroidRadioRepeatTest {
         currentSongId: String? = null,
         startPlaying: Boolean = true,
         completedPlaybackInstanceId: Long? = null,
+        currentPlaybackRequested: Boolean = false,
+        liveSong: Boolean = false,
     ) {
         runTest {
             Settings.replaceSharedForTest(Settings(MapSettings()))
@@ -98,7 +105,16 @@ class AndroidRadioRepeatTest {
                     val queue = MusicQueue()
                     val seed = SongItem("seed", "Seed", null, emptyList(), null)
                     val recommendation = seed.copy(id = "recommendation")
-                    currentSongId?.let { queue.setQueue(listOf(seed.copy(id = "previous"), seed.copy(id = it), seed.copy(id = "next")), 1) }
+                    currentSongId?.let {
+                        queue.setQueue(
+                            listOf(
+                                seed.copy(id = "previous"),
+                                seed.copy(id = it, musicVideoType = if (liveSong) MUSIC_VIDEO_TYPE_LIVE else null),
+                                seed.copy(id = "next"),
+                            ),
+                            1,
+                        )
+                    }
                     var playbackRequests = 0
                     var queueRestores = 0
                     var resumeRequests = 0
@@ -118,6 +134,10 @@ class AndroidRadioRepeatTest {
 
                                 "isReady" -> {
                                     currentSongId != null
+                                }
+
+                                "getWantsPlayback" -> {
+                                    currentPlaybackRequested
                                 }
 
                                 "getPlaybackTransitionPending" -> {
@@ -210,7 +230,7 @@ class AndroidRadioRepeatTest {
                         val retained = currentSongId == seed.id
                         assertEquals(if (retained) 0 else 1, playbackRequests)
                         assertEquals(if (retained) 1 else 0, queueRestores)
-                        assertEquals(if (retained && startPlaying) 1 else 0, resumeRequests)
+                        assertEquals(if (retained && startPlaying && !currentPlaybackRequested) 1 else 0, resumeRequests)
                         assertEquals(0, queue.currentIndex.value)
                         val appended =
                             suspendCoroutineUninterceptedOrReturn<Boolean> { continuation ->

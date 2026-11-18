@@ -472,7 +472,7 @@ internal class AndroidQueueCoordinator(
                     queue.toggleShuffle(legacyShuffle = Settings.shared.useLegacyShuffle)
                 }
                 player.restoreQueue(queue.snapshot())
-                if (startPlaying) player.resume()
+                if (startPlaying && !player.wantsPlayback) player.resume()
                 _shuffleModeEnabled.value = player.isShuffleEnabled
             }
         } else {
