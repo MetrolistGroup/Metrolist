@@ -57,6 +57,7 @@ import com.metrolist.shared.generated.resources.queue_current_playing
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.theme.rememberReducedMotion
+import com.metrolist.shared.ui.utils.settled
 import com.metrolist.shared.ui.utils.toPolygonShape
 import kotlinx.coroutines.flow.collectLatest
 import org.jetbrains.compose.resources.stringResource
@@ -104,7 +105,7 @@ fun animatedCurrentSongArtworkShape(
                         MaterialShapes.Cookie9Sided,
                     )
                 return Outline.Generic(
-                    morph.toPath(progress).apply { transform(Matrix().apply { scale(size.width, size.height) }) },
+                    morph.toPath(progress).apply { transform(Matrix().apply { scale(size.width, size.height) }) }.settled(),
                 )
             }
         }
