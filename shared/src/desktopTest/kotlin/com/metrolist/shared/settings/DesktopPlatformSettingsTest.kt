@@ -20,6 +20,36 @@ import kotlin.test.assertTrue
 
 class DesktopPlatformSettingsTest {
     @Test
+    fun enumRepairPreservesOrdinalsInTheStringBackedDesktopStore() {
+        val root = createTempDirectory("desktop-enum-repair").toFile()
+        try {
+            val file = File(root, "settings.properties")
+            val properties =
+                Properties().apply {
+                    setProperty("settingsMigrationVersion", "14")
+                    setProperty("playerBackgroundStyle", PlayerBackgroundStyle.ANIMATED_GRADIENT.ordinal.toString())
+                    setProperty("sliderStyle", SliderStyle.WAVY.ordinal.toString())
+                    setProperty("themeMode", "DARK")
+                }
+            val secrets = UnavailableSecretStore(File(root, "secrets.properties"), RuntimeException("Test store"))
+            val backing = DesktopFileSettings(file, properties, secrets)
+            repeat(2) {
+                val settings = Settings(backing)
+                assertEquals(PlayerBackgroundStyle.ANIMATED_GRADIENT, settings.playerBackgroundStyle)
+                assertEquals(SliderStyle.WAVY, settings.sliderStyle)
+                assertEquals(ThemeMode.DARK, settings.themeMode)
+            }
+            backing.flush()
+            val reopened = Settings(DesktopFileSettings(file, loadPublicProperties(file), secrets))
+            assertEquals(PlayerBackgroundStyle.ANIMATED_GRADIENT, reopened.playerBackgroundStyle)
+            assertEquals(SliderStyle.WAVY, reopened.sliderStyle)
+            assertEquals(ThemeMode.DARK, reopened.themeMode)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun providerAiKeysMigrateToAndRemainInTheSecretStore() {
         val root = createTempDirectory("provider-ai-keys").toFile()
         try {

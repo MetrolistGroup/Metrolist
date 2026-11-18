@@ -13,7 +13,6 @@ import java.security.InvalidKeyException
 import java.security.SecureRandom
 import javax.crypto.SecretKey
 import kotlin.test.assertEquals
-import kotlin.test.assertFails
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
@@ -76,9 +75,12 @@ class AndroidSecureSettingsTest {
         keyAccess.current.unavailable = true
         val delegate = MapSettings().apply { putString("innerTubeCookie", "original cookie") }
         val settings = AndroidSecureSettings(context, delegate, keyAccess)
+        assertEquals("original cookie", settings.getStringOrNull("innerTubeCookie"))
 
-        assertFails { settings.putString("innerTubeCookie", "replacement cookie") }
+        settings.putString("innerTubeCookie", "replacement cookie")
+        assertEquals("replacement cookie", settings.getStringOrNull("innerTubeCookie"))
         assertEquals("original cookie", delegate.getStringOrNull("innerTubeCookie"))
+        assertEquals("original cookie", AndroidSecureSettings(context, delegate, keyAccess).getStringOrNull("innerTubeCookie"))
         keyAccess.current.unavailable = false
         settings.putString("innerTubeCookie", "replacement cookie")
         assertNull(delegate.getStringOrNull("innerTubeCookie"))

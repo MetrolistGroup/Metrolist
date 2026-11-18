@@ -244,6 +244,18 @@ interface HistoryDao {
         accountKey: String?,
     )
 
+    @Query("UPDATE event SET remoteFeedbackToken = :token WHERE id = :id")
+    suspend fun updateHistoryEventToken(
+        id: Long,
+        token: String?,
+    )
+
+    @Query("UPDATE history_snapshot SET remoteFeedbackToken = :token WHERE eventId = :id")
+    suspend fun updateHistorySnapshotToken(
+        id: Long,
+        token: String?,
+    )
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(searchHistory: SearchHistory)
 

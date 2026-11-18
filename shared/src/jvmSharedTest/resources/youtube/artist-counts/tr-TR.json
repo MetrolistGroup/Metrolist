@@ -1,0 +1,41 @@
+{
+  "header": {
+    "musicImmersiveHeaderRenderer": {
+      "subscriptionButton": {
+        "subscribeButtonRenderer": {
+          "subscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 Mn"
+              }
+            ]
+          },
+          "longSubscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 Mn abone"
+              }
+            ],
+            "accessibility": {
+              "accessibilityData": {
+                "label": "59,3 milyon abone"
+              }
+            }
+          }
+        }
+      },
+      "monthlyListenerCount": {
+        "runs": [
+          {
+            "text": "Aylık kitle: 240 Mn"
+          }
+        ],
+        "accessibility": {
+          "accessibilityData": {
+            "label": "Aylık kitle: 240 milyon"
+          }
+        }
+      }
+    }
+  }
+}

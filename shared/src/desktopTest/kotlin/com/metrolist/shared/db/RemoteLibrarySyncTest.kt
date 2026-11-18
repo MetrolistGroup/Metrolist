@@ -7,15 +7,56 @@ import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.viewmodels.LibraryViewModel
+import com.russhwolf.settings.MapSettings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDateTime
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class RemoteLibrarySyncTest {
+    @Test
+    fun cleanLibraryScansRemoveTrackedStaleMembershipWithoutDeletingSongDataOrUntrackedSaves() =
+        runBlocking {
+            val previousSettings = Settings.sharedOverrideForTest()
+            Settings.replaceSharedForTest(Settings(MapSettings()))
+            val path = Files.createTempFile("library-membership", ".db")
+            Files.delete(path)
+            val database = getDesktopDatabaseBuilder(path.toFile()).build()
+            val library = LibraryViewModel(CoroutineScope(Job().apply { cancel() }))
+            try {
+                val dao = database.dao()
+                val savedAt = LocalDateTime(2026, 1, 1, 0, 0)
+                val tracked = SongEntity("tracked", "Old remote row", inLibrary = savedAt, isDownloaded = true, totalPlayTime = 3000)
+                val untracked = tracked.copy(id = "untracked", title = "Local save")
+                val local = tracked.copy(id = "local", isLocal = true)
+                dao.upsert(tracked)
+                dao.upsert(untracked)
+                dao.upsert(local)
+                Settings.shared.lastRemoteLibraryItemKeysJson = """["song:tracked","song:local"]"""
+
+                library.synchronizeRemote(database, emptyList(), emptyList(), emptyList(), reconcile = true)
+                assertNotNull(dao.getSongById(tracked.id)!!.song.inLibrary)
+                library.synchronizeRemote(database, emptyList(), emptyList(), emptyList(), reconcile = false)
+                assertNotNull(dao.getSongById(tracked.id)!!.song.inLibrary)
+                library.synchronizeRemote(database, emptyList(), emptyList(), emptyList(), reconcile = true)
+                assertEquals(tracked.copy(inLibrary = null), dao.getSongById(tracked.id)!!.song)
+                assertEquals(untracked, dao.getSongById(untracked.id)!!.song)
+                assertEquals(local, dao.getSongById(local.id)!!.song)
+            } finally {
+                database.close()
+                Files.deleteIfExists(path)
+                Settings.replaceSharedForTest(previousSettings)
+            }
+        }
+
     @Test
     fun largeBatchPreservesLocalMetadataAndMergesSharedArtistsInOrder() =
         runBlocking {

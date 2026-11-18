@@ -66,7 +66,7 @@ object DesktopCrashRecovery {
                         )} ${System.getProperty("os.version")} ${System.getProperty("os.arch")} / ${thread.name}",
                         error,
                     )
-                handoffDesktopCrash(report, store, ::prompt, ::desktopRestartCommand) { command ->
+                handoffDesktopCrash(report, store, { prompt(report.text) }, ::desktopRestartCommand) { command ->
                     ProcessBuilder(command).prepareDesktopRelaunch().inheritIO().start()
                 }
                 Runtime.getRuntime().halt(1)
@@ -76,7 +76,7 @@ object DesktopCrashRecovery {
 
     private fun label(resource: StringResource) = runBlocking { getString(resource) }
 
-    private fun prompt(): DesktopCrashChoice =
+    private fun prompt(report: String): DesktopCrashChoice =
         awaitDesktopCrashChoice(
             isHeadless = GraphicsEnvironment.isHeadless(),
             isDispatchThread = EventQueue.isDispatchThread(),
@@ -94,6 +94,8 @@ object DesktopCrashRecovery {
                     letItCrash,
                 )
             val dialog = pane.createDialog(null, label(Res.string.crash_imminent_title))
+            installCrashScreenshotHint(dialog, onCopy = { copy(report) }, onShare = { share(report) })
+            dialog.pack()
             try {
                 dialog.addWindowListener(
                     object : WindowAdapter() {
@@ -115,6 +117,7 @@ object DesktopCrashRecovery {
         EventQueue.invokeLater {
             val frame = JFrame(label(Res.string.crash_title))
             frame.defaultCloseOperation = WindowConstants.EXIT_ON_CLOSE
+            installCrashScreenshotHint(frame, onCopy = { copy(report) }, onShare = { share(report) })
             frame.add(
                 JScrollPane(
                     JTextArea(report).apply {
@@ -134,7 +137,7 @@ object DesktopCrashRecovery {
                     it.addActionListener { block() }
                     actions.add(it)
                 }
-            action(Res.string.crash_copy_logs) { Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(report), null) }
+            action(Res.string.crash_copy_logs) { copy(report) }
             action(Res.string.crash_share_logs) { share(report) }
             action(Res.string.crash_restart) {
                 ProcessBuilder(desktopRestartCommand()).prepareDesktopRelaunch().inheritIO().start()
@@ -173,6 +176,10 @@ object DesktopCrashRecovery {
                 }
             }, "CrashUpdateCheck").start()
         }
+    }
+
+    private fun copy(report: String) {
+        Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(report), null)
     }
 
     fun share(report: String) {

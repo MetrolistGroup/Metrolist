@@ -63,6 +63,12 @@ class DesktopPlaybackController(
         songsOnly: Boolean,
     ) = PlayerState.playTrack(song, queue.ifEmpty { listOf(song) }, songsOnly = songsOnly)
 
+    override fun shuffleQueue(
+        songs: List<SongItem>,
+        queueTitle: String?,
+        songsOnly: Boolean,
+    ) = PlayerState.shuffleQueue(songs, songsOnly)
+
     override fun currentPositionMs(): Long = PlayerState.currentMediaPositionMs()
 
     override fun togglePlayPause() = PlayerState.togglePlay()

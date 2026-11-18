@@ -121,6 +121,7 @@ class MediaSessionPlayerTest {
                     null
                 },
                 onError = {},
+                isDownloaded = { false },
             )
         try {
             controller.markQueueTarget("old-video")

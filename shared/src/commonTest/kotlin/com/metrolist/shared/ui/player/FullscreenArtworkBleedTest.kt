@@ -15,6 +15,17 @@ class FullscreenArtworkBleedTest {
     private val artHeight = 64
     private val height = 64 * 3
 
+    @Test
+    fun wideThumbnailContinuationFadesInBeforeTheArtworkEnds() {
+        for (artHeight in listOf(450, 600, 800)) {
+            val start = fullscreenArtworkDetailTop(800, artHeight)
+            assertTrue(start + 48 <= artHeight)
+            assertEquals(0, start % 4)
+        }
+        assertEquals(560, fullscreenArtworkDetailTop(800, 800))
+        assertEquals(0, fullscreenArtworkDetailTop(32, 18))
+    }
+
     private fun render(
         canvas: IntArray,
         tone: Int,

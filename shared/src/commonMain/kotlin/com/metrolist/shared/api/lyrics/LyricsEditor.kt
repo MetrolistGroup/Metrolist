@@ -38,6 +38,15 @@ class LyricsEditor(
             current = current.copy(selectionStart = selectionStart, selectionEnd = selectionEnd)
             return
         }
+        legacySnapshot(text)?.let { next ->
+            push(
+                next.copy(
+                    selectionStart = selectionStart.coerceIn(0, next.text.length),
+                    selectionEnd = selectionEnd.coerceIn(0, next.text.length),
+                ),
+            )
+            return
+        }
         val before = current
         val oldRows =
             before.text
@@ -368,6 +377,24 @@ private fun snapshot(document: JsonObject): LyricsEditorSnapshot =
         },
         document,
     )
+
+private fun legacySnapshot(text: String): LyricsEditorSnapshot? {
+    if (text.length > 8 * 1024 * 1024) return null
+    val rows =
+        text
+            .lineSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .toList()
+    if (rows.none { it.startsWith('<') }) return null
+    for ((index, row) in rows.withIndex()) {
+        if (parseRow(row) != null) continue
+        val previous = rows.getOrNull(index - 1) ?: return null
+        val header = parseRow(previous) ?: return null
+        if (!MlxParser.isLegacyWordLine(row) && !(header.text.isEmpty() && parseRow(previous + row) != null)) return null
+    }
+    return runCatching { snapshot(editorDocument(text, importing = true)) }.getOrNull()
+}
 
 private fun updateLine(
     source: JsonObject?,

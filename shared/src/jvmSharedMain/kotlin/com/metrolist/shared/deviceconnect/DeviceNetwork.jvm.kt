@@ -16,6 +16,15 @@ internal fun isDeviceConnectLanAddress(address: InetAddress): Boolean =
 
 internal fun deviceConnectLanAddresses(): List<InetAddress> =
     runCatching {
+        deviceConnectLanInterfaces()
+            .flatMap { it.inetAddresses.toList() }
+            .filter(::isDeviceConnectLanAddress)
+            .distinct()
+            .sortedBy { it.hostAddress }
+    }.getOrDefault(emptyList())
+
+internal fun deviceConnectLanInterfaces(): List<NetworkInterface> =
+    runCatching {
         NetworkInterface
             .getNetworkInterfaces()
             .toList()
@@ -24,18 +33,24 @@ internal fun deviceConnectLanAddresses(): List<InetAddress> =
                     it.isUp &&
                         !it.isLoopback &&
                         !it.isVirtual &&
+                        !it.isPointToPoint &&
                         it.supportsMulticast() &&
-                        isDeviceConnectLanInterfaceName(it.name)
+                        isDeviceConnectLanInterfaceName(it.name, it.displayName.orEmpty())
                 }.getOrDefault(false)
-            }.flatMap { it.inetAddresses.toList() }
-            .filter(::isDeviceConnectLanAddress)
-            .distinct()
-            .sortedBy { it.hostAddress }
+            }
     }.getOrDefault(emptyList())
 
-internal fun isDeviceConnectLanInterfaceName(name: String): Boolean =
-    listOf("br-", "docker", "veth", "tun", "tap", "ppp", "vpn", "wg")
-        .none(name.lowercase()::startsWith)
+internal fun isDeviceConnectLanInterfaceName(
+    name: String,
+    displayName: String = name,
+): Boolean {
+    val normalized = name.lowercase()
+    return listOf("br-", "docker", "veth", "tun", "utun", "tap", "ppp", "vpn", "wg", "awdl", "llw", "anpi", "bridge")
+        .none(normalized::startsWith) &&
+        !Regex("^ap\\d").containsMatchIn(normalized) &&
+        listOf("virtual", "vethernet", "hyper-v", "bluetooth", "wi-fi direct", "hosted network")
+            .none { it in normalized || it in displayName.lowercase() }
+}
 
 internal fun isDeviceConnectAllowedClientAddress(value: String?): Boolean {
     val host = value?.substringBefore('%') ?: return false

@@ -11,10 +11,10 @@ from ci_paths import changed_paths, classify, metadata_only
 
 
 CHECKS = {
-    "android": ("build-android.yml", "Android / APK"),
-    "desktop": ("build-desktop.yml", "Desktop / Linux x64"),
-    "ios": ("build-ios.yml", "iOS App & Framework / Validate iOS"),
-    "repository": ("verify-repository-checks.yml", "checks"),
+    "android": ("ci.yml", "Android / APK"),
+    "desktop": ("ci.yml", "Desktop / Linux x64"),
+    "ios": ("ci.yml", "iOS / Validate iOS"),
+    "repository": ("ci.yml", "Select checks and repository checks"),
 }
 
 
@@ -71,8 +71,8 @@ def verify_run(repository, sha, workflow, job_name, get=api, required=True):
         return None
     if len(matches) != 1 or matches[0]["conclusion"] != "success":
         raise ValueError(f"{workflow}: required job {job_name!r} did not succeed: {run['html_url']}")
-    if workflow == "build-android.yml" and not any(step["name"] == "Test Android string generation" and step["conclusion"] == "success" for step in matches[0].get("steps", [])):
-        raise ValueError(f"{workflow}: this run only packaged an APK. Dispatch variant=debug to run Android verification.")
+    if workflow == "ci.yml" and job_name == "Android / APK" and not any(step["name"] == "Test Android string generation" and step["conclusion"] == "success" for step in matches[0].get("steps", [])):
+        raise ValueError(f"{workflow}: this run lacks Android verification. Dispatch ci.yml to run the checks.")
     check_id = matches[0]["check_run_url"].rsplit("/", 1)[1]
     check = get(f"repos/{repository}/check-runs/{check_id}")[0]
     if check["head_sha"] != sha or check["app"]["slug"] != "github-actions" or check["status"] != "completed" or check["conclusion"] != "success":
@@ -105,7 +105,7 @@ def main():
                 stream.write(summary)
         return
     raise ValueError("Release blocked before packaging. " + " ".join(errors) +
-                     " Run the required Verify workflows on main at the release revision, then retry the release. See docs/releasing.md.")
+                     " Run CI on main at the release revision, then retry the release. See docs/releasing.md.")
 
 
 if __name__ == "__main__":

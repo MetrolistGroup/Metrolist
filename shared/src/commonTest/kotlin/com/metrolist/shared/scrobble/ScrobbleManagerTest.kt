@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -30,6 +31,71 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ScrobbleManagerTest {
+    @Test
+    fun failedRetryDoesNotRestoreScrobblesAfterDisconnect() = checkAccountChangeDuringRetry(reconnect = false)
+
+    @Test
+    fun failedRetryDoesNotRestoreScrobblesAfterCredentialReplacement() = checkAccountChangeDuringRetry(reconnect = true)
+
+    @Test
+    fun failedRetryDoesNotRestoreScrobblesAfterSameCredentialReconnect() =
+        checkAccountChangeDuringRetry(reconnect = true, sameCredential = true)
+
+    @Test
+    fun transientRetryStillReschedulesAnUnchangedPendingSubmission() =
+        runTest {
+            val account = ScrobbleAccount(ScrobbleProvider.LAST_FM, "listener", "token")
+            ScrobbleSessions.connectLastFm(account.account, account.credential)
+            val original = pending("retry", account.provider, account.account)
+            PendingScrobbleStore.upsert(original)
+            testManager(account, mutableListOf(), submissionResult = Result.failure(IllegalStateException("offline")))
+                .retryPendingScrobblesForTest()
+            val updated = PendingScrobbleStore.all().single()
+            assertEquals(original.attemptCount + 1, updated.attemptCount)
+            assertTrue(updated.nextAttemptAtMs > 1000L)
+            assertEquals(original, updated.copy(attemptCount = original.attemptCount, nextAttemptAtMs = original.nextAttemptAtMs))
+        }
+
+    private fun checkAccountChangeDuringRetry(
+        reconnect: Boolean,
+        sameCredential: Boolean = false,
+    ) = runTest {
+        for (provider in ScrobbleProvider.entries) {
+            val account = ScrobbleAccount(provider, "listener", "old-token")
+
+            suspend fun connect(credential: String) {
+                when (provider) {
+                    ScrobbleProvider.LAST_FM -> ScrobbleSessions.connectLastFm(account.account, credential)
+                    ScrobbleProvider.LISTEN_BRAINZ -> ScrobbleSessions.connectListenBrainz(account.account, credential)
+                }
+            }
+            connect(account.credential)
+            PendingScrobbleStore.upsert(pending("retry-$provider", provider, account.account))
+            val started = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            val manager =
+                ScrobbleManager(
+                    backgroundScope,
+                    { 1000L },
+                    startRetryLoop = false,
+                    accountsOverride = { listOfNotNull(ScrobbleSessions.current(provider)) },
+                    submitOverride = { _, _, _, _, _, _, _ ->
+                        started.complete(Unit)
+                        release.await()
+                        Result.failure(IllegalStateException("offline"))
+                    },
+                    persistenceDispatcher = StandardTestDispatcher(testScheduler),
+                )
+            val retry = launch { manager.retryPendingScrobblesForTest() }
+            started.await()
+            if (reconnect) connect(if (sameCredential) account.credential else "new-token") else ScrobbleSessions.disconnect(provider)
+            assertTrue(PendingScrobbleStore.all().isEmpty())
+            release.complete(Unit)
+            retry.join()
+            assertTrue(PendingScrobbleStore.all().isEmpty(), "Stale retry restored cleared $provider queue")
+        }
+    }
+
     @Test
     fun consecutiveCommittedOccurrencesSubmitSeparatelyButRecoveryKeepsTheListen() =
         runTest {
@@ -101,7 +167,8 @@ class ScrobbleManagerTest {
             advanceTimeBy(180_000)
             runCurrent()
             assertEquals(1, submitted.size)
-            manager.onPlaybackInstanceStart(unknown.copy(duration = 180, musicVideoType = "MUSIC_VIDEO_TYPE_LIVE"))
+            manager.onPlaybackInstanceStart(unknown.copy(duration = 180))
+            manager.onPlayerStateChanged(true, unknown.copy(musicVideoType = "MUSIC_VIDEO_TYPE_LIVE"))
             advanceTimeBy(180_000)
             runCurrent()
             assertEquals(1, submitted.size)

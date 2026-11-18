@@ -22,8 +22,9 @@ internal fun isTrustedLoginUrl(
             ?: return false
     if (host == root || host.endsWith(".$root")) return true
     return when (root) {
+        // Google sign-in can pass through interstitials such as gds.google.com and regional hosts such as accounts.google.co.uk.
         "youtube.com" -> {
-            host in setOf("accounts.google.com", "myaccount.google.com", "consent.google.com", "www.google.com")
+            host == "google.com" || host.endsWith(".google.com") || REGIONAL_GOOGLE_ACCOUNTS.matches(host)
         }
 
         "spotify.com", "deezer.com", "tidal.com" -> {
@@ -43,3 +44,5 @@ internal fun openExternalLoginUrl(
     if (runCatching { Url(url).protocol.name }.getOrNull() != "https") return
     context.startActivitySafely(Intent(Intent.ACTION_VIEW, url.toUri()))
 }
+
+private val REGIONAL_GOOGLE_ACCOUNTS = Regex("""accounts\.google\.(com?\.)?[a-z]{2}""")

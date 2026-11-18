@@ -167,6 +167,7 @@ fun SearchScreen(
     navigator: Navigator,
     floatingActionsBottomInset: State<Dp>,
     initialQuery: String? = null,
+    onInitialQueryConsumed: () -> Unit = {},
     onSearchResultsVisible: (Boolean) -> Unit = {},
     searchViewModel: SearchViewModel = koinViewModel(),
 ) {
@@ -395,6 +396,8 @@ fun SearchScreen(
         if (queryFromIntent.isNotEmpty() && queryFromIntent != query) {
             submitSearch(queryFromIntent)
         }
+        // Clearing the request lets the same link search again after the query changes.
+        if (initialQuery != null) onInitialQueryConsumed()
     }
 
     LaunchedEffect(isQuerySubmitted, initialQuery, isTv, isPlayerExpanded) {
@@ -510,6 +513,10 @@ fun SearchScreen(
 
                                 else -> {}
                             }
+                        },
+                        onAlbumPlay = { album ->
+                            dismissKeyboardAndFocus()
+                            playerConnection?.playAlbum(album.id, album.title)
                         },
                         onItemLongClick = { item ->
                             when (item) {

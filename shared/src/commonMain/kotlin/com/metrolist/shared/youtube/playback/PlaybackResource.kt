@@ -4,6 +4,9 @@ import com.metrolist.innertubex.extraction.PlaybackTrackingData
 import com.metrolist.innertubex.extraction.StreamDiagnostics
 import com.metrolist.innertubex.sabr.SabrBootstrap
 import com.metrolist.shared.api.musicvideo.CounterpartPositionMap
+import com.metrolist.shared.model.MUSIC_VIDEO_TYPE_LIVE
+import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.isLive
 import kotlin.time.Instant
 
 data class PlaybackResource(
@@ -44,6 +47,7 @@ data class PlaybackResource(
     val allowPlaybackTrackingFallback: Boolean = false,
     val sabrTokenSupplier: (suspend () -> ByteArray?)? = null,
     val onSabrAttestationPending: (() -> Unit)? = null,
+    val isLive: Boolean = false,
 ) {
     val networkUrl: String?
         get() =
@@ -70,8 +74,6 @@ data class PlaybackResource(
     val hasVideo: Boolean
         get() = hasDirectVideo || hasSabrVideo
 
-    val isLive: Boolean = profileId == "ANDROID_LIVE" || isLiveStreamUrl(url) || isLiveStreamUrl(videoUrl.orEmpty())
-
     fun hasSameSabrAudio(other: PlaybackResource): Boolean {
         val first = sabrBootstrap ?: return false
         val second = other.sabrBootstrap ?: return false
@@ -81,6 +83,14 @@ data class PlaybackResource(
             (first.contentLengthBytes ?: contentLengthBytes) == (second.contentLengthBytes ?: other.contentLengthBytes)
     }
 }
+
+/** Keeps the queue's live state in step with the resolved stream; a recording gets its finite duration back. */
+fun SongItem.matchingLiveState(resource: PlaybackResource): SongItem =
+    when {
+        resource.isLive && !isLive -> copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE, duration = null)
+        !resource.isLive && isLive && (resource.durationSeconds ?: 0L) > 0L -> copy(duration = resource.durationSeconds)
+        else -> this
+    }
 
 fun isLiveStreamUrl(url: String): Boolean =
     url.contains("yt_live_broadcast", ignoreCase = true) ||

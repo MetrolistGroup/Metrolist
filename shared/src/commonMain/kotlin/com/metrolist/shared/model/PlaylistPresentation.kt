@@ -8,6 +8,7 @@ data class PlaylistPresentationOptions(
     val direction: SortDirection = SortDirection.ASCENDING,
     val reorder: Boolean = false,
     val query: String = "",
+    val listeningTimes: Map<String, Long> = emptyMap(),
 )
 
 data class PlaylistPresentation(
@@ -22,7 +23,16 @@ suspend fun preparePlaylistPresentation(
 ): PlaylistPresentation {
     val context = currentCoroutineContext()
     context.ensureActive()
-    val ordered = if (options.reorder) songs else songs.sortedForPlaylist(options.sort, options.direction)
+    val ordered =
+        if (options.reorder) {
+            songs
+        } else {
+            songs.sortedForPlaylist(
+                options.sort,
+                options.direction,
+                listeningTimes = options.listeningTimes,
+            )
+        }
     context.ensureActive()
     val displayed = ordered.filterForPlaylistSearch(options.query)
     context.ensureActive()

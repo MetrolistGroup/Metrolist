@@ -42,6 +42,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.model.isLive
 import com.metrolist.shared.state.SongLikeState
+import com.metrolist.shared.state.SongMetadataState
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.icons.SongStatusIcons
 import org.jetbrains.compose.resources.stringResource
@@ -167,7 +168,8 @@ fun SongStatusBadges(
     showExplicit: Boolean = true,
 ) {
     val isLiked = SongLikeState.isLiked(song.id)
-    if (!isLiked && song.libraryRemoveToken == null && !isDownloaded && !(showExplicit && song.isExplicit) && !song.isNew &&
+    val isInLibrary = SongMetadataState.isInLibrary(song)
+    if (!isLiked && !isInLibrary && !isDownloaded && !(showExplicit && song.isExplicit) && !song.isNew &&
         !song.isLive
     ) {
         return
@@ -188,7 +190,7 @@ fun SongStatusBadges(
                 modifier = Modifier.offset(y = 1.dp).size(13.dp),
             )
         }
-        if (song.libraryRemoveToken != null) {
+        if (isInLibrary) {
             Icon(
                 imageVector = SongStatusIcons.Saved,
                 contentDescription = stringResource(Res.string.saved_to_library),

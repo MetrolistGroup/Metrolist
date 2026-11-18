@@ -1,0 +1,41 @@
+{
+  "header": {
+    "musicImmersiveHeaderRenderer": {
+      "subscriptionButton": {
+        "subscribeButtonRenderer": {
+          "subscriberCountText": {
+            "runs": [
+              {
+                "text": "5.93 क॰"
+              }
+            ]
+          },
+          "longSubscriberCountText": {
+            "runs": [
+              {
+                "text": "5.93 क॰ सदस्य"
+              }
+            ],
+            "accessibility": {
+              "accessibilityData": {
+                "label": "5.93 करोड़ सदस्य"
+              }
+            }
+          }
+        }
+      },
+      "monthlyListenerCount": {
+        "runs": [
+          {
+            "text": "हर महीने 24 क॰ दर्शक"
+          }
+        ],
+        "accessibility": {
+          "accessibilityData": {
+            "label": "हर महीने 24 करोड़ दर्शक"
+          }
+        }
+      }
+    }
+  }
+}

@@ -17,34 +17,34 @@ object MusicVideoMatcher {
         video: SongItem,
         candidates: List<YTItem>,
     ): SongItem? {
-        val tracks = candidates.filterIsInstance<SongItem>().filterNot { it.isVideoSong }.filter { it.id != video.id }
         val artistIds = video.artists.mapNotNull { it.id }.toSet()
         val artistNames =
             video.artists
                 .map { normalizeName(it.name) }
                 .filter { it.isNotBlank() }
                 .toSet()
-        val titleMatches = tracks.filter { candidate -> titleMatches(video.title, candidate.title, artistNames) }
-        val eligibleTracks = titleMatches.ifEmpty { return null }
-        val artistMatches =
-            if (artistIds.isNotEmpty()) {
-                eligibleTracks.filter { it.sharesArtistId(artistIds) }.ifEmpty { nameMatching(eligibleTracks, artistNames) }
-            } else if (artistNames.isNotEmpty()) {
-                nameMatching(eligibleTracks, artistNames)
-            } else {
-                eligibleTracks
+        val title = cleanCoreTitle(stripArtistPrefix(video.title, artistNames))
+        // Search cannot identify which live performance, remix or other edition the user selected.
+        if (title.isBlank() || NON_OFFICIAL_VARIANT_PATTERN.containsMatchIn(title)) return null
+        val eligibleTracks =
+            candidates.filterIsInstance<SongItem>().filter { candidate ->
+                !candidate.isVideoSong && candidate.id != video.id &&
+                    cleanCoreTitle(candidate.title) == title &&
+                    audioDurationCompatible(video.duration, candidate.duration)
             }
-        val pool = artistMatches.ifEmpty { if (artistNames.isEmpty()) eligibleTracks else emptyList() }
-        if (pool.isEmpty()) return null
-
-        return pool
-            .mapNotNull { candidate ->
-                val score =
-                    scoreCandidate(video, candidate, artistNames) +
-                        if (parseMusicVideoType(candidate.musicVideoType) == MusicVideoType.ATV) SCORE_AUDIO_TRACK else 0
-                if (score > 0) candidate to score else null
-            }.maxByOrNull { it.second }
-            ?.first
+        val artistMatches =
+            eligibleTracks.filter { candidate ->
+                candidate.sharesArtistId(artistIds) || candidate.artists.any { normalizeName(it.name) in artistNames }
+            }
+        val videoDuration = video.duration?.takeIf { it > 0L }
+        return artistMatches.minWithOrNull(
+            compareByDescending<SongItem> { it.sharesArtistId(artistIds) }
+                .thenByDescending { parseMusicVideoType(it.musicVideoType) == MusicVideoType.ATV }
+                .thenBy { candidate ->
+                    val trackDuration = candidate.duration?.takeIf { it > 0L }
+                    if (videoDuration != null && trackDuration != null) abs(videoDuration - trackDuration) else Long.MAX_VALUE
+                },
+        )
     }
 
     fun findBestMatch(
@@ -243,16 +243,17 @@ object MusicVideoMatcher {
         return false
     }
 
-    private fun nameMatching(
-        videos: List<SongItem>,
-        trackArtistNames: Set<String>,
-    ): List<SongItem> =
-        videos.filter { candidate ->
-            candidateMatchesTrackArtist(candidate.artists, trackArtistNames) ||
-                trackArtistNames.any { artist ->
-                    artist.length >= MIN_ARTIST_NAME_LENGTH && normalizeTitle(candidate.title).contains(artist)
-                }
+    internal fun hasSameAudioVariant(
+        video: SongItem,
+        track: SongItem,
+    ): Boolean {
+        fun variants(song: SongItem): Set<String> {
+            val artistNames = song.artists.map { normalizeName(it.name) }.toSet()
+            val title = cleanCoreTitle(stripArtistPrefix(song.title, artistNames))
+            return NON_OFFICIAL_VARIANT_PATTERN.findAll(title).map { it.value }.toSet()
         }
+        return variants(video) == variants(track)
+    }
 
     internal fun candidateMatchesTrackArtist(
         candidateArtists: List<ArtistTiny>,
@@ -414,7 +415,6 @@ object MusicVideoMatcher {
 
     private const val SCORE_EXACT_ID_MATCH = 10
     private const val SCORE_OFFICIAL_VIDEO = 4
-    private const val SCORE_AUDIO_TRACK = 4
     private const val SCORE_GENERIC_VIDEO = 1
     private const val SCORE_STATIC_ART_TRACK_PENALTY = -5
     private const val SCORE_EXACT_TITLE = 3
@@ -427,6 +427,15 @@ object MusicVideoMatcher {
 
     private const val MAX_VIDEO_DURATION_RATIO = 2L
     private const val MAX_VIDEO_DURATION_DELTA_SECONDS = 90L
+
+    private fun audioDurationCompatible(
+        videoDuration: Long?,
+        trackDuration: Long?,
+    ): Boolean {
+        if (videoDuration == null || trackDuration == null || videoDuration <= 0L || trackDuration <= 0L) return true
+        return durationCompatible(trackDuration, videoDuration) &&
+            trackDuration - videoDuration <= DURATION_TOLERANCE_SECONDS
+    }
 
     private fun durationCompatible(
         trackDuration: Long?,
@@ -442,7 +451,7 @@ object MusicVideoMatcher {
     private const val LEVENSHTEIN_TITLE_THRESHOLD = 0.75
     private const val LEVENSHTEIN_ARTIST_THRESHOLD = 0.80
 
-    private val NON_WORD_PATTERN = Regex("[^\\p{L}\\p{N}]+")
+    private val NON_WORD_PATTERN = Regex("[^\\p{L}\\p{M}\\p{N}]+")
 
     private val DISQUALIFYING_VARIANTS =
         listOf(

@@ -7,6 +7,7 @@ import com.metrolist.innertubex.models.YouTubeClient
 import com.metrolist.innertubex.transcriptCues
 import com.metrolist.shared.api.lyrics.YouTubeLyricsApi
 import com.metrolist.shared.api.lyrics.YouTubeTranscriptCue
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 
 class InnerTubeLyricsApi(
@@ -23,8 +24,13 @@ class InnerTubeLyricsApi(
         browseId: String,
     ): JsonObject = innerTube.browse(client, browseId = browseId).bodyAsJsonObjectLimited(MAX_JSON_RESPONSE_BYTES)
 
-    override suspend fun player(videoId: String): JsonObject =
-        innerTube.player(YouTubeClient.WEB, videoId).bodyAsJsonObjectLimited(MAX_JSON_RESPONSE_BYTES)
+    override suspend fun player(videoId: String): JsonObject {
+        val web = innerTube.player(YouTubeClient.WEB, videoId).bodyAsJsonObjectLimited(MAX_JSON_RESPONSE_BYTES)
+        if (web.hasCaptionTracks()) return web
+        // Signed out, WEB answers UNPLAYABLE without captions; IOS still lists the caption tracks.
+        val ios = innerTube.player(YouTubeClient.IOS, videoId).bodyAsJsonObjectLimited(MAX_JSON_RESPONSE_BYTES)
+        return if (ios.hasCaptionTracks()) ios else web
+    }
 
     override suspend fun transcript(videoId: String): List<YouTubeTranscriptCue> =
         innerTube
@@ -43,3 +49,9 @@ class InnerTubeLyricsApi(
         const val MAX_JSON_RESPONSE_BYTES = 4 * 1024 * 1024
     }
 }
+
+internal fun JsonObject.hasCaptionTracks(): Boolean =
+    ((this["captions"] as? JsonObject)?.get("playerCaptionsTracklistRenderer") as? JsonObject)
+        ?.get("captionTracks")
+        ?.let { it as? JsonArray }
+        ?.isNotEmpty() == true

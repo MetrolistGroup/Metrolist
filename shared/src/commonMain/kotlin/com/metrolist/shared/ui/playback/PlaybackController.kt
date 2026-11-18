@@ -84,6 +84,12 @@ interface PlaybackController {
         play(song, songs)
     }
 
+    fun shuffleQueue(
+        songs: List<SongItem>,
+        queueTitle: String? = null,
+        songsOnly: Boolean = false,
+    )
+
     fun togglePlayPause()
 
     fun seekTo(positionMs: Long)

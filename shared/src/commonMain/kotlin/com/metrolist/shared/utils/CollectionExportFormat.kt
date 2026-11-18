@@ -32,13 +32,16 @@ enum class CollectionExportFormat(
                 buildString {
                     appendLine("#EXTM3U")
                     songs.forEach { song ->
-                        appendLine("#EXTINF:${song.duration ?: -1},${song.artists.joinToString(", ") { it.name }} - ${song.title}")
+                        val label = "${song.artists.joinToString(", ") { it.name }} - ${song.title}".replace(m3uLineBreaks, " ")
+                        appendLine("#EXTINF:${song.duration ?: -1},$label")
                         appendLine(song.exportUri)
                     }
                 }
             }
         }
 }
+
+private val m3uLineBreaks = Regex("[\\r\\n]+")
 
 private val SongItem.exportUri: String
     get() = if (isLocal) id else "https://music.youtube.com/watch?v=$id"

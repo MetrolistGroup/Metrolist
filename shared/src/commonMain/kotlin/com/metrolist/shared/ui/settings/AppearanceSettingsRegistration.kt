@@ -34,6 +34,7 @@ import com.metrolist.shared.settings.ThemePaletteStyle
 import com.metrolist.shared.settings.YouTubeCanvasMode
 import com.metrolist.shared.settings.desktopDefaultOpenTab
 import com.metrolist.shared.settings.desktopDefaultOpenTabs
+import com.metrolist.shared.settings.isDesktopMac
 import com.metrolist.shared.settings.normalizeDefaultOpenTab
 import com.metrolist.shared.settings.updateDefaultOpenTab
 import com.metrolist.shared.ui.icons.MetrolistIcons
@@ -180,6 +181,9 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                         scale.name,
                         stringResource(
                             when (scale) {
+                                DensityScale.MASSIVE -> Res.string.density_massive
+                                DensityScale.HUGE -> Res.string.density_huge
+                                DensityScale.EXTRA_LARGE -> Res.string.density_extra_large
                                 DensityScale.LARGE -> Res.string.density_large
                                 DensityScale.SLIGHTLY_LARGE -> Res.string.density_slightly_large
                                 DensityScale.NATIVE -> Res.string.density_native
@@ -303,7 +307,14 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                 switch(
                     id = "desktopTrayToggleOnClick",
                     title = stringResource(Res.string.desktop_tray_toggle_on_click),
-                    description = stringResource(Res.string.desktop_tray_toggle_on_click_desc),
+                    description =
+                        stringResource(
+                            if (isDesktopMac()) {
+                                Res.string.desktop_tray_toggle_on_click_desc_mac
+                            } else {
+                                Res.string.desktop_tray_toggle_on_click_desc
+                            },
+                        ),
                     checked = settings.desktopTrayToggleOnClick,
                 ) { settings.desktopTrayToggleOnClick = it }
             }

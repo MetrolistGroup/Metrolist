@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.9.0.schema.json
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.28.0.schema.json
 PackageIdentifier: MetrolistGroup.Metrolist
 PackageVersion: '@VERSION@'
 InstallerType: exe
@@ -7,8 +7,8 @@ InstallModes:
   - interactive
   - silent
 InstallerSwitches:
-  Silent: --silent --launch=false
-  SilentWithProgress: --silent --launch=false
+  Silent: --silent
+  SilentWithProgress: --silent
   Custom: --launch=false
 UpgradeBehavior: install
 Protocols:
@@ -22,4 +22,4 @@ Installers:
     InstallerUrl: '@WINDOWS_URL@'
     InstallerSha256: '@WINDOWS_SHA256@'
 ManifestType: installer
-ManifestVersion: 1.9.0
+ManifestVersion: 1.28.0

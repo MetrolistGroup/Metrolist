@@ -312,7 +312,6 @@
     <string name="settings_translation_mode_summary">Oversæt ordene, eller skriv deres udtale med målskriftens tegn</string>
     <string name="settings_translation_provider_summary">Vælg den tjeneste, der oversætter sangtekster</string>
     <string name="settings_translation_model_summary">Model til oversættelse eller transskription af sangtekster</string>
-    <string name="settings_detector_model_summary">Model, der afgør, om sangtekster skal oversættes</string>
     <string name="settings_translation_formality_summary">Vælg formelt eller uformelt sprog til DeepL-oversættelser</string>
     <string name="settings_discord_advanced_summary">Vis aktivitetsskabeloner og egne linkknapper</string>
     <string name="settings_discord_activity_type_summary">Vælg, hvordan Discord beskriver din musikaktivitet</string>

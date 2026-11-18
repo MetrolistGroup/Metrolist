@@ -538,6 +538,9 @@ fun LoginScreen(
 
                                     private fun handleNavigation(uri: Uri): Boolean {
                                         val action = loginNavigationAction(uri.toString(), uri.scheme, isPopup = false)
+                                        if (action == LoginNavigationAction.BLOCK) {
+                                            Timber.tag("LoginScreen").w("Blocked sign-in navigation to %s", uri.host)
+                                        }
                                         return action != LoginNavigationAction.LOAD_IN_CURRENT_WEBVIEW
                                     }
                                 }
@@ -616,6 +619,7 @@ fun LoginScreen(
             PopupVisibility(visible = !tvWarningAccepted) {
                 AlertDialog(
                     onDismissRequest = onNavigateBack,
+                    outlineActions = false,
                     title = { Text(stringResource(Res.string.sign_in_on_tv)) },
                     text = { Text(stringResource(Res.string.tv_sign_in_warning)) },
                     dismissButton = {

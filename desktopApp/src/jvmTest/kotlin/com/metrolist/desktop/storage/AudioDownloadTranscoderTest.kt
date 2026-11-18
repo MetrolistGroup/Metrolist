@@ -7,9 +7,11 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.bytedeco.javacpp.Pointer
 import org.bytedeco.javacv.FFmpegFrameGrabber
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.IOException
 import java.nio.file.Files
 import javax.sound.sampled.AudioFileFormat
 import javax.sound.sampled.AudioFormat
@@ -22,8 +24,70 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import com.metrolist.shared.playback.ffmpeg.FFmpegFrameGrabber as DesktopFrameGrabber
 
 class AudioDownloadTranscoderTest {
+    @Test
+    fun repeatedTranscodesReleaseTrackedNativeAllocations() =
+        runBlocking {
+            val directory = Files.createTempDirectory("metrolist-batch-transcode-").toFile()
+            val source = directory.resolve("source.wav")
+            val invalid = directory.resolve("invalid.wav")
+            val destination = directory.resolve("track.m4a")
+            val song = SongItem("batch", "Batch track", null, listOf(ArtistTiny(null, "Artist")), AlbumTiny(null, "Album"))
+            try {
+                writeTestWave(source)
+                invalid.writeBytes(ByteArray(4096))
+                AudioDownloadTranscoder.transcodeToM4a(source, destination, song)
+                val initial = Pointer.totalBytes()
+                repeat(300) { index ->
+                    when (index % 5) {
+                        0 -> {
+                            AudioDownloadTranscoder.transcodeToM4a(source, destination, song)
+                        }
+
+                        1 -> {
+                            assertFailsWith<IOException> {
+                                AudioDownloadTranscoder.transcodeToM4a(
+                                    source,
+                                    destination,
+                                    song,
+                                ) { throw IOException("synthetic write failure") }
+                            }
+                        }
+
+                        2 -> {
+                            val job = Job()
+                            assertFailsWith<CancellationException> {
+                                withContext(job) {
+                                    AudioDownloadTranscoder.transcodeToM4a(source, destination, song) { job.cancel() }
+                                }
+                            }
+                        }
+
+                        3 -> {
+                            assertFailsWith<IOException> {
+                                AudioDownloadTranscoder.transcodeToM4a(source, directory.resolve("missing/track.m4a"), song)
+                            }
+                        }
+
+                        else -> {
+                            assertFailsWith<DesktopFrameGrabber.Companion.Exception> {
+                                AudioDownloadTranscoder.transcodeToM4a(invalid, destination, song)
+                            }
+                        }
+                    }
+                    assertTrue(
+                        Pointer.totalBytes() <= initial + 1024,
+                        "Native bytes after transcode $index: ${Pointer.totalBytes()}, initial $initial",
+                    )
+                    assertTrue(directory.listFiles()!!.all { it == source || it == invalid || it == destination })
+                }
+            } finally {
+                directory.deleteRecursively()
+            }
+        }
+
     @Test
     fun convertsAudioToTaggedM4a() {
         val directory = Files.createTempDirectory("metrolist-audio-transcode-").toFile()

@@ -265,7 +265,7 @@ class ScrobbleManager internal constructor(
             return
         }
         updatePlayedTime()
-        currentSong = song.copy(duration = song.duration?.takeIf { it > 0L } ?: currentSong?.duration)
+        currentSong = if (song.isLive) song else song.copy(duration = song.duration?.takeIf { it > 0L } ?: currentSong?.duration)
         lastUpdateMs = monotonicClock()
         if (reportingEnabled) startTicker()
     }
@@ -569,7 +569,8 @@ class ScrobbleManager internal constructor(
 
                         else -> {
                             val attempts = pending.attemptCount + 1
-                            PendingScrobbleStore.upsert(
+                            PendingScrobbleStore.replaceIfUnchanged(
+                                pending,
                                 pending.copy(
                                     attemptCount = attempts,
                                     nextAttemptAtMs = nextAttemptAt(attempts, apiFailure?.retryAfterMs, pending.id.hashCode()),
@@ -620,7 +621,7 @@ class ScrobbleManager internal constructor(
             if (currentSong?.id != song.id) onSongStart(song) else onSongResume(song)
         } else {
             if (currentSong?.id == song.id) {
-                currentSong = song.copy(duration = song.duration?.takeIf { it > 0L } ?: currentSong?.duration)
+                currentSong = if (song.isLive) song else song.copy(duration = song.duration?.takeIf { it > 0L } ?: currentSong?.duration)
                 onSongPause()
             } else {
                 onSongStop()

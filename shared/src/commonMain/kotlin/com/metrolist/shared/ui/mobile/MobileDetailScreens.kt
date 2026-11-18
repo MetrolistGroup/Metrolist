@@ -35,13 +35,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.metrolist.shared.api.PlaylistNotFoundException
-import com.metrolist.shared.api.PlaylistPage
 import com.metrolist.shared.api.playlistSongs
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.cacheRemotePlaylist
 import com.metrolist.shared.db.cachedRemotePlaylistSections
 import com.metrolist.shared.db.entities.toSongItem
-import com.metrolist.shared.db.loadAndCachePlaylistPage
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.error
 import com.metrolist.shared.generated.resources.error_occurred
@@ -55,12 +53,14 @@ import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.ArtistPageResult
 import com.metrolist.shared.model.EpisodeItem
 import com.metrolist.shared.model.PlaylistItem
+import com.metrolist.shared.model.PlaylistSongSort
 import com.metrolist.shared.model.PodcastPage
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.model.canEdit
 import com.metrolist.shared.model.filterForPlaylistSearch
 import com.metrolist.shared.model.indexOfPlaylistOccurrence
+import com.metrolist.shared.model.isReordering
 import com.metrolist.shared.model.playlistOccurrenceKey
 import com.metrolist.shared.model.playlistSearchIndices
 import com.metrolist.shared.model.sortedForPlaylist
@@ -78,6 +78,7 @@ import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.PodcastLibrary
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.state.SongMetadataState
+import com.metrolist.shared.state.setArtistSubscribed
 import com.metrolist.shared.ui.components.AddSongSheetContent
 import com.metrolist.shared.ui.components.CollectionPreviews
 import com.metrolist.shared.ui.components.ContainedLoadingIndicator
@@ -106,6 +107,7 @@ import com.metrolist.shared.viewmodels.AboutArtistViewModel
 import com.metrolist.shared.viewmodels.ArtistSubscriptionState
 import com.metrolist.shared.viewmodels.PlaylistPageLoader
 import com.metrolist.shared.viewmodels.artistCatalogTitles
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -178,7 +180,7 @@ internal fun MobileAlbumScreen(
                     playbackController.playQueue(queue)
                 },
                 onShuffle = { queue ->
-                    playbackController.playQueue(queue.shuffled())
+                    playbackController.shuffleQueue(queue)
                 },
                 onMoreOptions = { onMoreOptions(page.album) },
                 isFavorite = isFavorite,
@@ -206,7 +208,7 @@ internal fun MobileAlbumScreen(
                         selectedSongs = selectedSongs,
                         onPlay = { playbackController.playQueue(selectedSongs) },
                         onShuffle = {
-                            playbackController.playQueue(selectedSongs.shuffled())
+                            playbackController.shuffleQueue(selectedSongs)
                         },
                         allSelected = selection.allSelected(allIds),
                         onDone = selection::exit,
@@ -248,6 +250,7 @@ internal fun MobileAlbumScreen(
 @Composable
 internal fun MobileArtistScreen(
     artistId: String,
+    database: MusicDatabase,
     loader: MobileDetailLoader<ArtistPageResult>,
     subscription: ArtistSubscriptionState,
     fallbackTitle: String? = null,
@@ -311,10 +314,13 @@ internal fun MobileArtistScreen(
     fun playArtistSongs(shuffle: Boolean) {
         scope.launch {
             val songs = GlobalYouTubeRepository.instance.getArtistSongs(artistId, page) { operationError = errorText }
-            val queue = if (shuffle) songs.shuffled() else songs
-            queue.firstOrNull()?.let {
-                if (!shuffle && playbackController.state.value.isShuffled) playbackController.toggleShuffle()
-                playbackController.play(it, queue, songsOnly = true)
+            if (shuffle) {
+                playbackController.shuffleQueue(songs, songsOnly = true)
+            } else {
+                songs.firstOrNull()?.let {
+                    if (playbackController.state.value.isShuffled) playbackController.toggleShuffle()
+                    playbackController.play(it, songs, songsOnly = true)
+                }
             }
         }
     }
@@ -356,7 +362,15 @@ internal fun MobileArtistScreen(
         onSubscribeClick = {
             subscription.toggle(
                 scope,
-                request = { GlobalYouTubeRepository.instance.subscribeChannel(artistId, it) },
+                request = {
+                    database.setArtistSubscribed(
+                        GlobalYouTubeRepository.instance,
+                        artistId,
+                        artist?.title ?: fallbackTitle.orEmpty(),
+                        it,
+                        artist?.thumbnail,
+                    )
+                },
                 onError = { onError(errorText) },
             )
         },
@@ -407,9 +421,8 @@ internal fun MobilePlaylistScreen(
     var pageFailed by remember(loader) { mutableStateOf(false) }
     var editingPrepared by remember(loader) { mutableStateOf(false) }
     var cachedSections by remember(loader) { mutableStateOf<Map<String, List<YTItem>>?>(null) }
-    var syncedPage by remember(loader) { mutableStateOf<PlaylistPage?>(null) }
     var storedRemote by remember(loader) { mutableStateOf(false) }
-    val playlistData = syncedPage?.sections ?: page?.sections ?: cachedSections
+    val playlistData = page?.sections ?: cachedSections
     val selection = rememberSelectionState(playlistId)
     var selectionQuery by remember(playlistId) { mutableStateOf("") }
     val playbackState by remember(playbackController) {
@@ -422,7 +435,6 @@ internal fun MobilePlaylistScreen(
             Settings.shared.playlistSongSort,
             Settings.shared.playlistSongSortDirection,
         )
-    var reorderMode by remember(playlistId) { mutableStateOf(false) }
     var showAddSong by remember(playlistId) { mutableStateOf(false) }
     val reorder =
         remember(playlistId, reloadKey, database, scope) {
@@ -468,22 +480,13 @@ internal fun MobilePlaylistScreen(
         loadError = null
         try {
             val started = TimeSource.Monotonic.markNow()
-            cachedSections = withContext(Dispatchers.Default) { database.cachedRemotePlaylistSections(playlistId) }
+            cachedSections =
+                withContext(Dispatchers.Default) {
+                    if (PlaybackNetworkStateStore.current.connected) database.cachedRemotePlaylistSections(playlistId) else null
+                }
             Logger.d("MobilePlaylist", "cached lookup ms=${started.elapsedNow().inWholeMilliseconds} hit=${cachedSections != null}")
             if (cachedSections != null) {
                 isLoading = false
-                editMutex.withLock {
-                    val refreshStarted = TimeSource.Monotonic.markNow()
-                    val refreshed =
-                        withContext(Dispatchers.Default) {
-                            database.loadAndCachePlaylistPage(GlobalYouTubeRepository.instance, playlistId)
-                        }
-                    Logger.d(
-                        "MobilePlaylist",
-                        "full refresh ms=${refreshStarted.elapsedNow().inWholeMilliseconds} songs=${refreshed.songs.size}",
-                    )
-                    if (!refreshed.isOffline) syncedPage = refreshed
-                }
             } else {
                 val fetchStarted = TimeSource.Monotonic.markNow()
                 withContext(Dispatchers.Default) { loader.loadFirst() }
@@ -513,7 +516,6 @@ internal fun MobilePlaylistScreen(
         } catch (error: Exception) {
             if (error is PlaylistNotFoundException) {
                 cachedSections = null
-                syncedPage = null
                 loadError = missingPlaylistText
             } else if (cachedSections == null) {
                 loadError = errorText
@@ -542,7 +544,7 @@ internal fun MobilePlaylistScreen(
             try {
                 val complete =
                     reorder.entries.takeIf { it.isNotEmpty() }?.map { it.first }
-                        ?: syncedPage?.songs ?: cachedSections?.playlistSongs()
+                        ?: cachedSections?.playlistSongs()
                         ?: withContext(Dispatchers.Default) { loader.complete().songs }
                 pageFailed = false
                 action(BlockedContent.filterSongs(complete))
@@ -580,11 +582,24 @@ internal fun MobilePlaylistScreen(
             val data = playlistData
             val loadedSongs = remember(data) { data.playlistSongs() }
             val metadataRevision by SongMetadataState.revision.collectAsState()
+            val listeningTimes = if (sorting.sort == PlaylistSongSort.LISTENING_TIME) SongMetadataState.listeningTimes else emptyMap()
             val sourceSongs = if (reorder.entries.isNotEmpty()) reorder.entries.map { it.first } else loadedSongs
+            val canEdit =
+                (data["header"]?.firstOrNull() as? PlaylistItem)?.canEdit == true &&
+                    GlobalYouTubeRepository.instance.canManagePlaylists()
+            val reorderMode = sorting.sort.isReordering(Settings.shared.playlistEditLock, canEdit && editingPrepared)
             val songs =
-                remember(sourceSongs, blockedVersion, sorting, reorderMode, metadataRevision) {
+                remember(sourceSongs, blockedVersion, sorting, reorderMode, metadataRevision, listeningTimes) {
                     val visible = BlockedContent.filterSongs(sourceSongs)
-                    if (reorderMode) visible else visible.sortedForPlaylist(sorting.sort, sorting.direction)
+                    if (reorderMode) {
+                        visible
+                    } else {
+                        visible.sortedForPlaylist(
+                            sorting.sort,
+                            sorting.direction,
+                            listeningTimes = listeningTimes,
+                        )
+                    }
                 }
             val playlist =
                 remember(data, fallbackTitle, songs) {
@@ -599,14 +614,13 @@ internal fun MobilePlaylistScreen(
                 }
 
             val bookmark = rememberPlaylistBookmark(playlist, database, scope) { onSwipeFeedback(errorText) }
-            val canEdit = playlist.canEdit && GlobalYouTubeRepository.instance.canManagePlaylists()
 
             fun withEditablePlaylist(action: () -> Unit) {
                 scope.launch {
                     try {
                         editMutex.withLock {
                             if (!editingPrepared) {
-                                val complete = syncedPage?.songs ?: cachedSections?.playlistSongs() ?: loader.complete().songs
+                                val complete = cachedSections?.playlistSongs() ?: loader.complete().songs
                                 database.cacheRemotePlaylist(playlistId, playlist, complete)
                                 val stored = checkNotNull(database.dao().findPlaylistEntity(playlistId))
                                 reorder.update(
@@ -626,6 +640,9 @@ internal fun MobilePlaylistScreen(
                         onSwipeFeedback(errorText)
                     }
                 }
+            }
+            LaunchedEffect(playlistId, canEdit, Settings.shared.playlistEditLock, sorting.sort) {
+                if (sorting.sort.isReordering(Settings.shared.playlistEditLock, canEdit)) withEditablePlaylist { }
             }
             PopupVisibility(visible = showAddSong) {
                 ModalBottomSheet(onDismissRequest = { showAddSong = false }) {
@@ -706,15 +723,15 @@ internal fun MobilePlaylistScreen(
                         onReorderModeChange = { enabled ->
                             selectionQuery = ""
                             if (!enabled) {
-                                reorderMode = false
+                                Settings.shared.playlistEditLock = true
                             } else {
-                                withEditablePlaylist { reorderMode = true }
+                                withEditablePlaylist { Settings.shared.playlistEditLock = false }
                             }
                         },
                         modifier = Modifier.padding(vertical = 8.dp),
                     )
                 },
-                durationSongs = (syncedPage ?: page)?.takeUnless { it.isOffline }?.songs.orEmpty(),
+                durationSongs = page?.takeUnless { it.isOffline }?.songs ?: cachedSections?.playlistSongs().orEmpty(),
                 hasMoreSongs = page?.hasMore == true,
                 hiddenSongCount = loadedSongs.size - songs.size,
                 paginationContent = {
@@ -756,14 +773,26 @@ internal fun MobilePlaylistScreen(
                 text = playlistContentText(),
                 onPlayAll = {
                     loadRemaining { complete ->
-                        val queue = complete.sortedForPlaylist(sorting.sort, sorting.direction).filterForPlaylistSearch(selectionQuery)
+                        val queue =
+                            complete
+                                .sortedForPlaylist(
+                                    sorting.sort,
+                                    sorting.direction,
+                                    listeningTimes = listeningTimes,
+                                ).filterForPlaylistSearch(selectionQuery)
                         queue.firstOrNull { !it.isUnavailable }?.let { playbackController.play(it, queue) }
                     }
                 },
                 onShuffle = {
                     loadRemaining { complete ->
-                        val shuffled = complete.filterForPlaylistSearch(selectionQuery).shuffled()
-                        shuffled.firstOrNull { !it.isUnavailable }?.let { playbackController.play(it, shuffled) }
+                        playbackController.shuffleQueue(
+                            complete
+                                .sortedForPlaylist(
+                                    sorting.sort,
+                                    sorting.direction,
+                                    listeningTimes = listeningTimes,
+                                ).filterForPlaylistSearch(selectionQuery),
+                        )
                     }
                 },
                 onMoreOptions = { onMoreOptions(playlist) },
@@ -773,7 +802,16 @@ internal fun MobilePlaylistScreen(
                         selection.toggle(displayedRows[index].second)
                     } else {
                         loadRemaining { complete ->
-                            val queue = if (reorderMode) songs else complete.sortedForPlaylist(sorting.sort, sorting.direction)
+                            val queue =
+                                if (reorderMode) {
+                                    songs
+                                } else {
+                                    complete.sortedForPlaylist(
+                                        sorting.sort,
+                                        sorting.direction,
+                                        listeningTimes = listeningTimes,
+                                    )
+                                }
                             val target = queue.indexOfPlaylistOccurrence(song)
                             if (target >= 0) playbackController.playQueue(queue, target)
                         }
@@ -787,15 +825,22 @@ internal fun MobilePlaylistScreen(
                         selectedSongs = selectedSongs,
                         onPlay = { selectedSongs.firstOrNull { !it.isUnavailable }?.let { playbackController.play(it, selectedSongs) } },
                         onShuffle = {
-                            selectedSongs.shuffled().let { s ->
-                                s.firstOrNull { !it.isUnavailable }?.let { playbackController.play(it, s) }
-                            }
+                            playbackController.shuffleQueue(selectedSongs)
                         },
                         allSelected = selection.allSelected(displayedKeys),
                         onDone = selection::exit,
                         onSelectAll = {
                             loadRemaining { complete ->
-                                val ordered = if (reorderMode) complete else complete.sortedForPlaylist(sorting.sort, sorting.direction)
+                                val ordered =
+                                    if (reorderMode) {
+                                        complete
+                                    } else {
+                                        complete.sortedForPlaylist(
+                                            sorting.sort,
+                                            sorting.direction,
+                                            listeningTimes = listeningTimes,
+                                        )
+                                    }
                                 selection.toggleAll(
                                     ordered.playlistSearchIndices(selectionQuery).mapTo(mutableSetOf()) { index ->
                                         ordered[index].playlistOccurrenceKey(index)
@@ -844,7 +889,7 @@ internal fun MobilePlaylistScreen(
                         }
                     }
                 },
-                onTrackMenuClick = { song, _ -> if (!reorderMode) onSongMenu(song) },
+                onTrackMenuClick = { song, _ -> onSongMenu(song) },
                 onBackClick = onBack,
                 onArtistClick = onArtistClick,
                 currentSongId = playbackState.currentSongId,

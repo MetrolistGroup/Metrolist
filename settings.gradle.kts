@@ -37,6 +37,7 @@ dependencyResolutionManagement {
         maven {
             setUrl("https://jitpack.io")
             content {
+                includeGroup("com.github.nyxiereal.glyphmind")
                 includeGroup("com.github.MetrolistGroup.innertubex")
                 includeGroup("com.github.MetrolistGroup.quackjs")
             }

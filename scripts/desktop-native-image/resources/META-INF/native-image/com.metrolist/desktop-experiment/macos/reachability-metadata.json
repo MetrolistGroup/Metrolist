@@ -41,6 +41,109 @@
           "com.metrolist.desktop.utils.MacMenuBarTemplateHelper$LibObjC"
         ]
       }
+    },
+    {
+      "type": "com.metrolist.desktop.utils.MacMenuBarTemplateHelper$DispatchCallback",
+      "jniAccessible": true,
+      "allDeclaredMethods": true
+    },
+    {
+      "type": "com.metrolist.desktop.utils.MacMenuBarTemplateHelper$MenuWillOpenCallback",
+      "jniAccessible": true,
+      "allDeclaredMethods": true
+    },
+    {
+      "type": "org.jetbrains.skiko.renderer.MetalRenderer",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "onOcclusionStateChanged",
+          "parameterTypes": [
+            "boolean"
+          ]
+        },
+        {
+          "name": "onLiveResizeStarted",
+          "parameterTypes": []
+        },
+        {
+          "name": "onLiveResizeEnded",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jetbrains.skiko.RenderExceptionsHandler",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "throwException",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.lwawt.macosx.CTrayIcon",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "handleMouseEvent",
+          "parameterTypes": [
+            "sun.lwawt.macosx.NSEvent"
+          ]
+        },
+        {
+          "name": "getPopupMenuModel",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.lwawt.macosx.CMenuItem",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "handleAction",
+          "parameterTypes": [
+            "long",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.lwawt.macosx.CCheckboxMenuItem",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "handleAction",
+          "parameterTypes": [
+            "boolean"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.lwawt.macosx.CPopupMenu",
+      "jniAccessible": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.LibC",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.sun.jna.platform.unix.LibC"
+        ]
+      }
     }
   ]
 }

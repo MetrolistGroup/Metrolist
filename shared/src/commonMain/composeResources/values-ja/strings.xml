@@ -429,7 +429,6 @@
     <string name="lastfm_service_error">Last.fm にログインできません。しばらくしてからもう一度お試しください。</string>
     <string name="song_cache_location_custom">カスタムフォルダ</string>
     <string name="song_cache_location_custom_desc">Storage Access Framework で選択したカスタムフォルダ</string>
-
     <string name="settings_appearance_overview">テーマ、フォント、プレーヤーの外観</string>
     <string name="settings_android_auto_overview">車載用プレイリストとクイック追加先</string>
     <string name="settings_about_overview">貢献者、コミュニティのリンク、ライセンス</string>
@@ -474,7 +473,6 @@
     <string name="settings_translation_mode_summary">言葉を翻訳するか、発音を対象言語の文字で表記</string>
     <string name="settings_translation_provider_summary">歌詞を翻訳するサービスを選択</string>
     <string name="settings_translation_model_summary">歌詞の翻訳や発音表記に使うモデル</string>
-    <string name="settings_detector_model_summary">歌詞の翻訳が必要かを判断するモデル</string>
     <string name="settings_translation_formality_summary">DeepL の翻訳で使う丁寧な表現またはくだけた表現を選択</string>
     <string name="settings_discord_advanced_summary">アクティビティのテンプレートと独自のリンクボタンを表示</string>
     <string name="settings_discord_activity_type_summary">Discord での音楽アクティビティの表示方法を選択</string>
@@ -497,4 +495,108 @@
     <string name="settings_resume_prompt_summary">アプリ起動時、保存されたキューの再生を再開する前に確認</string>
     <string name="settings_player_layout_summary">カバーと再生操作部品の配置を変更</string>
     <string name="settings_filter_q_summary">Q は選択したフィルターの帯域幅や共振の強さを調整します</string>
+    <string name="offline_mode">オフラインモード</string>
+    <string name="new_releases">新着</string>
+    <string name="podcasts_for_you">あなたへのポッドキャスト</string>
+    <string name="recap">要約</string>
+    <string name="home_unavailable">ホームを利用できません</string>
+    <string name="most_viewed_videos">最も再生されたミュージックビデオ</string>
+    <string name="search_library">ライブラリを検索</string>
+    <string name="settings_reset_to_default">デフォルトにリセット</string>
+    <string name="mix">ミックス</string>
+    <string name="pause">停止</string>
+    <string name="download_notification_title">ダウンロード中の曲</string>
+    <string name="download_notification_paused">ダウンロードを一時停止しました</string>
+    <string name="downloads_completed">ダウンロードが完了しました</string>
+    <string name="downloads_finished">ダウンロード完了</string>
+    <string name="completed_downloads">ダウンロードが完了しました</string>
+    <string name="download_completion_summary">%1$d件ダウンロード完了、%2$d件失敗</string>
+    <plurals name="download_notification_progress">
+        <item quantity="other">%2$d曲中%1$d曲ダウンロード完了、%3$d曲失敗</item>
+    </plurals>
+    <plurals name="downloads_failed_banner">
+        <item quantity="other">%1$d曲のダウンロードに失敗しました</item>
+    </plurals>
+    <plurals name="download_queue_pending">
+        <item quantity="other">ダウンロードキュー（%1$d曲）</item>
+    </plurals>
+    <string name="download_paused">一時停止</string>
+    <string name="download_pause_all">すべて一時停止</string>
+    <string name="download_resume_all">すべて再開</string>
+    <string name="download_cancel_all">すべてキャンセル</string>
+    <string name="downloads_empty">進行中のダウンロードはありません</string>
+    <string name="downloads_empty_hint">オフライン再生用に保存した曲は、ダウンロード中にここに表示されます。</string>
+    <string name="remove_all_downloads">ダウンロードをすべて削除</string>
+    <string name="view_song_info">曲の情報を表示</string>
+    <string name="loudness_value">%1$s dB</string>
+    <string name="lyrics_song_artist">アーティスト</string>
+    <string name="lyrics_capability_line_syllable">行と音節</string>
+    <string name="lyrics_capability_line_syllable_unsynced">行、音節、同期なし</string>
+    <string name="lyrics_capability_line_unsynced">行、同期なし</string>
+    <string name="lyrics_capability_line">行</string>
+    <string name="lyrics_capability_unsynced">同期なし</string>
+    <string name="lyrics_youtube_captions">YouTube 字幕</string>
+    <string name="select_songs">曲を選択</string>
+    <string name="edit_playlist_cover">プレイリストカバーを編集</string>
+    <string name="edit_playlist_cover_note">プレイリストのカバーを変更するには、アカウントが電話番号にリンクされ、YouTube Musicで認証されている必要があります</string>
+    <string name="edit_playlist_cover_note_wait">画像を選択したら、新しいカバーがプレイリストに表示されるまでしばらくお待ちください</string>
+    <string name="choose_from_library">ライブラリから選択</string>
+    <string name="remove_custom_image">カスタム画像を削除</string>
+    <string name="playlist_cover_update_failed">プレイリストカバーを更新できませんでした</string>
+    <string name="sleep_timer_end_current_song">この曲の最後</string>
+    <string name="sleep_timer_fade_out">最後の1分でフェードアウト</string>
+    <string name="sleep_timer_fade_out_enabled">最後の1分間は音声が徐々に小さくなります。</string>
+    <string name="sleep_timer_remaining">残り %1$s</string>
+    <string name="sleep_timer_cancel">タイマーをキャンセル</string>
+    <string name="sleep_timer_hour">時間</string>
+    <string name="sleep_timer_minute">分</string>
+    <string name="sleep_timer_advanced_options">高度なオプション</string>
+    <string name="sleep_timer_finish_current_song">タイマー終了時、この曲の最後で停止</string>
+    <string name="sleep_timer_set_default">デフォルトに設定</string>
+    <string name="up_next">次に再生</string>
+    <string name="queue_loading">キューを読み込み中…</string>
+    <string name="calculating">計算中…</string>
+    <plurals name="queue_track_count_duration">
+        <item quantity="other">%1$d トラック · %2$s</item>
+    </plurals>
+    <string name="suggested_tracks">おすすめ</string>
+    <string name="playback_notification_channel_name">再生</string>
+    <string name="theme_mode">テーマモード</string>
+    <string name="lyrics_provided_by">歌詞提供: %1$s</string>
+    <string name="lyrics_curated_by">(提出者: %1$s)</string>
+    <string name="lyrics_written_by">作詞: %1$s</string>
+    <string name="lyrics_auto_scroll_btn">自動スクロール</string>
+    <string name="action_not_now">今はしない</string>
+    <string name="youtube_session_expired_title">ログアウトされた可能性があります</string>
+    <string name="youtube_session_expired_message">YouTubeアカウントの機能を復元するには、再度ログインしてください。ダウンロード済みコンテンツやキャッシュされたコンテンツはオフラインでも引き続きご利用いただけます。</string>
+    <string name="auto_load_more_desc">曲が終盤に近づくと、ラジオやミックスキューに自動的に追加されます</string>
+    <string name="music_video_quality" tools:ignore="MissingTranslation">ミュージックビデオの品質</string>
+    <string name="music_video_quality_desc" tools:ignore="MissingTranslation">ミュージックビデオのデフォルトの解像度</string>
+    <string name="music_video_quality_auto" tools:ignore="MissingTranslation">自動</string>
+    <string name="music_video_resolution" tools:ignore="MissingTranslation">ビデオの解像度</string>
+    <string name="music_video_resolution_desc" tools:ignore="MissingTranslation">このミュージックビデオの解像度を変更する</string>
+    <string name="music_video_resolution_current" tools:ignore="MissingTranslation">再生中</string>
+    <string name="music_video_cache" tools:ignore="MissingTranslation">ミュージックビデオのキャッシュ</string>
+    <string name="clear_music_video_cache" tools:ignore="MissingTranslation">ミュージックビデオのキャッシュを削除</string>
+    <string name="clear_music_video_cache_desc" tools:ignore="MissingTranslation">キャッシュされた曲とビデオの解像度の一致を削除します</string>
+    <string name="clear_all_downloads_dialog">ダウンロードされたすべての音声ファイルを削除しますか?</string>
+    <string name="song_cache_location">曲のキャッシュの保存場所</string>
+    <string name="song_cache_location_internal">内部ストレージ</string>
+    <string name="song_cache_location_internal_desc">アプリストレージに隠されています</string>
+    <string name="song_cache_location_shared_media">共有メディアフォルダー</string>
+    <string name="song_cache_location_shared_media_desc">ファイルマネージャーやメディアスキャナーでは、Android/media の下に表示されます</string>
+    <string name="song_cache_directory">曲のキャッシュディレクトリ</string>
+    <string name="storage_in_total">合計: %1$s</string>
+    <string name="downloads">ダウンロード</string>
+    <string name="youtube_playlists">YouTube プレイリスト</string>
+    <string name="podcasts">ポッドキャスト</string>
+    <string name="download_location">ダウンロード場所</string>
+    <string name="player_canvas_desc">SpotifyとYouTube Canvasの動画は、利用可能な場合、拡張プレーヤーの背後で再生されます。ストレージ容量とモバイルデータ通信量を多く消費します。</string>
+    <string name="disable_animated_artwork_on_mobile_data">モバイルデータで動くアートワークを無効化</string>
+    <string name="disable_animated_artwork_on_mobile_data_desc">モバイルデータ通信では、アニメーションがキャッシュされている場合でも、静止画を表示します</string>
+    <string name="settings_history_playlists">再生履歴プレイリスト</string>
+    <string name="settings_history_playlists_desc">視聴履歴から週単位および月単位のプレイリストを作成できます。これらのプレイリストは自動的に更新され、ライブラリに表示されます。</string>
+    <string name="history_playlist_weekly">週間トップ曲</string>
+    <string name="history_playlist_monthly">月間トップ曲</string>
+    <string name="queue_youtube_history_when_offline">オフライン時にYouTubeの履歴をキューに追加</string>
 </resources>

@@ -64,9 +64,10 @@ internal fun audioOutputMixers(
 ): List<Mixer.Info?> {
     if (!configuredLine.isNullOrBlank()) return listOf(null)
     if (!osName.equals("Linux", ignoreCase = true)) return listOf(null) + mixers
-    // Stay on the system audio server; hardware, loopback and null outputs can silently lose audio.
+    // Prefer system routes before Java Sound's default, which can select hardware or loopback devices.
     return mixers.filter { it.name.endsWith(" [default]") } +
-        mixers.filter { it.name.endsWith(" [pipewire]") || it.name.endsWith(" [pulse]") }
+        mixers.filter { it.name.endsWith(" [pipewire]") || it.name.endsWith(" [pulse]") } +
+        listOf(null)
 }
 
 fun Throwable.isAudioOutputUnavailable(): Boolean =

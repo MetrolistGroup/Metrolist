@@ -26,44 +26,62 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class PlaylistReorderTest {
     @Test
-    fun remoteFailurePreservesStoredOrderAndSuccessMovesOnlyTheRequestedOccurrence() =
-        runBlocking {
-            val directory = Files.createTempDirectory("playlist-reorder")
-            val database = getDatabaseBuilder(directory.resolve("test.db").toFile()).build()
-            try {
-                val dao = database.dao()
-                dao.insert(PlaylistEntity(id = "VLplaylist", name = "Playlist", browseId = "playlist", isEditable = true))
-                dao.insert(SongEntity("duplicate", "Song"))
-                listOf("first", "second", "third").forEachIndexed { position, occurrence ->
-                    dao.insert(
-                        PlaylistSongMap(
-                            playlistId = "VLplaylist",
-                            songId = "duplicate",
-                            position = position,
-                            setVideoId = occurrence,
-                        ),
-                    )
-                }
-                val original = dao.playlistSongMaps("VLplaylist", 0)
-                val sections: Map<String, List<YTItem>> = mapOf("songs" to listOf(song("first"), song("second"), song("third")))
-                val move = requireNotNull(sections.reorderPlaylistSong(song("first"), song("third"), afterTarget = true))
-                assertTrue(
-                    commitRemotePlaylistReorder(database, "playlist", move) { Result.failure(IllegalStateException("offline")) }.isFailure,
+    fun remoteFailurePreservesStoredOrderAndSuccessMovesOnlyTheRequestedOccurrence() = verifyRemoteReorder()
+
+    @Test
+    fun remoteReorderKeepsRestoredOccurrencesWithRepeatedPositionsSeparate() = verifyRemoteReorder(repeatedPositions = true)
+
+    @Test
+    fun negativeStoredPositionsRemainReorderable() = verifyRemoteReorder(repeatedPositions = true, positionOffset = -1)
+
+    private fun verifyRemoteReorder(
+        repeatedPositions: Boolean = false,
+        positionOffset: Int = 0,
+    ) = runBlocking {
+        val directory = Files.createTempDirectory("playlist-reorder")
+        val database = getDatabaseBuilder(directory.resolve("test.db").toFile()).build()
+        try {
+            val dao = database.dao()
+            dao.insert(PlaylistEntity(id = "VLplaylist", name = "Playlist", browseId = "playlist", isEditable = true))
+            dao.insert(SongEntity("duplicate", "Song"))
+            listOf("first", "second", "third").forEachIndexed { position, occurrence ->
+                dao.insert(
+                    PlaylistSongMap(
+                        playlistId = "VLplaylist",
+                        songId = "duplicate",
+                        position = (if (repeatedPositions) (position - 1).coerceAtLeast(0) else position) + positionOffset,
+                        setVideoId = occurrence,
+                    ),
                 )
-                assertEquals(original, dao.playlistSongMaps("VLplaylist", 0))
-                commitRemotePlaylistReorder(database, "playlist", move) {
-                    assertEquals(original, dao.playlistSongMaps("VLplaylist", 0))
-                    Result.success(Unit)
-                }.getOrThrow()
-                assertEquals(listOf("second", "third", "first"), dao.playlistSongMaps("VLplaylist", 0).map { it.setVideoId })
-                val backward = requireNotNull(move.sections.reorderPlaylistSong(song("first"), song("second"), afterTarget = false))
-                commitRemotePlaylistReorder(database, "playlist", backward) { Result.success(Unit) }.getOrThrow()
-                assertEquals(original, dao.playlistSongMaps("VLplaylist", 0))
-            } finally {
-                database.close()
-                directory.toFile().deleteRecursively()
             }
+            val original = dao.playlistSongMaps("VLplaylist", Int.MIN_VALUE)
+            val sections: Map<String, List<YTItem>> = mapOf("songs" to listOf(song("first"), song("second"), song("third")))
+            val move = requireNotNull(sections.reorderPlaylistSong(song("first"), song("third"), afterTarget = true))
+            assertTrue(
+                commitRemotePlaylistReorder(database, "playlist", move) { Result.failure(IllegalStateException("offline")) }.isFailure,
+            )
+            assertEquals(original, dao.playlistSongMaps("VLplaylist", Int.MIN_VALUE))
+            commitRemotePlaylistReorder(database, "playlist", move) {
+                assertEquals(original, dao.playlistSongMaps("VLplaylist", Int.MIN_VALUE))
+                Result.success(Unit)
+            }.getOrThrow()
+            assertEquals(listOf("second", "third", "first"), dao.playlistSongMaps("VLplaylist", Int.MIN_VALUE).map { it.setVideoId })
+            val backward = requireNotNull(move.sections.reorderPlaylistSong(song("first"), song("second"), afterTarget = false))
+            commitRemotePlaylistReorder(database, "playlist", backward) { Result.success(Unit) }.getOrThrow()
+            assertEquals(
+                original.mapIndexed {
+                    position,
+                    map,
+                    ->
+                    map.copy(position = position)
+                },
+                dao.playlistSongMaps("VLplaylist", Int.MIN_VALUE),
+            )
+        } finally {
+            database.close()
+            directory.toFile().deleteRecursively()
         }
+    }
 
     @Test
     fun dragMovesDuplicateOccurrencesAcrossSectionsAndPreservesSuggestions() {

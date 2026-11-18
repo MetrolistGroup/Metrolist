@@ -2,29 +2,35 @@ package com.metrolist.shared.youtube.playback
 
 import com.metrolist.innertubex.sabr.SabrBootstrap
 import com.metrolist.innertubex.sabr.SabrFormatId
+import com.metrolist.shared.model.MUSIC_VIDEO_TYPE_LIVE
+import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.isLive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class PlaybackResourceTest {
     @Test
-    fun liveClassificationFollowsTheResourceAndItsCopies() {
-        val recorded = PlaybackResource("video", "https://media.example.test/audio", emptyMap(), null, null)
+    fun transportMarkersDoNotClassifyRecordingsAsLive() {
+        val recorded = PlaybackResource("video", "https://media.example.test/audio", emptyMap(), null, null, durationSeconds = 228L)
         assertFalse(recorded.isLive)
         val liveProfile = recorded.copy(profileId = "ANDROID_LIVE")
-        assertTrue(liveProfile.isLive)
-        assertFalse(liveProfile.copy(profileId = "WEB_REMIX").isLive)
+        assertFalse(liveProfile.isLive)
         for (marker in listOf("yt_live_broadcast", "/live/1", "live=1", "/hls_playlist/", "/hls_variant/")) {
             val liveUrl = "https://media.example.test/$marker".uppercase()
             val audio = recorded.copy(url = liveUrl)
             val video = recorded.copy(videoUrl = liveUrl)
-            assertTrue(audio.isLive)
-            assertTrue(video.isLive)
-            assertFalse(audio.copy(url = recorded.url).isLive)
-            assertFalse(video.copy(videoUrl = null).isLive)
+            assertFalse(audio.isLive)
+            assertFalse(video.isLive)
+            assertFalse(audio.copy(durationSeconds = null).isLive)
+            assertFalse(video.copy(durationSeconds = null).isLive)
         }
+        val live = recorded.copy(durationSeconds = null, isLive = true)
+        assertTrue(live.isLive)
+        assertTrue(live.copy(url = "https://media.example.test/rendition").isLive)
     }
 
     @Test
@@ -73,5 +79,25 @@ class PlaybackResourceTest {
         for (url in listOf("sabr://video", "file:///audio", "/cache/audio", "content://downloads/audio")) {
             assertNull(direct.copy(url = url).networkUrl)
         }
+    }
+
+    @Test
+    fun queueLiveStateFollowsTheResolvedStream() {
+        val song = SongItem("video", "Track", null, emptyList(), null, duration = 353L)
+
+        fun resource(
+            isLive: Boolean,
+            duration: Long?,
+        ) = PlaybackResource("video", "https://example.test/a", emptyMap(), null, null, durationSeconds = duration, isLive = isLive)
+
+        val live = song.matchingLiveState(resource(isLive = true, duration = null))
+        assertTrue(live.isLive)
+        assertEquals(MUSIC_VIDEO_TYPE_LIVE, live.musicVideoType)
+        // A track wrongly marked live becomes seekable again once a finite recording plays.
+        val restored = live.matchingLiveState(resource(isLive = false, duration = 353L))
+        assertFalse(restored.isLive)
+        assertEquals(353L, restored.duration)
+        assertSame(song, song.matchingLiveState(resource(isLive = false, duration = 353L)))
+        assertSame(live, live.matchingLiveState(resource(isLive = false, duration = null)))
     }
 }

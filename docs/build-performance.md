@@ -2,9 +2,9 @@
 
 ## CI path selection
 
-`.github/scripts/ci_paths.py` owns the path rules for Android, desktop, iOS, repository checks and Arch packaging. The entry workflows run a small Linux selection job. Common sources, common tests, Compose resources and documentation select one Linux x64 JVM build with shared tests. Android and iOS source sets select their own platform. JVM shared sources select Android and desktop. Platform workflows select their platform. Gradle scripts, catalogs, wrapper files, shared actions, release workflows and unknown paths select everything. Deleted paths and both sides of renames count. An unreadable diff selects everything. Arch packaging runs for recipe or global build changes, not for every desktop edit.
+[CI](../.github/workflows/ci.yml) uses one Linux selection job and runs cheap repository checks there. Docs-only changes need no build runner. Common production sources and Compose resources select Android, desktop x64 and iOS. Common tests and JVM shared sources select Android and desktop. Platform source sets select their platform. Global build inputs and unreadable diffs select every platform. Deleted paths and both sides of renames count. See [CI path selection](checks.md#ci-path-selection) for job counts and manual packaging commands.
 
-Main pushes run the affected platform's unit tests. Shared-only changes run the shared JVM tests. iOS targets require Apple SDKs, so iOS compiles and tests only on macOS.
+Main pushes run the affected platform's ktlint and unit tests. Nightly supplies the APK and native desktop builds, so CI skips debug APK assembly and its separate desktop compile task on push. Tests still compile their dependencies. ARM64 verification, other desktop packaging and launch probes stay manual. iOS targets need Apple SDKs and run only on macOS.
 
 ## Release verification gate
 
@@ -18,7 +18,7 @@ Release callers pass `run-verification: false` only after the gate passes. `-Pme
 | Packaged launch smoke tests | Manual Linux, Windows and macOS packages |
 | iOS simulator backend tests | iOS verification and manual IPA builds |
 | Windows manager tests and payload installation | `build-desktop.yml` with `windows-manager=true` |
-| Shared JAR integrity and iOS dictionary checks | Linux verification; manual packaging also checks final distributables |
+| Shared JAR integrity checks | Linux verification; manual packaging also checks final distributables |
 
 Packaging jobs always keep the macOS architecture inspection, APK signature checks, archive existence and version checks, provenance, Sentry uploads, staging and publication. The stable Windows manager installer builds in parallel with portable packaging.
 
@@ -64,6 +64,6 @@ The build pins Kotlin and the Compose compiler to 2.4.21. Kotlin 2.5 [disables](
 
 `gradle.properties` does not set the internal property because KGP reports its use. Do not disable `kotlin.internal.jvm.enableKmpClasspathMetadataForIncrementalCompilation`; [Kotlin PR 7638](https://github.com/JetBrains/kotlin/pull/7638) explains why common fragments need that metadata. Fresh CI checkouts compile non-incrementally. Clean `:shared` if a local build misbehaves after changing an expect/actual pair.
 
-Room 3 requires KSP with Kotlin code generation ([Room 3 release notes](https://developer.android.com/jetpack/androidx/releases/room3#3.0.3)). [KSP2](https://github.com/google/ksp/blob/2.3.13/docs/ksp2.md) runs separately from the Kotlin compiler. Room KSP runs only in shared production source sets; `androidApp` does not apply KSP.
+Room 3 requires KSP with Kotlin code generation ([Room 3 release notes](https://developer.android.com/jetpack/androidx/releases/room3#3.0.3)). [KSP2](https://github.com/google/ksp/blob/2.3.14/docs/ksp2.md) runs separately from the Kotlin compiler. Room KSP runs only in shared production source sets; `androidApp` does not apply KSP.
 
 Kotlin's [release-cache options](https://kotlinlang.org/docs/native-improving-compilation-time.html#enable-caches-for-release-binaries) trade some compiler optimizations for build speed.

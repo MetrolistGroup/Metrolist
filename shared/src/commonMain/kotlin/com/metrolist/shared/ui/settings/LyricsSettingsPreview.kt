@@ -74,6 +74,7 @@ fun PlayerLyricsSettingsPreview(
     viewModel: PlayerViewModel,
     modifier: Modifier = Modifier,
     isCasting: Boolean = false,
+    isBuffering: Boolean = false,
 ) {
     val state by viewModel.uiState.collectAsState()
     LaunchedEffect(
@@ -99,6 +100,7 @@ fun PlayerLyricsSettingsPreview(
         lyricsRetimed = state.mvLyricsRetimed,
         isPlaying = state.isPlaying,
         isCasting = isCasting,
+        isBuffering = isBuffering,
         onSeek = viewModel::seekToPosition,
     )
 }
@@ -118,6 +120,7 @@ fun LyricsSettingsPreview(
     lyricsRetimed: Boolean = false,
     isPlaying: Boolean = false,
     isCasting: Boolean = false,
+    isBuffering: Boolean = false,
     onSeek: (Long, PlaybackSeekSource) -> Unit = { _, _ -> },
 ) {
     val useCurrentLyrics = useCurrentLyricsForPreview(songId, isPlaying, currentLyrics)
@@ -220,6 +223,7 @@ fun LyricsSettingsPreview(
                             timingOffsetMs = if (useCurrentLyrics) timingOffsetMs else 0,
                             isPlaying = if (useCurrentLyrics) isPlaying else previewPlaying,
                             isCasting = useCurrentLyrics && isCasting,
+                            isBuffering = useCurrentLyrics && isBuffering,
                             isVisible = lifecycleState == Lifecycle.State.RESUMED,
                             lyricsRetimed = useCurrentLyrics && lyricsRetimed,
                             onSeek = { positionMs, source ->

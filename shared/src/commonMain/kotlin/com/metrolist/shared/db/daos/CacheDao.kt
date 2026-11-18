@@ -46,8 +46,14 @@ interface CacheDao {
     suspend fun cacheLyricsIfUnchanged(
         lyrics: LyricsEntity,
         expected: LyricsEntity?,
+        allowLegacyOverwrite: Boolean = false,
     ): LyricsEntity? {
         val current = cachedLyrics(lyrics.id)
+        if (current?.isLegacyProtected == true && !allowLegacyOverwrite &&
+            (lyrics.lyrics != current.lyrics || lyrics.provider != current.provider)
+        ) {
+            return current
+        }
         // An offset-only row may appear while the first lyrics fetch is in flight.
         val previous = expected ?: LyricsEntity(id = lyrics.id, lyrics = "")
         if (current != expected &&
@@ -62,6 +68,7 @@ interface CacheDao {
         val updated =
             lyrics.copy(
                 offsetMs = current?.offsetMs ?: lyrics.offsetMs,
+                isLegacyProtected = current?.isLegacyProtected == true && !allowLegacyOverwrite,
                 userLyrics = current?.userLyrics,
                 userLyricsDraft = current?.userLyricsDraft,
                 stashedUserLyrics = current?.stashedUserLyrics,
@@ -277,6 +284,16 @@ interface CacheDao {
     @Transaction
     @Query("SELECT * FROM cached_audio WHERE kind = :kind ORDER BY cachedAt DESC")
     fun cachedAudioByKind(kind: String): Flow<List<CachedAudioEntity>>
+
+    @Query(
+        """
+        UPDATE cached_audio SET cachedAt = (SELECT dateDownload FROM song WHERE id = cached_audio.songId)
+        WHERE kind = 'DOWNLOAD' AND EXISTS (
+            SELECT 1 FROM song WHERE id = cached_audio.songId AND dateDownload < cached_audio.cachedAt
+        )
+        """,
+    )
+    suspend fun restoreDownloadDates()
 
     @Query("SELECT songId, filePath FROM cached_audio WHERE kind = :kind AND songId IN (:songIds)")
     suspend fun cachedAudioCandidates(

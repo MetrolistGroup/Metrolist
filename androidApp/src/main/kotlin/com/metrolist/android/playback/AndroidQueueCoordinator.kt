@@ -341,7 +341,7 @@ internal class AndroidQueueCoordinator(
                 songs = playableSongs,
                 startIndex = adjustedStartIndex,
                 startPlaying = startPlaying,
-                preparePlayback = startPlaying || fromRemote,
+                preparePlayback = true,
                 startPositionMs = startPositionMs,
                 recommendationsSongsOnly = songsOnly,
             )
@@ -429,7 +429,8 @@ internal class AndroidQueueCoordinator(
                         val additions = BlockedContent.filterPlayableSongs(next.songs.drop(previous.songs.size))
                         appendPlaylistSongs(additions)
                     } while (playlistPage?.hasMore == true &&
-                        shouldLoadPlaylistPage(player.currentMediaItemIndex.value, player.songQueue.value.size)
+                        // Shuffle can only mix songs that are already loaded, so it loads the whole playlist.
+                        (player.isShuffleEnabled || shouldLoadPlaylistPage(player.currentMediaItemIndex.value, player.songQueue.value.size))
                     )
                 } catch (e: CancellationException) {
                     throw e
@@ -698,6 +699,9 @@ internal class AndroidQueueCoordinator(
             }
         }
         scope.launch {
+            player.shuffleEnabled.collect { if (it) schedulePlaylistPage() }
+        }
+        scope.launch {
             combine(
                 player.currentMediaItemIndex,
                 player.songQueue,
@@ -945,6 +949,7 @@ internal class AndroidQueueCoordinator(
 
     suspend fun advanceQueueAfterCurrent(completedPlaybackInstanceId: Long? = null) {
         if (transitions.consumeCrossfadeCompletion(completedPlaybackInstanceId) || transitions.isCrossfading) return
+        if (completedPlaybackInstanceId != null && completedPlaybackInstanceId != player.currentPlaybackInstanceId) return
         if (AndroidDeviceConnect.manager.remote.isActive) {
             AndroidDeviceConnect.manager.remote.playbackEnded()
             return

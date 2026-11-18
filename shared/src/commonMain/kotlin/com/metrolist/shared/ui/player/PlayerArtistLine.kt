@@ -1,8 +1,6 @@
 package com.metrolist.shared.ui.player
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.MarqueeDefaults
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -47,12 +46,18 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.unknown_artist
 import com.metrolist.shared.generated.resources.view_artist
 import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.ui.components.CollectionPreviews
+import com.metrolist.shared.ui.components.LocalVisualWorkActive
+import com.metrolist.shared.ui.components.animateMarquee
+import com.metrolist.shared.utils.isDesktop
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
@@ -118,8 +123,20 @@ fun PlayerArtistLine(
     val artistBounds = remember(artists, layoutDirection) { mutableStateMapOf<Int, IntRect>() }
     var focusedArtist by remember { mutableStateOf<Int?>(null) }
     val focusedBounds = focusedArtist?.let(artistBounds::get)
+    val active =
+        if (isDesktop) {
+            val visible by LocalVisualWorkActive.current.collectAsState()
+            val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+            visible && lifecycle.isAtLeast(Lifecycle.State.STARTED)
+        } else {
+            true
+        }
     val pixelsPerSecond = with(LocalDensity.current) { 30.dp.toPx() }
-    LaunchedEffect(contentWidth, containerWidth, iterations, initialDelayMillis, pixelsPerSecond, focusedArtist, focusedBounds) {
+    LaunchedEffect(contentWidth, containerWidth, iterations, initialDelayMillis, pixelsPerSecond, focusedArtist, focusedBounds, active) {
+        if (!active) {
+            offset.snapTo(0f)
+            return@LaunchedEffect
+        }
         if (focusedArtist != null) {
             focusedBounds?.let { offset.animateTo(artistMarqueeFocusOffset(offset.value, it, containerWidth)) }
             return@LaunchedEffect
@@ -131,7 +148,7 @@ fun PlayerArtistLine(
             try {
                 repeat(iterations) { index ->
                     delay(if (index == 0) initialDelayMillis.toLong() else MarqueeDefaults.RepeatDelayMillis.toLong())
-                    offset.animateTo(cycle.distance.toFloat(), tween(cycle.durationMillis, easing = LinearEasing))
+                    offset.animateMarquee(cycle.distance, cycle.durationMillis)
                     offset.snapTo(0f)
                 }
             } finally {
@@ -213,9 +230,12 @@ fun PlayerArtistLine(
             containerWidth = constraints.constrainWidth(contentWidth)
             val distance = contentWidth + (containerWidth / 3f).roundToInt()
             layout(containerWidth, copies.first().height) {
-                val x = offset.value.roundToInt()
-                copies[0].placeRelativeWithLayer(-x, 0)
-                if (contentWidth > containerWidth) copies[1].placeRelativeWithLayer(distance - x, 0)
+                val translation = {
+                    val x = offset.value.roundToInt().toFloat()
+                    if (layoutDirection == LayoutDirection.Rtl) x else -x
+                }
+                copies[0].placeRelativeWithLayer(0, 0) { translationX = translation() }
+                if (contentWidth > containerWidth) copies[1].placeRelativeWithLayer(distance, 0) { translationX = translation() }
             }
         }
     }

@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -62,7 +63,7 @@ fun MetrolistTheme(
 ) {
     val context = LocalContext.current
     val view = LocalView.current
-    val lightStatusBars = !darkTheme && SystemBarAppearance.imageOwners == 0
+    val lightStatusBars = SystemBarAppearance.playerLightStatusBars ?: (!darkTheme && SystemBarAppearance.imageOwners == 0)
     SideEffect {
         context.findActivity()?.window?.let { window ->
             WindowCompat.getInsetsController(window, view).apply {
@@ -164,4 +165,5 @@ fun Bitmap.extractThemeColor(): Color = ThemeColorExtractor().extractSeedColor(t
 
 internal object SystemBarAppearance {
     var imageOwners by mutableIntStateOf(0)
+    var playerLightStatusBars by mutableStateOf<Boolean?>(null)
 }

@@ -42,7 +42,7 @@ import com.metrolist.shared.model.RadioQueueChip
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.artworkExplicitness
 import com.metrolist.shared.model.canSwitchToMusicVideo
-import com.metrolist.shared.model.isLiveType
+import com.metrolist.shared.model.isLive
 import com.metrolist.shared.model.isOfficialVideoType
 import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.model.isVideoSong
@@ -2153,7 +2153,7 @@ class PlayerViewModel(
         val isOfficialMusicVideo: Boolean
             get() = isOfficialVideoType(musicVideoType)
         val isLive: Boolean
-            get() = isLiveType(musicVideoType)
+            get() = toSongItem().isLive
 
         fun toSongItem(): SongItem =
             SongItem(

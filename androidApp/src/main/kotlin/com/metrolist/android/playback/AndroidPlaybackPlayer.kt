@@ -263,6 +263,8 @@ interface AndroidPlaybackPlayer {
         startPaused: Boolean = false,
         queueSongId: String = resource.videoId,
         positionMs: Long = 0L,
+        playbackSong: SongItem? = null,
+        sourceSong: SongItem? = null,
         onFailure: (Throwable) -> Unit = {},
     ): PlaybackPreloadToken?
 

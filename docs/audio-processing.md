@@ -10,7 +10,7 @@ MetroEQ band gains and AutoEQ imports support -30 to +30 dB. The separate output
 - Desktop decodes through FFmpeg. `AudioRenderer` applies EQ and gain before silence skipping, then normalization and user volume at output.
 - iOS attaches `MTAudioProcessingTap` through `AVAudioMix` before starting a prepared player. Each tap owns its processing state. HLS fallback bypasses the tap, so MetroEQ, independent pitch and the meter are unavailable for that stream. Speed remains available.
 
-Android's System equalizer opens the installed audio-effects panel for the current audio session. Each new player opens its own effects session; releasing an outgoing player closes only that session. Panel availability depends on the device and route. Changing hardware audio processing requires restart because the sink reads it at construction.
+Android's System equalizer opens the installed audio-effects panel for the current audio session. The primary player, preloads and ordinary stream replacements share one session ID, so system effects stay attached across track changes and crossfades. The session stays open until its last attached player releases. Bluetooth stuck-output recovery prepares a fresh ID and adopts it after a successful handoff, with one close and one open notification. A failed replacement leaves the current session unchanged. MetroEQ and normalization still process PCM separately for each player. Panel availability depends on the device and route. Changing hardware audio processing requires restart because the sink reads it at construction.
 
 ## Tempo and pitch
 

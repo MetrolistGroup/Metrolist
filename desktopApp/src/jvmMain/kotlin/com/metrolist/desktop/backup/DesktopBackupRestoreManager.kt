@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.metrolist.desktop.history.HistoryRepository
 import com.metrolist.desktop.utils.desktopRestartCommand
 import com.metrolist.desktop.utils.prepareDesktopRelaunch
+import com.metrolist.desktop.utils.windowsDelayedRestartCommand
 import com.metrolist.shared.backup.BACKUP_DATABASE_ENTRY
 import com.metrolist.shared.backup.BACKUP_MANIFEST_ENTRY
 import com.metrolist.shared.backup.BACKUP_SETTINGS_ENTRY
@@ -17,7 +18,6 @@ import com.metrolist.shared.backup.requireBackupSize
 import com.metrolist.shared.backup.requireSupportedBackupDatabaseVersion
 import com.metrolist.shared.backup.requireSupportedFormat
 import com.metrolist.shared.backup.shouldConvertRestoredDatabase
-import com.metrolist.shared.backup.shouldMigrateDatabaseLikes
 import com.metrolist.shared.backup.withLegacyArtistNameAliases
 import com.metrolist.shared.db.DATABASE_VERSION
 import com.metrolist.shared.db.JdbcSQLiteDriver
@@ -29,6 +29,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.ArtistNameAliases
 import com.metrolist.shared.settings.PortableSettings
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.state.restoreDatabaseLikes
 import com.metrolist.shared.utils.XdgUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -233,8 +234,6 @@ object DesktopBackupRestoreManager {
             File(restoreDir, BACKUP_SETTINGS_ENTRY).takeIf(File::exists)?.let {
                 json.decodeFromString(PortableSettings.serializer(), it.readText())
             }
-        val migrateDatabaseLikes =
-            shouldMigrateDatabaseLikes(restoredSettings?.entries?.mapTo(mutableSetOf()) { it.key })
         val settingsSnapshot = File(restoreDir, "previous-settings.json")
         val preservedMarker = File(restoreDir, "database-preserved")
         val installationMarker = File(restoreDir, "installation-started")
@@ -304,14 +303,12 @@ object DesktopBackupRestoreManager {
                 Files.copy(staged.toPath(), stagedLiveDatabase.toPath(), StandardCopyOption.REPLACE_EXISTING)
                 atomicMove(stagedLiveDatabase, databaseFile)
                 databasePromoted = true
-                val verifiedLikes = verifyRestored()
-                if (migrateDatabaseLikes) databaseLikedSongs = verifiedLikes
+                databaseLikedSongs = verifyRestored()
             }
             if (restoredSettings == null) settings.artistNameAliasesJson = "{}"
             restoredSettings?.let(settings::importBackupSettings)
-            if (databasePromoted && migrateDatabaseLikes) {
-                settings.likedSongsJson = json.encodeToString(databaseLikedSongs)
-                settings.likedSongIds = databaseLikedSongs.joinToString(",") { it.id }
+            if (databasePromoted) {
+                settings.restoreDatabaseLikes(databaseLikedSongs, restoredSettings?.entries?.mapTo(mutableSetOf()) { it.key })
             }
             Files.deleteIfExists(File(restoreDir, MARKER).toPath())
             runCatching {
@@ -381,7 +378,7 @@ object DesktopBackupRestoreManager {
             val appCommand = desktopRestartCommand()
             val process =
                 if (System.getProperty("os.name").startsWith("Windows", ignoreCase = true)) {
-                    ProcessBuilder(listOf("cmd", "/c", "ping -n 2 127.0.0.1 >nul & start \"\"") + appCommand)
+                    ProcessBuilder(windowsDelayedRestartCommand(appCommand))
                 } else {
                     ProcessBuilder(
                         listOf(

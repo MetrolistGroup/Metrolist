@@ -150,7 +150,7 @@ class TokenlessStreamRenewalTest {
             assertEquals(1, renewals)
             job.cancelAndJoin()
             assertFalse(TokenlessStreamRenewal.needsRenewal(tokenless.copy(clientName = "local")))
-            assertFalse(TokenlessStreamRenewal.needsRenewal(tokenless.copy(url = "https://example.test/live/1")))
+            assertFalse(TokenlessStreamRenewal.needsRenewal(tokenless.copy(url = "https://example.test/live/1", isLive = true)))
         }
 
     @Test

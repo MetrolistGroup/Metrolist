@@ -6,7 +6,6 @@
 package com.metrolist.shared.ui.menu
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -91,8 +90,10 @@ import com.metrolist.shared.generated.resources.youtube_music
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.state.GlobalYouTubeRepository
+import com.metrolist.shared.ui.components.Scrollbar
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.loadingShimmer
+import com.metrolist.shared.ui.components.playbackMarquee
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.screens.statisticsDuration
 import com.metrolist.shared.ui.statistics.StatisticsFormatter
@@ -102,6 +103,8 @@ import com.metrolist.shared.ui.utils.segmentedGroupShape
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.formatDuration
 import com.metrolist.shared.utils.formatLoudness
+import com.metrolist.shared.utils.isDesktop
+import com.metrolist.shared.utils.parseAudienceCount
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -261,13 +264,18 @@ fun SongDetailsContent(
         val information =
             buildList {
                 fun addValue(
-                    label: String,
+                    label: String?,
                     value: String?,
                     loading: Boolean,
                 ) {
                     if (!value.isNullOrBlank() || loading) add(label to value?.takeIf { it.isNotBlank() })
                 }
-                addValue(stringResource(Res.string.subscribers), watchInformation?.subscriberCount, watchInformationLoading)
+                val subscribers = parseAudienceCount(watchInformation?.subscriberCount)
+                addValue(
+                    stringResource(Res.string.subscribers).takeUnless { subscribers?.isCountOnly == false },
+                    subscribers?.text,
+                    watchInformationLoading,
+                )
                 addValue(
                     stringResource(Res.string.views),
                     (watchInformation?.viewCount ?: playerInformation?.viewCount)?.let(numbers::number),
@@ -287,13 +295,21 @@ fun SongDetailsContent(
                 Triple(stringResource(Res.string.details), MetrolistIcons.Outlined.Info, details),
                 Triple(stringResource(Res.string.about), MetrolistIcons.Outlined.Description, information),
             ).filter { it.third.isNotEmpty() }
-        SelectionContainer {
-            Column(modifier = modifier.fillMaxWidth().verticalScrollWithDrag(rememberScrollState()).padding(16.dp)) {
-                SongDetailsHeader(title, artistText, thumbnail)
-                Spacer(Modifier.height(16.dp))
-                sections.forEachIndexed { index, (sectionTitle, icon, rows) ->
-                    if (index > 0) Spacer(Modifier.height(4.dp))
-                    SongDetailsSection(sectionTitle, icon, rows, index == 0, index == sections.lastIndex)
+        val scrollState = rememberScrollState()
+        Box(modifier.fillMaxWidth()) {
+            SelectionContainer {
+                Column(modifier = Modifier.fillMaxWidth().verticalScrollWithDrag(scrollState).padding(16.dp)) {
+                    SongDetailsHeader(title, artistText, thumbnail)
+                    Spacer(Modifier.height(16.dp))
+                    sections.forEachIndexed { index, (sectionTitle, icon, rows) ->
+                        if (index > 0) Spacer(Modifier.height(4.dp))
+                        SongDetailsSection(sectionTitle, icon, rows, index == 0, index == sections.lastIndex)
+                    }
+                }
+            }
+            if (isDesktop) {
+                Box(Modifier.matchParentSize()) {
+                    Scrollbar(scrollState, Modifier.align(Alignment.CenterEnd))
                 }
             }
         }
@@ -339,7 +355,7 @@ private fun SongDetailsHeader(
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.basicMarquee(),
+                modifier = Modifier.playbackMarquee(),
             )
             Text(
                 text = subtitle,
@@ -347,7 +363,7 @@ private fun SongDetailsHeader(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.basicMarquee(),
+                modifier = Modifier.playbackMarquee(),
             )
         }
     }
@@ -357,7 +373,7 @@ private fun SongDetailsHeader(
 private fun SongDetailsSection(
     title: String,
     icon: ImageVector,
-    rows: List<Pair<String, String?>>,
+    rows: List<Pair<String?, String?>>,
     first: Boolean,
     last: Boolean,
 ) {
@@ -374,7 +390,9 @@ private fun SongDetailsSection(
             Spacer(Modifier.height(4.dp))
             rows.forEach { (label, value) ->
                 Column(Modifier.fillMaxWidth()) {
-                    Text(label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                    if (label != null) {
+                        Text(label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                    }
                     if (value == null) {
                         Box(
                             Modifier

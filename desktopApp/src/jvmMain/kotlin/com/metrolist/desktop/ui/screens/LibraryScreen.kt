@@ -118,6 +118,7 @@ import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.rememberScrollingFabState
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.menu.cursorContextMenu
+import com.metrolist.shared.ui.menu.groupedMenuItemShapes
 import com.metrolist.shared.ui.menu.rememberCursorContextMenuState
 import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.screens.LibraryAutoPlaylist
@@ -158,7 +159,8 @@ fun LibraryScreen(
                 },
             )
         }
-    var isGridView by remember { mutableStateOf(LibraryState.libraryViewType == LibraryViewType.GRID) }
+    val gridFilter = selectedFilter?.let { LibraryFilterType.valueOf(it.name) } ?: LibraryFilterType.ALL
+    val isGridView = Settings.shared.libraryGridView(gridFilter, LibraryState.libraryViewType == LibraryViewType.GRID)
     var manualOrder by remember { mutableStateOf(Settings.shared.libraryManualOrder) }
     var searchQuery by remember { mutableStateOf("") }
     val activeLibraryGridState = rememberLibrarySearchScrollState(searchQuery, libraryGridState)
@@ -214,8 +216,7 @@ fun LibraryScreen(
                         }
                 },
                 onGridViewChange = {
-                    isGridView = it
-                    LibraryState.updateLibraryViewType(if (it) LibraryViewType.GRID else LibraryViewType.LIST)
+                    Settings.shared.setLibraryGridView(gridFilter, it)
                 },
                 onManualOrderChange = {
                     manualOrder = it
@@ -396,6 +397,7 @@ fun LibraryScreen(
                     DropdownMenuItem(
                         modifier = Modifier.navigationPopupSource(),
                         text = { Text(stringResource(Res.string.create_playlist)) },
+                        shape = groupedMenuItemShapes(0, 2).shape,
                         onClick = {
                             showNewPlaylistMenu = false
                             showCreateDialog = true
@@ -403,6 +405,7 @@ fun LibraryScreen(
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(Res.string.import_playlist)) },
+                        shape = groupedMenuItemShapes(1, 2).shape,
                         onClick = {
                             showNewPlaylistMenu = false
                             UiState.openPlaylistImportRequested = true

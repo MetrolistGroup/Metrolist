@@ -1,6 +1,7 @@
 package com.metrolist.desktop.spotifyimport
 
 import com.metrolist.desktop.state.app.AppState
+import com.metrolist.desktop.state.auth.AuthState
 import com.metrolist.desktop.state.content.LibraryContentState
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.favorites
@@ -67,10 +68,12 @@ internal class DesktopPlaylistImportExecutor(
                                     durationSeconds = it.durationSeconds,
                                 )
                             }
+                        // Signed-out batches have no YouTube Music account to create playlists in.
+                        val batchDestination = if (AuthState.isSignedIn) Destination.NewSynced else Destination.NewLocal
                         val matches =
                             playlistManager.resolveImportTracks(
                                 tracks,
-                                PlaylistImportManager.Destination.NewSynced,
+                                batchDestination,
                                 provider,
                             ) { resolved, total, _ ->
                                 PlaylistImportStatusManager.updateProgress(
@@ -94,7 +97,7 @@ internal class DesktopPlaylistImportExecutor(
                                 .importResolvedTracks(
                                     playlist.name,
                                     matches,
-                                    PlaylistImportManager.Destination.NewSynced,
+                                    batchDestination,
                                     provider,
                                     coverUrl = playlist.image,
                                 ) { imported, total, _ ->

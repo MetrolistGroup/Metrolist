@@ -95,6 +95,7 @@ class IosDatabaseMigrationTest {
                                 .map { it.song.id },
                         )
                         assertEquals(425, upgraded.dao().cachedLyrics("song")?.offsetMs)
+                        assertEquals(version < 66, upgraded.dao().cachedLyrics("song")?.isLegacyProtected)
                         assertEquals(listOf(historicalSpeedDialItem(version)), upgraded.speedDialDao().getAllOnce())
                     } finally {
                         upgraded.close()

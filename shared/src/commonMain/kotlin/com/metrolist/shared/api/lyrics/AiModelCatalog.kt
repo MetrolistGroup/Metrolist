@@ -6,15 +6,19 @@
 package com.metrolist.shared.api.lyrics
 
 import com.metrolist.shared.deviceconnect.DeviceCrypto
+import com.metrolist.shared.network.readTextLimited
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -22,6 +26,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
@@ -48,38 +53,40 @@ class AiModelCatalog(
     private val availableIds = mutableMapOf<String, Set<String>>()
     private val throughputCache = mutableMapOf<String, Double?>()
     private val lock = Mutex()
-    private var modelsDev: JsonObject? = null
+    private val modelLoadLock = Mutex()
+    private var modelsDev: Map<String, ModelsDevProvider>? = null
 
     suspend fun models(
         preset: AiProviderPreset,
         apiKey: String,
         baseUrl: String,
         refresh: Boolean = false,
-    ): Result<List<AiModelInfo>> {
-        val cacheKey = cacheKey(preset, apiKey, baseUrl)
-        if (!refresh) lock.withLock { cache[cacheKey] }?.let { return Result.success(it) }
-        return try {
-            val fromApi = if (preset.modelsEndpoint.isNotBlank()) fetchProviderModels(preset, apiKey, baseUrl, cacheKey) else null
-            if (fromApi?.isFailure == true) lock.withLock { availableIds.remove(cacheKey) }
-            val dev = preset.modelsDevId?.let { devProvider(it) }
-            var result = fromApi?.getOrNull()?.let { priceFromModelsDev(it, dev, preset) }
-            if (result.isNullOrEmpty() && (preset.id != "OpenRouter" || fromApi?.isSuccess != true)) {
-                result = dev?.let(::parseModelsDevModels)?.let { priceFromModelsDev(it, dev, preset) }
+    ): Result<List<AiModelInfo>> =
+        modelLoadLock.withLock {
+            val cacheKey = cacheKey(preset, apiKey, baseUrl)
+            if (!refresh) lock.withLock { cache[cacheKey] }?.let { return@withLock Result.success(it) }
+            try {
+                val fromApi = if (preset.modelsEndpoint.isNotBlank()) fetchProviderModels(preset, apiKey, baseUrl, cacheKey) else null
+                if (fromApi?.isFailure == true) lock.withLock { availableIds.remove(cacheKey) }
+                val dev = preset.modelsDevId?.let { devProvider(it) }
+                var result = fromApi?.getOrNull()?.let { priceFromModelsDev(it, dev, preset) }
+                if (result.isNullOrEmpty() && (preset.id != "OpenRouter" || fromApi?.isSuccess != true)) {
+                    result = dev?.let(::parseModelsDevModels)?.let { priceFromModelsDev(it, dev, preset) }
+                }
+                if (result.isNullOrEmpty() && preset.id == "OpenRouter" && fromApi?.isSuccess != true) {
+                    result = filterAndSort(AiProviderPresets.openRouterOfflineModels)
+                }
+                if (result == null) {
+                    return@withLock Result.failure(fromApi?.exceptionOrNull() ?: IllegalStateException("No model list available"))
+                }
+                lock.withLock { cache[cacheKey] = result }
+                Result.success(result)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Result.failure(e)
             }
-            if (result.isNullOrEmpty() && preset.id == "OpenRouter" && fromApi?.isSuccess != true) {
-                result = filterAndSort(AiProviderPresets.openRouterOfflineModels)
-            }
-            if (result == null) {
-                return Result.failure(fromApi?.exceptionOrNull() ?: IllegalStateException("No model list available"))
-            }
-            lock.withLock { cache[cacheKey] = result }
-            Result.success(result)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Result.failure(e)
         }
-    }
 
     private fun cacheKey(
         preset: AiProviderPreset,
@@ -96,10 +103,16 @@ class AiModelCatalog(
         baseUrl: String,
         savedModel: String,
     ): String {
-        if (!preset.isAi || preset.editableEndpoint || baseUrl != preset.endpoint) return savedModel
-        val models = models(preset, apiKey, baseUrl).getOrNull() ?: return savedModel
+        val effectiveBaseUrl =
+            if (preset.id == "Gemini" && baseUrl == AiProviderPresets.LEGACY_GEMINI_ENDPOINT) {
+                preset.endpoint
+            } else {
+                baseUrl
+            }
+        if (!preset.isAi || preset.editableEndpoint || effectiveBaseUrl != preset.endpoint) return savedModel
+        val models = models(preset, apiKey, effectiveBaseUrl).getOrNull() ?: return savedModel
         // Only a successful provider response can prove a saved model has disappeared.
-        val ids = lock.withLock { availableIds[cacheKey(preset, apiKey, baseUrl)] } ?: return savedModel
+        val ids = lock.withLock { availableIds[cacheKey(preset, apiKey, effectiveBaseUrl)] } ?: return savedModel
         if (ids.isEmpty() || savedModel in ids) return savedModel
         val candidates = models.filter { it.id in ids }
         return defaultModel(preset, candidates, freeOnly = savedModel.endsWith(":free")) ?: savedModel
@@ -151,30 +164,31 @@ class AiModelCatalog(
                 }
         return try {
             val response =
-                httpClient.get(url) {
-                    timeout { requestTimeoutMillis = 20_000 }
-                    if (preset.id == "OpenRouter" || url.contains("openrouter.ai")) {
-                        header("HTTP-Referer", "https://github.com/MetrolistGroup/Metrolist")
-                        header("X-Title", "Metrolist")
-                    }
-                    if (apiKey.isNotBlank()) {
-                        when (preset.protocol) {
-                            AiProtocol.ANTHROPIC -> {
-                                header("x-api-key", apiKey.trim())
-                                header("anthropic-version", "2023-06-01")
-                            }
+                httpClient
+                    .prepareGet(url) {
+                        timeout { requestTimeoutMillis = 20_000 }
+                        if (preset.id == "OpenRouter" || url.contains("openrouter.ai")) {
+                            header("HTTP-Referer", "https://github.com/MetrolistGroup/Metrolist")
+                            header("X-Title", "Metrolist")
+                        }
+                        if (apiKey.isNotBlank()) {
+                            when (preset.protocol) {
+                                AiProtocol.ANTHROPIC -> {
+                                    header("x-api-key", apiKey.trim())
+                                    header("anthropic-version", "2023-06-01")
+                                }
 
-                            AiProtocol.GEMINI -> {
-                                header("x-goog-api-key", apiKey.trim())
-                            }
+                                AiProtocol.GEMINI -> {
+                                    header("x-goog-api-key", apiKey.trim())
+                                }
 
-                            AiProtocol.OPENAI -> {
-                                header("Authorization", "Bearer ${apiKey.trim()}")
+                                AiProtocol.OPENAI -> {
+                                    header("Authorization", "Bearer ${apiKey.trim()}")
+                                }
                             }
                         }
-                    }
-                }
-            val text = response.bodyAsText()
+                    }.readTextLimited(MODEL_RESPONSE_LIMIT_BYTES)
+            val text = response.body ?: return Result.failure(IllegalStateException("Model list exceeds size limit"))
             if (!response.status.isSuccess()) {
                 Result.failure(IllegalStateException("Model list failed (${response.status.value})"))
             } else {
@@ -190,9 +204,9 @@ class AiModelCatalog(
                 }
                 Result.success(
                     when (preset.protocol) {
-                        AiProtocol.ANTHROPIC -> parseAnthropicModels(text)
-                        AiProtocol.GEMINI -> parseGeminiModels(text)
-                        AiProtocol.OPENAI -> parseOpenAiModels(text, textOnly = preset.id == "OpenRouter")
+                        AiProtocol.ANTHROPIC -> parseAnthropicModels(rootObject)
+                        AiProtocol.GEMINI -> parseGeminiModels(rootObject)
+                        AiProtocol.OPENAI -> parseOpenAiModels(rootObject, textOnly = preset.id == "OpenRouter")
                     },
                 )
             }
@@ -203,33 +217,39 @@ class AiModelCatalog(
         }
     }
 
-    private suspend fun devProvider(id: String): JsonObject? {
+    private suspend fun devProvider(id: String): ModelsDevProvider? {
         val root =
-            lock.withLock { modelsDev } ?: try {
-                val response = httpClient.get("https://models.dev/api.json") { timeout { requestTimeoutMillis = 30_000 } }
+            modelsDev ?: try {
+                val response =
+                    httpClient
+                        .prepareGet("https://models.dev/api.json") {
+                            timeout { requestTimeoutMillis = 30_000 }
+                        }.readTextLimited(MODEL_RESPONSE_LIMIT_BYTES)
                 if (!response.status.isSuccess()) return null
-                Json.parseToJsonElement(response.bodyAsText()).jsonObject.also { parsed -> lock.withLock { modelsDev = parsed } }
+                val text = response.body ?: return null
+                // Decode only model metadata, without retaining the full catalog's JSON tree.
+                modelsDevJson.decodeFromString<Map<String, ModelsDevProvider>>(text).also { modelsDev = it }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
                 return null
             }
-        return root[id] as? JsonObject
+        return root[id]
     }
 
     private fun priceFromModelsDev(
         models: List<AiModelInfo>,
-        dev: JsonObject?,
+        dev: ModelsDevProvider?,
         preset: AiProviderPreset,
     ): List<AiModelInfo> {
-        val entries = dev?.get("models") as? JsonObject
+        val entries = dev?.models
         val sorted =
             models.filter { keep(it, entries, preset) }.map { model ->
                 if (model.inputUsdPerMTok != null || entries == null) return@map model
-                val cost = (entries[model.id] as? JsonObject)?.get("cost") as? JsonObject ?: return@map model
+                val cost = entries[model.id]?.cost ?: return@map model
                 model.copy(
-                    inputUsdPerMTok = cost.number("input"),
-                    outputUsdPerMTok = cost.number("output"),
+                    inputUsdPerMTok = cost.input,
+                    outputUsdPerMTok = cost.output,
                 )
             }
         return filterAndSort(sorted)
@@ -237,11 +257,11 @@ class AiModelCatalog(
 
     private fun keep(
         model: AiModelInfo,
-        known: JsonObject?,
+        known: Map<String, ModelsDevModel>?,
         preset: AiProviderPreset,
     ): Boolean {
         if (known == null) return true
-        val entry = known[model.id] as? JsonObject
+        val entry = known[model.id]
         if (entry != null && !modelsDevTextModel(entry)) return false
         return when {
             preset.mixedProtocols -> entry == null || implemented(entry)
@@ -251,13 +271,19 @@ class AiModelCatalog(
     }
 
     internal companion object {
+        const val MODEL_RESPONSE_LIMIT_BYTES = 16 * 1024 * 1024
+        private val modelsDevJson = Json { ignoreUnknownKeys = true }
+
         fun parseOpenAiModels(
             body: String,
             textOnly: Boolean = false,
+        ): List<AiModelInfo> = parseOpenAiModels(Json.parseToJsonElement(body).jsonObject, textOnly)
+
+        private fun parseOpenAiModels(
+            root: JsonObject,
+            textOnly: Boolean,
         ): List<AiModelInfo> =
-            Json
-                .parseToJsonElement(body)
-                .jsonObject["data"]
+            root["data"]
                 .asObjects()
                 .filter { openAiTextModel(it, requireMetadata = textOnly) && activeModel(it) }
                 .mapNotNull { entry ->
@@ -272,20 +298,20 @@ class AiModelCatalog(
                     )
                 }
 
-        fun parseAnthropicModels(body: String): List<AiModelInfo> =
-            Json
-                .parseToJsonElement(body)
-                .jsonObject["data"]
+        fun parseAnthropicModels(body: String): List<AiModelInfo> = parseAnthropicModels(Json.parseToJsonElement(body).jsonObject)
+
+        private fun parseAnthropicModels(root: JsonObject): List<AiModelInfo> =
+            root["data"]
                 .asObjects()
                 .mapNotNull { entry ->
                     val id = entry.string("id") ?: return@mapNotNull null
                     AiModelInfo(id, entry.string("display_name") ?: id)
                 }
 
-        fun parseGeminiModels(body: String): List<AiModelInfo> =
-            Json
-                .parseToJsonElement(body)
-                .jsonObject["models"]
+        fun parseGeminiModels(body: String): List<AiModelInfo> = parseGeminiModels(Json.parseToJsonElement(body).jsonObject)
+
+        private fun parseGeminiModels(root: JsonObject): List<AiModelInfo> =
+            root["models"]
                 .asObjects()
                 .filter { entry ->
                     (entry["supportedGenerationMethods"] as? JsonArray)?.any { it.jsonPrimitive.contentOrNull == "generateContent" } == true
@@ -295,20 +321,19 @@ class AiModelCatalog(
                 }
 
         fun parseModelsDevModels(provider: JsonObject): List<AiModelInfo> =
-            (provider["models"] as? JsonObject)
-                .orEmpty()
-                .mapNotNull { (id, element) ->
-                    val entry = element as? JsonObject ?: return@mapNotNull null
-                    if (!implemented(entry) || !modelsDevTextModel(entry)) return@mapNotNull null
-                    val cost = entry["cost"] as? JsonObject
-                    AiModelInfo(
-                        id = id,
-                        name = entry.string("name") ?: id,
-                        inputUsdPerMTok = cost?.number("input"),
-                        outputUsdPerMTok = cost?.number("output"),
-                        contextLength = ((entry["limit"] as? JsonObject)?.get("context"))?.jsonPrimitive?.intOrNull,
-                    )
-                }
+            parseModelsDevModels(modelsDevJson.decodeFromJsonElement<ModelsDevProvider>(provider))
+
+        private fun parseModelsDevModels(provider: ModelsDevProvider): List<AiModelInfo> =
+            provider.models.mapNotNull { (id, entry) ->
+                if (!implemented(entry) || !modelsDevTextModel(entry)) return@mapNotNull null
+                AiModelInfo(
+                    id = id,
+                    name = entry.name ?: id,
+                    inputUsdPerMTok = entry.cost?.input,
+                    outputUsdPerMTok = entry.cost?.output,
+                    contextLength = entry.limit?.context,
+                )
+            }
 
         fun parseOpenRouterThroughput(body: String): Double? =
             Json
@@ -325,8 +350,8 @@ class AiModelCatalog(
                     }
                 }.maxOrNull()
 
-        private fun implemented(entry: JsonObject): Boolean {
-            val npm = (entry["provider"] as? JsonObject)?.string("npm") ?: return true
+        private fun implemented(entry: ModelsDevModel): Boolean {
+            val npm = entry.provider?.npm ?: return true
             return npm == "@ai-sdk/anthropic" || npm == "@ai-sdk/openai-compatible"
         }
 
@@ -372,9 +397,14 @@ class AiModelCatalog(
                 RegexOption.IGNORE_CASE,
             )
 
-        private fun activeModel(entry: JsonObject): Boolean {
-            if (entry.string("status") in listOf("deprecated", "preview", "alpha", "beta")) return false
-            val expiration = entry.string("expiration_date") ?: return true
+        private fun activeModel(entry: JsonObject): Boolean = activeModel(entry.string("status"), entry.string("expiration_date"))
+
+        private fun activeModel(
+            status: String?,
+            expiration: String?,
+        ): Boolean {
+            if (status in listOf("deprecated", "preview", "alpha", "beta")) return false
+            if (expiration == null) return true
             val today =
                 Clock.System
                     .now()
@@ -383,14 +413,10 @@ class AiModelCatalog(
             return expiration > today
         }
 
-        private fun modelsDevTextModel(entry: JsonObject): Boolean {
-            val modalities = entry["modalities"] as? JsonObject
-            val input = modalities?.get("input") as? JsonArray
-            val output = modalities?.get("output") as? JsonArray
-            return activeModel(entry) &&
-                (input == null || input.any { it.jsonPrimitive.contentOrNull == "text" }) &&
-                (output == null || output.map { it.jsonPrimitive.contentOrNull } == listOf("text"))
-        }
+        private fun modelsDevTextModel(entry: ModelsDevModel): Boolean =
+            activeModel(entry.status, entry.expirationDate) &&
+                (entry.modalities?.input?.contains("text") != false) &&
+                (entry.modalities?.output == null || entry.modalities.output == listOf("text"))
 
         private fun openAiTextModel(
             entry: JsonObject,
@@ -405,3 +431,41 @@ class AiModelCatalog(
         }
     }
 }
+
+@Serializable
+private data class ModelsDevProvider(
+    val models: Map<String, ModelsDevModel> = emptyMap(),
+)
+
+@Serializable
+private data class ModelsDevModel(
+    val name: String? = null,
+    val cost: ModelsDevCost? = null,
+    val limit: ModelsDevLimit? = null,
+    val provider: ModelsDevImplementation? = null,
+    val modalities: ModelsDevModalities? = null,
+    val status: String? = null,
+    @SerialName("expiration_date") val expirationDate: String? = null,
+)
+
+@Serializable
+private data class ModelsDevCost(
+    val input: Double? = null,
+    val output: Double? = null,
+)
+
+@Serializable
+private data class ModelsDevLimit(
+    val context: Int? = null,
+)
+
+@Serializable
+private data class ModelsDevImplementation(
+    val npm: String? = null,
+)
+
+@Serializable
+private data class ModelsDevModalities(
+    val input: List<String>? = null,
+    val output: List<String>? = null,
+)

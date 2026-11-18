@@ -250,7 +250,7 @@ class MacosBuildTest(unittest.TestCase):
                     self.assertIn('-Dorg.gradle.java.installations.paths=/test JDK/Contents/Home', arguments)
                 else:
                     self.assertEqual([
-                        ':desktopApp:packageReleaseDmg', f'-Pmetrolist.verifyPackaging={verification}', '--no-daemon', '--no-configuration-cache',
+                        ':desktopApp:packageReleaseDmg', '-Pmetrolist.debug=false', f'-Pmetrolist.verifyPackaging={verification}', '--no-daemon', '--no-configuration-cache',
                     ], arguments)
 
 

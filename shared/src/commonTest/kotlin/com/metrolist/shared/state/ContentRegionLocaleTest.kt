@@ -48,6 +48,67 @@ class ContentRegionLocaleTest {
     private fun freshSettings(): Settings = Settings(MapSettings())
 
     @Test
+    fun invalidSavedLanguagesReturnToSystemAndInvalidateHomeOnlyOnce() =
+        runTest {
+            for (language in listOf("SYSTEM_DEFAULT", "system", "", "zz", "en-GARBAGE", "und")) {
+                val backing = MapSettings()
+                val settings =
+                    Settings(backing).apply {
+                        contentLanguage = language
+                        lastResolvedContentCountry = "PL"
+                        lastResolvedContentLanguage = language
+                        lastHomePageJson = "stale-home"
+                        visitorData = "same-region-visitor"
+                    }
+
+                fun apply() = GlobalYouTube.applyContentRegion("SYSTEM", settings.contentLanguage, "PL", "pl-PL", settings)
+
+                apply()
+                assertEquals("SYSTEM", settings.contentLanguage, language)
+                assertEquals("SYSTEM", backing.getString("contentLanguage", ""), language)
+                assertEquals(YouTubeLocale(gl = "PL", hl = "pl"), GlobalYouTube.innerTube.locale, language)
+                assertEquals("pl", settings.lastResolvedContentLanguage, language)
+                assertEquals("", settings.lastHomePageJson, language)
+                assertEquals("same-region-visitor", settings.visitorData, language)
+
+                val engine =
+                    MockEngine(
+                        MockEngineConfig().apply {
+                            dispatcher = StandardTestDispatcher(testScheduler)
+                            addHandler { respond("{}", headers = headersOf(HttpHeaders.ContentType, "application/json")) }
+                        },
+                    )
+                val innerTube = clientWithContentNegotiation(engine)
+                try {
+                    innerTube.locale = GlobalYouTube.innerTube.locale
+                    innerTube.browse(YouTubeClient.WEB_REMIX, browseId = "FEmusic_home")
+                    val request = engine.requestHistory.single()
+                    val body = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
+                    val client = body["context"]!!.jsonObject["client"]!!.jsonObject
+                    assertEquals("pl", client["hl"]!!.jsonPrimitive.content, language)
+                    assertEquals("PL", client["gl"]!!.jsonPrimitive.content, language)
+                    assertEquals("pl-PL,pl;q=0.9", request.headers[HttpHeaders.AcceptLanguage], language)
+                } finally {
+                    innerTube.close()
+                    innerTube.httpClient.close()
+                }
+                settings.lastHomePageJson = "fresh-home"
+                apply()
+                assertEquals("fresh-home", settings.lastHomePageJson, language)
+            }
+        }
+
+    @Test
+    fun validLegacyAndBundledContentLanguagesRemainExplicit() {
+        for (language in listOf("es-419", "en-GB", "fil", "iw", "zh-CN", "zh-TW", "zh-HK", "pt-BR", "hi-Latn")) {
+            val settings = freshSettings().apply { contentLanguage = language }
+            GlobalYouTube.applyContentRegion("SYSTEM", settings.contentLanguage, "PL", "pl", settings)
+            assertEquals(language, settings.contentLanguage)
+            assertEquals(language, GlobalYouTube.innerTube.locale.hl)
+        }
+    }
+
+    @Test
     fun invalidSavedCountriesReturnToSystemAndInvalidateStaleRegionData() {
         for (country in listOf("150", "EU", "001")) {
             val settings =

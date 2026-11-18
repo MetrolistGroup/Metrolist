@@ -160,6 +160,7 @@ internal fun CastSessionState.withGoogleCastMedia(
     copy(
         connected = true,
         isPlaying = autoplay,
+        isBuffering = autoplay,
         positionMs = positionMs,
         durationMs = durationMs,
         hasEnded = false,
@@ -478,6 +479,7 @@ internal class GoogleCastSession(
         _state.value =
             current.copy(
                 isPlaying = playerState == "PLAYING" || playerState == "BUFFERING",
+                isBuffering = playerState == "BUFFERING",
                 positionMs =
                     status["currentTime"]
                         ?.jsonPrimitive

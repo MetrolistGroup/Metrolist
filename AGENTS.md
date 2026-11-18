@@ -97,7 +97,7 @@ Use [development.md](docs/development.md) for setup and the code map. Before bui
 
 - Never hardcode user-facing Kotlin text. Add English to `shared/src/commonMain/composeResources/values/strings.xml` and use `stringResource(Res.string.<key>)` or `pluralStringResource(Res.plurals.<key>, ...)`.
 - Desktop uses `com.metrolist.shared.generated.resources.Res`; Android generates its referenced subset. Do not create platform-local catalogs.
-- Add English only to `values/strings.xml`, including KMP-only keys. The shared XML catalogs are the single source of truth; translators maintain `values-*/strings.xml` only through Weblate as described in [strings.md](docs/strings.md). Missing UI translations fall back to the base English resources at runtime. Do not add translation side tables or copy English into locale catalogs.
+- Add English only to `values/strings.xml`, including KMP-only keys. The shared XML catalogs are the single source of truth; translators maintain `values-*/strings.xml` only through Weblate as described in [strings.md](docs/strings.md). Missing UI translations fall back to the base English resources at runtime. Do not add translation side tables or copy English into locale catalogs. Never add, remove or rename keys in `values-*/strings.xml`, even to delete a key you removed from the base catalog; Weblate syncs locale catalogs and manual edits break its merges.
 - Derive locale defaults and fallbacks from system locale, settings or resources. Never silently fall back to English or hardcode language or country defaults. Derive bundled languages from `composeResources/values*/`, never a hardcoded list.
 - When `contentLanguage` or `contentCountry` is `SYSTEM`, use the JVM system locale. Otherwise use the selected code.
 

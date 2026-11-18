@@ -93,13 +93,13 @@ import com.metrolist.android.ui.menu.PlaylistMenu
 import com.metrolist.android.ui.menu.SongMenu
 import com.metrolist.android.viewmodels.AutoPlaylistPresentationInput
 import com.metrolist.android.viewmodels.prepareAutoPlaylistSongs
+import com.metrolist.android.viewmodels.withSongSorting
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.collectionPlayCounts
 import com.metrolist.shared.db.entities.CachedAudioEntity
 import com.metrolist.shared.db.entities.KIND_CACHE
 import com.metrolist.shared.db.entities.KIND_DOWNLOAD
 import com.metrolist.shared.db.entities.toSongItem
-import com.metrolist.shared.db.entities.withStoredDownloadMetadata
 import com.metrolist.shared.db.refreshUploadedSongs
 import com.metrolist.shared.db.synchronizeUploadedSongs
 import com.metrolist.shared.generated.resources.Res
@@ -133,16 +133,16 @@ import com.metrolist.shared.generated.resources.upload_failed
 import com.metrolist.shared.generated.resources.uploaded_playlist_name
 import com.metrolist.shared.generated.resources.uploaded_song_to_youtube_music
 import com.metrolist.shared.generated.resources.uploading
-import com.metrolist.shared.model.AlbumTiny
-import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.BuiltinPlaylist
 import com.metrolist.shared.model.CollectionSort
 import com.metrolist.shared.model.PlaylistItem
+import com.metrolist.shared.model.PlaylistSongSort
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.SortDirection
 import com.metrolist.shared.model.TopPlaylistPeriod
 import com.metrolist.shared.model.defaultDirection
 import com.metrolist.shared.model.indexOfPlaylistOccurrence
+import com.metrolist.shared.model.isReordering
 import com.metrolist.shared.model.toSongItem
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.HiddenLibraryItem
@@ -202,6 +202,7 @@ fun AutoPlaylistScreen(
     type: String,
     onBackClick: () -> Unit = {},
     onArtistClick: ((String) -> Unit)? = null,
+    onAlbumClick: ((String) -> Unit)? = null,
     onOpenDownloadQueue: () -> Unit = {},
 ) {
     val playerConnection = LocalPlayerConnection.current
@@ -305,7 +306,7 @@ fun AutoPlaylistScreen(
     }
     var topPeriod by remember { mutableStateOf(TopPlaylistPeriod.ALL_TIME) }
     var topDirection by remember { mutableStateOf(SortDirection.DESCENDING) }
-    var likedReorderMode by remember { mutableStateOf(false) }
+    val likedReorderMode = playlistSort.isReordering(Settings.shared.playlistEditLock, currentType == "liked")
     val addToPlaylist = LocalPlaylistAdder.current
     val selection = rememberSelectionState(currentType)
     val downloadFilter = rememberDownloadPlaylistFilter(database)
@@ -351,9 +352,11 @@ fun AutoPlaylistScreen(
             playlistSort = playlistSort,
             playlistDirection = playlistSortDirection,
             topDirection = topDirection,
-            reorder = likedReorderMode,
             likedSongRecency = if (isLikedCollection) SongLikeState.likedSongRecency else emptyList(),
             downloadFilter = downloadFilterState,
+        ).withSongSorting(
+            locked = Settings.shared.playlistEditLock,
+            listeningTimes = { SongMetadataState.listeningTimes },
         )
 
     var preparedSongs by remember(currentType) { mutableStateOf<List<SongItem>>(emptyList()) }
@@ -446,7 +449,6 @@ fun AutoPlaylistScreen(
         selection.exit()
         collectionQuery = ""
         collectionEntries = emptyList()
-        likedReorderMode = false
         when (currentType) {
             "liked" -> {
                 songs = BlockedContent.filterSongs(SongLikeState.likedSongs)
@@ -468,21 +470,7 @@ fun AutoPlaylistScreen(
                         withContext(Dispatchers.Default) {
                             BlockedContent.filterSongs(
                                 downloadedSongs.map { entry ->
-                                    SongItem(
-                                        id = entry.songId,
-                                        title = entry.title,
-                                        thumbnail = entry.thumbnailUrl,
-                                        artists =
-                                            entry.artist.split(",").mapNotNull { name ->
-                                                name.trim().takeIf { it.isNotBlank() && it != "Unknown" }?.let {
-                                                    ArtistTiny(
-                                                        id = null,
-                                                        name = it,
-                                                    )
-                                                }
-                                            },
-                                        album = entry.album?.let { AlbumTiny(id = null, name = it) },
-                                    ).withStoredDownloadMetadata(storedSongs[entry.songId])
+                                    entry.toSongItem(storedSongs[entry.songId])
                                 },
                             )
                         }
@@ -493,26 +481,16 @@ fun AutoPlaylistScreen(
 
             "cached" -> {
                 database.dao().cachedAudioByKind(KIND_CACHE).collectLatest { cachedSongs ->
+                    val storedSongs =
+                        withContext(Dispatchers.IO) {
+                            database.dao().getSongsByIds(cachedSongs.map { it.songId }).associateBy { it.id }
+                        }
                     collectionEntries = cachedSongs
                     songs =
                         withContext(Dispatchers.Default) {
                             BlockedContent.filterSongs(
                                 cachedSongs.map { entry ->
-                                    SongItem(
-                                        id = entry.songId,
-                                        title = entry.title,
-                                        thumbnail = entry.thumbnailUrl,
-                                        artists =
-                                            entry.artist.split(",").mapNotNull { name ->
-                                                name.trim().takeIf { it.isNotBlank() && it != "Unknown" }?.let {
-                                                    ArtistTiny(
-                                                        id = null,
-                                                        name = it,
-                                                    )
-                                                }
-                                            },
-                                        album = entry.album?.let { AlbumTiny(id = null, name = it) },
-                                    )
+                                    entry.toSongItem(storedSongs[entry.songId])
                                 },
                             )
                         }
@@ -915,7 +893,7 @@ fun AutoPlaylistScreen(
                                         )
                                     },
                                     onReorderModeChange = {
-                                        likedReorderMode = it
+                                        Settings.shared.playlistEditLock = !it
                                     },
                                     modifier = Modifier.padding(vertical = 8.dp),
                                 )
@@ -947,6 +925,8 @@ fun AutoPlaylistScreen(
             onPlayNext = { playerConnection?.addToQueue(song, playNext = true) },
             onAddToQueue = { playerConnection?.addToQueue(song) },
             onLike = { SongLikeState.toggleLike(song) },
+            onGoToArtist = onArtistClick,
+            onGoToAlbum = song.album?.id?.let { albumId -> onAlbumClick?.let { open -> { open(albumId) } } },
             onRemove =
                 if (currentType == "cached") {
                     {

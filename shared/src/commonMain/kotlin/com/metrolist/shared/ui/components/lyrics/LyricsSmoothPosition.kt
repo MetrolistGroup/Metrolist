@@ -41,6 +41,7 @@ fun rememberSmoothLyricsPosition(
     playbackSpeed: Float = Settings.shared.playbackSpeed,
     maxPosition: Long = Long.MAX_VALUE,
     isCasting: Boolean = false,
+    isBuffering: Boolean = false,
 ): Long =
     rememberSmoothLyricsPositionState(
         currentPosition,
@@ -49,6 +50,7 @@ fun rememberSmoothLyricsPosition(
         playbackSpeed = playbackSpeed,
         maxPosition = maxPosition,
         isCasting = isCasting,
+        isBuffering = isBuffering,
     ).longValue
 
 @Composable
@@ -59,6 +61,7 @@ fun rememberSmoothLyricsPosition(
     playbackSpeed: Float = Settings.shared.playbackSpeed,
     maxPosition: Long = Long.MAX_VALUE,
     isCasting: Boolean = false,
+    isBuffering: Boolean = false,
 ): Long =
     rememberSmoothLyricsPositionState(
         positionFlow = positionFlow,
@@ -67,6 +70,7 @@ fun rememberSmoothLyricsPosition(
         playbackSpeed = playbackSpeed,
         maxPosition = maxPosition,
         isCasting = isCasting,
+        isBuffering = isBuffering,
     ).longValue
 
 @Composable
@@ -78,6 +82,7 @@ fun rememberSmoothLyricsPositionState(
     playbackSpeed: Float = Settings.shared.playbackSpeed,
     maxPosition: Long = Long.MAX_VALUE,
     isCasting: Boolean = false,
+    isBuffering: Boolean = false,
     enabled: Boolean = true,
     positionReader: (() -> Long)? = null,
 ): LongState {
@@ -102,6 +107,7 @@ fun rememberSmoothLyricsPositionState(
         enabled,
         isPlaying,
         isCasting,
+        isBuffering,
         songId,
         frameInterval,
         boundedMaxPosition,
@@ -115,10 +121,11 @@ fun rememberSmoothLyricsPositionState(
             playbackSpeed = playbackSpeed,
             maxPosition = boundedMaxPosition,
             isCasting = isCasting,
+            isBuffering = isBuffering,
             enabled = enabled,
             visibility = visibility,
             frameInterval = frameInterval,
-            positionReader = if (hasLiveReader) ({ readPosition?.invoke() ?: positionFlow.value }) else null,
+            positionReader = if (hasLiveReader && !isCasting) ({ readPosition?.invoke() ?: positionFlow.value }) else null,
             songId = songId,
         ).collect { smoothPosition.longValue = it }
     }
@@ -132,6 +139,7 @@ internal fun smoothLyricsPositions(
     visibility: StateFlow<Boolean>,
     maxPosition: Long = Long.MAX_VALUE,
     isCasting: Boolean = false,
+    isBuffering: Boolean = false,
     enabled: Boolean = true,
     frameInterval: Duration = 16.milliseconds,
     positionReader: (() -> Long)? = null,
@@ -140,29 +148,36 @@ internal fun smoothLyricsPositions(
     tickOrigin: TimeMark = playbackAnimationOrigin,
 ): Flow<Long> =
     channelFlow {
+        val effectiveReader = if (isCasting) null else positionReader
+        val effectiveSpeed = if (isCasting) 1f else playbackSpeed
+        val discontinuityToleranceMs =
+            if (isCasting) CAST_PLAYBACK_DISCONTINUITY_TOLERANCE_MS else DEFAULT_PLAYBACK_DISCONTINUITY_TOLERANCE_MS
+        val shouldInterpolate = isPlaying && !isBuffering
         visibility.collectLatest { shown ->
-            if (!enabled || !shown || !isPlaying || isCasting) {
+            if (!enabled || !shown || !shouldInterpolate) {
                 positionFlow.collect { sample ->
-                    val position = if (enabled && shown && !isCasting) positionReader?.invoke() ?: sample else sample
+                    val position = if (enabled && shown) effectiveReader?.invoke() ?: sample else sample
                     send(position.coerceIn(0L, maxPosition))
                 }
                 return@collectLatest
             }
-            val clock = LyricsPositionClock(playbackSpeed, maxPosition, timeSource)
-            clock.sample(positionFlow.value, positionReader)
-            send(clock.positionMs())
+            val clock = LyricsPositionClock(effectiveSpeed, maxPosition, timeSource, discontinuityToleranceMs)
+            clock.sample(positionFlow.value, effectiveReader)
+            send(clock.positionMs(effectiveReader))
             var logMark: TimeMark? = null
             coroutineScope {
                 launch {
                     positionFlow.collect { sample ->
-                        clock.sample(sample, positionReader)
+                        if (clock.sample(sample, effectiveReader)) {
+                            send(clock.positionMs(effectiveReader))
+                        }
                     }
                 }
                 launch {
                     lyricsPositionTicks(frameInterval, tickOrigin).collect {
-                        val position = clock.positionMs(positionReader)
+                        val position = clock.positionMs(effectiveReader)
                         send(position)
-                        if (positionReader != null && (logMark == null || logMark!!.elapsedNow().inWholeMilliseconds >= 5_000L)) {
+                        if (effectiveReader != null && (logMark == null || logMark!!.elapsedNow().inWholeMilliseconds >= 5_000L)) {
                             logMark = timeSource.markNow()
                             PlaybackEventLog.debug(
                                 PlaybackEventKind.PLAYER,
@@ -174,7 +189,7 @@ internal fun smoothLyricsPositions(
                                         "anchorPositionMs" to clock.anchorPositionMs.toString(),
                                         "anchorAgeMs" to clock.anchorAgeMs.toString(),
                                         "renderPositionMs" to position.toString(),
-                                        "playbackSpeed" to playbackSpeed.toString(),
+                                        "playbackSpeed" to effectiveSpeed.toString(),
                                         "livePositionReader" to "true",
                                     ),
                             )
@@ -189,6 +204,7 @@ internal class LyricsPositionClock(
     private val playbackSpeed: Float,
     private val maxPosition: Long = Long.MAX_VALUE,
     private val timeSource: TimeSource = TimeSource.Monotonic,
+    private val discontinuityToleranceMs: Long = DEFAULT_PLAYBACK_DISCONTINUITY_TOLERANCE_MS,
 ) {
     var anchorPositionMs = 0L
         private set
@@ -200,14 +216,24 @@ internal class LyricsPositionClock(
     fun sample(
         positionMs: Long,
         positionReader: (() -> Long)? = null,
-    ) {
+    ): Boolean {
         val bounded = (positionReader?.invoke() ?: positionMs).coerceIn(0L, maxPosition)
-        if (!initialized || isPlaybackPositionDiscontinuity(anchorPositionMs, bounded, anchorAgeMs, playbackSpeed)) {
+        val discontinuity =
+            !initialized ||
+                isPlaybackPositionDiscontinuity(
+                    anchorPositionMs,
+                    bounded,
+                    anchorAgeMs,
+                    playbackSpeed,
+                    discontinuityToleranceMs,
+                )
+        if (discontinuity) {
             lastPositionMs = bounded
         }
         anchorPositionMs = bounded
         anchorMark = timeSource.markNow()
         initialized = true
+        return discontinuity
     }
 
     fun positionMs(positionReader: (() -> Long)? = null): Long {
@@ -228,6 +254,7 @@ fun rememberSmoothLyricsPositionState(
     playbackSpeed: Float = Settings.shared.playbackSpeed,
     maxPosition: Long = Long.MAX_VALUE,
     isCasting: Boolean = false,
+    isBuffering: Boolean = false,
     enabled: Boolean = true,
 ): LongState {
     val positionFlow = remember(songId) { MutableStateFlow(currentPosition) }
@@ -243,6 +270,7 @@ fun rememberSmoothLyricsPositionState(
         playbackSpeed = playbackSpeed,
         maxPosition = maxPosition,
         isCasting = isCasting,
+        isBuffering = isBuffering,
         enabled = enabled,
     )
 }
@@ -268,13 +296,17 @@ internal fun advanceSmoothPlaybackPosition(
     (position + elapsedMillis.coerceAtLeast(0L) * playbackSpeed.coerceAtLeast(0.02f))
         .coerceIn(0.0, maxPosition.coerceAtLeast(0L).toDouble())
 
+internal const val DEFAULT_PLAYBACK_DISCONTINUITY_TOLERANCE_MS = 300L
+internal const val CAST_PLAYBACK_DISCONTINUITY_TOLERANCE_MS = 1_500L
+
 internal fun isPlaybackPositionDiscontinuity(
     previousPositionMs: Long,
     samplePositionMs: Long,
     elapsedSincePreviousSampleMs: Long,
     playbackSpeed: Float,
+    toleranceMs: Long = DEFAULT_PLAYBACK_DISCONTINUITY_TOLERANCE_MS,
 ): Boolean {
     val expectedDeltaMs = elapsedSincePreviousSampleMs.coerceAtLeast(0L).toDouble() * playbackSpeed.coerceAtLeast(0.1f)
     val observedDeltaMs = (samplePositionMs - previousPositionMs).toDouble()
-    return samplePositionMs < previousPositionMs || abs(observedDeltaMs - expectedDeltaMs) > 300.0
+    return samplePositionMs < previousPositionMs || abs(observedDeltaMs - expectedDeltaMs) > toleranceMs.toDouble()
 }

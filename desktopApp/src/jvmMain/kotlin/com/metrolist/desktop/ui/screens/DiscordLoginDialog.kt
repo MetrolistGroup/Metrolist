@@ -35,6 +35,7 @@ import com.metrolist.desktop.ui.components.WebViewAvailabilityLoading
 import com.metrolist.desktop.ui.components.WebViewUnavailableContent
 import com.metrolist.desktop.ui.components.rememberLinuxWebKitAvailable
 import com.metrolist.desktop.utils.prepareDesktopWebViewDataDirectory
+import com.metrolist.desktop.web.DesktopWebView
 import com.metrolist.desktop.web.LinuxWebViewCanvas
 import com.metrolist.desktop.window.ClearWindowContentOnDispose
 import com.metrolist.shared.discord.DiscordAuthSession
@@ -54,7 +55,6 @@ import com.metrolist.shared.utils.tryOpenUrl
 import io.github.kdroidfilter.webview.request.RequestInterceptor
 import io.github.kdroidfilter.webview.request.WebRequest
 import io.github.kdroidfilter.webview.request.WebRequestInterceptResult
-import io.github.kdroidfilter.webview.web.WebView
 import io.github.kdroidfilter.webview.web.WebViewNavigator
 import io.github.kdroidfilter.webview.web.rememberWebViewNavigator
 import io.github.kdroidfilter.webview.web.rememberWebViewState
@@ -219,7 +219,7 @@ private fun EmbeddedDiscordLoginDialog(
             }
 
             Box(Modifier.fillMaxSize()) {
-                WebView(
+                DesktopWebView(
                     state = webViewState,
                     navigator = navigator,
                     modifier = Modifier.fillMaxSize(),

@@ -23,6 +23,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
@@ -55,10 +56,15 @@ class AndroidRadioRepeatTest {
     @Test
     fun queuePlaybackCanPreparePaused() = checkRepeatModes(startRadio = false, startPlaying = false)
 
+    @Test
+    fun oldCompletionCannotAdvanceOrRepeatTheNewCurrentPlayback() =
+        checkRepeatModes(startRadio = false, currentSongId = "seed", completedPlaybackInstanceId = 41L)
+
     private fun checkRepeatModes(
         startRadio: Boolean,
         currentSongId: String? = null,
         startPlaying: Boolean = true,
+        completedPlaybackInstanceId: Long? = null,
     ) {
         runTest {
             Settings.replaceSharedForTest(Settings(MapSettings()))
@@ -94,6 +100,10 @@ class AndroidRadioRepeatTest {
                             arrayOf(AndroidPlaybackPlayer::class.java),
                         ) { _, method, args ->
                             when (method.name) {
+                                "getCurrentPlaybackInstanceId" -> {
+                                    42L
+                                }
+
                                 "getCurrentSong" -> {
                                     MutableStateFlow(queue.currentItem())
                                 }
@@ -165,6 +175,24 @@ class AndroidRadioRepeatTest {
                             {},
                             episodeResumePosition = { _, _ -> 0L },
                         )
+                    if (completedPlaybackInstanceId != null) {
+                        val selected = queue.currentIndex.value
+                        coordinator.advanceQueueAfterCurrent(completedPlaybackInstanceId)
+                        val service = Robolectric.buildService(MusicService::class.java).get()
+                        ReflectionHelpers.setField(service, "player", player)
+                        ReflectionHelpers.setField(service, "transitions", coordinator.transitions)
+                        val completion =
+                            MusicService::class.java
+                                .getDeclaredMethod("handlePlaybackCompletion", Long::class.javaObjectType, Continuation::class.java)
+                                .apply { isAccessible = true }
+                        suspendCoroutineUninterceptedOrReturn<Unit> { continuation ->
+                            completion.invoke(service, completedPlaybackInstanceId, continuation)
+                        }
+                        assertEquals(selected, queue.currentIndex.value)
+                        assertEquals(0, playbackRequests)
+                        assertEquals(0, queueRestores)
+                        continue
+                    }
                     if (startRadio) {
                         coordinator.playMix(seed)
                         val retained = currentSongId == seed.id

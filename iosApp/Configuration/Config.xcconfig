@@ -10,7 +10,7 @@ INFOPLIST_PREPROCESS = YES
 INFOPLIST_PREFIX_HEADER = $(DERIVED_FILE_DIR)/MetrolistVersion.h
 SWIFT_VERSION = 5.9
 SWIFT_STRICT_CONCURRENCY = complete
-IPHONEOS_DEPLOYMENT_TARGET = 17.0
+IPHONEOS_DEPLOYMENT_TARGET = 15.0
 SDKROOT = iphoneos
 // The KMP dependency graph publishes arm64 simulator binaries only.
 EXCLUDED_ARCHS[sdk=iphonesimulator*] = x86_64

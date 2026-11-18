@@ -8,7 +8,6 @@ import re
 import shutil
 import subprocess
 import tempfile
-import xml.etree.ElementTree as ET
 
 from generate_distribution import REPOSITORY
 
@@ -29,19 +28,11 @@ def propose(kind, generated, repository, version):
         raise ValueError("Invalid stable version")
     if run("gh", "repo", "view", REPOSITORY, "--json", "isPrivate", "--jq", ".isPrivate") != "false":
         raise ValueError("Do not distribute recipes while the release repository is private")
-    if kind == "flatpak":
-        if os.environ.get("FLATPAK_BINARY_EXCEPTION") != "true":
-            print("Skipping Flatpak: no confirmed Flathub binary-build exception")
-            return
-        tree = ET.parse(generated / "flatpak/com.metrolist.desktop.metainfo.xml")
-        if tree.find("./screenshots/screenshot/image") is None:
-            raise ValueError("Flathub proposals require desktop screenshots")
     source = generated / kind
     # Restrict the copied files to the generated recipe tree, not arbitrary checkout files.
     paths = sorted(path.relative_to(source) for path in source.rglob("*") if path.is_file())
     if not paths or any((source / path).is_symlink() for path in paths):
         raise ValueError("Generated recipe tree is missing or contains symlinks")
-    paths = [path for path in paths if path.name != "SUBMISSION-NOTES.txt"]
     branch = f"build/metrolist-{version}"
     proposal_state = run("gh", "pr", "list", "--repo", repository, "--head", branch,
                          "--state", "all", "--json", "state", "--jq", '.[0].state // ""')
@@ -90,7 +81,7 @@ def propose(kind, generated, repository, version):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("kind", choices=("winget", "homebrew", "nix", "flatpak"))
+    parser.add_argument("kind", choices=("winget", "homebrew", "nix"))
     parser.add_argument("--generated", type=Path, required=True)
     parser.add_argument("--repository", default="")
     parser.add_argument("--version", required=True)

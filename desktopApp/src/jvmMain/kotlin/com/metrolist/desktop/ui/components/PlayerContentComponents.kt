@@ -6,7 +6,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -88,6 +87,7 @@ import com.metrolist.shared.ui.components.PlayerPrimaryControls
 import com.metrolist.shared.ui.components.PopupVisibility
 import com.metrolist.shared.ui.components.VintagePlayerControls
 import com.metrolist.shared.ui.components.VintagePlayerControlsText
+import com.metrolist.shared.ui.components.playbackMarquee
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.menu.cursorContextMenu
 import com.metrolist.shared.ui.menu.rememberCursorContextMenuState
@@ -173,18 +173,15 @@ fun PlayerCoreContent(
                         .alpha(if (hasAnimatedFrame) 0f else 1f)
                         .clip(RoundedCornerShape(28.dp))
                         .shadow(24.dp, RoundedCornerShape(28.dp)),
-                extractColor = true,
                 contentScale = if (Settings.shared.cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
             )
-            PlayerState.animatedCoverUrl?.let { coverUrl ->
-                AnimatedCover(
-                    url = coverUrl,
-                    active = PlayerState.isPlaying && !UiState.videoFullscreenObscuresPlayer,
-                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(28.dp)),
-                    contentScale = ContentScale.Crop,
-                    onFrameAvailabilityChanged = { hasAnimatedFrame = it },
-                )
-            }
+            AnimatedCover(
+                url = PlayerState.animatedCoverUrl,
+                active = PlayerState.isPlaying && !UiState.videoFullscreenObscuresPlayer,
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(28.dp)),
+                contentScale = ContentScale.Crop,
+                onFrameAvailabilityChanged = { hasAnimatedFrame = it },
+            )
         }
 
         Column(
@@ -227,7 +224,7 @@ fun PlayerCoreContent(
                                         PlayerState.exitExpanded()
                                         PlaylistAlbumState.openSongAlbum(song)
                                     }
-                                }.basicMarquee(
+                                }.playbackMarquee(
                                     iterations = if (UiState.videoFullscreenObscuresPlayer) 0 else 1,
                                     initialDelayMillis = 2000,
                                     velocity = 30.dp,
@@ -488,7 +485,14 @@ fun PlayerProgressSection() {
     }
 
     val displayPosition = {
-        if (isDragging || pendingSeekTargetMs != null) (sliderValue * duration).toLong() else position.value
+        when {
+            isDragging || pendingSeekTargetMs != null -> (sliderValue * duration).toLong()
+
+            isLive -> position.value
+
+            // The seek bar's clock, so the label changes in the same repaint as a progress step.
+            else -> smoothPosition.longValue
+        }
     }
 
     val isSolid = Settings.shared.playerBackgroundStyle == PlayerBackgroundStyle.SOLID

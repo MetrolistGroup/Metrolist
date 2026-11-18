@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Select checks and repository checks
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 5
+    outputs:
+      android: ${{ steps.paths.outputs.android }}
+      desktop: ${{ steps.paths.outputs.desktop }}
+      ios: ${{ steps.paths.outputs.ios }}
+      shared-only: ${{ steps.paths.outputs.shared-only }}
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select platform checks
+        id: paths
+        uses: ./.github/actions/ci-changes
+      - name: Check scripts and hooks
+        run: |
+          node --test .github/scripts/*.test.cjs
+          bash -n scripts/build_ios.sh
+          python3 scripts/check_compose_resource_escapes.py
+          python3 scripts/test_compose_resource_escapes.py
+          python3 scripts/check_translation_mechanics.py
+          python3 scripts/test_translation_mechanics.py
+          python3 scripts/test_hooks.py
+          python3 scripts/test_build_ios.py
+          python3 scripts/test_metromem.py
+          python3 -m unittest discover -s .github/tests
+          python3 -m unittest discover -s scripts/desktop-native-image -p test_native_pipeline.py
+          python3 scripts/test_build_appimage.py
+          python3 scripts/test_linux_appimage_apprun.py
+          python3 scripts/test_distribution.py
+          python3 scripts/test_generate_altstore_source.py
+          python3 .github/actions/upload-desktop-sentry/test_verify_metadata.py
+
+  android:
+    name: Android
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
+    uses: ./.github/workflows/reusable-android-build.yml
+    with:
+      variant: debug
+      assemble: ${{ github.event_name != 'push' }}
+      cache-read-only: ${{ github.event_name == 'pull_request' }}
+    secrets:
+      KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH || secrets.KEYSTORE }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+
+  desktop:
+    name: Desktop
+    needs: changes
+    if: needs.changes.outputs.desktop == 'true'
+    uses: ./.github/workflows/reusable-desktop-verify.yml
+    with:
+      compile: ${{ github.event_name != 'push' }}
+      shared-only: ${{ needs.changes.outputs.shared-only == 'true' }}
+      cache-read-only: ${{ github.event_name == 'pull_request' }}
+    secrets:
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+
+  ios:
+    name: iOS
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
+    uses: ./.github/workflows/reusable-ios-build.yml
+    with:
+      cache-read-only: ${{ github.event_name == 'pull_request' }}
+    secrets:
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}

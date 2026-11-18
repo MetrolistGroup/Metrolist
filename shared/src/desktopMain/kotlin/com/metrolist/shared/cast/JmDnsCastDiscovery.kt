@@ -1,7 +1,9 @@
 package com.metrolist.shared.cast
 
+import com.metrolist.shared.utils.MdnsDiscoverySession
 import java.net.Inet4Address
 import java.net.InetAddress
+import java.util.concurrent.ConcurrentHashMap
 import javax.jmdns.JmDNS
 import javax.jmdns.ServiceEvent
 import javax.jmdns.ServiceListener
@@ -9,10 +11,13 @@ import javax.jmdns.ServiceListener
 class JmDnsCastDiscovery(
     private val localAddresses: () -> List<InetAddress>,
 ) : MdnsCastDiscovery {
-    private val instances = mutableListOf<JmDNS>()
     private val lock = Any()
+    private var reportError: (CastError) -> Unit = {}
+    private var session: MdnsDiscoverySession<InetAddress, JmDNS>? = null
+    private val foundDevices = ConcurrentHashMap.newKeySet<String>()
+    private val listeners = ConcurrentHashMap<JmDNS, MutableMap<String, ServiceListener>>()
 
-    @Volatile private var running = false
+    @Volatile private var generation: Any? = null
 
     override fun start(
         onDeviceFound: (CastDevice) -> Unit,
@@ -20,24 +25,32 @@ class JmDnsCastDiscovery(
         onError: (CastError) -> Unit,
     ) {
         synchronized(lock) {
-            if (running) return
-            running = true
-        }
-        val addresses = runCatching { localAddresses().distinct() }.getOrDefault(emptyList())
-        addresses.forEach { address ->
-            if (!running) return
-            runCatching {
-                val jmDns = JmDNS.create(address, "Metrolist")
-                synchronized(lock) {
-                    if (!running) {
-                        runCatching { jmDns.close() }
-                        return
-                    }
-                    instances += jmDns
-                }
-                register(jmDns, FCAST_TYPE, CastProtocol.FCAST, onDeviceFound, onDeviceLost)
-                register(jmDns, GOOGLE_CAST_TYPE, CastProtocol.GOOGLE_CAST, onDeviceFound, onDeviceLost)
+            if (generation != null) return
+            if (runCatching { session?.close() }.isFailure) {
+                onError(CastError.DISCOVERY_FAILED)
+                return
             }
+            reportError = onError
+            val current = Any().also { generation = it }
+            session =
+                MdnsDiscoverySession(
+                    addresses = localAddresses,
+                    create = { JmDNS.create(it, "Metrolist") },
+                    configure = { jmDns ->
+                        register(jmDns, FCAST_TYPE, CastProtocol.FCAST, onDeviceFound, onDeviceLost, current)
+                        register(jmDns, GOOGLE_CAST_TYPE, CastProtocol.GOOGLE_CAST, onDeviceFound, onDeviceLost, current)
+                    },
+                    beforeClose = { jmDns ->
+                        listeners.remove(jmDns)?.forEach { (type, listener) -> jmDns.removeServiceListener(type, listener) }
+                    },
+                    onReset = {
+                        listeners.clear()
+                        val lost = foundDevices.toList()
+                        foundDevices.clear()
+                        if (generation === current) lost.forEach(onDeviceLost)
+                    },
+                    onError = { if (generation === current) onError(CastError.DISCOVERY_FAILED) },
+                ).also { it.start() }
         }
     }
 
@@ -47,19 +60,24 @@ class JmDnsCastDiscovery(
         protocol: CastProtocol,
         onDeviceFound: (CastDevice) -> Unit,
         onDeviceLost: (String) -> Unit,
+        current: Any,
     ) {
-        jmDns.addServiceListener(
-            serviceType,
+        val listener =
             object : ServiceListener {
                 override fun serviceAdded(event: ServiceEvent) {
-                    event.dns.requestServiceInfo(event.type, event.name)
+                    // JmDNS already resolves services through its built-in collector.
                 }
 
                 override fun serviceRemoved(event: ServiceEvent) {
-                    onDeviceLost(deviceId(protocol, event.name))
+                    if (generation === current && listeners[jmDns]?.get(serviceType) === this) {
+                        val id = deviceId(protocol, event.name)
+                        foundDevices.remove(id)
+                        onDeviceLost(id)
+                    }
                 }
 
                 override fun serviceResolved(event: ServiceEvent) {
+                    if (generation !== current || listeners[jmDns]?.get(serviceType) !== this) return
                     val address =
                         event.info.inet4Addresses.firstOrNull()
                             ?: event.info.inetAddresses.firstOrNull { it is Inet4Address }
@@ -67,9 +85,11 @@ class JmDnsCastDiscovery(
                             ?: event.info.inetAddresses.firstOrNull()
                             ?: return
                     val name = event.info.getPropertyString("fn")?.takeIf(String::isNotBlank) ?: event.name
+                    val id = deviceId(protocol, event.name)
+                    foundDevices.add(id)
                     onDeviceFound(
                         CastDevice(
-                            id = deviceId(protocol, event.name),
+                            id = id,
                             name = name,
                             protocol = protocol,
                             host = address.hostAddress,
@@ -77,20 +97,18 @@ class JmDnsCastDiscovery(
                         ),
                     )
                 }
-            },
-        )
+            }
+        listeners.getOrPut(jmDns) { ConcurrentHashMap() }[serviceType] = listener
+        jmDns.addServiceListener(serviceType, listener)
     }
 
     override fun stop() {
-        val toClose =
-            synchronized(lock) {
-                if (!running) return
-                running = false
-                val list = instances.toList()
-                instances.clear()
-                list
-            }
-        toClose.forEach { runCatching { it.close() } }
+        synchronized(lock) {
+            generation = null
+            runCatching { session?.close() }
+                .onSuccess { session = null }
+                .onFailure { reportError(CastError.DISCOVERY_FAILED) }
+        }
     }
 
     private fun deviceId(

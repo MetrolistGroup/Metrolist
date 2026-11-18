@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.metrolist.android.LocalMiniPlayerBottomInset
 import com.metrolist.android.playback.LocalPlayerConnection
+import com.metrolist.android.ui.component.SwipeGestureHandler
 import com.metrolist.android.ui.components.handleItemClick
 import com.metrolist.android.ui.menu.AlbumMenu
 import com.metrolist.android.ui.menu.ArtistMenu
@@ -28,6 +29,7 @@ import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.ui.components.PopupContent
@@ -109,6 +111,14 @@ fun BrowseScreen(
         contentPadding = PaddingValues(bottom = LocalMiniPlayerBottomInset.current),
         currentSongId = remember(currentSong) { derivedStateOf { currentSong.value?.id } },
         isPlaying = isPlaying,
+        songContainer = { song, content ->
+            SwipeGestureHandler(
+                onSwipeLeft = { playerConnection?.addToQueue(song) },
+                onSwipeRight = { playerConnection?.addToQueue(song, playNext = true) },
+                enabled = playerConnection != null && Settings.shared.swipeToSong,
+                content = content,
+            )
+        },
         headerContent =
             if (showSongActions) {
                 {

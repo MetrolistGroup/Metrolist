@@ -76,10 +76,14 @@ import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.CollectionHeaderNavigation
 import com.metrolist.shared.ui.components.LoadingScreen
 import com.metrolist.shared.ui.components.PopupContent
+import com.metrolist.shared.ui.components.UnavailableSongSnackbar
 import com.metrolist.shared.ui.components.lyrics.LyricsTranslationSnackbar
 import com.metrolist.shared.ui.icons.MetrolistIcons
+import com.metrolist.shared.ui.listentogether.ListenTogetherBlockedUsersScreen
 import com.metrolist.shared.ui.listentogether.ListenTogetherGlobalEvents
+import com.metrolist.shared.ui.menu.ContentUndoHintsSnackbar
 import com.metrolist.shared.ui.menu.HiddenHomeItemsSnackbar
+import com.metrolist.shared.ui.menu.settingsPage
 import com.metrolist.shared.ui.navigation.LocalNavigator
 import com.metrolist.shared.ui.navigation.NavigationTransition
 import com.metrolist.shared.ui.navigation.Screen
@@ -107,6 +111,18 @@ fun AppContentHost(
     }
     val navigator = LocalNavigator.current
     HiddenHomeItemsSnackbar(AppState.snackbarHostState)
+    UnavailableSongSnackbar(AppState.snackbarHostState)
+    ContentUndoHintsSnackbar(AppState.snackbarHostState) { page ->
+        PlayerState.closeFullscreenPlayer()
+        val settingsPage = page.settingsPage
+        if (settingsPage == null) {
+            UiState.showSettings = false
+            navigator.navigate(Screen.ListenTogetherBlockedUsers)
+        } else {
+            UiState.selectedSettingsPage = settingsPage
+            UiState.showSettings = true
+        }
+    }
     LyricsTranslationSnackbar(AppState.snackbarHostState, LyricsState.lyricsTranslationFailures)
     ListenTogetherGlobalEvents(ListenTogetherState.listenTogetherManager) { AppState.snackbarHostState.showSnackbar(it) }
     val deviceConnectState by DesktopDeviceConnect.manager.state.collectAsState()
@@ -158,6 +174,10 @@ fun AppContentHost(
                         AlbumScreen(destination.id, colorScheme)
                     }
 
+                    is Screen.HomeSection -> {
+                        BrowseScreen(colorScheme, destination)
+                    }
+
                     is Screen.Browse -> {
                         if (
                             BrowseState.selectedBrowseId == destination.browseId &&
@@ -186,6 +206,13 @@ fun AppContentHost(
 
                     is Screen.AutoPlaylist -> {
                         LocalPlaylistScreen(destination.type)
+                    }
+
+                    Screen.ListenTogetherBlockedUsers -> {
+                        ListenTogetherBlockedUsersScreen(
+                            manager = ListenTogetherState.listenTogetherManager,
+                            onNavigateBack = { navigator.goBack() },
+                        )
                     }
 
                     Screen.Library, Screen.Statistics, Screen.ListenTogether -> {

@@ -13,7 +13,7 @@ data class AiProviderPreset(
     val id: String,
     val group: AiProviderGroup,
     val protocol: AiProtocol = AiProtocol.OPENAI,
-    /** Full request endpoint; Gemini retains a {model} placeholder. */
+    /** Full request endpoint; Gemini endpoints may include a model or {model} placeholder. */
     val endpoint: String = "",
     val defaultModel: String = "",
     val modelsDevId: String? = null,
@@ -28,11 +28,12 @@ data class AiProviderPreset(
         get() =
             endpoint
                 .replace(Regex("/(chat/completions|messages)$"), "/models")
-                .replace(Regex("/models/\\{model\\}:generateContent$"), "/models")
+                .replace(Regex("/models/[^/]+:generateContent$"), "/models")
 }
 
 object AiProviderPresets {
     private const val LEGACY_CUSTOM = "Custom"
+    const val LEGACY_GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
     const val DEFAULT_LYRICS_AI_MODEL = "qwen/qwen3.7-flash"
     const val FREE_LYRICS_AI_MODEL = "google/gemma-4-26b-a4b-it:free"
@@ -101,8 +102,8 @@ object AiProviderPresets {
                 "Gemini",
                 AiProviderGroup.DIRECT,
                 AiProtocol.GEMINI,
-                "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-                "gemini-2.5-flash-lite",
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+                "gemini-flash-lite-latest",
                 "google",
             ),
             AiProviderPreset(
@@ -158,7 +159,7 @@ object AiProviderPresets {
                 "Gemini-compatible",
                 AiProviderGroup.CUSTOM,
                 AiProtocol.GEMINI,
-                "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
                 editableEndpoint = true,
             ),
             AiProviderPreset("DeepL", AiProviderGroup.SERVICE),

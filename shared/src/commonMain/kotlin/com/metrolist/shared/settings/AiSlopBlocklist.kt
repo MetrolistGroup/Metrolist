@@ -7,16 +7,21 @@ import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.state.GlobalYouTube
+import com.metrolist.shared.utils.Logger
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.CancellationException
 import kotlin.time.Clock
 
 object AiSlopBlocklist {
     const val CONTRIBUTION_URL = "https://github.com/Override92/AiSList"
     private const val SOURCE_URL = "https://raw.githubusercontent.com/Override92/AiSList/main/AiSList/aislist_blocklist.txt"
-    private const val MAX_RESPONSE_CHARACTERS = 524_288
+    private const val TAG = "AiSlopBlocklist"
+
+    // The upstream list passed 1 MB in November 2026. The limit leaves room for growth and still bounds memory.
+    internal const val MAX_RESPONSE_CHARACTERS = 8 * 1024 * 1024
     private const val REFRESH_INTERVAL_MS = 24L * 60L * 60L * 1_000L
 
     private val channelIdPattern = Regex("UC[A-Za-z0-9_-]{20,24}")
@@ -27,20 +32,34 @@ object AiSlopBlocklist {
         if (!Settings.shared.blockAiSlopArtists) return
         val now = Clock.System.now().toEpochMilliseconds()
         if (!force && entries.isNotEmpty() && now - Settings.shared.aiSlopBlocklistUpdatedAt < REFRESH_INTERVAL_MS) return
-        runCatching {
+        try {
             val response = GlobalYouTube.client.get(SOURCE_URL)
             check(response.status.isSuccess()) { "AI blocklist request failed (${response.status.value})" }
-            val declaredSize = response.headers[HttpHeaders.ContentLength]?.toLongOrNull()
-            check(declaredSize == null || declaredSize <= MAX_RESPONSE_CHARACTERS)
+            checkDeclaredSize(response.headers[HttpHeaders.ContentLength]?.toLongOrNull())
             val body = response.bodyAsText()
-            check(body.length <= MAX_RESPONSE_CHARACTERS)
-            val parsed = parse(body)
-            check(parsed.isNotEmpty())
+            val parsed = parseDownloaded(body)
             Settings.shared.aiSlopBlocklistCache = body
             Settings.shared.aiSlopBlocklistUpdatedAt = now
             entries = parsed
             BlockedContent.notifyChanged()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Logger.w(TAG, "AI blocklist refresh failed; keeping ${entries.size} cached entries", e)
         }
+    }
+
+    internal fun checkDeclaredSize(declaredSize: Long?) {
+        check(declaredSize == null || declaredSize <= MAX_RESPONSE_CHARACTERS) {
+            "AI blocklist declared size $declaredSize exceeds $MAX_RESPONSE_CHARACTERS"
+        }
+    }
+
+    internal fun parseDownloaded(body: String): Set<String> {
+        check(body.length <= MAX_RESPONSE_CHARACTERS) {
+            "AI blocklist size ${body.length} exceeds $MAX_RESPONSE_CHARACTERS"
+        }
+        return parse(body).also { check(it.isNotEmpty()) { "AI blocklist contains no entries" } }
     }
 
     fun matches(item: YTItem): Boolean {

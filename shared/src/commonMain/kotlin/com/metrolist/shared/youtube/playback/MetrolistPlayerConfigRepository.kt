@@ -4,7 +4,8 @@ import com.metrolist.innertubex.cipher.PlayerConfigRepository
 import com.metrolist.shared.settings.Settings
 
 object MetrolistPlayerConfigRepository : PlayerConfigRepository {
-    override val enabled: Boolean = false
+    // Hints only load from the MetrolistGroup/faraday registry; the library rejects every other source.
+    override val enabled: Boolean = true
 
     override val sourceUrl: String
         get() = Settings.shared.githubNTransformConfigUrl

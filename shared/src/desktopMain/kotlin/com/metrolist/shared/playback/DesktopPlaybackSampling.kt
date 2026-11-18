@@ -1,6 +1,10 @@
 package com.metrolist.shared.playback
 
 import com.metrolist.shared.playback.sponsorblock.SponsorBlockSegment
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.selects.onTimeout
+import kotlinx.coroutines.selects.select
 import kotlin.math.ceil
 
 const val DESKTOP_PRELOAD_MIN_POSITION_MS = 500L
@@ -37,3 +41,10 @@ internal fun desktopPlaybackSampleDelayMs(
     val untilSegment = segment?.let { ((it.startMs - positionMs) / speed).toLong() } ?: Long.MAX_VALUE
     return minOf(untilPreparation, untilTransition - 50L, untilSegment - 50L).coerceIn(50L, 1_000L)
 }
+
+@OptIn(ExperimentalCoroutinesApi::class)
+internal suspend fun ReceiveChannel<Unit>.awaitPlaybackSample(waitMs: Long?): Boolean =
+    select {
+        onReceive { true }
+        if (waitMs != null) onTimeout(waitMs) { false }
+    }

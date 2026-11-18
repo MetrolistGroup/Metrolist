@@ -59,13 +59,13 @@ class MediaSessionConnectionTest {
                 assertTrue(result.availableSessionCommands.contains(MediaSessionConstants.CommandToggleLike))
                 assertTrue(result.availableSessionCommands.contains(MediaSessionConstants.CommandToggleShuffle))
                 assertTrue(result.availableSessionCommands.contains(MediaSessionConstants.CommandToggleRepeat))
+                assertTrue(result.availableSessionCommands.contains(MediaSessionConstants.CommandToggleStartRadio))
                 assertTrue(result.availableSessionCommands.contains(SessionCommand.COMMAND_CODE_SESSION_SET_RATING))
                 assertTrue(result.availablePlayerCommands.contains(Player.COMMAND_PLAY_PAUSE))
                 assertTrue(result.availablePlayerCommands.contains(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM))
                 assertTrue(result.availablePlayerCommands.contains(Player.COMMAND_SEEK_TO_MEDIA_ITEM))
                 if (!trusted) {
                     assertFalse(result.availablePlayerCommands.contains(Player.COMMAND_CHANGE_MEDIA_ITEMS))
-                    assertFalse(result.availableSessionCommands.contains(MediaSessionConstants.CommandToggleStartRadio))
                 }
             }
             val unverifiedController =
@@ -84,6 +84,7 @@ class MediaSessionConnectionTest {
             assertFalse(unverifiedResult.availableSessionCommands.contains(MediaSessionConstants.CommandToggleLike))
             assertFalse(unverifiedResult.availableSessionCommands.contains(MediaSessionConstants.CommandToggleShuffle))
             assertFalse(unverifiedResult.availableSessionCommands.contains(MediaSessionConstants.CommandToggleRepeat))
+            assertFalse(unverifiedResult.availableSessionCommands.contains(MediaSessionConstants.CommandToggleStartRadio))
             assertFalse(unverifiedResult.availableSessionCommands.contains(SessionCommand.COMMAND_CODE_SESSION_SET_RATING))
             assertTrue(unverifiedResult.availablePlayerCommands.contains(Player.COMMAND_PLAY_PAUSE))
             assertTrue(unverifiedResult.availablePlayerCommands.contains(Player.COMMAND_SEEK_TO_MEDIA_ITEM))
@@ -166,7 +167,7 @@ class MediaSessionConnectionTest {
                             assertEquals(description, canControl, result.availablePlayerCommands.contains(Player.COMMAND_SET_MEDIA_ITEM))
                             assertEquals(
                                 description,
-                                canBrowse,
+                                trusted || verified,
                                 result.availableSessionCommands.contains(MediaSessionConstants.CommandToggleStartRadio),
                             )
                             assertEquals(

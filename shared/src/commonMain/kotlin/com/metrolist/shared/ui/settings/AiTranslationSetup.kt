@@ -87,7 +87,6 @@ internal suspend fun completeLyricsSetup(
         settings.lyricsAiProvider = preset.id
         settings.lyricsAiBaseUrl = preset.endpoint
         settings.lyricsAiModel = verifiedModel
-        settings.lyricsAiDetectorModel = ""
         settings.lyricsAiTargetLanguage = language
         settings.lyricsShowTranslations = true
         settings.lyricsAiTranslationEnabled = true

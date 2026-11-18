@@ -22,6 +22,7 @@ import javax.sound.sampled.DataLine
 import javax.sound.sampled.FloatControl
 import javax.sound.sampled.SourceDataLine
 import kotlin.concurrent.thread
+import kotlin.math.abs
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -149,6 +150,33 @@ class AudioRendererTest {
     }
 
     @Test
+    fun stalledDrainWaitsForResumeAndCancelsOnFlush() {
+        for (flush in listOf(false, true)) {
+            val line = TestSourceDataLine()
+            val renderer = AudioRenderer(1_000, 1, line.line)
+            val completed = CountDownLatch(1)
+            val drained = AtomicBoolean()
+            renderer.pause()
+            val worker =
+                thread(isDaemon = true) {
+                    drained.set(renderer.drain { true })
+                    completed.countDown()
+                }
+            try {
+                assertTrue(line.availabilityChecked.await(5, TimeUnit.SECONDS))
+                assertFalse(completed.await(500, TimeUnit.MILLISECONDS), "Paused drain completed the track")
+                if (flush) renderer.flush() else renderer.resume()
+                assertTrue(completed.await(3, TimeUnit.SECONDS))
+                assertEquals(!flush, drained.get())
+            } finally {
+                renderer.close()
+                worker.interrupt()
+                worker.join(5_000)
+            }
+        }
+    }
+
+    @Test
     fun returningToUnityDrainsTempoThenWritesPcmDirectly() {
         val line = TestSourceDataLine().apply { availableBytes = Int.MAX_VALUE }
         val renderer = AudioRenderer(48_000, 1, line.line)
@@ -162,7 +190,7 @@ class AudioRendererTest {
             renderer.writePcmData(directInput)
             AudioTempoProcessor(48_000, 1, 1.25f, 1f).use {
                 it.process(filteredInput, expected::write)
-                it.setSpeed(1f)
+                assertTrue(it.requiresRebuild(1f, 1f))
                 it.process(null, expected::write)
             }
             expected.write(directInput)
@@ -172,6 +200,33 @@ class AudioRendererTest {
             assertContentEquals(expected.toByteArray(), line.writtenBytes())
             assertTrue(renderer.drain { true })
             assertContentEquals(expected.toByteArray(), line.writtenBytes())
+        } finally {
+            renderer.close()
+        }
+    }
+
+    @Test
+    fun speedBoundaryFlushesBufferedAudioUsingTheOldProcessorSpeed() {
+        val line = TestSourceDataLine().apply { availableBytes = Int.MAX_VALUE }
+        val renderer = AudioRenderer(48_000, 1, line.line)
+        val input = ByteArray(48_000 * Short.SIZE_BYTES)
+        val expected = ByteArrayOutputStream()
+        AudioTempoProcessor(48_000, 1, 0.5f).use { processor ->
+            processor.process(input, expected::write)
+            processor.process(null, expected::write)
+        }
+        val expectedPositionMs = expected.size() / Short.SIZE_BYTES * 1_000.0 / 48_000 * 0.5
+        try {
+            renderer.setPlaybackSpeed(0.5f)
+            renderer.writePcmData(input)
+            renderer.setPlaybackSpeed(1f)
+            renderer.writePcmData(byteArrayOf(0, 0))
+
+            val actualPositionMs = renderer.getPlayedPositionMs()
+            assertTrue(
+                abs(actualPositionMs - expectedPositionMs) < 5.0,
+                "Expected buffered audio to retain its old speed mapping: $actualPositionMs vs $expectedPositionMs ms",
+            )
         } finally {
             renderer.close()
         }

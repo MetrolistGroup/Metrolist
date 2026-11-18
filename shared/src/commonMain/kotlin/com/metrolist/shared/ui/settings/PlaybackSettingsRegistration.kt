@@ -335,6 +335,14 @@ internal fun SettingsUiRegistryBuilder.registerPlaybackSettings(host: SharedSett
                     settings.autoDownloadOnLike = enabled
                 }
             }
+            // Only Android downloads a whole album or playlist when it is saved.
+            if (host.platform == SettingsPlatform.ANDROID) {
+                switch(
+                    id = "autoDownloadSavedCollections",
+                    title = stringResource(Res.string.auto_download_saved_collections),
+                    checked = settings.autoDownloadSavedCollections,
+                ) { enabled -> host.onSettingChanged(SettingsChangeEffect.AUTO_DOWNLOAD_SAVED_COLLECTIONS, enabled) }
+            }
         }
         if (host.platform != SettingsPlatform.DESKTOP) {
             group("device", stringResource(Res.string.appearance_misc)) {

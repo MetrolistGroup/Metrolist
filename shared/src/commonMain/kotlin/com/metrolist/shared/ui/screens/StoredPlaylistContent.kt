@@ -52,6 +52,7 @@ import com.metrolist.shared.model.SortDirection
 import com.metrolist.shared.model.defaultDirection
 import com.metrolist.shared.model.filterForPlaylistSearch
 import com.metrolist.shared.model.indexOfPlaylistOccurrence
+import com.metrolist.shared.model.isReordering
 import com.metrolist.shared.model.presentCollection
 import com.metrolist.shared.model.sortedForLikedPlaylist
 import com.metrolist.shared.settings.SavedPlaylistCollectionSorting
@@ -143,7 +144,7 @@ fun StoredPlaylistContent(
     LaunchedEffect(id, collectionSort) { onCollectionSortChange(collectionSort) }
     var playlistSort by remember(id) { mutableStateOf(defaultPlaylistSorting.sort) }
     var playlistSortDirection by remember(id) { mutableStateOf(defaultPlaylistSorting.direction) }
-    var reorderMode by remember(id) { mutableStateOf(false) }
+    val reorderMode = playlistSort.isReordering(Settings.shared.playlistEditLock, onReorderSongs != null, hasMoreSongs)
     val selection = rememberSelectionState(id)
     val downloadFilter = downloadFilterDatabase?.let { rememberDownloadPlaylistFilter(it) }
     val downloadFilterState = downloadFilter?.state?.collectAsState()?.value
@@ -151,6 +152,7 @@ fun StoredPlaylistContent(
     var pendingRemoval by remember(id) { mutableStateOf<Set<String>?>(null) }
     var confirmClear by remember { mutableStateOf(false) }
     val metadataRevision by SongMetadataState.revision.collectAsState()
+    val listeningTimes = if (playlistSort == PlaylistSongSort.LISTENING_TIME) SongMetadataState.listeningTimes else emptyMap()
     val likedSongRecency = SongLikeState.likedSongRecency
     val orderedSongs =
         remember(
@@ -158,6 +160,7 @@ fun StoredPlaylistContent(
             likedSongRecency,
             downloadFilterState,
             metadataRevision,
+            listeningTimes,
             collectionMetadata,
             playCounts,
             collectionDirection,
@@ -180,6 +183,7 @@ fun StoredPlaylistContent(
                             playlistSort,
                             playlistSortDirection,
                             likedSongRecency,
+                            listeningTimes,
                         )
                 }
 
@@ -215,14 +219,18 @@ fun StoredPlaylistContent(
                             playlistSort,
                             playlistSortDirection,
                             SongLikeState.likedSongRecency,
+                            listeningTimes,
                         ) ?: return@launch
                 } else {
                     orderedSongs
                 }
             val playable = (if (song == null) complete.filterForPlaylistSearch(query) else complete).filterNot { it.isUnavailable }
-            val queue = if (shuffle) playable.shuffled() else playable
-            val target = song?.let { queue.indexOfPlaylistOccurrence(it) } ?: 0
-            if (target in queue.indices) playback.playQueue(queue, target)
+            if (shuffle) {
+                playback.shuffleQueue(playable)
+            } else {
+                val target = song?.let { playable.indexOfPlaylistOccurrence(it) } ?: 0
+                if (target in playable.indices) playback.playQueue(playable, target)
+            }
         }
     }
 
@@ -269,7 +277,7 @@ fun StoredPlaylistContent(
                 selectedCount = selectedSongs.size,
                 selectedSongs = selectedSongs,
                 onPlay = { selectedSongs.firstOrNull { !it.isUnavailable }?.let { playback.play(it, selectedSongs) } },
-                onShuffle = { selectedSongs.shuffled().let { s -> s.firstOrNull { !it.isUnavailable }?.let { playback.play(it, s) } } },
+                onShuffle = { playback.shuffleQueue(selectedSongs) },
                 allSelected = selection.allSelected(displayedIds),
                 onDone = selection::exit,
                 onSelectAll = { selection.toggleAll(displayedIds) },
@@ -380,7 +388,7 @@ fun StoredPlaylistContent(
                                 )
                             },
                             onReorderModeChange = {
-                                reorderMode = it
+                                Settings.shared.playlistEditLock = !it
                                 selection.exit()
                             },
                         )

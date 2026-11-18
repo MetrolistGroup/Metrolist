@@ -33,7 +33,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
@@ -121,6 +120,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -178,6 +178,8 @@ import com.metrolist.shared.generated.resources.share
 import com.metrolist.shared.generated.resources.sleep_timer
 import com.metrolist.shared.generated.resources.small_album_art
 import com.metrolist.shared.generated.resources.song
+import com.metrolist.shared.generated.resources.switch_to_audio
+import com.metrolist.shared.generated.resources.switch_to_video
 import com.metrolist.shared.generated.resources.unknown
 import com.metrolist.shared.generated.resources.unlike
 import com.metrolist.shared.generated.resources.video
@@ -199,6 +201,7 @@ import com.metrolist.shared.ui.components.EXPANDED_ANCHOR
 import com.metrolist.shared.ui.components.LiquidBackground
 import com.metrolist.shared.ui.components.LoadingScreen
 import com.metrolist.shared.ui.components.LocalPlayerArtworkPrefetchUrls
+import com.metrolist.shared.ui.components.PlayerMenuAction
 import com.metrolist.shared.ui.components.PlayerPrimaryControls
 import com.metrolist.shared.ui.components.PopupVisibility
 import com.metrolist.shared.ui.components.SleepTimerDialog
@@ -214,6 +217,7 @@ import com.metrolist.shared.ui.components.formatSleepTimerRemaining
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.lyrics.LyricsContrastScrim
 import com.metrolist.shared.ui.components.lyrics.LyricsOffsetEditor
+import com.metrolist.shared.ui.components.playbackMarquee
 import com.metrolist.shared.ui.components.playerControlBlend
 import com.metrolist.shared.ui.components.rememberBottomSheetState
 import com.metrolist.shared.ui.components.rememberTrackMarquee
@@ -631,14 +635,9 @@ fun PlayerScreen(
                 (isFullscreen && isPlayerContentVisible) ||
                     (bottomSheetState.isExpanded && (isImmersive || uiState.isLyricsExpanded))
             )
-    platform.PlayerWindowEffects(
-        hideSystemBars = shouldHideSystemBars,
-        lockLandscape =
-            !isTv && isFullscreen && !bottomSheetState.isCollapsed && !bottomSheetState.isDismissed && !isInPipMode,
-    )
 
     val playerType = Settings.shared.playerType
-    val usesFullscreenThumbnail = playerThumbnailStyle == PlayerThumbnailStyle.FULLSCREEN && allowArtworkExpansion
+    val usesFullscreenThumbnail = playerThumbnailStyle == PlayerThumbnailStyle.FULLSCREEN
     val prefersTallCover = usesFullscreenThumbnail && !isLandscape
     val playbackNetwork by PlaybackNetworkStateStore.state.collectAsState()
     val artworkAllowedOnNetwork = Settings.shared.isAnimatedArtworkAllowedOnNetwork(playbackNetwork)
@@ -762,6 +761,12 @@ fun PlayerScreen(
             },
         animationSpec = if (!playerContentState.isActive) snap() else spring(),
         label = "TextBackgroundColor",
+    )
+    platform.PlayerWindowEffects(
+        hideSystemBars = shouldHideSystemBars,
+        lockLandscape =
+            !isTv && isFullscreen && !bottomSheetState.isCollapsed && !bottomSheetState.isDismissed && !isInPipMode,
+        lightStatusBars = (textBackgroundColor.luminance() < 0.5f).takeIf { playerContentState.isVisible },
     )
 
     var canvasMinimalUi by rememberSaveable { mutableStateOf(false) }
@@ -915,6 +920,47 @@ fun PlayerScreen(
                 derivedStateOf { !useLandscapeLayout && queueSheetState.progress > 0.2f }
             }
             val landscapeQueueVisible = useLandscapeLayout && !queueSheetState.isCollapsed
+            // Phone landscape has no room above the controls, so cast and the audio/video switch move into the player menu.
+            val landscapeMenuActions =
+                if (useLandscapeLayout && !isTv && !landscapeQueueVisible) {
+                    buildList {
+                        if (showVideoButton) {
+                            add(
+                                PlayerMenuAction(
+                                    icon =
+                                        if (isVideoModeActive) {
+                                            MetrolistIcons.Outlined.Headphones
+                                        } else {
+                                            MetrolistIcons.Outlined.SmartDisplay
+                                        },
+                                    title =
+                                        stringResource(
+                                            if (isVideoModeActive) Res.string.switch_to_audio else Res.string.switch_to_video,
+                                        ),
+                                    isLoading = isVideoModeResolving,
+                                    onClick = {
+                                        showPlayerMenu = false
+                                        playerConnection?.setVideoMode(!isVideoModeActive)
+                                    },
+                                ),
+                            )
+                        }
+                        if (!isListenTogetherGuest && platform.supportsCasting && Settings.shared.isPlayerCastButtonVisible) {
+                            add(
+                                PlayerMenuAction(
+                                    icon = if (castState.isConnected) MetrolistIcons.Filled.Cast else MetrolistIcons.Outlined.Cast,
+                                    title = stringResource(Res.string.cast),
+                                    onClick = {
+                                        showPlayerMenu = false
+                                        openCastDialog()
+                                    },
+                                ),
+                            )
+                        }
+                    }
+                } else {
+                    emptyList()
+                }
             val queuePanelWidth = minOf(480.dp, screenWidth / 2)
             val queuePanelSlidePx = with(LocalDensity.current) { queuePanelWidth.toPx() } / 2f
             val queueSlideDirection = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1f else 1f
@@ -1199,6 +1245,7 @@ fun PlayerScreen(
                                 onShowSleepTimer = { showSleepTimerDialog = true },
                                 onOpenCast = openCastDialog,
                                 isCasting = castState.isConnected,
+                                isBuffering = castState.isBuffering,
                             )
                         } else if (useLandscapeLayout) {
                             if (useTabletLayout || landscapeQueueVisible) {
@@ -1286,7 +1333,6 @@ fun PlayerScreen(
                                     playerType = playerType,
                                     playPauseFocusRequester = playPauseFocusRequester,
                                     showVideoSurface = showVideoSurface,
-                                    onOpenCast = openCastDialog,
                                     castState = castState,
                                     showVideoButton = showVideoButton,
                                     isVideoModeActive = isVideoModeActive,
@@ -1346,6 +1392,7 @@ fun PlayerScreen(
                                             isLoading = uiState.isLyricsLoading,
                                             textColor = textBackgroundColor,
                                             isCasting = castState.isConnected,
+                                            isBuffering = castState.isBuffering,
                                         )
                                     } else {
                                         Column(
@@ -1422,12 +1469,13 @@ fun PlayerScreen(
                                                                         colors =
                                                                             ToggleButtonDefaults.colors(
                                                                                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                                                                contentColor = textBackgroundColor,
+                                                                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                                                                 checkedContainerColor = MaterialTheme.colorScheme.primary,
                                                                                 checkedContentColor = MaterialTheme.colorScheme.onPrimary,
                                                                                 disabledContainerColor =
                                                                                     MaterialTheme.colorScheme.surfaceVariant,
-                                                                                disabledContentColor = textBackgroundColor,
+                                                                                disabledContentColor =
+                                                                                    MaterialTheme.colorScheme.onSurfaceVariant,
                                                                             ),
                                                                         modifier =
                                                                             Modifier
@@ -1502,12 +1550,13 @@ fun PlayerScreen(
                                                                         colors =
                                                                             ToggleButtonDefaults.colors(
                                                                                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                                                                contentColor = textBackgroundColor,
+                                                                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                                                                 checkedContainerColor = MaterialTheme.colorScheme.primary,
                                                                                 checkedContentColor = MaterialTheme.colorScheme.onPrimary,
                                                                                 disabledContainerColor =
                                                                                     MaterialTheme.colorScheme.surfaceVariant,
-                                                                                disabledContentColor = textBackgroundColor,
+                                                                                disabledContentColor =
+                                                                                    MaterialTheme.colorScheme.onSurfaceVariant,
                                                                             ),
                                                                         modifier =
                                                                             Modifier
@@ -1586,7 +1635,7 @@ fun PlayerScreen(
                                                                     color = textBackgroundColor.copy(alpha = 0.8f),
                                                                     maxLines = 1,
                                                                     modifier =
-                                                                        Modifier.basicMarquee(
+                                                                        Modifier.playbackMarquee(
                                                                             iterations = if (LocalPlayerContentActive.current) 1 else 0,
                                                                             initialDelayMillis = 3000,
                                                                             velocity = 30.dp,
@@ -1605,7 +1654,7 @@ fun PlayerScreen(
                                                         colors =
                                                             IconButtonDefaults.filledIconButtonColors(
                                                                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                                                contentColor = textBackgroundColor,
+                                                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                                             ),
                                                         modifier =
                                                             Modifier
@@ -1646,7 +1695,7 @@ fun PlayerScreen(
                                                                             if (castState.isConnected) {
                                                                                 MaterialTheme.colorScheme.onPrimary
                                                                             } else {
-                                                                                textBackgroundColor
+                                                                                MaterialTheme.colorScheme.onSurfaceVariant
                                                                             },
                                                                     ),
                                                                 modifier = Modifier.size(36.dp).playerControlBlend(),
@@ -1783,6 +1832,7 @@ fun PlayerScreen(
                                                             textBackgroundColor
                                                         },
                                                     isCasting = castState.isConnected,
+                                                    isBuffering = castState.isBuffering,
                                                     hasBackground = usesFullscreenThumbnail || canvasMinimalUi,
                                                     modifier = Modifier.fillMaxWidth(),
                                                 )
@@ -2004,7 +2054,6 @@ fun PlayerScreen(
                                             )
                                         } else {
                                             PlayerActionRow(
-                                                contentColor = textBackgroundColor,
                                                 isLyricsVisible = uiState.isLyricsVisible,
                                                 isLyricsExpanded = uiState.isLyricsExpanded,
                                                 onToggleLyricsExpanded = {
@@ -2451,6 +2500,7 @@ fun PlayerScreen(
                                 showPlayerMenu = false
                                 showSongDetails = true
                             },
+                            extraActions = landscapeMenuActions,
                         )
                     }
 

@@ -55,5 +55,5 @@ package() {
   ln -s /opt/metrolist/bin/Metrolist "$pkgdir/usr/bin/metrolist"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 desktopApp/src/desktopMain/resources/logo.png "$pkgdir/usr/share/icons/hicolor/512x512/apps/metrolist.png"
-  install -Dm644 "$srcdir/metrolist.desktop" "$pkgdir/usr/share/applications/metrolist.desktop"
+  install -Dm644 "$srcdir/metrolist.desktop" "$pkgdir/usr/share/applications/Metrolist.desktop"
 }

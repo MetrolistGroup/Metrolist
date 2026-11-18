@@ -721,7 +721,7 @@ private fun HomeShelfHeader(
         shuffleLabel = shuffleLabel,
         onShuffleClick =
             onShuffleSongs?.takeIf { shelf.headerAction == HomeShelfHeaderAction.SHUFFLE && songs.isNotEmpty() }?.let { shuffle ->
-                { shuffle(songs.shuffled()) }
+                { shuffle(songs) }
             },
         isWide = isWide,
     )

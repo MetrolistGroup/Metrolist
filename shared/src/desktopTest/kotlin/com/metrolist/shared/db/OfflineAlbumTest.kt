@@ -22,12 +22,15 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.nio.file.Files
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -78,6 +81,56 @@ class OfflineAlbumTest {
                 assertEquals(listOf("track-1"), assertNotNull(repository.getAlbum("album")).songs.map { it.id })
                 database.dao().updateDownloadedInfo("track-1", false, null)
                 assertNull(repository.getAlbum("album"))
+            } finally {
+                client.close()
+                database.close()
+                Files.deleteIfExists(path)
+            }
+        }
+
+    @Test
+    fun emptyRemoteAlbumPlaylistFallsBackToDownloadedTracks() =
+        runBlocking {
+            val albumId = "MPREb_offline"
+            val albumResponse =
+                """{
+                    "microformat":{"microformatDataRenderer":{"urlCanonical":"https://www.youtube.com/playlist?list=OLAK5uy_offline"}},
+                    "header":{"musicDetailHeaderRenderer":{"title":{"simpleText":"Album"}}}
+                }"""
+            val path = Files.createTempFile("metrolist-empty-remote-album", ".db")
+            Files.deleteIfExists(path)
+            val database = getDesktopDatabaseBuilder(path.toFile()).build()
+            val requestedIds = mutableListOf<String>()
+            val client =
+                createClient(
+                    MockEngine { request ->
+                        val requestBody = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
+                        val browseId = checkNotNull(requestBody["browseId"]) { "Missing browse ID" }.jsonPrimitive.content
+                        requestedIds += browseId
+                        val response =
+                            when (browseId) {
+                                albumId -> albumResponse
+                                "VLOLAK5uy_offline" -> "{}"
+                                else -> error("Unexpected browse ID: $browseId")
+                            }
+                        respond(response, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
+                    },
+                )
+            try {
+                database.storeAlbumPage(
+                    page.copy(
+                        album = page.album.copy(id = albumId, playlistId = "OLAK5uy_offline"),
+                        songs = page.songs.map { it.copy(album = AlbumTiny(albumId, page.album.title)) },
+                    ),
+                )
+                database.dao().updateDownloadedInfo("track-2", true, null)
+                val repository = YouTubeRepository(InnerTube(client, retryDelay = {}), databaseProvider = { database })
+
+                val loaded = assertNotNull(repository.getAlbum(albumId, loadAllPages = false))
+                assertEquals(listOf(albumId, "VLOLAK5uy_offline"), requestedIds)
+                assertEquals(listOf("track-2"), loaded.songs.map { it.id })
+                assertNull(loaded.playlistPage)
+                assertEquals(listOf("track-2"), assertNotNull(repository.getAlbumPlaybackPage(albumId)).songs.map { it.id })
             } finally {
                 client.close()
                 database.close()

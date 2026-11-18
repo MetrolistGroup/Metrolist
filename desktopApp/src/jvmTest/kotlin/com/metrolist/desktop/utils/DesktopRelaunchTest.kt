@@ -26,6 +26,18 @@ class DesktopRelaunchTest {
     }
 
     @Test
+    fun windowsRestartKeepsQuotedPathsWithSpaces() {
+        assertEquals(
+            listOf(
+                "cmd",
+                "/c",
+                "\"ping -n 2 127.0.0.1 >nul & start \"\" \"C:\\Portable Programs\\Metrolist\\Metrolist.exe\" \"--profile\"\"",
+            ),
+            windowsDelayedRestartCommand(listOf("C:\\Portable Programs\\Metrolist\\Metrolist.exe", "--profile")),
+        )
+    }
+
+    @Test
     fun appImageTakesPrecedenceOverItsMountedLauncher() {
         val image = "/home/listener/Metrolist Desktop.AppImage"
         assertEquals(

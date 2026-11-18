@@ -40,13 +40,14 @@ fun DesktopHorizontalScrollControls(
         content()
         return
     }
+    val scrollState = horizontalScrollState(state)
     val scope = rememberCoroutineScope()
     val animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val distance = with(LocalDensity.current) { maxWidth.toPx() * 0.8f }
 
         fun scroll(forward: Boolean) {
-            if (if (forward) !state.canScrollForward else !state.canScrollBackward) return
+            if (if (forward) !scrollState.canScrollForward else !scrollState.canScrollBackward) return
             scope.launch {
                 if (state is CarouselState) {
                     state.animateScrollToItem(
@@ -61,7 +62,7 @@ fun DesktopHorizontalScrollControls(
 
         content()
         AnimatedVisibility(
-            visible = state.canScrollBackward,
+            visible = scrollState.canScrollBackward,
             modifier = Modifier.align(Alignment.CenterStart).padding(start = 8.dp),
             enter = fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()),
             exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
@@ -71,7 +72,7 @@ fun DesktopHorizontalScrollControls(
             }
         }
         AnimatedVisibility(
-            visible = state.canScrollForward,
+            visible = scrollState.canScrollForward,
             modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp),
             enter = fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()),
             exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
@@ -82,3 +83,7 @@ fun DesktopHorizontalScrollControls(
         }
     }
 }
+
+// Compose 1.13.0-beta02's CarouselState does not forward its pager's measured scroll limits.
+@Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
+internal fun horizontalScrollState(state: ScrollableState): ScrollableState = if (state is CarouselState) state.pagerState else state

@@ -75,6 +75,16 @@ The browse IDs are `VLPLPFNXelFU5pPeamFpCnM6plwdHA1fJ27V` for Hann's public WOOF
 
 To refresh, POST to `https://music.youtube.com/youtubei/v1/browse` with the browse ID and a signed-out `WEB_REMIX` client context. The fixtures use client version `1.20260615.03.00`, `hl=en` and `gl=PL` as explicit probe parameters. Keep only the header renderer and its containing path before committing a fixture. The album supplies a real strapline shape for comparison; it does not change album parsing.
 
+## Artist audience counts
+
+`shared/src/jvmSharedTest/resources/youtube/artist-counts/*.json` contains 27 signed-out WEB_REMIX artist header captures from 2026-11-15. They retain only `subscriberCountText`, `longSubscriberCountText` and `monthlyListenerCount` under their original header paths, including text runs and accessibility labels. No cookies, account data, visitor data, menus or track bodies were saved.
+
+To refresh, POST to `https://music.youtube.com/youtubei/v1/browse?prettyPrint=false` with browse ID `UC0C-w0YjGpqDXGB8IHb662A`. Use the pinned InnerTubeX v0.11.7 context: client name `WEB_REMIX`, client version `1.20260707.12.00`, the fixture's explicit `hl` and `gl`, `request.internalExperimentFlags=[]`, `request.useSsl=true` and `user.lockedSafetyMode=false`. Send no cookies. Keep only the three count subtrees and their containing path.
+
+The file names identify the request pairs. They cover en/US, de/DE, fr/FR, es/ES, pt-BR/BR, it/IT, nl/NL, pl/PL, cs/CZ, ru/RU, uk/UA, tr/TR, ar/EG, fa/US, iw/IL, he/IL, hi/IN, bn/BD, th/TH, vi/VN, id/ID, ja/JP, ko/KR, zh-CN/SG, zh-TW/TW, hu/HU and fi/FI. Persian requests with IR and AF returned HTTP 400; fa/US returned Persian text. The supplied probe ID `UCvoQ3TJRxv-g8uPvnz5Nqfg` returned no artist header.
+
+`ArtistAudienceFixturesTest` loads every capture on desktop and Android host, checks both subscriber fields and asserts the displayed count with its app label. `AudienceCountTest` covers Unicode digits and separators, units before the number and unchanged text without an added label when extraction is uncertain. Neither test uses settings or Android APIs.
+
 ## Music-video round trips
 
 `MusicVideoResolverTest.audioSwitchRetainsUgcVideoWhenNextAndVideoSearchHaveNoCounterpart` uses reduced `/next` rows from signed-out WEB_REMIX requests with client version `1.20260707.12.00`. `W5ww34C76Gk` is the UGC upload of Myth In Slaughter; `olNdzTu5QYg` is its ATV audio track. Both responses contain an ordinary `playlistPanelVideoRenderer` without a counterpart wrapper. The fixture keeps the video ID and type, with a shortened containing path. Search results are supplied by the test, not captured. The authoritative timing fixture in the adjacent test is synthetic.
@@ -82,3 +92,9 @@ To refresh, POST to `https://music.youtube.com/youtubei/v1/browse` with the brow
 ## Home renderer projection
 
 `HomeRendererParityTest` uses reduced synthetic JSON for ordinary and immersive Home headers, mix subtitle runs and initial/shelf/page continuation tokens. Its IDs, titles and artwork strings are invented; it is not a signed-in Home capture. `HomeShelfBuilderTest` exercises the shared data projection without rendering UI. See [Home projection](innertube.md#home) for the shared behavior.
+
+## Glyphmind dictionary downloads
+
+`shared/src/jvmSharedTest/resources/glyphmind/mandarin.bin` is the unmodified [dict-v1 Mandarin pack](https://github.com/nyxiereal/glyphmind/releases/download/dict-v1/mandarin.bin). It is 264,352 bytes with SHA-256 `ed3f75c21aadf72819f226ab47d17ccc35166c1acc2e2d0ae1d0801ea77f4fa0`. The backend wiring tests serve it through Ktor MockEngine and install it in temporary storage. Only test runtimes include this fixture; production still downloads it on demand.
+
+The table combines Unicode Unihan 17.0.0 and houbb/pinyin 0.4.0 data. Its attribution and retained Unicode and Apache license texts are in [glyphmind's bundled notice](../shared/src/commonMain/composeResources/files/licenses/glyphmind/NOTICE.md) and the adjacent `licenses/` directory. Replacing the fixture requires verifying the published pack against glyphmind's pinned manifest.

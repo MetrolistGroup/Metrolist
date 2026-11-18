@@ -132,7 +132,6 @@ internal class ListenTogetherNotifications(
         } else {
             if (approve) manager.approveJoin(request.requestId) else manager.rejectJoin(request.requestId)
         }
-        notifications.cancel(request.notificationUri().toString(), 0)
     }
 
     private fun postAutoApproved(suggestion: ListenTogetherSuggestion) {
@@ -243,6 +242,5 @@ class ListenTogetherNotificationReceiver : BroadcastReceiver() {
         intent: Intent,
     ) {
         AndroidListenTogetherManager.respondToNotification(intent)
-        intent.dataString?.let { NotificationManagerCompat.from(context).cancel(it, 0) }
     }
 }

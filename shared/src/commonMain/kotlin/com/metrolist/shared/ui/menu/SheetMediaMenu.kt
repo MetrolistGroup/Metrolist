@@ -3,7 +3,6 @@
 package com.metrolist.shared.ui.menu
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +45,7 @@ import com.metrolist.shared.ui.components.PlayerMenuActionGroup
 import com.metrolist.shared.ui.components.PlayerMenuPrimaryActions
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.isAutoPlaylistIcon
+import com.metrolist.shared.ui.components.playbackMarquee
 import com.metrolist.shared.ui.components.squareArtworkSlot
 import com.metrolist.shared.ui.icons.SongStatusIcons
 import com.metrolist.shared.ui.tv.tvFocusHighlight
@@ -159,7 +159,12 @@ fun ExpressiveMediaMenuHeader(
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false).basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
+                    modifier =
+                        Modifier
+                            .weight(
+                                1f,
+                                fill = false,
+                            ).playbackMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
                 )
                 if (isExplicit && subtitle.isNullOrBlank()) {
                     Spacer(Modifier.width(6.dp))
@@ -179,7 +184,7 @@ fun ExpressiveMediaMenuHeader(
                                 .weight(1f, fill = false)
                                 .then(
                                     if (subtitleLinks == null) {
-                                        Modifier.basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
+                                        Modifier.playbackMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
                                     } else {
                                         Modifier
                                     },

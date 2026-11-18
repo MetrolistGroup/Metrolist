@@ -31,11 +31,12 @@ class MediaMenuPlaybackActions(
         if (songs.isEmpty()) return
         val songsOnly = item is ArtistItem
         if (!shuffle && songsOnly && resetArtistShuffle && playback.state.value.isShuffled) playback.toggleShuffle()
-        val queue = if (shuffle) songs.shuffled() else songs
-        if (item is AlbumItem) {
-            playback.playQueue(queue)
+        if (shuffle) {
+            playback.shuffleQueue(songs, songsOnly = songsOnly)
+        } else if (item is AlbumItem) {
+            playback.playQueue(songs)
         } else {
-            playback.play(queue.first(), queue, songsOnly = songsOnly)
+            playback.play(songs.first(), songs, songsOnly = songsOnly)
         }
     }
 }

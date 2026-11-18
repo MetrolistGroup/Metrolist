@@ -252,6 +252,7 @@ fun LyricsView(
     onLyricsClosed: () -> Unit = {},
     songId: Any? = null,
     isCasting: Boolean = false,
+    isBuffering: Boolean = false,
     isVisible: Boolean = true,
     isLiquidBackground: Boolean = Settings.shared.playerBackgroundStyle == PlayerBackgroundStyle.LIQUID,
 ) {
@@ -360,10 +361,10 @@ fun LyricsView(
             LyricsAnimationStyle.fromString(Settings.shared.lyricsAnimationStyle)
         }
     val isWordByWord =
-        remember(lyrics, isLrcSynced, animStyle, Settings.shared.lyricsRomanizationEnabled) {
+        remember(lyrics, isLrcSynced, animStyle, Settings.shared.isLyricsRomanizationActive) {
             isLrcSynced &&
                 animStyle != LyricsAnimationStyle.NONE &&
-                lyrics.any { it.hasAnimatedWordTiming(Settings.shared.lyricsRomanizationEnabled) }
+                lyrics.any { it.hasAnimatedWordTiming(Settings.shared.isLyricsRomanizationActive) }
         }
 
     val clockEnabled = isVisible && lyrics.isNotEmpty() && isLrcSynced
@@ -383,6 +384,7 @@ fun LyricsView(
                 timingOffsetMs = effectiveOffsetMs,
                 isCasting = isCasting,
                 enabled = clockEnabled,
+                isBuffering = isBuffering,
             )
         } else {
             null
@@ -401,6 +403,7 @@ fun LyricsView(
                     isPlaying = isPlaying,
                     songId = currentSongKey,
                     isCasting = isCasting,
+                    isBuffering = isBuffering,
                     enabled = clockEnabled,
                 )
             remember(smoothPosition, effectiveOffsetMs) {
@@ -454,7 +457,6 @@ fun LyricsView(
             isLrcSynced,
             shouldFollowPlayback,
             isWordByWord,
-            isCasting,
         ) {
             derivedStateOf(structuralEqualityPolicy()) {
                 if (!isLrcSynced || timelineItems.isEmpty()) {
@@ -473,7 +475,7 @@ fun LyricsView(
                         currentTimeMs = lyricsPositionState.value,
                         shouldFollowPlayback = shouldFollowPlayback,
                         isWordByWord = isWordByWord,
-                        seekGeneration = if (isCasting) null else deadlinePosition?.value?.seekGeneration,
+                        seekGeneration = deadlinePosition?.value?.seekGeneration,
                     )
                 }
             }
@@ -729,6 +731,9 @@ fun LyricsView(
             isAutoScrollEnabled,
             isSelectionMode,
             isVisible,
+            isWordByWord,
+            lyricsPositionState,
+            scrollTargetState,
         ) {
             if (!isVisible) return@LaunchedEffect
             var lastTargetIndex = -1

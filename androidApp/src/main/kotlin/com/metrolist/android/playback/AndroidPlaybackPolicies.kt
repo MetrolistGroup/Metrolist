@@ -307,6 +307,14 @@ internal fun shouldRequestQueueVideo(
     return isVideoModeActive ?: (isVideoSong && !isPodcast)
 }
 
+// With music videos turned off, a requested video plays its own audio; only Song mode trades it for the album track.
+internal fun canSwapToAudioCounterpart(
+    videoPlaybackEnabled: Boolean,
+    networkConnected: Boolean,
+    remotePlaybackActive: Boolean = false,
+    guestPlaybackLocked: Boolean = false,
+): Boolean = videoPlaybackEnabled && networkConnected && !remotePlaybackActive && !guestPlaybackLocked
+
 internal fun isQueuePlaybackModeCurrent(
     song: SongItem,
     requestedWantVideo: Boolean,
@@ -325,7 +333,8 @@ internal fun isQueuePlaybackModeCurrent(
 internal fun shouldResolveMusicTrackCounterpart(
     sourceIsVideoSong: Boolean,
     wantVideo: Boolean,
-): Boolean = sourceIsVideoSong && !wantVideo
+    videoPlaybackEnabled: Boolean,
+): Boolean = sourceIsVideoSong && !wantVideo && videoPlaybackEnabled
 
 internal enum class CastQueueReplacementResult {
     REMOTE,

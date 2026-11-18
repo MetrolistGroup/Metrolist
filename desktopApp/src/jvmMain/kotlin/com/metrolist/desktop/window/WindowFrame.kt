@@ -50,7 +50,7 @@ fun FrameWindowScope.WindowFrame(
         PlayerState.isFullscreen = transition.playerFullscreen
         state.size = nextState.size
         state.position = nextState.position
-        state.placement = nextState.placement
+        setWindowPlacement(state, nextState.placement) { window.placement = it }
     }
 
     when {

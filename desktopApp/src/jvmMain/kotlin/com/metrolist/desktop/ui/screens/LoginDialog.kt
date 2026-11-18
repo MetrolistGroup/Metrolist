@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
@@ -43,6 +44,7 @@ import com.metrolist.desktop.ui.components.WebViewAvailabilityLoading
 import com.metrolist.desktop.ui.components.WebViewUnavailableContent
 import com.metrolist.desktop.ui.components.rememberLinuxWebKitAvailable
 import com.metrolist.desktop.utils.prepareDesktopWebViewDataDirectory
+import com.metrolist.desktop.web.DesktopWebView
 import com.metrolist.desktop.window.ClearWindowContentOnDispose
 import com.metrolist.innertubex.models.response.AccountsListResponse
 import com.metrolist.shared.auth.AccountDiscoveryAction
@@ -91,7 +93,6 @@ import com.metrolist.shared.youtube.logging.YtLogger
 import io.github.kdroidfilter.webview.cookie.Cookie
 import io.github.kdroidfilter.webview.cookie.CookieManager
 import io.github.kdroidfilter.webview.web.LoadingState
-import io.github.kdroidfilter.webview.web.WebView
 import io.github.kdroidfilter.webview.web.WebViewNavigator
 import io.github.kdroidfilter.webview.web.rememberWebViewNavigator
 import io.github.kdroidfilter.webview.web.rememberWebViewState
@@ -682,7 +683,7 @@ private fun WebViewContent(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             )
         }
-        WebView(
+        DesktopWebView(
             state = webViewState,
             navigator = navigator,
             modifier = Modifier.fillMaxWidth().weight(1f),
@@ -787,7 +788,7 @@ private fun WebViewPromptWindow(
                 Surface(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text(title, style = MaterialTheme.typography.headlineSmall)
-                        Column(Modifier.weight(1f, fill = false).verticalScrollWithDrag(rememberScrollState())) {
+                        Column(Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScrollWithDrag(rememberScrollState())) {
                             text()
                         }
                         FlowRow(

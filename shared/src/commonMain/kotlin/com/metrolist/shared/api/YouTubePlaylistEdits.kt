@@ -419,7 +419,8 @@ internal class YouTubePlaylistEdits(
                 val response = requestTube.addToPlaylist(YouTubeClient.WEB_REMIX, id, videoId)
                 if (response.status.value == 404) throw PlaylistNotFoundException(id)
                 check(response.status.isSuccess()) { "Add song failed with HTTP ${response.status.value}" }
-                check(response.bodyLimited<JsonObject>(SMALL_RESPONSE_LIMIT)["status"]?.jsonPrimitive?.contentOrNull == "STATUS_SUCCEEDED")
+                val status = response.bodyLimited<JsonObject>(SMALL_RESPONSE_LIMIT)["status"]?.jsonPrimitive?.contentOrNull
+                check(status == "STATUS_SUCCEEDED") { "Add song failed with status ${status ?: "missing"}" }
                 if (innerTube.sessionSnapshot() != requestSession) throw CancellationException("InnerTube session changed")
                 onSongAdded(requestSession, id, videoId)
             }

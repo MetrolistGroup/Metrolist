@@ -1,4 +1,4 @@
-{ lib, stdenv, appimageTools, fetchurl, release }:
+{ lib, stdenv, appimageTools, fetchurl, glib-networking, release }:
 let
   pname = "metrolist";
   version = release.version;
@@ -8,13 +8,16 @@ let
 in
 appimageTools.wrapType2 {
   inherit pname version src;
+  # alsa-plugins would hide the host's /etc/alsa and its PipeWire configuration in the FHS sandbox.
   extraPkgs = pkgs: with pkgs; [
-    gtk3 webkitgtk_4_1 libsecret dbus alsa-plugins
+    gtk3 webkitgtk_4_1 libsecret dbus glib-networking
   ];
+  profile = ''
+    export GIO_EXTRA_MODULES="${glib-networking}/lib/gio/modules''${GIO_EXTRA_MODULES:+:$GIO_EXTRA_MODULES}"
+  '';
   extraInstallCommands = ''
-    install -Dm644 ${contents}/Metrolist.desktop $out/share/applications/metrolist.desktop
-    substituteInPlace $out/share/applications/metrolist.desktop \
-      --replace-fail 'Exec=bin/Metrolist' 'Exec=metrolist'
+    install -Dm644 ${contents}/Metrolist.desktop $out/share/applications/Metrolist.desktop
+    sed -i "s|^Exec=.*|Exec=$out/bin/metrolist %u|" $out/share/applications/Metrolist.desktop
     install -Dm644 ${contents}/Metrolist.png $out/share/icons/hicolor/512x512/apps/Metrolist.png
   '';
   meta = {

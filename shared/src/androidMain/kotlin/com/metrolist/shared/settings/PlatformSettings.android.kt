@@ -32,3 +32,5 @@ internal actual fun defaultKmpSettings(): KmpSettings {
 }
 
 internal actual fun defaultMinimizeToTrayOnClose(): Boolean = false
+
+internal actual fun isDesktopMac(): Boolean = false

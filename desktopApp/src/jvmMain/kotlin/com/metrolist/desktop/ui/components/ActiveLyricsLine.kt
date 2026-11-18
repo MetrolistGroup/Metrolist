@@ -80,6 +80,7 @@ fun ActiveLyricsLine(modifier: Modifier = Modifier) {
             songId = PlayerState.currentTrack?.id,
             timingOffsetMs = timingOffsetMs,
             isCasting = castState.isConnected,
+            isBuffering = castState.isBuffering,
             enabled = !UiState.videoFullscreenObscuresPlayer,
         )
     val currentLineIndex by remember(lyrics, lyricsPositionState) {

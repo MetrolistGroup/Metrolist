@@ -43,6 +43,63 @@ internal fun shouldMonitorPlaybackProgress(
     playWhenReady && suppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE && !transitionPending &&
         (playbackState == Player.STATE_READY || (offloadRequested && playbackState == Player.STATE_BUFFERING))
 
+internal fun playbackProgressPositionMs(
+    isLive: Boolean,
+    renderedPositionMs: Long,
+    reportedPositionMs: Long,
+): Long = if (isLive) renderedPositionMs.coerceAtLeast(0L) else reportedPositionMs.coerceAtLeast(0L)
+
+internal class OffloadSleepStallTracker(
+    private val timeoutMs: Long = 2_000L,
+) {
+    private var sleepingForOffload = false
+    private var wasExpectingProgress = true
+    private var lastProgressAtMs = 0L
+    private var lastOutputPosition: Long? = null
+
+    fun onSleepingForOffload(
+        nowMs: Long,
+        outputPosition: Long?,
+    ) {
+        if (sleepingForOffload) return
+        sleepingForOffload = true
+        lastProgressAtMs = nowMs
+        lastOutputPosition = outputPosition
+    }
+
+    fun shouldDisableOffload(
+        outputPosition: Long?,
+        expectProgress: Boolean,
+        nowMs: Long,
+    ): Boolean {
+        if (!sleepingForOffload) return false
+        if (!expectProgress) {
+            wasExpectingProgress = false
+            lastProgressAtMs = nowMs
+            return false
+        }
+        if (!wasExpectingProgress) {
+            wasExpectingProgress = true
+            lastProgressAtMs = nowMs
+        }
+        if (outputPosition == null || outputPosition != lastOutputPosition) {
+            lastOutputPosition = outputPosition
+            if (outputPosition != null) lastProgressAtMs = nowMs
+            return false
+        }
+        if (nowMs - lastProgressAtMs < timeoutMs) return false
+        reset()
+        return true
+    }
+
+    fun reset() {
+        sleepingForOffload = false
+        wasExpectingProgress = true
+        lastProgressAtMs = 0L
+        lastOutputPosition = null
+    }
+}
+
 internal fun playbackPollIntervalMs(
     fineProgressActive: Boolean,
     positionMs: Long,

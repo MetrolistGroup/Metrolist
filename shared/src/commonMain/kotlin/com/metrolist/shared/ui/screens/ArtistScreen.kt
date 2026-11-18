@@ -134,6 +134,7 @@ import com.metrolist.shared.generated.resources.more_options
 import com.metrolist.shared.generated.resources.play
 import com.metrolist.shared.generated.resources.radio
 import com.metrolist.shared.generated.resources.retry
+import com.metrolist.shared.generated.resources.saved_to_library
 import com.metrolist.shared.generated.resources.see_all
 import com.metrolist.shared.generated.resources.show_less
 import com.metrolist.shared.generated.resources.show_more
@@ -156,6 +157,7 @@ import com.metrolist.shared.model.previewAspectRatio
 import com.metrolist.shared.model.previewThumbnailUrl
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.settings.displayTitle
+import com.metrolist.shared.state.SongMetadataState
 import com.metrolist.shared.ui.components.BlurredArtworkBackground
 import com.metrolist.shared.ui.components.CollectionPreviews
 import com.metrolist.shared.ui.components.ExpandableText
@@ -193,6 +195,7 @@ import com.metrolist.shared.utils.formatDuration
 import com.metrolist.shared.utils.highResolutionArtworkUrl
 import com.metrolist.shared.utils.isPullToRefreshSupported
 import com.metrolist.shared.utils.monthlyAudienceText
+import com.metrolist.shared.utils.parseAudienceCount
 import com.metrolist.shared.utils.withoutPlaybackCountLabel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -1040,9 +1043,9 @@ private fun ArtistHeaderDetails(
                 ArtistPlaceholderText(MaterialTheme.typography.bodyLarge, fraction = 0.55f)
             }
         } else {
-            artist.subscribers?.takeIf { it.isNotBlank() }?.let { count ->
+            parseAudienceCount(artist.subscribers)?.let { count ->
                 Text(
-                    stringResource(Res.string.artist_subscriber_count, count),
+                    count.withLabel { stringResource(Res.string.artist_subscriber_count, it) },
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1667,6 +1670,14 @@ private fun ArtistSongListItem(
                 fontWeight = FontWeight.Medium,
                 color = contentColor,
             )
+            if (SongMetadataState.isInLibrary(song)) {
+                Icon(
+                    imageVector = SongStatusIcons.Saved,
+                    contentDescription = stringResource(Res.string.saved_to_library),
+                    tint = Color.Unspecified,
+                    modifier = Modifier.padding(start = 8.dp).size(10.dp),
+                )
+            }
             if (song.id in LocalDownloadedSongIds.current) {
                 Icon(
                     imageVector = SongStatusIcons.Downloaded,

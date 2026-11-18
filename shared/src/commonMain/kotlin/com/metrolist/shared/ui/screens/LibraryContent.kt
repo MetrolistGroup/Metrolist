@@ -55,8 +55,12 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -156,6 +160,7 @@ enum class LibraryFilter {
 }
 
 enum class LibrarySortType {
+    DOWNLOADED,
     RECENTLY_ADDED,
     NAME,
     LAST_UPDATED,
@@ -197,6 +202,17 @@ fun rememberLibrarySearchScrollState(
 ): LazyGridState {
     val filteredState = rememberLazyGridState()
     return if (query.isBlank()) unfilteredState else filteredState
+}
+
+internal class LibraryReorderScrollConnection(
+    private val isDragging: () -> Boolean,
+) : NestedScrollConnection {
+    // Auto-scroll at the grid edge must not pull the enclosing refresh indicator.
+    override fun onPostScroll(
+        consumed: Offset,
+        available: Offset,
+        source: NestedScrollSource,
+    ): Offset = if (isDragging()) Offset(0f, available.y) else Offset.Zero
 }
 
 @Composable
@@ -359,6 +375,7 @@ fun LibraryContent(
             from: YTItem,
             to: YTItem,
         ) {
+            scrollState.requestScrollToItem(scrollState.firstVisibleItemIndex, scrollState.firstVisibleItemScrollOffset)
             reorderOrder =
                 moveLibraryItems(
                     orderableItems,
@@ -402,6 +419,7 @@ fun LibraryContent(
                             if (fromItem != null && toItem != null) moveItem(fromItem, toItem)
                         }
                     }
+                val reorderScrollConnection = remember(reorderState) { LibraryReorderScrollConnection { reorderState.isAnyItemDragging } }
                 DragScrollableGrid(
                     columns =
                         if (!isGridView) {
@@ -417,6 +435,7 @@ fun LibraryContent(
                     modifier =
                         Modifier
                             .fillMaxSize()
+                            .nestedScroll(reorderScrollConnection)
                             .blockInput(isGridView != currentGridView)
                             .desktopArrowScroll(scrollState)
                             .libraryGridPinch(isGridView && !useDesktopUi, useGridItemSize),
@@ -826,6 +845,10 @@ private fun LibraryHeader(
 
 private fun LibrarySortType.isAvailableFor(filter: LibraryFilter?): Boolean =
     when (this) {
+        LibrarySortType.DOWNLOADED -> {
+            filter == LibraryFilter.TRACKS
+        }
+
         LibrarySortType.ARTIST, LibrarySortType.YEAR, LibrarySortType.LENGTH -> {
             filter == LibraryFilter.ALBUMS
         }
@@ -1046,6 +1069,10 @@ internal fun sortLibraryItems(
     direction: SortDirection = sort.defaultDirection,
 ): List<YTItem> =
     when (sort) {
+        LibrarySortType.DOWNLOADED -> {
+            items.sortedByLibraryMetadata(direction) { (it as? SongItem)?.downloadedAt }
+        }
+
         LibrarySortType.RECENTLY_ADDED -> {
             items.sortedByLibraryMetadata(direction, YTItem::libraryAddedAt)
         }
@@ -1109,7 +1136,7 @@ internal fun <T : Comparable<T>> List<YTItem>.sortedByLibraryMetadata(
 internal val LibrarySortType.defaultDirection: SortDirection
     get() =
         if (this in
-            setOf(LibrarySortType.RECENTLY_ADDED, LibrarySortType.LAST_UPDATED)
+            setOf(LibrarySortType.RECENTLY_ADDED, LibrarySortType.LAST_UPDATED, LibrarySortType.DOWNLOADED)
         ) {
             SortDirection.DESCENDING
         } else {

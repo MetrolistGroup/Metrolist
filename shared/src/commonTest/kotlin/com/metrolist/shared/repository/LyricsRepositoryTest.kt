@@ -10,6 +10,7 @@ import com.metrolist.shared.api.lyrics.LyricsTranslationFailure
 import com.metrolist.shared.api.lyrics.LyricsUtils
 import com.metrolist.shared.api.lyrics.MlxBuilder
 import com.metrolist.shared.api.lyrics.MlxWord
+import com.metrolist.shared.api.lyrics.parseTtmlToMlx
 import com.metrolist.shared.api.lyrics.romanizer.LyricsRomanizer
 import com.metrolist.shared.db.entities.LyricsEntity
 import com.metrolist.shared.model.LyricsEntry
@@ -56,7 +57,7 @@ import kotlin.time.Duration.Companion.milliseconds
 @OptIn(ExperimentalCoroutinesApi::class)
 class LyricsRepositoryTest {
     @Test
-    fun freeOpenRouterTranslatesAndDetectsAllLinesInOneBatch() =
+    fun freeOpenRouterLocallySelectsForeignLinesAndTranslatesOneBatch() =
         runBlocking {
             Settings.shared.lyricsAiTranslationEnabled = true
             Settings.shared.lyricsAiProvider = "OpenRouter"
@@ -86,8 +87,8 @@ class LyricsRepositoryTest {
                             .jsonObject
                             .getValue("lines")
                             .jsonArray
-                    assertEquals(originals, inputs.map { it.jsonPrimitive.content })
-                    val payload = "{\"lines\":${JsonArray(translated.map(::JsonPrimitive))}}"
+                    assertEquals(originals.filter { it != "Bonsoir" }, inputs.map { it.jsonPrimitive.content })
+                    val payload = "{\"lines\":${JsonArray(translated.filter { it != "Bonsoir" }.map(::JsonPrimitive))}}"
                     respond("""{"choices":[{"message":{"content":${JsonPrimitive(payload)}}}]}""")
                 },
             ).use { http ->
@@ -220,7 +221,7 @@ class LyricsRepositoryTest {
                 },
             ).use { client ->
                 val repository = LyricsRepository(FakeLyricsFetcher(emptyMap()), LyricsTranslationClient(client))
-                val original = listOf(LyricsEntry(time = 0, text = "Hello"))
+                val original = listOf(LyricsEntry(time = 0, text = "I will remember you"))
                 val failures = mutableListOf<LyricsTranslationFailure>()
                 repeat(2) {
                     assertEquals(original, repository.enrichLyricsEntries("song", original, forceAiTranslation = true) { failures += it })
@@ -245,33 +246,28 @@ class LyricsRepositoryTest {
                 HttpClient(
                     MockEngine {
                         requests++
-                        if (requests == 1) {
-                            assertTrue(progress.none { it.isTranslating })
-                            respond("""{"choices":[{"message":{"content":"{\"lines\":[\"Hello\",\"\"]}"}}]}""")
-                        } else {
-                            assertEquals(setOf(0), progress.last().lines)
-                            when (outcome) {
-                                "cancel" -> {
-                                    throw CancellationException()
-                                }
+                        assertEquals(setOf(0), progress.last().lines)
+                        when (outcome) {
+                            "cancel" -> {
+                                throw CancellationException()
+                            }
 
-                                "failure", "retry" -> {
-                                    if (outcome == "failure" || requests == 2) {
-                                        respond("unavailable", HttpStatusCode.ServiceUnavailable)
-                                    } else {
-                                        respond("""{"choices":[{"message":{"content":"{\"lines\":[\"Bonjour\"]}"}}]}""")
-                                    }
-                                }
-
-                                else -> {
+                            "failure", "retry" -> {
+                                if (outcome == "failure" || requests == 1) {
+                                    respond("unavailable", HttpStatusCode.ServiceUnavailable)
+                                } else {
                                     respond("""{"choices":[{"message":{"content":"{\"lines\":[\"Bonjour\"]}"}}]}""")
                                 }
+                            }
+
+                            else -> {
+                                respond("""{"choices":[{"message":{"content":"{\"lines\":[\"Bonjour\"]}"}}]}""")
                             }
                         }
                     },
                 ).use { client ->
                     val repository = LyricsRepository(FakeLyricsFetcher(emptyMap()), LyricsTranslationClient(client))
-                    val original = listOf(LyricsEntry(0, "Hello"), LyricsEntry(1_000, "Bonsoir"))
+                    val original = listOf(LyricsEntry(0, "I will remember you"), LyricsEntry(1_000, "Bonsoir"))
 
                     suspend fun enrich() =
                         repository.enrichLyricsEntries(
@@ -289,7 +285,7 @@ class LyricsRepositoryTest {
                     }
                     assertFalse(progress.last().isTranslating)
                     assertEquals(if (outcome == "failure") 1 else 0, failures)
-                    assertEquals(if (outcome in listOf("failure", "retry")) 3 else 2, requests)
+                    assertEquals(if (outcome in listOf("failure", "retry")) 2 else 1, requests)
                 }
             }
         }
@@ -319,12 +315,12 @@ class LyricsRepositoryTest {
                         onTranslationFailure = { error("Unexpected failure") },
                     )
                 }
-                assertEquals(1, requests)
+                assertEquals(0, requests)
             }
         }
 
     @Test
-    fun authenticationAndRateLimitsFailOnceDuringDetectionOrTranslation() =
+    fun authenticationAndRateLimitsFailOnceDuringTranslation() =
         runTest {
             Settings.shared.lyricsAiTranslationEnabled = true
             Settings.shared.lyricsAiTargetLanguage = "fr"
@@ -343,7 +339,7 @@ class LyricsRepositoryTest {
                             },
                         ).use { client ->
                             val repository = LyricsRepository(FakeLyricsFetcher(emptyMap()), LyricsTranslationClient(client))
-                            val original = listOf(LyricsEntry(0, "Hello"))
+                            val original = listOf(LyricsEntry(0, "I will remember you"))
                             assertEquals(
                                 original,
                                 repository.enrichLyricsEntries(
@@ -372,7 +368,7 @@ class LyricsRepositoryTest {
             HttpClient(MockEngine { error("Missing credentials must not reach the provider") }).use { client ->
                 val repository = LyricsRepository(FakeLyricsFetcher(emptyMap()), LyricsTranslationClient(client))
                 var failures = 0
-                val original = listOf(LyricsEntry(0, "Hello"))
+                val original = listOf(LyricsEntry(0, "I will remember you"))
                 for (force in listOf(false, true)) {
                     assertEquals(
                         original,
@@ -399,6 +395,136 @@ class LyricsRepositoryTest {
     }
 
     @Test
+    fun bundledTranslationsRequireMatchingLanguageAndMode() =
+        runBlocking {
+            Settings.shared.lyricsAiTargetLanguage = "zh-CN"
+            Settings.shared.lyricsRomanizationEnabled = false
+            HttpClient(MockEngine { error("No translation request expected") }).use { client ->
+                val repository = LyricsRepository(FakeLyricsFetcher(emptyMap()), LyricsTranslationClient(client))
+                for (language in listOf(null, "en", "zh_CN")) {
+                    val mlx =
+                        MlxBuilder()
+                            .song(translationLanguage = language)
+                            .line(1_000, 2_000, "안녕", background = "메아리")
+                            .translatedLine(1_000, "你好", background = "回声")
+                            .build()
+                    val json =
+                        """{"version":2,"song":{"translationLanguage":${language?.let(::JsonPrimitive)}},
+                            "lines":[{"startMs":1000,"endMs":2000,"text":"안녕","backgroundText":"메아리",
+                            "translatedText":"你好","backgroundTranslatedText":"回声"}]}"""
+                    for (raw in listOf(mlx, json)) {
+                        val entries = assertNotNull(LyricsUtils.parseMlxDocument(raw)).lines
+                        for (mode in listOf("Literal", "Transcribed", "Romanized")) {
+                            Settings.shared.lyricsAiTranslationMode = mode
+                            val result = repository.enrichLyricsEntries("song", entries, allowRemoteTranslation = false).single()
+                            val matches = language == "zh_CN" && mode == "Literal"
+                            assertEquals(if (matches) "你好" else null, result.translatedText, "$language $mode")
+                            assertEquals(if (matches) "回声" else null, result.backgroundTranslatedText, "$language $mode")
+                            assertEquals(entries.single().text, result.text)
+                            assertEquals(entries.single().words, result.words)
+                            assertEquals(entries.single().time, result.time)
+                        }
+                    }
+                }
+                val ttml =
+                    """<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body><div>
+                        <p begin="1s" end="2s">안녕<span ttm:role="x-translation" xml:lang="zh">你好</span></p>
+                        </div></body></tt>"""
+                Settings.shared.lyricsAiTranslationMode = "Literal"
+                val entries = assertNotNull(LyricsUtils.parseMlxDocument(parseTtmlToMlx(ttml, "Song", "Artist", "Unison"))).lines
+                assertEquals("你好", repository.enrichLyricsEntries("ttml", entries).single().translatedText)
+                Settings.shared.lyricsAiTargetLanguage = "en"
+                assertNull(repository.enrichLyricsEntries("ttml", entries).single().translatedText)
+            }
+        }
+
+    @Test
+    fun selectedAiOutputOverridesBundledTranslations() =
+        runBlocking {
+            Settings.shared.lyricsAiTranslationEnabled = true
+            Settings.shared.lyricsAiTargetLanguage = "zh-CN"
+            Settings.shared.lyricsAiApiKey = "test-key"
+            Settings.shared.lyricsRomanizationEnabled = false
+            HttpClient(
+                MockEngine {
+                    respond("""{"choices":[{"message":{"content":"{\"lines\":[\"你好\",\"回声\"]}"}}]}""")
+                },
+            ).use { client ->
+                val repository = LyricsRepository(FakeLyricsFetcher(emptyMap()), LyricsTranslationClient(client))
+                for (language in listOf(null, "en", "zh")) {
+                    val entry =
+                        LyricsEntry(
+                            1_000,
+                            "안녕",
+                            backgroundText = "메아리",
+                            translatedText = "Bundled translation",
+                            backgroundTranslatedText = "Bundled background",
+                            translationLanguage = language,
+                        )
+                    for (mode in listOf("Literal", "Transcribed")) {
+                        Settings.shared.lyricsAiTranslationMode = mode
+                        val result =
+                            repository
+                                .enrichLyricsEntries(
+                                    "song-$language-$mode",
+                                    listOf(entry),
+                                    forceAiTranslation = true,
+                                ).single()
+                        assertEquals("你好", result.translatedText)
+                        assertEquals("回声", result.backgroundTranslatedText)
+                        assertEquals(entry.text, result.text)
+                        assertEquals(entry.backgroundText, result.backgroundText)
+                        assertEquals("zh-CN", result.translationLanguage)
+                        assertEquals(mode, result.translationMode)
+                        Settings.shared.lyricsAiTranslationMode = if (mode == "Literal") "Transcribed" else "Literal"
+                        val changedMode =
+                            repository.enrichLyricsEntries("song-$language-$mode", listOf(result), allowRemoteTranslation = false).single()
+                        assertNull(changedMode.translatedText)
+                        assertNull(changedMode.backgroundTranslatedText)
+                    }
+                }
+            }
+        }
+
+    @Test
+    fun missingAiOutputKeepsMatchingBundledTranslationsOrSourceLyrics() =
+        runBlocking {
+            Settings.shared.lyricsAiTranslationEnabled = true
+            Settings.shared.lyricsAiTargetLanguage = "zh-CN"
+            Settings.shared.lyricsAiApiKey = "test-key"
+            Settings.shared.lyricsRomanizationEnabled = false
+            for (output in listOf("", "안녕", null)) {
+                HttpClient(
+                    MockEngine {
+                        if (output == null) {
+                            respond("Unauthorized", HttpStatusCode.Unauthorized)
+                        } else {
+                            val payload = "{\"lines\":[${JsonPrimitive(output)}]}"
+                            respond("{\"choices\":[{\"message\":{\"content\":${JsonPrimitive(payload)}}}]}")
+                        }
+                    },
+                ).use { client ->
+                    val repository = LyricsRepository(FakeLyricsFetcher(emptyMap()), LyricsTranslationClient(client))
+                    for (language in listOf(null, "en", "zh")) {
+                        val entry = LyricsEntry(1_000, "안녕", translatedText = "你好", translationLanguage = language)
+                        for (mode in listOf("Literal", "Transcribed")) {
+                            Settings.shared.lyricsAiTranslationMode = mode
+                            val result =
+                                repository
+                                    .enrichLyricsEntries(
+                                        "song-$language-$mode",
+                                        listOf(entry),
+                                        forceAiTranslation = true,
+                                    ).single()
+                            assertEquals("안녕", result.text)
+                            assertEquals(if (language == "zh" && mode == "Literal") "你好" else null, result.translatedText)
+                        }
+                    }
+                }
+            }
+        }
+
+    @Test
     fun localPreparationRomanizesWithoutRequestingMissingTranslations() =
         runBlocking {
             Settings.shared.lyricsRomanizationEnabled = true
@@ -421,7 +547,7 @@ class LyricsRepositoryTest {
                         LyricsTranslationClient(client),
                         aiModelCatalog = AiModelCatalog(client),
                     )
-                val original = listOf(LyricsEntry(10_000, "안녕", translatedText = "Bonjour"))
+                val original = listOf(LyricsEntry(10_000, "안녕", translatedText = "Bonjour", translationLanguage = "fr"))
                 var failures = 0
                 val prepared = repository.enrichLyricsEntries("song", original, allowRemoteTranslation = false) { failures++ }
                 assertEquals("annyeong", prepared.single().romanizedText)
@@ -429,6 +555,43 @@ class LyricsRepositoryTest {
                 assertEquals(10_000L, prepared.single().time)
                 assertEquals(0, requests)
                 assertEquals(0, failures)
+            }
+        }
+
+    @Test
+    fun romanizeAsMainDoesNotEnableRomanizationWhenGateIsDisabled() =
+        runBlocking {
+            val previousEnabled = Settings.shared.lyricsRomanizationEnabled
+            val previousAsMain = Settings.shared.lyricsRomanizeAsMain
+            val previousLanguages = Settings.shared.lyricsRomanizeLanguages
+            try {
+                Settings.shared.lyricsRomanizationEnabled = false
+                Settings.shared.lyricsRomanizeAsMain = true
+                Settings.shared.lyricsRomanizeLanguages = "Korean:true"
+                assertFalse(Settings.shared.isLyricsRomanizationActive)
+
+                HttpClient(
+                    MockEngine { error("Unexpected network call") },
+                ).use { client ->
+                    val repository =
+                        LyricsRepository(
+                            FakeLyricsFetcher(emptyMap()),
+                            LyricsTranslationClient(client),
+                            aiModelCatalog = AiModelCatalog(client),
+                        )
+                    val original = listOf(LyricsEntry(10_000, "안녕"))
+                    val prepared = repository.enrichLyricsEntries("song", original, allowRemoteTranslation = false) {}
+                    assertNull(prepared.single().romanizedText)
+
+                    Settings.shared.lyricsRomanizationEnabled = true
+                    assertTrue(Settings.shared.isLyricsRomanizationActive)
+                    val enabled = repository.enrichLyricsEntries("song", original, allowRemoteTranslation = false) {}
+                    assertEquals("annyeong", enabled.single().romanizedText)
+                }
+            } finally {
+                Settings.shared.lyricsRomanizationEnabled = previousEnabled
+                Settings.shared.lyricsRomanizeAsMain = previousAsMain
+                Settings.shared.lyricsRomanizeLanguages = previousLanguages
             }
         }
 
@@ -490,7 +653,7 @@ class LyricsRepositoryTest {
     }
 
     @Test
-    fun detectorAndTranslationFailuresRetainOriginalLyricsAndRomanization() =
+    fun translationFailuresRetainOriginalLyricsAndRomanization() =
         runBlocking {
             Settings.replaceSharedForTest(Settings(MapSettings()))
             try {
@@ -536,7 +699,7 @@ class LyricsRepositoryTest {
                         LyricsTranslationClient(client),
                         aiModelCatalog = AiModelCatalog(client),
                     )
-                val original = listOf(LyricsEntry(0, "Hello"))
+                val original = listOf(LyricsEntry(0, "I will remember you"))
                 assertEquals(original, repository.enrichLyricsEntries("song", original) {})
                 assertEquals(0, requests)
             }
@@ -592,7 +755,7 @@ class LyricsRepositoryTest {
                     val translated =
                         repository.enrichLyricsEntries(
                             "song",
-                            listOf(LyricsEntry(0, "Hello")),
+                            listOf(LyricsEntry(0, "I will remember you")),
                             forceAiTranslation = true,
                         ) {}
                     assertEquals("Bonjour", translated.single().translatedText)
@@ -622,7 +785,7 @@ class LyricsRepositoryTest {
                     },
                 ).use { client ->
                     val repository = LyricsRepository(FakeLyricsFetcher(emptyMap()), LyricsTranslationClient(client))
-                    val original = listOf(LyricsEntry(time = 0, text = "Hello"))
+                    val original = listOf(LyricsEntry(time = 0, text = "I will remember you"))
                     assertEquals(
                         "Bonjour",
                         repository.enrichLyricsEntries("song", original, forceAiTranslation = true) {}.single().translatedText,
@@ -669,7 +832,7 @@ class LyricsRepositoryTest {
                     install(ContentNegotiation) { json() }
                 }.use { client ->
                     val repository = LyricsRepository(FakeLyricsFetcher(emptyMap()), LyricsTranslationClient(client))
-                    val original = listOf(LyricsEntry(time = 0, text = "Hello"))
+                    val original = listOf(LyricsEntry(time = 0, text = "I will remember you"))
                     var failures = 0
                     assertEquals(original, repository.enrichLyricsEntries("song", original) { failures++ })
                     assertEquals(1, failures)
@@ -715,14 +878,9 @@ class LyricsRepositoryTest {
                                 .getValue("lines")
                                 .jsonArray
                         val sources = input.map { it.jsonPrimitive.content }
-                        val payload =
-                            if (requests++ == 0) {
-                                assertEquals(listOf(mixed, target), sources)
-                                """{"lines":["忘れない",""]}"""
-                            } else {
-                                assertEquals(listOf(mixed), sources)
-                                """{"lines":["I will remember this song forever, I will not forget"]}"""
-                            }
+                        requests++
+                        assertEquals(listOf(mixed), sources)
+                        val payload = """{"lines":["I will remember this song forever, I will not forget"]}"""
                         respond("{\"choices\":[{\"message\":{\"content\":${JsonPrimitive(payload)}}}]}")
                     },
                 ).use { client ->
@@ -736,7 +894,7 @@ class LyricsRepositoryTest {
                     assertEquals("I will remember this song forever, I will not forget", result[0].translatedText)
                     assertNull(result[0].backgroundTranslatedText)
                     assertEquals(entries[1], result[1])
-                    assertEquals(2, requests)
+                    assertEquals(1, requests)
                 }
             }
         }
@@ -751,14 +909,16 @@ class LyricsRepositoryTest {
             Settings.shared.lyricsAiApiKey = "test-key"
             Settings.shared.lyricsRomanizationEnabled = false
             for ((mainNeeded, backgroundNeeded) in listOf(true to false, false to true, true to true, false to false)) {
+                val main = if (mainNeeded) "I will remember you" else "Je veux chanter encore"
+                val background = if (backgroundNeeded) "I will see you again" else "Nous chanterons encore cette chanson"
                 val expectedSources =
                     listOfNotNull(
-                        "Hello".takeIf { mainNeeded },
-                        "Hello".takeIf { mainNeeded },
-                        "Goodbye".takeIf { backgroundNeeded },
-                        "Goodbye".takeIf { backgroundNeeded },
-                        "Goodbye".takeIf { backgroundNeeded },
-                        "Goodbye".takeIf { backgroundNeeded },
+                        main.takeIf { mainNeeded },
+                        main.takeIf { mainNeeded },
+                        background.takeIf { backgroundNeeded },
+                        background.takeIf { backgroundNeeded },
+                        background.takeIf { backgroundNeeded },
+                        background.takeIf { backgroundNeeded },
                     )
                 var requests = 0
                 HttpClient(
@@ -772,24 +932,16 @@ class LyricsRepositoryTest {
                                 .jsonObject
                                 .getValue("content")
                                 .jsonPrimitive.content
-                        val payload =
-                            if (requests++ == 0) {
-                                assertTrue(prompt.contains("Hello"))
-                                assertTrue(prompt.contains("Goodbye"))
-                                "{\"lines\":${JsonArray(
-                                    listOf(if (mainNeeded) "Hello" else "", if (backgroundNeeded) "Goodbye" else "").map(::JsonPrimitive),
-                                )}}"
-                            } else {
-                                val input =
-                                    Json
-                                        .parseToJsonElement(prompt.substringAfter("\n\n"))
-                                        .jsonObject
-                                        .getValue("lines")
-                                        .jsonArray
-                                assertEquals(expectedSources, input.map { it.jsonPrimitive.content })
-                                val output = expectedSources.map { if (it == "Hello") "Bonjour" else "Au revoir" }
-                                "{\"lines\":${JsonArray(output.map(::JsonPrimitive))}}"
-                            }
+                        requests++
+                        val input =
+                            Json
+                                .parseToJsonElement(prompt.substringAfter("\n\n"))
+                                .jsonObject
+                                .getValue("lines")
+                                .jsonArray
+                        assertEquals(expectedSources, input.map { it.jsonPrimitive.content })
+                        val output = expectedSources.map { if (it == main) "Bonjour" else "Au revoir" }
+                        val payload = "{\"lines\":${JsonArray(output.map(::JsonPrimitive))}}"
                         respond("{\"choices\":[{\"message\":{\"content\":${JsonPrimitive(payload)}}}]}")
                     },
                 ).use { client ->
@@ -799,16 +951,16 @@ class LyricsRepositoryTest {
                             LyricsEntry(0, ""),
                             LyricsEntry(
                                 1000,
-                                "Hello Goodbye",
+                                "$main $background",
                                 words =
                                     listOf(
-                                        WordTimestamp("Hello", 1.0, 2.0),
-                                        WordTimestamp("Goodbye", 1.5, 2.5, isBackground = true),
+                                        WordTimestamp(main, 1.0, 2.0),
+                                        WordTimestamp(background, 1.5, 2.5, isBackground = true),
                                     ),
                             ),
-                            LyricsEntry(3000, "Hello", backgroundText = "Goodbye"),
-                            LyricsEntry(4000, "Goodbye", isBackground = true),
-                            LyricsEntry(5000, "", backgroundText = "Goodbye"),
+                            LyricsEntry(3000, main, backgroundText = background),
+                            LyricsEntry(4000, background, isBackground = true),
+                            LyricsEntry(5000, "", backgroundText = background),
                         )
                     val progress = mutableListOf<LyricsTranslationProgress>()
                     val result = repository.enrichLyricsEntries("song", entries, onTranslationProgress = { progress += it })
@@ -831,7 +983,7 @@ class LyricsRepositoryTest {
                     assertNull(result[3].backgroundTranslatedText)
                     assertNull(result[4].translatedText)
                     assertEquals("Au revoir".takeIf { backgroundNeeded }, result[4].backgroundTranslatedText)
-                    assertEquals(if (expectedSources.isEmpty()) 1 else 2, requests)
+                    assertEquals(if (expectedSources.isEmpty()) 0 else 1, requests)
                 }
             }
         }
@@ -1082,7 +1234,7 @@ class LyricsRepositoryTest {
             }
 
         assertEquals(1, nonEmpty.single().first)
-        assertTrue(needsJapaneseDictionaryForAiAlignment(nonEmpty, listOf("toukyou"), null))
+        assertTrue(needsDictionaryForAiAlignment(nonEmpty, listOf("toukyou"), null))
     }
 
     @Test
@@ -1095,9 +1247,9 @@ class LyricsRepositoryTest {
                 romanizedText = "toukyou",
             )
 
-        assertFalse(needsJapaneseDictionaryPreparation(entry, romanizationEnabled = false))
-        assertFalse(needsJapaneseDictionaryPreparation(entry.copy(romanizedText = null), romanizationEnabled = false))
-        assertTrue(needsJapaneseDictionaryPreparation(entry, romanizationEnabled = true))
+        assertFalse(needsDictionaryPreparation(entry, romanizationEnabled = false))
+        assertFalse(needsDictionaryPreparation(entry.copy(romanizedText = null), romanizationEnabled = false))
+        assertTrue(needsDictionaryPreparation(entry, romanizationEnabled = true))
     }
 
     @Test
@@ -2579,6 +2731,59 @@ class LyricsRepositoryTest {
                     sourceLines = listOf("first", "second"),
                 ),
             )
+        }
+    }
+
+    @Test
+    fun completedTranslationIgnoresDetectionPolicyButStillChecksSourceTargetModeAndProviderConfig() {
+        HttpClient(MockEngine { error("Unexpected translation request") }).use { client ->
+            val repository = LyricsRepository(FakeLyricsFetcher(emptyMap()), LyricsTranslationClient(client))
+            val entity =
+                LyricsEntity(
+                    id = "song",
+                    lyrics = "I will remember you",
+                    translatedLyrics = "METROLIST_TRANSLATION_V2:{\"lines\":[\"Bonjour\"]}",
+                    translationLanguage = "fr",
+                    translationMode = "Literal",
+                    translationSourceHash = "source",
+                )
+            for (version in listOf("v2", "v3", "v4", "v5")) {
+                for (suffix in listOf(
+                    "",
+                    "|vocals-v1|false",
+                    "|vocals-v1|true",
+                    "|passages-v1|false",
+                    "|passages-v1|true",
+                    "|glyphmind-v1|false",
+                    "|glyphmind-v1|true",
+                )) {
+                    val saved = entity.copy(translationConfigKey = "$version|provider|url|translator|legacy-detector|config$suffix")
+                    for (forced in listOf(false, true)) {
+                        val key = "v5|provider|url|translator|glyphmind-0.1.0|config|glyphmind-v1|$forced"
+                        assertEquals(
+                            listOf("Bonjour"),
+                            repository.readCachedTranslation(saved, "fr", "Literal", "source", key)?.result?.translatedLines,
+                        )
+                        assertNull(repository.readCachedTranslation(saved, "zh-CN", "Literal", "source", key))
+                        assertNull(repository.readCachedTranslation(saved, "fr", "Transcribed", "source", key))
+                        assertNull(repository.readCachedTranslation(saved, "fr", "Literal", "changed", key))
+                        assertNull(
+                            repository.readCachedTranslation(
+                                saved,
+                                "fr",
+                                "Literal",
+                                "source",
+                                "v5|other-provider|url|translator|glyphmind-0.1.0|config|glyphmind-v1|$forced",
+                            ),
+                        )
+                        assertEquals(
+                            saved.translationConfigKey == key,
+                            repository.readCachedTranslation(saved.copy(translationNotNeeded = true), "fr", "Literal", "source", key) !=
+                                null,
+                        )
+                    }
+                }
+            }
         }
     }
 

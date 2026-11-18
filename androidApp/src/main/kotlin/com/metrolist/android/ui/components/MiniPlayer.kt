@@ -143,6 +143,7 @@ import com.metrolist.shared.state.SongMetadataState
 import com.metrolist.shared.state.rememberArtistSubscription
 import com.metrolist.shared.state.toggleArtistSubscription
 import com.metrolist.shared.ui.LocalIsTv
+import com.metrolist.shared.ui.components.BlurredArtworkBackground
 import com.metrolist.shared.ui.components.BottomSheetState
 import com.metrolist.shared.ui.components.ContainedLoadingIndicator
 import com.metrolist.shared.ui.components.CrossfadeArtwork
@@ -750,15 +751,24 @@ internal fun MiniPlayerCard(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (useBlurMiniPlayer) {
-                AsyncImage(
-                    url = artworkUrl,
-                    contentDescription = null,
-                    modifier =
-                        Modifier
-                            .matchParentSize()
-                            .nativeBlurCompat(miniPlayerBlurRadiusPx),
-                    contentScale = ContentScale.Crop,
-                )
+                if (!supportsNativeBlur()) {
+                    BlurredArtworkBackground(
+                        url = artworkUrl,
+                        modifier = Modifier.matchParentSize(),
+                        blurRadiusPx = miniPlayerBlurRadiusPx,
+                        crossfade = true,
+                    )
+                } else {
+                    AsyncImage(
+                        url = artworkUrl,
+                        contentDescription = null,
+                        modifier =
+                            Modifier
+                                .matchParentSize()
+                                .nativeBlurCompat(miniPlayerBlurRadiusPx),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
                 Box(
                     modifier =
                         Modifier

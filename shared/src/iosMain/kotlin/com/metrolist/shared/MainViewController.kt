@@ -72,6 +72,7 @@ import com.metrolist.shared.playlist.storeIosPlaylistCover
 import com.metrolist.shared.playlist.uploadStoredPlaylistCover
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
+import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.state.SongMetadataState
 import com.metrolist.shared.state.contentCountryCodes
 import com.metrolist.shared.storage.IosAudioDownloadManager
@@ -99,6 +100,7 @@ import com.metrolist.shared.update.IosUpdateNotice
 import com.metrolist.shared.utils.ArtworkSizingInterceptor
 import com.metrolist.shared.utils.Logger
 import com.metrolist.shared.utils.formatHistoryMonth
+import com.metrolist.shared.utils.isCrashReportingAvailable
 import com.metrolist.shared.youtube.playback.IosPageBoundTokenHost
 import com.metrolist.shared.youtube.playback.IosPlaybackNetworkMonitor
 import com.metrolist.shared.youtube.playback.StreamResolver
@@ -191,6 +193,7 @@ fun MetrolistIOSApp() {
     val appJob = remember(databaseGeneration) { SupervisorJob(scope.coroutineContext[Job]) }
     val appScope = remember(appJob) { CoroutineScope(scope.coroutineContext + appJob) }
     LaunchedEffect(database, appScope) {
+        SongLikeState.recoverDatabaseLikes(database)
         SongMetadataState.bind(database, appScope)
     }
     val downloadManager = remember(database, appScope) { IosAudioDownloadManager(database, appScope) }
@@ -416,7 +419,7 @@ fun MetrolistIOSApp() {
                 pureBlack = Settings.shared.isPureBlackTheme(),
             ) {
                 IosOnboarding { consent, login, restore ->
-                    Settings.shared.sentryEnabled = consent
+                    if (isCrashReportingAvailable()) Settings.shared.sentryEnabled = consent
                     Settings.shared.iosOnboardingComplete = true
                     showOnboarding = false
                     if (login) handleOpenUrl("metrolist://login")

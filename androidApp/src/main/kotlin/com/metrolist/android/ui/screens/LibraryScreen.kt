@@ -87,6 +87,7 @@ import com.metrolist.android.ui.menu.SongMenu
 import com.metrolist.android.ui.utils.playSong
 import com.metrolist.android.utils.startActivitySafely
 import com.metrolist.android.viewmodels.LibraryViewModel
+import com.metrolist.shared.constants.ThumbnailCornerRadius
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.KIND_CACHE
 import com.metrolist.shared.db.entities.toSongItem
@@ -139,6 +140,7 @@ import com.metrolist.shared.ui.components.RefreshIndicator
 import com.metrolist.shared.ui.components.ScrollingAddButton
 import com.metrolist.shared.ui.components.rememberScrollingFabState
 import com.metrolist.shared.ui.icons.MetrolistIcons
+import com.metrolist.shared.ui.menu.groupedMenuItemShapes
 import com.metrolist.shared.ui.menu.loadMediaItemSongs
 import com.metrolist.shared.ui.navigation.LocalRootContentActive
 import com.metrolist.shared.ui.navigation.navigationPopupSource
@@ -148,6 +150,7 @@ import com.metrolist.shared.ui.screens.LibraryFilter
 import com.metrolist.shared.ui.screens.libraryAutoPlaylists
 import com.metrolist.shared.ui.screens.libraryContentText
 import com.metrolist.shared.ui.screens.rememberLibrarySearchScrollState
+import com.metrolist.shared.ui.theme.gridCellShape
 import com.metrolist.shared.ui.tv.tvFocusHighlight
 import com.metrolist.shared.utils.ShareUrls
 import kotlinx.coroutines.flow.Flow
@@ -245,7 +248,8 @@ fun LibraryScreen(
         selectedFilter = null
         Settings.shared.libraryFilter = LibraryFilterType.ALL
     }
-    var isGridView by remember { mutableStateOf(Settings.shared.libraryGridView) }
+    val gridFilter = selectedFilter?.let { LibraryFilterType.valueOf(it.name) } ?: LibraryFilterType.ALL
+    val isGridView = Settings.shared.libraryGridView(gridFilter)
     var manualOrder by remember { mutableStateOf(Settings.shared.libraryManualOrder) }
     var isSearchOpen by remember { mutableStateOf(false) }
     val hiddenItemVersion by HiddenLibraryItems.version.collectAsStateWithLifecycle()
@@ -483,8 +487,7 @@ fun LibraryScreen(
                 compactGrid = !isLandscape,
                 onFilterChange = onFilterChange,
                 onGridViewChange = {
-                    isGridView = it
-                    Settings.shared.libraryGridView = it
+                    Settings.shared.setLibraryGridView(gridFilter, it)
                 },
                 onManualOrderChange = {
                     manualOrder = it
@@ -543,6 +546,7 @@ fun LibraryScreen(
                             onSwipeLeft = { queue(item, playNext = false) },
                             onSwipeRight = { queue(item, playNext = true) },
                             enabled = playerConnection != null && Settings.shared.swipeToSong && searchQuery.isNotBlank(),
+                            shape = if (isGridView) gridCellShape() else RoundedCornerShape(ThumbnailCornerRadius),
                             content = content,
                         )
                     } else {
@@ -786,16 +790,18 @@ fun LibraryScreen(
             ) {
                 DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
                     DropdownMenuItem(
-                        modifier = Modifier.tvFocusHighlight(RoundedCornerShape(4.dp)).navigationPopupSource(),
+                        modifier = Modifier.tvFocusHighlight(groupedMenuItemShapes(0, 2).shape).navigationPopupSource(),
                         text = { Text(stringResource(Res.string.create_playlist)) },
+                        shape = groupedMenuItemShapes(0, 2).shape,
                         onClick = {
                             showNewPlaylistMenu = false
                             showCreateDialog = true
                         },
                     )
                     DropdownMenuItem(
-                        modifier = Modifier.tvFocusHighlight(RoundedCornerShape(4.dp)),
+                        modifier = Modifier.tvFocusHighlight(groupedMenuItemShapes(1, 2).shape),
                         text = { Text(stringResource(Res.string.import_playlist)) },
+                        shape = groupedMenuItemShapes(1, 2).shape,
                         onClick = {
                             showNewPlaylistMenu = false
                             onNavigateToPlaylistImport()

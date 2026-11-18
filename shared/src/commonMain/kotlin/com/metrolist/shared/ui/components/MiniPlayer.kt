@@ -102,6 +102,7 @@ import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.theme.getGradientColors
 import com.metrolist.shared.ui.theme.rememberArtworkSeedColor
 import com.metrolist.shared.ui.utils.artworkBlur
+import com.metrolist.shared.ui.utils.supportsNativeBlur
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -254,12 +255,21 @@ fun MiniPlayer(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (useBlur) {
-                AsyncImage(
-                    url = song.previewThumbnailUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize().artworkBlur(24.dp, backgroundColor),
-                    contentScale = ContentScale.Crop,
-                )
+                if (!supportsNativeBlur()) {
+                    BlurredArtworkBackground(
+                        url = song.previewThumbnailUrl,
+                        modifier = Modifier.fillMaxSize(),
+                        blurRadiusPx = with(LocalDensity.current) { 24.dp.toPx() },
+                        crossfade = true,
+                    )
+                } else {
+                    AsyncImage(
+                        url = song.previewThumbnailUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize().artworkBlur(24.dp, backgroundColor),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
                 Box(
                     modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)),
                 )

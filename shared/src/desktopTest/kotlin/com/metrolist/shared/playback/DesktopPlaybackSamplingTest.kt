@@ -1,10 +1,54 @@
 package com.metrolist.shared.playback
 
 import com.metrolist.shared.playback.sponsorblock.SponsorBlockSegment
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DesktopPlaybackSamplingTest {
+    @Test
+    fun samplingWaitTimesOutOrWakesOnAChangeAndRemainsCancellable() =
+        runTest {
+            val changes = Channel<Unit>(Channel.CONFLATED)
+            val timeout = async { changes.awaitPlaybackSample(50L) }
+            runCurrent()
+            advanceTimeBy(49L)
+            assertFalse(timeout.isCompleted)
+            advanceTimeBy(1L)
+            runCurrent()
+            assertFalse(timeout.await())
+
+            val changed = async { changes.awaitPlaybackSample(1_000L) }
+            runCurrent()
+            changes.send(Unit)
+            runCurrent()
+            assertTrue(changed.await())
+
+            val paused = async { changes.awaitPlaybackSample(null) }
+            runCurrent()
+            advanceTimeBy(10_000L)
+            assertFalse(paused.isCompleted)
+            changes.send(Unit)
+            runCurrent()
+            assertTrue(paused.await())
+
+            val cancelled = async { changes.awaitPlaybackSample(null) }
+            runCurrent()
+            cancelled.cancel()
+            cancelled.join()
+            assertTrue(cancelled.isCancelled)
+            changes.send(Unit)
+            assertTrue(changes.awaitPlaybackSample(50L))
+        }
+
     @Test
     fun hiddenPlaybackSleepsUntilTheCrossfadeBoundaryAtTheCurrentSpeed() {
         fun delay(

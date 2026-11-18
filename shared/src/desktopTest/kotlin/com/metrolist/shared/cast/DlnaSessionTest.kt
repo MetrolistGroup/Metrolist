@@ -10,6 +10,7 @@ import com.russhwolf.settings.MapSettings
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -18,15 +19,15 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.net.InetSocketAddress
-import java.net.Socket
+import java.net.ServerSocket
 import java.net.URI
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFails
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -57,6 +58,72 @@ class DlnaSessionTest {
                 }
             }
         }
+
+    @Test
+    fun stoppedReceiverWithResetPositionAdvancesTheQueue() =
+        runBlocking {
+            Receiver(CastProtocol.SONOS).use { receiver ->
+                val scope = CoroutineScope(coroutineContext + SupervisorJob())
+                val manager = manager(scope, Settings(MapSettings()))
+                try {
+                    receiver.position = "00:02:59"
+                    assertTrue(manager.cast(receiver.device, media, 179_000L, true, 1f))
+                    withTimeout(5_000L) { manager.state.first { !it.isBuffering } }
+                    receiver.position = "00:00:00"
+                    receiver.playing = false
+                    val ended = withTimeout(5_000L) { manager.state.first { it.hasEnded } }
+                    assertTrue(ended.isConnected)
+                    assertTrue(shouldHandleCastPlaybackEnd(ended, null))
+                    val polls = receiver.transportPolls.value
+                    withTimeout(5_000L) { receiver.transportPolls.first { it >= polls + 3 } }
+                    assertTrue(manager.state.value.hasEnded)
+                    assertTrue(manager.replaceMedia(media, 0L, true, 1f))
+                    assertFalse(manager.state.value.hasEnded)
+                } finally {
+                    manager.release()
+                    scope.cancel()
+                }
+            }
+        }
+
+    @Test
+    fun stoppedReceiverMidSongDoesNotAdvanceTheQueue() = verifyStoppedRenderer("00:00:42", expectedEnd = false)
+
+    @Test
+    fun stoppedReceiverAllowsTheObservedPlayingPollInterval() =
+        verifyStoppedRenderer("00:02:57", expectedEnd = true, playingPollDelayMs = 2_000L)
+
+    @Test
+    fun explicitStopNearTheEndDoesNotAdvanceTheQueue() = verifyStoppedRenderer("00:02:59", expectedEnd = false, explicitStop = true)
+
+    private fun verifyStoppedRenderer(
+        lastPosition: String,
+        expectedEnd: Boolean,
+        playingPollDelayMs: Long = 0L,
+        explicitStop: Boolean = false,
+    ) = runBlocking {
+        Receiver(CastProtocol.SONOS).use { receiver ->
+            val scope = CoroutineScope(coroutineContext + SupervisorJob())
+            val session = DlnaSession(scope, requireNotNull(receiver.device.endpoint))
+            try {
+                receiver.position = lastPosition
+                receiver.transportDelayMs = playingPollDelayMs
+                session.load("http://127.0.0.1/media", media, requireNotNull(parseDlnaTime(lastPosition)), true, 1f, 1L)
+                withTimeout(5_000L) { session.state.first { it.isPlaying && !it.isBuffering } }
+                receiver.transportDelayMs = 0L
+                if (explicitStop) session.stop() else receiver.playing = false
+                receiver.position = "00:00:00"
+                val stopped = withTimeout(5_000L) { session.state.first { !it.isPlaying } }
+                assertEquals(expectedEnd, stopped.hasEnded)
+                val polls = receiver.transportPolls.value
+                withTimeout(5_000L) { receiver.transportPolls.first { it >= polls + 2 } }
+                assertEquals(expectedEnd, session.state.value.hasEnded)
+            } finally {
+                session.close()
+                scope.cancel()
+            }
+        }
+    }
 
     @Test
     fun loadingPreservesDlnaReceiverVolumeUntilExplicitAdjustment() = verifyReceiverVolume(CastProtocol.DLNA)
@@ -215,6 +282,41 @@ class DlnaSessionTest {
         }
 
     @Test
+    fun replacementRechecksItsQueueOwnerAfterWaitingForAnotherLoad() =
+        runBlocking {
+            Receiver().use { receiver ->
+                val scope = CoroutineScope(coroutineContext + SupervisorJob())
+                val manager = manager(scope, Settings(MapSettings()))
+                val loading = CompletableDeferred<Unit>()
+                val finish = CompletableDeferred<Unit>()
+                try {
+                    assertTrue(manager.cast(receiver.device, media, 0L, true, 1f))
+                    receiver.onPlay = {
+                        loading.complete(Unit)
+                        runBlocking { finish.await() }
+                    }
+                    val first = launch { assertTrue(manager.replaceMedia(media, 0L, true, 1f)) }
+                    loading.await()
+                    var current = true
+                    val stale =
+                        launch(start = CoroutineStart.UNDISPATCHED) {
+                            assertFalse(manager.replaceMedia(media, 0L, true, 1f) { current })
+                        }
+                    current = false
+                    receiver.onPlay = {}
+                    finish.complete(Unit)
+                    first.join()
+                    stale.join()
+                    assertEquals(2, receiver.actions.count { it == "SetAVTransportURI" })
+                } finally {
+                    finish.complete(Unit)
+                    manager.release()
+                    scope.cancel()
+                }
+            }
+        }
+
+    @Test
     fun cancelledReplacementClosesItsProxyAndAllowsAnotherReplacement() =
         runBlocking {
             Receiver().use { receiver ->
@@ -222,6 +324,7 @@ class DlnaSessionTest {
                 val manager = manager(scope, Settings(MapSettings()))
                 try {
                     assertTrue(manager.cast(receiver.device, media, 0L, true, 1f))
+                    val originalUrl = URI(receiver.mediaUrl)
                     val replacing = CompletableDeferred<Unit>()
                     val replacement =
                         launch {
@@ -233,17 +336,91 @@ class DlnaSessionTest {
                     replacement.join()
                     assertTrue(replacement.isCancelled)
                     val url = URI(receiver.mediaUrl)
-                    assertFails { Socket(url.host, url.port).use { } }
+                    assertEquals(originalUrl.port, url.port)
+                    assertEquals(404, headStatus(url))
+                    assertEquals(200, headStatus(originalUrl))
                     receiver.onPlay = {}
                     assertTrue(manager.replaceMedia(media, 0L, true, 1f))
                     val nextUrl = URI(receiver.mediaUrl)
-                    Socket(nextUrl.host, nextUrl.port).use { }
+                    assertEquals(originalUrl.port, nextUrl.port)
+                    assertEquals(200, headStatus(nextUrl))
+                    assertEquals(404, headStatus(originalUrl))
                 } finally {
                     manager.release()
                     scope.cancel()
                 }
             }
         }
+
+    @Test
+    fun occupiedStreamPortReportsTheBindFailure() =
+        runBlocking {
+            Receiver().use { receiver ->
+                ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { occupied ->
+                    val scope = CoroutineScope(coroutineContext + SupervisorJob())
+                    val manager =
+                        JvmCastManager(
+                            scope,
+                            { error("No discovery") },
+                            { listOf(InetAddress.getLoopbackAddress()) },
+                            "test",
+                            Settings(MapSettings()),
+                            streamPort = occupied.localPort,
+                        )
+                    try {
+                        assertFalse(manager.cast(receiver.device, media, 0L, true, 1f))
+                        assertEquals(CastError.STREAM_PORT_UNAVAILABLE, manager.state.value.error)
+                        assertTrue(receiver.actions.isEmpty())
+                    } finally {
+                        manager.release()
+                        scope.cancel()
+                    }
+                }
+            }
+        }
+
+    @Test
+    fun missingStreamRequestReportsFirewallHintAndLateRequestClearsIt() =
+        runBlocking {
+            Receiver().use { receiver ->
+                val scope = CoroutineScope(coroutineContext + SupervisorJob())
+                val manager =
+                    JvmCastManager(
+                        scope,
+                        { error("No discovery") },
+                        { listOf(InetAddress.getLoopbackAddress()) },
+                        "test",
+                        Settings(MapSettings()),
+                        streamPort = 0,
+                        streamRequestTimeoutMs = 50L,
+                    )
+                try {
+                    assertTrue(manager.cast(receiver.device, media, 0L, true, 1f))
+                    // A blocked Sonos stream reports STOPPED rather than PLAYING.
+                    receiver.playing = false
+                    withTimeout(5_000L) { manager.state.first { it.error == CastError.STREAM_UNREACHABLE } }
+                    assertTrue(manager.state.value.isConnected)
+                    assertEquals(200, headStatus(URI(receiver.mediaUrl)))
+                    withTimeout(5_000L) { manager.state.first { it.error == null } }
+                    assertTrue(manager.state.value.isConnected)
+                } finally {
+                    manager.release()
+                    scope.cancel()
+                }
+            }
+        }
+
+    private fun headStatus(uri: URI): Int {
+        val connection = uri.toURL().openConnection() as HttpURLConnection
+        return try {
+            connection.requestMethod = "HEAD"
+            connection.connectTimeout = 2_000
+            connection.readTimeout = 2_000
+            connection.responseCode
+        } finally {
+            connection.disconnect()
+        }
+    }
 
     private fun manager(
         scope: CoroutineScope,
@@ -254,6 +431,7 @@ class DlnaSessionTest {
         { listOf(InetAddress.getLoopbackAddress()) },
         "test",
         settings,
+        streamPort = 0,
     )
 
     private class Receiver(
@@ -262,6 +440,7 @@ class DlnaSessionTest {
         private val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         val actions = CopyOnWriteArrayList<String>()
         val failedVolumePolls = MutableStateFlow(0)
+        val transportPolls = MutableStateFlow(0)
 
         @Volatile var onPlay: () -> Unit = {}
 
@@ -276,6 +455,10 @@ class DlnaSessionTest {
         private val metadataRejected = AtomicBoolean()
 
         @Volatile var volume = 80
+
+        @Volatile var position = "00:00:42"
+
+        @Volatile var transportDelayMs = 0L
 
         @Volatile var playing = false
         val device =
@@ -341,10 +524,12 @@ class DlnaSessionTest {
                         }
                         when (action) {
                             "GetPositionInfo" -> {
-                                "<response><RelTime>00:00:42</RelTime><TrackDuration>00:03:00</TrackDuration></response>"
+                                "<response><RelTime>$position</RelTime><TrackDuration>00:03:00</TrackDuration></response>"
                             }
 
                             "GetTransportInfo" -> {
+                                if (transportDelayMs > 0L) Thread.sleep(transportDelayMs)
+                                transportPolls.value++
                                 "<response><CurrentTransportState>${if (playing) "PLAYING" else "STOPPED"}" +
                                     "</CurrentTransportState></response>"
                             }

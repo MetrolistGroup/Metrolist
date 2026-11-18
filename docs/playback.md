@@ -10,11 +10,27 @@ Room guests and Device Connect followers do not change the host queue after a lo
 
 Android and desktop begin bounded SABR recovery when the producer fails, while buffered audio can still play. Replacements warm up muted and follow the current position before handoff. A token-backed session that remains attestation pending after its first response fails early and excludes that profile through the same recovery policy.
 
+On Android, an offload AudioTrack that stops advancing its playback head after entering offload sleep is switched to PCM after two seconds. The 12-second playback watchdog remains the fallback for other output stalls.
+
+## Android track transitions
+
+When crossfade is disabled, or same-album gapless is enabled for consecutive tracks on one album, Android adds the resolved next audio source to the active ExoPlayer playlist before the current track ends. ExoPlayer handles the boundary without replacing the player or its audio session. Per-stream metadata selects both normalization attenuation and boost for queued PCM. Player volume applies only user, sleep timer and crossfade gains. Offload requires gapless support and stays disabled when either queued track needs normalization.
+
+After a native handover, Android removes finished playlist items before queue promotion. The active player holds only the current source and, while preloading, the next source.
+
+Cancellation after a native handover commits the playing track's identity, resource, reporter and queue occurrence together. Both normal promotion and cancellation preserve current queue title and artist edits. If that occurrence is no longer the intended next item, Android restores the previous track.
+
+Other crossfades keep separate players and their gain ramps. Same-album gapless transitions use the playlist path and do not ramp, even when crossfade is enabled. Video, live streams and tracks restored at a nonzero position keep the separate-player preload path. Queue edits, repeat-one and end-of-song sleep timers cancel the queued source.
+
+On Android, `MusicService.seekTo` cancels an active crossfade and leaves an unstarted preload queued.
+
 ## Seek diagnostics
 
 Export the playback log immediately after a jump. Android's 500-event buffer records `Android seek requested.` separately from `Android native position discontinuity.`. Compare source, player ID, queue request and playback instance with preparation and recovery events.
 
 Lyrics taps include line indices, timestamps and offsets. Media-session seeks identify the command. Warm replacements remain muted until the outgoing player releases, while intentional crossfades keep their gain ramps.
+
+Android keeps silent preloads out of system audio-effect session registration. A secondary player shares the primary player's session ID and registers when overlap starts or when it becomes the primary player. Releasing the outgoing player keeps that session open. Silent preparation and cancellation send no effect-session broadcasts.
 
 Seek-bar release requires a changed value and the same song and duration as the gesture. Track/duration changes cancel pending gestures. Unknown-duration and live tracks cannot use the shared scrubber.
 

@@ -33,6 +33,7 @@ import com.metrolist.desktop.ui.components.WebViewAvailabilityLoading
 import com.metrolist.desktop.ui.components.WebViewUnavailableContent
 import com.metrolist.desktop.ui.components.rememberLinuxWebKitAvailable
 import com.metrolist.desktop.utils.prepareSpotifyWebViewDataDirectory
+import com.metrolist.desktop.web.DesktopWebView
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.close
@@ -52,7 +53,6 @@ import com.metrolist.shared.playlistimport.awaitProviderCredentials
 import com.metrolist.shared.spotifyimport.spotifySessionCookie
 import com.metrolist.shared.utils.OsUtil
 import io.github.kdroidfilter.webview.web.LoadingState
-import io.github.kdroidfilter.webview.web.WebView
 import io.github.kdroidfilter.webview.web.rememberWebViewNavigator
 import io.github.kdroidfilter.webview.web.rememberWebViewState
 import kotlinx.coroutines.CancellationException
@@ -112,7 +112,7 @@ private fun SpotifyWebViewContent(
     val webViewState =
         rememberWebViewState(SPOTIFY_LOGIN_URL).apply {
             webSettings.desktopWebSettings.dataDirectory = webViewDataDirectory.getOrNull()
-            webSettings.customUserAgentString = buildBrowserUserAgent()
+            safariUserAgent()?.let { webSettings.customUserAgentString = it }
         }
     val navigator = rememberWebViewNavigator()
     val currentOnSessionCookie by rememberUpdatedState(onSessionCookie)
@@ -150,7 +150,7 @@ private fun SpotifyWebViewContent(
         if (webViewState.loadingState is LoadingState.Loading || isAuthenticating) {
             LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
-        WebView(
+        DesktopWebView(
             state = webViewState,
             navigator = navigator,
             modifier = Modifier.fillMaxWidth().weight(1f),
@@ -263,18 +263,13 @@ private fun resolveWindowsLoginHelper(): File {
         ?: File("src/desktopMain/resources/windows/$helperName")
 }
 
-private fun buildBrowserUserAgent(): String {
-    val platformToken =
-        when {
-            OsUtil.isMac -> "Macintosh; Intel Mac OS X 10_15_7"
-            else -> "X11; Linux x86_64"
-        }
-    return if (OsUtil.isMac) {
-        "Mozilla/5.0 ($platformToken) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15"
+// Spotify's sign-in rejects WebKitGTK posing as Chrome with "Something went wrong"; its own user agent passes.
+private fun safariUserAgent(): String? =
+    if (OsUtil.isMac) {
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15"
     } else {
-        "Mozilla/5.0 ($platformToken) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        null
     }
-}
 
 private const val SPOTIFY_OPEN_URL = "https://open.spotify.com/"
 private const val SPOTIFY_LOGIN_URL =

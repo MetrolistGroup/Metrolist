@@ -1,0 +1,41 @@
+{
+  "header": {
+    "musicImmersiveHeaderRenderer": {
+      "subscriptionButton": {
+        "subscribeButtonRenderer": {
+          "subscriberCountText": {
+            "runs": [
+              {
+                "text": "5930만"
+              }
+            ]
+          },
+          "longSubscriberCountText": {
+            "runs": [
+              {
+                "text": "구독자 5930만명"
+              }
+            ],
+            "accessibility": {
+              "accessibilityData": {
+                "label": "구독자 5930만명"
+              }
+            }
+          }
+        }
+      },
+      "monthlyListenerCount": {
+        "runs": [
+          {
+            "text": "월간 시청자 2.4억명"
+          }
+        ],
+        "accessibility": {
+          "accessibilityData": {
+            "label": "월간 시청자 2.4억명"
+          }
+        }
+      }
+    }
+  }
+}

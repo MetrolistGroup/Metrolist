@@ -14,6 +14,8 @@ class MlxBuilder {
     private val agentLines = StringBuilder()
     private val lyricLines = StringBuilder()
     private val romanLyricLines = StringBuilder()
+    private val translatedLyricLines = StringBuilder()
+    private var hasTranslations = false
 
     fun meta(
         source: String,
@@ -41,11 +43,13 @@ class MlxBuilder {
         artist: String? = null,
         youtubeId: String? = null,
         songwriters: List<String>? = null,
+        translationLanguage: String? = null,
     ): MlxBuilder {
         songLines.clear()
         if (title != null) songLines.appendLine("title=$title")
         if (artist != null) songLines.appendLine("artist=$artist")
         if (youtubeId != null) songLines.appendLine("youtube_id=$youtubeId")
+        if (translationLanguage != null) songLines.appendLine("translation_language=$translationLanguage")
         if (!songwriters.isNullOrEmpty()) {
             songLines.appendLine("songwriters=${songwriters.joinToString(", ")}")
         }
@@ -208,6 +212,19 @@ class MlxBuilder {
         return this
     }
 
+    fun translatedLine(
+        startMs: Long,
+        text: String?,
+        background: String? = null,
+    ): MlxBuilder {
+        translatedLyricLines.append(ts(startMs))
+        translatedLyricLines.append(text.orEmpty())
+        if (!background.isNullOrBlank()) translatedLyricLines.append(" [bg:$background]")
+        translatedLyricLines.appendLine()
+        hasTranslations = hasTranslations || !text.isNullOrBlank() || !background.isNullOrBlank()
+        return this
+    }
+
     private fun appendWords(
         target: StringBuilder,
         words: List<MlxWord>,
@@ -243,6 +260,11 @@ class MlxBuilder {
                 appendLine()
                 appendLine("[romanLyrics]")
                 append(romanLyricLines)
+            }
+            if (hasTranslations) {
+                appendLine()
+                appendLine("[translatedLyrics]")
+                append(translatedLyricLines)
             }
         }
 

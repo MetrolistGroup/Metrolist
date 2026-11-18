@@ -24,7 +24,7 @@ prepare() {
   chmod +x "$_appimage-$arch-$pkgver.AppImage"
   # The AppImage runtime extracts itself without FUSE.
   "./$_appimage-$arch-$pkgver.AppImage" --appimage-extract >/dev/null
-  sed -i -e 's|^Exec=.*|Exec=metrolist %u|' -e 's|^Icon=.*|Icon=metrolist|' squashfs-root/Metrolist.desktop
+  sed -i -e 's|^Exec=.*|Exec=/usr/bin/metrolist %u|' -e 's|^Icon=.*|Icon=metrolist|' squashfs-root/Metrolist.desktop
 }
 
 package() {
@@ -34,5 +34,5 @@ package() {
   chmod -R u+rwX,go+rX,go-w "$pkgdir/opt/metrolist"
   ln -s /opt/metrolist/bin/Metrolist "$pkgdir/usr/bin/metrolist"
   install -Dm644 Metrolist.png "$pkgdir/usr/share/icons/hicolor/512x512/apps/metrolist.png"
-  install -Dm644 Metrolist.desktop "$pkgdir/usr/share/applications/metrolist.desktop"
+  install -Dm644 Metrolist.desktop "$pkgdir/usr/share/applications/Metrolist.desktop"
 }

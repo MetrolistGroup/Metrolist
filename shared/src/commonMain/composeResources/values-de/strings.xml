@@ -1148,7 +1148,6 @@
     <string name="ai_provider">Anbieter</string>
     <string name="ai_base_url">Basis-URL</string>
     <string name="ai_translation_model">Übersetzungsmodell</string>
-    <string name="ai_judge_detector_model">Erkennungsmodell</string>
     <string name="ai_target_language">Zielsprache</string>
     <string name="ai_deepl_formality">Förmlichkeit</string>
     <string name="ai_deepl_formality_default">Standard</string>
@@ -2383,7 +2382,6 @@
     <string name="settings_translation_mode_summary">Übersetze Wörter oder übertrage ihre Aussprache in die Zielschrift</string>
     <string name="settings_translation_provider_summary">Wähle den Dienst, der Lyrics übersetzt</string>
     <string name="settings_translation_model_summary">Modell zum Übersetzen oder Transkribieren von Lyrics</string>
-    <string name="settings_detector_model_summary">Modell, das entscheidet, ob Lyrics übersetzt werden müssen</string>
     <string name="settings_translation_formality_summary">Wähle formelle oder informelle Sprache für DeepL-Übersetzungen</string>
     <string name="settings_discord_advanced_summary">Zeige Aktivitätsvorlagen und eigene Link-Schaltflächen</string>
     <string name="settings_discord_activity_type_summary">Wähle, wie Discord deine Musikaktivität bezeichnet</string>

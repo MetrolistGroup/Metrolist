@@ -1,0 +1,41 @@
+{
+  "header": {
+    "musicImmersiveHeaderRenderer": {
+      "subscriptionButton": {
+        "subscribeButtonRenderer": {
+          "subscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 M"
+              }
+            ]
+          },
+          "longSubscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 M feliratkozó"
+              }
+            ],
+            "accessibility": {
+              "accessibilityData": {
+                "label": "59,3 millió feliratkozó"
+              }
+            }
+          }
+        }
+      },
+      "monthlyListenerCount": {
+        "runs": [
+          {
+            "text": "240 M havi közönség"
+          }
+        ],
+        "accessibility": {
+          "accessibilityData": {
+            "label": "240 millió havi közönség"
+          }
+        }
+      }
+    }
+  }
+}

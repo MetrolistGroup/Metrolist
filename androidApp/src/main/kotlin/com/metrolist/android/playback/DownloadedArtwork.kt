@@ -2,6 +2,7 @@ package com.metrolist.android.playback
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import coil3.imageLoader
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
@@ -28,6 +29,24 @@ internal class DownloadedArtwork(
     }
 
     private fun keyedFile(url: String): File = File(directory, url.encodeUtf8().sha256().hex() + ".png")
+
+    suspend fun exportArtwork(url: String?): AudioExportArtwork? =
+        withContext(Dispatchers.IO) {
+            if (url.isNullOrBlank()) return@withContext null
+            retain(url)
+            try {
+                val source = file(url).takeIf { it.length() > 0 } ?: return@withContext null
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(source.absolutePath, bounds)
+                if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@withContext null
+                AudioExportArtwork(source.readBytes(), bounds.outWidth, bounds.outHeight)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Timber.w(error, "Could not read download artwork for export")
+                null
+            }
+        }
 
     suspend fun retain(url: String?) =
         withContext(Dispatchers.IO) {

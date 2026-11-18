@@ -4,6 +4,7 @@ import com.metrolist.innertubex.InnerTube
 import com.metrolist.innertubex.cipher.YouTubeCipherService
 import com.metrolist.innertubex.extraction.TokenProvider
 import com.metrolist.innertubex.models.YouTubeLocale
+import com.metrolist.shared.BuildConfig
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.OfflineSongAvailability
@@ -19,6 +20,23 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import org.koin.dsl.module
 import org.koin.mp.KoinPlatform
+
+private val contentLanguageCodes: Set<String> by lazy {
+    (platformContentLanguageCodes + BuildConfig.BUNDLED_LANGUAGE_TAGS.split(','))
+        .filterTo(mutableSetOf()) { it.isNotBlank() && it != "und" }
+}
+
+// Language, optional script and optional region; platforms list different combinations (iOS has zh-Hant-HK, not zh-HK).
+private val contentLanguageTag = Regex("([a-zA-Z]{2,3})(?:-([A-Z][a-z]{3}))?(?:-([A-Z]{2}|[0-9]{3}))?")
+
+private fun isContentLanguage(tag: String): Boolean {
+    if (tag in contentLanguageCodes) return true
+    val match = contentLanguageTag.matchEntire(tag) ?: return false
+    val language = match.groupValues[1]
+    val region = match.groupValues[3]
+    return (language in contentLanguageCodes || canonicalLanguageTag(language) in contentLanguageCodes) &&
+        (region.isEmpty() || region.first().isDigit() || region in contentCountryCodes)
+}
 
 val coreModule =
     module {
@@ -70,7 +88,11 @@ object GlobalYouTube {
         systemLanguage: String,
         settings: Settings = Settings.shared,
     ) {
-        val resolvedHl = if (contentLanguage == SYSTEM) systemLanguage.substringBefore('-').substringBefore('_') else contentLanguage
+        val validContentLanguage = isContentLanguage(contentLanguage)
+        if (contentLanguage != SYSTEM && !validContentLanguage) {
+            settings.contentLanguage = SYSTEM
+        }
+        val resolvedHl = if (validContentLanguage) contentLanguage else systemLanguage.substringBefore('-').substringBefore('_')
         val validContentCountry = contentCountry in contentCountryCodes
         if (contentCountry != SYSTEM && !validContentCountry) {
             settings.contentCountry = SYSTEM

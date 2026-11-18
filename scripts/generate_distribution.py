@@ -10,12 +10,9 @@ from pathlib import Path
 import re
 import shutil
 import tempfile
-from urllib.parse import urlsplit
-import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = "MetrolistGroup/Metrolist"
-APP_ID = "com.metrolist.desktop"
 
 
 def release_assets(version):
@@ -84,32 +81,8 @@ def render(path, substitutions):
     return re.sub(r"@([A-Z0-9_]+)@", replace, path.read_text())
 
 
-def metainfo(metadata, date, screenshots):
-    tree = ET.parse(ROOT / f"flatpak/{APP_ID}.metainfo.xml")
-    release = tree.find("./releases/release")
-    release.set("version", metadata["tagName"][1:])
-    release.set("date", date)
-    description = ET.SubElement(release, "description")
-    for paragraph in metadata["body"].strip().split("\n\n"):
-        ET.SubElement(description, "p").text = paragraph.strip()
-    if screenshots:
-        node = ET.SubElement(tree.getroot(), "screenshots")
-        for index, item in enumerate(screenshots):
-            url = urlsplit(item["url"])
-            if url.scheme != "https" or not url.netloc or url.username or url.password:
-                raise ValueError("Screenshots require public HTTPS URLs without credentials")
-            if not item["caption"].strip():
-                raise ValueError("Screenshots require captions")
-            shot = ET.SubElement(node, "screenshot", {"type": "default"} if index == 0 else {})
-            ET.SubElement(shot, "caption").text = item["caption"]
-            ET.SubElement(shot, "image", {"type": "source"}).text = item["url"]
-    ET.indent(tree, space="  ")
-    return ET.tostring(tree.getroot(), encoding="unicode", xml_declaration=True) + "\n"
-
-
-def generate(assets_dir, metadata, output, screenshots):
+def generate(assets_dir, metadata, output):
     substitutions, assets, date = verified_release(assets_dir, metadata)
-    appdata = metainfo(metadata, date, screenshots)
     if output.exists():
         raise ValueError(f"Output already exists: {output}. Choose an empty output path.")
     version = substitutions["VERSION"]
@@ -123,18 +96,6 @@ def generate(assets_dir, metadata, output, screenshots):
         cask = stage / "homebrew/Casks/metrolist.rb"
         cask.parent.mkdir(parents=True)
         cask.write_text(render(ROOT / "packaging/homebrew/metrolist.rb.in", substitutions))
-        flatpak = stage / "flatpak"
-        flatpak.mkdir()
-        (flatpak / f"{APP_ID}.json").write_text(render(ROOT / f"packaging/flatpak/{APP_ID}.json.in", substitutions))
-        for suffix in ("desktop", "png", "svg"):
-            shutil.copyfile(ROOT / f"flatpak/{APP_ID}.{suffix}", flatpak / f"{APP_ID}.{suffix}")
-        shutil.copyfile(ROOT / f"packaging/flatpak/{APP_ID}", flatpak / APP_ID)
-        (flatpak / f"{APP_ID}.metainfo.xml").write_text(appdata)
-        (flatpak / "SUBMISSION-NOTES.txt").write_text(
-            "Offline release-artifact build, not approved for Flathub.\n"
-            "Flathub requires a source build or an explicit exception.\n"
-            + ("Desktop screenshots still required.\n" if not screenshots else "")
-        )
         release = {
             "version": version, "releaseUrl": metadata["url"], "date": date,
             "linux": {system: assets[key] for system, key in (
@@ -159,11 +120,9 @@ def main():
     parser.add_argument("--assets", type=Path, required=True)
     parser.add_argument("--release", type=Path, required=True, help="gh release view --json metadata")
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--screenshots", type=Path, default=ROOT / "packaging/flatpak/screenshots.json")
     args = parser.parse_args()
     try:
-        generate(args.assets, json.loads(args.release.read_text()), args.output,
-                 json.loads(args.screenshots.read_text()))
+        generate(args.assets, json.loads(args.release.read_text()), args.output)
     except (ValueError, KeyError, OSError) as error:
         parser.exit(1, f"Distribution generation failed: {error}\n")
 

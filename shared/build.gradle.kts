@@ -22,13 +22,10 @@ import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTes
 import java.io.File
 import java.io.OutputStream
 import java.net.URI
-import java.security.MessageDigest
 import java.util.Base64
 import java.util.Locale
 import java.util.Properties
-import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
-import java.util.zip.ZipOutputStream
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -136,7 +133,9 @@ val windowsArm64FfmpegNatives =
     }
 val desktopFfmpegNatives =
     tasks.register<Jar>("desktopFfmpegNatives") {
-        archiveFileName.set("ffmpeg-$ffmpegVersion-$javacppPlatform.jar")
+        // JavaCPP caches natives by JAR name; keep old cached audio libraries out of the new extraction directory.
+        val audioSuffix = if (javacppPlatform.startsWith("linux-")) "-system-audio" else ""
+        archiveFileName.set("ffmpeg-$ffmpegVersion-$javacppPlatform$audioSuffix.jar")
         destinationDirectory.set(layout.buildDirectory.dir("platform-libs"))
         isPreserveFileTimestamps = false
         isReproducibleFileOrder = true
@@ -148,6 +147,10 @@ val desktopFfmpegNatives =
                 exclude("META-INF/MANIFEST.MF", "META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA")
                 exclude("**/ffmpeg", "**/ffmpeg.exe", "**/ffprobe", "**/ffprobe.exe")
                 exclude("META-INF/native-image/**/ffmpeg/**", "META-INF/native-image/**/ffprobe/**")
+                if (javacppPlatform.startsWith("linux-")) {
+                    // Host ALSA and audio-server libraries must use the host's configuration and plugins.
+                    exclude("**/libasound.so*", "**/libpulse*.so*", "**/libjack*.so*", "**/libpipewire-*.so*", "**/libspa-*.so*")
+                }
             }
         }
     }
@@ -168,129 +171,6 @@ val desktopIcu4j =
             listOf("unames.icu", "zoneinfo64.res", "uts46.nrm", "confusables*.cfu", "*.spp", "nfkc*.nrm").forEach { exclude("$data/$it") }
         }
     }
-
-abstract class StripKuromojiDictionaryTask : DefaultTask() {
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val sourceJar: RegularFileProperty
-
-    @get:OutputFile
-    abstract val outputJar: RegularFileProperty
-
-    @TaskAction
-    fun stripDictionary() {
-        val output = outputJar.get().asFile
-        output.parentFile.mkdirs()
-        ZipFile(sourceJar.get().asFile).use { source ->
-            ZipOutputStream(output.outputStream().buffered()).use { destination ->
-                source
-                    .entries()
-                    .asSequence()
-                    .filter { it.name.endsWith(".class") || it.name in ATTRIBUTION_FILES }
-                    .sortedBy { it.name }
-                    .forEach { entry ->
-                        destination.putNextEntry(ZipEntry(entry.name).apply { time = 0L })
-                        source.getInputStream(entry).use { it.copyTo(destination) }
-                        destination.closeEntry()
-                    }
-            }
-        }
-    }
-
-    private companion object {
-        val ATTRIBUTION_FILES = setOf("META-INF/LICENSE.md", "META-INF/NOTICE.md", "META-INF/CONTRIBUTORS.md")
-    }
-}
-
-abstract class VerifyKuromojiPackagingTask : DefaultTask() {
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val engineJar: RegularFileProperty
-
-    @TaskAction
-    fun verifyPackaging() {
-        val jar = engineJar.get().asFile
-        ZipFile(jar).use { packaged ->
-            check(packaged.entries().asSequence().all { it.name.endsWith(".class") || it.name.startsWith("META-INF/") })
-            check(packaged.entries().asSequence().none { it.name.endsWith(".bin") })
-            check(listOf("META-INF/LICENSE.md", "META-INF/NOTICE.md", "META-INF/CONTRIBUTORS.md").all { packaged.getEntry(it) != null })
-        }
-        check(jar.length() < 1024 * 1024) { "Code-only Kuromoji artifact is unexpectedly large: ${jar.length()} bytes" }
-        logger.lifecycle("Kuromoji code-only artifact: ${jar.length()} bytes (dictionary payload excluded)")
-    }
-}
-
-abstract class VerifyIosKuromojiPackagingTask : DefaultTask() {
-    @get:InputDirectory
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val resourceDirectory: DirectoryProperty
-
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val xcodeProject: RegularFileProperty
-
-    @TaskAction
-    fun verifyPackaging() {
-        val resources = resourceDirectory.get().asFile
-        val engine = File(resources, "kuromoji.js")
-        val bootstrap = File(resources, "kuromoji-bootstrap.js")
-
-        fun sha256(file: File): String =
-            MessageDigest.getInstance("SHA-256").digest(file.readBytes()).joinToString("") {
-                (it.toInt() and 0xff).toString(16).padStart(2, '0')
-            }
-
-        check(sha256(engine) == "ab0ac10f1c4a9b5e246e63e57b04ba14d3a6148cd7e8d62cb97a960d4f85a3e6")
-        check(sha256(bootstrap) == "3a2f75400ef6f04301408701c2a2dbe23e614561df4aea3ab36504e9cca4ceb9")
-        check(File(resources, "kuromoji-LICENSE-2.0.txt").isFile)
-        check(File(resources, "kuromoji-NOTICE.md").isFile)
-        check(resources.listFiles().orEmpty().none { it.name.endsWith(".dat.gz") })
-        val project = xcodeProject.get().asFile.readText()
-        check(
-            listOf(
-                "kuromoji.js in Resources",
-                "kuromoji-bootstrap.js in Resources",
-                "kuromoji-LICENSE-2.0.txt in Resources",
-                "kuromoji-NOTICE.md in Resources",
-            ).all { it in project },
-        )
-    }
-}
-
-val kuromojiIpadicArtifact =
-    configurations.create("kuromojiIpadicArtifact") {
-        isCanBeConsumed = false
-        isCanBeResolved = true
-        isTransitive = false
-    }
-dependencies.add(kuromojiIpadicArtifact.name, libs.kuromoji.ipadic.get())
-val kuromojiCodeOnlyJar = layout.buildDirectory.file("generated/romanizer/kuromoji-ipadic-code-0.9.0.jar")
-val stripKuromojiDictionary =
-    tasks.register<StripKuromojiDictionaryTask>("stripKuromojiIpadicDictionary") {
-        sourceJar.set(layout.file(kuromojiIpadicArtifact.elements.map { it.single().asFile }))
-        outputJar.set(kuromojiCodeOnlyJar)
-    }
-val kuromojiCodeOnlyDependency = files(kuromojiCodeOnlyJar).builtBy(stripKuromojiDictionary)
-val verifyKuromojiPackaging =
-    tasks.register<VerifyKuromojiPackagingTask>("verifyKuromojiPackaging") {
-        dependsOn(stripKuromojiDictionary)
-        engineJar.set(kuromojiCodeOnlyJar)
-    }
-
-val verifyIosKuromojiPackaging =
-    tasks.register<VerifyIosKuromojiPackagingTask>("verifyIosKuromojiPackaging") {
-        resourceDirectory.set(layout.projectDirectory.dir("src/iosMain/resources"))
-        xcodeProject.set(layout.projectDirectory.file("../iosApp/iosApp.xcodeproj/project.pbxproj"))
-    }
-
-val runPackagingVerification = providers.gradleProperty("metrolist.verifyPackaging").map(String::toBooleanStrict).getOrElse(true)
-tasks.matching { it.name.startsWith("compileKotlinIos") }.configureEach {
-    if (runPackagingVerification) dependsOn(verifyIosKuromojiPackaging)
-}
-
-tasks.named("check") {
-    dependsOn(verifyKuromojiPackaging, verifyIosKuromojiPackaging)
-}
 
 abstract class GenerateRoomMigrationTestSchemas : DefaultTask() {
     @get:InputDirectory
@@ -394,6 +274,7 @@ kotlin {
         }
         minSdk = 24
         androidResources.enable = true
+        lint { ignoreTestSources = true }
         withHostTest {}
         withDeviceTestBuilder {
             sourceSetTreeName = "test"
@@ -434,6 +315,7 @@ kotlin {
         }
         getByName("commonMain") {
             dependencies {
+                implementation("com.github.nyxiereal.glyphmind:glyphmind:0.1.0")
                 api("com.github.MetrolistGroup.innertubex:innertubex:$innerTubeXVersion")
                 api(libs.runtime)
                 api(libs.foundation)
@@ -496,7 +378,7 @@ kotlin {
         getByName("androidHostTest") {
             dependsOn(jvmSharedTest)
             dependencies {
-                implementation("org.robolectric:robolectric:4.17")
+                implementation("org.robolectric:robolectric:4.18")
             }
         }
         getByName("androidDeviceTest") {
@@ -527,9 +409,6 @@ kotlin {
                 implementation(libs.ktor.server.websockets)
                 implementation(libs.timber)
 
-                implementation(libs.kuromoji.core)
-                implementation(kuromojiCodeOnlyDependency)
-
                 implementation(libs.media3.exoplayer)
                 implementation(libs.media3.common)
                 implementation(libs.media3.datasource)
@@ -550,8 +429,6 @@ kotlin {
                 implementation(libs.jmdns)
                 api("org.bytedeco:ffmpeg:$ffmpegVersion")
                 implementation(files(desktopFfmpegNatives))
-                implementation(libs.kuromoji.core)
-                implementation(kuromojiCodeOnlyDependency)
             }
         }
         getByName("desktopTest") {
@@ -560,7 +437,6 @@ kotlin {
                 implementation(libs.coil.network.okhttp)
                 implementation(libs.junit4)
                 implementation(libs.ktor.client.cio)
-                runtimeOnly(libs.kuromoji.ipadic)
             }
         }
         getByName("iosMain") {
@@ -593,6 +469,12 @@ tasks.named<Test>("desktopTest") {
     filter { reflectionFreeTestSuites.forEach(::excludeTestsMatching) }
     systemProperty("metrolist.test.withoutReflection", "true")
     systemProperty("io.ktor.development", "true")
+    // Track opt-in flags so cached test environments cannot silently enable or skip LAN tests.
+    listOf("METROLIST_MEASURE_DISCOVERY", "METROLIST_TEST_IPV6_DISCOVERY").forEach { flag ->
+        val value = providers.environmentVariable(flag).orElse("0")
+        inputs.property(flag, value)
+        environment(flag, value.get())
+    }
     environment(
         "XDG_DATA_HOME",
         layout.buildDirectory
@@ -1093,10 +975,12 @@ val desktopClasses = layout.buildDirectory.dir("classes/kotlin/desktop/main")
 
 tasks.register("verifyDesktopJarIntegrity") {
     group = "verification"
-    description = "Verifies every compiled shared class and JAR entry used by the desktop runtime."
+    description = "Verifies shared desktop classes, license resources and the absence of retired romanization assets."
     dependsOn(desktopJar)
     inputs.file(desktopJar.flatMap { it.archiveFile })
     inputs.dir(desktopClasses)
+    val licenseDirectory = layout.projectDirectory.dir("src/commonMain/composeResources/files/licenses/glyphmind").asFile
+    inputs.dir(licenseDirectory)
 
     doLast {
         val jarFile = inputs.files.files.single { it.isFile && it.extension == "jar" }
@@ -1114,6 +998,21 @@ tasks.register("verifyDesktopJarIntegrity") {
         ZipFile(jarFile).use { archive ->
             val entries = archive.entries().asSequence().toList()
             val entryNames = entries.mapTo(mutableSetOf()) { it.name }
+            check(entryNames.none { it == "romanization/mandarin.bin" || it.startsWith("com/atilika/kuromoji/") }) {
+                "Shared desktop JAR contains retired romanization assets"
+            }
+            val notice = licenseDirectory.resolve("NOTICE.md").readText()
+            val referencedLicenses = Regex("`(licenses/[^`]+)`").findAll(notice).map { it.groupValues[1] }.toList() + "LICENSE"
+            check(referencedLicenses.all { licenseDirectory.resolve(it).isFile }) { "Glyphmind NOTICE references missing license files" }
+            val resourcePrefix = "composeResources/com.metrolist.shared.generated.resources/files/licenses/glyphmind/"
+            val missingLicenses =
+                licenseDirectory
+                    .walkTopDown()
+                    .filter { it.isFile }
+                    .map { it.relativeTo(licenseDirectory).invariantSeparatorsPath }
+                    .filter { "$resourcePrefix$it" !in entryNames }
+                    .toList()
+            check(missingLicenses.isEmpty()) { "Shared desktop JAR is missing glyphmind license resources: $missingLicenses" }
             val missingClasses = compiledClasses - entryNames
             if (missingClasses.isNotEmpty()) {
                 throw GradleException(

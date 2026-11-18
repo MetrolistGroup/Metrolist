@@ -572,7 +572,6 @@
     <string name="settings_translation_mode_summary">ترجمهٔ واژه‌ها یا نوشتن تلفظ آن‌ها با خط مقصد</string>
     <string name="settings_translation_provider_summary">انتخاب سرویسی که متن ترانه را ترجمه می‌کند</string>
     <string name="settings_translation_model_summary">مدل ترجمه یا آوانویسی متن ترانه</string>
-    <string name="settings_detector_model_summary">مدلی که تصمیم می‌گیرد متن ترانه به ترجمه نیاز دارد یا نه</string>
     <string name="settings_translation_formality_summary">انتخاب زبان رسمی یا غیررسمی برای ترجمه‌های DeepL</string>
     <string name="settings_discord_advanced_summary">نمایش الگوهای فعالیت و دکمه‌های پیوند سفارشی</string>
     <string name="settings_discord_activity_type_summary">انتخاب روش توصیف فعالیت موسیقی شما در Discord</string>

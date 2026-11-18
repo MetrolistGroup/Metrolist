@@ -1,6 +1,8 @@
 package com.metrolist.shared.ui.components
 
-import androidx.compose.foundation.basicMarquee
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.foundation.MarqueeDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -8,6 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -34,10 +37,21 @@ fun rememberTrackMarquee(
         }
     }
     return if (active && running) {
-        Modifier.basicMarquee(iterations = 1, initialDelayMillis = 0, velocity = 30.dp)
+        Modifier.playbackMarquee(iterations = 1, initialDelayMillis = 0, velocity = 30.dp)
     } else {
         Modifier
     }
 }
 
-fun Modifier.singleLineMarquee(): Modifier = basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
+fun Modifier.singleLineMarquee(): Modifier = playbackMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
+
+expect fun Modifier.playbackMarquee(
+    iterations: Int = MarqueeDefaults.Iterations,
+    initialDelayMillis: Int = MarqueeDefaults.RepeatDelayMillis,
+    velocity: Dp = MarqueeDefaults.Velocity,
+): Modifier
+
+internal expect suspend fun Animatable<Float, AnimationVector1D>.animateMarquee(
+    distance: Int,
+    durationMillis: Int,
+)

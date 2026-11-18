@@ -16,6 +16,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.window.WindowScope
+import com.metrolist.shared.utils.OsUtil
 import java.awt.MouseInfo
 import java.awt.Point
 
@@ -25,7 +26,7 @@ fun WindowScope.WindowDragHandle(
     onRestoreFromMaximized: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    if (!LinuxWindowMove.isX11Toolkit()) {
+    if (!OsUtil.isLinux) {
         WindowDraggableArea(content = content)
         return
     }

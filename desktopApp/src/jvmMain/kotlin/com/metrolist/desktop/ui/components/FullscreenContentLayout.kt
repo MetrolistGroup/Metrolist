@@ -303,14 +303,14 @@ internal fun DesktopLyricsContent(
             lyricsProvidedBy = { provider -> String.format(lyricsProvidedByFmt, provider) },
             providerUrl =
                 if (isMatchingTrack) {
-                    lyricsProviderUrl(LyricsState.currentLyricsProvider, lyricsDoc?.meta?.sourceId)
+                    lyricsProviderUrl(LyricsState.currentLyricsProvider, lyricsDoc?.meta?.sourceId, lyricsDoc?.meta?.lyricSource)
                 } else {
                     null
                 },
             lyricsMeta = if (isMatchingTrack) lyricsDoc?.meta else null,
             lyricsCuratorUrl =
                 if (isMatchingTrack) {
-                    lyricsCuratorUrl(LyricsState.currentLyricsProvider, lyricsDoc?.meta?.lyricsCuratorId)
+                    lyricsCuratorUrl(LyricsState.currentLyricsProvider, lyricsDoc?.meta?.lyricsCuratorId, lyricsDoc?.meta?.lyricSource)
                 } else {
                     null
                 },
@@ -348,6 +348,7 @@ internal fun DesktopLyricsContent(
             textSizeMultiplier = textSizeMultiplier,
             songId = PlayerState.currentTrack?.id,
             isCasting = castState.isConnected,
+            isBuffering = castState.isBuffering,
             selectionState = selection,
             onShareSelection = { selectedText = it },
             textColor = textColor,

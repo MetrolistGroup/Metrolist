@@ -135,7 +135,8 @@ private fun m4aMetadataBox(metadata: AudioExportMetadata): ByteArray {
 
     val items =
         textTag("©nam", metadata.title) + textTag("©ART", metadata.artist) +
-            (metadata.album?.takeIf(String::isNotBlank)?.let { textTag("©alb", it) } ?: byteArrayOf())
+            (metadata.album?.takeIf(String::isNotBlank)?.let { textTag("©alb", it) } ?: byteArrayOf()) +
+            (metadata.artwork?.let { mp4Box("covr", mp4Box("data", byteArrayOf(0, 0, 0, 14, 0, 0, 0, 0) + it.png)) } ?: byteArrayOf())
     val handler = mp4Box("hdlr", ByteArray(8) + "mdir".encodeToByteArray() + ByteArray(13))
     return mp4Box("udta", mp4Box("meta", ByteArray(4) + handler + mp4Box("ilst", items)))
 }

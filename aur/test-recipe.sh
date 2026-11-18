@@ -48,7 +48,7 @@ package
 [[ -x "$pkgdir/opt/metrolist/bin/Metrolist" ]]
 [[ "$(readlink "$pkgdir/usr/bin/metrolist")" == /opt/metrolist/bin/Metrolist ]]
 cmp "$test_dir/project/LICENSE" "$pkgdir/usr/share/licenses/metrolist-git/LICENSE"
-cmp "$srcdir/metrolist.desktop" "$pkgdir/usr/share/applications/metrolist.desktop"
+cmp "$srcdir/metrolist.desktop" "$pkgdir/usr/share/applications/Metrolist.desktop"
 cmp "$test_dir/project/desktopApp/src/desktopMain/resources/logo.png" "$pkgdir/usr/share/icons/hicolor/512x512/apps/metrolist.png"
 
 rm "$test_dir/project/settings.gradle.kts"

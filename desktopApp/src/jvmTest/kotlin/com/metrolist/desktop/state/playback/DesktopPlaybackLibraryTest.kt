@@ -1,20 +1,52 @@
 package com.metrolist.desktop.state.playback
 
 import com.metrolist.desktop.history.HistoryStat
+import com.metrolist.desktop.state.app.AppState
+import com.metrolist.desktop.state.content.PlaylistAlbumState
+import com.metrolist.innertubex.InnerTube
 import com.metrolist.shared.api.PlaylistSongAlreadyPresentException
+import com.metrolist.shared.api.YouTubeRepository
+import com.metrolist.shared.api.playlistSongs
+import com.metrolist.shared.db.cacheRemotePlaylist
+import com.metrolist.shared.db.cachedRemotePlaylistSections
+import com.metrolist.shared.db.getDatabaseBuilder
+import com.metrolist.shared.db.loadAndCachePlaylistPage
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playlist.PlaylistAddBatchResult
+import com.metrolist.shared.settings.Settings
+import com.russhwolf.settings.PropertiesSettings
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.http.HttpHeaders
+import io.ktor.http.content.TextContent
+import io.ktor.http.headersOf
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import java.nio.file.Files
+import java.util.Properties
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -26,6 +58,99 @@ import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DesktopPlaybackLibraryTest {
+    @Test
+    fun addingToAnUnselectedCachedPlaylistUpdatesItsStoredMembership() = checkUnselectedCachedPlaylistAdd(failSecond = false)
+
+    @Test
+    fun partialAdditionToAnUnselectedCachedPlaylistKeepsAcknowledgedMembership() = checkUnselectedCachedPlaylistAdd(failSecond = true)
+
+    private fun checkUnselectedCachedPlaylistAdd(failSecond: Boolean) =
+        runBlocking {
+            val previousSettings = Settings.sharedOverrideForTest()
+            Settings.replaceSharedForTest(Settings(PropertiesSettings(Properties())))
+            Dispatchers.setMain(StandardTestDispatcher())
+            val previousSelection = PlaylistAlbumState.selectedPlaylistId
+            PlaylistAlbumState.selectedPlaylistId = null
+            val directory = Files.createTempDirectory("unselected-playlist-add")
+            val database = getDatabaseBuilder(directory.resolve("songs.db").toFile()).build()
+            val original = SongItem("original", "Original", null, emptyList(), null, playlistSetVideoId = "set-original")
+            val additions = listOf("first", "second").map { SongItem(it, it, null, emptyList(), null) }
+            val serverSongs = mutableListOf(original)
+            var browseRequests = 0
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        val response =
+                            if (request.url.encodedPath.endsWith("/browse/edit_playlist")) {
+                                val action =
+                                    Json
+                                        .parseToJsonElement(
+                                            (request.body as TextContent).text,
+                                        ).jsonObject["actions"]!!
+                                        .jsonArray
+                                        .single()
+                                        .jsonObject
+                                val id = action["addedVideoId"]!!.jsonPrimitive.content
+                                if (failSecond && id == "second") {
+                                    """{"status":"STATUS_FAILED"}"""
+                                } else {
+                                    serverSongs += additions.single { it.id == id }.copy(playlistSetVideoId = "set-$id")
+                                    """{"status":"STATUS_SUCCEEDED"}"""
+                                }
+                            } else {
+                                browseRequests++
+                                val rows =
+                                    serverSongs.joinToString(",") { song ->
+                                        """{"musicResponsiveListItemRenderer":{"playlistItemData":{"videoId":"${song.id}","playlistSetVideoId":"${song.playlistSetVideoId}"},
+                        "flexColumns":[{"musicResponsiveListItemFlexColumnRenderer":{"text":{"simpleText":"${song.title}"}}}]}}"""
+                                    }
+                                """{"header":{"musicEditablePlaylistDetailHeaderRenderer":{"header":{"musicDetailHeaderRenderer":{"title":{"simpleText":"Playlist"}}}}},
+                    "contents":{"sectionListRenderer":{"contents":[{"musicPlaylistShelfRenderer":{"contents":[$rows]}}]}}}"""
+                            }
+                        respond(response, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+                    },
+                ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+            val tube = InnerTube(client, retryDelay = {}).apply { replaceSession("SAPISID=test", "visitor", "account", "0", true) }
+            try {
+                database.cacheRemotePlaylist("PLtarget", PlaylistItem("PLtarget", "Playlist", null, isEditable = true), listOf(original))
+                val repository = YouTubeRepository(tube)
+                val library = DesktopPlaybackLibrary(scope = this, database = { database }, repository = { repository })
+                val completed = CompletableDeferred<Result<Unit>>()
+                library.addToPlaylist("PLtarget", additions) { completed.complete(it) }
+                val result = completed.await()
+                assertEquals(!failSecond, result.isSuccess, result.toString())
+                assertNull(PlaylistAlbumState.selectedPlaylistId)
+
+                val expected = listOf(original) + additions.take(if (failSecond) 1 else 2)
+                assertEquals(
+                    expected.map { it.id },
+                    database
+                        .dao()
+                        .playlistSongs("PLtarget")
+                        .first()
+                        .map { it.song.id },
+                )
+                assertNull(database.cachedRemotePlaylistSections("PLtarget"))
+                assertEquals(1, browseRequests)
+
+                val reopened =
+                    database.cachedRemotePlaylistSections("PLtarget")
+                        ?: database.loadAndCachePlaylistPage(repository, "PLtarget").sections
+                assertEquals(expected.map { "set-${it.id}" }, reopened.playlistSongs().map { it.playlistSetVideoId })
+                assertEquals(2, browseRequests)
+                assertTrue(database.cachedRemotePlaylistSections("PLtarget") != null)
+            } finally {
+                AppState.scope.coroutineContext.cancelChildren()
+                PlaylistAlbumState.selectedPlaylistId = previousSelection
+                database.close()
+                tube.close()
+                client.close()
+                directory.toFile().deleteRecursively()
+                Dispatchers.resetMain()
+                Settings.replaceSharedForTest(previousSettings)
+            }
+        }
+
     @Test
     fun selectedPlaylistsAddInOrderAndOnlyOnce() =
         runTest {

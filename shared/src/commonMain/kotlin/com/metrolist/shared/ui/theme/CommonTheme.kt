@@ -27,7 +27,6 @@ import coil3.request.SuccessResult
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamicColorScheme
 import com.materialkolor.dynamiccolor.ColorSpec
-import com.materialkolor.quantize.QuantizerCelebi
 import com.materialkolor.score.Score
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.ThemePaletteStyle
@@ -42,9 +41,6 @@ val DefaultThemeColor = Color(0xFF6750A4)
 
 // Official material-color-utilities Score fallback (Google Blue), used when the artwork has no usable colour.
 val ArtworkFallbackSeedColor = Color(0xFF4285F4)
-
-// Official material-color-utilities quantizer sample size (QuantizerCelebi.quantize(pixels, 128)).
-private const val ARTWORK_QUANTIZER_MAX_COLORS = 128
 
 fun parseThemeSeedColor(value: Long): Color {
     if (value == 0L) return DefaultThemeColor
@@ -216,13 +212,15 @@ fun selectArtworkSeedColor(
     pixelAt: (x: Int, y: Int) -> Int,
 ): Color {
     if (width <= 0 || height <= 0) return DefaultThemeColor
+    val sampleWidth = minOf(width, 128)
+    val sampleHeight = minOf(height, 128)
     val pixels =
-        IntArray(64 * 64) { index ->
-            pixelAt((index % 64) * width / 64, (index / 64) * height / 64)
+        IntArray(sampleWidth * sampleHeight) { index ->
+            pixelAt((index % sampleWidth) * width / sampleWidth, (index / sampleWidth) * height / sampleHeight)
         }.filter { it ushr 24 >= 128 }
     if (pixels.isEmpty()) return ArtworkFallbackSeedColor
-    val opaque = pixels.map { it or 0xFF000000.toInt() }.toIntArray()
-    val colors = QuantizerCelebi.quantize(opaque, ARTWORK_QUANTIZER_MAX_COLORS)
+    // The sample is bounded; keep its exact colors so sparse accents are not merged into neutrals.
+    val colors = pixels.groupingBy { it or 0xFF000000.toInt() }.eachCount()
     return Color(Score.score(colors, fallbackColorArgb = ArtworkFallbackSeedColor.toArgb()).first())
 }
 

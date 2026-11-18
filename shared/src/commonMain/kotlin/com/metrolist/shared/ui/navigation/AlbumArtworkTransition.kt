@@ -74,6 +74,21 @@ internal fun albumArtworkKey(
     source: String,
 ): String = "album-artwork-$albumId:$source"
 
+internal fun albumArtworkOverlayBounds(
+    bounds: Rect,
+    resting: Rect,
+    visible: Rect,
+): Rect {
+    val verticalDistance = maxOf(0f, resting.top - bounds.center.y, bounds.center.y - resting.bottom)
+    val horizontalDistance = maxOf(0f, resting.left - bounds.center.x, bounds.center.x - resting.right)
+    return Rect(
+        bounds.left + maxOf(0f, visible.left - resting.left - maxOf(abs(bounds.left - resting.left), verticalDistance)),
+        bounds.top + maxOf(0f, visible.top - resting.top - maxOf(abs(bounds.top - resting.top), horizontalDistance)),
+        bounds.right - maxOf(0f, resting.right - visible.right - maxOf(abs(bounds.right - resting.right), verticalDistance)),
+        bounds.bottom - maxOf(0f, resting.bottom - visible.bottom - maxOf(abs(bounds.bottom - resting.bottom), horizontalDistance)),
+    )
+}
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 private class ScrollContainerOverlayClip(
     private val overlay: NavOverlayCoordinates,
@@ -96,15 +111,10 @@ private class ScrollContainerOverlayClip(
             root.localBoundingBoxOf(resting).let { visible ->
                 if (mask == null) visible else visible.intersect(full.copy(left = full.left + mask.left, right = full.left + mask.right))
             }
-        val distance =
-            maxOf(
-                abs(bounds.left - full.left),
-                abs(bounds.top - full.top),
-                abs(bounds.right - full.right),
-                abs(bounds.bottom - full.bottom),
-            )
         val content = overlay.contentCoordinates?.takeIf { it.isAttached }?.let { root.localBoundingBoxOf(it) }
-        val clip = content?.let { visible.inflate(distance).intersect(it) } ?: visible.inflate(distance)
+        // Restore margins near the slot; vertical settling inside the row must not widen the horizontal mask.
+        val expanded = albumArtworkOverlayBounds(bounds, full, visible)
+        val clip = content?.let { expanded.intersect(it) } ?: expanded
         if (clip.isEmpty) return Path()
         if (mask == null) return Path().apply { addRect(clip) }
         val radius = with(density) { CornerRadius(cornerRadius().toPx()) }

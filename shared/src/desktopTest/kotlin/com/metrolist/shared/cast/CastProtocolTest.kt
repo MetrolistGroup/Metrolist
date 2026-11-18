@@ -11,7 +11,9 @@ import com.metrolist.shared.youtube.playback.PlaybackResource
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -249,6 +251,77 @@ class CastProtocolTest {
             clients.forEach { it.close() }
         }
     }
+
+    @Test
+    fun replacingProxyMediaRevokesOldRequestsAndKeepsTheListener() =
+        runBlocking {
+            val address = InetAddress.getLoopbackAddress()
+            val media =
+                CastMedia(
+                    "Song",
+                    null,
+                    PlaybackResource(
+                        "id",
+                        "https://r1.googlevideo.com/videoplayback",
+                        emptyMap(),
+                        null,
+                        null,
+                        contentLengthBytes = 10L,
+                        mimeType = "audio/mp4",
+                    ),
+                    0L,
+                )
+            val proxy = CastProxyServer(address, address, media)
+            val clients = mutableListOf<Socket>()
+            try {
+                val oldUrl = URI(proxy.mediaUrl())
+                val stream =
+                    CastProxyServer::class.java
+                        .getDeclaredField("currentStream")
+                        .apply { isAccessible = true }
+                        .get(proxy)
+                val sockets =
+                    stream.javaClass
+                        .getDeclaredField("sockets")
+                        .apply { isAccessible = true }
+                        .get(stream) as Set<*>
+                repeat(4) {
+                    clients +=
+                        Socket(address, proxy.port).apply {
+                            soTimeout = 2_000
+                            getOutputStream().write("GET ${oldUrl.rawPath} HTTP/1.1\r\n".toByteArray())
+                        }
+                }
+                withTimeout(5_000L) { while (sockets.size < 4) delay(10L) }
+                val nextUrl = URI(proxy.stageMedia(media.copy(resource = media.resource.copy(contentLengthBytes = 25L))))
+                proxy.commitMedia(nextUrl.toString())
+                assertEquals(oldUrl.port, nextUrl.port)
+                assertTrue(oldUrl.rawPath != nextUrl.rawPath)
+                clients.forEach { assertEquals(-1, it.getInputStream().read()) }
+                Socket(address, proxy.port).use { client ->
+                    client.soTimeout = 2_000
+                    client.getOutputStream().write("HEAD ${nextUrl.rawPath} HTTP/1.1\r\nHost: localhost\r\n\r\n".toByteArray())
+                    val response = client.getInputStream().bufferedReader().readText()
+                    assertTrue(response.startsWith("HTTP/1.1 200"))
+                    assertTrue(response.contains("Content-Length: 25\r\n"))
+                }
+                assertTrue(proxy.hasMediaRequest)
+                Socket(address, proxy.port).use { client ->
+                    client.soTimeout = 2_000
+                    client.getOutputStream().write("HEAD ${oldUrl.rawPath} HTTP/1.1\r\nHost: localhost\r\n\r\n".toByteArray())
+                    assertTrue(
+                        client
+                            .getInputStream()
+                            .bufferedReader()
+                            .readText()
+                            .startsWith("HTTP/1.1 404"),
+                    )
+                }
+            } finally {
+                proxy.close()
+                clients.forEach(Socket::close)
+            }
+        }
 
     @Test
     fun googleCastMusicLoadPreservesSongMetadata() {

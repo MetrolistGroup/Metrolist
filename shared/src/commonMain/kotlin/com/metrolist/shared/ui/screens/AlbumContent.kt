@@ -54,6 +54,7 @@ import com.metrolist.shared.model.SortDirection
 import com.metrolist.shared.model.filterForPlaylistSearch
 import com.metrolist.shared.model.indexOfPlaylistOccurrence
 import com.metrolist.shared.model.sortedForPlaylist
+import com.metrolist.shared.state.SongMetadataState
 import com.metrolist.shared.ui.components.AlbumHeader
 import com.metrolist.shared.ui.components.CollectionHeaderHorizontalPadding
 import com.metrolist.shared.ui.components.CollectionHeaderNavigation
@@ -75,7 +76,13 @@ import com.metrolist.shared.utils.isDesktop
 import org.jetbrains.compose.resources.stringResource
 
 private val AlbumSortOptions =
-    setOf(PlaylistSongSort.ORIGINAL, PlaylistSongSort.TITLE, PlaylistSongSort.ARTIST, PlaylistSongSort.DURATION)
+    setOf(
+        PlaylistSongSort.ORIGINAL,
+        PlaylistSongSort.TITLE,
+        PlaylistSongSort.ARTIST,
+        PlaylistSongSort.DURATION,
+        PlaylistSongSort.LISTENING_TIME,
+    )
 
 data class AlbumContentText(
     val play: String,
@@ -154,9 +161,10 @@ fun AlbumContent(
         }
     }
     NavigationBackHandler(enabled = isSearchOpen, onBack = toggleSearch)
+    val listeningTimes = if (sort == PlaylistSongSort.LISTENING_TIME) SongMetadataState.listeningTimes else emptyMap()
     val sortedSongs =
-        remember(songs, sortAvailable, sort, sortDirection) {
-            if (sortAvailable) songs.sortedForPlaylist(sort, sortDirection) else songs
+        remember(songs, sortAvailable, sort, sortDirection, listeningTimes) {
+            if (sortAvailable) songs.sortedForPlaylist(sort, sortDirection, listeningTimes = listeningTimes) else songs
         }
     val displayedSongs =
         remember(sortedSongs, effectiveQuery) {
@@ -210,7 +218,7 @@ fun AlbumContent(
                         searchListState.animateScrollToItem(listOfNotNull(header).size + 1)
                     }
                 }
-                LaunchedEffect(isSearchOpen, isWide) {
+                LaunchedEffect(isSearchOpen, activeListState, isWide, displayedSongs.size) {
                     if (isSearchOpen && !isWide) {
                         activeListState.animateScrollToItem(listOfNotNull(header).size + 1)
                     }
@@ -575,7 +583,8 @@ fun AlbumContent(
                             }
 
                             item {
-                                Spacer(Modifier.height(32.dp))
+                                // Keep the search row at the top even when results do not fill the viewport.
+                                Spacer(if (isSearchOpen) Modifier.fillParentMaxHeight() else Modifier.height(32.dp))
                             }
                         }
                         LazyListScrollbar(

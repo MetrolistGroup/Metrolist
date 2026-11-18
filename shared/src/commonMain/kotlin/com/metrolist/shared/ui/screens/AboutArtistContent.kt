@@ -117,7 +117,7 @@ import com.metrolist.shared.ui.components.loadingShimmer
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.utils.carouselScroll
 import com.metrolist.shared.utils.Logger
-import com.metrolist.shared.utils.monthlyListenersCount
+import com.metrolist.shared.utils.parseAudienceCount
 import com.metrolist.shared.viewmodels.AboutArtistViewModel
 import com.metrolist.shared.viewmodels.ArtistPhoto
 import kotlinx.coroutines.Job
@@ -392,12 +392,14 @@ fun AboutArtistContent(
                 }
                 return
             }
+            val monthlyAudience = parseAudienceCount(info?.monthlyListeners)
+            val subscribers = parseAudienceCount(info?.subscribers)
             val stats =
                 listOf(
                     Res.string.artist_lastfm_listeners to data?.listeners,
                     Res.string.artist_lastfm_scrobbles to data?.scrobbles,
-                    Res.string.artist_monthly_audience to monthlyListenersCount(info?.monthlyListeners),
-                    Res.string.subscribers to info?.subscribers,
+                    Res.string.artist_monthly_audience.takeIf { monthlyAudience?.isCountOnly == true } to monthlyAudience?.text,
+                    Res.string.subscribers.takeIf { subscribers?.isCountOnly == true } to subscribers?.text,
                 ).filter { !it.second.isNullOrBlank() }
             if (stats.isNotEmpty()) {
                 item(key = "stats", contentType = "stats") {
@@ -410,11 +412,13 @@ fun AboutArtistContent(
                                 row.forEach { (label, count) ->
                                     Column(Modifier.weight(1f)) {
                                         Text(count.orEmpty(), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                                        Text(
-                                            stringResource(label),
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
+                                        if (label != null) {
+                                            Text(
+                                                stringResource(label),
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
                                     }
                                 }
                             }

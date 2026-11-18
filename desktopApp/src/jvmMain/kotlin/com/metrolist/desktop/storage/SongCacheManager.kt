@@ -357,9 +357,16 @@ object SongCacheManager {
                     headers.forEach { (name, value) -> header(name, value) }
                 }.execute { response ->
                     if (!response.status.isSuccess()) return@execute null
+                    val range =
+                        if (response.status.value == 206) {
+                            parseHttpByteRange(response.headers["Content-Range"])
+                                ?.takeIf { it.start == 0L && it.end == it.total - 1 } ?: return@execute null
+                        } else {
+                            null
+                        }
                     val limit = minOf(if (image) MAX_THUMBNAIL_BYTES else MAX_AUDIO_BYTES, maxBytes)
                     if (limit <= 0L) return@execute null
-                    val expected = response.headers["Content-Length"]?.toLongOrNull()
+                    val expected = range?.total ?: response.headers["Content-Length"]?.toLongOrNull()
                     if (expected != null && expected > limit) return@execute null
                     if (cacheDir.usableSpace <= (expected ?: 1024L) + 1024 * 1024) return@execute null
                     val destination = cacheFile(baseName + extension(response.headers["Content-Type"], image))

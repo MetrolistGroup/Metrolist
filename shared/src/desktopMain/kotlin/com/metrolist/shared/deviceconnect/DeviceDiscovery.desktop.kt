@@ -8,13 +8,19 @@
 package com.metrolist.shared.deviceconnect
 
 import com.metrolist.shared.utils.Logger
+import com.metrolist.shared.utils.MdnsDiscoverySession
+import java.net.Inet4Address
 import java.net.Inet6Address
+import java.net.InetAddress
 import java.net.NetworkInterface
 import java.util.Collections
 import java.util.UUID
+import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import javax.jmdns.JmDNS
@@ -39,31 +45,21 @@ actual class DeviceDiscoveryController actual constructor(
     private var localDeviceId = ""
     private val instances = CopyOnWriteArrayList<JmDNS>()
 
-    @Volatile
-    private var closeFailure: Throwable? = null
     private val listeners = ConcurrentHashMap<JmDNS, ServiceListener>()
     private val activeServiceKeys = mutableSetOf<String>()
     private val devicesByService = ConcurrentHashMap<String, DiscoveredDevice>()
     private val devicesById = ConcurrentHashMap<String, DiscoveredDevice>()
     private val discoveryLock = Any()
     private var discovering = false
-    private val fetchingServices = mutableSetOf<String>()
+    private val lookups = DesktopDiscoveryLookups()
 
-    init {
-        val addresses = deviceConnectLanAddresses()
-        Logger.i(LOG_TAG, "mDNS LAN addresses: ${addresses.map { it.hostAddress }}")
-        addresses.forEach { address ->
-            runCatching { JmDNS.create(address, "Metrolist") }
-                .onSuccess {
-                    instances += it
-                    Logger.i(LOG_TAG, "mDNS listening on ${address.hostAddress}")
-                }.onFailure { reportError("mDNS unavailable on ${address.hostAddress}: ${it.message}", it) }
+    private var session: MdnsDiscoverySession<InetAddress, JmDNS>? = null
+
+    @Volatile private var registration: ((JmDNS) -> Unit)? = null
+    private val fetchExecutor =
+        ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS, ArrayBlockingQueue(32)) { task ->
+            Thread(task, "DeviceConnect-mDNS-fetch").apply { isDaemon = true }
         }
-        if (instances.isEmpty()) {
-            reportError("mDNS unavailable: no active LAN interface.", null)
-            reportFailure()
-        }
-    }
 
     actual fun registerService(
         deviceId: String,
@@ -73,12 +69,16 @@ actual class DeviceDiscoveryController actual constructor(
     ) {
         localDeviceId = deviceId
         val properties = deviceConnectDiscoveryTxtRecords(deviceId, deviceName, deviceType)
-        Logger.i(LOG_TAG, "mDNS register metrolist-$deviceId-$serviceInstanceId port=$port on ${instances.size} interface(s).")
+        Logger.i(LOG_TAG, "mDNS register metrolist-$deviceId-$serviceInstanceId port=$port.")
+        val register: (JmDNS) -> Unit = { jmDns ->
+            jmDns.registerService(
+                ServiceInfo.create(serviceType(), "metrolist-$deviceId-${instanceName(jmDns.inetAddress)}", port, 0, 0, properties),
+            )
+        }
+        registration = register
         instances.forEach { jmDns ->
             runCatching {
-                jmDns.registerService(
-                    ServiceInfo.create(serviceType(), "metrolist-$deviceId-$serviceInstanceId", port, 0, 0, properties),
-                )
+                session?.withResource(jmDns) { if (jmDns in instances) register(jmDns) }
             }.onFailure {
                 reportError("mDNS register failed: ${it.message}", it)
                 reportFailure()
@@ -87,8 +87,16 @@ actual class DeviceDiscoveryController actual constructor(
     }
 
     actual suspend fun unregisterService() {
+        registration = null
         try {
-            runDesktopDiscoveryWorkers(instances.map { jmDns -> { jmDns.unregisterAllServices() } })
+            runDesktopDiscoveryWorkers(
+                instances.map { jmDns ->
+                    {
+                        session?.withResource(jmDns) { if (jmDns in instances) jmDns.unregisterAllServices() }
+                        Unit
+                    }
+                },
+            )
         } catch (error: Throwable) {
             reportError("mDNS unregister failed: ${error.message}", error)
             error.suppressed.forEach { reportError("mDNS unregister failed: ${it.message}", it) }
@@ -100,134 +108,203 @@ actual class DeviceDiscoveryController actual constructor(
         onFound: (DiscoveredDevice) -> Unit,
         onLost: (DiscoveredDevice) -> Unit,
     ) {
-        synchronized(discoveryLock) { discovering = true }
-        Logger.i(LOG_TAG, "mDNS discover ${serviceType()} on ${instances.size} interface(s).")
-        instances.forEach { jmDns ->
-            val listener =
-                object : ServiceListener {
-                    override fun serviceAdded(event: ServiceEvent) {
-                        Logger.d(LOG_TAG, "mDNS found ${event.name} via ${jmDns.inetAddress.hostAddress}")
+        synchronized(discoveryLock) {
+            if (discovering) return
+            discovering = true
+        }
+        if (session != null) {
+            instances.forEach { listen(it, onFound, onLost) }
+            return
+        }
+        session =
+            MdnsDiscoverySession(
+                addresses = ::desktopDeviceConnectDiscoveryAddresses,
+                create = { JmDNS.create(it, "Metrolist-${instanceName(it)}") },
+                configure = { jmDns ->
+                    instances += jmDns
+                    registration?.invoke(jmDns)
+                    listen(jmDns, onFound, onLost)
+                },
+                beforeClose = { jmDns ->
+                    instances.remove(jmDns)
+                    val listener = synchronized(discoveryLock) { listeners.remove(jmDns) }
+                    listener?.let { jmDns.removeServiceListener(serviceType(), it) }
+                },
+                onReset = {
+                    val lost =
                         synchronized(discoveryLock) {
-                            if (!discovering || listeners[jmDns] !== this) return
-                            activeServiceKeys += serviceKey(jmDns, event.name)
+                            instances.clear()
+                            listeners.clear()
+                            activeServiceKeys.clear()
+                            lookups.clear()
+                            devicesByService.clear()
+                            devicesById.values.toList().also { devicesById.clear() }
                         }
-                        event.dns.requestServiceInfo(event.type, event.name)
-                    }
-
-                    override fun serviceRemoved(event: ServiceEvent) {
-                        Logger.d(LOG_TAG, "mDNS lost ${event.name} via ${jmDns.inetAddress.hostAddress}")
-                        val (replacement, lost) =
-                            synchronized(discoveryLock) {
-                                if (!discovering || listeners[jmDns] !== this) return
-                                val key = serviceKey(jmDns, event.name)
-                                activeServiceKeys.remove(key)
-                                val device = devicesByService.remove(key) ?: return
-                                if (!devicesById.remove(device.deviceId, device)) return
-                                val replacement = desktopDiscoveryReplacement(device, devicesByService.values)
-                                if (replacement == null) {
-                                    null to device
-                                } else {
-                                    devicesById[device.deviceId] = replacement
-                                    replacement to null
-                                }
-                            }
-                        replacement?.let(onFound)
-                        lost?.let(onLost)
-                    }
-
-                    override fun serviceResolved(event: ServiceEvent) {
-                        resolved(event, event.info, allowFetch = true)
-                    }
-
-                    // JmDNS can resolve before the TXT record arrives; fetch the complete record once in that case.
-                    private fun resolved(
-                        event: ServiceEvent,
-                        info: ServiceInfo,
-                        allowFetch: Boolean,
-                    ) {
-                        val host =
-                            selectDeviceConnectHost(
-                                info.inet4Addresses.map { it.hostAddress },
-                                jmDns.inetAddress.hostAddress,
-                            ) ?: selectDeviceConnectHost(
-                                info.inetAddresses.mapNotNull { address ->
-                                    if (address is Inet6Address && address.isLinkLocalAddress) {
-                                        val local = jmDns.inetAddress
-                                        val scopeId =
-                                            (local as? Inet6Address)?.scopeId?.takeIf { it > 0 }
-                                                ?: NetworkInterface.getByInetAddress(local)?.index?.takeIf { it > 0 }
-                                                ?: return@mapNotNull null
-                                        address.hostAddress?.substringBefore('%')?.let { "$it%$scopeId" }
-                                    } else {
-                                        address.hostAddress
-                                    }
-                                },
-                            )
-                                ?: run {
-                                    Logger.w(
-                                        LOG_TAG,
-                                        "mDNS ${event.name} has no LAN address (ipv4=${info.inet4Addresses.map { it.hostAddress }}, " +
-                                            "ipv6=${info.inetAddresses.map { it.hostAddress }}).",
-                                    )
-                                    return
-                                }
-                        val deviceId = info.getPropertyString(DEVICE_CONNECT_DEVICE_ID_TXT_KEY).orEmpty()
-                        if (deviceId == localDeviceId && deviceId.isNotBlank()) return
-                        if (deviceId.isBlank() && allowFetch) {
-                            // One fetch per service at a time; events that arrive meanwhile are covered by it.
-                            if (!synchronized(discoveryLock) { fetchingServices.add(event.name) }) return
-                            Logger.d(LOG_TAG, "mDNS ${event.name} resolved without TXT; fetching the full record.")
-                            thread(name = "DeviceConnect-mDNS-fetch", isDaemon = true) {
-                                val full =
-                                    runCatching { jmDns.getServiceInfo(serviceType(), event.name, true, FULL_RECORD_TIMEOUT_MS) }
-                                        .onFailure {
-                                            Logger.w(LOG_TAG, "mDNS full record fetch for ${event.name} failed: ${it.message}", it)
-                                        }.getOrNull()
-                                synchronized(discoveryLock) { fetchingServices.remove(event.name) }
-                                if (full != null) resolved(event, full, allowFetch = false)
-                            }
-                            return
-                        }
-                        if (deviceId.isBlank() || info.port !in 1..65535) {
-                            Logger.w(
-                                LOG_TAG,
-                                "mDNS ${event.name} has an invalid record (deviceId blank=${deviceId.isBlank()}, port=${info.port}, " +
-                                    "txtKeys=${Collections.list(info.propertyNames)}).",
-                            )
-                            return
-                        }
-                        val device =
-                            DiscoveredDevice(
-                                serviceName = event.name,
-                                deviceId = deviceId,
-                                deviceName = deviceConnectNameFromTxtRecord(info::getPropertyString),
-                                host = host,
-                                port = info.port,
-                                deviceType = deviceConnectTypeFromTxtRecord(info::getPropertyString),
-                            )
-                        Logger.d(LOG_TAG, "mDNS resolved ${event.name} -> $host:${info.port} (deviceId=$deviceId)")
-                        val changed =
-                            synchronized(discoveryLock) {
-                                if (!discovering || listeners[jmDns] !== this) return
-                                val key = serviceKey(jmDns, event.name)
-                                if (key !in activeServiceKeys) return
-                                devicesByService[key] = device
-                                devicesById.put(deviceId, device) != device
-                            }
-                        if (changed) onFound(device)
-                    }
-                }
-            synchronized(discoveryLock) {
-                if (!discovering) return@forEach
-                listeners[jmDns] = listener
-            }
-            runCatching { jmDns.addServiceListener(serviceType(), listener) }
-                .onFailure {
-                    synchronized(discoveryLock) { listeners.remove(jmDns, listener) }
+                    lost.forEach(onLost)
+                },
+                onError = {
                     reportError("mDNS discovery failed: ${it.message}", it)
                     reportFailure()
+                },
+                onClosed = {
+                    reportClosed()
+                },
+            ).also {
+                session = it
+                it.start(waitUntilStarted = true)
+            }
+    }
+
+    private fun listen(
+        jmDns: JmDNS,
+        onFound: (DiscoveredDevice) -> Unit,
+        onLost: (DiscoveredDevice) -> Unit,
+    ) {
+        val listener =
+            object : ServiceListener {
+                override fun serviceAdded(event: ServiceEvent) {
+                    Logger.d(LOG_TAG, "mDNS found ${event.name} via ${jmDns.inetAddress.hostAddress}")
+                    synchronized(discoveryLock) {
+                        if (!discovering || listeners[jmDns] !== this) return
+                        activeServiceKeys += serviceKey(jmDns, event.name)
+                    }
+                    // JmDNS already resolves services through its built-in collector.
                 }
+
+                override fun serviceRemoved(event: ServiceEvent) {
+                    Logger.d(LOG_TAG, "mDNS lost ${event.name} via ${jmDns.inetAddress.hostAddress}")
+                    val (replacement, lost) =
+                        synchronized(discoveryLock) {
+                            if (!discovering || listeners[jmDns] !== this) return
+                            val key = serviceKey(jmDns, event.name)
+                            activeServiceKeys.remove(key)
+                            lookups.remove(key)
+                            val device = devicesByService.remove(key) ?: return
+                            if (!devicesById.remove(device.deviceId, device)) return
+                            val replacement = desktopDiscoveryReplacement(device, devicesByService.values)
+                            if (replacement == null) {
+                                null to device
+                            } else {
+                                devicesById[device.deviceId] = replacement
+                                replacement to null
+                            }
+                        }
+                    replacement?.let(onFound)
+                    lost?.let(onLost)
+                }
+
+                override fun serviceResolved(event: ServiceEvent) {
+                    resolved(event, event.info, allowFetch = true)
+                }
+
+                // JmDNS can resolve before the TXT record arrives; fetch the complete record once in that case.
+                private fun resolved(
+                    event: ServiceEvent,
+                    info: ServiceInfo,
+                    allowFetch: Boolean,
+                ) {
+                    synchronized(discoveryLock) {
+                        if (!discovering || listeners[jmDns] !== this) return
+                    }
+                    val host =
+                        selectDeviceConnectHost(
+                            info.inet4Addresses.map { it.hostAddress },
+                            jmDns.inetAddress.hostAddress,
+                        ) ?: selectDeviceConnectHost(
+                            info.inetAddresses.mapNotNull { address ->
+                                if (address is Inet6Address && address.isLinkLocalAddress) {
+                                    val local = jmDns.inetAddress
+                                    val scopeId =
+                                        (local as? Inet6Address)?.scopeId?.takeIf { it > 0 }
+                                            ?: NetworkInterface.getByInetAddress(local)?.index?.takeIf { it > 0 }
+                                            ?: return@mapNotNull null
+                                    address.hostAddress?.substringBefore('%')?.let { "$it%$scopeId" }
+                                } else {
+                                    address.hostAddress
+                                }
+                            },
+                        )
+                            ?: run {
+                                Logger.w(
+                                    LOG_TAG,
+                                    "mDNS ${event.name} has no LAN address (ipv4=${info.inet4Addresses.map { it.hostAddress }}, " +
+                                        "ipv6=${info.inetAddresses.map { it.hostAddress }}).",
+                                )
+                                return
+                            }
+                    val deviceId = info.getPropertyString(DEVICE_CONNECT_DEVICE_ID_TXT_KEY).orEmpty()
+                    if (deviceId == localDeviceId && deviceId.isNotBlank()) return
+                    if (deviceId.isBlank() && allowFetch) {
+                        // A lookup can emit another incomplete callback, even after it returns.
+                        val key = serviceKey(jmDns, event.name)
+                        if (!synchronized(discoveryLock) {
+                                discovering && listeners[jmDns] === this &&
+                                    key in activeServiceKeys && lookups.start(key)
+                            }
+                        ) {
+                            return
+                        }
+                        Logger.d(LOG_TAG, "mDNS ${event.name} resolved without TXT; fetching the full record.")
+                        try {
+                            fetchExecutor.execute {
+                                // Serialize with native close so a late lookup cannot recreate a closed instance's timers.
+                                val full =
+                                    session?.withResource(jmDns) {
+                                        synchronized(discoveryLock) {
+                                            if (!discovering || listeners[jmDns] !== this) return@withResource null
+                                        }
+                                        runCatching { jmDns.getServiceInfo(serviceType(), event.name, false, FULL_RECORD_TIMEOUT_MS) }
+                                            .onFailure {
+                                                Logger.w(LOG_TAG, "mDNS full record fetch for ${event.name} failed: ${it.message}", it)
+                                            }.getOrNull()
+                                    }
+                                synchronized(discoveryLock) { lookups.finish(key) }
+                                if (full != null) resolved(event, full, allowFetch = false)
+                            }
+                        } catch (_: RejectedExecutionException) {
+                            synchronized(discoveryLock) { lookups.remove(key) }
+                        }
+                        return
+                    }
+                    if (deviceId.isBlank() || info.port !in 1..65535) {
+                        Logger.w(
+                            LOG_TAG,
+                            "mDNS ${event.name} has an invalid record (deviceId blank=${deviceId.isBlank()}, port=${info.port}, " +
+                                "txtKeys=${Collections.list(info.propertyNames)}).",
+                        )
+                        return
+                    }
+                    val device =
+                        DiscoveredDevice(
+                            serviceName = event.name,
+                            deviceId = deviceId,
+                            deviceName = deviceConnectNameFromTxtRecord(info::getPropertyString),
+                            host = host,
+                            port = info.port,
+                            deviceType = deviceConnectTypeFromTxtRecord(info::getPropertyString),
+                        )
+                    Logger.d(LOG_TAG, "mDNS resolved ${event.name} -> $host:${info.port} (deviceId=$deviceId)")
+                    val changed =
+                        synchronized(discoveryLock) {
+                            if (!discovering || listeners[jmDns] !== this) return
+                            val key = serviceKey(jmDns, event.name)
+                            if (key !in activeServiceKeys) return
+                            devicesByService[key] = device
+                            devicesById.put(deviceId, device) != device
+                        }
+                    if (changed) onFound(device)
+                }
+            }
+        synchronized(discoveryLock) {
+            if (!discovering) return
+            listeners[jmDns] = listener
         }
+        runCatching { jmDns.addServiceListener(serviceType(), listener) }
+            .onFailure {
+                synchronized(discoveryLock) { listeners.remove(jmDns, listener) }
+                reportError("mDNS discovery failed: ${it.message}", it)
+                reportFailure()
+            }
     }
 
     actual suspend fun stopDiscovery() {
@@ -237,6 +314,8 @@ actual class DeviceDiscoveryController actual constructor(
                 discovering = false
                 listeners.entries.toList().also {
                     listeners.clear()
+                    lookups.clear()
+                    fetchExecutor.queue.clear()
                     activeServiceKeys.clear()
                     devicesByService.clear()
                     devicesById.clear()
@@ -249,31 +328,61 @@ actual class DeviceDiscoveryController actual constructor(
     }
 
     actual suspend fun close() {
-        closeFailure?.let { throw it }
         stopDiscovery()
-        val unregisterFailure = runCatching { unregisterService() }.exceptionOrNull()
-        closeFailure = unregisterFailure
-        val closingInstances = instances.toList()
-        instances.clear()
-        // Native close can still confirm withdrawal after unregisterAllServices fails.
-        thread(name = "DeviceConnect-mDNS-close", isDaemon = true) {
-            runCatching {
-                runDesktopDiscoveryWorkers(closingInstances.map { jmDns -> { jmDns.close() } })
-            }.onSuccess {
-                closeFailure = null
-                if (unregisterFailure != null) reportClosed()
-            }.onFailure { reportError("mDNS close failed: ${it.message}", it) }
-        }
-        unregisterFailure?.let { throw it }
-        reportClosed()
+        registration = null
+        fetchExecutor.shutdownNow()
+        // JmDNS.close withdraws the host and services in one cancellation cycle.
+        session?.close()
     }
 
     private fun serviceType() = "${DeviceConnectManager.SERVICE_TYPE}local."
+
+    private fun instanceName(address: InetAddress) =
+        "$serviceInstanceId-${NetworkInterface.getByInetAddress(address).index}-${if (address is Inet4Address) 4 else 6}"
 
     private fun serviceKey(
         jmDns: JmDNS,
         serviceName: String,
     ) = "${System.identityHashCode(jmDns)}:$serviceName"
+}
+
+internal fun desktopDeviceConnectDiscoveryAddresses(): List<InetAddress> =
+    runCatching {
+        deviceConnectLanInterfaces().flatMap { selectDesktopDiscoveryAddresses(it.inetAddresses.toList()) }
+    }.getOrDefault(emptyList())
+
+internal fun selectDesktopDiscoveryAddresses(addresses: List<InetAddress>): List<InetAddress> {
+    val lan = addresses.filter(::isDeviceConnectLanAddress).sortedBy { it.hostAddress }
+    val ipv6 = lan.filterIsInstance<Inet6Address>()
+    return listOfNotNull(
+        lan.filterIsInstance<Inet4Address>().firstOrNull(),
+        ipv6.firstOrNull { !it.isLinkLocalAddress } ?: ipv6.firstOrNull(),
+    )
+}
+
+internal class DesktopDiscoveryLookups {
+    private val attempted = mutableSetOf<String>()
+    private val pending = mutableSetOf<String>()
+
+    fun start(key: String): Boolean {
+        if (pending.size >= 32 || !attempted.add(key)) return false
+        pending.add(key)
+        return true
+    }
+
+    fun finish(key: String) {
+        pending.remove(key)
+    }
+
+    fun remove(key: String) {
+        attempted.remove(key)
+        pending.remove(key)
+    }
+
+    fun clear() {
+        attempted.clear()
+        pending.clear()
+    }
 }
 
 internal fun desktopDiscoveryReplacement(

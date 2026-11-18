@@ -39,6 +39,7 @@ import com.metrolist.shared.generated.resources.copy
 import com.metrolist.shared.generated.resources.edit
 import com.metrolist.shared.generated.resources.edit_lyrics
 import com.metrolist.shared.generated.resources.lyrics_offset
+import com.metrolist.shared.generated.resources.lyrics_romanization_show_original
 import com.metrolist.shared.generated.resources.lyrics_romanize_title
 import com.metrolist.shared.generated.resources.lyrics_show_translations
 import com.metrolist.shared.generated.resources.no_provider_results_found
@@ -94,7 +95,13 @@ fun LyricsMenu(
     var editText by remember(lyricsUiState.rawLyrics) { mutableStateOf(TextFieldValue(lyricsUiState.rawLyrics.orEmpty())) }
     val snackbarHostState = remember { SnackbarHostState() }
     val copiedMessage = stringResource(Res.string.copied)
-    var romanizationEnabled by remember { mutableStateOf(Settings.shared.lyricsRomanizationEnabled) }
+    val romanizeAsMain = Settings.shared.isLyricsRomanizationActive && Settings.shared.lyricsRomanizeAsMain
+    val toggleChecked =
+        if (romanizeAsMain) {
+            Settings.shared.lyricsShowOriginalLyrics
+        } else {
+            Settings.shared.lyricsRomanizationEnabled
+        }
     var manualAiTranslationChecked by remember(lyricsUiState.manualAiTranslationEnabled) {
         mutableStateOf(lyricsUiState.manualAiTranslationEnabled)
     }
@@ -242,7 +249,17 @@ fun LyricsMenu(
                             null
                         },
                         Material3MenuItemData(
-                            title = { Text(stringResource(Res.string.lyrics_romanize_title)) },
+                            title = {
+                                Text(
+                                    stringResource(
+                                        if (romanizeAsMain) {
+                                            Res.string.lyrics_romanization_show_original
+                                        } else {
+                                            Res.string.lyrics_romanize_title
+                                        },
+                                    ),
+                                )
+                            },
                             icon = {
                                 Icon(
                                     imageVector = MetrolistIcons.Outlined.Translate,
@@ -250,15 +267,21 @@ fun LyricsMenu(
                                 )
                             },
                             onClick = {
-                                romanizationEnabled = !romanizationEnabled
-                                Settings.shared.lyricsRomanizationEnabled = romanizationEnabled
+                                if (romanizeAsMain) {
+                                    Settings.shared.lyricsShowOriginalLyrics = !toggleChecked
+                                } else {
+                                    Settings.shared.lyricsRomanizationEnabled = !toggleChecked
+                                }
                             },
                             trailingContent = {
                                 ExpressiveSwitch(
-                                    checked = romanizationEnabled,
+                                    checked = toggleChecked,
                                     onCheckedChange = {
-                                        romanizationEnabled = it
-                                        Settings.shared.lyricsRomanizationEnabled = it
+                                        if (romanizeAsMain) {
+                                            Settings.shared.lyricsShowOriginalLyrics = it
+                                        } else {
+                                            Settings.shared.lyricsRomanizationEnabled = it
+                                        }
                                     },
                                 )
                             },

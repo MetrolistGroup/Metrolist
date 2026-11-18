@@ -17,7 +17,7 @@ internal data class AudioOffloadEligibility(
         get() =
             audioResourceAvailable && !outputFailed &&
                 equalizer.isIdentity &&
-                normalizationGain in 0f..1f &&
+                normalizationGain == 1f &&
                 !skipSilence &&
                 speed == 1f && pitch == 1f &&
                 !crossfade && !meterActive

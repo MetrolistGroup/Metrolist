@@ -70,6 +70,14 @@ class MusicVideoPlaybackPolicyTest {
     }
 
     @Test
+    fun previousOnFirstItemWrapsToLastOnlyWithRepeatAll() {
+        assertTrue(shouldWrapToLastItem(repeatAll = true, playbackPositionMs = 1_000L, currentQueueIndex = 0, lastQueueIndex = 4))
+        assertFalse(shouldWrapToLastItem(repeatAll = false, playbackPositionMs = 1_000L, currentQueueIndex = 0, lastQueueIndex = 4))
+        assertFalse(shouldWrapToLastItem(repeatAll = true, playbackPositionMs = 5_000L, currentQueueIndex = 0, lastQueueIndex = 4))
+        assertFalse(shouldWrapToLastItem(repeatAll = true, playbackPositionMs = 1_000L, currentQueueIndex = 0, lastQueueIndex = 0))
+    }
+
+    @Test
     fun disabledVideoPlaybackKeepsVideoSongsPlayableAsAudio() {
         assertFalse(shouldRequestQueueVideo(isVideoSong = true, videoPlaybackEnabled = false))
         assertFalse(shouldRequestQueueVideo(isVideoSong = false, isVideoModeActive = true, videoPlaybackEnabled = false))
@@ -90,10 +98,25 @@ class MusicVideoPlaybackPolicyTest {
             for (videoMode in listOf(false, true)) {
                 val wantVideo = shouldRequestQueueVideo(isVideoSong = video.isVideoSong, isVideoModeActive = videoMode)
                 assertEquals(videoMode, wantVideo)
-                assertEquals(!videoMode, shouldResolveMusicTrackCounterpart(sourceIsVideoSong = video.isVideoSong, wantVideo = wantVideo))
+                assertEquals(
+                    !videoMode,
+                    shouldResolveMusicTrackCounterpart(
+                        sourceIsVideoSong = video.isVideoSong,
+                        wantVideo = wantVideo,
+                        videoPlaybackEnabled = true,
+                    ),
+                )
             }
         }
         assertFalse(shouldRequestQueueVideo(isVideoSong = false, isVideoModeActive = false))
+    }
+
+    @Test
+    fun disabledMusicVideosKeepTheRequestedVideosAudio() {
+        assertFalse(shouldResolveMusicTrackCounterpart(sourceIsVideoSong = true, wantVideo = false, videoPlaybackEnabled = false))
+        assertFalse(canSwapToAudioCounterpart(videoPlaybackEnabled = false, networkConnected = true))
+        assertTrue(canSwapToAudioCounterpart(videoPlaybackEnabled = true, networkConnected = true))
+        assertFalse(canSwapToAudioCounterpart(videoPlaybackEnabled = true, networkConnected = true, remotePlaybackActive = true))
     }
 
     @Test

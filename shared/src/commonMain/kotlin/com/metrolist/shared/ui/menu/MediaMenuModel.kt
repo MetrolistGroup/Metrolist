@@ -19,6 +19,7 @@ import androidx.compose.ui.text.AnnotatedString
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.action_download
 import com.metrolist.shared.generated.resources.action_like
+import com.metrolist.shared.generated.resources.add_to_library
 import com.metrolist.shared.generated.resources.add_to_playlist
 import com.metrolist.shared.generated.resources.add_to_queue
 import com.metrolist.shared.generated.resources.add_to_queue_desc
@@ -79,6 +80,7 @@ import com.metrolist.shared.settings.ArtistNameAliases
 import com.metrolist.shared.settings.HiddenHomeItems
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.settings.displayTitle
+import com.metrolist.shared.state.SongLibraryState
 import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.CollectionPreviews
 import com.metrolist.shared.ui.components.Material3MenuGroup
@@ -88,6 +90,7 @@ import com.metrolist.shared.ui.components.PopupVisibility
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.monthlyAudienceText
+import com.metrolist.shared.utils.parseAudienceCount
 import org.jetbrains.compose.resources.stringResource
 
 enum class MediaDownloadState {
@@ -205,8 +208,21 @@ fun songMediaMenuModel(
     leadingPrimaryActions: List<PlayerMenuAction> = emptyList(),
     trailingPrimaryActions: List<PlayerMenuAction> = emptyList(),
     deleteUploadAction: PlayerMenuAction? = null,
+    showLibraryAction: Boolean = !isGuest,
 ): MediaMenuModel {
     val unlikeLabel = stringResource(Res.string.unlike)
+    val libraryAction =
+        if (showLibraryAction && SongLibraryState.canToggle(song)) {
+            val inLibrary = SongLibraryState.isInLibrary(song)
+            action(
+                if (inLibrary) MetrolistIcons.Outlined.LibraryMusic else MetrolistIcons.Outlined.LibraryAdd,
+                stringResource(if (inLibrary) Res.string.remove_from_library else Res.string.add_to_library),
+                onDismiss,
+                { SongLibraryState.toggle(song) },
+            )
+        } else {
+            null
+        }
     val likeLabel = stringResource(Res.string.action_like)
     val playLabel = stringResource(Res.string.play)
     val moveUpLabel = stringResource(Res.string.move_up)
@@ -214,7 +230,8 @@ fun songMediaMenuModel(
     val removeFromPlaylistLabel = stringResource(Res.string.remove_from_playlist)
     val editLabel = stringResource(Res.string.edit)
     val editDesc = stringResource(Res.string.edit_song_description)
-    val artistAction = artistNavigationMenuAction(song.artists, onGoToArtist, onDismiss)
+    val navigation = songMenuNavigation(song)
+    val artistAction = artistNavigationMenuAction(navigation.artists, onGoToArtist, onDismiss)
     val download =
         downloadAction(downloadState, downloadProgress, false, onDismiss, onDownload)?.let {
             it.copy(enabled = it.enabled && (!song.isUnavailable || downloadState == MediaDownloadState.DOWNLOADED))
@@ -295,6 +312,7 @@ fun songMediaMenuModel(
                 listOfNotNull(
                     download.takeIf { isPlayerMenu },
                     pinAction(isPinned, onDismiss, onTogglePin),
+                    libraryAction,
                     hideAction(onDismiss, onHideFromLibrary),
                     dislikeMenuAction(isDisliked, onDismiss, onDislike),
                     blockArtistMenuAction(onDismiss, onBlockArtist),
@@ -312,7 +330,11 @@ fun songMediaMenuModel(
             navigation =
                 buildList {
                     artistAction?.let(::add)
-                    albumNavigationMenuAction(onDismiss, onGoToAlbum, isPodcast = song.podcastId != null)?.let(::add)
+                    albumNavigationMenuAction(
+                        onDismiss,
+                        onGoToAlbum.takeIf { navigation.albumId != null },
+                        isPodcast = song.podcastId != null,
+                    )?.let(::add)
                     if (isPlayerMenu) detailsAction?.let(::add)
                 },
             additional = listOfNotNull(detailsAction.takeUnless { isPlayerMenu }) + additionalActions,
@@ -339,6 +361,17 @@ fun songMediaMenuModel(
         actionGroups = actionGroups,
     )
 }
+
+internal data class SongMenuNavigation(
+    val artists: List<ArtistTiny>,
+    val albumId: String?,
+)
+
+internal fun songMenuNavigation(song: SongItem): SongMenuNavigation =
+    SongMenuNavigation(
+        artists = song.artists.filter { !it.id.isNullOrBlank() }.distinctBy { it.id },
+        albumId = song.album?.id?.takeIf(String::isNotBlank),
+    )
 
 internal fun <T> songMenuActionGroups(
     queue: List<T>,
@@ -478,7 +511,7 @@ fun artistMediaMenuModel(
         title = artist.displayTitle,
         subtitle =
             monthlyAudienceText(artist.monthlyListeners, stringResource(Res.string.monthly_audience_short))
-                ?: artist.subscribers?.takeIf(String::isNotBlank)?.let { "${stringResource(Res.string.subscribers)}: $it" },
+                ?: parseAudienceCount(artist.subscribers)?.withLabel { "${stringResource(Res.string.subscribers)}: $it" },
         thumbnail = artist.thumbnail,
         fallbackIcon = MetrolistIcons.Outlined.AccountCircle,
         artistId = artist.id,
@@ -541,6 +574,7 @@ fun playlistMediaMenuModel(
     additionalActions: List<PlayerMenuAction> = emptyList(),
 ): MediaMenuModel {
     val exportPlaylistLabel = stringResource(Res.string.export_playlist)
+    val syncPlaylistAction = rememberPlaylistSyncAction(playlist, onDismiss)
     val selectSongsLabel = stringResource(Res.string.select_songs)
     val renameLabel = stringResource(Res.string.rename)
     val renameDesc = stringResource(Res.string.rename_playlist_description)
@@ -575,6 +609,7 @@ fun playlistMediaMenuModel(
                     onExport?.let {
                         action(MetrolistIcons.Outlined.Share, exportPlaylistLabel, onDismiss, it)
                     },
+                    syncPlaylistAction,
                 ),
                 listOfNotNull(
                     onSelect?.let {

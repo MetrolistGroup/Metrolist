@@ -36,6 +36,7 @@ import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.state.playback.PlayerArtworkPreview
+import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.shared.constants.ThumbnailCornerRadius
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.icons.MetrolistIcons
@@ -52,7 +53,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.LinkedHashMap
-import java.util.concurrent.ConcurrentHashMap
 import coil3.compose.AsyncImage as CoilAsyncImage
 import org.jetbrains.skia.Image as SkiaImage
 
@@ -89,13 +89,30 @@ private val artworkThemeCache =
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ArtworkThemeData>): Boolean = size > 15
     }
 private val artworkThemeCacheMutex = Mutex()
-private val artworkThemeRequestMutexes = ConcurrentHashMap<String, Mutex>()
+
+@Composable
+internal fun UpdateArtworkTheme() {
+    val context = LocalPlatformContext.current
+    val url = PlayerState.currentArtworkUrl.orEmpty()
+    val canonicalUrl = remember(url) { canonicalArtworkUrl(url) }
+    val enabled = Settings.shared.materialYouEnabled && Settings.shared.dynamicTheme
+    LaunchedEffect(canonicalUrl, enabled) {
+        if (!enabled) return@LaunchedEffect
+        updateArtworkTheme(canonicalUrl) { artworkUrl ->
+            withContext(Dispatchers.IO) {
+                artworkThemeCacheMutex.withLock { artworkThemeCache[artworkUrl] }
+                    ?: loadArtworkTheme(context, url).also { theme ->
+                        artworkThemeCacheMutex.withLock { artworkThemeCache[artworkUrl] = theme }
+                    }
+            }.seedColor
+        }
+    }
+}
 
 @Composable
 internal fun AsyncImage(
     url: String,
     modifier: Modifier = Modifier,
-    extractColor: Boolean = false,
     shape: Shape = RoundedCornerShape(ThumbnailCornerRadius),
     contentScale: ContentScale = ContentScale.Crop,
     alignment: Alignment = Alignment.Center,
@@ -106,7 +123,6 @@ internal fun AsyncImage(
 ) {
     val context = LocalPlatformContext.current
     val canonicalUrl = remember(url) { canonicalArtworkUrl(url) }
-    val artworkColorsEnabled = Settings.shared.materialYouEnabled && Settings.shared.dynamicTheme
 
     val saturationMatrix =
         remember(saturation) {
@@ -116,27 +132,6 @@ internal fun AsyncImage(
         remember(saturationMatrix) {
             ColorFilter.colorMatrix(saturationMatrix)
         }
-
-    LaunchedEffect(canonicalUrl, extractColor, artworkColorsEnabled) {
-        if (!extractColor || !artworkColorsEnabled) return@LaunchedEffect
-        updateArtworkTheme(canonicalUrl) { artworkUrl ->
-            val requestMutex = artworkThemeRequestMutexes.computeIfAbsent(artworkUrl) { Mutex() }
-            try {
-                withContext(Dispatchers.IO) {
-                    requestMutex.withLock {
-                        val themeData =
-                            artworkThemeCacheMutex.withLock { artworkThemeCache[artworkUrl] }
-                                ?: loadArtworkTheme(context, url).also { theme ->
-                                    artworkThemeCacheMutex.withLock { artworkThemeCache[artworkUrl] = theme }
-                                }
-                        themeData.seedColor
-                    }
-                }
-            } finally {
-                artworkThemeRequestMutexes.remove(artworkUrl, requestMutex)
-            }
-        }
-    }
 
     val imageModifier =
         if (blur != null) {

@@ -10,8 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
 import com.metrolist.android.listentogether.AndroidListenTogetherManager
+import com.metrolist.shared.ui.theme.ComponentShapes
 import com.metrolist.shared.ui.components.SwipeGestureHandler as SharedSwipeGestureHandler
 
 @Composable
@@ -22,6 +24,7 @@ fun SwipeGestureHandler(
     enabled: Boolean = true,
     removeOnSwipeLeft: Boolean = false,
     enableSwipeRight: Boolean = true,
+    shape: Shape = ComponentShapes.CardShape,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
@@ -36,6 +39,7 @@ fun SwipeGestureHandler(
         enabled = enabled && !isGuest,
         removeOnSwipeLeft = removeOnSwipeLeft,
         enableSwipeRight = enableSwipeRight,
+        shape = shape,
         content = content,
     )
 }

@@ -547,4 +547,17 @@
     <string name="sponsorblock_skipped">Promocijski odsek preskočen</string>
     <string name="episode_played">Predvajano</string>
     <string name="lastfm_service_error">Prijava v Last.fm ni na voljo. Poskusite znova pozneje.</string>
+    <string name="settings_reset_to_default">Ponastavi na privzeto</string>
+    <string name="download_paused">Pavzirano</string>
+    <string name="downloads_empty">Nobenih prenosov v teku</string>
+    <string name="downloads_empty_hint">Pesmi, ki jih shranite za poslušanje brez povezave, se bodo med prenašanjem prikazale tukaj.</string>
+    <string name="remove_all_downloads">Odstrani vse prenose</string>
+    <string name="lyrics_song_artist">Avtor pesmi</string>
+    <string name="lyrics_capability_line_syllable">Vrstica in zlog</string>
+    <string name="lyrics_capability_line_syllable_unsynced">Vrstica, zlog in nesinhronizirano</string>
+    <string name="lyrics_capability_line_unsynced">Linijski in nesinhroniziran</string>
+    <string name="lyrics_capability_line">Linija</string>
+    <string name="lyrics_capability_unsynced">Nesinhroniziran</string>
+    <string name="lyrics_youtube_captions">YouTube napisi</string>
+    <string name="edit_playlist_cover">Uredi sliko seznama predvajanja</string>
 </resources>
