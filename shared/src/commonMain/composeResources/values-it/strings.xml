@@ -112,19 +112,19 @@
         <item quantity="other">%1$d album</item>
     </plurals>
     <plurals name="n_week">
-        <item quantity="one">%1$d settimana</item>
-        <item quantity="many">%1$d settimane</item>
-        <item quantity="other">%1$d settimane</item>
+        <item quantity="one">%1$d settimana</item>
+        <item quantity="many">%1$d settimane</item>
+        <item quantity="other">%1$d settimane</item>
     </plurals>
     <plurals name="n_month">
-        <item quantity="one">%1$d mese</item>
-        <item quantity="many">%1$d mesi</item>
-        <item quantity="other">%1$d mesi</item>
+        <item quantity="one">%1$d mese</item>
+        <item quantity="many">%1$d mesi</item>
+        <item quantity="other">%1$d mesi</item>
     </plurals>
     <plurals name="n_year">
-        <item quantity="one">%1$d anno</item>
-        <item quantity="many">%1$d anni</item>
-        <item quantity="other">%1$d anni</item>
+        <item quantity="one">%1$d anno</item>
+        <item quantity="many">%1$d anni</item>
+        <item quantity="other">%1$d anni</item>
     </plurals>
     <string name="undo">Annulla</string>
     <string name="lyrics_not_found">Testo non trovato</string>
@@ -287,7 +287,7 @@
     <string name="discord_refresh_rpc">Aggiorna RPC</string>
     <string name="discord_refresh_rpc_description">Invia nuovamente l'attività attuale a Discord</string>
     <string name="discord_refresh_rate_limited">Aspetta un attimo prima di aggiornare ancora</string>
-    <string name="discord_refresh_error">Impossibile aggiornare l\u0027attività</string>
+    <string name="discord_refresh_error">Impossibile aggiornare l'attività</string>
     <string name="integrations">Servizi collegati</string>
     <string name="settings_interface">Interfaccia</string>
     <string name="settings_playback">Riproduzione</string>
@@ -468,7 +468,7 @@
         <item quantity="many">%1$d brani</item>
         <item quantity="other">%1$d brani</item>
     </plurals>
-    <string name="spotify_login_page_failed">Impossibile caricare l\u0027accesso a Spotify: %1$s</string>
+    <string name="spotify_login_page_failed">Impossibile caricare l'accesso a Spotify: %1$s</string>
     <string name="import_playlist">Importa playlist</string>
     <string name="playlist_url">URL o ID della playlist</string>
     <string name="playlist_name">Nome playlist</string>
@@ -598,9 +598,9 @@
     <string name="updates_notification_text">Tocca per scaricare e installare l\u0027aggiornamento</string>
     <string name="updates_channel_name">Aggiornamenti app</string>
     <string name="updates_channel_description">Notifiche sulle nuove versioni di Metrolist</string>
-    <string name="updates_download_failed">Impossibile scaricare l\u0027aggiornamento.</string>
-    <string name="updates_digest_failed">L\u0027aggiornamento scaricato non corrisponde al checksum di GitHub.</string>
-    <string name="updates_installer_failed">L\u0027installer di Android non è disponibile o l\u0027installazione delle app non è consentita.</string>
+    <string name="updates_download_failed">Impossibile scaricare l'aggiornamento.</string>
+    <string name="updates_digest_failed">L'aggiornamento scaricato non corrisponde al checksum di GitHub.</string>
+    <string name="updates_installer_failed">L'installer di Android non è disponibile o l'installazione delle app non è consentita.</string>
     <string name="updates_release_unavailable">Questo rilascio non include un APK compatibile.</string>
     <string name="updates_release_notes_title">Cosa c\u0027è di nuovo in Metrolist %1$s</string>
     <string name="device_connect_title">Device Connect</string>
@@ -1038,7 +1038,7 @@
     <string name="menu_account">Account</string>
     <string name="onboarding_finish_description">Configurazione completata. Comincia ad ascoltare, oppure trasferisci prima il tuo account e i tuoi dati.</string>
     <string name="account_user_icon">Utente</string>
-    <string name="account_webview_remove_failed">Impossibile rimuovere il profilo d\u0027accesso WebView.</string>
+    <string name="account_webview_remove_failed">Impossibile rimuovere il profilo d'accesso WebView.</string>
     <string name="account_login_with_token">Accedi con il token</string>
     <string name="playlist_reorder">Riordina</string>
     <string name="startup_error_title">Errore di avvio di Metrolist</string>
@@ -1186,7 +1186,7 @@
     <string name="disconnect_cast">Disconnettiti</string>
     <string name="cast_no_media">Scegli un brano prima di trasmettere.</string>
     <string name="cast_unsupported_stream">Questo brano non supporta la trasmissione.</string>
-    <string name="cast_playback_failed">Il dispositivo di trasmissione non è riuscito a completare l\u0027azione.</string>
+    <string name="cast_playback_failed">Il dispositivo di trasmissione non è riuscito a completare l'azione.</string>
     <string name="lyrics_romanize_as_main">Testi romanizzati come principale</string>
     <string name="lyrics_romanization_syllable_title">Sillabe romanizzate sotto le parole</string>
     <string name="lyrics_romanization_syllable_description">Mostra il testo romanizzato sotto ogni parola nei testi sincronizzati per parola (come Apple Music)</string>
