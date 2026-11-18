@@ -43,6 +43,7 @@ import com.metrolist.shared.constants.BlockedSongsUndoHintShownKey
 import com.metrolist.shared.constants.BlockedUsersUndoHintShownKey
 import com.metrolist.shared.constants.CachedCollectionSortDirectionKey
 import com.metrolist.shared.constants.CachedCollectionSortKey
+import com.metrolist.shared.constants.CachedSongsCustomOrderKey
 import com.metrolist.shared.constants.CanvasCacheSizeKey
 import com.metrolist.shared.constants.CanvasContentOrderKey
 import com.metrolist.shared.constants.CanvasEnabledSourcesKey
@@ -737,6 +738,15 @@ class Settings(
     var likedSongSortDirection by preference(LikedSongSortDirectionKey, SortDirection.DESCENDING)
     var cachedCollectionSort by preference(CachedCollectionSortKey, CollectionSort.NEWEST)
     var cachedCollectionSortDirection by preference(CachedCollectionSortDirectionKey, SortDirection.DESCENDING)
+    var cachedSongsCustomOrder by preference(CachedSongsCustomOrderKey, "[]")
+
+    fun cachedSongsOrder(): List<String> =
+        runCatching { Json.decodeFromString<List<String>>(cachedSongsCustomOrder) }.getOrDefault(emptyList())
+
+    fun setCachedSongsOrder(order: List<String>) {
+        cachedSongsCustomOrder = Json.encodeToString(order.distinct())
+    }
+
     var downloadedCollectionSort by preference(DownloadedCollectionSortKey, CollectionSort.NEWEST)
     var downloadedCollectionSortDirection by preference(DownloadedCollectionSortDirectionKey, SortDirection.DESCENDING)
     private var collectionCoversJson by preference(CollectionCoversKey, "{}")

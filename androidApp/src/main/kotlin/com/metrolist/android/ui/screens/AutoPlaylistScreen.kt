@@ -134,6 +134,7 @@ import com.metrolist.shared.generated.resources.uploaded_playlist_name
 import com.metrolist.shared.generated.resources.uploaded_song_to_youtube_music
 import com.metrolist.shared.generated.resources.uploading
 import com.metrolist.shared.model.BuiltinPlaylist
+import com.metrolist.shared.model.CollectionMeta
 import com.metrolist.shared.model.CollectionSort
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.PlaylistSongSort
@@ -143,6 +144,9 @@ import com.metrolist.shared.model.TopPlaylistPeriod
 import com.metrolist.shared.model.defaultDirection
 import com.metrolist.shared.model.indexOfPlaylistOccurrence
 import com.metrolist.shared.model.isReordering
+import com.metrolist.shared.model.moveCachedSong
+import com.metrolist.shared.model.presentCollection
+import com.metrolist.shared.model.reconcileCachedCustomOrder
 import com.metrolist.shared.model.toSongItem
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.HiddenLibraryItem
@@ -270,7 +274,10 @@ fun AutoPlaylistScreen(
                     } else {
                         Settings.shared.cachedCollectionSortDirection
                     },
-                ).sort,
+                ).sort
+                .let { saved ->
+                    if (currentType == "cached" || saved != CollectionSort.MANUAL) saved else CollectionSort.NEWEST
+                },
         )
     }
     val countIds =
@@ -307,6 +314,8 @@ fun AutoPlaylistScreen(
     var topPeriod by remember { mutableStateOf(TopPlaylistPeriod.ALL_TIME) }
     var topDirection by remember { mutableStateOf(SortDirection.DESCENDING) }
     val likedReorderMode = playlistSort.isReordering(Settings.shared.playlistEditLock, currentType == "liked")
+    val cachedReorderMode = collectionSort.isReordering(Settings.shared.playlistEditLock, currentType == "cached")
+    val reorderMode = if (currentType == "cached") cachedReorderMode else likedReorderMode
     val addToPlaylist = LocalPlaylistAdder.current
     val selection = rememberSelectionState(currentType)
     val downloadFilter = rememberDownloadPlaylistFilter(database)
@@ -354,6 +363,7 @@ fun AutoPlaylistScreen(
             topDirection = topDirection,
             likedSongRecency = if (isLikedCollection) SongLikeState.likedSongRecency else emptyList(),
             downloadFilter = downloadFilterState,
+            cachedCustomOrder = if (currentType == "cached") Settings.shared.cachedSongsOrder() else emptyList(),
         ).withSongSorting(
             locked = Settings.shared.playlistEditLock,
             listeningTimes = { SongMetadataState.listeningTimes },
@@ -370,6 +380,19 @@ fun AutoPlaylistScreen(
             }
         }
     }
+    val cachedManualSongs =
+        remember(currentType, collectionSort, collectionQuery, songs, Settings.shared.cachedSongsCustomOrder) {
+            if (currentType == "cached" && collectionSort == CollectionSort.MANUAL && collectionQuery.isBlank()) {
+                songs.presentCollection(
+                    "",
+                    CollectionSort.MANUAL,
+                    SortDirection.ASCENDING,
+                    customOrder = Settings.shared.cachedSongsOrder(),
+                ) { null }
+            } else {
+                emptyList()
+            }
+        }
     val displayedSongs =
         if (currentType == "downloaded" &&
             (downloadFilterState.loading || downloadFilterState.failed || preparedDownloadFilter != downloadFilterState)
@@ -377,8 +400,17 @@ fun AutoPlaylistScreen(
             emptyList()
         } else if (isLikedCollection && likedReorderMode && collectionQuery.isBlank()) {
             songs
+        } else if (currentType == "cached" && collectionSort == CollectionSort.MANUAL && collectionQuery.isBlank()) {
+            cachedManualSongs
         } else {
             preparedSongs
+        }
+
+    suspend fun orderedCachedSongs(): List<SongItem> =
+        if (collectionQuery.isBlank()) {
+            displayedSongs
+        } else {
+            prepareAutoPlaylistSongs(presentationInput().copy(query = ""))
         }
     val selectedSongs =
         remember(displayedSongs, selection.selectedIds) {
@@ -494,6 +526,14 @@ fun AutoPlaylistScreen(
                                 },
                             )
                         }
+                    val currentIds = cachedSongs.mapTo(hashSetOf()) { it.songId }
+                    val savedOrder = Settings.shared.cachedSongsOrder()
+                    if (savedOrder.isNotEmpty()) {
+                        val cleaned = savedOrder.filter { it in currentIds }
+                        if (cleaned != savedOrder) {
+                            Settings.shared.setCachedSongsOrder(cleaned)
+                        }
+                    }
                     isLoading = false
                 }
                 return@LaunchedEffect
@@ -772,7 +812,7 @@ fun AutoPlaylistScreen(
                     },
                     onTrackMenuClick = { song, _ -> selectedMenuSong = song },
                     onTrackLongClick = { song ->
-                        if (!likedReorderMode) selection.begin(song.id)
+                        if (!reorderMode) selection.begin(song.id)
                     },
                     trackTrailingContent = { song, _ ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -797,13 +837,39 @@ fun AutoPlaylistScreen(
                     currentSongId = currentSong?.id,
                     isPlaying = isPlaying,
                     onArtistClick = onArtistClick,
-                    reorderMode = likedReorderMode,
+                    reorderMode = reorderMode,
                     onReorder = { fromIndex, toIndex ->
                         val from = displayedSongs.getOrNull(fromIndex)
                         val to = displayedSongs.getOrNull(toIndex)
                         if (from != null && to != null) {
-                            SongLikeState.moveLike(from.id, to.id, selectedSongs.mapTo(mutableSetOf()) { it.id })
-                            songs = BlockedContent.filterSongs(SongLikeState.likedSongs)
+                            when (currentType) {
+                                "liked" -> {
+                                    SongLikeState.moveLike(from.id, to.id, selectedSongs.mapTo(mutableSetOf()) { it.id })
+                                    songs = BlockedContent.filterSongs(SongLikeState.likedSongs)
+                                }
+
+                                "cached" -> {
+                                    val currentIds =
+                                        if (collectionEntries.isNotEmpty()) {
+                                            collectionEntries.map { it.songId }
+                                        } else {
+                                            displayedSongs.map { it.id }
+                                        }
+                                    val currentOrder =
+                                        reconcileCachedCustomOrder(
+                                            currentIds,
+                                            Settings.shared.cachedSongsOrder(),
+                                        )
+                                    val updatedOrder =
+                                        moveCachedSong(
+                                            currentOrder,
+                                            from.id,
+                                            to.id,
+                                            selectedSongs.mapTo(mutableSetOf()) { it.id },
+                                        )
+                                    Settings.shared.setCachedSongsOrder(updatedOrder)
+                                }
+                            }
                         }
                     },
                     searchQuery = collectionQuery,
@@ -832,18 +898,49 @@ fun AutoPlaylistScreen(
                     orderControls = {
                         when {
                             isStoredCollection -> {
+                                val isCachedCollection = currentType == "cached"
                                 Column {
                                     CollectionFilterBar(
-                                        text = collectionFilterBarText(),
+                                        text = collectionFilterBarText(includeManual = isCachedCollection),
                                         query = collectionQuery,
                                         onQueryChange = { collectionQuery = it },
                                         sort = collectionSort,
-                                        onSortChange = {
-                                            collectionSort = it
-                                            collectionDirection = it.defaultDirection
+                                        onSortChange = { selectedSort ->
+                                            if (isCachedCollection &&
+                                                selectedSort == CollectionSort.MANUAL &&
+                                                Settings.shared.cachedSongsOrder().isEmpty()
+                                            ) {
+                                                val initialSongs =
+                                                    if (collectionQuery.isBlank() && displayedSongs.isNotEmpty()) {
+                                                        displayedSongs
+                                                    } else {
+                                                        val entriesById = collectionEntries.associateBy(CachedAudioEntity::songId)
+                                                        songs.presentCollection("", collectionSort, collectionDirection) { song ->
+                                                            entriesById[song.id]?.let { entry ->
+                                                                CollectionMeta(
+                                                                    timestamp = entry.cachedAt,
+                                                                    fileSize = entry.fileSize,
+                                                                    lastAccessed = entry.lastAccessedAt,
+                                                                    playCount = playCounts[song.id] ?: 0,
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                val visibleIds = initialSongs.mapTo(hashSetOf()) { it.id }
+                                                val hiddenIds =
+                                                    collectionEntries
+                                                        .map { it.songId }
+                                                        .filterNot { it in visibleIds }
+                                                val initialOrder = (hiddenIds + initialSongs.map { it.id }).distinct()
+                                                if (initialOrder.isNotEmpty()) {
+                                                    Settings.shared.setCachedSongsOrder(initialOrder)
+                                                }
+                                            }
+                                            collectionSort = selectedSort
+                                            collectionDirection = selectedSort.defaultDirection
                                             Settings.shared.setPlaylistCollectionSorting(
                                                 "special:$currentType",
-                                                SavedPlaylistCollectionSorting(it, it.defaultDirection),
+                                                SavedPlaylistCollectionSorting(selectedSort, selectedSort.defaultDirection),
                                             )
                                         },
                                         sortDirection = collectionDirection,
@@ -856,6 +953,12 @@ fun AutoPlaylistScreen(
                                         },
                                         modifier = Modifier.padding(vertical = 8.dp),
                                         showSearch = false,
+                                        reorderMode = isCachedCollection && cachedReorderMode,
+                                        canReorder = isCachedCollection,
+                                        onReorderModeChange = { enabled ->
+                                            if (enabled) collectionQuery = ""
+                                            Settings.shared.playlistEditLock = !enabled
+                                        },
                                     )
                                 }
                             }
@@ -949,28 +1052,40 @@ fun AutoPlaylistScreen(
 
     if (showCollectionMenu) {
         val title = autoPlaylistTitle(currentType)
+
+        fun launchCollectionAction(action: (List<SongItem>) -> Unit) {
+            if (currentType == "cached") {
+                scope.launch {
+                    val queue = orderedCachedSongs()
+                    if (queue.isNotEmpty()) action(queue)
+                }
+            } else {
+                action(songs)
+            }
+        }
+
         PlaylistMenu(
             playlist =
                 BuiltinPlaylist.fromId("auto:$currentType")?.playlist(title)
                     ?: PlaylistItem(id = "auto:$currentType", title = title, thumbnail = null),
             fallbackIcon = MetrolistIcons.Filled.Favorite,
             onDismiss = { showCollectionMenu = false },
-            onPlay = { playerConnection?.playQueue(songs, queueTitle = title, finite = true) },
-            onShuffle = { playerConnection?.shuffleQueue(songs, queueTitle = title, finite = true) },
-            onPlayNext = { playerConnection?.addToQueue(songs, playNext = true) },
-            onAddToQueue = { playerConnection?.addToQueue(songs) },
+            onPlay = { launchCollectionAction { playerConnection?.playQueue(it, queueTitle = title, finite = true) } },
+            onShuffle = { launchCollectionAction { playerConnection?.shuffleQueue(it, queueTitle = title, finite = true) } },
+            onPlayNext = { launchCollectionAction { playerConnection?.addToQueue(it, playNext = true) } },
+            onAddToQueue = { launchCollectionAction { playerConnection?.addToQueue(it) } },
             onHideFromLibrary = {
                 HiddenLibraryItems.hide(HiddenLibraryItem(HiddenLibraryItemType.AUTO, currentType, title))
             },
             onExport = { showExportDialog = true },
-            loadSongs = { songs },
+            loadSongs = { if (currentType == "cached") orderedCachedSongs() else songs },
         )
     }
     PopupVisibility(visible = showExportDialog) {
         CollectionExportDialog(
             title = autoPlaylistTitle(currentType),
             onDismiss = { showExportDialog = false },
-            loadSongs = { songs },
+            loadSongs = { if (currentType == "cached") orderedCachedSongs() else songs },
         )
     }
 

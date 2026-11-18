@@ -11,6 +11,9 @@ import com.metrolist.shared.model.CollectionSort
 import com.metrolist.shared.model.PlaylistSongSort
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.SortDirection
+import com.metrolist.shared.model.moveCachedSong
+import com.metrolist.shared.model.reconcileCachedCustomOrder
+import com.metrolist.shared.settings.SavedPlaylistCollectionSorting
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.viewmodels.DownloadPlaylistFilterState
 import com.russhwolf.settings.MapSettings
@@ -23,6 +26,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -258,4 +262,148 @@ class AutoPlaylistPresentationTest {
             assertSame(previous, published)
             assertEquals(songs.take(1), prepareAutoPlaylistSongs(input.copy(query = "Zulu"), dispatcher))
         }
+
+    @Test
+    fun cachedManualSortAppliesCustomOrderAndPlacesNewSongsFirst() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val bravo = SongItem("b", "Bravo", null, emptyList(), null)
+            val cachedSongs = listOf(songs[0], bravo, songs[1])
+            val cachedInput =
+                input.copy(
+                    type = "cached",
+                    songs = cachedSongs,
+                    collectionSort = CollectionSort.MANUAL,
+                    collectionDirection = SortDirection.ASCENDING,
+                    cachedCustomOrder = listOf("deleted", "a", "z"),
+                )
+
+            assertEquals(
+                listOf(bravo, songs[1], songs[0]),
+                prepareAutoPlaylistSongs(cachedInput, dispatcher),
+            )
+            assertFalse(cachedInput.withSongSorting(locked = true) { emptyMap() }.reorder)
+            assertTrue(cachedInput.withSongSorting(locked = false) { emptyMap() }.reorder)
+            assertFalse(
+                cachedInput
+                    .copy(collectionSort = CollectionSort.NEWEST)
+                    .withSongSorting(locked = false) { emptyMap() }
+                    .reorder,
+            )
+        }
+
+    @Test
+    fun cachedManualSortSearchFiltersWithoutLosingCustomOrderForPlayback() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val bravo = SongItem("b", "Alpha Remix", null, emptyList(), null)
+            val cachedSongs = listOf(songs[0], bravo, songs[1])
+            val cachedInput =
+                input.copy(
+                    type = "cached",
+                    songs = cachedSongs,
+                    collectionSort = CollectionSort.MANUAL,
+                    collectionDirection = SortDirection.DESCENDING,
+                    cachedCustomOrder = listOf("b", "z", "a"),
+                )
+
+            assertEquals(
+                listOf(bravo, songs[1]),
+                prepareAutoPlaylistSongs(cachedInput.copy(query = " alpha "), dispatcher),
+            )
+            assertEquals(
+                listOf(bravo, songs[0], songs[1]),
+                prepareAutoPlaylistSongs(cachedInput.copy(query = ""), dispatcher),
+            )
+        }
+
+    @Test
+    fun switchingCachedSortToBuiltinPreservesMetadataSortingAndLeavesDownloadedUnchanged() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val bravo = SongItem("b", "Bravo", null, emptyList(), null)
+            val cachedSongs = listOf(songs[0], bravo, songs[1])
+            val timestamps = mapOf("z" to 30L, "b" to 10L, "a" to 20L)
+            val entries =
+                cachedSongs.mapIndexed { index, song ->
+                    CachedAudioEntity(
+                        songId = song.id,
+                        title = song.title,
+                        artist = "",
+                        filePath = song.id,
+                        fileSize = (index + 1L) * 100L,
+                        cachedAt = timestamps.getValue(song.id),
+                        lastAccessedAt = index.toLong(),
+                        cacheLocation = "test",
+                    )
+                }
+            val base =
+                input.copy(
+                    type = "cached",
+                    songs = cachedSongs,
+                    collectionEntries = entries,
+                    cachedCustomOrder = listOf("b", "z", "a"),
+                )
+
+            assertEquals(
+                listOf(songs[1], bravo, songs[0]),
+                prepareAutoPlaylistSongs(
+                    base.copy(collectionSort = CollectionSort.TITLE, collectionDirection = SortDirection.ASCENDING),
+                    dispatcher,
+                ),
+            )
+            assertEquals(
+                listOf(songs[0], songs[1], bravo),
+                prepareAutoPlaylistSongs(
+                    base.copy(collectionSort = CollectionSort.NEWEST, collectionDirection = SortDirection.DESCENDING),
+                    dispatcher,
+                ),
+            )
+            assertEquals(
+                listOf(bravo, songs[0], songs[1]),
+                prepareAutoPlaylistSongs(
+                    base.copy(collectionSort = CollectionSort.MOST_PLAYED, playCounts = mapOf("b" to 5, "z" to 2)),
+                    dispatcher,
+                ),
+            )
+
+            val downloadedInput =
+                base.copy(
+                    type = "downloaded",
+                    collectionSort = CollectionSort.MANUAL,
+                    collectionDirection = SortDirection.DESCENDING,
+                )
+            assertFalse(downloadedInput.withSongSorting(locked = false) { emptyMap() }.reorder)
+            assertEquals(
+                listOf(songs[0], songs[1], bravo),
+                prepareAutoPlaylistSongs(downloadedInput, dispatcher),
+            )
+        }
+
+    @Test
+    fun moveCachedSongSupportsSingleAndMultiSelectionMoves() {
+        val initial = listOf("a", "b", "c", "d")
+        assertEquals(listOf("b", "c", "a", "d"), moveCachedSong(initial, "a", "c"))
+        assertEquals(initial, moveCachedSong(initial, "a", "c", selectedSongIds = setOf("a", "c")))
+        assertEquals(listOf("c", "a", "b", "d"), moveCachedSong(initial, "a", "c", selectedSongIds = setOf("a", "b")))
+        assertEquals(listOf("a", "d", "b", "c"), moveCachedSong(initial, "d", "b", selectedSongIds = setOf("a", "d")))
+        assertEquals(initial, moveCachedSong(initial, "missing", "c"))
+
+        assertEquals(
+            listOf("e", "a", "c"),
+            reconcileCachedCustomOrder(currentIds = listOf("c", "e", "a"), savedOrder = listOf("a", "b", "c", "d")),
+        )
+
+        val settings = Settings(MapSettings())
+        settings.setCachedSongsOrder(listOf("b", "a", "c", "b"))
+        settings.setPlaylistCollectionSorting(
+            "special:cached",
+            SavedPlaylistCollectionSorting(CollectionSort.MANUAL, SortDirection.ASCENDING),
+        )
+        assertEquals(listOf("b", "a", "c"), settings.cachedSongsOrder())
+        assertEquals(
+            SavedPlaylistCollectionSorting(CollectionSort.MANUAL, SortDirection.ASCENDING),
+            settings.playlistCollectionSorting("special:cached", CollectionSort.NEWEST, SortDirection.DESCENDING),
+        )
+    }
 }

@@ -33,6 +33,7 @@ internal data class AutoPlaylistPresentationInput(
     val likedSongRecency: List<String> = emptyList(),
     val listeningTimes: Map<String, Long> = emptyMap(),
     val downloadFilter: DownloadPlaylistFilterState = DownloadPlaylistFilterState(),
+    val cachedCustomOrder: List<String> = emptyList(),
 )
 
 internal fun AutoPlaylistPresentationInput.withSongSorting(
@@ -40,7 +41,12 @@ internal fun AutoPlaylistPresentationInput.withSongSorting(
     listeningTimes: () -> Map<String, Long>,
 ): AutoPlaylistPresentationInput =
     copy(
-        reorder = playlistSort.isReordering(locked, type == "liked"),
+        reorder =
+            when (type) {
+                "liked" -> playlistSort.isReordering(locked, true)
+                "cached" -> collectionSort.isReordering(locked, true)
+                else -> false
+            },
         listeningTimes = if (playlistSort == PlaylistSongSort.LISTENING_TIME) listeningTimes() else emptyMap(),
     )
 
@@ -54,7 +60,18 @@ internal suspend fun prepareAutoPlaylistSongs(
                 "downloaded", "cached" -> {
                     val entries = collectionEntries.associateBy(CachedAudioEntity::songId)
                     val filtered = if (type == "downloaded") downloadFilter.apply(songs) else songs
-                    filtered.presentCollection(query, collectionSort, collectionDirection) { song ->
+                    val effectiveSort =
+                        if (type == "cached") {
+                            collectionSort
+                        } else {
+                            collectionSort.takeUnless { it == CollectionSort.MANUAL } ?: CollectionSort.NEWEST
+                        }
+                    filtered.presentCollection(
+                        query,
+                        effectiveSort,
+                        collectionDirection,
+                        customOrder = if (type == "cached") cachedCustomOrder else emptyList(),
+                    ) { song ->
                         entries[song.id]?.let { entry ->
                             CollectionMeta(
                                 timestamp = entry.cachedAt,
