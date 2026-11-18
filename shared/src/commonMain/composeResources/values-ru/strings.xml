@@ -2683,4 +2683,5 @@
     <string name="account_nightly_update_available">Доступна новая ночная сборка</string>
     <string name="tray_hide_miniplayer">Скрыть мини-плеер</string>
     <string name="updates_nightly_builds_desc">После каждого изменения будет создаваться новая сборка. Ночные сборки могут быть нестабильными.</string>
+    <string name="playlist_lock">Заблокировать</string>
 </resources>
