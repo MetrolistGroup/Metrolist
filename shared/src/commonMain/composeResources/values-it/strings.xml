@@ -530,7 +530,7 @@
     <string name="hide_short_songs">Nascondi i brani brevi</string>
     <string name="hide_short_songs_desc">Nascondi anteprime, audio degli Shorts e altri brani più brevi della durata impostata</string>
     <string name="minimum_song_duration">Durata minima dei brani</string>
-    <string name="minimum_song_duration_desc">Nascondi brani di durata inferiore a %1$d secondi</string>
+    <string name="minimum_song_duration_desc">Nascondi brani di durata inferiore a %1$d secondi</string>
     <string name="block_ai_slop_artists">Blocca gli artisti IA noti</string>
     <string name="block_ai_slop_artists_desc">Nascondi i canali elencati in Override92/AiSList. La lista CC BY-NC 4.0 si aggiorna quotidianamente e rimane disponibile offline.</string>
     <string name="listen_together_entry_subtitle">Ascolta la musica con i tuoi amici in tempo reale.</string>
