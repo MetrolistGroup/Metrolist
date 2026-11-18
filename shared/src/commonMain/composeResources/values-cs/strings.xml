@@ -1437,7 +1437,7 @@
     <string name="stats_for_nerds">Statistiky pro experty</string>
     <string name="copy_debug_info">Zkopírovat debug informace</string>
     <string name="copy_url_at_current_time">Zkopírovat URL v aktuálním čase</string>
-    <string name="offset_ms">%1$d milisekund</string>
+    <string name="offset_ms">%1$d milisekund</string>
     <string name="retry_cleanup">Opakovat čištění</string>
     <string name="windows_login_helper">Pomocník přihlášení Windows</string>
     <string name="start_login_process">Spustit proces přihlášení</string>
@@ -1635,11 +1635,11 @@
     <string name="shortcuts_music_video">Videoklip</string>
     <string name="shortcuts_navigation_interface">Navigace a rozhraní</string>
     <string name="shortcut_seek_backward_forward">Posunout vpřed/vzad o 5s</string>
-    <string name="shortcut_jump_percent" formatted="false">Přejít na 0\u0025 – 90\u0025</string>
+    <string name="shortcut_jump_percent" formatted="false">Přejít na 0% – 90%</string>
     <string name="shortcut_toggle_shuffle">Přepnout náhodné přehrávání</string>
     <string name="shortcut_cycle_repeat">Procházet režim opakování</string>
-    <string name="shortcut_volume_up_down">Zvýšení / snížení hlasitosti o 10 \u0025</string>
-    <string name="shortcut_volume_step">Zvýšení / Snížení hlasitosti o krok</string>
+    <string name="shortcut_volume_up_down">Zvýšení / snížení hlasitosti o 10 %</string>
+    <string name="shortcut_volume_step">Zvýšení / Snížení hlasitosti o krok</string>
     <string name="shortcut_mute_unmute">Ztlumit / zrušit ztlumení</string>
     <string name="shortcut_toggle_captions">Přepnout titulky</string>
     <string name="show_queue">Zobrazit frontu</string>
@@ -1790,7 +1790,7 @@
     <string name="tray_tooltip_playing">Přehrávání: %1$s • %2$s</string>
     <string name="tray_tooltip_paused">Pozastaveno: %1$s • %2$s</string>
     <string name="ready_to_start_login">Připraveno pro zahájení přihlášení.</string>
-    <string name="shortcut_toggle_video">Přepnout režim videa / prohlížeč</string>
+    <string name="shortcut_toggle_video">Přepnout režim videa / prohlížeč</string>
     <string name="shortcut_toggle_fullscreen_video">Přepnout video do celé obrazovky</string>
     <string name="shortcut_developer_log">Prohlížeč vývojářských záznamu</string>
     <string name="restore_replaces_data">Tohle vám nahradí vaše stávající nastavení, údaje, účty a data v knihovně. Metrolist se restartuje automaticky.</string>
@@ -1804,8 +1804,8 @@
     <string name="login_window_closed_unfinished">Okno s přihlášením se zavřelo před koncem.</string>
     <string name="login_helper_failed">Pomocník selhal: %1$s</string>
     <string name="error_with_message">Chyba: %1$s</string>
-    <string name="shortcut_toggle_lyrics">Přepnout panel / výsuvným panelem pro text písně</string>
-    <string name="shortcut_toggle_queue">Přepnout panel / výsuvným panelem pro frontu</string>
+    <string name="shortcut_toggle_lyrics">Přepnout panel / výsuvným panelem pro text písně</string>
+    <string name="shortcut_toggle_queue">Přepnout panel / výsuvným panelem pro frontu</string>
     <string name="shortcut_dismiss_dialogs">Zavřít dialogová okna nebo režim celé obrazovky</string>
     <string name="romanize_track">Převést skladbu do latinky</string>
     <string name="select_to_cancel">Kliknutím zrušíte</string>
