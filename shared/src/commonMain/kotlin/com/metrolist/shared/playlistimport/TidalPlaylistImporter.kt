@@ -14,7 +14,6 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -24,7 +23,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.compose.resources.getString
-import kotlin.time.Duration.Companion.milliseconds
 
 object TidalPlaylistImporter {
     private const val UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -103,7 +101,7 @@ object TidalPlaylistImporter {
     ): Result<ImportedPlaylistData> {
         val embedUrl = "https://embed.tidal.com/playlists/$playlistId"
         val response =
-            withTimeout(15_000.milliseconds) {
+            withImportRequestTimeout {
                 httpClient.get(embedUrl) {
                     header("User-Agent", UA)
                 }
@@ -211,7 +209,7 @@ object TidalPlaylistImporter {
     ): Result<ImportedPlaylistData> {
         val embedUrl = "https://embed.tidal.com/albums/$albumId"
         val response =
-            withTimeout(15_000.milliseconds) {
+            withImportRequestTimeout {
                 httpClient.get(embedUrl) {
                     header("User-Agent", UA)
                 }
@@ -299,7 +297,7 @@ object TidalPlaylistImporter {
     ): Result<ImportedPlaylistData> {
         val embedUrl = "https://embed.tidal.com/tracks/$trackId"
         val response =
-            withTimeout(15_000.milliseconds) {
+            withImportRequestTimeout {
                 httpClient.get(embedUrl) {
                     header("User-Agent", UA)
                 }

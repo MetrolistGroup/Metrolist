@@ -17,7 +17,6 @@ import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -30,7 +29,6 @@ import meow.nyx.spotlib.PlaylistMeta
 import org.jetbrains.compose.resources.getString
 import kotlin.io.encoding.Base64
 import kotlin.time.Clock
-import kotlin.time.Duration.Companion.milliseconds
 
 object AppleMusicPlaylistImporter {
     private const val UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -86,7 +84,7 @@ object AppleMusicPlaylistImporter {
             while (nextUrl != null && playlists.size < 500) {
                 val fullUrl = appleApiUrl(nextUrl)
                 val response =
-                    withTimeout(15_000.milliseconds) {
+                    withImportRequestTimeout {
                         httpClient.get(fullUrl) {
                             header("Authorization", "Bearer $devToken")
                             header("Music-User-Token", userToken)
@@ -141,7 +139,7 @@ object AppleMusicPlaylistImporter {
             while (nextUrl != null && tracks.size < PlaylistImportManager.MAX_PLAYLIST_TRACKS) {
                 val fullUrl = appleApiUrl(nextUrl)
                 val response =
-                    withTimeout(15_000.milliseconds) {
+                    withImportRequestTimeout {
                         httpClient.get(fullUrl) {
                             header("Authorization", "Bearer $devToken")
                             header("Music-User-Token", userToken)
@@ -266,7 +264,7 @@ object AppleMusicPlaylistImporter {
     ): Result<ImportedPlaylistData> {
         val metaUrl = "https://api.music.apple.com/v1/catalog/$storefront/playlists/$playlistId"
         val metaResponse =
-            withTimeout(15_000.milliseconds) {
+            withImportRequestTimeout {
                 httpClient.get(metaUrl) {
                     header("Authorization", "Bearer $token")
                     header("Origin", "https://music.apple.com")
@@ -315,7 +313,7 @@ object AppleMusicPlaylistImporter {
         while (nextUrl != null && tracks.size < PlaylistImportManager.MAX_PLAYLIST_TRACKS) {
             val fullUrl = appleApiUrl(nextUrl)
             val response =
-                withTimeout(15_000.milliseconds) {
+                withImportRequestTimeout {
                     httpClient.get(fullUrl) {
                         header("Authorization", "Bearer $token")
                         header("Origin", "https://music.apple.com")
@@ -366,7 +364,7 @@ object AppleMusicPlaylistImporter {
     ): Result<ImportedPlaylistData> {
         val metaUrl = "https://api.music.apple.com/v1/catalog/$storefront/albums/$albumId"
         val response =
-            withTimeout(15_000.milliseconds) {
+            withImportRequestTimeout {
                 httpClient.get(metaUrl) {
                     header("Authorization", "Bearer $token")
                     header("Origin", "https://music.apple.com")
@@ -433,7 +431,7 @@ object AppleMusicPlaylistImporter {
 
         return try {
             val browseHtml =
-                withTimeout(15_000.milliseconds) {
+                withImportRequestTimeout {
                     val response =
                         httpClient.get("https://music.apple.com/browse") {
                             header("User-Agent", UA)
@@ -446,7 +444,7 @@ object AppleMusicPlaylistImporter {
             val jsUrl = "https://music.apple.com$bundlePath"
 
             val js =
-                withTimeout(15_000.milliseconds) {
+                withImportRequestTimeout {
                     val response =
                         httpClient.get(jsUrl) {
                             header("User-Agent", UA)
@@ -477,6 +475,8 @@ object AppleMusicPlaylistImporter {
             jwt
         } catch (e: CancellationException) {
             throw e
+        } catch (error: ImportException) {
+            throw error
         } catch (_: Exception) {
             null
         }

@@ -11,7 +11,6 @@ import io.ktor.client.request.header
 import io.ktor.http.Url
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -20,7 +19,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.compose.resources.getString
-import kotlin.time.Duration.Companion.milliseconds
 
 object DeezerPlaylistImporter {
     private const val UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -106,7 +104,7 @@ object DeezerPlaylistImporter {
     ): Result<ImportedPlaylistData> {
         val url = "https://api.deezer.com/playlist/$playlistId"
         val response =
-            withTimeout(15_000.milliseconds) {
+            withImportRequestTimeout {
                 httpClient.get(url) {
                     header("User-Agent", UA)
                 }
@@ -159,7 +157,7 @@ object DeezerPlaylistImporter {
         while (nextUrl != null && tracks.size < PlaylistImportManager.MAX_PLAYLIST_TRACKS) {
             val urlToFetch = deezerApiUrl(nextUrl)
             val pageResponse =
-                withTimeout(15_000.milliseconds) {
+                withImportRequestTimeout {
                     httpClient.get(urlToFetch) {
                         header("User-Agent", UA)
                     }
@@ -209,7 +207,7 @@ object DeezerPlaylistImporter {
     ): Result<ImportedPlaylistData> {
         val url = "https://api.deezer.com/album/$albumId"
         val response =
-            withTimeout(15_000.milliseconds) {
+            withImportRequestTimeout {
                 httpClient.get(url) {
                     header("User-Agent", UA)
                 }
@@ -247,7 +245,7 @@ object DeezerPlaylistImporter {
             val pageUrl = deezerApiUrl(nextUrl)
             if (!visited.add(pageUrl)) throw ImportException(ImportErrorKey.IncompleteSource)
             val pageResponse =
-                withTimeout(15_000.milliseconds) {
+                withImportRequestTimeout {
                     httpClient.get(pageUrl) {
                         header("User-Agent", UA)
                     }
