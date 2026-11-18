@@ -212,6 +212,7 @@ fun SongContextMenu(
     onMoveDown: (() -> Unit)? = null,
     onHideFromLibrary: (() -> Unit)? = null,
     additionalActions: List<PlayerMenuAction> = emptyList(),
+    onPlaybackAction: () -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     var showDetails by remember(song.id) { mutableStateOf(false) }
@@ -251,13 +252,19 @@ fun SongContextMenu(
             isPinned = isPinned,
             downloadState = downloadState,
             downloadProgress = ((LibraryState.downloadProgress[song.id] ?: 0f) * 100).toInt(),
-            onPlay = { playback.play(song) },
+            onPlay = {
+                onPlaybackAction()
+                playback.play(song)
+            },
             onLike = {
                 PlayerState.toggleLike(song)
                 onDismiss()
             },
             onDislike = { PlayerState.toggleDislike(song) },
-            onStartRadio = { playback.startRadio(song) },
+            onStartRadio = {
+                onPlaybackAction()
+                playback.startRadio(song)
+            },
             onAddToPlaylist = {
                 showAddToPlaylist(song)
                 onDismiss()
@@ -416,6 +423,7 @@ fun PlaylistContextMenu(
     fallbackIcon: ImageVector? = null,
     additionalActions: List<PlayerMenuAction> = emptyList(),
     downloadSongs: List<SongItem> = songs,
+    onPlaybackAction: () -> Unit = {},
 ) {
     val playlist = localizedBuiltinPlaylist(playlist)
     var showExportDialog by remember(playlist.id) { mutableStateOf(false) }
@@ -491,8 +499,14 @@ fun PlaylistContextMenu(
             fallbackIcon = fallbackIcon,
             downloadState = downloadState,
             downloadProgress = downloadProgress,
-            onPlay = playbackActions::play,
-            onShuffle = playbackActions::shuffle,
+            onPlay = {
+                onPlaybackAction()
+                playbackActions.play()
+            },
+            onShuffle = {
+                onPlaybackAction()
+                playbackActions.shuffle()
+            },
             onShare =
                 if (isLocal) {
                     null

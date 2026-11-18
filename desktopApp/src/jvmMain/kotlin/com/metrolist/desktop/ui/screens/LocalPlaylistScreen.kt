@@ -110,6 +110,7 @@ import com.metrolist.shared.ui.menu.cursorContextMenu
 import com.metrolist.shared.ui.menu.rememberCursorContextMenuState
 import com.metrolist.shared.ui.navigation.LocalNavigator
 import com.metrolist.shared.ui.screens.StoredPlaylistContent
+import com.metrolist.shared.ui.screens.rememberPendingCollectionPlayState
 import com.metrolist.shared.ui.utils.rememberFileSizeFormatter
 import io.ktor.utils.io.jvm.javaio.toByteReadChannel
 import kotlinx.coroutines.CancellationException
@@ -436,11 +437,16 @@ private fun LocalPlaylistLayout(
                 .catch { emit(playCountsRequest to Result.failure(it)) }
         }
     }.collectAsState(null)
+    val playCountsFailed =
+        countIds.isNotEmpty() &&
+            playCountsState?.first === playCountsRequest &&
+            playCountsState?.second?.isFailure == true
     val playCountsLoaded =
         countIds.isEmpty() ||
             (playCountsState?.first === playCountsRequest && playCountsState?.second?.isSuccess == true)
     val playCounts =
         if (playCountsLoaded) playCountsState?.second?.getOrNull().orEmpty() else emptyMap()
+    val pendingPlayState = rememberPendingCollectionPlayState(type)
     val cachedCustomOrder =
         remember(isCachedCollection, cachedSorting, Settings.shared.cachedSongsCustomOrder) {
             if (isCachedCollection && cachedSorting?.sort == CollectionSort.MANUAL) {
@@ -531,7 +537,8 @@ private fun LocalPlaylistLayout(
             collectionMetadata = collectionMetadata,
             playCounts = playCounts,
             playCountsLoaded = playCountsLoaded,
-            onRetryPlayCounts = { playCountsRetryKey++ },
+            onRetryPlayCounts = { if (playCountsFailed) playCountsRetryKey++ },
+            pendingPlayState = pendingPlayState,
             onCollectionSortChange = { countSort = it == CollectionSort.MOST_PLAYED },
             onRemoveSongs = onRemoveSongs?.let { action -> { ids -> launchCollectionMutation { action(ids) } } },
             onClearCollection = onClearCollection?.let { action -> { launchCollectionMutation(action) } },
@@ -550,6 +557,7 @@ private fun LocalPlaylistLayout(
             expanded = collectionMenu.expanded,
             offset = collectionMenu.offset,
             onDismiss = collectionMenu::dismiss,
+            onPlaybackAction = pendingPlayState::cancel,
             onHideFromLibrary = { HiddenLibraryItems.hide(HiddenLibraryItem(HiddenLibraryItemType.AUTO, type, title)) },
             additionalActions =
                 listOf(
@@ -570,6 +578,7 @@ private fun LocalPlaylistLayout(
                 offset = songMenu.offset,
                 onRemoveFromPlaylist = onRemoveSongs?.let { action -> { launchCollectionMutation { action(setOf(song.id)) } } },
                 removeLabel = stringResource(Res.string.remove),
+                onPlaybackAction = pendingPlayState::cancel,
                 onDismiss = {
                     songMenu.dismiss()
                 },

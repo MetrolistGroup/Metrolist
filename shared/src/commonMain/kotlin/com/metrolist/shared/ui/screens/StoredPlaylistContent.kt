@@ -83,6 +83,18 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
+class PendingCollectionPlayState {
+    internal var job: Job? = null
+
+    fun cancel() {
+        job?.cancel()
+        job = null
+    }
+}
+
+@Composable
+fun rememberPendingCollectionPlayState(key: Any?): PendingCollectionPlayState = remember(key) { PendingCollectionPlayState() }
+
 @Composable
 fun StoredPlaylistContent(
     id: String,
@@ -103,6 +115,7 @@ fun StoredPlaylistContent(
     playCounts: Map<String, Int> = emptyMap(),
     playCountsLoaded: Boolean = true,
     onRetryPlayCounts: (() -> Unit)? = null,
+    pendingPlayState: PendingCollectionPlayState = rememberPendingCollectionPlayState(id),
     onCollectionSortChange: (CollectionSort) -> Unit = {},
     onRemoveSongs: ((Set<String>) -> Unit)? = null,
     onClearCollection: (() -> Unit)? = null,
@@ -240,7 +253,6 @@ fun StoredPlaylistContent(
         rememberUpdatedState(collectionMetadata == null || collectionSort != CollectionSort.MOST_PLAYED || playCountsLoaded)
     val currentOrderedSongs = rememberUpdatedState(orderedSongs)
     val currentQuery = rememberUpdatedState(query)
-    var playJob by remember(id) { mutableStateOf<Job?>(null) }
 
     fun playCollection(
         song: SongItem? = null,
@@ -249,8 +261,11 @@ fun StoredPlaylistContent(
         if (collectionSort == CollectionSort.MOST_PLAYED && !currentPlayCountsReady.value) {
             onRetryPlayCounts?.invoke()
         }
-        playJob?.cancel()
-        playJob =
+        val initialState = playback.state.value
+        val initialSongId = initialState.currentSong?.id
+        val initialQueueIds = initialState.queue.map(SongItem::id)
+        pendingPlayState.cancel()
+        pendingPlayState.job =
             scope.launch {
                 val complete =
                     if (hasMoreSongs && loadCompleteSongs != null) {
@@ -266,6 +281,10 @@ fun StoredPlaylistContent(
                             .first { (ready, _) -> ready }
                             .second
                     }
+                val currentState = playback.state.value
+                if (currentState.currentSong?.id != initialSongId || currentState.queue.map(SongItem::id) != initialQueueIds) {
+                    return@launch
+                }
                 val playable =
                     (if (song == null) complete.filterForPlaylistSearch(currentQuery.value) else complete)
                         .filterNot { it.isUnavailable }
@@ -321,13 +340,11 @@ fun StoredPlaylistContent(
                 selectedCount = selectedSongs.size,
                 selectedSongs = selectedSongs,
                 onPlay = {
-                    playJob?.cancel()
-                    playJob = null
+                    pendingPlayState.cancel()
                     selectedSongs.firstOrNull { !it.isUnavailable }?.let { playback.play(it, selectedSongs) }
                 },
                 onShuffle = {
-                    playJob?.cancel()
-                    playJob = null
+                    pendingPlayState.cancel()
                     playback.shuffleQueue(selectedSongs)
                 },
                 allSelected = selection.allSelected(displayedIds),
