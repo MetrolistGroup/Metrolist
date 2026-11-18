@@ -292,14 +292,14 @@
     <string name="app_font_picker_desc">选择 TTF 或 OTF 文件。Metrolist 将其复制到应用私有存储。</string>
     <string name="app_font_system">系统默认</string>
     <string name="app_font_applied">使用 %1$s</string>
-    <string name="app_font_invalid">无法使用该字体。请选择有效的 TTF 或 OTF 文件，大小小于 20 MB。</string>
+    <string name="app_font_invalid">无法使用该字体。请选择有效的 TTF 或 OTF 文件，大小小于 20 MB。</string>
     <string name="app_font_downloads">快速字体下载</string>
     <string name="app_font_checking">正在检查已安装字体…</string>
     <string name="app_font_reset">重置字体</string>
     <string name="app_font_reset_description">使用系统字体并移除导入的字体</string>
     <string name="app_font_downloading">正在下载 %1$s…</string>
     <string name="app_font_active">激活</string>
-    <string name="app_font_installed">已安装 · 点击使用</string>
+    <string name="app_font_installed">已安装 · 点击使用</string>
     <string name="app_font_download_and_use">点击下载并使用</string>
     <string name="app_font_download_error">无法下载 %1$s。请检查连接并重试。</string>
     <string name="app_font_import_custom">导入 TTF 或 OTF 文件</string>
@@ -796,4 +796,5 @@
     <string name="edit_playlist_cover_note">您的账号必须绑定电话号码并在 YouTube Music 上完成验证才能更改播放列表封面</string>
     <string name="discord_state">状态</string>
     <string name="settings_reset_to_default">重置为默认设置</string>
+    <string name="backup_created"></string>
 </resources>
