@@ -338,14 +338,14 @@
     <string name="app_font_picker_desc">Selectează un fișier TTF sau OTF. Metrolist îl va copia în stocarea privată a aplicației.</string>
     <string name="app_font_system">Prestabilit de sistem</string>
     <string name="app_font_applied">Se folosește %1$s</string>
-    <string name="app_font_invalid">Nu s-a putut folosi acel font. Alege un fișier TTF sau OTF mai mic de 20 MB.</string>
+    <string name="app_font_invalid">Nu s-a putut folosi acel font. Alege un fișier TTF sau OTF mai mic de 20 MB.</string>
     <string name="app_font_downloads">Descărcare rapidă fonturi</string>
     <string name="app_font_checking">Se verifică fontul instalat…</string>
     <string name="app_font_reset">Resetează fontul</string>
     <string name="app_font_reset_description">Folosește fontul sistemului și elimină fontul importat</string>
     <string name="app_font_downloading">Se descarcă %1$s…</string>
     <string name="app_font_active">Activ</string>
-    <string name="app_font_installed">Instalat · Atinge pentru a-l utiliza</string>
+    <string name="app_font_installed">Instalat · Atinge pentru a-l utiliza</string>
     <string name="app_font_download_and_use">Atinge pentru a-l descărca și utiliza</string>
     <string name="app_font_download_error">Nu s-a putut descărca %1$s. Verifică-ți conexiunea și încearcă din nou.</string>
     <string name="app_font_import_custom">Importă un fișier TTF sau OTF</string>
@@ -2644,4 +2644,6 @@
     <string name="cast_volume_step">Treapta de volum în timpul difuzării</string>
     <string name="cast_volume_step_description">Controlează cât de mult modifică volumul difuzorului sau al televizorului butoanele de volum ale telefonului în timpul difuzării</string>
     <string name="wrapped_merge_note">Include istoricul salvat din Metrolist și YouTube, plus cel din Last.fm atunci când serviciul este conectat și încărcat. Perechile unice de artiști și titluri sunt stabilite pe baza celui mai mare număr zilnic de redări. Melodiile de pe Last.fm care nu au o potrivire sunt numărate ca redări; potrivirile ambigue sunt excluse. Acest lucru poate duce la o subestimare a numărului de redări individuale. Timpul de ascultare include doar duratele înregistrate.</string>
+    <string name="matugen_colors_description"></string>
+    <string name="matugen_colors"></string>
 </resources>
