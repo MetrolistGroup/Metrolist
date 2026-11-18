@@ -48,7 +48,10 @@ class AndroidRadioRepeatTest {
     fun ordinaryQueuePlaybackPreservesRepeat() = checkRepeatModes(startRadio = false)
 
     @Test
-    fun currentSongRadioRetainsPlaybackWithoutRequestingOrSeekingAudio() = checkRepeatModes(startRadio = true, currentSongId = "seed")
+    fun currentSongRadioRetainsAudioAndStartsWhenRequested() = checkRepeatModes(startRadio = true, currentSongId = "seed")
+
+    @Test
+    fun currentSongRadioCanKeepPausedPlaybackPaused() = checkRepeatModes(startRadio = true, currentSongId = "seed", startPlaying = false)
 
     @Test
     fun differentSongRadioStartsFromZero() = checkRepeatModes(startRadio = true, currentSongId = "other")
@@ -98,6 +101,7 @@ class AndroidRadioRepeatTest {
                     currentSongId?.let { queue.setQueue(listOf(seed.copy(id = "previous"), seed.copy(id = it), seed.copy(id = "next")), 1) }
                     var playbackRequests = 0
                     var queueRestores = 0
+                    var resumeRequests = 0
                     val player =
                         Proxy.newProxyInstance(
                             AndroidPlaybackPlayer::class.java.classLoader,
@@ -127,6 +131,10 @@ class AndroidRadioRepeatTest {
                                 "restoreQueue" -> {
                                     queueRestores++
                                     queue.restore(args!![0] as MusicQueueSnapshot)
+                                }
+
+                                "resume" -> {
+                                    resumeRequests++
                                 }
 
                                 "isShuffleEnabled" -> {
@@ -202,6 +210,7 @@ class AndroidRadioRepeatTest {
                         val retained = currentSongId == seed.id
                         assertEquals(if (retained) 0 else 1, playbackRequests)
                         assertEquals(if (retained) 1 else 0, queueRestores)
+                        assertEquals(if (retained && startPlaying) 1 else 0, resumeRequests)
                         assertEquals(0, queue.currentIndex.value)
                         val appended =
                             suspendCoroutineUninterceptedOrReturn<Boolean> { continuation ->
