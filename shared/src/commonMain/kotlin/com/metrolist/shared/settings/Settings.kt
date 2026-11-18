@@ -177,6 +177,9 @@ import com.metrolist.shared.constants.SlimNavBarKey
 import com.metrolist.shared.constants.SpeedDialArtworkRefreshTimesKey
 import com.metrolist.shared.constants.SpeedDialSurprisePinnedKey
 import com.metrolist.shared.constants.SponsorBlockEnabledKey
+import com.metrolist.shared.constants.SupportPromptDismissedKey
+import com.metrolist.shared.constants.SupportPromptLaunchThresholdKey
+import com.metrolist.shared.constants.SupportPromptLaunchesKey
 import com.metrolist.shared.constants.SwipeToRemoveSongKey
 import com.metrolist.shared.constants.SwipeToSongKey
 import com.metrolist.shared.constants.TempoPitchPresetsJsonKey
@@ -275,6 +278,9 @@ class Settings(
     val artistNameAliases: Map<String, String> by derivedStateOf { ArtistNameAliases.deserialize(artistNameAliasesJson) }
 
     var tokenLoginWarningDismissed by preference(TokenLoginWarningDismissedKey, false)
+    var supportPromptDismissed by preference(SupportPromptDismissedKey, false)
+    var supportPromptLaunches by preference(SupportPromptLaunchesKey, 0)
+    var supportPromptLaunchThreshold by preference(SupportPromptLaunchThresholdKey, 0)
     var visitorData by preference("")
     var dataSyncId by preference("")
     var innerTubeAuthUser by preference("0")

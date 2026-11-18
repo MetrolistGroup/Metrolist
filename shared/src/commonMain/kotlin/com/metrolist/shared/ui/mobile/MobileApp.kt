@@ -242,6 +242,7 @@ import com.metrolist.shared.ui.player.collectWhilePlayerActive
 import com.metrolist.shared.ui.screens.AboutScreen
 import com.metrolist.shared.ui.screens.HomeContent
 import com.metrolist.shared.ui.screens.SearchScreen
+import com.metrolist.shared.ui.screens.SupportPrompt
 import com.metrolist.shared.ui.screens.homeContentText
 import com.metrolist.shared.ui.screens.pageKey
 import com.metrolist.shared.ui.screens.searchScreenText
@@ -1920,6 +1921,8 @@ fun MobileApp(
                     },
                 )
             }
+
+            SupportPrompt()
 
             PopupVisibility(visible = showContinuePlaybackPrompt) {
                 AlertDialog(

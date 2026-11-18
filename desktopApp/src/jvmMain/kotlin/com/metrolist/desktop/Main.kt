@@ -221,6 +221,7 @@ import com.metrolist.shared.ui.navigation.Navigator
 import com.metrolist.shared.ui.navigation.Screen
 import com.metrolist.shared.ui.navigation.rememberNavigationState
 import com.metrolist.shared.ui.playback.LocalPlaybackController
+import com.metrolist.shared.ui.screens.SupportPrompt
 import com.metrolist.shared.ui.settings.SettingsPageId
 import com.metrolist.shared.ui.utils.LocalMouseScrollFactors
 import com.metrolist.shared.ui.utils.desktopMouseScrollFactors
@@ -340,6 +341,7 @@ private fun WindowScope.AppContent(
             DesktopImageLoader.create(context)
         }
         UpdateArtworkTheme()
+        SupportPrompt()
         val matugenEnabled = Settings.shared.matugenTheme
         LaunchedEffect(matugenEnabled) {
             if (matugenEnabled) MatugenColors.watch()

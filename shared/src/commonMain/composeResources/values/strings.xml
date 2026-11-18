@@ -746,6 +746,9 @@
     <string name="open_github_profile">Open GitHub profile</string>
     <!-- Translators: Label for sponsor developer in the About screen. -->
     <string name="sponsor_developer">Sponsor developer</string>
+    <string name="support_prompt_title">Enjoying the app?</string>
+    <string name="support_prompt_message">Support Metrolist's development by supporting the developers behind it. Tap someone to open their support page.</string>
+    <string name="support_prompt_never_show">Never show this again</string>
     <!-- Translators: Label for credits collaborator; retained for translation compatibility but not currently referenced by app code. -->
     <!-- Translators: Label for discord in the multiple app screens. -->
     <string name="brand_discord" translatable="false">Discord</string>

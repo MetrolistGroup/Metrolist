@@ -8,6 +8,9 @@ package com.metrolist.shared.constants
 val ListenTogetherEnabledKey = "listenTogetherEnabled"
 val ListenTogetherServerMetadataKey = "listenTogetherServerMetadata"
 val TokenLoginWarningDismissedKey = "tokenLoginWarningDismissed"
+val SupportPromptDismissedKey = "supportPromptDismissed"
+val SupportPromptLaunchesKey = "supportPromptLaunches"
+val SupportPromptLaunchThresholdKey = "supportPromptLaunchThreshold"
 
 val DiscordPendingAuthSessionKey = "discordPendingAuthSession"
 val DesktopWindowPositionKey = "desktopWindowPosition"
