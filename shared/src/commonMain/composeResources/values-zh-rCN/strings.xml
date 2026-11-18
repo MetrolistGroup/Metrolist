@@ -80,7 +80,7 @@
     <string name="bitrate">比特率</string>
     <string name="sample_rate">采样率</string>
     <string name="loudness">响度</string>
-    <string name="loudness_value">%1$s dB</string>
+    <string name="loudness_value">%1$s dB</string>
     <string name="volume">音量</string>
     <string name="file_size">文件大小</string>
     <string name="unknown">未知</string>
@@ -104,13 +104,13 @@
         <item quantity="other">%1$d 张专辑</item>
     </plurals>
     <plurals name="n_week">
-        <item quantity="other">%1$d 周</item>
+        <item quantity="other">%1$d 周</item>
     </plurals>
     <plurals name="n_month">
-        <item quantity="other">%1$d 月</item>
+        <item quantity="other">%1$d 月</item>
     </plurals>
     <plurals name="n_year">
-        <item quantity="other">%1$d 年</item>
+        <item quantity="other">%1$d 年</item>
     </plurals>
     <string name="undo">撤销</string>
     <string name="lyrics_not_found">未找到歌词</string>
@@ -129,7 +129,7 @@
     <string name="queue_loading">正在加载队列…</string>
     <string name="calculating">正在计算…</string>
     <plurals name="queue_track_count_duration">
-        <item quantity="other">%1$d 首 · %2$s</item>
+        <item quantity="other">%1$d 首 · %2$s</item>
     </plurals>
     <string name="suggested_tracks">推荐</string>
     <string name="playback_notification_channel_name">播放</string>
