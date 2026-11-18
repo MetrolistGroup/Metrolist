@@ -65,6 +65,33 @@ class PlaylistImportCommonTest {
     }
 
     @Test
+    fun matchingKeepsArtistNamesThatContainCommas() {
+        val track = PlaylistImportManager.CsvTrack("See You Again (feat. Kali Uchis)", "Tyler, The Creator, Kali Uchis", null)
+        val song = SongItem("song", "See You Again (feat. Kali Uchis)", null, listOf(ArtistTiny(null, "Tyler, The Creator")), null, 181)
+
+        assertEquals(song, PlaylistImportManager.bestTrackMatch(track, listOf(song)))
+        assertEquals(null, PlaylistImportManager.bestTrackMatch(track, listOf(song.copy(artists = listOf(ArtistTiny(null, "MHD"))))))
+    }
+
+    @Test
+    fun matchingIgnoresFeaturingCreditsButNotOtherTitleVariants() {
+        val track = PlaylistImportManager.CsvTrack("Starboy", "The Weeknd, Daft Punk", null)
+        val featured = SongItem("featured", "Starboy (feat. Daft Punk)", null, listOf(ArtistTiny(null, "The Weeknd")), null, 231)
+        val remix = featured.copy(id = "remix", title = "Starboy (Remix)")
+
+        assertEquals(featured, PlaylistImportManager.bestTrackMatch(track, listOf(remix, featured)))
+        assertEquals(null, PlaylistImportManager.bestTrackMatch(track, listOf(remix)))
+        assertEquals(
+            "featured",
+            PlaylistImportManager.bestTrackMatch(track.copy(title = "Starboy ft. Daft Punk"), listOf(featured.copy(title = "Starboy")))?.id,
+        )
+        assertEquals(
+            "featured",
+            PlaylistImportManager.bestTrackMatch(track, listOf(featured.copy(title = "Starboy [with Daft Punk]")))?.id,
+        )
+    }
+
+    @Test
     fun spotifyResolutionRetriesWithoutAlbumMetadataButKeepsOtherProvidersSinglePass() {
         val track = PlaylistImportManager.CsvTrack("Song", "Artist", null, album = "Spotify Album")
 

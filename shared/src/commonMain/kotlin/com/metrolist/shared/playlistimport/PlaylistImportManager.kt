@@ -662,23 +662,31 @@ class PlaylistImportManager(
             return scheme == null || scheme.equals("file", ignoreCase = true)
         }
 
+        private val FEATURE_CREDIT =
+            Regex("""\s*[(\[](?:feat\.?|ft\.?|featuring|with)\s[^)\]]*[)\]]|\s+(?:feat\.?|ft\.?|featuring)\s.*$""", RegexOption.IGNORE_CASE)
+
         internal fun bestTrackMatch(
             track: CsvTrack,
             candidates: List<SongItem>,
         ): SongItem? {
             fun normalized(value: String): String = value.lowercase().filter(Char::isLetterOrDigit)
-            val title = normalized(track.title)
+
+            // YouTube Music titles credit guests ("Starboy (feat. Daft Punk)") that Spotify lists as co-artists.
+            fun normalizedTitle(value: String): String = normalized(value.replace(FEATURE_CREDIT, ""))
+            val title = normalizedTitle(track.title)
             if (title.isEmpty()) return null
             val artist = normalized(track.artist)
             val album = normalized(track.album)
             return candidates
                 .filter { song ->
-                    normalized(song.title) == title &&
+                    normalizedTitle(song.title) == title &&
                         (
                             artist.isEmpty() || normalized(song.artists.joinToString { it.name }) == artist ||
                                 track.artist.split(',').any { sourceArtist ->
                                     song.artists.any { normalized(it.name) == normalized(sourceArtist) }
-                                }
+                                } ||
+                                // Names like "Tyler, The Creator" contain the separator, so match whole names too.
+                                song.artists.any { normalized(it.name).length >= 3 && normalized(it.name) in artist }
                         ) &&
                         (
                             track.durationSeconds == null || song.duration == null ||
