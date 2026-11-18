@@ -870,6 +870,8 @@ fun PlayerScreen(
                 }
             val useTabletLayout = isTv && useLandscapeLayout && minOf(screenWidth, maxHeight) >= 600.dp
             val compactPortraitHeight = !useLandscapeLayout && maxHeight < 560.dp
+            // Short split-screen windows shrink the centred artwork to a sliver; show it beside the title as lyrics do.
+            val artworkBesideTitle = !useLandscapeLayout && !isTv && !usesFullscreenThumbnail && maxHeight < ArtworkBesideTitleMaxHeight
             val primaryControlSize = if (compactPortraitHeight) 64.dp else 72.dp
             val showFullscreenThumbnailBackground = usesFullscreenThumbnail
             val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -1777,6 +1779,7 @@ fun PlayerScreen(
                                                     } else if (
                                                         !usesFullscreenThumbnail &&
                                                         !usesCanvasThumbnail &&
+                                                        !artworkBesideTitle &&
                                                         currentSong?.displayThumbnail != null &&
                                                         !(
                                                             isVideoModeActive &&
@@ -1867,7 +1870,7 @@ fun PlayerScreen(
                                     ) {
                                         AnimatedVisibility(
                                             visible =
-                                                (usesCanvasThumbnail || uiState.isLyricsVisible) &&
+                                                (usesCanvasThumbnail || uiState.isLyricsVisible || artworkBesideTitle) &&
                                                     currentSong?.displayThumbnail != null,
                                             enter = expandHorizontally(clip = false) + fadeIn(),
                                             exit = shrinkHorizontally(clip = false) + fadeOut(),
@@ -2545,3 +2548,4 @@ private fun FullscreenBackgroundBounds(
 }
 
 private val MinPortraitPlayerHeight = 420.dp
+private val ArtworkBesideTitleMaxHeight = 600.dp

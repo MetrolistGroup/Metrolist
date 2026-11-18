@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.metrolist.shared.constants.currentGridThumbnailHeight
 import com.metrolist.shared.generated.resources.Res
-import com.metrolist.shared.generated.resources.minutes_short
 import com.metrolist.shared.generated.resources.n_song
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.SongItem
@@ -130,8 +129,7 @@ private fun albumMetadataText(
 ): String {
     val songCount = album.songCount ?: songs.size.takeIf { it > 0 }
     val songsCountText = songCount?.let { pluralStringResource(Res.plurals.n_song, it, it) }
-    val minutes = albumTotalDuration(album, songs)?.div(60)?.toInt()
-    val durationText = minutes?.let { pluralStringResource(Res.plurals.minutes_short, it, it) }
+    val durationText = albumTotalDuration(album, songs)?.let { totalDurationText(it) }
     return listOfNotNull(
         album.type,
         songs.firstNotNullOfOrNull { it.genre?.takeIf(String::isNotBlank) },

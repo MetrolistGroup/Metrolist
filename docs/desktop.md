@@ -80,6 +80,20 @@ Windows registers `metrolist-auth` under `HKCU\Software\Classes` for the running
 
 The embedded login is used when registration fails, when a macOS launch lacks a bundle or open-URI support, or when an unpackaged JVM launch has no native launcher. Linux registration requires working `xdg-mime` and writable user application data. Browser launch failure keeps the waiting dialog available for retry.
 
+## Matugen colors
+
+Appearance's Matugen colors switch replaces the app's color scheme with the one [Matugen](https://github.com/InioX/matugen) generates from the wallpaper. It is off by default, and nothing reads or watches the palette file while it is off. While it is on, Material You, the theme color, song artwork colors and palette style are disabled. Light, dark and pure black still follow the theme setting.
+
+Copy [`matugen-template.properties`](matugen-template.properties) into Matugen's templates directory and add it to Matugen's `config.toml`:
+
+```toml
+[templates.metrolist]
+input_path = "~/.config/matugen/templates/metrolist.properties"
+output_path = "~/.config/metrolist/matugen.properties"
+```
+
+The output path follows `XDG_CONFIG_HOME` on every platform, like `settings.properties`. Flatpak reads `~/.var/app/com.metrolist.desktop/config/metrolist/matugen.properties`. Run `matugen image /path/to/wallpaper`; the app reloads the file when Matugen rewrites it. A file with a missing or malformed color is logged and ignored, keeping the last valid palette. Deleting the file restores the normal theme.
+
 ## Display density
 
 Linux JVM and native launchers preserve `XCURSOR_THEME` and `XCURSOR_SIZE`. In KDE sessions they read Plasma's `kcminputrc` through `kreadconfig6` or `kreadconfig5`, without applying GNOME cursor defaults. Missing or automatic cursor sizes stay unset for the toolkit to resolve.

@@ -1681,6 +1681,7 @@ fun MobileApp(
                                     onMoreOptions = { menuItem = it to null },
                                     onSongMenu = { menuItem = it to null },
                                     modifier = Modifier.fillMaxSize().padding(routePadding),
+                                    downloadedSongIds = downloadedSongIds,
                                 )
                             }
 

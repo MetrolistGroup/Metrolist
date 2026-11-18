@@ -95,7 +95,7 @@ internal fun UpdateArtworkTheme() {
     val context = LocalPlatformContext.current
     val url = PlayerState.currentArtworkUrl.orEmpty()
     val canonicalUrl = remember(url) { canonicalArtworkUrl(url) }
-    val enabled = Settings.shared.materialYouEnabled && Settings.shared.dynamicTheme
+    val enabled = Settings.shared.materialYouEnabled && Settings.shared.dynamicTheme && !Settings.shared.matugenTheme
     LaunchedEffect(canonicalUrl, enabled) {
         if (!enabled) return@LaunchedEffect
         updateArtworkTheme(canonicalUrl) { artworkUrl ->

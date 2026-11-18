@@ -126,6 +126,7 @@ import com.metrolist.shared.constants.LyricsPlusLighterKey
 import com.metrolist.shared.constants.LyricsProgressiveBlurKey
 import com.metrolist.shared.constants.LyricsShareImageStyleKey
 import com.metrolist.shared.constants.LyricsShowOriginalLyricsKey
+import com.metrolist.shared.constants.MatugenThemeKey
 import com.metrolist.shared.constants.MinimumSongDurationSecondsKey
 import com.metrolist.shared.constants.MusicVideoCacheJsonKey
 import com.metrolist.shared.constants.MusicVideoPlaybackEnabledKey
@@ -313,6 +314,7 @@ class Settings(
     var autoPureBlack by preference(AutoPureBlackKey, false)
     var selectedThemeColor by preference(0L)
     var themePaletteStyle by preference(ThemePaletteStyle.TONAL_SPOT)
+    var matugenTheme by preference(MatugenThemeKey, false)
 
     var appFont by preference(FontOption.SYSTEM)
     var androidCustomFontFile by preference(AndroidCustomFontFileKey, "")

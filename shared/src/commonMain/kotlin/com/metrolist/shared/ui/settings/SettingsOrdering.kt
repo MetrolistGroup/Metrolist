@@ -55,6 +55,7 @@ internal fun List<SettingsGroupRegistration>.prioritized(page: SettingsPageId): 
                 SettingsPageId.APPEARANCE to "theme" -> {
                     listOf(
                         "themeMode",
+                        "matugen",
                         "materialYou",
                         "themeColor",
                         "dynamicTheme",

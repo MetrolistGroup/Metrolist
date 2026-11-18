@@ -107,29 +107,16 @@ class NextTrackPreloadTest {
     }
 
     @Test
-    fun cancellingSecondaryClosesOnlyItsLifecycle() {
+    fun cancellingSecondaryReleasesItsLifecycleInOrder() {
         val events = mutableListOf<String>()
-        val currentPlaybackInstance = 7L
-        val currentQueueIndex = 2
-        var currentReporterStopped = false
-        var secondaryReporterStopped = false
-        var secondaryHasAudioFocus = false
 
         cancelSecondaryPlayback(
             detachPlayer = { events += "secondary detached" },
             closeSources = { events += "secondary sources closed" },
-            stopReporting = {
-                secondaryReporterStopped = true
-                events += "secondary reporting stopped"
-            },
+            stopReporting = { events += "secondary reporting stopped" },
             releasePlayer = { events += "secondary released" },
         )
 
-        assertEquals(7L, currentPlaybackInstance)
-        assertEquals(2, currentQueueIndex)
-        assertFalse(currentReporterStopped)
-        assertTrue(secondaryReporterStopped)
-        assertFalse(secondaryHasAudioFocus)
         assertEquals(
             listOf(
                 "secondary detached",

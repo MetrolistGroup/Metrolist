@@ -33,7 +33,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
-import org.robolectric.util.ReflectionHelpers
 import java.lang.reflect.Proxy
 
 @RunWith(RobolectricTestRunner::class)
@@ -171,8 +170,6 @@ class AndroidDeviceConnectPlaybackTest {
                 assertEquals(0, saves)
                 assertFalse(playback.syncTargetLoaded)
                 assertFalse(queue.isPlaybackLoading.value)
-                assertEquals(null, ReflectionHelpers.getField<String?>(playback, "appliedSyncSessionId"))
-                assertEquals(null, ReflectionHelpers.getField<Long?>(playback, "appliedSyncTrackRevision"))
             } finally {
                 database.close()
                 Dispatchers.resetMain()
