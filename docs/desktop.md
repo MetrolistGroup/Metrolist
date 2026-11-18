@@ -153,7 +153,7 @@ Bytedeco publishes no `windows-arm64` FFmpeg natives. `scripts/build_windows_arm
 ./gradlew :desktopApp:packageReleaseDmg
 ```
 
-The AppImage script writes `dist/Metrolist.AppImage` and accepts `GRADLE` to select the Gradle command. The DMG task requires macOS and writes under `desktopApp/build/compose/binaries/main-release/dmg/`. Packages include their own runtime.
+The AppImage script writes `dist/Metrolist.AppImage` and accepts `GRADLE` to select the Gradle command. The DMG task requires macOS and writes under `desktopApp/build/compose/binaries/main-release/dmg/`. The bundle declares macOS 15.0 as its minimum because Bytedeco's FFmpeg dylibs target macOS 15; older systems could open the app but failed to load FFmpeg at playback. Packages include their own runtime.
 
 The AppImage script and Windows and macOS release workflows pass `-Pmetrolist.debug=false` so release packages use the release title and settings.
 

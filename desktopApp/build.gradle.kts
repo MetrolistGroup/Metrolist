@@ -809,6 +809,8 @@ compose.desktop {
             }
             macOS {
                 bundleID = "com.metrolist.desktop"
+                // Bytedeco's FFmpeg dylibs are built for macOS 15; older systems fail to load them at playback.
+                minimumSystemVersion = "15.0"
                 infoPlist {
                     extraKeysRawXml =
                         """
