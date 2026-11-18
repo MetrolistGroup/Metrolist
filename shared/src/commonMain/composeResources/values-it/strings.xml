@@ -506,7 +506,7 @@
     <string name="listenbrainz_now_playing_description">Mostra il brano in riproduzione su ListenBrainz</string>
     <string name="listenbrainz_connect_title">Connettiti a ListenBrainz</string>
     <string name="listenbrainz_user_token">Token utente</string>
-    <string name="restore_database_incompatible">Questo backup utilizza la versione %1$d del database, ma quest\u0027app supporta solo fino alla versione %2$d. Aggiorna Metrolist e riprova.</string>
+    <string name="restore_database_incompatible">Questo backup utilizza la versione %1$d del database, ma quest'app supporta solo fino alla versione %2$d. Aggiorna Metrolist e riprova.</string>
     <string name="restore_failed_detail">Impossibile ripristinare il backup durante %1$s\n\nMotivo: %2$s</string>
     <string name="restore_error_unknown">Nessun\u0027informazione aggiuntiva disponibile.</string>
     <string name="restore_stage_reading_backup">Leggendo il file di backup</string>
