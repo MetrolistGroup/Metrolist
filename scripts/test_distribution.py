@@ -53,7 +53,9 @@ class DistributionTest(unittest.TestCase):
         self.assertEqual(set(data['linux']), {'x86_64-linux', 'aarch64-linux'})
         nix_recipe = (self.output / 'nix/packaging/nix/package.nix').read_text()
         self.assertNotIn('alsa-plugins', nix_recipe.split('extraPkgs =', 1)[1].split('];', 1)[0])
-        for asset in data['linux'].values():
+        self.assertEqual(set(data['darwin']), {'aarch64-darwin', 'x86_64-darwin'})
+        self.assertTrue((self.output / 'nix/packaging/nix/darwin.nix').is_file())
+        for asset in [*data['linux'].values(), *data['darwin'].values()]:
             self.assertEqual(asset['sha256'], hashlib.sha256((self.assets / asset['name']).read_bytes()).hexdigest())
             self.assertTrue(asset['hash'].startswith('sha256-'))
         self.assertFalse((self.output / 'flatpak').exists())

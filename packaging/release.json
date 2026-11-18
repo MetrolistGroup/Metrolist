@@ -15,5 +15,19 @@
       "sha256": "4e73eb3fa6b8bc8d20e783bd931fcf36365a9dae836d76ed9870e1be34d0e54a",
       "hash": "sha256-TnPrP6a4vI0g54O9kx/PNjZana6DbXbtmHDhvjTQ5Uo="
     }
+  },
+  "darwin": {
+    "aarch64-darwin": {
+      "name": "metrolist-desktop-macos-arm64-14.0.0.dmg",
+      "url": "https://github.com/MetrolistGroup/Metrolist/releases/download/v14.0.0/metrolist-desktop-macos-arm64-14.0.0.dmg",
+      "sha256": "cbee8dce25f62ed1ba0ca89538b7a43e128995f188108722293ac9f752291e48",
+      "hash": "sha256-y+6NziX2LtG6DKiVOLekPhKJlfGIEIciKTrJ91IpHkg="
+    },
+    "x86_64-darwin": {
+      "name": "metrolist-desktop-macos-x64-14.0.0.dmg",
+      "url": "https://github.com/MetrolistGroup/Metrolist/releases/download/v14.0.0/metrolist-desktop-macos-x64-14.0.0.dmg",
+      "sha256": "3ab2634cc5a5bdd29e2a000ee08ada9b6bc8886e883bc0c97b9ab5060a098cc1",
+      "hash": "sha256-OrJjTMWlvdKeKgAO4Iram2vIiG6IO8DJe5q1BgoJjME="
+    }
   }
 }
