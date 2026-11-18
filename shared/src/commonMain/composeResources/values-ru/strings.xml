@@ -2694,4 +2694,5 @@
     <string name="lastfm_session_expired_title">Сеанс Last.fm истёк</string>
     <string name="lastfm_session_expired">Войти в Last.fm снова</string>
     <string name="lastfm_session_expired_description">Текущий сеанс Last.fm больше не действителен. Прослушивания сохраняются и будут отправлены после входа.</string>
+    <string name="matugen_colors"></string>
 </resources>
