@@ -78,7 +78,6 @@ import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.close_fullscreen_player
 import com.metrolist.shared.generated.resources.exit_expanded_mode
-import com.metrolist.shared.generated.resources.lock_queue
 import com.metrolist.shared.generated.resources.n_song
 import com.metrolist.shared.generated.resources.playback_reconnecting
 import com.metrolist.shared.generated.resources.queue
@@ -88,7 +87,6 @@ import com.metrolist.shared.generated.resources.repeat
 import com.metrolist.shared.generated.resources.shuffle
 import com.metrolist.shared.generated.resources.sleep_timer
 import com.metrolist.shared.generated.resources.undo
-import com.metrolist.shared.generated.resources.unlock_queue
 import com.metrolist.shared.generated.resources.up_next
 import com.metrolist.shared.model.RepeatMode
 import com.metrolist.shared.model.previewThumbnailUrl

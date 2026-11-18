@@ -271,7 +271,6 @@ private val booleanKeys =
         "autoLoadMore",
         "disableLoadMoreWhenRepeatAll",
         "preventDuplicateTracksInQueue",
-        "isQueueLocked",
         "enableAnimatedCovers",
         "enableAppleMusicArtistArtwork",
         AppleMusicArtistVideosKey,

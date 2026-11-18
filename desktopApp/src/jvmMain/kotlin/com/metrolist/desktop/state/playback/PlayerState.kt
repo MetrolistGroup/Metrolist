@@ -3586,7 +3586,7 @@ object PlayerState {
     }
 
     fun removeQueueOccurrence(key: Long): QueueRemoval? {
-        if (isListenTogetherGuest() || Settings.shared.isQueueLocked) return null
+        if (isListenTogetherGuest()) return null
         val state = queue.state.value
         val index = state.entries.indexOfFirst { it.key == key }
         if (index <= state.currentIndex) return null
@@ -3598,7 +3598,7 @@ object PlayerState {
         toKey: Long,
         selectedEntryKeys: Set<Long> = emptySet(),
     ) {
-        if (isListenTogetherGuest() || Settings.shared.isQueueLocked) return
+        if (isListenTogetherGuest()) return
         val state = queue.state.value
         val from = state.entries.indexOfFirst { it.key == fromKey }
         val to = state.entries.indexOfFirst { it.key == toKey }
@@ -3616,7 +3616,7 @@ object PlayerState {
     }
 
     fun reorderQueue(order: List<Int>): Boolean {
-        if (isListenTogetherGuest() || Settings.shared.isQueueLocked) return false
+        if (isListenTogetherGuest()) return false
         val expectedQueue = queue.snapshots.value
         if (order.size != expectedQueue.displayedItems.size || order.toSet() != expectedQueue.displayedItems.indices.toSet()) return false
         if (deviceConnect.intercept(

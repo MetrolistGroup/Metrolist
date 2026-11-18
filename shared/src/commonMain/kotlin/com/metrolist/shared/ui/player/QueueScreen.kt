@@ -51,7 +51,6 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -126,7 +125,6 @@ import com.metrolist.shared.generated.resources.deselect_track_by_artist
 import com.metrolist.shared.generated.resources.explicit
 import com.metrolist.shared.generated.resources.filter_downloaded
 import com.metrolist.shared.generated.resources.liked
-import com.metrolist.shared.generated.resources.lock_queue
 import com.metrolist.shared.generated.resources.more_options
 import com.metrolist.shared.generated.resources.n_selected
 import com.metrolist.shared.generated.resources.pause_track_by_artist
@@ -147,14 +145,12 @@ import com.metrolist.shared.generated.resources.select_track_by_artist
 import com.metrolist.shared.generated.resources.shuffle
 import com.metrolist.shared.generated.resources.suggested_tracks
 import com.metrolist.shared.generated.resources.undo
-import com.metrolist.shared.generated.resources.unlock_queue
 import com.metrolist.shared.generated.resources.up_next
 import com.metrolist.shared.model.RadioQueueChip
 import com.metrolist.shared.model.moveSelection
 import com.metrolist.shared.playback.LocalPlayerSession
 import com.metrolist.shared.playback.QueueRemoval
 import com.metrolist.shared.playback.SleepTimerState
-import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.LocalIsTv
 import com.metrolist.shared.ui.components.ChipShelf
 import com.metrolist.shared.ui.components.ContainedLoadingIndicator
@@ -379,7 +375,6 @@ fun QueueScreen(
     val hapticManager = rememberMetrolistHaptics()
     val hasSelection = state.selectedEntryKeys.isNotEmpty()
     var draggingEntryKey by remember { mutableStateOf<Long?>(null) }
-    val isUnlocked = !Settings.shared.isQueueLocked
     val isTv = LocalIsTv.current
     val queueFocusRequester = remember { FocusRequester() }
     var tvMovement by remember { mutableStateOf(TvQueueMovement()) }
@@ -406,7 +401,8 @@ fun QueueScreen(
         restoreFocusKey = focusedEntryKey
     }
     val canControlPlayback = state.canControlPlayback && !isListenTogetherGuest
-    val showReorderHandleSpace = !isTv && isUnlocked && canControlPlayback
+    val selectionEnabled = !isTv || tvSelecting
+    val showReorderHandleSpace = !isTv && canControlPlayback
     val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val allTracks = remember(state.tracks, state.suggestedTracks) { state.tracks + state.suggestedTracks }
     val queueSelectionActions =
@@ -534,11 +530,6 @@ fun QueueScreen(
                         onEvent(QueueEvent.ClearSelection)
                     },
                     onSelectAll = { onEvent(QueueEvent.SelectAll) },
-                    isUnlocked = isUnlocked,
-                    onUnlockedChange = { unlocked ->
-                        if (!unlocked) onEvent(QueueEvent.ClearSelection)
-                        Settings.shared.isQueueLocked = !unlocked
-                    },
                     actions = {
                         headerActions()
                         if (isTv) {
@@ -682,7 +673,7 @@ fun QueueScreen(
                             ) {
                                 // Keep the handle composed while the committed move awaits the player so the row does not shift.
                                 val dragModifier =
-                                    if (isUnlocked && canControlPlayback && track.canRemove) {
+                                    if (canControlPlayback && track.canRemove) {
                                         Modifier
                                             .draggableHandle(
                                                 enabled = reorderEnabled,
@@ -697,7 +688,7 @@ fun QueueScreen(
                                     }
                                 QueueTrackSwipeToDismissBox(
                                     trackKey = track.uniqueKey,
-                                    enabled = isUnlocked && track.canRemove && !hasSelection && canControlPlayback && !isDragging,
+                                    enabled = track.canRemove && !hasSelection && canControlPlayback && !isDragging,
                                     onDismiss = {
                                         if (canControlPlayback) {
                                             onEvent(QueueEvent.RemoveTrack(track.entryKey))
@@ -711,7 +702,7 @@ fun QueueScreen(
                                         currentDuration = state.currentDuration.takeIf { isActive },
                                         trackIndex = queueIndex,
                                         isSelected = isSelected,
-                                        showSelectionCheckbox = if (isTv) tvSelecting else isUnlocked,
+                                        showSelectionCheckbox = selectionEnabled,
                                         isReorderable = showReorderHandleSpace && track.canRemove,
                                         showReorderHandleSpace = showReorderHandleSpace,
                                         isMoving = grabbed,
@@ -748,25 +739,25 @@ fun QueueScreen(
                                                     true
                                                 },
                                         onMoveUp =
-                                            if (isUnlocked && reorderEnabled && index > 0) {
+                                            if (reorderEnabled && index > 0) {
                                                 { onMoveTrack(index, index - 1) }
                                             } else {
                                                 null
                                             },
                                         onMoveDown =
-                                            if (isUnlocked && reorderEnabled && index < state.tracks.lastIndex) {
+                                            if (reorderEnabled && index < state.tracks.lastIndex) {
                                                 { onMoveTrack(index, index + 1) }
                                             } else {
                                                 null
                                             },
                                         onMoveToTop =
-                                            if (isUnlocked && reorderEnabled && index > 0) {
+                                            if (reorderEnabled && index > 0) {
                                                 { onMoveTrack(index, 0) }
                                             } else {
                                                 null
                                             },
                                         onMoveToBottom =
-                                            if (isUnlocked && reorderEnabled && index < state.tracks.lastIndex) {
+                                            if (reorderEnabled && index < state.tracks.lastIndex) {
                                                 { onMoveTrack(index, state.tracks.lastIndex) }
                                             } else {
                                                 null
@@ -782,7 +773,7 @@ fun QueueScreen(
                                                     } else {
                                                         tvMovement
                                                     }
-                                            } else if (if (isTv) tvSelecting else isUnlocked) {
+                                            } else if (selectionEnabled) {
                                                 onEvent(
                                                     if (isSelected) {
                                                         QueueEvent.DeselectTrack(track.entryKey)
@@ -821,7 +812,7 @@ fun QueueScreen(
                                 Box {
                                     QueueTrackSwipeToDismissBox(
                                         trackKey = track.uniqueKey,
-                                        enabled = isUnlocked && track.canRemove && !hasSelection && canControlPlayback,
+                                        enabled = track.canRemove && !hasSelection && canControlPlayback,
                                         onDismiss = {
                                             if (canControlPlayback) {
                                                 onEvent(QueueEvent.RemoveTrack(track.entryKey))
@@ -1080,8 +1071,6 @@ private fun PlaylistHeader(
     allSelected: Boolean,
     onClearSelection: () -> Unit,
     onSelectAll: () -> Unit,
-    isUnlocked: Boolean,
-    onUnlockedChange: (Boolean) -> Unit,
     actions: @Composable RowScope.() -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1179,20 +1168,6 @@ private fun PlaylistHeader(
                     }
                 } else {
                     actions()
-                }
-                if (selectedCount == 0 && !LocalIsTv.current) {
-                    FilledTonalIconToggleButton(
-                        checked = isUnlocked,
-                        onCheckedChange = onUnlockedChange,
-                        modifier = Modifier.size(48.dp),
-                        shapes = IconButtonDefaults.toggleableShapes(),
-                    ) {
-                        Icon(
-                            imageVector = if (isUnlocked) MetrolistIcons.Rounded.LockOpen else MetrolistIcons.Rounded.Lock,
-                            contentDescription = stringResource(if (isUnlocked) Res.string.lock_queue else Res.string.unlock_queue),
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
                 }
             }
         }
