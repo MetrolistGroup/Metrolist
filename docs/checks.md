@@ -33,6 +33,8 @@ Live YouTube tests are opt-in and never run in CI. See [InnerTube live tests](in
 
 ### Focus and navigation
 
+On desktop, enable Floating search and open it with Ctrl+K and the search bar. The popup and scrim must appear, and typing must work without another click. Dismiss with Escape, an outside click and submission, then reopen. Toggle Ctrl+K rapidly and verify navigation works after closing. Repeat on Linux JVM and native builds; an invisible popup must not intercept input.
+
 For keyboard and Android TV focus, traverse Home, Library, Search, album/artist/playlist pages, mini and full players, app bars, navigation bars/rails, chips, menus, settings and dialogs. Check both directions through carousel edges, nested card actions and player controls, then return from menus and the queue. Check light, dark, pure-black, dynamic and album-color backgrounds, including artwork behind controls. Focus outlines must remain visible without moving content; switching to touch must hide them. Verify press motion, marquee focus reveal, carousel snapping and player/queue focus recovery.
 
 On Android TV, in song and player menus, Radio and Add to playlist share the primary row with no Share action. Check full, landscape, tablet and fullscreen video players in Standard, Classic and Vintage. Cast and Share stay hidden, Like still works, and D-pad traversal skips removed controls. Repeat with Portuguese labels, lyrics, menus and the queue. Phones, tablets, Automotive, desktop and iOS keep their existing controls.
