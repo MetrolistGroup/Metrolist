@@ -978,10 +978,6 @@
         <item quantity="one">%1$d dakika</item>
         <item quantity="other">%1$d dakika</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d dak</item>
-        <item quantity="other">%1$d dak</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d parça</item>
         <item quantity="other">%1$d parça</item>
@@ -1005,10 +1001,6 @@
     <plurals name="removed_songs_from_playlist">
         <item quantity="one">%1$d şarkı çalma listesinden kaldırıldı</item>
         <item quantity="other">%1$d şarkı çalma listesinden kaldırıldı</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d sn</item>
-        <item quantity="other">%1$d sn</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d şarkı</item>
