@@ -161,20 +161,20 @@
     <string name="action_not_now">Non ora</string>
     <string name="youtube_session_expired_title">La sessione è scaduta</string>
     <string name="youtube_session_expired_message">Accedi per ripristinare le funzionalità di YouTube. Puoi continuare ad ascoltare la musica scaricata e nella cache offline.</string>
-    <string name="audio_quality">Qualità dell\u0027audio</string>
+    <string name="audio_quality">Qualità dell'audio</string>
     <string name="audio_quality_auto">Automatica</string>
     <string name="audio_quality_high">Alta</string>
     <string name="audio_quality_low">Bassa</string>
     <string name="queue">Coda</string>
     <string name="persistent_queue">Ripristina coda all'avvio</string>
-    <string name="persistent_queue_desc">Ripristina l\u0027ultima coda all\u0027apertura dell\u0027app</string>
+    <string name="persistent_queue_desc">Ripristina l'ultima coda all'apertura dell'app</string>
     <string name="auto_load_more">Carica brani simili in automatico</string>
     <string name="auto_load_more_desc">Aggiungi automaticamente brani simili quando le code di radio e mix stanno per finire</string>
     <string name="skip_silence">Salta il silenzio</string>
-    <string name="audio_normalization">Normalizzazione dell\u0027audio</string>
+    <string name="audio_normalization">Normalizzazione dell'audio</string>
     <string name="auto_skip_next_on_error">Salta al prossimo brano quando c'è un errore</string>
     <string name="auto_skip_next_on_error_desc">Passa al brano successivo in caso di errore di riproduzione</string>
-    <string name="stop_music_on_task_clear">Interrompi la musica quando l\u0027attività è interrotta</string>
+    <string name="stop_music_on_task_clear">Interrompi la musica quando l'attività è interrotta</string>
     <string name="storage">Archiviazione</string>
     <string name="music_video_quality" tools:ignore="MissingTranslation">Qualità video musicali</string>
     <string name="music_video_quality_desc" tools:ignore="MissingTranslation">Risoluzione predefinita per i video</string>
