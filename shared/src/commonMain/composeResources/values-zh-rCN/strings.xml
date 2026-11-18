@@ -840,4 +840,69 @@
     <string name="widget_playlists_description"></string>
     <string name="listen_together_description"></string>
     <string name="choose_something_below"></string>
+    <string name="foreign_import_title"></string>
+    <string name="restore_error_unknown"></string>
+    <string name="spotify_sign_in_again"></string>
+    <plurals name="spotify_playlist_track_count">
+    </plurals>
+    <string name="backup_restore_busy"></string>
+    <string name="restore_stage_restarting_app"></string>
+    <string name="restore_stage_applying_settings"></string>
+    <string name="spotify_login_page_failed"></string>
+    <string name="or_choose_existing_playlist"></string>
+    <string name="hide_podcasts"></string>
+    <string name="restore_failed_detail"></string>
+    <string name="minimum_song_duration_desc"></string>
+    <string name="playlist_url"></string>
+    <string name="could_not_queue_download"></string>
+    <string name="restore_stage_validating_database"></string>
+    <string name="restore_stage_verifying_database"></string>
+    <string name="hide_podcasts_desc"></string>
+    <plurals name="playlist_import_success">
+    </plurals>
+    <string name="queue_current_playing"></string>
+    <string name="hide_non_musical_videos_desc"></string>
+    <string name="restore_stage_stopping_app"></string>
+    <plurals name="statistics_tracks">
+    </plurals>
+    <string name="load_playlist"></string>
+    <plurals name="spotify_playlist_count">
+    </plurals>
+    <string name="channel_switch_sign_in_again"></string>
+    <string name="spotify_login_title"></string>
+    <string name="restore_stage_reading_backup"></string>
+    <string name="local_playlist"></string>
+    <string name="hide_short_songs_desc"></string>
+    <string name="integration_on_signed_out"></string>
+    <string name="integration_on_account"></string>
+    <string name="listen_together_entry_subtitle"></string>
+    <string name="spotify_sign_in"></string>
+    <plurals name="spotify_selected_playlist_count">
+    </plurals>
+    <string name="hide_non_musical_videos"></string>
+    <string name="listen_together_server_label"></string>
+    <string name="integration_off"></string>
+    <string name="ai_setup_create_account"></string>
+    <string name="restore_stage_installing_database"></string>
+    <string name="account_logout_confirm"></string>
+    <string name="scrobble_create_account"></string>
+    <string name="ai_setup_sign_in_again"></string>
+    <string name="restore_stage_reading_settings"></string>
+    <string name="logout"></string>
+    <plurals name="n_track">
+    </plurals>
+    <string name="listen_together_guest_queue"></string>
+    <string name="device_connect_peer_details"></string>
+    <string name="lyrics_youtube_captions"></string>
+    <string name="spotify_track_limit_warning"></string>
+    <string name="queue_current_paused"></string>
+    <string name="menu_add_to_queue"></string>
+    <string name="spotify_choose_playlists_supporting"></string>
+    <string name="restore_stage_converting_database"></string>
+    <string name="hide_video_songs_desc"></string>
+    <string name="discord_integration_description"></string>
+    <string name="minimum_song_duration"></string>
+    <string name="integration_on"></string>
+    <string name="discord_logout"></string>
+    <string name="hide_short_songs"></string>
 </resources>
