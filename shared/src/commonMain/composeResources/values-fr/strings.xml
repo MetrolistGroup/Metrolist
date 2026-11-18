@@ -621,7 +621,7 @@
     <string name="updates_channel_description">Notifications à propos des nouvelles versions de Metrolist</string>
     <string name="updates_download_failed">La mise à jour n\u0027a pas pu être téléchargée.</string>
     <string name="updates_digest_failed">L\u0027empreinte numérique de la mise à jour téléchargée ne correspond pas à celle issue de GitHub.</string>
-    <string name="updates_installer_failed">L\u0027installeur de paquets d\u0027Android n\u0027est pas disponible ou l\u0027installation d\u0027applications est restreinte sur cet appareil.</string>
+    <string name="updates_installer_failed">L'installeur de paquets d'Android n'est pas disponible ou l'installation d'applications est restreinte sur cet appareil.</string>
     <string name="updates_release_unavailable">Cette version ne contient pas de fichier APK compatible.</string>
     <string name="updates_release_notes_title">Metrolist %1$s</string>
     <string name="device_connect_title">Appareils connectés</string>
@@ -1956,7 +1956,7 @@
     <string name="follow_agent_positioning_hints">Suivre les indications de position des agents</string>
     <string name="lastfm_login_session_invalid">Réponse de session incorrecte</string>
     <string name="video_stats_position_vol">Position / volume</string>
-    <string name="lyrics_share_auto_fit">Rétablir l\u0027ajustement automatique</string>
+    <string name="lyrics_share_auto_fit">Rétablir l'ajustement automatique</string>
     <string name="cd_playback_position">Position du lecteur</string>
     <string name="scrobble_now_playing">Now Playing</string>
     <string name="ai_provider_default">Valeur par défaut du fournisseur</string>
@@ -2608,4 +2608,7 @@
     <string name="listen_together_custom_server_name">Serveur personnalisé</string>
     <string name="listen_together_custom_server_maintainer">Utilisateur</string>
     <string name="learn_more">En savoir plus</string>
+    <string name="updates_nightly_builds_desc"></string>
+    <string name="search_episodes"></string>
+    <string name="duration_three_units"></string>
 </resources>
