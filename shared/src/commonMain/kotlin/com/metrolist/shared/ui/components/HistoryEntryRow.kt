@@ -194,6 +194,22 @@ fun HistoryEntryRow(
                                     },
                                 )
                             }
+                            if (onSongMenu != null) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(Res.string.more_options)) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onSongMenu()
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            MetrolistIcons.Outlined.MoreVert,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text(deleteText) },
                                 onClick = {
@@ -213,7 +229,7 @@ fun HistoryEntryRow(
                     }
                 }
             }
-            onSongMenu?.takeUnless { isSelectMode }?.let { open ->
+            onSongMenu?.takeUnless { isSelectMode || showInlineMenu }?.let { open ->
                 IconButton(modifier = Modifier.navigationPopupSource(), onClick = open, shapes = IconButtonDefaults.shapes()) {
                     Icon(MetrolistIcons.Default.MoreVert, stringResource(Res.string.more_options))
                 }
