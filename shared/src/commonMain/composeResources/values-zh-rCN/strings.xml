@@ -797,4 +797,5 @@
     <string name="discord_state">状态</string>
     <string name="settings_reset_to_default">重置为默认设置</string>
     <string name="backup_created">备份已创建</string>
+    <string name="search_songs_artists_podcasts"></string>
 </resources>
