@@ -2,6 +2,8 @@ name: Build debug APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [password-lock]
 
 jobs:
   build:
