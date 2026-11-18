@@ -274,7 +274,6 @@ fun WindowScope.App(
     toggleWindowFullscreen: () -> Unit,
     checkDarkMode: (Boolean) -> Unit,
     isLinux: Boolean = false,
-    integrationsReady: Boolean = false,
 ) {
     val playbackController = remember { DesktopPlaybackController(AppState.scope) }
     val downloadStates = LibraryState.downloadStates
@@ -287,7 +286,7 @@ fun WindowScope.App(
         LocalMouseScrollFactors provides desktopMouseScrollFactors(LocalDensity.current),
         desktopScrollConfig(),
     ) {
-        AppContent(navigator, onMaximized, toggleWindowFullscreen, checkDarkMode, isLinux, integrationsReady)
+        AppContent(navigator, onMaximized, toggleWindowFullscreen, checkDarkMode, isLinux)
     }
 }
 
@@ -298,7 +297,6 @@ private fun WindowScope.AppContent(
     toggleWindowFullscreen: () -> Unit,
     checkDarkMode: (Boolean) -> Unit,
     isLinux: Boolean,
-    integrationsReady: Boolean,
 ) {
     MetrolistTheme {
         val colorScheme = MaterialTheme.colorScheme
@@ -597,8 +595,6 @@ private fun WindowScope.AppContent(
                 )
             }
         }
-
-        if (integrationsReady) MiniplayerWindow()
 
         if (UiState.showFloatingSearch) {
             FloatingSearchOverlay(
@@ -1603,12 +1599,17 @@ private fun runDesktopApp(args: Array<String>) {
                                     toggleWindowFullscreen = toggleFullscreen,
                                     checkDarkMode = { areWeInDarkMode.value = it },
                                     isLinux = isLinux,
-                                    integrationsReady = integrationsReady,
                                 )
                             }
                         }
                     }
                 }
+            }
+        }
+
+        if (integrationsReady && Settings.shared.desktopOnboardingComplete) {
+            MetrolistTheme {
+                MiniplayerWindow()
             }
         }
 
