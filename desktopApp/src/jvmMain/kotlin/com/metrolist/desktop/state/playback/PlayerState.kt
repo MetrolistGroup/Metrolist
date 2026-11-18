@@ -3617,8 +3617,9 @@ object PlayerState {
             if (currentRemoved) {
                 state.entries
                     .withIndex()
-                    .firstOrNull { (index, _) -> index > state.currentIndex && index !in indices }
-                    ?.value
+                    .firstOrNull { (index, entry) ->
+                        index > state.currentIndex && index !in indices && !isSongBlocked(entry.song)
+                    }?.value
                     ?.key
             } else {
                 null
@@ -3632,7 +3633,14 @@ object PlayerState {
                     if (removal != null) {
                         if (currentRemoved) {
                             playbackPosition.value = 0L
-                            playbackDuration.value = (queue.currentItem()?.duration ?: 0L) * 1_000L
+                            playbackDuration.value =
+                                nextEntryKey
+                                    ?.let { key ->
+                                        queue.state.value.entries
+                                            .firstOrNull { it.key == key }
+                                            ?.song
+                                            ?.duration
+                                    }?.times(1_000L) ?: 0L
                             progress = 0f
                             transitions.retireCurrentPlayback()
                         }
