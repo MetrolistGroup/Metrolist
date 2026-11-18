@@ -178,11 +178,12 @@ fun HistoryEntryRow(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false },
                     ) {
+                        val menuItemCount = listOfNotNull(onEdit, onSongMenu).size + 1
                         DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
                             if (onEdit != null) {
                                 DropdownMenuItem(
                                     text = { Text(editText) },
-                                    shape = groupedMenuItemShapes(0, 2).shape,
+                                    shape = groupedMenuItemShapes(0, menuItemCount).shape,
                                     onClick = {
                                         menuExpanded = false
                                         onEdit()
@@ -199,6 +200,7 @@ fun HistoryEntryRow(
                             if (onSongMenu != null) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(Res.string.more_options)) },
+                                    shape = groupedMenuItemShapes(if (onEdit == null) 0 else 1, menuItemCount).shape,
                                     onClick = {
                                         menuExpanded = false
                                         onSongMenu()
@@ -214,7 +216,7 @@ fun HistoryEntryRow(
                             }
                             DropdownMenuItem(
                                 text = { Text(deleteText) },
-                                shape = groupedMenuItemShapes(if (onEdit == null) 0 else 1, if (onEdit == null) 1 else 2).shape,
+                                shape = groupedMenuItemShapes(menuItemCount - 1, menuItemCount).shape,
                                 onClick = {
                                     menuExpanded = false
                                     onDelete()
