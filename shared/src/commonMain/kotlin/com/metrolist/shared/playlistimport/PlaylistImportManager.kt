@@ -146,7 +146,7 @@ class PlaylistImportManager(
     }
 
     private fun CsvTrack.matchKey(): String =
-        listOf(title.trim().lowercase(), artist.trim().lowercase(), directReference.orEmpty()).joinToString("\u0000")
+        listOfNotNull(title.trim().lowercase(), artist.trim().lowercase(), directReference.orEmpty(), videoId).joinToString("\u0000")
 
     suspend fun loadYouTubePlaylist(
         input: String,
