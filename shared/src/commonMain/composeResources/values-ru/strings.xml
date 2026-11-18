@@ -390,7 +390,7 @@
     <string name="appearance_enable_haptic_feedback">Тактильная обратная связь</string>
     <string name="appearance_enable_haptic_feedback_description">Вибрирует при нажатии кнопок и взаимодействиях</string>
     <string name="appearance_auto_playlists">Автоматические плейлисты</string>
-    <string name="appearance_show_liked_playlist">Плейлист "Понравившееся"</string>
+    <string name="appearance_show_liked_playlist">Плейлист Понравившееся</string>
     <string name="appearance_show_downloaded_playlist">Плейлист "Скачанное"</string>
     <string name="appearance_show_top_playlist">Плейлист "Топ"</string>
     <string name="appearance_show_uploaded_playlist">Плейлист "Загруженное"</string>
