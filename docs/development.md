@@ -355,6 +355,8 @@ The lyrics settings preview uses the current song's lyrics only during active pl
 
 ### AI translation
 
+Google romanization fails if any batch request fails or returns missing or misaligned lines. Failed batches must not substitute source text and enter the completed translation cache.
+
 Automatic translation uses glyphmind's bundled language detector for each main and background vocal. It checks whole lines, script runs and overlapping three-word passages. Confident foreign passages trigger translation through the selected provider; unknown lines remain unchanged unless translation is forced. There are no detection HTTP requests or detector model setting. Short phrases and names can be missed or misclassified. See [romanization and detection](romanization.md) for the model, downloads and behavior changes. Completed translations survive detector-policy changes when source, target, translation mode and provider configuration match. Negative decisions require the same detection policy and never block a forced request.
 
 Translation retries once after a failure, except for cancellation, missing credentials, HTTP 401/403 and 429. A final failure keeps the original lyrics and shows a short snackbar naming the cause. HTTP 200 alone does not prove a usable translation. Playback exports record the stage, provider, model, failure category, output lengths, finish reason and reasoning presence, but never lyrics, response bodies or credentials. Gemini thought parts are excluded. Manual translation enriches displayed lyrics without refetching and keeps the source, offset and video retiming.
