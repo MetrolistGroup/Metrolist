@@ -1152,9 +1152,9 @@
     <string name="save_changes">Salva modifiche</string>
     <string name="general">Generale</string>
     <string name="persistent_shuffle_title">Riproduzione casuale persistente</string>
-    <string name="persistent_shuffle_desc">Mantieni la riproduzione casuale attiva all\u0027avvio di nuovi brani o playlist</string>
+    <string name="persistent_shuffle_desc">Mantieni la riproduzione casuale attiva all'avvio di nuovi brani o playlist</string>
     <string name="remember_shuffle_and_repeat">Ricorda shuffle e ripetizione</string>
-    <string name="remember_shuffle_and_repeat_desc">Memorizza le impostazioni di riproduzione casuale e ripetizione quando riapri l\u0027app</string>
+    <string name="remember_shuffle_and_repeat_desc">Memorizza le impostazioni di riproduzione casuale e ripetizione quando riapri l'app</string>
     <string name="export_playlist">Esporta playlist</string>
     <string name="export_failed">Impossibile esportare la playlist</string>
     <string name="auto_download_on_like">Scarica automaticamente quando metti Mi piace</string>
@@ -1206,7 +1206,7 @@
     <string name="lyrics_line_spacing">Spaziatura testo</string>
     <string name="subtitle_text_size">Dimensioni sottotitoli video</string>
     <string name="error_title">Errore</string>
-    <string name="album_art">Copertina dell\u0027album</string>
+    <string name="album_art">Copertina dell'album</string>
     <string name="previous">Indietro</string>
     <string name="play_pause">Riproduci/pausa</string>
     <string name="next">Avanti</string>
@@ -1875,7 +1875,7 @@
     <string name="equalizer_invalid_profile">Questo file non è un profilo EQ parametrico</string>
     <string name="equalizer_autoeq_unavailable">Impossibile caricare profili AutoEQ</string>
     <string name="skip_silence_instant">Salta immediatamente i silenzi</string>
-    <string name="skip_silence_instant_desc">Dopo 2 secondi di silenzio, salta fino a 15 secondi. Potrebbe saltare l\u0027audio a basso volume.</string>
+    <string name="skip_silence_instant_desc">Dopo 2 secondi di silenzio, salta fino a 15 secondi. Potrebbe saltare l'audio a basso volume.</string>
     <string name="share_lyrics">Condividi testo</string>
     <string name="share_as_text">Condividi come testo</string>
     <string name="customize_colors">Personalizza colori</string>
