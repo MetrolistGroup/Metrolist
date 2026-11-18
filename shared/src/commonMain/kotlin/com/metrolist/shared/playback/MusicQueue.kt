@@ -270,7 +270,10 @@ class MusicQueue {
         publishItems()
     }
 
-    fun removeAt(indices: Set<Int>): QueueRemoval? {
+    fun removeAt(
+        indices: Set<Int>,
+        advanceCurrentToSuccessor: Boolean = false,
+    ): QueueRemoval? {
         val validIndices = indices.filter { it in displayedEntries.indices }.sorted()
         if (validIndices.isEmpty()) return null
         val previousCurrentIndex = _currentIndex.value
@@ -284,9 +287,10 @@ class MusicQueue {
             }
         displayedEntries = displayedEntries.filterNot { it in removedEntries }
         originalEntries = originalEntries.filterNot { it in removedEntries }
+        val removedIndexSet = validIndices.toHashSet()
         val currentIndex =
-            if (previousCurrentIndex in validIndices) {
-                val nextIndex = (previousCurrentIndex + 1 until _items.value.size).firstOrNull { it !in validIndices }
+            if (advanceCurrentToSuccessor && previousCurrentIndex in removedIndexSet) {
+                val nextIndex = (previousCurrentIndex + 1 until _items.value.size).firstOrNull { it !in removedIndexSet }
                 nextIndex?.let { it - validIndices.count { removedIndex -> removedIndex < it } } ?: -1
             } else {
                 (previousCurrentIndex - validIndices.count { it < previousCurrentIndex }).coerceIn(-1, displayedEntries.lastIndex)

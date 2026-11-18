@@ -226,7 +226,7 @@ internal fun reduceDcPlayback(
             val indices = command.indices.ifEmpty { setOf(command.index) }
             if (indices.any { it !in queue.items.value.indices }) return null
             val removingCurrent = queue.currentIndex.value in indices
-            queue.removeAt(indices)
+            queue.removeAt(indices, advanceCurrentToSuccessor = command.advanceCurrentToSuccessor)
             if (removingCurrent) {
                 trackChanged = true
                 next =
@@ -284,7 +284,13 @@ internal fun reduceDcPlayback(
             queue.restore(restored)
             if (currentSong != queue.currentItem() || restored.currentIndex in command.indices) {
                 trackChanged = true
-                next = next.copy(positionMs = 0L, durationMs = (queue.currentItem()?.duration ?: 0L) * 1_000L, ready = false)
+                next =
+                    next.copy(
+                        positionMs = 0L,
+                        durationMs = (queue.currentItem()?.duration ?: 0L) * 1_000L,
+                        ready = false,
+                        playing = command.startPlaying ?: next.playing,
+                    )
             }
         }
     }

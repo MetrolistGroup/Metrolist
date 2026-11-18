@@ -2637,7 +2637,7 @@ object PlayerState {
         val state = queue.state.value
         val index = state.entries.indexOfFirst { it.key == key }
         val entry = state.entries.getOrNull(index) ?: return
-        playTrack(entry.song, queue.items.value, startIndex = index)
+        playTrack(entry.song, queue.items.value, startIndex = index, queueEntryKey = key)
     }
 
     private fun localSongChangeStartsPlayback(): Boolean =
@@ -2662,12 +2662,13 @@ object PlayerState {
         songsOnly: Boolean = false,
         shuffleModeEnabled: Boolean? = null,
         startIndex: Int? = null,
+        queueEntryKey: Long? = null,
     ) {
         if (track.isUnavailable) return
         if (list?.any { it.isUnavailable } == true) {
             val playableList = list.filterNot { it.isUnavailable }
             val playableStartIndex = startIndex?.let { list.take(it).count { song -> !song.isUnavailable } }
-            playTrack(track, playableList, songsOnly, shuffleModeEnabled, playableStartIndex)
+            playTrack(track, playableList, songsOnly, shuffleModeEnabled, playableStartIndex, queueEntryKey)
             return
         }
         val songs = list?.takeIf { it.isNotEmpty() } ?: listOf(track)
@@ -2707,6 +2708,7 @@ object PlayerState {
             songsOnly = songsOnly || (list === queue.items.value && queue.recommendationsSongsOnly),
             shuffleModeEnabled = shuffleModeEnabled,
             startIndex = startIndex,
+            queueEntryKey = queueEntryKey,
         )
     }
 
@@ -2846,6 +2848,7 @@ object PlayerState {
         songsOnly: Boolean = false,
         shuffleModeEnabled: Boolean? = null,
         startIndex: Int? = null,
+        queueEntryKey: Long? = null,
     ) {
         cancelCrossfadeForManualAction()
         val restorePosition = pendingResumePosition?.takeIf { list?.isEmpty() == true && it.first == track.id }
@@ -2856,14 +2859,25 @@ object PlayerState {
                 val playableTrack: SongItem
                 if (!list.isNullOrEmpty()) {
                     val startIndex = startIndex ?: list.indexOfPlaylistOccurrence(track).takeIf { it >= 0 } ?: 0
-                    if (list === queue.items.value) {
+                    if (queueEntryKey != null) {
+                        val currentEntries = queue.state.value.entries
+                        val currentIndex = currentEntries.indexOfFirst { it.key == queueEntryKey }
+                        if (currentIndex < 0) {
+                            if (isCurrentPlaybackTransition(generation)) {
+                                isPlaybackResolving = false
+                                desiredPlayback.value = player.wantsPlayback
+                            }
+                            return@launch
+                        }
+                        queue.skipTo(currentIndex)
+                    } else if (list === queue.items.value) {
                         queue.skipTo(startIndex)
                     } else {
                         replaceQueue(list, startIndex, songsOnly = songsOnly, shuffleModeEnabled = shuffleModeEnabled)
                     }
                     playableTrack = queue
                         .currentItem()
-                        ?.takeIf { current -> !isSongBlocked(current) && list.any { it.id == current.id } }
+                        ?.takeIf { current -> !isSongBlocked(current) && (queueEntryKey != null || list.any { it.id == current.id }) }
                         ?: return@launch
                     Logger.i("PlayerState", "Set up queue with ${list.size} songs, starting at index $startIndex")
                 } else if (list == null) {
@@ -3614,7 +3628,17 @@ object PlayerState {
             if (connectedSession) {
                 syncSession.remove(indices, expectedQueue)
             } else {
-                queue.removeAt(indices).also { if (it != null) queueChanged() }
+                queue.removeAt(indices, advanceCurrentToSuccessor = currentRemoved).also { removal ->
+                    if (removal != null) {
+                        if (currentRemoved) {
+                            playbackPosition.value = 0L
+                            playbackDuration.value = (queue.currentItem()?.duration ?: 0L) * 1_000L
+                            progress = 0f
+                            transitions.retireCurrentPlayback()
+                        }
+                        queueChanged()
+                    }
+                }
             } ?: return null
         if (currentRemoved && !connectedSession) {
             if (nextEntryKey == null) stop() else playQueueOccurrence(nextEntryKey)

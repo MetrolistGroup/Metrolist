@@ -53,6 +53,7 @@ internal class DesktopDeviceConnectSession(
         val removed: MusicQueueSnapshot,
         val sessionId: String,
         val revision: Long,
+        val wasPlaying: Boolean,
     )
 
     private var undo: QueueUndo? = null
@@ -114,12 +115,12 @@ internal class DesktopDeviceConnectSession(
         val activeSession = sync.state.value.sessionId ?: return null
         val revision = sync.queueRevision ?: return null
         val local = MusicQueue().apply { restore(expectedQueue) }
-        val removal = local.removeAt(indices) ?: return null
-        undo = QueueUndo(removal, expectedQueue, local.snapshot(), activeSession, revision + 1L)
+        val removal = local.removeAt(indices, advanceCurrentToSuccessor = true) ?: return null
+        undo = QueueUndo(removal, expectedQueue, local.snapshot(), activeSession, revision + 1L, desiredPlaying)
         connectedRemovals.removeAll { it.get() == null }
         connectedRemovals += WeakReference(removal)
         sync.intercept(
-            DcPlaybackCommand(DcPlaybackAction.REMOVE, indices = indices),
+            DcPlaybackCommand(DcPlaybackAction.REMOVE, indices = indices, advanceCurrentToSuccessor = true),
             expectedQueueRevision = revision,
             expectedQueue = expectedQueue,
         )
@@ -142,6 +143,7 @@ internal class DesktopDeviceConnectSession(
                 DcPlaybackAction.RESTORE_QUEUE,
                 queue = pending.original,
                 indices = removal.items.mapTo(mutableSetOf()) { it.index },
+                startPlaying = pending.wasPlaying,
             ),
             expectedQueueRevision = pending.revision,
             expectedQueue = pending.removed,
