@@ -2686,4 +2686,5 @@
     <string name="playlist_lock">Блокировка</string>
     <string name="search_episodes">Поиск выпусков</string>
     <string name="updates_nightly_builds">Ночные сборки</string>
+    <string name="add_to_library">Добавить в библиотеку</string>
 </resources>
