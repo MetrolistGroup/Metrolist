@@ -2599,4 +2599,6 @@
     <string name="ai_setup_key_limits">Zkontrolovat limity klíče</string>
     <string name="hide_recent_searches">Skrýt „Z nedávných vyhledávání“</string>
     <string name="credits_multiplatform_developer">Multiplatformní vývojář</string>
+    <string name="matugen_colors_description"></string>
+    <string name="matugen_colors"></string>
 </resources>
