@@ -238,24 +238,47 @@ object DeezerPlaylistImporter {
                 ?.jsonPrimitive
                 ?.content ?: ""
 
+        // Album details embed only a preview, without a continuation even when more tracks exist.
         val tracks = mutableListOf<PlaylistImportManager.CsvTrack>()
-        val initialTracks = root["tracks"]?.jsonObject?.get("data")?.jsonArray
-        if (initialTracks != null) {
-            for (item in initialTracks) {
+        var totalExpected = root["nb_tracks"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()
+        var nextUrl: String? = "https://api.deezer.com/album/$albumId/tracks"
+        val visited = mutableSetOf<String>()
+        while (nextUrl != null) {
+            val pageUrl = deezerApiUrl(nextUrl)
+            if (!visited.add(pageUrl)) throw ImportException(ImportErrorKey.IncompleteSource)
+            val pageResponse =
+                withTimeout(15_000.milliseconds) {
+                    httpClient.get(pageUrl) {
+                        header("User-Agent", UA)
+                    }
+                }
+            if (!pageResponse.status.isSuccess()) throw ImportException(ImportErrorKey.IncompleteSource)
+            val pageBody =
+                pageResponse.bodyAsTextLimited(MAX_JSON_RESPONSE_BYTES)
+                    ?: throw ImportException(ImportErrorKey.IncompleteSource)
+            val pageRoot = json.parseToJsonElement(pageBody).jsonObject
+            if (pageRoot.containsKey("error")) throw ImportException(ImportErrorKey.IncompleteSource)
+            val pageData = pageRoot["data"] as? JsonArray ?: throw ImportException(ImportErrorKey.IncompleteSource)
+            totalExpected = pageRoot["total"]?.jsonPrimitive?.contentOrNull?.toIntOrNull() ?: totalExpected
+            val previousSize = tracks.size
+            for (item in pageData) {
                 val obj = item.jsonObject
-                val trackTitle = obj["title"]?.jsonPrimitive?.content?.trim() ?: continue
+                val trackTitle = obj["title"]?.jsonPrimitive?.contentOrNull?.trim() ?: continue
                 val trackArtist =
                     obj["artist"]
                         ?.jsonObject
                         ?.get("name")
                         ?.jsonPrimitive
-                        ?.content
+                        ?.contentOrNull
                         ?.trim() ?: albumArtist
                 tracks += PlaylistImportManager.CsvTrack(trackTitle, trackArtist, null)
+                if (tracks.size > PlaylistImportManager.MAX_PLAYLIST_TRACKS) throw ImportException(ImportErrorKey.TooManyTracks)
             }
+            onProgress(tracks.size, totalExpected)
+            nextUrl = pageRoot["next"]?.jsonPrimitive?.contentOrNull
+            if (nextUrl != null && tracks.size == previousSize) throw ImportException(ImportErrorKey.IncompleteSource)
         }
-
-        onProgress(tracks.size, tracks.size)
+        if (totalExpected != null && tracks.size < totalExpected) throw ImportException(ImportErrorKey.IncompleteSource)
 
         if (tracks.isEmpty()) {
             return Result.failure(IllegalStateException("No tracks found in this Deezer album"))

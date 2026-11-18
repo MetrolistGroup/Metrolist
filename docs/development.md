@@ -417,6 +417,8 @@ Every platform passes reports and breadcrumbs through `redactDiagnosticText` and
 
 Android account imports from Deezer, Tidal and Amazon Music handle one playlist or liked-songs collection at a time. Back from destination selection returns to the previous step, keeping CSV rows and mappings. Batches over `PlaylistImportManager.MAX_PLAYLIST_TRACKS` fail instead of truncating; Spotify reports skipped playlists. The desktop Spotify import can target Favorites, a new synced playlist or an editable synced playlist. Playlist file imports keep explicitly supplied titles as local custom metadata; bare URLs and filenames do not become titles, and local edits win on reimport.
 
+Deezer album URL imports use the paginated track-list endpoint, not the truncated track preview embedded in album details. Failed continuations and incomplete track lists fail the import instead of saving a partial album.
+
 Android Spotify and Apple Music library imports open the destination picker for one playlist. Multiple playlists import sequentially through the foreground service into separate playlists with their source names and covers. The app creates synced playlists when signed into YouTube Music and local playlists otherwise. A failed playlist does not stop the rest. The final failure report includes completed counts and failed playlist names.
 
 Last.fm and ListenBrainz login dialogs link to account registration; ListenBrainz also links to its token page.
