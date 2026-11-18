@@ -1980,7 +1980,7 @@
     <string name="ai_provider_group_custom">Vlastní endpointy</string>
     <string name="ai_model_free">Bezplatný</string>
     <string name="ai_model_speed">~%1$s tokenů/s</string>
-    <string name="export_as_format">Exportovat jako "%1$s"</string>
+    <string name="export_as_format">Exportovat jako %1$s</string>
     <string name="exporting_collection">Exportuji %1$s</string>
     <string name="device_connect_pair_hint">Pro spárování nového zařízení otevřete Integrace v Nastavení.</string>
     <string name="playlist_order_original">Pořadí skladeb v playlistu</string>
