@@ -864,7 +864,6 @@ internal fun LandscapePlayerContent(
     playerType: PlayerType = Settings.shared.playerType,
     playPauseFocusRequester: FocusRequester? = null,
     showVideoSurface: Boolean = false,
-    onOpenCast: () -> Unit = {},
     castState: CastState = CastState(),
     showVideoButton: Boolean = false,
     isVideoModeActive: Boolean = false,
@@ -911,9 +910,11 @@ internal fun LandscapePlayerContent(
         val horizontalPadding = if (compactHeight) 16.dp else LandscapePlayerHorizontalPadding
         val verticalPadding = if (compactHeight) 8.dp else LandscapePlayerVerticalPadding
         val topButtonSize = if (compactHeight) 36.dp else 40.dp
-        // Only the audio/video switcher and the classic header sit above the controls.
+        // Phones keep cast and the audio/video switch in the player menu; only TV has room for the switch on top.
+        val showTopVideoSwitch = showVideoButton && isTv
+        // Only the TV audio/video switcher and the classic header sit above the controls.
         val controlsTopPadding =
-            if (showVideoButton || playerType == PlayerType.CLASSIC) {
+            if (showTopVideoSwitch || playerType == PlayerType.CLASSIC) {
                 topButtonSize + if (compactHeight) 4.dp else 16.dp
             } else {
                 0.dp
@@ -1076,7 +1077,7 @@ internal fun LandscapePlayerContent(
             )
         }
 
-        if (!showVideoButton && isClassic) {
+        if (!showTopVideoSwitch && isClassic) {
             Box(
                 modifier =
                     Modifier
@@ -1114,7 +1115,7 @@ internal fun LandscapePlayerContent(
             }
         }
 
-        if (showVideoButton) {
+        if (showTopVideoSwitch) {
             Box(
                 modifier =
                     Modifier
@@ -1159,23 +1160,6 @@ internal fun LandscapePlayerContent(
                     )
                 }
             }
-        }
-
-        if (!isTv && !isListenTogetherGuest && platform.supportsCasting && Settings.shared.isPlayerCastButtonVisible) {
-            LandscapePlayerCastButton(
-                isCasting = castState.isConnected,
-                buttonSize = topButtonSize,
-                onClick = {
-                    hapticManager.perform(HapticEvent.PRESS)
-                    onOpenCast()
-                },
-                modifier =
-                    Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = verticalPadding, end = LandscapeRightPaneEndGap)
-                        .zIndex(1f)
-                        .focusProperties { if (isTv && playPauseFocusRequester != null) down = playPauseFocusRequester },
-            )
         }
 
         Row(
@@ -1489,7 +1473,7 @@ internal fun LandscapePlayerContent(
                                                     ),
                                                 isPlaying = isPlaying,
                                                 isLoading = isPlaybackLoading && LocalPlayerContentActive.current,
-                                                showLoadingIndicator = !(showVideoButton && isVideoModeResolving),
+                                                showLoadingIndicator = !(showTopVideoSwitch && isVideoModeResolving),
                                                 repeatMode = repeatMode,
                                                 isLiked = isLiked,
                                                 onToggleRepeat = {
@@ -1534,7 +1518,7 @@ internal fun LandscapePlayerContent(
                                                 spacing = if (compactHeight) 40.dp else 52.dp,
                                                 isPlaying = isPlaying,
                                                 isLoading = isPlaybackLoading && LocalPlayerContentActive.current,
-                                                showLoadingIndicator = !(showVideoButton && isVideoModeResolving),
+                                                showLoadingIndicator = !(showTopVideoSwitch && isVideoModeResolving),
                                                 onSkipPrevious = {
                                                     Logger.d("Haptics", "Trigger PlayerScreen previous click")
                                                     hapticManager.perform(HapticEvent.PRESS)
@@ -1558,7 +1542,7 @@ internal fun LandscapePlayerContent(
                                             PlayerPrimaryControls(
                                                 isPlaying = isPlaying,
                                                 isLoading = isPlaybackLoading && LocalPlayerContentActive.current,
-                                                showLoadingIndicator = !(showVideoButton && isVideoModeResolving),
+                                                showLoadingIndicator = !(showTopVideoSwitch && isVideoModeResolving),
                                                 playText = stringResource(Res.string.play),
                                                 pauseText = stringResource(Res.string.pause),
                                                 onSkipPrevious = {

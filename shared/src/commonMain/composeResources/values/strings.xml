@@ -4022,6 +4022,8 @@
     <!-- Translators: Imperative action label for close video fullscreen in the music video player. -->
     <string name="close_video_fullscreen">Close video fullscreen</string>
     <string name="switch_to_audio">Switch to audio</string>
+    <!-- Translators: Player menu action that plays the music video of the current song. -->
+    <string name="switch_to_video">Switch to video</string>
     <string name="prefer_word_synced_lyrics">Prefer word-synced lyrics</string>
     <string name="prefer_word_synced_lyrics_description">Search enabled sources for word timings before using line-synced or plain lyrics</string>
     <!-- Translators: Label for thumbnail in the music video player. -->
