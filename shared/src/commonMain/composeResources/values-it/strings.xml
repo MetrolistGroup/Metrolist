@@ -143,9 +143,9 @@
     <string name="queue_loading">Caricamento coda…</string>
     <string name="calculating">Calcolando…</string>
     <plurals name="queue_track_count_duration">
-        <item quantity="one">%1$d traccia · %2$s</item>
-        <item quantity="many">%1$d tracce · %2$s</item>
-        <item quantity="other">%1$d tracce · %2$s</item>
+        <item quantity="one">%1$d traccia · %2$s</item>
+        <item quantity="many">%1$d tracce · %2$s</item>
+        <item quantity="other">%1$d tracce · %2$s</item>
     </plurals>
     <string name="suggested_tracks">Raccomandate</string>
     <string name="playback_notification_channel_name">Riproduzione</string>
@@ -427,7 +427,7 @@
         <item quantity="other">%1$d artisti bloccati</item>
     </plurals>
     <string name="android_auto_pinned_playlists">Playlist per guida fissate</string>
-    <string name="android_auto_pinned_playlists_desc">Mostra fino a sei playlist nella home dell\u0027auto per riprodurle con un tocco. Mantiene l\u0027ordine di selezione.</string>
+    <string name="android_auto_pinned_playlists_desc">Mostra fino a sei playlist nella home dell'auto per riprodurle con un tocco. Mantiene l'ordine di selezione.</string>
     <string name="android_auto_pinned_playlists_count">Fissate: %1$d di %2$d</string>
     <string name="android_auto_choose_pinned_playlists">Scegli le playlist per la guida</string>
     <string name="android_auto_pinned_playlist_mode">Riproduzione delle playlist</string>
