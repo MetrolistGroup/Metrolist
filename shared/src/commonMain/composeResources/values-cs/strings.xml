@@ -1613,7 +1613,7 @@
     <string name="device_connect_device_type_desktop">Počítač</string>
     <string name="device_connect_device_type_android_auto">Android Auto</string>
     <string name="device_connect_device_type_unknown">Neznámé zařízení</string>
-    <string name="device_connect_device_type_and_model">%1$s · %2$s</string>
+    <string name="device_connect_device_type_and_model">%1$s · %2$s</string>
     <string name="settings_disable_wayland_fix">Vypnout Wayland opravu měřítka (Wayland scale fix)</string>
     <string name="device_connect_pair_code_message">Ověřte, zda se tento kód shoduje na zařízení %1$s, potom potvrďte na obou zařízeních.</string>
     <string name="device_connect_pair_code_accessibility">Párovací kód: %1$s</string>
@@ -1979,7 +1979,7 @@
     <string name="ai_provider_group_direct">Přímí poskytovatelé</string>
     <string name="ai_provider_group_custom">Vlastní endpointy</string>
     <string name="ai_model_free">Zdarma</string>
-    <string name="ai_model_speed">~%1$s tokenu/s</string>
+    <string name="ai_model_speed">~%1$s tokenu/s</string>
     <string name="export_as_format">Exportovat jako "%1$s"</string>
     <string name="exporting_collection">Exportuji %1$s</string>
     <string name="device_connect_pair_hint">Pro spárování nového zařízení otevřete Integrace v Nastavení.</string>
@@ -2001,7 +2001,7 @@
     <string name="ai_model_same_as_translation">Stejný jako překladový model</string>
     <string name="ai_model_search">Vyhledávání modelů</string>
     <string name="ai_model_custom_id">Použít vlastní ID modelu</string>
-    <string name="ai_model_price">%1$s dovnitř / %2$s ven na 1M tokenů</string>
+    <string name="ai_model_price">%1$s dovnitř / %2$s ven na 1M tokenů</string>
     <string name="ai_model_load_failed">Nepodařilo se načíst modely</string>
     <string name="ai_model_api_key_needed">Přidejte API klíč, aby se načetl seznam modelů</string>
     <string name="ai_model_none_found">Žádné modely neodpovídají vašemu vyhledávání</string>
