@@ -201,7 +201,7 @@ Android Auto lists **Shuffle** as the first row of playlists, albums, Liked song
 
 The **Quick-add playlist** setting selects an editable saved playlist for the now-playing **Add to playlist** button, which uses the shared playlist mutation path with YouTube sync and duplicate checks. An unset or deleted destination prompts for configuration. Android Auto settings are available on phones too.
 
-Auto playback requests keep their resolved metadata until the session applies them, even if the metadata cache evicts it. Indexed queue selections cancel pending Auto requests so a late result cannot override them. Queue selection accepts occurrence-specific media IDs. Transport-only controllers can select an existing queue entry but cannot replace the queue or browse.
+Auto playback requests keep their resolved metadata until the session applies them, even if the metadata cache evicts it. Indexed queue selections cancel pending Auto requests so a late result cannot override them. Queue selection accepts occurrence-specific media IDs. Transport-only controllers can select an existing queue entry but cannot replace the queue or browse. Offline, resuming or selecting a queue entry keeps the whole queue and starts at the next downloaded entry; later transitions skip songs that are not downloaded.
 
 The YouTube playlists folder reads saved remote playlists without a network request while offline. If an online listing fails before returning anything, it falls back to stored playlists; a successful empty listing stays empty.
 

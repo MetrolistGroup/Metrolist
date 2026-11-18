@@ -98,6 +98,7 @@ import com.metrolist.shared.model.isLive
 import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.model.isVideoSong
 import com.metrolist.shared.model.previewThumbnailUrl
+import com.metrolist.shared.playback.MusicQueueEntry
 import com.metrolist.shared.playback.PauseOnMuteController
 import com.metrolist.shared.playback.PlaybackErrorContext
 import com.metrolist.shared.playback.PlaybackFailure
@@ -2804,6 +2805,13 @@ class MusicService :
         }
     }
 
+    private fun automotiveQueueItem(entry: MusicQueueEntry): MediaItem =
+        automotiveLibrary
+            .playableItem(entry.song)
+            .buildUpon()
+            .setMediaId(AutomotiveMediaIds.queueSong(entry.key, entry.song.id))
+            .build()
+
     private suspend fun resolveVoicePlayback(
         request: VoiceSearchRequest,
         generation: Long,
@@ -2813,33 +2821,23 @@ class MusicService :
             val state = player.queueState.value
             val current = state.entries.getOrNull(state.currentIndex)
             if (current != null && !PlaybackNetworkStateStore.current.connected) {
-                val playable =
-                    offlineAutomotiveQueue(
-                        AutomotiveSongResolution(state.entries.map { it.song }, state.currentIndex),
-                        false,
-                        offlineAvailability(),
-                    )
-                if (playable != null) {
+                val index = offlineQueueEntryIndex(state.entries, state.currentIndex, offlineAvailability())
+                if (index != null) {
                     return automotivePlaybackRequestGate.resolve(
                         generation,
-                        playable.songs.map(automotiveLibrary::playableItem),
-                        playable.startIndex,
-                        if (playable.songs[playable.startIndex].id == current.song.id) player.currentPosition.value else C.TIME_UNSET,
+                        listOf(automotiveQueueItem(state.entries[index])),
+                        0,
+                        if (index == state.currentIndex) player.currentPosition.value else C.TIME_UNSET,
+                        replacesQueue = false,
                         canApply = !AndroidListenTogetherManager.isGuestPlaybackLocked,
                     )
                 }
             }
             if (current != null && !BlockedContent.isBlocked(current.song) && PlaybackNetworkStateStore.current.connected) {
                 Settings.shared.pendingContinuePlayback = false
-                val item =
-                    automotiveLibrary
-                        .playableItem(current.song)
-                        .buildUpon()
-                        .setMediaId(AutomotiveMediaIds.queueSong(current.key, current.song.id))
-                        .build()
                 return automotivePlaybackRequestGate.resolve(
                     generation,
-                    listOf(item),
+                    listOf(automotiveQueueItem(current)),
                     0,
                     player.currentPosition.value,
                     replacesQueue = false,
@@ -3392,18 +3390,15 @@ class MusicService :
                 if (queueSelection != null) {
                     val activeQueueIndex = automotiveQueueIndex(selectedItem.mediaId, player.queueState.value.entries)
                     if (activeQueueIndex != null && !PlaybackNetworkStateStore.current.connected) {
-                        val playable =
-                            offlineAutomotiveQueue(
-                                AutomotiveSongResolution(player.songQueue.value, activeQueueIndex),
-                                false,
-                                offlineAvailability(),
-                            )
+                        val entries = player.queueState.value.entries
+                        val index = offlineQueueEntryIndex(entries, activeQueueIndex, offlineAvailability())
                         return@future automotivePlaybackRequestGate.resolve(
                             requestGeneration,
-                            playable?.songs.orEmpty().map(automotiveLibrary::playableItem),
-                            playable?.startIndex ?: 0,
-                            startPositionMs,
-                            canApply = playable != null && !AndroidListenTogetherManager.isGuestPlaybackLocked,
+                            listOfNotNull(index?.let { automotiveQueueItem(entries[it]) }),
+                            0,
+                            if (index == activeQueueIndex) startPositionMs else C.TIME_UNSET,
+                            replacesQueue = false,
+                            canApply = index != null && !AndroidListenTogetherManager.isGuestPlaybackLocked,
                         )
                     }
                     return@future automotivePlaybackRequestGate.resolve(
