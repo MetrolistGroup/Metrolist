@@ -2701,4 +2701,10 @@
     <string name="updates_nightly_builds">Versiuni nightly</string>
     <string name="updates_force_install">Instalează oricum</string>
     <string name="ai_api_key_optional">Opțional, modelele gratuite funcționează fără o cheie</string>
+    <string name="lyrics_romanization_show_romanization"></string>
+    <string name="lyrics_romanization_larger_text"></string>
+    <string name="lyrics_romanization_larger_text_description"></string>
+    <string name="lyrics_romanization_show_original_description"></string>
+    <string name="lyrics_romanization_show_original"></string>
+    <string name="lyrics_romanization_show_romanization_description"></string>
 </resources>
