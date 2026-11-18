@@ -1534,19 +1534,19 @@
     <string name="shortcuts_navigation_interface">Navigazione e interfaccia</string>
     <string name="shortcut_play_pause">Riproduci / pausa</string>
     <string name="shortcut_seek_backward_forward">Vai indietro / avanti 5s</string>
-    <string name="shortcut_jump_percent" formatted="false">Salta a 0\u0025 - 90\u0025</string>
+    <string name="shortcut_jump_percent" formatted="false">Salta a 0% - 90%</string>
     <string name="shortcut_next_track">Brano successivo</string>
     <string name="shortcut_previous_track">Brano precedente</string>
     <string name="shortcut_toggle_shuffle">Attiva/disattiva casuale</string>
     <string name="shortcut_cycle_repeat">Alterna modalità ripetizione</string>
-    <string name="shortcut_volume_up_down">Volume su / giù 10\u0025</string>
-    <string name="shortcut_volume_step">Volume su / giù di un livello</string>
+    <string name="shortcut_volume_up_down">Volume su / giù 10%</string>
+    <string name="shortcut_volume_step">Volume su / giù di un livello</string>
     <string name="shortcut_mute_unmute">Muto / riattiva</string>
-    <string name="shortcut_toggle_video">Alterna modalità / visualizzatore video</string>
+    <string name="shortcut_toggle_video">Alterna modalità / visualizzatore video</string>
     <string name="shortcut_toggle_fullscreen_video">Alterna video schermo intero</string>
     <string name="shortcut_toggle_captions">Alterna sottotitoli</string>
-    <string name="shortcut_toggle_lyrics">Alterna pannello / drawer testi</string>
-    <string name="shortcut_toggle_queue">Alterna pannello / drawer coda</string>
+    <string name="shortcut_toggle_lyrics">Alterna pannello / drawer testi</string>
+    <string name="shortcut_toggle_queue">Alterna pannello / drawer coda</string>
     <string name="shortcut_toggle_device_connect">Alterna pannello Device Connect</string>
     <string name="shortcut_toggle_shortcuts">Alterna elenco scorciatoie</string>
     <string name="shortcut_open_search">Apri ricerca</string>
@@ -1633,7 +1633,7 @@
     <string name="liked_songs_title">Brani piaciuti</string>
     <string name="liked_songs_subtitle">I tuoi brani preferiti</string>
     <string name="liked_songs_empty">Nessun brano piaciuto</string>
-    <string name="liked_songs_empty_hint">I brani che ti piacciono compariranno qui\nTocca l\u0027icona del cuore su un brano per aggiungerlo ai brani piaciuti.</string>
+    <string name="liked_songs_empty_hint">I brani che ti piacciono compariranno qui\nTocca l'icona del cuore su un brano per aggiungerlo ai brani piaciuti.</string>
     <string name="top_playlist_title">La mia top 100</string>
     <string name="top_playlist_empty">Ancora nessun brano</string>
     <string name="top_playlist_empty_hint">Ascolta musica per creare la tua top 100.</string>
