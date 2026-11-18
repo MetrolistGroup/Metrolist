@@ -113,24 +113,13 @@ internal suspend fun resolveAutomotiveSearchSongQueue(
     item: MediaItem,
     library: AutomotiveMediaLibrary,
     mode: AutomotiveSongPlaybackMode,
-    onRadioSeed: (SongItem) -> Unit = {}
 ): AutomotiveSongQueue? {
     val isSearchSong = AutomotiveMediaIds.browseSong(item.mediaId)
         ?.parentId?.startsWith("auto:search:") == true
 
     if (isSearchSong && mode != AutomotiveSongPlaybackMode.QUEUE) {
-        return when (mode) {
-            AutomotiveSongPlaybackMode.SINGLE_SONG -> {
-                library.resolveSong(item)?.let { song ->
-                    AutomotiveSongQueue(songs = listOf(song), startIndex = 0)
-                }
-            }
-            AutomotiveSongPlaybackMode.RADIO -> {
-                library.resolveSong(item)?.let { song ->
-                    onRadioSeed(song)
-                    AutomotiveSongQueue(songs = listOf(song), startIndex = 0)
-                }
-            }
+        return library.resolveSong(item)?.let { song ->
+            AutomotiveSongQueue(songs = listOf(song), startIndex = 0, songPlaybackMode = mode)
         } ?: library.resolveSongQueue(item)
     }
     return library.resolveSongQueue(item)
@@ -144,15 +133,16 @@ internal suspend fun awaitAutomotiveRadioSeed(
     isPlaying: StateFlow<Boolean>,
     transitionPending: StateFlow<Boolean>,
     latestRequestId: () -> Long,
+    isCurrentSession: () -> Boolean,
     playMix: (SongItem) -> Unit,
 ) {
     val request = requests.first { it.requestId > initialRequestId }
     if (request.song.id != song.id) return
 
     combine(currentSong, isPlaying, transitionPending) { current, playing, pending ->
-        current?.id == song.id && playing && !pending
+        current?.id != null && playing && !pending
     }.first { it }
-    if (latestRequestId() == request.requestId) {
-        playMix(song)
+    if (latestRequestId() == request.requestId && isCurrentSession()) {
+        currentSong.value?.let(playMix)
     }
 }

@@ -115,6 +115,7 @@ internal class AndroidQueueCoordinator(
     private var pendingRestorePositionMs: Long? = null
     private var restoredSongId: String? = null
     private var remoteLoadGeneration = 0L
+    var singleSongQueueSessionId: Long? = null
 
     fun saveShuffleMode() {
         val queue = player.queueSnapshots.value
@@ -568,7 +569,8 @@ internal class AndroidQueueCoordinator(
         )
 
     private fun canBootstrapRecommendations(): Boolean =
-        shouldBootstrapQueueRecommendations(isFiniteQueue, Settings.shared.autoLoadMore, playlistPage?.hasMore == true)
+        singleSongQueueSessionId != queueSessionId &&
+            shouldBootstrapQueueRecommendations(isFiniteQueue, Settings.shared.autoLoadMore, playlistPage?.hasMore == true)
 
     fun selectQueueChip(chipId: String) {
         if (AndroidDeviceConnect.manager.remote.isFollowing || AndroidListenTogetherManager.isGuestPlaybackLocked) return

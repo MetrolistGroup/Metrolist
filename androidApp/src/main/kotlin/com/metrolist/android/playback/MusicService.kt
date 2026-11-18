@@ -120,6 +120,7 @@ import com.metrolist.shared.playback.shouldSkipAfterPlaybackFailure
 import com.metrolist.shared.playback.sponsorblock.observeSponsorBlockSkipping
 import com.metrolist.shared.scrobble.ScrobbleManager
 import com.metrolist.shared.scrobble.ScrobbleSessions
+import com.metrolist.shared.settings.AutomotiveSongPlaybackMode
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.MusicVideoQuality
 import com.metrolist.shared.settings.Settings
@@ -311,10 +312,36 @@ class MusicService :
                     ),
                 )
             ) {
+                val songQueue = pendingAutomotiveSongQueue?.takeIf {
+                    it.songs.getOrNull(it.startIndex)?.id == songs.getOrNull(startIndex)?.id
+                }
+                pendingAutomotiveSongQueue = null
                 queueCoordinator.replaceQueueSession(songs, startIndex, queueTitle, finite = true, playlistPage = playlistPage) {
+                    if (songQueue?.songPlaybackMode == AutomotiveSongPlaybackMode.SINGLE_SONG) {
+                        queueCoordinator.singleSongQueueSessionId = queueCoordinator.queueSessionId
+                    }
+                    val initialRequestId = player.latestQueuePlaybackRequestId
                     replacement()
                     if (shuffleEnabled) player.toggleShuffle(preserveHistory = shuffleModeEnabled != true)
                     _shuffleModeEnabled.value = player.isShuffleEnabled
+                    if (songQueue?.songPlaybackMode == AutomotiveSongPlaybackMode.RADIO) {
+                        songs.getOrNull(startIndex)?.let { song ->
+                            val sessionId = queueCoordinator.queueSessionId
+                            pendingRadioJob = serviceScope.launch {
+                                awaitAutomotiveRadioSeed(
+                                    song = song,
+                                    initialRequestId = initialRequestId,
+                                    requests = player.queuePlaybackRequests,
+                                    currentSong = player.currentSong,
+                                    isPlaying = player.isPlaying,
+                                    transitionPending = player.playbackTransitionPending,
+                                    latestRequestId = { player.latestQueuePlaybackRequestId },
+                                    isCurrentSession = { queueCoordinator.queueSessionId == sessionId },
+                                    playMix = { playMix(it) },
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -369,6 +396,7 @@ class MusicService :
     private val playbackPersistenceLifecycle = PlaybackPersistenceLifecycle()
 
     private var pendingRadioJob: Job? = null
+    private var pendingAutomotiveSongQueue: AutomotiveSongQueue? = null
 
     private lateinit var audioManager: AudioManager
     private val pauseOnMute = PauseOnMuteController()
@@ -3347,6 +3375,7 @@ class MusicService :
             serviceScope.future {
                 (application as App).startup.await()
                 pendingRadioJob?.cancel()
+                pendingAutomotiveSongQueue = null
                 if (!canResolveMediaSessionItems(
                         canBrowse = canBrowseLibrary(session, controller),
                         isAssistant = isAssistantController(controller),
@@ -3404,23 +3433,9 @@ class MusicService :
                         item = item,
                         library = automotiveLibrary,
                         mode = Settings.shared.androidAutoSongPlaybackMode,
-                        onRadioSeed = { song ->
-                            val initialRequestId = player.latestQueuePlaybackRequestId
-                            pendingRadioJob = serviceScope.launch {
-                                awaitAutomotiveRadioSeed(
-                                    song = song,
-                                    initialRequestId = initialRequestId,
-                                    requests = player.queuePlaybackRequests,
-                                    currentSong = player.currentSong,
-                                    isPlaying = player.isPlaying,
-                                    transitionPending = player.playbackTransitionPending,
-                                    latestRequestId = { player.latestQueuePlaybackRequestId },
-                                    playMix = { playMix(it) }
-                                )
-                            }
-                        }
                     )
                 }
+                pendingAutomotiveSongQueue = songQueue
                 val individuallyResolvedSongs =
                     if (mediaItems.size != 1 || (pinnedQueue == null && songQueue == null)) {
                         mediaItems.map { item ->
@@ -3450,16 +3465,21 @@ class MusicService :
                         )
                     }
                 val songs = playable?.songs.orEmpty()
-                automotivePlaybackRequestGate.resolve(
-                    requestGeneration = requestGeneration,
-                    mediaItems = songs.map(automotiveLibrary::playableItem),
-                    startIndex = playable?.startIndex ?: startIndex,
-                    startPositionMs = if (songQueue?.shuffle == true) C.TIME_UNSET else startPositionMs,
-                    queueTitle = pinnedQueue?.title,
-                    shuffleModeEnabled = pinnedQueue?.shuffle ?: songQueue?.shuffle?.takeIf { it },
-                    playlistPage = pinnedQueue?.playlistPage ?: songQueue?.playlistPage,
-                    canApply = playable != null && !AndroidListenTogetherManager.isGuestPlaybackLocked,
-                )
+                return@future try {
+                    automotivePlaybackRequestGate.resolve(
+                        requestGeneration = requestGeneration,
+                        mediaItems = songs.map(automotiveLibrary::playableItem),
+                        startIndex = playable?.startIndex ?: startIndex,
+                        startPositionMs = if (songQueue?.shuffle == true) C.TIME_UNSET else startPositionMs,
+                        queueTitle = pinnedQueue?.title,
+                        shuffleModeEnabled = pinnedQueue?.shuffle ?: songQueue?.shuffle?.takeIf { it },
+                        playlistPage = pinnedQueue?.playlistPage ?: songQueue?.playlistPage,
+                        canApply = playable != null && !AndroidListenTogetherManager.isGuestPlaybackLocked,
+                    )
+                } catch (error: CancellationException) {
+                    pendingAutomotiveSongQueue = null
+                    throw error
+                }
             }
     }
 

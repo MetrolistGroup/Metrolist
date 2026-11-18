@@ -1563,15 +1563,17 @@ class AutomotiveBrowseTest {
         val queue = resolveAutomotiveSearchSongQueue(selected, library, AutomotiveSongPlaybackMode.QUEUE)
         assertEquals(searchItems.size, queue?.songs?.size)
         assertEquals(1, queue?.startIndex)
+        assertNull(queue?.songPlaybackMode)
 
         val single = resolveAutomotiveSearchSongQueue(selected, library, AutomotiveSongPlaybackMode.SINGLE_SONG)
         assertEquals(listOf(selectedId), single?.songs?.map { it.id })
         assertEquals(0, single?.startIndex)
+        assertEquals(AutomotiveSongPlaybackMode.SINGLE_SONG, single?.songPlaybackMode)
 
-        var seed: SongItem? = null
-        val radio = resolveAutomotiveSearchSongQueue(selected, library, AutomotiveSongPlaybackMode.RADIO) { seed = it }
+        val radio = resolveAutomotiveSearchSongQueue(selected, library, AutomotiveSongPlaybackMode.RADIO)
         assertEquals(listOf(selectedId), radio?.songs?.map { it.id })
-        assertEquals(selectedId, seed?.id)
+        assertEquals(0, radio?.startIndex)
+        assertEquals(AutomotiveSongPlaybackMode.RADIO, radio?.songPlaybackMode)
 
         //Non search items uses the previous behavior (Queue)
         database.dao().insert(PlaylistSongMap(playlistId = "local", songId = "episode", position = 1))
@@ -1583,11 +1585,13 @@ class AutomotiveBrowseTest {
             resolveAutomotiveSearchSongQueue(playlistItem, library, AutomotiveSongPlaybackMode.SINGLE_SONG)!!
         assertEquals(full.songs.map { it.id }, withSingleSongMode.songs.map { it.id })
         assertEquals(full.startIndex, withSingleSongMode.startIndex)
+        assertNull(withSingleSongMode.songPlaybackMode)
 
         val withRadioMode =
             resolveAutomotiveSearchSongQueue(playlistItem, library, AutomotiveSongPlaybackMode.RADIO)!!
         assertEquals(full.songs.map { it.id }, withRadioMode.songs.map { it.id })
         assertEquals(full.startIndex, withRadioMode.startIndex)
+        assertNull(withRadioMode.songPlaybackMode)
     }
 
     @Test
@@ -1598,66 +1602,66 @@ class AutomotiveBrowseTest {
         val currentSong = MutableStateFlow<SongItem?>(null)
         val isPlaying = MutableStateFlow(false)
         val pending = MutableStateFlow(false)
-        var latestId = 0L
-        var mixCalls = 0
+        var latestId: Long
+        var mixCalls: Int
+        var sessionId = 0L
+        var mixedSong: SongItem? = null
 
-        fun runWaiter(initialId: Long, target: SongItem) = launch {
-            awaitAutomotiveRadioSeed(
-                target, initialId, requests,
-                currentSong, isPlaying, pending,
-                { latestId }) { mixCalls++ }
+        suspend fun runCase(
+            initialId: Long,
+            request: QueuePlaybackRequest,
+            expectedMixCalls: Int,
+            playedSong: SongItem = request.song,
+            session: Long = sessionId,
+            emitBeforeWaiter: Boolean = false,
+            beforeResume: suspend () -> Unit = {},
+        ) {
+            mixCalls = 0
+            mixedSong = null
+            latestId = request.requestId
+            pending.value = true
+            if (emitBeforeWaiter) requests.emit(request)
+            val job = this@runBlocking.launch {
+                awaitAutomotiveRadioSeed(
+                    songA, initialId, requests,
+                    currentSong, isPlaying, pending,
+                    { latestId }, { sessionId == session },
+                ) { song -> mixCalls++; mixedSong = song }
+            }
+            if (!emitBeforeWaiter) requests.emit(request)
+            currentSong.value = playedSong
+            isPlaying.value = true
+            beforeResume()
+            pending.value = false
+            job.join()
+            assertEquals(expectedMixCalls, mixCalls)
         }
 
         // correct request and song
-        var job = runWaiter(0L, songA)
-        latestId = 1L
-        pending.value = true
-        requests.emit(QueuePlaybackRequest(1L, songA))
-        currentSong.value = songA
-        isPlaying.value = true
-        pending.value = false
-        job.join()
-        assertEquals(1, mixCalls)
+        runCase(0L, QueuePlaybackRequest(1L, songA), expectedMixCalls = 1)
+        assertEquals(songA.id, mixedSong?.id)
 
         // latestId changes before playMix is called
-        mixCalls = 0
-        job = runWaiter(1L, songA)
-        latestId = 2L
-        pending.value = true
-        requests.emit(QueuePlaybackRequest(2L, songA))
-        currentSong.value = songA
-        isPlaying.value = true
-        pending.value = false
-        latestId = 3L
-        job.join()
-        assertEquals(0, mixCalls)
+        runCase(1L, QueuePlaybackRequest(2L, songA), expectedMixCalls = 0) { latestId = 3L }
 
         // The waiter waits for A, but B starts.
-        mixCalls = 0
-        job = runWaiter(3L, songA)
-        latestId = 4L
-        pending.value = true
-        requests.emit(QueuePlaybackRequest(4L, songB))
-        currentSong.value = songB
-        isPlaying.value = true
-        pending.value = false
-        job.join()
-        assertEquals(0, mixCalls)
+        runCase(3L, QueuePlaybackRequest(4L, songB), expectedMixCalls = 0)
 
         // The waiter waits for A, but the another request for A is done
-        mixCalls = 0
-        job = runWaiter(10L, songA)
-        latestId = 11L
-        pending.value = true
-        requests.emit(QueuePlaybackRequest(11L, songA))
-        currentSong.value = songA
-        isPlaying.value = true
-        latestId = 12L
-        yield()
-        requests.emit(QueuePlaybackRequest(12L, songA))
-        pending.value = false
-        job.join()
-        assertEquals(0, mixCalls)
+        runCase(10L, QueuePlaybackRequest(11L, songA), expectedMixCalls = 0) {
+            latestId = 12L
+            yield()
+            requests.emit(QueuePlaybackRequest(12L, songA))
+        }
+
+        // Committed song has a different ID than the search seed.
+        val songA2 = SongItem("A2", "A2", null, emptyList(), null)
+        runCase(20L, QueuePlaybackRequest(21L, songA), expectedMixCalls = 1, playedSong = songA2)
+        assertEquals(songA2.id, mixedSong?.id)
+
+        // Queue session changed before binding
+        sessionId = 1L
+        runCase(30L, QueuePlaybackRequest(31L, songA), expectedMixCalls = 0, session = 0L, emitBeforeWaiter = true)
     }
 
     private fun playlistResponse(
