@@ -54,6 +54,10 @@ class AndroidRadioRepeatTest {
     fun differentSongRadioStartsFromZero() = checkRepeatModes(startRadio = true, currentSongId = "other")
 
     @Test
+    fun radioForDifferentSongCanKeepPausedPlaybackPaused() =
+        checkRepeatModes(startRadio = true, currentSongId = "other", startPlaying = false)
+
+    @Test
     fun queuePlaybackCanPreparePaused() = checkRepeatModes(startRadio = false, startPlaying = false)
 
     @Test
@@ -194,7 +198,7 @@ class AndroidRadioRepeatTest {
                         continue
                     }
                     if (startRadio) {
-                        coordinator.playMix(seed)
+                        coordinator.playMix(seed, startPlaying)
                         val retained = currentSongId == seed.id
                         assertEquals(if (retained) 0 else 1, playbackRequests)
                         assertEquals(if (retained) 1 else 0, queueRestores)

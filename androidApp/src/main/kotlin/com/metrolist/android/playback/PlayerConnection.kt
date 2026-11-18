@@ -1224,7 +1224,7 @@ class PlayerConnection(
             listenTogetherPlaybackRequestsState.tryEmit(ListenTogetherPlaybackRequest(song = song))
             return
         }
-        musicService?.playMix(song)
+        musicService?.playMix(song, startPlaying = localSongChangeStartsPlayback())
     }
 
     override fun selectQueueChip(chipId: String) {
