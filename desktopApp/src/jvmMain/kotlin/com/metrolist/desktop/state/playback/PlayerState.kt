@@ -3632,6 +3632,14 @@ object PlayerState {
                 queue.removeAt(indices, advanceCurrentToSuccessor = currentRemoved).also { removal ->
                     if (removal != null) {
                         if (currentRemoved) {
+                            nextEntryKey?.let { successorKey ->
+                                val successorIndex =
+                                    queue.state.value.entries
+                                        .indexOfFirst { it.key == successorKey }
+                                if (successorIndex >= 0) {
+                                    queue.skipTo(successorIndex, automaticRemoval = removal)
+                                }
+                            }
                             playbackPosition.value = 0L
                             playbackDuration.value =
                                 nextEntryKey

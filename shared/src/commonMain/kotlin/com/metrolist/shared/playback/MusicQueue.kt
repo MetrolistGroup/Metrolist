@@ -157,11 +157,15 @@ class MusicQueue {
         return previous
     }
 
-    fun skipTo(index: Int): SongItem? {
+    fun skipTo(
+        index: Int,
+        automaticRemoval: QueueRemoval? = null,
+    ): SongItem? {
         val song = _items.value.getOrNull(index) ?: return null
         _currentIndex.value = index
         _state.value = _state.value.copy(currentIndex = index)
         publishSnapshot()
+        if (automaticRemoval?.undoIdentity === queueIdentity) automaticRemoval.autoAdvancedEntryKey = displayedEntries[index].key
         return song
     }
 
@@ -333,7 +337,12 @@ class MusicQueue {
         val shiftedCurrentIndex = restored.indexOf(current)
         displayedEntries = restored
         val currentIndex =
-            if (isShuffled == removal.wasShuffled && currentIndexBeforeRestore == removal.currentIndexAfterRemoval) {
+            if (isShuffled == removal.wasShuffled &&
+                (
+                    currentIndexBeforeRestore == removal.currentIndexAfterRemoval ||
+                        (removal.autoAdvancedEntryKey != null && current?.key == removal.autoAdvancedEntryKey)
+                )
+            ) {
                 removal.previousCurrentIndex
             } else {
                 shiftedCurrentIndex
@@ -493,4 +502,5 @@ data class QueueRemoval(
     val wasShuffled: Boolean,
 ) {
     internal var undoIdentity: Any? = null
+    internal var autoAdvancedEntryKey: Long? = null
 }
