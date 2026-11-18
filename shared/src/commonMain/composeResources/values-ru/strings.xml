@@ -2679,4 +2679,7 @@
         <item quantity="many">%1$d дней</item>
         <item quantity="other">%1$d дней</item>
     </plurals>
+    <string name="account_downloading_nightly_update">Загрузка ночной сборки</string>
+    <string name="account_nightly_update_available">Доступна новая ночная сборка</string>
+    <string name="tray_hide_miniplayer">Скрыть мини-плеер</string>
 </resources>
