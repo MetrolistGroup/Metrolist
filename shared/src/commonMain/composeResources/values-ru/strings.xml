@@ -2563,7 +2563,7 @@
     <string name="restore_hidden_item_title">Показать снова?</string>
     <string name="restore_hidden_item_message">Показать "%1$s" снова?</string>
     <string name="unblock_artist_title">Разблокировать исполнителя?</string>
-    <string name="unblock_artist_message">Показывать "%1$s" в очередях, рекомендациях и статистике снова?</string>
+    <string name="unblock_artist_message">Показывать %1$s в очередях, рекомендациях и статистике снова?</string>
     <string name="bottom_sheet_pane_title">Нижняя панель</string>
     <string name="devtools_render_backend">Бэкенд отрисовки</string>
     <string name="devtools_render_backend_auto">Автоматически</string>
