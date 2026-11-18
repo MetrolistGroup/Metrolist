@@ -1268,7 +1268,7 @@
     <string name="migrated">Перенесено</string>
     <string name="ready_to_migrate">Готово к переносу</string>
     <string name="discord_logout">Выйти</string>
-    <string name="new_episodes">Новые эпизоды</string>
+    <string name="new_episodes">Новые выпуски</string>
     <string name="episodes_for_later">Сохраненные выпуски</string>
     <string name="downloaded_episodes">Скачанные выпуски</string>
     <string name="no_subscribed_channels">Нет подписанных каналов</string>
@@ -2043,7 +2043,7 @@
     <string name="metroeq_q_value">Q: %1$s</string>
     <string name="metroeq_frequency_value">%1$s Гц</string>
     <string name="sponsorblock_podcasts">SponsorBlock (подкасты)</string>
-    <string name="sponsorblock_podcasts_description">Пропускать спонсорские вставки, саморекламу и призывы к взаимодействию только в эпизодах подкастов. (https://sponsor.ajay.app)</string>
+    <string name="sponsorblock_podcasts_description">Пропускать спонсорские вставки, саморекламу и напоминания о взаимодействии только в выпусках подкастов. (https://sponsor.ajay.app)</string>
     <string name="sponsorblock_skipped">Рекламный сегмент пропущен</string>
     <string name="episode_played">Прослушано</string>
     <string name="lastfm_service_error">Вход в Last.fm недоступен. Повторите попытку позже.</string>
@@ -2361,7 +2361,7 @@
         <item quantity="many">%1$d спрятано</item>
         <item quantity="other">%1$d спрятано</item>
     </plurals>
-    <string name="no_episode_description">Описание этого эпизода отсутствует.</string>
+    <string name="no_episode_description">Описание для этого выпуска отсутствует.</string>
     <plurals name="episode_duration_hours">
         <item quantity="one">%1$d ч</item>
         <item quantity="few">%1$d ч</item>
@@ -2684,5 +2684,5 @@
     <string name="tray_hide_miniplayer">Скрыть мини-плеер</string>
     <string name="updates_nightly_builds_desc">После каждого изменения будет создаваться новая сборка. Ночные сборки могут быть нестабильными.</string>
     <string name="playlist_lock">Блокировка</string>
-    <string name="search_episodes">Искать эпизоды</string>
+    <string name="search_episodes">Поиск выпусков</string>
 </resources>
