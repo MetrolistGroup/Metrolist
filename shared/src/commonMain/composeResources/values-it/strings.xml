@@ -84,7 +84,7 @@
     <string name="bitrate">Bitrate</string>
     <string name="sample_rate">Frequenza di campionamento</string>
     <string name="loudness">Volume</string>
-    <string name="loudness_value">%1$s dB</string>
+    <string name="loudness_value">%1$s dB</string>
     <string name="volume">Volume</string>
     <string name="file_size">Dimensione file</string>
     <string name="unknown">Sconosciuto</string>
