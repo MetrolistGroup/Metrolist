@@ -1462,7 +1462,7 @@
     <string name="retry_cleanup">Riprova pulizia</string>
     <string name="windows_login_helper">Assistente d'accesso Windows</string>
     <string name="start_login_process">Avvia processo di accesso</string>
-    <string name="complete_sign_in">Completa l\u0027accesso</string>
+    <string name="complete_sign_in">Completa l'accesso</string>
     <string name="youtube_login_webview_unwritable">Impossibile accedere a YouTube perché il percorso dati della WebView non è sovrascrivibile.</string>
     <string name="discord_login_webview_unwritable">Impossibile accedere a Discord perché il percorso dati della WebView non è sovrascrivibile.</string>
     <string name="confirm_delete_stored_audio">I file audio salvati selezionati saranno cancellati.</string>
@@ -1533,7 +1533,7 @@
     <string name="shortcuts_music_video">Video musicale</string>
     <string name="shortcuts_navigation_interface">Navigazione e interfaccia</string>
     <string name="shortcut_play_pause">Riproduci / pausa</string>
-    <string name="shortcut_seek_backward_forward">Vai indietro / avanti 5s</string>
+    <string name="shortcut_seek_backward_forward">Vai indietro / avanti 5s</string>
     <string name="shortcut_jump_percent" formatted="false">Salta a 0\u0025 - 90\u0025</string>
     <string name="shortcut_next_track">Brano successivo</string>
     <string name="shortcut_previous_track">Brano precedente</string>
