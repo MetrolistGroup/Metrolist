@@ -16,10 +16,10 @@
     <string name="mood_and_genres">Настроения и жанры</string>
     <string name="account">Аккаунт</string>
     <string name="quick_picks">Рекомендуем</string>
-    <string name="forgotten_favorites">Забытые избранные</string>
-    <string name="keep_listening">Продолжайте слушать</string>
+    <string name="forgotten_favorites">Вы давно не слушали</string>
+    <string name="keep_listening">Слушать дальше</string>
     <string name="similar_to">Похоже на</string>
-    <string name="new_releases">Новые релизы</string>
+    <string name="new_releases">Новинки</string>
     <string name="podcasts_for_you">Подкасты для вас</string>
     <string name="recap">Итоги</string>
     <string name="home_unavailable">Главная страница недоступна</string>
@@ -2500,7 +2500,7 @@
     <string name="current_version">Текущая версия</string>
     <string name="guest">Гость</string>
     <string name="leave_room">Выйти из комнаты</string>
-    <string name="charts">Графики</string>
+    <string name="charts">Хит-парады</string>
     <string name="album_charts">Лучшие альбомы</string>
     <string name="recap_playlists">Итоговые плейлисты</string>
     <string name="settings_default">По умолчанию</string>
