@@ -145,8 +145,11 @@ class PlaylistImportManager(
         return result
     }
 
-    private fun CsvTrack.matchKey(): String =
-        listOfNotNull(title.trim().lowercase(), artist.trim().lowercase(), directReference.orEmpty(), videoId).joinToString("\u0000")
+    private fun CsvTrack.matchKey(): String {
+        val identity = listOfNotNull(title.trim().lowercase(), artist.trim().lowercase(), directReference.orEmpty(), videoId)
+        val albumIdentity = album.trim().lowercase().takeIf(String::isNotEmpty)
+        return (identity + if (albumIdentity == null) emptyList() else listOf("album", albumIdentity)).joinToString("\u0000")
+    }
 
     suspend fun loadYouTubePlaylist(
         input: String,

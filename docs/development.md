@@ -415,7 +415,7 @@ Every platform passes reports and breadcrumbs through `redactDiagnosticText` and
 
 ### Imports and scrobbling
 
-Android account imports from Deezer, Tidal and Amazon Music handle one playlist or liked-songs collection at a time. Back from destination selection returns to the previous step, keeping CSV rows and mappings. Batches over `PlaylistImportManager.MAX_PLAYLIST_TRACKS` fail instead of truncating; Spotify reports skipped playlists. The desktop Spotify import can target Favorites, a new synced playlist or an editable synced playlist. Playlist file imports keep explicitly supplied titles as local custom metadata; bare URLs and filenames do not become titles, and local edits win on reimport.
+Android account imports from Deezer, Tidal and Amazon Music handle one playlist or liked-songs collection at a time. Back from destination selection returns to the previous step, keeping CSV rows and mappings. Batches over `PlaylistImportManager.MAX_PLAYLIST_TRACKS` fail instead of truncating; Spotify reports skipped playlists. The desktop Spotify import can target Favorites, a new synced playlist or an editable synced playlist. Playlist file imports keep explicitly supplied titles as local custom metadata; bare URLs and filenames do not become titles, and local edits win on reimport. Persisted import matches distinguish supplied albums as well as explicit video IDs, so reimporting same-title tracks from different albums preserves their resolved versions. Old album-ambiguous entries are resolved again rather than reused.
 
 Deezer album URL imports use the paginated track-list endpoint, not the truncated track preview embedded in album details. Failed continuations and incomplete track lists fail the import instead of saving a partial album.
 
