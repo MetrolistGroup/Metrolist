@@ -792,7 +792,7 @@
     <string name="unpin_from_speed_dial">Rimuovi dai fissati in Accesso rapido</string>
     <string name="remove">Rimuovi</string>
     <string name="remove_recent_search_item_action">Rimuovi dalle ricerche recenti</string>
-    <string name="cast_permission_required">L\u0027accesso alla rete locale è richiesto per trovare i dispositivi a cui trasmettere.</string>
+    <string name="cast_permission_required">L'accesso alla rete locale è richiesto per trovare i dispositivi a cui trasmettere.</string>
     <string name="share_album">Condividi album</string>
     <string name="listen_together_users">Utenti</string>
     <string name="listen_together_log_user_joined">Utente entrato</string>
