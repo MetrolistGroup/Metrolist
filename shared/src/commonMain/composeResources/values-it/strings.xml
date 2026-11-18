@@ -195,8 +195,8 @@
     <string name="max_song_cache_size">Dimensione massima cache dei brani</string>
     <string name="clear_song_cache">Cancella la cache dei brani</string>
     <string name="song_cache_location">Percorso cache dei brani</string>
-    <string name="song_cache_location_internal">Spazio di archiviazione dell\u0027app</string>
-    <string name="song_cache_location_internal_desc">Nascosto nello spazio d\u0027archiviazione</string>
+    <string name="song_cache_location_internal">Spazio di archiviazione dell'app</string>
+    <string name="song_cache_location_internal_desc">Nascosto nello spazio d'archiviazione</string>
     <string name="song_cache_location_shared_media">Cartella multimediale condivisa</string>
     <string name="song_cache_location_shared_media_desc">Visibile in Android/media per i file manager e gli scanner multimediali</string>
     <string name="song_cache_location_custom">Cartella personalizzata</string>
