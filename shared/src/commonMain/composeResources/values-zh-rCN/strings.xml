@@ -820,4 +820,6 @@
     <string name="lyrics"></string>
     <string name="information"></string>
     <string name="description"></string>
+    <string name="play_pause"></string>
+    <string name="album_art"></string>
 </resources>
