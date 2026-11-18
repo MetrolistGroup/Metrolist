@@ -327,3 +327,5 @@ Preserve these rules when changing workflows:
 - Measure cache changes on hosted runners with cold and repeated warm runs. Local timings do not establish CI speedups.
 
 Arch verification restores the unprivileged builder's Gradle caches and wrapper from a separate OS, architecture and dependency-scoped cache. Only successful pushes to main save it. It does not persist the project configuration cache.
+
+When importing a custom playlist cover on Android 7/8 and Android 9+, select camera JPEGs with rotated and mirrored EXIF orientations. The saved cover should match the photo viewer orientation, remain at most 1024 pixels on either side, and keep its orientation after restarting. Also check an ordinary PNG.
