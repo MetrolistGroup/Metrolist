@@ -82,7 +82,7 @@ internal class DesktopQueueTransitions(
         return outgoing
     }
 
-    fun acceptsEof(instanceId: Long): Boolean {
+    fun acceptsPlaybackEvent(instanceId: Long): Boolean {
         if (retiredPlaybackInstanceId != null && player.currentPlaybackInstanceId != retiredPlaybackInstanceId) {
             retiredPlaybackInstanceId = null
         }
@@ -91,7 +91,7 @@ internal class DesktopQueueTransitions(
     }
 
     fun onEof(instanceId: Long): Boolean {
-        if (!acceptsEof(instanceId)) return true
+        if (!acceptsPlaybackEvent(instanceId)) return true
         if (!allowed() || !hasCurrentTarget()) {
             cancel()
             return false

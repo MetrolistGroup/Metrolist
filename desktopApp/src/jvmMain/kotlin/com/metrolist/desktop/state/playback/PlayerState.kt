@@ -1440,7 +1440,7 @@ object PlayerState {
             player.streamFailure.collect { failure ->
                 val failedVideoId = failure.videoId
                 val failedPlaybackInstanceId = failure.playbackInstanceId ?: return@collect
-                if (failedPlaybackInstanceId != player.currentPlaybackInstanceId ||
+                if (!transitions.acceptsPlaybackEvent(failedPlaybackInstanceId) ||
                     interruptedNetworkPlaybackInstanceId == failedPlaybackInstanceId
                 ) {
                     return@collect
@@ -2049,7 +2049,7 @@ object PlayerState {
 
         scope.launch {
             player.onEOFPlaybackInstance.collect { completedPlaybackInstanceId ->
-                if (!transitions.acceptsEof(completedPlaybackInstanceId)) return@collect
+                if (!transitions.acceptsPlaybackEvent(completedPlaybackInstanceId)) return@collect
                 flushPodcastProgress()
                 completedCachePlaybackInstanceId.value = completedPlaybackInstanceId
                 if (deviceConnect.isActive) {
