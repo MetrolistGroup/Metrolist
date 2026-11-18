@@ -1921,7 +1921,7 @@
     <string name="equalizer_invalid_profile">Tento soubor není parametrický EQ profil</string>
     <string name="equalizer_autoeq_unavailable">Nepodařilo se načíst AutoEQ profily</string>
     <string name="skip_silence_instant">Okamžité přeskočení ticha</string>
-    <string name="skip_silence_instant_desc">Po 2 sekundách ticha přeskočí až o 15 sekund. Může přeskočit tiché části zvuku.</string>
+    <string name="skip_silence_instant_desc">Po 2 sekundách ticha přeskočí až o 15 sekund. Může přeskočit tiché části zvuku.</string>
     <string name="share_lyrics">Sdílet text písně</string>
     <string name="share_as_text">Sdílet jako text</string>
     <string name="customize_colors">Přizpůsobit barvy</string>
