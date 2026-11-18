@@ -557,6 +557,7 @@ private fun LocalPlaylistLayout(
             expanded = collectionMenu.expanded,
             offset = collectionMenu.offset,
             onDismiss = collectionMenu::dismiss,
+            pendingPlayState = pendingPlayState,
             onPlaybackAction = pendingPlayState::cancel,
             onHideFromLibrary = { HiddenLibraryItems.hide(HiddenLibraryItem(HiddenLibraryItemType.AUTO, type, title)) },
             additionalActions =

@@ -57,6 +57,9 @@ class DesktopPlaybackController(
             state.copy(positionMs = position)
         }.stateIn(scope, SharingStarted.Eagerly, PlaybackUiState())
 
+    override val explicitPlaybackGeneration: Long
+        get() = PlayerState.explicitPlaybackGeneration
+
     override fun play(
         song: SongItem,
         queue: List<SongItem>,

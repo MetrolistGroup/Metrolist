@@ -75,6 +75,7 @@ import com.metrolist.shared.ui.components.rememberDownloadPlaylistFilter
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.playback.LocalPlaybackController
+import com.metrolist.shared.ui.playback.PlaybackController
 import com.metrolist.shared.ui.playback.listState
 import com.metrolist.shared.ui.selection.rememberSelectionState
 import kotlinx.coroutines.Job
@@ -82,13 +83,26 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
+import kotlin.concurrent.Volatile
 
 class PendingCollectionPlayState {
-    internal var job: Job? = null
+    @Volatile
+    private var job: Job? = null
 
     fun cancel() {
-        job?.cancel()
+        val current = job
         job = null
+        current?.cancel()
+    }
+
+    fun track(launched: Job?) {
+        cancel()
+        if (launched != null && !launched.isCompleted) {
+            job = launched
+            launched.invokeOnCompletion {
+                if (job === launched) job = null
+            }
+        }
     }
 }
 
@@ -261,11 +275,9 @@ fun StoredPlaylistContent(
         if (collectionSort == CollectionSort.MOST_PLAYED && !currentPlayCountsReady.value) {
             onRetryPlayCounts?.invoke()
         }
-        val initialState = playback.state.value
-        val initialSongId = initialState.currentSong?.id
-        val initialQueueIds = initialState.queue.map(SongItem::id)
-        pendingPlayState.cancel()
-        pendingPlayState.job =
+        val initialQueueIds = playback.currentQueueIds()
+        val expectedGeneration = playback.explicitPlaybackGeneration
+        pendingPlayState.track(
             scope.launch {
                 val complete =
                     if (hasMoreSongs && loadCompleteSongs != null) {
@@ -281,8 +293,9 @@ fun StoredPlaylistContent(
                             .first { (ready, _) -> ready }
                             .second
                     }
-                val currentState = playback.state.value
-                if (currentState.currentSong?.id != initialSongId || currentState.queue.map(SongItem::id) != initialQueueIds) {
+                if (playback.explicitPlaybackGeneration != expectedGeneration ||
+                    playback.currentQueueIds() != initialQueueIds
+                ) {
                     return@launch
                 }
                 val playable =
@@ -294,7 +307,8 @@ fun StoredPlaylistContent(
                     val target = song?.let { playable.indexOfPlaylistOccurrence(it) } ?: 0
                     if (target in playable.indices) playback.playQueue(playable, target)
                 }
-            }
+            },
+        )
     }
 
     PlaylistContent(
@@ -576,3 +590,5 @@ fun StoredPlaylistContent(
 }
 
 private fun Set<String>.toggle(id: String): Set<String> = if (id in this) this - id else this + id
+
+private fun PlaybackController.currentQueueIds(): List<String> = state.value.queue.map(SongItem::id)

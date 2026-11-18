@@ -155,6 +155,7 @@ import org.koin.core.context.GlobalContext
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -426,6 +427,10 @@ internal fun MusicPlayer.setPlaying(playing: Boolean) {
 }
 
 object PlayerState {
+    private val _explicitPlaybackGeneration = AtomicLong(0L)
+    val explicitPlaybackGeneration: Long
+        get() = _explicitPlaybackGeneration.get()
+
     private val _listenTogetherPlaybackRequests = MutableSharedFlow<ListenTogetherPlaybackRequest>(extraBufferCapacity = 1)
     val listenTogetherPlaybackRequests: SharedFlow<ListenTogetherPlaybackRequest> = _listenTogetherPlaybackRequests.asSharedFlow()
     private val database by lazy { GlobalContext.get().get<MusicDatabase>() }
@@ -2654,6 +2659,7 @@ object PlayerState {
             playTrack(track, list.filterNot { it.isUnavailable }, songsOnly, shuffleModeEnabled)
             return
         }
+        _explicitPlaybackGeneration.incrementAndGet()
         val songs = list?.takeIf { it.isNotEmpty() } ?: listOf(track)
         val index = songs.indexOfPlaylistOccurrence(track).coerceAtLeast(0)
         val action = if (list === queue.items.value) DcPlaybackAction.SELECT else DcPlaybackAction.REPLACE_QUEUE
@@ -3190,6 +3196,7 @@ object PlayerState {
         }
         if (!fromEOF && !fromFailure && !fromListenTogether && deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.NEXT))) return
         if ((!fromEOF || fromFailure) && !fromListenTogether && isListenTogetherGuest()) return
+        if (!fromEOF && !fromFailure && !fromListenTogether) _explicitPlaybackGeneration.incrementAndGet()
 
         if (fromEOF && sleepTimerStopAfterCurrentSong) {
             setPlaybackPlaying(false)
@@ -3362,6 +3369,7 @@ object PlayerState {
         fromListenTogether: Boolean = false,
         fromRemoteControl: Boolean = false,
     ) {
+        if (!fromListenTogether) _explicitPlaybackGeneration.incrementAndGet()
         if (!fromListenTogether && deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PREVIOUS))) return
         if (!fromListenTogether && isListenTogetherGuest()) return
 
@@ -3702,6 +3710,7 @@ object PlayerState {
     }
 
     fun startRadio(song: SongItem) {
+        if (!isListenTogetherGuest() && !isSongBlocked(song)) _explicitPlaybackGeneration.incrementAndGet()
         if (deviceConnect.intercept(
                 DcPlaybackCommand(
                     DcPlaybackAction.REPLACE_QUEUE,

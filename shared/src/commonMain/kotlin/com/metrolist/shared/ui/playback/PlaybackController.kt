@@ -66,6 +66,7 @@ interface PlaybackController {
     val canSkipPrevious: Boolean get() = state.value.canSkipPrevious
     val supportsVideoPlayback: Boolean get() = true
     val supportsCasting: Boolean get() = true
+    val explicitPlaybackGeneration: Long get() = 0L
 
     fun currentPositionMs(): Long = state.value.positionMs
 

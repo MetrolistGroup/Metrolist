@@ -187,11 +187,13 @@ import com.metrolist.shared.ui.menu.rememberCursorContextMenuState
 import com.metrolist.shared.ui.menu.rememberDeleteUploadAction
 import com.metrolist.shared.ui.menu.songMediaMenuModel
 import com.metrolist.shared.ui.playback.LocalPlaybackController
+import com.metrolist.shared.ui.screens.PendingCollectionPlayState
 import com.metrolist.shared.ui.theme.ComponentShapes
 import com.metrolist.shared.utils.CollectionExportFormat
 import com.metrolist.shared.utils.ShareUrls
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -200,6 +202,8 @@ import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.core.context.GlobalContext
 import com.metrolist.shared.db.entities.toSongItem as localSongItem
+
+private val sharedMenuPlayState = PendingCollectionPlayState()
 
 @Composable
 fun SongContextMenu(
@@ -253,6 +257,7 @@ fun SongContextMenu(
             downloadState = downloadState,
             downloadProgress = ((LibraryState.downloadProgress[song.id] ?: 0f) * 100).toInt(),
             onPlay = {
+                sharedMenuPlayState.cancel()
                 onPlaybackAction()
                 playback.play(song)
             },
@@ -262,6 +267,7 @@ fun SongContextMenu(
             },
             onDislike = { PlayerState.toggleDislike(song) },
             onStartRadio = {
+                sharedMenuPlayState.cancel()
                 onPlaybackAction()
                 playback.startRadio(song)
             },
@@ -423,6 +429,7 @@ fun PlaylistContextMenu(
     fallbackIcon: ImageVector? = null,
     additionalActions: List<PlayerMenuAction> = emptyList(),
     downloadSongs: List<SongItem> = songs,
+    pendingPlayState: PendingCollectionPlayState? = null,
     onPlaybackAction: () -> Unit = {},
 ) {
     val playlist = localizedBuiltinPlaylist(playlist)
@@ -490,6 +497,31 @@ fun PlaylistContextMenu(
                 playback,
                 withSongs = { action -> withMediaSongs(playlist, actionSongs, action) },
             )
+
+        fun startMenuPlayback(invoke: MediaMenuPlaybackActions.() -> Unit) {
+            val expectedGeneration = playback.explicitPlaybackGeneration
+            onPlaybackAction()
+            sharedMenuPlayState.cancel()
+            pendingPlayState?.cancel()
+            var launched: Job? = null
+            val guardedActions =
+                MediaMenuPlaybackActions(
+                    playlist,
+                    playback,
+                    withSongs = { action ->
+                        launched =
+                            withMediaSongs(playlist, actionSongs) { loadedSongs ->
+                                if (playback.explicitPlaybackGeneration == expectedGeneration) {
+                                    action(loadedSongs)
+                                }
+                            }
+                    },
+                )
+            guardedActions.invoke()
+            sharedMenuPlayState.track(launched)
+            pendingPlayState?.track(launched)
+        }
+
         playlistMediaMenuModel(
             playlist = playlist,
             isFavorite = isFavorite,
@@ -499,14 +531,8 @@ fun PlaylistContextMenu(
             fallbackIcon = fallbackIcon,
             downloadState = downloadState,
             downloadProgress = downloadProgress,
-            onPlay = {
-                onPlaybackAction()
-                playbackActions.play()
-            },
-            onShuffle = {
-                onPlaybackAction()
-                playbackActions.shuffle()
-            },
+            onPlay = { startMenuPlayback(MediaMenuPlaybackActions::play) },
+            onShuffle = { startMenuPlayback(MediaMenuPlaybackActions::shuffle) },
             onShare =
                 if (isLocal) {
                     null
@@ -903,12 +929,12 @@ private fun withMediaSongs(
     item: YTItem,
     existingSongs: List<SongItem>,
     action: (List<SongItem>) -> Unit,
-) {
+): Job? {
     if (existingSongs.isNotEmpty()) {
         action(existingSongs)
-        return
+        return null
     }
-    AppState.scope.launch {
+    return AppState.scope.launch {
         try {
             loadMediaSongs(item, existingSongs).takeIf { it.isNotEmpty() }?.let(action)
         } catch (e: CancellationException) {
