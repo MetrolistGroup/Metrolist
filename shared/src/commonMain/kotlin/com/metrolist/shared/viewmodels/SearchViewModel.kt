@@ -410,7 +410,9 @@ class SearchViewModel(
                         if (repository.sessionSnapshot() != session) return@withLock
                         repository.clearSearchHistory(remoteTokens)
                         if (repository.sessionSnapshot() != session) return@withLock
-                        removeLocalSearchHistory(revisions.filter { (query, revision) -> searchHistoryRevisions[query] == revision }.keys)
+                        val unchangedQueries = revisions.filter { (query, revision) -> searchHistoryRevisions[query] == revision }.keys
+                        removeLocalSearchHistory(unchangedQueries)
+                        removedRemoteSearchQueries.addAll(unchangedQueries.map(String::lowercase))
                     } catch (e: CancellationException) {
                         throw e
                     } catch (_: Exception) {

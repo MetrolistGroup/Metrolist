@@ -534,6 +534,39 @@ class SearchViewModelTest {
         }"""
 
     @Test
+    fun clearedHistoryDoesNotReturnFromStaleRemoteRefresh() =
+        runTest {
+            Settings.shared.pauseSearchHistory = false
+            var response = historyResponse("old query", "old-token")
+            val client =
+                HttpClient(
+                    mockEngine { request ->
+                        respond(
+                            if (request.url.encodedPath.endsWith("feedback")) "{}" else response,
+                            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    },
+                ) { install(ContentNegotiation) { json() } }
+            try {
+                val tube = InnerTube(client, retryDelay = {}).apply { cookie = "SAPISID=session" }
+                val model = SearchViewModel(backgroundScope, YouTubeRepository(tube))
+                model.refreshSearchHistory()
+                model.uiState.first { it.searchHistory == listOf("old query") }
+                response = "{}"
+                model.clearSearchHistory()
+                model.uiState.first { it.searchHistory.isEmpty() }
+                response = """{"contents":[${historyResponse("old query", "stale-token")},${historyResponse("fresh", "fresh-token")}]}"""
+                model.refreshSearchHistory()
+                val refreshed = model.uiState.first { "fresh" in it.searchHistory }
+                assertEquals(listOf("fresh"), refreshed.searchHistory)
+                model.addSearchHistory("old query")
+                assertEquals(listOf("old query", "fresh"), model.uiState.value.searchHistory)
+            } finally {
+                client.close()
+            }
+        }
+
+    @Test
     fun successfulHistoryRemovalLoadsOlderEntriesAndIgnoresStaleDeletedQueries() =
         runTest {
             val initialHistory = (1..10).map { historyResponse("query $it", "token-$it") }
