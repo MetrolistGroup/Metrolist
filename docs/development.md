@@ -419,6 +419,8 @@ Android account imports from Deezer, Tidal and Amazon Music handle one playlist 
 
 The existing 15-second request deadlines in Deezer, Apple Music, Tidal and Amazon Music imports report incomplete-source failures, not user cancellations. Cancel and parent deadlines still cancel the import.
 
+Apple Music album URL imports follow the track relationship’s continuation links, preserving order and repeated tracks. Failed or incomplete pages fail the import instead of returning a partial album.
+
 Deezer album URL imports use the paginated track-list endpoint, not the truncated track preview embedded in album details. Failed continuations and incomplete track lists fail the import instead of saving a partial album.
 
 Tidal single-track URL imports read the requested track from the embed page's media-session metadata, retaining support for older Open Graph pages. Missing or malformed track metadata fails rather than importing a localized placeholder as a song title. Current-format album and playlist embeds preserve visible track order and duplicates. The public embed server caps collections at 50 entries without providing the original total; current-format URL imports reject collections at that cap instead of silently saving a partial list. Current-format collections containing videos or missing metadata also fail without importing a prefix.

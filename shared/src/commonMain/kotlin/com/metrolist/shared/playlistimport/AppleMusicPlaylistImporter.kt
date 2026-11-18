@@ -385,28 +385,62 @@ object AppleMusicPlaylistImporter {
         val title = attrs?.get("name")?.jsonPrimitive?.content ?: fallbackTitles?.album ?: getString(Res.string.album)
         val albumArtist = attrs?.get("artistName")?.jsonPrimitive?.content ?: ""
 
-        val tracksArray =
+        val expectedCount =
+            attrs
+                ?.get("trackCount")
+                ?.jsonPrimitive
+                ?.contentOrNull
+                ?.toIntOrNull()
+        var page =
             albumItem["relationships"]
                 ?.jsonObject
                 ?.get("tracks")
-                ?.jsonObject
-                ?.get("data")
-                ?.jsonArray ?: JsonArray(emptyList())
-
+                ?.jsonObject ?: throw ImportException(ImportErrorKey.IncompleteSource)
         val tracks = mutableListOf<PlaylistImportManager.CsvTrack>()
-        for (trackItem in tracksArray) {
-            val trackAttrs = trackItem.jsonObject["attributes"]?.jsonObject ?: continue
-            val trackName = trackAttrs["name"]?.jsonPrimitive?.content?.trim() ?: continue
-            val trackArtist = trackAttrs["artistName"]?.jsonPrimitive?.content?.trim() ?: albumArtist
-            tracks +=
-                PlaylistImportManager.CsvTrack(
-                    title = trackName,
-                    artist = trackArtist,
-                    videoId = null,
-                )
+        val visited = mutableSetOf(Url(metaUrl).toString())
+        while (true) {
+            val items = page["data"] as? JsonArray ?: throw ImportException(ImportErrorKey.IncompleteSource)
+            val next = page["next"]?.jsonPrimitive?.contentOrNull
+            if (next?.isBlank() == true || items.size > PlaylistImportManager.MAX_PLAYLIST_TRACKS - tracks.size ||
+                (items.isEmpty() && (next != null || tracks.isNotEmpty()))
+            ) {
+                throw ImportException(ImportErrorKey.IncompleteSource)
+            }
+            for (trackItem in items) {
+                val trackAttrs =
+                    trackItem.jsonObject["attributes"]?.jsonObject
+                        ?: throw ImportException(ImportErrorKey.IncompleteSource)
+                val trackName =
+                    trackAttrs["name"]
+                        ?.jsonPrimitive
+                        ?.contentOrNull
+                        ?.trim()
+                        ?.takeIf(String::isNotEmpty)
+                        ?: throw ImportException(ImportErrorKey.IncompleteSource)
+                val trackArtist = trackAttrs["artistName"]?.jsonPrimitive?.contentOrNull?.trim() ?: albumArtist
+                tracks += PlaylistImportManager.CsvTrack(trackName, trackArtist, null)
+            }
+            if (expectedCount != null && tracks.size > expectedCount) throw ImportException(ImportErrorKey.IncompleteSource)
+            onProgress(tracks.size, expectedCount ?: tracks.size.takeIf { next == null })
+            if (next == null) break
+            if (tracks.size == PlaylistImportManager.MAX_PLAYLIST_TRACKS) throw ImportException(ImportErrorKey.IncompleteSource)
+            val nextUrl = Url(appleApiUrl(next)).toString()
+            if (!visited.add(nextUrl)) throw ImportException(ImportErrorKey.IncompleteSource)
+            val nextResponse =
+                withImportRequestTimeout {
+                    httpClient.get(nextUrl) {
+                        header("Authorization", "Bearer $token")
+                        header("Origin", "https://music.apple.com")
+                        header("User-Agent", UA)
+                    }
+                }
+            if (!nextResponse.status.isSuccess()) throw ImportException(ImportErrorKey.IncompleteSource)
+            val nextBody =
+                nextResponse.bodyAsTextLimited(MAX_JSON_RESPONSE_BYTES)
+                    ?: throw ImportException(ImportErrorKey.IncompleteSource)
+            page = json.parseToJsonElement(nextBody).jsonObject
         }
-
-        onProgress(tracks.size, tracks.size)
+        if (expectedCount != null && tracks.size != expectedCount) throw ImportException(ImportErrorKey.IncompleteSource)
 
         if (tracks.isEmpty()) {
             return Result.failure(IllegalStateException("No tracks found in this Apple Music album"))
