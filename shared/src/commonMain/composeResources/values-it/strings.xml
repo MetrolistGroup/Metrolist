@@ -1169,9 +1169,9 @@
     <string name="subscribe">Iscriviti</string>
     <string name="subscribed">Iscritto</string>
     <plurals name="seconds">
-        <item quantity="one">%1$d secondo</item>
-        <item quantity="many">%1$d secondi</item>
-        <item quantity="other">%1$d secondi</item>
+        <item quantity="one">%1$d secondo</item>
+        <item quantity="many">%1$d secondi</item>
+        <item quantity="other">%1$d secondi</item>
     </plurals>
     <string name="beta_tag">[BETA]</string>
     <string name="crossfade">Dissolvenza</string>
