@@ -2682,4 +2682,5 @@
     <string name="account_downloading_nightly_update">Загрузка ночной сборки</string>
     <string name="account_nightly_update_available">Доступна новая ночная сборка</string>
     <string name="tray_hide_miniplayer">Скрыть мини-плеер</string>
+    <string name="updates_nightly_builds_desc">После каждого изменения будет создаваться новая сборка.\n\nНочные сборки могут быть нестабильными.</string>
 </resources>
