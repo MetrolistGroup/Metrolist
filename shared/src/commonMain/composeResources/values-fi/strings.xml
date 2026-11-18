@@ -967,10 +967,6 @@
         <item quantity="one">%1$d minuutti</item>
         <item quantity="other">%1$d minuuttia</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d min</item>
-        <item quantity="other">%1$d min</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d kappale</item>
         <item quantity="other">%1$d kappaletta</item>
@@ -994,10 +990,6 @@
     <plurals name="removed_songs_from_playlist">
         <item quantity="one">Poistettu %1$d kappale soittolistasta</item>
         <item quantity="other">Poistettu %1$d kappaletta soittolistasta</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d s</item>
-        <item quantity="other">%1$d s</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d kappale</item>
