@@ -1609,9 +1609,7 @@ private fun runDesktopApp(args: Array<String>) {
         }
 
         if (integrationsReady && Settings.shared.desktopOnboardingComplete) {
-            MetrolistTheme {
-                MiniplayerWindow()
-            }
+            MiniplayerWindow()
         }
 
         // System tray icon (stock Compose Tray on macOS, ComposeNativeTray on Linux/Windows)
