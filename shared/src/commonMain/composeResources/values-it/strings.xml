@@ -1366,7 +1366,7 @@
     <string name="settings_artist_icon_source">Fonte icona artista</string>
     <string name="settings_artist_banner_source">Fonte banner artisti</string>
     <string name="settings_artist_source_custom">Personalizzata</string>
-    <string name="import_source_text_file">Testo / file</string>
+    <string name="import_source_text_file">Testo / file</string>
     <string name="import_source_youtube_music">YouTube Music</string>
     <string name="video_stats_mv_source">Fonte video musicale</string>
     <string name="video_stats_stream_source">Fonte stream</string>
@@ -1683,7 +1683,7 @@
     <string name="pinned">Fissato</string>
     <string name="link_copied_to_clipboard">Link copiato negli appunti</string>
     <string name="downloaded">Scaricati</string>
-    <string name="playback_error_sabr_attestation">YouTube ha rifiutato l\u0027attestazione SABR dello stream.</string>
+    <string name="playback_error_sabr_attestation">YouTube ha rifiutato l'attestazione SABR dello stream.</string>
     <string name="playback_error_explicit_signed_in">Questo brano con contenuti espliciti non è riproducibile con la sessione YouTube attuale.</string>
     <string name="playback_error_explicit_sign_in">Accedi a YouTube Music per riprodurre questo brano con contenuti espliciti.</string>
     <string name="playback_error_no_playable_stream">Nessun flusso audio riproducibile trovato.</string>
@@ -1696,7 +1696,7 @@
     <string name="playback_error_track_not_found">Impossibile trovare il brano richiesto.</string>
     <string name="playback_error_unable_to_play_link">Impossibile riprodurre il link richiesto.</string>
     <string name="could_not_download_update_manager">Impossibile scaricare il manager degli aggiornamenti</string>
-    <string name="update_not_published_stable">L\u0027aggiornamento selezionato non è una versione stabile rilasciata</string>
+    <string name="update_not_published_stable">L'aggiornamento selezionato non è una versione stabile rilasciata</string>
     <string name="error_with_message">Errore: %1$s</string>
     <string name="logs_exported_to">Log esportati in: %1$s</string>
     <string name="expand_sidebar">Espandi barra laterale</string>
@@ -1744,7 +1744,7 @@
     <string name="import_status_saving_tracks">Salvataggio nella libreria: %1$d / %2$d…</string>
     <string name="import_status_completed">Importazione completata</string>
     <string name="import_notification_channel_name">Importazione playlist</string>
-    <string name="import_notification_channel_desc">Mostra l\u0027avanzamento e i risultati dell\u0027importazione delle playlist</string>
+    <string name="import_notification_channel_desc">Mostra l'avanzamento e i risultati dell'importazione delle playlist</string>
     <string name="import_notification_in_progress">Importazione di “%1$s”</string>
     <string name="import_notification_success">Importati %1$d brani in “%2$s”</string>
     <string name="import_notification_partial">Importati %1$d brani in “%2$s” (%3$d non sono stati trovati)</string>
@@ -1760,7 +1760,7 @@
     <string name="import_cancel">Annulla importazione</string>
     <string name="import_tracks_found">%1$d brani trovati</string>
     <string name="import_destination_favorites">Preferiti</string>
-    <string name="import_error_empty_input">L\u0027input non può essere vuoto</string>
+    <string name="import_error_empty_input">L'input non può essere vuoto</string>
     <string name="import_error_youtube_dedicated_flow">Le playlist di YouTube devono essere importate nella sezione dedicata</string>
     <string name="import_error_invalid_youtube_url">URL playlist YouTube non valido</string>
     <string name="import_error_no_tracks_recognized">Impossibile riconoscere alcun brano dal testo o dal link fornito</string>
@@ -1771,7 +1771,7 @@
     <string name="subtitles">Sottotitoli</string>
     <string name="open_miniplayer">Apri mini lettore</string>
     <string name="active">Attivo</string>
-    <string name="video_stats_video_id_cpn">ID video / CPN</string>
+    <string name="video_stats_video_id_cpn">ID video / CPN</string>
     <string name="video_stats_na">N/D</string>
     <string name="video_stats_close">[x]</string>
     <string name="video_stats_video_codec">Codec video</string>
@@ -1886,12 +1886,12 @@
     <string name="lyrics_share_failed">Impossibile creare o esportare l'immagine. Riprova.</string>
     <string name="lyrics_share_color">%1$s: #%2$s</string>
     <string name="lyrics_share_save_image">Salva PNG</string>
-    <string name="lyrics_share_text">"%1$s"\n\n%2$s - %3$s\n%4$s</string>
+    <string name="lyrics_share_text">%1$s\n\n%2$s - %3$s\n%4$s</string>
     <string name="edit_artist">Modifica artista</string>
     <string name="artist_name">Nome artista</string>
     <string name="clear_artist_alias">Cancella alias artista</string>
     <string name="csv_mapping_title">Mappa colonne CSV</string>
-    <string name="csv_first_row_header">La prima riga è l\u0027header</string>
+    <string name="csv_first_row_header">La prima riga è l'header</string>
     <string name="csv_column_label">Colonna %1$d</string>
     <string name="csv_named_column">Colonna %1$d: %2$s</string>
     <string name="csv_url_column">URL o ID YouTube</string>
@@ -1917,7 +1917,7 @@
     <string name="lyrics_share_text_size">Dimensione testo: %1$d%</string>
     <string name="lyrics_share_content_scale">Scala contenuti: %1$d%</string>
     <string name="lyrics_share_auto_fit">Ripristina adattamento automatico</string>
-    <string name="lyrics_share_scroll_options">Scorri in basso l\u0027anteprima per personalizzare la tua immagine.</string>
+    <string name="lyrics_share_scroll_options">Scorri in basso l'anteprima per personalizzare la tua immagine.</string>
     <plurals name="download_queue_pending">
         <item quantity="one">%1$d brano in coda di download</item>
         <item quantity="many">%1$d brani in coda di download</item>
@@ -1967,8 +1967,8 @@
     <string name="play_on_app">Riproduci su Metrolist</string>
     <string name="re_listen">Riascolta</string>
     <string name="stands_with_palestine">Questo progetto supporta la Palestina</string>
-    <string name="mini_player_subscribe_artist">Iscriviti all\u0027artista</string>
-    <string name="mini_player_unsubscribe_artist">Disiscriviti dall\u0027artista</string>
+    <string name="mini_player_subscribe_artist">Iscriviti all'artista</string>
+    <string name="mini_player_unsubscribe_artist">Disiscriviti dall'artista</string>
     <string name="subscribed_to_artist">Ti sei iscritto a %1$s</string>
     <string name="small">Piccolo</string>
     <string name="big">Grande</string>
@@ -1993,7 +1993,7 @@
     <string name="upload_sign_in_required">Accedi a YouTube Music prima di caricare brani.</string>
     <string name="upload_unsupported_type">YouTube Music non supporta questo formato. Convertilo in MP3, M4A, WMA, FLAC, o OGG prima di caricarlo. Anche i file Ogg Opus (.opus) sono supportati.</string>
     <string name="upload_empty_file">Il file selezionato è vuoto o la sua dimensione non è disponibile.</string>
-    <string name="upload_too_large">I file caricati su YouTube Music devono essere inferiori a 300 MB.</string>
+    <string name="upload_too_large">I file caricati su YouTube Music devono essere inferiori a 300 MB.</string>
     <string name="upload_http_error">Caricamento non riuscito (%1$d).</string>
     <string name="upload_already_exists">Questo brano è già nei tuoi caricamenti di YouTube Music.</string>
     <string name="delete_upload">Elimina caricamento</string>
@@ -2055,7 +2055,7 @@
     <string name="import_error_playlist_tracks_unavailable">Impossibile caricare i brani della playlist da %1$s. Esporta la playlist e incolla l'elenco dei brani.</string>
     <string name="import_error_album_tracks_unavailable">Impossibile caricare i brani dell'album da %1$s. Esporta l'album e incolla l'elenco dei brani.</string>
     <string name="login">Accedi</string>
-    <string name="app_version">Versione dell\u0027app</string>
+    <string name="app_version">Versione dell'app</string>
     <string name="yeah">Oh sì!</string>
     <string name="navigation">Navigazione</string>
     <string name="import_youtube_playlist">Importa playlist YouTube</string>
@@ -2114,12 +2114,12 @@
     <string name="metroeq_save_as">Salva con nome</string>
     <string name="audio_boost">Preamplificazione</string>
     <string name="metroeq_preset_flat">Piatto</string>
-    <string name="equalizer_band_gain">%1$s Hz · %2$s dB</string>
+    <string name="equalizer_band_gain">%1$s Hz · %2$s dB</string>
     <string name="metroeq_unsaved_changes">Modifiche non salvate</string>
     <string name="metroeq_preset_v_shape">Curva a V</string>
     <string name="metroeq_profile_name">Nome del profilo</string>
     <string name="metroeq_custom_profile">Profilo personalizzato</string>
-    <string name="metroeq_peak_reduction">Protezione picchi: %1$s dB</string>
+    <string name="metroeq_peak_reduction">Protezione picchi: %1$s dB</string>
     <string name="metroeq_preset_vocal">Voce</string>
     <string name="metroeq">MetroEQ</string>
     <string name="metroeq_preset_rock">Rock</string>
@@ -2167,13 +2167,13 @@
     <string name="webkit_install_command">Installalo con:\n%1$s</string>
     <string name="webkit_appimage_hint">Anche le versioni AppImage usano le librerie WebKitGTK di sistema per l'accesso.</string>
     <string name="search_history_keyboard_hint">Usa ↑/↓ per selezionare, Invio per cercare o Canc per rimuovere.</string>
-    <string name="video_stats_codec_bitrate_value">%1$s (%2$d kbps)</string>
+    <string name="video_stats_codec_bitrate_value">%1$s (%2$d kbps)</string>
     <string name="video_stats_resolution_optimal_value">%1$s (Ottimale: %2$s)</string>
-    <string name="video_stats_fps_value">%1$s / %2$s nominali</string>
+    <string name="video_stats_fps_value">%1$s / %2$s nominali</string>
     <string name="video_stats_dropped_frames_value">%1$d / %2$d persi (%3$s%)</string>
     <string name="video_stats_av_sync_value">%1$s ms (PTS: %2$s | Audio: %3$s)</string>
-    <string name="video_stats_latency_value">%1$s ms</string>
-    <string name="video_stats_media_stream_value">%1$s / %2$s MB (%3$s%)</string>
+    <string name="video_stats_latency_value">%1$s ms</string>
+    <string name="video_stats_media_stream_value">%1$s / %2$s MB (%3$s%)</string>
     <string name="video_stats_position_volume_value">%1$s | Vol.: %2$s</string>
     <string name="download_folder_unavailable">Impossibile usare questa cartella. Scegli una cartella scrivibile a cui il sistema o la sandbox consentano l'accesso a Metrolist.</string>
     <string name="window_maximize">Massimizza</string>
@@ -2237,7 +2237,7 @@
     <string name="top_period_past_year">Ultimo anno</string>
     <string name="new_badge">Nuovo</string>
     <string name="metroeq_q_value">Q: %1$s</string>
-    <string name="metroeq_frequency_value">%1$s Hz</string>
+    <string name="metroeq_frequency_value">%1$s Hz</string>
     <string name="sponsorblock_podcasts">SponsorBlock (podcast)</string>
     <string name="sponsorblock_podcasts_description">Salta sponsor, autopromozione e inviti a interagire solo negli episodi dei podcast. (https://sponsor.ajay.app)</string>
     <string name="sponsorblock_skipped">Segmento promozionale saltato</string>
@@ -2316,7 +2316,7 @@
     <string name="tempo_pitch_presets">Preset salvati</string>
     <string name="tempo_pitch_save_preset">Salva preset</string>
     <string name="tempo_pitch_preset_name">Nome preset</string>
-    <string name="tempo_pitch_delete_preset">Eliminare il preset "%1$s"?</string>
+    <string name="tempo_pitch_delete_preset">Eliminare il preset %1$s?</string>
     <string name="back_again_to_exit">Premi di nuovo indietro per uscire</string>
     <string name="system_equalizer_unavailable">Equalizzatore di sistema non disponibile. Avvia la riproduzione e assicurati che sia installata un'app per l'equalizzazione.</string>
     <string name="download_filter_in_playlist">In playlist</string>
