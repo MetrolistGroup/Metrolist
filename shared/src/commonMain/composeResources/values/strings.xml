@@ -3444,8 +3444,12 @@
     <string name="account_login_with_token_hint">Tap to view or edit tokens</string>
     <!-- Translators: Progress or status message for downloading update in the account menu. %1$s is the app version. -->
     <string name="account_downloading_update">Downloading v%1$s</string>
+    <!-- Translators: Progress message shown while downloading a nightly app update in the account menu. -->
+    <string name="account_downloading_nightly_update">Downloading nightly update</string>
     <!-- Translators: Label for update available in the account menu. %1$s is the available app version. -->
     <string name="account_update_available">v%1$s available</string>
+    <!-- Translators: Label shown when a nightly app update is available in the account menu. -->
+    <string name="account_nightly_update_available">New nightly available</string>
     <!-- Translators: Label for control playback position in the mini player and desktop player. -->
     <string name="cd_playback_position">Playback position</string>
     <!-- Translators: Label for control account menu in the desktop app. -->
