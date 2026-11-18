@@ -1551,6 +1551,8 @@ internal class IosPlaybackController(
 
     /** Stores the songs YouTube relates to [songId], feeding the classic local Quick picks. */
     private suspend fun recordRelatedSongs(songId: String) {
+        // Local files have no YouTube watch id, so their relations cannot be fetched.
+        if (songId.startsWith("local_")) return
         try {
             val dao = database.dao()
             if (dao.hasRelatedSongs(songId)) return
