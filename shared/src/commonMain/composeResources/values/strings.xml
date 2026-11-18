@@ -984,6 +984,10 @@
     <string name="song_artwork_colors">Colors from song artwork</string>
     <!-- Translators: Supporting text beneath the song artwork colors option in the settings. -->
     <string name="song_artwork_colors_description">Override app colors with the current song artwork when available</string>
+    <!-- Translators: Switch label in the desktop Appearance settings. Matugen is the name of a program and should not be translated. -->
+    <string name="matugen_colors">Matugen colors</string>
+    <!-- Translators: Supporting text beneath the Matugen colors switch. Keep the file path unchanged. -->
+    <string name="matugen_colors_description">Use the wallpaper palette Matugen writes to ~/.config/metrolist/matugen.properties</string>
     <!-- Translators: Option or section label for palette style in the Appearance settings. -->
     <string name="theme_palette_content">Content</string>
     <string name="theme_palette_style">Palette style</string>

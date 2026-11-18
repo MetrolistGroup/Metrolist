@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.utils.DesktopFontManager
+import com.metrolist.desktop.utils.MatugenColors
 import com.metrolist.shared.settings.FontOption
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.theme.MetrolistTypography
@@ -82,11 +83,13 @@ fun MetrolistTheme(
     content: @Composable () -> Unit,
 ) {
     val isDark = Settings.shared.getCurrentThemeIsDark()
+    val matugen = MatugenColors.palette
 
     SharedMetrolistTheme(
         seedColor = seedColor,
         darkTheme = isDark,
         pureBlack = pureBlack,
+        colorScheme = matugen?.let { if (isDark) it.dark else it.light },
     ) {
         MaterialExpressiveTheme(
             colorScheme = MaterialTheme.colorScheme,
