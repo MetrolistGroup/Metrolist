@@ -3632,7 +3632,12 @@ object PlayerState {
         val nextEntryKey = nextEntry?.value?.key
         val nextEntryIndex = nextEntry?.index
         val connectedSession = deviceConnect.isActive
-        val wasPlaying = if (isPlaybackResolving) desiredPlayback.value else player.wantsPlayback
+        val wasPlaying =
+            when {
+                castManager.state.value.isConnected -> castManager.state.value.isPlaying
+                isPlaybackResolving -> desiredPlayback.value
+                else -> player.wantsPlayback
+            }
         val removal =
             if (connectedSession) {
                 syncSession.remove(indices, expectedQueue, nextEntryIndex)
