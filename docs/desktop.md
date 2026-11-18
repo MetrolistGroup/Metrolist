@@ -46,7 +46,7 @@ On macOS, Metrolist uses Compose Multiplatform's stock `Tray` backed by OpenJDK'
 
 ## Linux audio setup
 
-Desktop uses bundled FFmpeg to decode audio and Java Sound to send PCM through ALSA. Automatic output selection tries named `default`, `pipewire` and `pulse` mixers before asking Java Sound for its default line. This also supports ALSA devices whose mixer names differ. Preferred mixers keep priority so Java Sound does not select a hardware or loopback output when a system route works.
+Desktop uses bundled FFmpeg to decode audio and Java Sound to send PCM through ALSA. Automatic output selection tries named `default`, `pipewire` and `pulse` mixers when the host exposes them. Java Sound's default line is used only when none of those system routes is listed, which supports ALSA devices with other mixer names without bypassing an available system route through a hardware or loopback output.
 
 Linux FFmpeg JARs exclude ALSA, PulseAudio, JACK and PipeWire libraries. JVM distributions, AppImages and native-image builds use the host's audio libraries, configuration and plugins. No Linux target keeps a bundled ALSA fallback. `verifyLinuxAudioLibraries` checks JVM package directories and JARs after packaging, including when other packaging checks are disabled. Native builds check their input classpath before compilation and their output directory before packaging. To check a directory, JAR or tarball directly, run `python3 scripts/desktop-native-image/verify_linux_audio.py <path>`.
 
