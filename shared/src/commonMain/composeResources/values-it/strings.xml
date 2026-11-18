@@ -1835,7 +1835,7 @@
     <string name="widget_recognizer_notification_text">Registrazione dell’audio per identificare il brano…</string>
     <string name="history_playlist_weekly">Top settimanali</string>
     <string name="settings_history_playlists">Playlist della cronologia di ascolto</string>
-    <string name="settings_history_playlists_desc">Crea playlist settimanali e mensili dalla tua cronologia d\u0027ascolto. Si aggiornano automaticamente e appaiono nella libreria.</string>
+    <string name="settings_history_playlists_desc">Crea playlist settimanali e mensili dalla tua cronologia d'ascolto. Si aggiornano automaticamente e appaiono nella libreria.</string>
     <string name="history_playlist_monthly">Top mensili</string>
     <plurals name="downloads_failed_banner">
         <item quantity="one">%1$d download fallito</item>
