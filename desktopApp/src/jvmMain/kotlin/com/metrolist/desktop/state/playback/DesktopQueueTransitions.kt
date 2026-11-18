@@ -53,6 +53,7 @@ internal class DesktopQueueTransitions(
 
     fun retireCurrentPlayback() {
         retiredPlaybackInstanceId = player.currentPlaybackInstanceId
+        pendingEof = false
     }
 
     fun cancel() {

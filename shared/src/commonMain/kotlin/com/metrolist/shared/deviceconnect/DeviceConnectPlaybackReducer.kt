@@ -226,7 +226,11 @@ internal fun reduceDcPlayback(
             val indices = command.indices.ifEmpty { setOf(command.index) }
             if (indices.any { it !in queue.items.value.indices }) return null
             val removingCurrent = queue.currentIndex.value in indices
-            queue.removeAt(indices, advanceCurrentToSuccessor = command.advanceCurrentToSuccessor)
+            queue.removeAt(
+                indices,
+                advanceCurrentToSuccessor = command.advanceCurrentToSuccessor,
+                successorIndex = command.successorIndex,
+            )
             if (removingCurrent) {
                 trackChanged = true
                 next =

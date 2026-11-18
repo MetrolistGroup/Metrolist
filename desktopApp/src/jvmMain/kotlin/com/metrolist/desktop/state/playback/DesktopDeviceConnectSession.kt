@@ -110,17 +110,23 @@ internal class DesktopDeviceConnectSession(
     fun remove(
         indices: Set<Int>,
         expectedQueue: MusicQueueSnapshot,
+        successorIndex: Int?,
     ): QueueRemoval? {
         val sync = coordinator()
         val activeSession = sync.state.value.sessionId ?: return null
         val revision = sync.queueRevision ?: return null
         val local = MusicQueue().apply { restore(expectedQueue) }
-        val removal = local.removeAt(indices, advanceCurrentToSuccessor = true) ?: return null
+        val removal = local.removeAt(indices, advanceCurrentToSuccessor = true, successorIndex = successorIndex) ?: return null
         undo = QueueUndo(removal, expectedQueue, local.snapshot(), activeSession, revision + 1L, desiredPlaying)
         connectedRemovals.removeAll { it.get() == null }
         connectedRemovals += WeakReference(removal)
         sync.intercept(
-            DcPlaybackCommand(DcPlaybackAction.REMOVE, indices = indices, advanceCurrentToSuccessor = true),
+            DcPlaybackCommand(
+                DcPlaybackAction.REMOVE,
+                indices = indices,
+                advanceCurrentToSuccessor = true,
+                successorIndex = successorIndex,
+            ),
             expectedQueueRevision = revision,
             expectedQueue = expectedQueue,
         )

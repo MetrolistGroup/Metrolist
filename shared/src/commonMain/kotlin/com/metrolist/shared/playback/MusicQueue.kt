@@ -157,15 +157,11 @@ class MusicQueue {
         return previous
     }
 
-    fun skipTo(
-        index: Int,
-        automaticRemoval: QueueRemoval? = null,
-    ): SongItem? {
+    fun skipTo(index: Int): SongItem? {
         val song = _items.value.getOrNull(index) ?: return null
         _currentIndex.value = index
         _state.value = _state.value.copy(currentIndex = index)
         publishSnapshot()
-        if (automaticRemoval?.undoIdentity === queueIdentity) automaticRemoval.autoAdvancedEntryKey = displayedEntries[index].key
         return song
     }
 
@@ -277,12 +273,14 @@ class MusicQueue {
     fun removeAt(
         indices: Set<Int>,
         advanceCurrentToSuccessor: Boolean = false,
+        successorIndex: Int? = null,
     ): QueueRemoval? {
         val validIndices = indices.filter { it in displayedEntries.indices }.sorted()
         if (validIndices.isEmpty()) return null
         val previousCurrentIndex = _currentIndex.value
         val originalIndices = originalEntries.withIndex().associate { it.value to it.index }
         val removedEntries = validIndices.map(displayedEntries::get).toSet()
+        val successorEntry = successorIndex?.takeIf { it in displayedEntries.indices && it !in validIndices }?.let(displayedEntries::get)
         val removed = validIndices.map { IndexedQueueItem(it, displayedEntries[it].song) }
         val removedOriginal =
             validIndices.map { index ->
@@ -294,14 +292,14 @@ class MusicQueue {
         val removedIndexSet = validIndices.toHashSet()
         val currentIndex =
             if (advanceCurrentToSuccessor && previousCurrentIndex in removedIndexSet) {
-                val nextIndex = (previousCurrentIndex + 1 until _items.value.size).firstOrNull { it !in removedIndexSet }
-                nextIndex?.let { it - validIndices.count { removedIndex -> removedIndex < it } } ?: -1
+                successorEntry?.let(displayedEntries::indexOf) ?: -1
             } else {
                 (previousCurrentIndex - validIndices.count { it < previousCurrentIndex }).coerceIn(-1, displayedEntries.lastIndex)
             }
         publishItems(currentIndex)
         return QueueRemoval(removed, removedOriginal, previousCurrentIndex, _currentIndex.value, isShuffled).also {
             it.undoIdentity = queueIdentity
+            it.autoAdvancedEntryKey = successorEntry?.key
         }
     }
 
@@ -339,8 +337,8 @@ class MusicQueue {
         val currentIndex =
             if (isShuffled == removal.wasShuffled &&
                 (
-                    currentIndexBeforeRestore == removal.currentIndexAfterRemoval ||
-                        (removal.autoAdvancedEntryKey != null && current?.key == removal.autoAdvancedEntryKey)
+                    removal.autoAdvancedEntryKey?.let { current?.key == it }
+                        ?: (currentIndexBeforeRestore == removal.currentIndexAfterRemoval)
                 )
             ) {
                 removal.previousCurrentIndex

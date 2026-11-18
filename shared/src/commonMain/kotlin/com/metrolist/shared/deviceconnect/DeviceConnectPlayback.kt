@@ -53,6 +53,7 @@ data class DcPlaybackCommand(
     val preserveCurrentTrack: Boolean = false,
     val startPlaying: Boolean? = null,
     val advanceCurrentToSuccessor: Boolean = false,
+    val successorIndex: Int? = null,
 )
 
 @Serializable
