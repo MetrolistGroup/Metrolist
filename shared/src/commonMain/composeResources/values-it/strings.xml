@@ -1457,7 +1457,7 @@
     <string name="sign_in">Accedi</string>
     <string name="stats_for_nerds">Statistiche per nerd</string>
     <string name="copy_debug_info">Copia info di debug</string>
-    <string name="copy_url_at_current_time">Copia l\u0027URL al minuto corrente</string>
+    <string name="copy_url_at_current_time">Copia l'URL al minuto corrente</string>
     <string name="offset_ms">%1$d ms</string>
     <string name="retry_cleanup">Riprova pulizia</string>
     <string name="windows_login_helper">Assistente d'accesso Windows</string>
