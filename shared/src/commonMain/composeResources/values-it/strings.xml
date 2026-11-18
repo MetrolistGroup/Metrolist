@@ -708,7 +708,7 @@
     <string name="import_error_unsupported_playlist_entries">Questa playlist contiene file locali o link diretti a cui Android non può accedere. Importa una playlist contenente link di YouTube, oppure scegli i file locali sul computer.</string>
     <string name="import_error_local_files_require_local_playlist">I file audio locali possono essere importati solo in una playlist locale.</string>
     <string name="import_error_file_read_failed">Impossibile leggere il file della playlist. Selezionalo di nuovo e concedi l’accesso ai file.</string>
-    <string name="history_deleting_title">Eliminando l\u0027elemento dalla cronologia</string>
+    <string name="history_deleting_title">Eliminando l'elemento dalla cronologia</string>
     <string name="enter_fullscreen" tools:ignore="MissingTranslation">Modalità schermo intero</string>
     <string name="export_format_csv_description">Elenco brani per i fogli di calcolo</string>
     <string name="export_saved">Esportazione salvata</string>
@@ -752,7 +752,7 @@
     <string name="history_sort_listening_time">Tempo di ascolto</string>
     <string name="home_load_item_failed">Impossibile caricare %1$s</string>
     <string name="language_ukrainian">Ucraino</string>
-    <string name="history_remove_item_message">Rimuovi %1$s dalla cronologia d\u0027ascolto.</string>
+    <string name="history_remove_item_message">Rimuovi %1$s dalla cronologia d'ascolto.</string>
     <string name="library_uploaded_songs">I tuoi brani caricati</string>
     <string name="device_connect_pair">Associa</string>
     <string name="device_connect_paired">Associati</string>
@@ -1003,7 +1003,7 @@
     <string name="removed_from_library">Rimossi dalla libreria</string>
     <string name="song_details">Dettagli brano</string>
     <string name="unlike">Non mi piace</string>
-    <string name="history_empty">Cronologia d\u0027ascolto vuota</string>
+    <string name="history_empty">Cronologia d'ascolto vuota</string>
     <plurals name="history_hours_ago">
         <item quantity="one">%1$d h fa</item>
         <item quantity="many">%1$d h fa</item>
