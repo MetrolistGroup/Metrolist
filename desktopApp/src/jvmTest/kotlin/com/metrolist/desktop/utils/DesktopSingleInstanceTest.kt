@@ -97,6 +97,7 @@ class DesktopSingleInstanceTest {
         try {
             assertTrue(owner.acquire { received.countDown() })
             assertFalse(contender.acquire("pending") {})
+            assertFalse(received.await(100, TimeUnit.MILLISECONDS))
             owner.startRestoreWatcher()
             assertTrue(received.await(5, TimeUnit.SECONDS))
         } finally {
