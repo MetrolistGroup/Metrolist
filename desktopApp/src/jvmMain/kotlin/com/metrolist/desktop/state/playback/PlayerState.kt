@@ -2059,7 +2059,7 @@ object PlayerState {
                 completedCachePlaybackInstanceId.value = completedPlaybackInstanceId
                 if (deviceConnect.isActive) {
                     if (sleepTimerStopAfterCurrentSong) {
-                        setPlaybackPlaying(false)
+                        setPlaybackPlaying(false, fromSleepTimer = true)
                         clearSleepTimer()
                     } else {
                         deviceConnect.playbackEnded()
@@ -2068,7 +2068,7 @@ object PlayerState {
                 }
                 if (sleepTimerStopAfterCurrentSong) {
                     transitions.cancel()
-                    setPlaybackPlaying(false)
+                    setPlaybackPlaying(false, fromSleepTimer = true)
                     clearSleepTimer()
                     return@collect
                 }
@@ -2464,6 +2464,7 @@ object PlayerState {
     var miniplayerFocusMode by Settings.shared::miniplayerFocusMode
 
     fun toggleShuffle() {
+        if (!isListenTogetherGuest()) _explicitPlaybackGeneration.incrementAndGet()
         if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.SHUFFLE, enabled = !shuffleEnabled))) return
         if (isListenTogetherGuest()) return
         invalidatePersistedRestore()
@@ -3207,7 +3208,7 @@ object PlayerState {
         if ((!fromEOF || fromFailure) && !fromListenTogether && isListenTogetherGuest()) return
 
         if (fromEOF && sleepTimerStopAfterCurrentSong) {
-            setPlaybackPlaying(false)
+            setPlaybackPlaying(false, fromSleepTimer = true)
             clearSleepTimer()
             return
         }
@@ -3442,11 +3443,12 @@ object PlayerState {
     }
 
     fun addToQueue(songs: List<SongItem>) {
-        if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.ADD, songs = BlockedContent.filterPlayableSongs(songs)))) return
-        if (isListenTogetherGuest()) return
-
         val filteredSongs = BlockedContent.filterPlayableSongs(songs)
-        if (filteredSongs.isEmpty()) return
+        if (!isListenTogetherGuest() && filteredSongs.isNotEmpty()) {
+            _explicitPlaybackGeneration.incrementAndGet()
+        }
+        if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.ADD, songs = filteredSongs))) return
+        if (isListenTogetherGuest() || filteredSongs.isEmpty()) return
 
         enqueueSongs(filteredSongs, playNext = false)
     }
@@ -3511,7 +3513,11 @@ object PlayerState {
                 if (finishCurrentSong) {
                     startSleepTimer(0L, stopAfterCurrentSong = true, fadeOut = fadeOut)
                 } else {
-                    if (castManager.state.value.isConnected) castManager.pause() else setPlaybackPlaying(false)
+                    if (castManager.state.value.isConnected) {
+                        castManager.pause()
+                    } else {
+                        setPlaybackPlaying(false, fromSleepTimer = true)
+                    }
                     clearSleepTimer()
                 }
             }
@@ -3548,16 +3554,12 @@ object PlayerState {
     fun fetchRelated(videoId: String) = related.fetch(videoId)
 
     fun playNext(songs: List<SongItem>) {
-        if (deviceConnect.intercept(
-                DcPlaybackCommand(DcPlaybackAction.PLAY_NEXT, songs = BlockedContent.filterPlayableSongs(songs)),
-            )
-        ) {
-            return
-        }
-        if (isListenTogetherGuest()) return
-
         val filteredSongs = BlockedContent.filterPlayableSongs(songs)
-        if (filteredSongs.isEmpty()) return
+        if (!isListenTogetherGuest() && filteredSongs.isNotEmpty()) {
+            _explicitPlaybackGeneration.incrementAndGet()
+        }
+        if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PLAY_NEXT, songs = filteredSongs))) return
+        if (isListenTogetherGuest() || filteredSongs.isEmpty()) return
 
         enqueueSongs(filteredSongs, playNext = true)
     }
@@ -3593,8 +3595,10 @@ object PlayerState {
     fun removeQueueItems(
         indices: Set<Int>,
         expectedQueue: MusicQueueSnapshot = queue.snapshots.value,
+        isUserAction: Boolean = true,
     ): QueueRemoval? {
         if (isListenTogetherGuest()) return null
+        if (isUserAction) _explicitPlaybackGeneration.incrementAndGet()
         if (deviceConnect.isActive) {
             return syncSession.remove(indices, expectedQueue)
         }
@@ -3635,6 +3639,7 @@ object PlayerState {
         if (isListenTogetherGuest() || Settings.shared.isQueueLocked) return false
         val expectedQueue = queue.snapshots.value
         if (order.size != expectedQueue.displayedItems.size || order.toSet() != expectedQueue.displayedItems.indices.toSet()) return false
+        _explicitPlaybackGeneration.incrementAndGet()
         if (deviceConnect.intercept(
                 DcPlaybackCommand(DcPlaybackAction.REORDER, order = order),
                 expectedQueue = expectedQueue,
@@ -3649,6 +3654,7 @@ object PlayerState {
 
     fun restoreQueueItems(removal: QueueRemoval) {
         if (isListenTogetherGuest()) return
+        _explicitPlaybackGeneration.incrementAndGet()
         if (syncSession.restore(removal)) return
         queue.restore(removal)
         queueChanged()
@@ -3659,6 +3665,7 @@ object PlayerState {
         to: Int,
         expectedQueue: MusicQueueSnapshot = queue.snapshots.value,
     ) {
+        if (!isListenTogetherGuest()) _explicitPlaybackGeneration.incrementAndGet()
         if (deviceConnect.intercept(
                 DcPlaybackCommand(DcPlaybackAction.MOVE, index = from, toIndex = to),
                 expectedQueue = expectedQueue,
@@ -3777,11 +3784,14 @@ object PlayerState {
 
     fun playFromId(videoId: String) {
         if (isListenTogetherGuest()) return
+        val expectedGeneration = reserveExplicitPlaybackGeneration()
         if (deviceConnect.willStartRemotePlayback) {
             val generation = playbackTransitionGeneration
             scope.launch {
                 val song = withContext(Dispatchers.IO) { GlobalYouTubeRepository.instance.getSongMetadata(videoId) }
-                if (song != null && isCurrentPlaybackTransition(generation)) playTrack(song)
+                if (song != null && isCurrentPlaybackTransition(generation) && explicitPlaybackGeneration == expectedGeneration) {
+                    playTrack(song, advanceGeneration = false)
+                }
             }
             return
         }
@@ -3909,7 +3919,13 @@ object PlayerState {
 
     fun pause() = setPlaybackPlaying(false)
 
-    fun setPlaybackPlaying(playing: Boolean) {
+    fun setPlaybackPlaying(
+        playing: Boolean,
+        fromSleepTimer: Boolean = false,
+    ) {
+        if (!fromSleepTimer && !isListenTogetherGuest()) {
+            _explicitPlaybackGeneration.incrementAndGet()
+        }
         if (deviceConnect.intercept(
                 DcPlaybackCommand(if (playing) DcPlaybackAction.PLAY else DcPlaybackAction.PAUSE),
                 expectedQueue = queue.snapshots.value,
@@ -3923,6 +3939,9 @@ object PlayerState {
     }
 
     fun stop() {
+        if (!isListenTogetherGuest()) {
+            _explicitPlaybackGeneration.incrementAndGet()
+        }
         if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PAUSE))) return
         if (isListenTogetherGuest()) return
         playbackTransitions.begin()
@@ -4191,6 +4210,7 @@ object PlayerState {
                 queue.items.value.indices
                     .filter { queue.items.value[it].id == songId }
                     .toSet(),
+                isUserAction = false,
             )
             return
         }
