@@ -2719,4 +2719,5 @@
     <string name="application_failure_log_raw_empty">Событий пока не записано.</string>
     <string name="lyrics_share_square_image">Квадратное изображение</string>
     <string name="lyrics_share_story_image">Изображение для истории</string>
+    <string name="auto_download_saved_collections">Автоматически скачивать сохраненные альбомы и плейлисты</string>
 </resources>
