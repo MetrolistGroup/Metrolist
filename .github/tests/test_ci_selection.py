@@ -333,7 +333,7 @@ class ReleaseGateTest(unittest.TestCase):
             text = (ROOT / ".github/workflows" / workflow).read_text()
             self.assertIn("run: python3 .github/scripts/release_verification.py", text)
             self.assertIn("checks: read", text)
-            self.assertEqual(text.count("run-verification: false"), 6 if workflow == "release.yml" else 5)
+            self.assertEqual(text.count("run-verification: false"), 7 if workflow == "release.yml" else 5)
             self.assertIn("fetch-depth: 0", text)
         for name in ("android-build", "desktop-linux", "desktop-macos", "desktop-windows", "ios-build"):
             text = (ROOT / f".github/workflows/reusable-{name}.yml").read_text()

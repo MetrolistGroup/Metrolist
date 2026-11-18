@@ -86,6 +86,7 @@ class ReleaseWorkflowsTest(unittest.TestCase):
         script = step_script('release.yml', 'Validate and checksum release assets')
         assets = [
             'Metrolist.apk',
+            'Metrolist-izzy.apk',
             'Metrolist-KMP-mapping.txt',
             'Metrolist-Desktop-Windows.zip',
             'Metrolist-Desktop-Windows-arm64.zip',
