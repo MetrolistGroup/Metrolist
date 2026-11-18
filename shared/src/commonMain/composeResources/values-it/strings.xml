@@ -785,7 +785,7 @@
     <string name="device_connect_signed_out_pairing">Sei disconnesso. Verifica il codice di associazione su entrambi i dispositivi prima di approvare.</string>
     <string name="language_japanese">Giapponese</string>
     <string name="language_korean">Coreano</string>
-    <string name="listen_together_log_join_rejected">Richiesta d\u0027ingresso rifiutata</string>
+    <string name="listen_together_log_join_rejected">Richiesta d'ingresso rifiutata</string>
     <string name="more_options">Più opzioni</string>
     <string name="no_matches">Nessuna corrispondenza</string>
     <string name="no_recognized_songs_yet">Nessun brano ancora riconosciuto</string>
