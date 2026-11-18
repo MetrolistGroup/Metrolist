@@ -131,7 +131,7 @@
     <string name="sleep_timer">Timer per il sonno</string>
     <string name="sleep_timer_end_current_song">Alla fine del brano</string>
     <string name="sleep_timer_fade_out">Dissolvenza al minuto finale</string>
-    <string name="sleep_timer_fade_out_enabled">L\u0027audio si dissolverà durante l\u0027ultimo minuto.</string>
+    <string name="sleep_timer_fade_out_enabled">L'audio si dissolverà durante l'ultimo minuto.</string>
     <string name="sleep_timer_remaining">Rimanenti: %1$s</string>
     <string name="sleep_timer_cancel">Annulla timer</string>
     <string name="error_unknown">Errore sconosciuto</string>
@@ -1948,7 +1948,7 @@
     <string name="openrouter_sign_in_description">Accedi dal tuo browser, o inserisci una chiave API qui sotto</string>
     <string name="ai_test_connection">Test di connessione</string>
     <string name="ai_test_connection_running">Test di connessione…</string>
-    <string name="ai_test_connection_description">Invia una richiesta di testo d\u0027esempio usando le impostazioni attuali</string>
+    <string name="ai_test_connection_description">Invia una richiesta di testo d'esempio usando le impostazioni attuali</string>
     <string name="ai_test_connection_success">Connessione riuscita.</string>
     <string name="ai_test_connection_failed">Connessione non riuscita. Controlla le credenziali e i modelli.</string>
     <string name="ai_test_missing_credentials">Inserisci le credenziali prima del test.</string>
