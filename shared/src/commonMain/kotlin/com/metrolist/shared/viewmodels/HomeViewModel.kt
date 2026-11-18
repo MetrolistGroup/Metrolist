@@ -988,7 +988,10 @@ class HomeViewModel(
         }
         val selectedChip = state.selectedChip
         val isFiltered = isFilteredHome(selectedChip?.params, selectedChip?.browseId ?: "FEmusic_home")
-        val apiQuickPicks = findSectionSongs(state.data.orEmpty(), "FEmusic_quickpicks")
+        // A restored startup snapshot keeps quickPicks separately and may lack
+        // the API shelf; fall back to the current picks so they are not lost.
+        val apiQuickPicks =
+            findSectionSongs(state.data.orEmpty(), "FEmusic_quickpicks").ifEmpty { state.quickPicks }
         val localQuickPicks =
             database
                 .dao()
@@ -1950,9 +1953,12 @@ internal fun classicQuickPicks(
     localQuickPicks: List<SongItem>,
     localForgottenFavorites: List<SongItem>,
 ): List<SongItem> =
-    (localQuickPicks + localForgottenFavorites.take(8))
-        .distinctBy { it.id }
-        .shuffled()
+    // Filter before sampling so blocked rows do not consume the quota.
+    BlockedContent
+        .filterSongs(
+            (localQuickPicks + localForgottenFavorites.take(8)).distinctBy { it.id },
+            BlockedContent.snapshot(),
+        ).shuffled()
         .take(20)
 
 private fun preferredQuickPicks(
