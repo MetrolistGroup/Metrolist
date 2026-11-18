@@ -1019,7 +1019,7 @@ class AutomotiveBrowseTest {
             assertTrue(pinned.playlistPage!!.hasMore)
             var installed: PlaylistPage? = null
             val gate =
-                AutomotivePlaybackRequestGate { _, _, _, _, page, replacement ->
+                AutomotivePlaybackRequestGate { _, _, _, _, page, _, replacement ->
                     installed = page
                     replacement()
                 }

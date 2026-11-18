@@ -988,7 +988,7 @@ class MediaSessionPlayerTest {
             var appliedShuffleMode: Boolean? = null
             var appliedStartIndex: Int? = null
             val requestGate =
-                AutomotivePlaybackRequestGate { _, startIndex, queueTitle, shuffleModeEnabled, _, replacement ->
+                AutomotivePlaybackRequestGate { _, startIndex, queueTitle, shuffleModeEnabled, _, _, replacement ->
                     automotiveQueueReplacements++
                     appliedQueueTitle = queueTitle
                     appliedShuffleMode = shuffleModeEnabled
@@ -1147,7 +1147,7 @@ class MediaSessionPlayerTest {
         val scope = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
         var queueReplacements = 0
         val requestGate =
-            AutomotivePlaybackRequestGate { _, _, _, _, _, replacement ->
+            AutomotivePlaybackRequestGate { _, _, _, _, _, _, replacement ->
                 queueReplacements++
                 replacement()
             }
@@ -1213,7 +1213,7 @@ class MediaSessionPlayerTest {
         val scope = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
         var queueReplacements = 0
         val requestGate =
-            AutomotivePlaybackRequestGate { _, _, _, _, _, replacement ->
+            AutomotivePlaybackRequestGate { _, _, _, _, _, _, replacement ->
                 queueReplacements++
                 replacement()
             }

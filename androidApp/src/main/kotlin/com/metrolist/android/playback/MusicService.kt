@@ -293,7 +293,7 @@ class MusicService :
     private val automotiveRootChildrenLimit = ConcurrentHashMap<MediaSession.ControllerInfo, Int>()
     private val automotiveRootBrowsableOnly = ConcurrentHashMap<MediaSession.ControllerInfo, Boolean>()
     private val automotivePlaybackRequestGate =
-        AutomotivePlaybackRequestGate { songs, startIndex, queueTitle, shuffleModeEnabled, playlistPage, replacement ->
+        AutomotivePlaybackRequestGate { songs, startIndex, queueTitle, shuffleModeEnabled, playlistPage, songPlaybackMode, replacement ->
             val shuffleEnabled =
                 newQueueShuffleEnabled(
                     requestedShuffle = shuffleModeEnabled,
@@ -312,19 +312,15 @@ class MusicService :
                     ),
                 )
             ) {
-                val songQueue = pendingAutomotiveSongQueue?.takeIf {
-                    it.songs.getOrNull(it.startIndex)?.id == songs.getOrNull(startIndex)?.id
-                }
-                pendingAutomotiveSongQueue = null
                 queueCoordinator.replaceQueueSession(songs, startIndex, queueTitle, finite = true, playlistPage = playlistPage) {
-                    if (songQueue?.songPlaybackMode == AutomotiveSongPlaybackMode.SINGLE_SONG) {
+                    if (songPlaybackMode == AutomotiveSongPlaybackMode.SINGLE_SONG) {
                         queueCoordinator.singleSongQueueSessionId = queueCoordinator.queueSessionId
                     }
                     val initialRequestId = player.latestQueuePlaybackRequestId
                     replacement()
                     if (shuffleEnabled) player.toggleShuffle(preserveHistory = shuffleModeEnabled != true)
                     _shuffleModeEnabled.value = player.isShuffleEnabled
-                    if (songQueue?.songPlaybackMode == AutomotiveSongPlaybackMode.RADIO) {
+                    if (songPlaybackMode == AutomotiveSongPlaybackMode.RADIO) {
                         songs.getOrNull(startIndex)?.let { song ->
                             val sessionId = queueCoordinator.queueSessionId
                             pendingRadioJob = serviceScope.launch {
@@ -396,7 +392,6 @@ class MusicService :
     private val playbackPersistenceLifecycle = PlaybackPersistenceLifecycle()
 
     private var pendingRadioJob: Job? = null
-    private var pendingAutomotiveSongQueue: AutomotiveSongQueue? = null
 
     private lateinit var audioManager: AudioManager
     private val pauseOnMute = PauseOnMuteController()
@@ -3375,7 +3370,6 @@ class MusicService :
             serviceScope.future {
                 (application as App).startup.await()
                 pendingRadioJob?.cancel()
-                pendingAutomotiveSongQueue = null
                 if (!canResolveMediaSessionItems(
                         canBrowse = canBrowseLibrary(session, controller),
                         isAssistant = isAssistantController(controller),
@@ -3435,7 +3429,6 @@ class MusicService :
                         mode = Settings.shared.androidAutoSongPlaybackMode,
                     )
                 }
-                pendingAutomotiveSongQueue = songQueue
                 val individuallyResolvedSongs =
                     if (mediaItems.size != 1 || (pinnedQueue == null && songQueue == null)) {
                         mediaItems.map { item ->
@@ -3465,21 +3458,17 @@ class MusicService :
                         )
                     }
                 val songs = playable?.songs.orEmpty()
-                return@future try {
-                    automotivePlaybackRequestGate.resolve(
-                        requestGeneration = requestGeneration,
-                        mediaItems = songs.map(automotiveLibrary::playableItem),
-                        startIndex = playable?.startIndex ?: startIndex,
-                        startPositionMs = if (songQueue?.shuffle == true) C.TIME_UNSET else startPositionMs,
-                        queueTitle = pinnedQueue?.title,
-                        shuffleModeEnabled = pinnedQueue?.shuffle ?: songQueue?.shuffle?.takeIf { it },
-                        playlistPage = pinnedQueue?.playlistPage ?: songQueue?.playlistPage,
-                        canApply = playable != null && !AndroidListenTogetherManager.isGuestPlaybackLocked,
-                    )
-                } catch (error: CancellationException) {
-                    pendingAutomotiveSongQueue = null
-                    throw error
-                }
+                automotivePlaybackRequestGate.resolve(
+                    requestGeneration = requestGeneration,
+                    mediaItems = songs.map(automotiveLibrary::playableItem),
+                    startIndex = playable?.startIndex ?: startIndex,
+                    startPositionMs = if (songQueue?.shuffle == true) C.TIME_UNSET else startPositionMs,
+                    queueTitle = pinnedQueue?.title,
+                    shuffleModeEnabled = pinnedQueue?.shuffle ?: songQueue?.shuffle?.takeIf { it },
+                    playlistPage = pinnedQueue?.playlistPage ?: songQueue?.playlistPage,
+                    songPlaybackMode = songQueue?.songPlaybackMode,
+                    canApply = playable != null && !AndroidListenTogetherManager.isGuestPlaybackLocked,
+                )
             }
     }
 
