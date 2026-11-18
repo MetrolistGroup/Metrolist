@@ -2317,4 +2317,23 @@
     <string name="charts">Žebříčky</string>
     <string name="leave_room">Opustit místnost</string>
     <string name="room_code">Kód místnosti</string>
+    <string name="add_to_library">Přidat do knihovny</string>
+    <string name="player_canvas_desc">Přehrávat videa ze Spotify a YouTube plátna v pozadí přehrávače, pokud jsou k dispozici. Spotřebovává více úložiště a mobilních dat.</string>
+    <string name="disable_animated_artwork_on_mobile_data">Zakázat animované obaly alb při připojení přes mobilní data</string>
+    <string name="disable_animated_artwork_on_mobile_data_desc">Zobrazovat statické obaly alb při připojení přes mobilní data, i když jsou animace uloženy v mezipaměti</string>
+    <string name="hidden_home_items_desc">Zobrazit a odkrýt umělce a podcasty skryté na Domovské stránce. Položky připnuté na Rychlý výběr zůstanou viditelné.</string>
+    <string name="hidden_home_items_empty">Žádné položky skryty z Domovské stránky</string>
+    <string name="unblock_artist_message">Chcete znovu povolit %1$s ve frontách, doporučeních a statistikách?</string>
+    <string name="integration_on_account">Zapnuto · %1$s</string>
+    <string name="integration_on_signed_out">Zapnuto · Nepřihlášeno</string>
+    <string name="discord_integration_description">Zobrazujte hudbu, kterou posloucháte, na svém profilu na Discordu</string>
+    <string name="devtools_render_backend_auto">Automatický</string>
+    <string name="devtools_render_backend_direct3d">Direct3D</string>
+    <string name="devtools_render_backend_opengl">OpenGL</string>
+    <string name="devtools_render_backend_software">Software</string>
+    <string name="devtools_render_backend_metal">Metal</string>
+    <string name="theme_palette_content">Obsah</string>
+    <string name="appearance_floating_bottom_nav">Plovoucí navigační lišta</string>
+    <string name="appearance_floating_bottom_nav_description">Zobrazí plovoucí lištu nad systémovou navigační oblastí. Obsahuje tlačítka Domů, Knihovna a samostatné tlačítko Hledat.</string>
+    <string name="appearance_floating_top_bar">Plovoucí horní lišta</string>
 </resources>
