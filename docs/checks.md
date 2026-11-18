@@ -343,3 +343,7 @@ Play an uncached direct HTTP audio stream on a throttled connection that is fast
 With Stop music on task clear enabled, confirm Back twice at the root on Android TV removes the task and stops active playback. With the setting disabled, playback should continue. Leaving a nested screen or closing the player must not exit; phone Back-exit behavior remains unchanged.
 
 For Android upgrades from v13, test a local playlist whose custom thumbnail still points to its own `FileProvider/cache/playlist_cover_crop_<timestamp>.jpg`. With surviving cache bytes, opening the library must copy the image into persistent playlist-cover storage, keep the original cache file, and preserve the recovered reference on a second open. Missing/unreadable files, other authorities, path traversal, remote playlists and newer custom covers must remain untouched. `LegacyPlaylistCoverRecoveryTest` covers these cases plus copy/database failure retries. This does not recover bytes already removed from the cache or make backup images portable.
+
+### Google Cast load replacement
+
+On a Google Cast receiver, replace a track while it is still buffering and confirm the replacement remains connected. A failure of the current load must still report a playback error rather than appearing to succeed. Repeat with rapid skips and normal end-of-track advancement.
