@@ -897,7 +897,7 @@
     <string name="statistics_listening_habits">Obiceiuri de ascultare</string>
     <string name="statistics_overview">Prezentare generală</string>
     <string name="statistics_period_summary">În %1$s: %2$s, %3$s de ascultare.</string>
-    <string name="statistics_play_count_duration">%1$s · %2$s</string>
+    <string name="statistics_play_count_duration">%1$s · %2$s</string>
     <string name="statistics_time">Timp</string>
     <string name="statistics_top_albums">Albume de top</string>
     <string name="statistics_top_artists">Artiști de top</string>
@@ -2707,4 +2707,5 @@
     <string name="lyrics_romanization_show_original_description">Afișează versul original dedesubt</string>
     <string name="lyrics_romanization_show_original">Afișează originalul</string>
     <string name="lyrics_romanization_show_romanization_description">Afișează romanizarea sub versuri</string>
+    <string name="search_episodes"></string>
 </resources>
