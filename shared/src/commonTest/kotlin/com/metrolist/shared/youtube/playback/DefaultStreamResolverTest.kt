@@ -1955,6 +1955,9 @@ class DefaultStreamResolverTest {
                     resource.videoUrl,
                 )
                 assertEquals("https://manifest.googlevideo.com/api/manifest/hls_playlist/itag/93/playlist/index.m3u8", resource.url)
+                val audio = resolver.resolve("live-video", ContentHints(isLive = isLive, maxVideoHeight = maxVideoHeight))
+                assertEquals(resource.url, audio.url)
+                assertFalse(audio.hasVideo)
             } finally {
                 resolver.close()
                 innerTube.close()

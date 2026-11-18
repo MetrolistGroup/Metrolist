@@ -1176,7 +1176,7 @@ class DefaultStreamResolver(
                     durationSeconds = durationSeconds.takeUnless { isLive },
                     isLive = isLive,
                     requireBoundedRange = false,
-                    videoUrl = if (extractWantVideo || resolvedVideoUrl != null) resolvedVideoUrl else null,
+                    videoUrl = resolvedVideoUrl.takeIf { extractWantVideo },
                     videoWidth = resolvedWidth,
                     videoHeight = resolvedHeight,
                     videoBitrate = resolvedBitrate?.toInt(),
