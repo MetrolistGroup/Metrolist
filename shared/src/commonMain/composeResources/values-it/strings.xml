@@ -2052,8 +2052,8 @@
     <string name="no_recognized_songs_hint">I brani che identifichi verranno mostrati qui.</string>
     <string name="recognition_history_earlier">Meno recenti</string>
     <string name="recognition_no_match_message">Non abbiamo potuto riconoscere questo brano.</string>
-    <string name="import_error_playlist_tracks_unavailable">Impossibile caricare i brani della playlist da %1$s. Esporta la playlist e incolla l\u0027elenco dei brani.</string>
-    <string name="import_error_album_tracks_unavailable">Impossibile caricare i brani dell\u0027album da %1$s. Esporta l\u0027album e incolla l\u0027elenco dei brani.</string>
+    <string name="import_error_playlist_tracks_unavailable">Impossibile caricare i brani della playlist da %1$s. Esporta la playlist e incolla l'elenco dei brani.</string>
+    <string name="import_error_album_tracks_unavailable">Impossibile caricare i brani dell'album da %1$s. Esporta l'album e incolla l'elenco dei brani.</string>
     <string name="login">Accedi</string>
     <string name="app_version">Versione dell\u0027app</string>
     <string name="yeah">Oh sì!</string>
