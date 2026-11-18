@@ -101,6 +101,28 @@ jobs:
       LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
       LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
 
+  android-izzy:
+    name: Android (IzzyOnDroid)
+    needs: prepare
+    uses: ./.github/workflows/reusable-android-build.yml
+    permissions:
+      contents: read
+    with:
+      run-verification: false
+      variant: izzy
+      upload-artifact: true
+      artifact-name: release-android-izzy
+      require-signing: true
+    # No Sentry or Lyprio secrets: the IzzyOnDroid APK must not carry them.
+    secrets:
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH || secrets.KEYSTORE }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+
   windows:
     name: Windows
     needs: prepare
@@ -194,6 +216,7 @@ jobs:
     needs:
       - prepare
       - android
+      - android-izzy
       - windows
       - windows-manager
       - linux
@@ -242,6 +265,7 @@ jobs:
           expected=(
             "release-assets/Metrolist.apk"
             "release-assets/Metrolist-with-Google-Cast.apk"
+            "release-assets/Metrolist-izzy.apk"
             "release-assets/Metrolist-KMP-mapping.txt"
             "release-assets/Metrolist.ipa"
             "release-assets/metrolist-altstore.json"
@@ -476,6 +500,7 @@ jobs:
     needs:
       - prepare
       - android
+      - android-izzy
       - windows
       - windows-manager
       - linux

@@ -334,8 +334,10 @@ fun SettingsScreen(
             add(SettingsPageId.BLOCKED_SONGS)
             add(SettingsPageId.STORAGE)
             add(SettingsPageId.BACKUP_RESTORE)
-            add(SettingsPageId.UPDATES)
-            add(SettingsPageId.UPDATE_DETAILS)
+            if (BuildConfig.UPDATER_ENABLED) {
+                add(SettingsPageId.UPDATES)
+                add(SettingsPageId.UPDATE_DETAILS)
+            }
             add(SettingsPageId.ABOUT)
             add(SettingsPageId.SUPPORTED_LINKS)
             if (SharedPreferences.shared.devtoolsUnlocked) {

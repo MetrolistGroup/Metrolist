@@ -621,7 +621,9 @@ fun MetrolistApp(
                     AppUpdateManager.pendingReleaseForInstalledVersion()
                         ?: AppUpdateManager.releaseForInstalledVersion()
             }
-            if (!wasUpdated || installedReleaseNotes != null || AppUpdateManager.releases.value.isNotEmpty()) {
+            if (!BuildConfig.UPDATER_ENABLED || !wasUpdated || installedReleaseNotes != null ||
+                AppUpdateManager.releases.value.isNotEmpty()
+            ) {
                 Settings.shared.lastRunAppVersion = BuildConfig.VERSION_NAME
             }
         }

@@ -38,6 +38,8 @@ Apps on the nightly update channel, the default for nightly builds and a switch 
 
 Android 14.0.0 uses `versionCode = 154` in `androidApp/build.gradle.kts`, one above legacy 13.7.0's 153. Raise it above the previous stable release before later tags. Legacy v13 apps update from `MetrolistGroup/Metrolist` `releases/latest`: they read the release title as a dotted version and download `Metrolist.apk` or, for Google Cast builds, `Metrolist-with-Google-Cast.apk`. Keep the title as the bare version and both asset names.
 
+IzzyOnDroid takes `Metrolist-izzy.apk`, built from the `izzy` build type in its own Gradle invocation. It has no Sentry, no in-app updater or install permission, and receives no Lyprio credentials; shared `BuildConfig` leaves Lyprio empty whenever an Izzy task is requested.
+
 1. Run the affected [checks](checks.md) before tagging.
 2. Supply Android signing, Last.fm and Lyprio credentials. The workflow checks the APK with `apksigner`.
 3. Let platform jobs produce Android, desktop, the pinned Windows manager installer and unsigned iOS packages.
