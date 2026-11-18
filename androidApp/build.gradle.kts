@@ -31,45 +31,6 @@ import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 
-// navigation3-ui 1.3.0-alpha04 drops z-indices of settled scenes that AnimatedContent can still build
-// transitions for, so NavDisplay's zIndices[key] throws NoSuchElementException. A missing z-index reads as 0.
-abstract class NavDisplayZIndexFallback : AsmClassVisitorFactory<InstrumentationParameters.None> {
-    override fun createClassVisitor(
-        classContext: ClassContext,
-        nextClassVisitor: ClassVisitor,
-    ): ClassVisitor =
-        object : ClassVisitor(Opcodes.ASM9, nextClassVisitor) {
-            override fun visitMethod(
-                access: Int,
-                name: String?,
-                descriptor: String?,
-                signature: String?,
-                exceptions: Array<out String>?,
-            ): MethodVisitor =
-                object : MethodVisitor(Opcodes.ASM9, super.visitMethod(access, name, descriptor, signature, exceptions)) {
-                    override fun visitMethodInsn(
-                        opcode: Int,
-                        owner: String,
-                        name: String,
-                        descriptor: String,
-                        isInterface: Boolean,
-                    ) {
-                        if (owner == "androidx/collection/MutableObjectFloatMap" && name == "get" &&
-                            descriptor == "(Ljava/lang/Object;)F"
-                        ) {
-                            super.visitInsn(Opcodes.FCONST_0)
-                            super.visitMethodInsn(opcode, owner, "getOrDefault", "(Ljava/lang/Object;F)F", isInterface)
-                        } else {
-                            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-                        }
-                    }
-                }
-        }
-
-    override fun isInstrumentable(classData: ClassData): Boolean =
-        classData.className.startsWith("androidx.navigation3.ui.NavDisplayKt__NavDisplayKt")
-}
-
 @CacheableTask
 abstract class GenerateAndroidStringsTask : DefaultTask() {
     @get:InputFiles
@@ -175,6 +136,45 @@ abstract class VerifyComposeResourcesTask : DefaultTask() {
             }
         }
     }
+}
+
+// navigation3-ui 1.3.0-alpha04 drops z-indices of settled scenes that AnimatedContent can still build
+// transitions for, so NavDisplay's zIndices[key] throws NoSuchElementException. A missing z-index reads as 0.
+abstract class NavDisplayZIndexFallback : AsmClassVisitorFactory<InstrumentationParameters.None> {
+    override fun createClassVisitor(
+        classContext: ClassContext,
+        nextClassVisitor: ClassVisitor,
+    ): ClassVisitor =
+        object : ClassVisitor(Opcodes.ASM9, nextClassVisitor) {
+            override fun visitMethod(
+                access: Int,
+                name: String?,
+                descriptor: String?,
+                signature: String?,
+                exceptions: Array<out String>?,
+            ): MethodVisitor =
+                object : MethodVisitor(Opcodes.ASM9, super.visitMethod(access, name, descriptor, signature, exceptions)) {
+                    override fun visitMethodInsn(
+                        opcode: Int,
+                        owner: String,
+                        name: String,
+                        descriptor: String,
+                        isInterface: Boolean,
+                    ) {
+                        if (owner == "androidx/collection/MutableObjectFloatMap" && name == "get" &&
+                            descriptor == "(Ljava/lang/Object;)F"
+                        ) {
+                            super.visitInsn(Opcodes.FCONST_0)
+                            super.visitMethodInsn(opcode, owner, "getOrDefault", "(Ljava/lang/Object;F)F", isInterface)
+                        } else {
+                            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                        }
+                    }
+                }
+        }
+
+    override fun isInstrumentable(classData: ClassData): Boolean =
+        classData.className.startsWith("androidx.navigation3.ui.NavDisplayKt__NavDisplayKt")
 }
 
 plugins {
