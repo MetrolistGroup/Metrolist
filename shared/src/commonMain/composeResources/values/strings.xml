@@ -2730,6 +2730,15 @@
         <item quantity="one">%1$dm ago</item>
         <item quantity="other">%1$dm ago</item>
     </plurals>
+    <!-- Translators: Day count in the total duration of a playlist or album. %1$d is the day count. -->
+    <plurals name="days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <!-- Translators: Total duration of a playlist or album made of two units, e.g. "10 hours, 36 minutes". %1$s and %2$s are the localized units, largest first. -->
+    <string name="duration_two_units">%1$s, %2$s</string>
+    <!-- Translators: Total duration of a playlist or album made of three units, e.g. "1 day, 2 hours, 45 minutes". %1$s, %2$s and %3$s are the localized units, largest first. -->
+    <string name="duration_three_units">%1$s, %2$s, %3$s</string>
     <!-- Translators: Pluralized count or status for hours in the song details. %1$d is the hour count. -->
     <plurals name="hours">
         <item quantity="one">%1$d hour</item>
@@ -2754,11 +2763,6 @@
     <plurals name="minutes">
         <item quantity="one">%1$d minute</item>
         <item quantity="other">%1$d minutes</item>
-    </plurals>
-    <!-- Translators: Pluralized count or status for minutes short in the song details. %1$d is the minute count. -->
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d min</item>
-        <item quantity="other">%1$d min</item>
     </plurals>
     <!-- Translators: Pluralized count or status for track in the Home screen. %1$d is the track count. -->
     <plurals name="n_track">
@@ -2789,11 +2793,6 @@
     <plurals name="removed_songs_from_playlist">
         <item quantity="one">Removed %1$d song from playlist</item>
         <item quantity="other">Removed %1$d songs from playlist</item>
-    </plurals>
-    <!-- Translators: Pluralized count or status for seconds short in the song details. %1$d is the second count. -->
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d s</item>
-        <item quantity="other">%1$d s</item>
     </plurals>
     <!-- Translators: Pluralized count or status for song count in the Home and browse screens and player menu. %1$d is the song count. -->
     <plurals name="song_count">
