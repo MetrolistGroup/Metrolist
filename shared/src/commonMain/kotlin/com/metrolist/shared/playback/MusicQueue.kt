@@ -63,10 +63,26 @@ class MusicQueue {
     fun snapshot(): MusicQueueSnapshot = _snapshots.value.also { it.undoIdentity = queueIdentity }
 
     fun restore(snapshot: MusicQueueSnapshot) {
-        queueIdentity = snapshot.undoIdentity ?: Any()
+        val hasOccurrenceKeys = snapshot.displayedEntryKeys?.size == snapshot.displayedItems.size
+        queueIdentity = snapshot.undoIdentity.takeIf { hasOccurrenceKeys } ?: Any()
         val normalized = snapshot.forRestore(true)
         recommendationsSongsOnly = normalized.recommendationsSongsOnly
-        val original = normalized.originalItems.map { Entry(nextEntryKey++, it) }
+        val originalKeys =
+            normalized.displayedEntryKeys
+                ?.takeIf { queueIdentity === normalized.undoIdentity && it.size == normalized.displayedItems.size }
+                ?.let { keys ->
+                    LongArray(normalized.originalItems.size) { -1L }.also { byOriginalIndex ->
+                        normalized.originalIndices.forEachIndexed { displayedIndex, originalIndex ->
+                            byOriginalIndex[originalIndex] = keys[displayedIndex]
+                        }
+                    }
+                }
+        val original =
+            normalized.originalItems.mapIndexed { index, song ->
+                val key = originalKeys?.get(index)?.takeIf { it >= 0L } ?: nextEntryKey++
+                nextEntryKey = maxOf(nextEntryKey, key + 1L)
+                Entry(key, song)
+            }
         val displayed = normalized.originalIndices.map(original::get)
         originalEntries = original.filterNot { it.song.isUnavailable }
         displayedEntries = displayed.filterNot { it.song.isUnavailable }
@@ -429,12 +445,18 @@ class MusicQueue {
                 currentIndex = index,
                 isShuffled = isShuffled,
                 recommendationsSongsOnly = recommendationsSongsOnly,
-            ).also { it.undoIdentity = queueIdentity }
+            ).also {
+                it.undoIdentity = queueIdentity
+                it.displayedEntryKeys = displayedEntries.map { entry -> entry.key }
+            }
     }
 
     private fun publishSnapshot() {
         _snapshots.value =
-            _snapshots.value.copy(currentIndex = _currentIndex.value, isShuffled = isShuffled).also { it.undoIdentity = queueIdentity }
+            _snapshots.value.copy(currentIndex = _currentIndex.value, isShuffled = isShuffled).also {
+                it.undoIdentity = queueIdentity
+                it.displayedEntryKeys = displayedEntries.map { entry -> entry.key }
+            }
     }
 }
 
@@ -453,6 +475,9 @@ data class MusicQueueSnapshot(
     @Transient
     internal var undoIdentity: Any? = null
 
+    @Transient
+    internal var displayedEntryKeys: List<Long>? = null
+
     fun forRestore(rememberShuffle: Boolean): MusicQueueSnapshot {
         val canonical = originalItems.takeIf { it.hasSameOccurrencesAs(displayedItems) } ?: displayedItems
         val indices =
@@ -468,14 +493,18 @@ data class MusicQueueSnapshot(
         if (!rememberShuffle && isShuffled && displayedItems.isNotEmpty()) {
             val prefix = indices.take(index + 1)
             val retained = prefix.toSet()
-            val ordered = (prefix + canonical.indices.filterNot { it in retained }).map(canonical::get)
+            val orderedIndices = prefix + canonical.indices.filterNot { it in retained }
+            val ordered = orderedIndices.map(canonical::get)
             return copy(
                 displayedItems = ordered,
                 originalItems = ordered,
                 originalIndices = canonical.indices.toList(),
                 currentIndex = index,
                 isShuffled = false,
-            ).also { it.undoIdentity = undoIdentity }
+            ).also {
+                it.undoIdentity = undoIdentity
+                it.displayedEntryKeys = keysForOriginalIndices(orderedIndices)
+            }
         }
         return copy(
             originalItems = canonical,
@@ -483,7 +512,16 @@ data class MusicQueueSnapshot(
             currentIndex = index,
             isShuffled =
                 isShuffled && displayedItems.isNotEmpty(),
-        ).also { it.undoIdentity = undoIdentity }
+        ).also {
+            it.undoIdentity = undoIdentity
+            it.displayedEntryKeys = keysForOriginalIndices(indices)
+        }
+    }
+
+    private fun keysForOriginalIndices(indices: List<Int>): List<Long>? {
+        val keys = displayedEntryKeys?.takeIf { it.size == displayedItems.size } ?: return null
+        val keyByOriginalIndex = indices.withIndex().associate { (displayedIndex, originalIndex) -> originalIndex to keys[displayedIndex] }
+        return indices.mapNotNull(keyByOriginalIndex::get)
     }
 }
 
