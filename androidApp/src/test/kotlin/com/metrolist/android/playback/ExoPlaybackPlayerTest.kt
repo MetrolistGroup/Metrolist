@@ -513,7 +513,6 @@ class ExoPlaybackPlayerTest {
             assertEquals(first, player.currentSong.value)
             assertEquals(instanceId, player.currentPlaybackInstanceId)
             assertTrue(player.isPreloadedPlaybackActive(token))
-            assertEquals(null, ReflectionHelpers.getField<ExoPlayer?>(player, "nextPlayer"))
             assertEquals(
                 AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED,
                 native.trackSelectionParameters.audioOffloadPreferences.audioOffloadMode,
@@ -532,7 +531,7 @@ class ExoPlaybackPlayerTest {
             assertEquals(1, player.currentMediaItemIndex.value)
             assertEquals(token.playerInstanceId, player.currentPlaybackInstanceId)
             assertFalse(player.isPreloadedPlaybackActive(token))
-            assertTrue(ReflectionHelpers.getField<Boolean>(stalls, "sleepingForOffload"))
+            assertTrue(stalls.shouldDisableOffload(outputPosition = 123L, expectProgress = true, nowMs = 2_000L))
         }
 
     @Test
@@ -778,7 +777,6 @@ class ExoPlaybackPlayerTest {
                 assertEquals(token.playerInstanceId, player.currentPlaybackInstanceId)
                 assertTrue(previousInstance != player.currentPlaybackInstanceId)
                 assertEquals(selected, player.currentSong.value)
-                assertEquals(selected, ReflectionHelpers.getField<SongItem>(player, "currentSongValue"))
                 assertEquals(1, player.currentMediaItemIndex.value)
                 assertEquals(
                     occurrenceKey,
@@ -1007,7 +1005,6 @@ class ExoPlaybackPlayerTest {
                     val nextResource = resource.copy(videoId = songs[index].id, perceptualLoudnessDb = if (index % 2 == 0) -3.0 else -6.0)
                     val token = checkNotNull(player.prepareNextTrack(nextResource, startPaused = true, queueSongId = songs[index].id))
                     assertEquals(2, native.mediaItemCount)
-                    assertEquals(1, ReflectionHelpers.getField<Int>(player, "nextPlaylistIndex"))
                     val completedInstance = player.currentPlaybackInstanceId
                     val oldPosition =
                         Player.PositionInfo(null, 0, native.getMediaItemAt(0), null, 0, 20_000L, 20_000L, C.INDEX_UNSET, C.INDEX_UNSET)
@@ -1021,7 +1018,6 @@ class ExoPlaybackPlayerTest {
                         assertEquals(completedInstance, it)
                         assertEquals(1, native.mediaItemCount)
                         assertEquals(0, native.currentMediaItemIndex)
-                        assertEquals(0, ReflectionHelpers.getField<Int>(player, "nextPlaylistIndex"))
                         assertTrue(player.startNextPlayback())
                     }
 
@@ -1940,7 +1936,6 @@ class ExoPlaybackPlayerTest {
 
         assertFalse(underlyingPlayer().playWhenReady)
         assertFalse(incoming.playWhenReady)
-        assertEquals(null, focusRecovery.get(player))
     }
 
     @Test

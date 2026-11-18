@@ -136,6 +136,7 @@ import com.metrolist.desktop.utils.DesktopNativeCrashRecovery
 import com.metrolist.desktop.utils.DesktopSingleInstance
 import com.metrolist.desktop.utils.DesktopStartup
 import com.metrolist.desktop.utils.DesktopUrlHandler
+import com.metrolist.desktop.utils.MatugenColors
 import com.metrolist.desktop.utils.NativeMemoryTrimmer
 import com.metrolist.desktop.utils.STOP_OMARCHY_URL
 import com.metrolist.desktop.utils.SentryManager
@@ -338,6 +339,10 @@ private fun WindowScope.AppContent(
             DesktopImageLoader.create(context)
         }
         UpdateArtworkTheme()
+        val matugenEnabled = Settings.shared.matugenTheme
+        LaunchedEffect(matugenEnabled) {
+            if (matugenEnabled) MatugenColors.watch()
+        }
         LaunchedEffect(colorScheme) {
             try {
                 val bg = colorScheme.background.toArgb()

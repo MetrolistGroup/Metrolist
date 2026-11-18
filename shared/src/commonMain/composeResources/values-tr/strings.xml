@@ -1043,7 +1043,7 @@
     <string name="token_login_title">Giriş jetonu</string>
     <string name="token_login_show_token">Belirteci göster</string>
     <string name="token_login_sensitive_warning_title">Bu jeton hassas veriler içeriyor.</string>
-    <string name="token_adv_login_description">Bu gelişmiş bir giriş yöntemidir. Web portalına alternatif olarak, giriş jetonunuzu doğrudan buraya girebilir veya güncelleyebilirsiniz. Örneğin bu işlem, birden fazla cihazda giriş yapmayı hızlandırabilir. Uygulamanın ayrıştıramadığı geçersiz jeton biçimlerinin kabul edilmeyeceğini lütfen unutmayın. \n\nJetonu paylaşmayın.</string>
+    <string name="token_adv_login_description">Bu gelişmiş bir giriş yöntemidir. Web portalına alternatif olarak, giriş jetonunuzu doğrudan buraya girebilir veya güncelleyebilirsiniz. Örneğin bu işlem, birden fazla cihazda giriş yapmayı hızlandırabilir. \nUygulamanın ayrıştıramadığı geçersiz jeton biçimlerinin kabul edilmeyeceğini lütfen unutmayın.\n\nJetonu paylaşmayın.</string>
     <string name="token_login_error_missing_auth_cookie">Boş olmayan bir SAPISID, __Secure-1PAPISID veya __Secure-3PAPISID çerezi ekleyin.</string>
     <string name="account_picker_title">Bir YouTube kanalı seçin</string>
     <string name="account_picker_subtitle">Bu Google hesabında birden fazla kanal var. Kullanmak istediğinizi seçin.</string>

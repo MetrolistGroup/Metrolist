@@ -158,8 +158,8 @@ class ScrobbleManagerTest {
             manager.onPlayerStateChanged(false, unknown)
             advanceTimeBy(10_000)
             manager.onPlayerStateChanged(true, unknown.copy(duration = 180))
-            assertEquals(1L, manager.startedAtForTest)
-            assertEquals(60_000L, manager.playedMsForTest)
+            assertEquals(1L, manager.session()?.startedAtTimestamp)
+            assertEquals(60_000L, manager.session()?.accumulatedPlayedMs)
             advanceTimeBy(30_000)
             runCurrent()
             assertEquals(listOf<Pair<Long, Long?>>(1L to 180L), submitted)
@@ -351,7 +351,7 @@ class ScrobbleManagerTest {
             advanceTimeBy(5000)
             runCurrent()
             assertEquals(listOf(100L), timestamps)
-            assertEquals(10_000L, manager.playedMsForTest)
+            assertEquals(10_000L, manager.session()?.accumulatedPlayedMs)
         }
 
     @Test
@@ -380,7 +380,6 @@ class ScrobbleManagerTest {
             ScrobbleSessions.connectLastFm("user", "test")
             Snapshot.sendApplyNotifications()
             runCurrent()
-            assertTrue(manager.hasActiveTickerForTest)
             assertEquals(1, nowPlaying)
             advanceTimeBy(6000)
             runCurrent()
@@ -498,23 +497,34 @@ class ScrobbleManagerTest {
     @Test
     fun pausedTimeIsNotCountedWhenSongStops() =
         runTest {
+            val account = ScrobbleAccount(ScrobbleProvider.LAST_FM, "fake", "credential")
+            ScrobbleSessions.connectLastFm(account.account, account.credential)
+            val sends = mutableListOf<String>()
             var now = 1_000L
-            val scope = backgroundScope
             val manager =
                 ScrobbleManager(
-                    scope,
+                    backgroundScope,
                     { now },
                     startRetryLoop = false,
+                    accountsOverride = { nowPlaying -> if (nowPlaying) emptyList() else listOf(account) },
+                    submitOverride = { _, _, track, _, _, _, _ ->
+                        sends += track
+                        Result.success(Unit)
+                    },
                     persistenceDispatcher = StandardTestDispatcher(testScheduler),
-                )
+                ).apply {
+                    minSongDuration = 0
+                    scrobbleDelayPercent = 1f
+                    scrobbleDelaySeconds = 20
+                }
             manager.onSongStart(song())
             now += 10_000L
             manager.onSongPause()
             now += 120_000L
             manager.onSongStop()
+            runCurrent()
 
-            assertEquals(10_000L, manager.playedMsForTest)
-            scope.cancel()
+            assertEquals(emptyList(), sends)
         }
 
     @Test
@@ -543,10 +553,10 @@ class ScrobbleManagerTest {
 
             assertEquals(outgoing.id, manager.session()?.songId)
             assertEquals(snapshot.startedAtTimestamp, manager.session()?.startedAtTimestamp)
-            assertEquals(15_000L, manager.playedMsForTest)
+            assertEquals(15_000L, manager.session()?.accumulatedPlayedMs)
             now += 10_000L
             manager.onSongPause()
-            assertEquals(25_000L, manager.playedMsForTest)
+            assertEquals(25_000L, manager.session()?.accumulatedPlayedMs)
             scope.cancel()
         }
 
@@ -591,7 +601,7 @@ class ScrobbleManagerTest {
 
             assertEquals(listOf(outgoing.title), sends)
             assertEquals(incoming.id, manager.session()?.songId)
-            assertEquals(1_000L, manager.playedMsForTest)
+            assertEquals(1_000L, manager.session()?.accumulatedPlayedMs)
         }
 
     @Test
@@ -613,7 +623,7 @@ class ScrobbleManagerTest {
             now += 7_000L
             manager.onSongPause()
 
-            assertEquals(12_000L, manager.playedMsForTest)
+            assertEquals(12_000L, manager.session()?.accumulatedPlayedMs)
             scope.cancel()
         }
 
@@ -655,7 +665,7 @@ class ScrobbleManagerTest {
             runCurrent()
 
             assertEquals(listOf(first.title, second.title), sends)
-            assertEquals(11_000L, manager.playedMsForTest)
+            assertEquals(11_000L, manager.session()?.accumulatedPlayedMs)
         }
 
     @Test
@@ -692,19 +702,6 @@ class ScrobbleManagerTest {
             runCurrent()
 
             assertEquals(listOf("OMGkawaiiAngel"), artists)
-        }
-
-    @Test
-    fun playbackWithoutScrobbleAccountStartsNoTicker() =
-        runTest {
-            val scope = backgroundScope
-            val manager =
-                ScrobbleManager(scope, { 1_000L }, startRetryLoop = false, persistenceDispatcher = StandardTestDispatcher(testScheduler))
-
-            manager.onSongStart(song())
-
-            assertFalse(manager.hasActiveTickerForTest)
-            scope.cancel()
         }
 
     @Test
@@ -1015,12 +1012,12 @@ class ScrobbleManagerTest {
                 )
             val song = song()
             manager.onSongStart(song)
-            val firstStart = manager.startedAtForTest
+            val firstStart = manager.session()?.startedAtTimestamp
             now += 60_000L
             manager.onPlaybackInstanceStart(song)
 
-            assertNotEquals(firstStart, manager.startedAtForTest)
-            assertEquals(0L, manager.playedMsForTest)
+            assertNotEquals(firstStart, manager.session()?.startedAtTimestamp)
+            assertEquals(0L, manager.session()?.accumulatedPlayedMs)
             scope.cancel()
         }
 

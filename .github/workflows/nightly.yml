@@ -115,11 +115,13 @@ jobs:
           PROMPT: >-
             You write release notes for Metrolist, a YouTube Music client for Android and desktop.
             The input is a list of Conventional Commit subjects with short hashes.
-            Write the changes users will notice as Markdown bullets under the subheadings
+            Write a short Markdown list of the changes users will notice under the subheadings
             "### New", "### Fixed" and "### Improved", leaving out empty subheadings.
-            Merge related commits into one bullet. Keep each bullet to one plain sentence
-            followed by its short hashes in parentheses. Leave out CI, build, test, docs,
-            refactor and chore commits unless users would notice them.
+            Combine all commits about the same feature, screen or component into one bullet
+            that starts with the area's name, such as "Import:" or "Lyrics:", followed by its
+            changes as brief comma-separated phrases of a few words, not full sentences.
+            End each bullet with all of its short hashes in parentheses. Leave out CI, build,
+            test, docs, refactor and chore commits unless users would notice them.
             Output only the subheadings and bullets, without an introduction, conclusion or emoji.
             If no commit is user-facing, output exactly: Internal changes only.
         run: |

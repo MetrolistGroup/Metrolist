@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.desktop.update.GitHubDesktopRelease
+import com.metrolist.desktop.utils.MatugenColors
 import com.metrolist.desktop.utils.resolveDesktopSeedColor
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.settings.SettingsPageId
@@ -20,7 +21,7 @@ object UiState {
     internal var artworkSeedColor by mutableStateOf<Color?>(null)
     val seedColor: Color
         get() =
-            resolveDesktopSeedColor(
+            MatugenColors.palette?.sourceColor ?: resolveDesktopSeedColor(
                 configured =
                     resolveThemeSeedColor(
                         materialYouEnabled = Settings.shared.materialYouEnabled,

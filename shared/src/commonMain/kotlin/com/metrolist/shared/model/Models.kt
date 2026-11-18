@@ -202,6 +202,10 @@ fun YTItem.isAvailableOffline(cachedSongIds: Set<String>): Boolean =
         else -> true
     }
 
+// A downloaded copy plays without YouTube, so the account's regional unavailability does not apply to it.
+fun List<SongItem>.withDownloadsPlayable(downloadedSongIds: Set<String>): List<SongItem> =
+    map { if (it.isUnavailable && it.id in downloadedSongIds) it.copy(isUnavailable = false) else it }
+
 fun EpisodeItem.toSongItem(podcastTitle: String? = null): SongItem =
     SongItem(
         id = id,

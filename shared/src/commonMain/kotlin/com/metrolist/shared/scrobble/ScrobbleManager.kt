@@ -636,9 +636,5 @@ class ScrobbleManager internal constructor(
         const val MAX_RETRY_MS = 6 * 60 * 60 * 1000L
     }
 
-    internal val playedMsForTest get() = totalPlayedMs
-    internal val startedAtForTest get() = songStartedAtTimestamp
-    internal val hasActiveTickerForTest get() = scrobbleJob?.isActive == true
-
     internal suspend fun retryPendingScrobblesForTest() = retryPendingScrobbles()
 }
