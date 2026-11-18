@@ -2899,7 +2899,7 @@ class MusicService :
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        super.onTaskRemoved(rootIntent)
+        // The lifetime observer retains loading and remote playback; Media3 stops non-playing sessions immediately.
         if (!::player.isInitialized) return
         playbackBenchmark.cancel()
         saveFinalPlaybackState()
