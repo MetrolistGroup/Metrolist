@@ -319,6 +319,9 @@ class HomeViewModel(
                     lastKnownLocaleSignature = "${locale.hl}:${locale.gl}"
                     cachedAllContent = restored
                 }
+                // The snapshot may have been written with the other
+                // recommendations mode; rebuild picks for the current setting.
+                rebuildQuickPicks()
                 scope.launch {
                     val restoredMetadata =
                         database

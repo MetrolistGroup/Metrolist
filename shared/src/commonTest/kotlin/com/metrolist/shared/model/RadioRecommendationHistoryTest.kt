@@ -178,6 +178,44 @@ class RadioRecommendationHistoryTest {
         }
 
     @Test
+    fun classicStopsBeforeFetchingAnEleventhPage() =
+        runTest {
+            var requests = 0
+            val selected =
+                RadioRecommendationHistory().select(
+                    page("seed", continuation = "0"),
+                    true,
+                    { songs -> songs.filterNot { it.id == "seed" } },
+                    { true },
+                ) {
+                    requests++
+                    page("seed", continuation = requests.toString())
+                }!!
+            assertEquals(9, requests)
+            assertEquals(emptyList(), selected.songs)
+            assertEquals("9", selected.continuation)
+        }
+
+    @Test
+    fun classicClearsARepeatedContinuation() =
+        runTest {
+            var requests = 0
+            val selected =
+                RadioRecommendationHistory().select(
+                    page("seed", continuation = "same"),
+                    true,
+                    { songs -> songs.filterNot { it.id == "seed" } },
+                    { true },
+                ) {
+                    requests++
+                    page("seed", continuation = "same")
+                }!!
+            assertEquals(1, requests)
+            assertEquals(emptyList(), selected.songs)
+            assertNull(selected.continuation)
+        }
+
+    @Test
     fun cancellationPropagates() =
         runTest {
             val history = RadioRecommendationHistory()
