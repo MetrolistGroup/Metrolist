@@ -7,6 +7,7 @@ import com.metrolist.shared.youtube.playback.PlaybackEventKind
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -435,7 +436,7 @@ class JvmCastManager(
         expectedMediaGeneration: Long,
     ) {
         sessionStateJob =
-            scope.launch {
+            scope.launch(start = CoroutineStart.UNDISPATCHED) {
                 activeSession.state.collect { playback ->
                     if (
                         session !== activeSession ||

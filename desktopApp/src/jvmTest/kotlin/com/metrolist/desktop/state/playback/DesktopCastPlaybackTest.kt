@@ -25,6 +25,7 @@ import com.metrolist.shared.youtube.playback.PlaybackResource
 import com.russhwolf.settings.PropertiesSettings
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -57,9 +58,12 @@ import java.nio.ByteOrder
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.SourceDataLine
+import kotlin.coroutines.CoroutineContext
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -232,6 +236,38 @@ class DesktopCastPlaybackTest {
             }
         }
     }
+
+    @Test
+    fun initialReceiverStateCannotOverwriteACompletedSeek() =
+        runBlocking {
+            val pending = ConcurrentLinkedQueue<Runnable>()
+            val paused = AtomicBoolean(true)
+            val dispatcher =
+                object : CoroutineDispatcher() {
+                    override fun dispatch(
+                        context: CoroutineContext,
+                        block: Runnable,
+                    ) {
+                        if (paused.get()) pending.add(block) else block.run()
+                    }
+                }
+
+            fun drain() {
+                paused.set(false)
+                while (pending.isNotEmpty()) pending.remove().run()
+            }
+            val fixture = Fixture(CoroutineScope(coroutineContext + SupervisorJob()), false, null, dispatcher)
+            try {
+                fixture.connect()
+                fixture.receiver.position = "00:00:42"
+                fixture.manager.seekTo(42_000L)
+                drain()
+                assertEquals(42_000L, fixture.manager.state.value.positionMs)
+            } finally {
+                drain()
+                withContext(NonCancellable) { fixture.close() }
+            }
+        }
 
     @Test
     fun disconnectDuringReceiverSwitchResumesTheCurrentSongLocally() =
@@ -743,6 +779,7 @@ class DesktopCastPlaybackTest {
         parentScope: CoroutineScope,
         localPlayback: Boolean,
         mediaHttpClient: OkHttpClient?,
+        managerDispatcher: CoroutineDispatcher? = null,
     ) {
         val failures = CopyOnWriteArrayList<Throwable>()
         val scope = CoroutineScope(parentScope.coroutineContext + CoroutineExceptionHandler { _, error -> failures += error })
@@ -784,7 +821,9 @@ class DesktopCastPlaybackTest {
             ).copy(url = file.toString(), clientName = "local", mimeType = "audio/wav", contentLengthBytes = Files.size(file))
         }
 
-        val manager = JvmCastManager(scope, { error("No discovery") }, { listOf(InetAddress.getLoopbackAddress()) }, "test", streamPort = 0)
+        val managerScope = managerDispatcher?.let { CoroutineScope(scope.coroutineContext + it) } ?: scope
+        val manager =
+            JvmCastManager(managerScope, { error("No discovery") }, { listOf(InetAddress.getLoopbackAddress()) }, "test", streamPort = 0)
         val transitions = DesktopPlaybackTransitions(scope)
         val published = mutableListOf<SongItem>()
         val localSelections = mutableListOf<SongItem>()
