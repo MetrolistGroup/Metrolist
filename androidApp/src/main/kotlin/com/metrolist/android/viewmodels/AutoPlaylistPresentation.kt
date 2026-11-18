@@ -157,6 +157,7 @@ internal suspend fun loadOrderedCachedSongs(
     database: MusicDatabase,
     settings: Settings = Settings.shared,
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    filterEntries: suspend (List<CachedAudioEntity>) -> List<CachedAudioEntity> = { it },
 ): List<SongItem> {
     val sorting =
         settings.playlistCollectionSorting(
@@ -165,7 +166,7 @@ internal suspend fun loadOrderedCachedSongs(
             settings.cachedCollectionSortDirection,
         )
     val customOrder = if (sorting.sort == CollectionSort.MANUAL) settings.cachedSongsOrder() else emptyList()
-    val cachedEntries = database.dao().cachedAudioByKind(KIND_CACHE).first()
+    val cachedEntries = filterEntries(database.dao().cachedAudioByKind(KIND_CACHE).first())
     if (cachedEntries.isEmpty()) return emptyList()
     val storedSongs =
         withContext(Dispatchers.IO) {

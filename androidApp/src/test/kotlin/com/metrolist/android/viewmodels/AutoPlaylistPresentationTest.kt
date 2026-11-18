@@ -484,5 +484,16 @@ class AutoPlaylistPresentationTest {
                     dispatcher = dispatcher,
                 ).isEmpty(),
             )
+
+            val availableOnly =
+                prepareCachedCollectionSongs(
+                    entries = entries.filter { it.songId != "a" },
+                    storedSongs = storedSongs,
+                    playCounts = emptyMap(),
+                    sorting = SavedPlaylistCollectionSorting(CollectionSort.MANUAL, SortDirection.ASCENDING),
+                    customOrder = listOf("a", "b", "c"),
+                    dispatcher = dispatcher,
+                )
+            assertEquals(listOf("b", "c"), availableOnly.map { it.id })
         }
 }

@@ -351,10 +351,11 @@ fun AutoPlaylistScreen(
     val isTopCollection = currentType == "top100"
     val metadataRevision by SongMetadataState.revision.collectAsState()
 
-    val savedCachedOrder =
+    val decodedCachedOrder =
         remember(currentType, Settings.shared.cachedSongsCustomOrder) {
             if (currentType == "cached") Settings.shared.cachedSongsOrder() else emptyList()
         }
+    val savedCachedOrder by rememberUpdatedState(decodedCachedOrder)
     var pendingCachedOrder by remember(currentType) { mutableStateOf<List<String>?>(null) }
     var pendingCachedSongs by remember(currentType) { mutableStateOf<List<SongItem>?>(null) }
 
