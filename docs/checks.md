@@ -337,3 +337,7 @@ On Android, play a live broadcast and inspect media notifications and Android Au
 ### Desktop direct-audio read ahead
 
 Play an uncached direct HTTP audio stream on a throttled connection that is faster than the encoded audio bitrate. Check continuous playback across range boundaries, then seek forwards and backwards, pause/resume, and switch tracks during a pending read. Repeat with a short file and a fully cached/downloaded track. Range requests stay bounded, obsolete requests stop when playback closes, and read ahead does not change the playback position. SABR playback and video range sizing remain unchanged.
+
+### Android TV root exit
+
+With Stop music on task clear enabled, confirm Back twice at the root on Android TV removes the task and stops active playback. With the setting disabled, playback should continue. Leaving a nested screen or closing the player must not exit; phone Back-exit behavior remains unchanged.

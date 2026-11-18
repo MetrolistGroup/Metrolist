@@ -314,7 +314,7 @@ class MainActivity : ComponentActivity() {
                             navigationSaveKey = navigationRestoration.saveKey,
                             incomingIntent = incomingIntentState.value,
                             incomingPlaybackSong = incomingPlaybackSong,
-                            onExitApp = ::finish,
+                            onExitApp = ::exitApp,
                             onIncomingIntentConsumed = { consumed ->
                                 if (incomingIntentState.value === consumed) {
                                     incomingIntentState.value = null
