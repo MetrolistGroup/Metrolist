@@ -112,19 +112,19 @@
         <item quantity="other">%1$d de albume</item>
     </plurals>
     <plurals name="n_week">
-        <item quantity="one">%1$d săptămână</item>
-        <item quantity="few">%1$d săptămâni</item>
-        <item quantity="other">%1$d de săptămâni</item>
+        <item quantity="one">%1$d săptămână</item>
+        <item quantity="few">%1$d săptămâni</item>
+        <item quantity="other">%1$d de săptămâni</item>
     </plurals>
     <plurals name="n_month">
-        <item quantity="one">%1$d lună</item>
-        <item quantity="few">%1$d luni</item>
-        <item quantity="other">%1$d de luni</item>
+        <item quantity="one">%1$d lună</item>
+        <item quantity="few">%1$d luni</item>
+        <item quantity="other">%1$d de luni</item>
     </plurals>
     <plurals name="n_year">
-        <item quantity="one">%1$d an</item>
-        <item quantity="few">%1$d ani</item>
-        <item quantity="other">%1$d de ani</item>
+        <item quantity="one">%1$d an</item>
+        <item quantity="few">%1$d ani</item>
+        <item quantity="other">%1$d de ani</item>
     </plurals>
     <string name="undo">Anulează</string>
     <string name="lyrics_not_found">Nu s-au găsit versuri</string>
@@ -143,9 +143,9 @@
     <string name="queue_loading">Se încarcă coada…</string>
     <string name="calculating">Se calculează…</string>
     <plurals name="queue_track_count_duration">
-        <item quantity="one">O piesă · %2$s</item>
-        <item quantity="few">%1$d piese · %2$s</item>
-        <item quantity="other">%1$d de piese · %2$s</item>
+        <item quantity="one">O piesă · %2$s</item>
+        <item quantity="few">%1$d piese · %2$s</item>
+        <item quantity="other">%1$d de piese · %2$s</item>
     </plurals>
     <string name="suggested_tracks">Sugerate</string>
     <string name="playback_notification_channel_name">Redare</string>
