@@ -381,7 +381,7 @@
     </plurals>
     <string name="android_auto_pinned_playlists">已置顶驾驶播放列表</string>
     <string name="android_auto_pinned_playlists_desc">选择最多六个播放列表，在车载主页优先显示，以便一键播放。选择顺序将保留。</string>
-    <string name="android_auto_pinned_playlists_count">已固定：%1$d / %2$d</string>
+    <string name="android_auto_pinned_playlists_count">已固定：%1$d / %2$d</string>
     <string name="android_auto_choose_pinned_playlists">选择驾驶播放列表</string>
     <string name="android_auto_pinned_playlist_mode">播放列表播放</string>
     <string name="android_auto_pinned_playlist_mode_desc">选择置顶驾驶播放列表的启动方式</string>
@@ -406,8 +406,8 @@
     <string name="remove_from_playlist">从播放列表中移除</string>
     <string name="radio">电台</string>
     <string name="imported_playlist">已导入的播放列表</string>
-    <string name="bitrate_value">%1$d 千比特/秒</string>
-    <string name="sample_rate_value">%1$d 赫兹</string>
+    <string name="bitrate_value">%1$d 千比特/秒</string>
+    <string name="sample_rate_value">%1$d 赫兹</string>
     <string name="import_error_unsupported_playlist_entries">此播放列表包含 Android 无法访问的本地文件或直接链接。请导入包含 YouTube 链接的播放列表，或在桌面端选择本地文件。</string>
     <string name="import_error_local_files_require_local_playlist">本地音频文件只能导入本地播放列表。</string>
     <string name="import_error_file_read_failed">无法读取播放列表文件。请重新选择并授予文件访问权限。</string>
@@ -686,7 +686,7 @@
     <string name="start_typing_to_search_music">开始输入以搜索 YouTube Music</string>
     <string name="filter_episodes">单集</string>
     <string name="metroeq_q_value">Q: %1$s</string>
-    <string name="metroeq_frequency_value">%1$s 赫兹</string>
+    <string name="metroeq_frequency_value">%1$s 赫兹</string>
     <string name="sponsorblock_podcasts">SponsorBlock（播客）</string>
     <string name="sponsorblock_podcasts_description">仅在播客单集中跳过赞助、自我推广和互动请求片段。 (https://sponsor.ajay.app)</string>
     <string name="sponsorblock_skipped">已跳过推广片段</string>
