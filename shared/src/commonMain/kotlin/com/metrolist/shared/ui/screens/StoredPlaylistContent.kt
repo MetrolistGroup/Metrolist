@@ -25,7 +25,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -75,6 +77,8 @@ import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.playback.LocalPlaybackController
 import com.metrolist.shared.ui.playback.listState
 import com.metrolist.shared.ui.selection.rememberSelectionState
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -97,6 +101,7 @@ fun StoredPlaylistContent(
     collectionMetadata: Map<String, CollectionMeta>? = null,
     downloadFilterDatabase: MusicDatabase? = null,
     playCounts: Map<String, Int> = emptyMap(),
+    playCountsLoaded: Boolean = true,
     onCollectionSortChange: (CollectionSort) -> Unit = {},
     onRemoveSongs: ((Set<String>) -> Unit)? = null,
     onClearCollection: (() -> Unit)? = null,
@@ -230,32 +235,43 @@ fun StoredPlaylistContent(
 
     val customCover = Settings.shared.collectionCovers[id.removePrefix("local:")]
     val scope = rememberCoroutineScope()
+    val currentPlayCountsReady =
+        rememberUpdatedState(collectionMetadata == null || collectionSort != CollectionSort.MOST_PLAYED || playCountsLoaded)
+    val currentOrderedSongs = rememberUpdatedState(orderedSongs)
+    val currentQuery = rememberUpdatedState(query)
+    var playJob by remember(id) { mutableStateOf<Job?>(null) }
 
     fun playCollection(
         song: SongItem? = null,
         shuffle: Boolean = false,
     ) {
-        scope.launch {
-            val complete =
-                if (hasMoreSongs && loadCompleteSongs != null) {
-                    loadCompleteSongs()
-                        ?.sortedForLikedPlaylist(
-                            playlistSort,
-                            playlistSortDirection,
-                            SongLikeState.likedSongRecency,
-                            listeningTimes,
-                        ) ?: return@launch
+        playJob?.cancel()
+        playJob =
+            scope.launch {
+                val complete =
+                    if (hasMoreSongs && loadCompleteSongs != null) {
+                        loadCompleteSongs()
+                            ?.sortedForLikedPlaylist(
+                                playlistSort,
+                                playlistSortDirection,
+                                SongLikeState.likedSongRecency,
+                                listeningTimes,
+                            ) ?: return@launch
+                    } else {
+                        snapshotFlow { currentPlayCountsReady.value to currentOrderedSongs.value }
+                            .first { (ready, _) -> ready }
+                            .second
+                    }
+                val playable =
+                    (if (song == null) complete.filterForPlaylistSearch(currentQuery.value) else complete)
+                        .filterNot { it.isUnavailable }
+                if (shuffle) {
+                    playback.shuffleQueue(playable)
                 } else {
-                    orderedSongs
+                    val target = song?.let { playable.indexOfPlaylistOccurrence(it) } ?: 0
+                    if (target in playable.indices) playback.playQueue(playable, target)
                 }
-            val playable = (if (song == null) complete.filterForPlaylistSearch(query) else complete).filterNot { it.isUnavailable }
-            if (shuffle) {
-                playback.shuffleQueue(playable)
-            } else {
-                val target = song?.let { playable.indexOfPlaylistOccurrence(it) } ?: 0
-                if (target in playable.indices) playback.playQueue(playable, target)
             }
-        }
     }
 
     PlaylistContent(
@@ -374,6 +390,7 @@ fun StoredPlaylistContent(
                                 onSortChange = {
                                     collectionSort = it
                                     collectionDirection = it.defaultDirection
+                                    onCollectionSortChange(it)
                                     Settings.shared.setPlaylistCollectionSorting(
                                         playlistSortingKey,
                                         SavedPlaylistCollectionSorting(it, it.defaultDirection),

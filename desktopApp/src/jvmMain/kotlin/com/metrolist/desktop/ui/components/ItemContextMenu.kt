@@ -147,7 +147,6 @@ import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.BuiltinPlaylist
-import com.metrolist.shared.model.CollectionMeta
 import com.metrolist.shared.model.CollectionSort
 import com.metrolist.shared.model.EpisodeItem
 import com.metrolist.shared.model.PlaylistItem
@@ -935,10 +934,7 @@ private suspend fun loadMediaSongs(
                         } else {
                             emptyMap()
                         }
-                    val metadata =
-                        entries.associate {
-                            it.songId to CollectionMeta(it.cachedAt, it.fileSize, lastAccessed = it.lastAccessedAt)
-                        }
+                    val metadata = SongCacheManager.cachedCollectionMetadata(entries)
                     entries
                         .map { entry ->
                             SongItem(
@@ -947,6 +943,8 @@ private suspend fun loadMediaSongs(
                                 artists = listOf(ArtistTiny(null, entry.artist)),
                                 thumbnail = null,
                                 album = null,
+                                isExplicit = entry.explicitness == true,
+                                explicitness = entry.explicitness,
                             )
                         }.presentCollectionWithPlayCounts(
                             sort = sorting.sort,

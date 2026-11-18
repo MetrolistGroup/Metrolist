@@ -234,36 +234,44 @@ private fun DownloadedPlaylistScreen() {
     )
 }
 
+private data class CachedPlaylistSnapshot(
+    val songs: List<SongItem> = emptyList(),
+    val sizeById: Map<String, Long> = emptyMap(),
+    val collectionMetadata: Map<String, CollectionMeta> = emptyMap(),
+    val sizeMb: Long = 0L,
+)
+
 @Composable
 private fun CachedPlaylistScreen() {
     val formatFileSize = rememberFileSizeFormatter()
-    val snapshot by produceState(Triple(emptyList<CachedSongEntry>(), emptyList<SongItem>(), 0L)) {
+    val snapshot by produceState(CachedPlaylistSnapshot()) {
         withContext(Dispatchers.IO) {
             SongCacheManager.cachedSongs.collect {
                 val entries = SongCacheManager.getCachedSongs()
-                value = Triple(entries, entries.map(CachedSongEntry::toSafeSongItem), SongCacheManager.getCacheSizeMB())
+                value =
+                    CachedPlaylistSnapshot(
+                        songs = entries.map(CachedSongEntry::toSafeSongItem),
+                        sizeById = entries.associate { it.songId to it.fileSize },
+                        collectionMetadata = SongCacheManager.cachedCollectionMetadata(entries),
+                        sizeMb = SongCacheManager.getCacheSizeMB(),
+                    )
             }
         }
     }
-    val (entries, songs, sizeMb) = snapshot
-    val sizeById = entries.associate { it.songId to it.fileSize }
 
     LocalPlaylistLayout(
         type = "cached",
         title = stringResource(Res.string.cached_songs_title),
-        subtitle = stringResource(Res.string.cached_songs_subtitle, String.format("%.1f", sizeMb.toDouble())),
+        subtitle = stringResource(Res.string.cached_songs_subtitle, String.format("%.1f", snapshot.sizeMb.toDouble())),
         icon = MetrolistIcons.Outlined.OfflinePin,
-        songs = songs,
+        songs = snapshot.songs,
         emptyMessage = stringResource(Res.string.cached_songs_empty),
         emptyHint = stringResource(Res.string.cached_songs_empty_hint),
-        collectionMetadata =
-            entries.associate {
-                it.songId to CollectionMeta(it.cachedAt, it.fileSize, lastAccessed = it.lastAccessedAt)
-            },
+        collectionMetadata = snapshot.collectionMetadata,
         onRemoveSongs = SongCacheManager::removeSongsFromCache,
         onClearCollection = { SongCacheManager.clearCache() },
         extraInfo = { _, song ->
-            sizeById[song.id]?.let { size ->
+            snapshot.sizeById[song.id]?.let { size ->
                 Text(
                     text = formatFileSize(size),
                     style = MaterialTheme.typography.bodySmall,
@@ -389,21 +397,41 @@ private fun LocalPlaylistLayout(
     val database = remember { GlobalContext.get().get<MusicDatabase>() }
     val isCachedCollection = type == "cached"
     val cachedSorting = if (isCachedCollection) Settings.shared.cachedCollectionSorting() else null
-    var countSort by remember(type) { mutableStateOf(cachedSorting?.sort == CollectionSort.MOST_PLAYED) }
+    val initialSort =
+        when (type) {
+            "cached" -> {
+                cachedSorting?.sort
+            }
+
+            "downloaded" -> {
+                Settings.shared
+                    .playlistCollectionSorting(
+                        "special:downloaded",
+                        Settings.shared.downloadedCollectionSort,
+                        Settings.shared.downloadedCollectionSortDirection,
+                    ).sort
+            }
+
+            else -> {
+                null
+            }
+        }
+    var countSort by remember(type) { mutableStateOf(initialSort == CollectionSort.MOST_PLAYED) }
     val needsPlayCounts = countSort || cachedSorting?.sort == CollectionSort.MOST_PLAYED
     val countIds =
         remember(collectionMetadata, needsPlayCounts) {
             if (needsPlayCounts) collectionMetadata?.keys?.toList().orEmpty() else emptyList()
         }
-    val playCountsState by remember(database, countIds) {
+    val playCountsRequest = remember(database, countIds) { Any() }
+    val playCountsState by remember(database, countIds, playCountsRequest) {
         if (countIds.isEmpty()) {
-            flowOf(countIds to emptyMap<String, Int>())
+            flowOf(playCountsRequest to emptyMap<String, Int>())
         } else {
-            database.collectionPlayCounts(countIds).map { countIds to it }
+            database.collectionPlayCounts(countIds).map { counts -> playCountsRequest to counts }
         }
     }.collectAsState(null)
-    val playCountsLoaded = countIds.isEmpty() || playCountsState?.first == countIds
-    val playCounts = if (playCountsState?.first == countIds) playCountsState?.second.orEmpty() else emptyMap()
+    val playCountsLoaded = countIds.isEmpty() || playCountsState?.first === playCountsRequest
+    val playCounts = if (playCountsState?.first === playCountsRequest) playCountsState?.second.orEmpty() else emptyMap()
     val cachedCustomOrder =
         remember(isCachedCollection, cachedSorting, Settings.shared.cachedSongsCustomOrder) {
             if (isCachedCollection && cachedSorting?.sort == CollectionSort.MANUAL) {
@@ -494,6 +522,7 @@ private fun LocalPlaylistLayout(
                 },
             collectionMetadata = collectionMetadata,
             playCounts = playCounts,
+            playCountsLoaded = playCountsLoaded,
             onCollectionSortChange = { countSort = it == CollectionSort.MOST_PLAYED },
             onRemoveSongs = onRemoveSongs?.let { action -> { ids -> launchCollectionMutation { action(ids) } } },
             onClearCollection = onClearCollection?.let { action -> { launchCollectionMutation(action) } },

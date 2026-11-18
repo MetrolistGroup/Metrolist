@@ -13,6 +13,7 @@ import com.metrolist.shared.db.withDatabaseTransaction
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.unknown_artist
 import com.metrolist.shared.model.ArtistTiny
+import com.metrolist.shared.model.CollectionMeta
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.artworkExplicitness
 import com.metrolist.shared.model.isPodcast
@@ -323,6 +324,23 @@ object SongCacheManager {
     fun getCacheSizeMB(): Long = getCacheSizeBytes() / (1024 * 1024)
 
     fun getCachedSongs(): List<CachedSongEntry> = _cachedSongs.value.filter { it.songId in _cachedSongIds.value }
+
+    /** Returns the latest access timestamp per entry across persisted and pending in-memory updates. */
+    fun effectiveLastAccessedTimes(entries: List<CachedSongEntry>): Map<String, Long> =
+        synchronized(indexLock) { entries.associate { it.songId to accessTimes.effective(it) } }
+
+    /** Builds collection sorting metadata for [entries] with effective in-memory access times. */
+    fun cachedCollectionMetadata(entries: List<CachedSongEntry>): Map<String, CollectionMeta> =
+        effectiveLastAccessedTimes(entries).let { lastAccessed ->
+            entries.associate { entry ->
+                entry.songId to
+                    CollectionMeta(
+                        timestamp = entry.cachedAt,
+                        fileSize = entry.fileSize,
+                        lastAccessed = lastAccessed[entry.songId] ?: entry.lastAccessedAt,
+                    )
+            }
+        }
 
     private fun extension(
         contentType: String?,
