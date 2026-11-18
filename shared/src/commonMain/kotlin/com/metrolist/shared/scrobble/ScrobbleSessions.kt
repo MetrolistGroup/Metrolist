@@ -50,7 +50,10 @@ object ScrobbleSessions {
         credential: String,
     ) = mutex.withLock {
         require(account.isNotBlank() && credential.isNotBlank())
-        PendingScrobbleStore.clear(ScrobbleProvider.LAST_FM)
+        // Plays held while the session was expired belong to this account, so signing back in sends them.
+        val resumesExpiredAccount = Settings.shared.lastFmSessionExpired && account == Settings.shared.lastFmUsername
+        if (!resumesExpiredAccount) PendingScrobbleStore.clear(ScrobbleProvider.LAST_FM)
+        Settings.shared.lastFmSessionExpired = false
         Settings.shared.lastFmUsername = account
         Settings.shared.lastFmSession = credential
         LastFM.sessionKey = credential
@@ -81,6 +84,7 @@ object ScrobbleSessions {
                     lastFmAccount = null
                     LastFM.sessionKey = null
                     Settings.shared.lastFmSession = ""
+                    Settings.shared.lastFmSessionExpired = false
                     Settings.shared.lastFmUsername = ""
                 }
 

@@ -56,6 +56,33 @@ class ScrobbleManagerTest {
             assertEquals(original, updated.copy(attemptCount = original.attemptCount, nextAttemptAtMs = original.nextAttemptAtMs))
         }
 
+    @Test
+    fun expiredLastFmSessionHoldsPlaysUntilTheSameAccountSignsInAgain() =
+        runTest {
+            val account = ScrobbleAccount(ScrobbleProvider.LAST_FM, "listener", "old-key-session")
+            ScrobbleSessions.connectLastFm(account.account, account.credential)
+            val held = pending("held", account.provider, account.account)
+            PendingScrobbleStore.upsert(held)
+            val sends = mutableListOf<String>()
+            val invalidSession =
+                ScrobbleApiException("Invalid session key", ScrobbleFailureDisposition.AUTHENTICATION, apiErrorCode = 9)
+            val manager = testManager(account, sends, submissionResult = Result.failure(invalidSession))
+
+            manager.retryPendingScrobblesForTest()
+            assertTrue(Settings.shared.lastFmSessionExpired)
+            assertEquals(listOf(held), PendingScrobbleStore.all())
+            manager.retryPendingScrobblesForTest()
+            assertEquals(listOf("held"), sends, "Expired sessions must not be retried")
+
+            ScrobbleSessions.connectLastFm(account.account, "new-key-session")
+            assertFalse(Settings.shared.lastFmSessionExpired)
+            assertEquals(listOf(held), PendingScrobbleStore.all())
+
+            Settings.shared.lastFmSessionExpired = true
+            ScrobbleSessions.connectLastFm("another-listener", "session")
+            assertTrue(PendingScrobbleStore.all().isEmpty(), "Another account must not inherit held plays")
+        }
+
     private fun checkAccountChangeDuringRetry(
         reconnect: Boolean,
         sameCredential: Boolean = false,

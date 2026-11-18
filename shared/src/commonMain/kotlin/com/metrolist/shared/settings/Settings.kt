@@ -627,6 +627,7 @@ class Settings(
 
     var lastFmUsername by preference("")
     var lastFmSession by preference("")
+    var lastFmSessionExpired by preference(false)
     var lastFmEnabled by preference(true)
     var lastFmUseNowPlaying by preference(true)
     var lastFmShowFriends by preference(true)
@@ -1329,6 +1330,7 @@ class Settings(
         private val nonPortableKeys =
             secureSettingsKeys +
                 setOf(
+                    "lastFmSessionExpired",
                     "aiSlopBlocklistCache",
                     "aiSlopBlocklistUpdatedAt",
                     SpeedDialArtworkRefreshTimesKey,

@@ -435,6 +435,8 @@ Android Spotify and Apple Music library imports open the destination picker for 
 
 Last.fm and ListenBrainz login dialogs link to account registration; ListenBrainz also links to its token page.
 
+Last.fm session keys only work with the API key that issued them. When Last.fm answers a scrobble or now-playing update with error 9, the account is marked as needing sign-in: Last.fm plays stay queued and are not sent, and the Last.fm settings page offers to sign in again. Signing back into the same account keeps and sends the held plays; another account still clears them.
+
 ## Desktop stored playback
 
 Queue transitions and preloading prefer downloaded or cached audio, matching manual track selection, including video-type tracks. An explicit playback-client override bypasses stored audio. Video-viewer resolution still uses the explicit video request path.
