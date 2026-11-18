@@ -138,9 +138,10 @@ class PlaybackControllerTest {
 
     private suspend fun withLocalVotes(block: suspend () -> Unit) {
         val previous = Settings.sharedOverrideForTest()
-        SongLikeState.awaitPersistence()
+        if (previous != null) SongLikeState.awaitPersistence()
         Settings.replaceSharedForTest(Settings(MapSettings()))
         try {
+            SongLikeState.awaitPersistence()
             SongLikeState.refreshFromSettings()
             block()
         } finally {
