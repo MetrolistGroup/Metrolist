@@ -31,6 +31,20 @@ def executable(path, machine=0x8664):
 
 
 class PipelineTest(unittest.TestCase):
+    def test_windows_registers_the_jna_callback_exception_handler(self):
+        metadata_directory = native_image.METADATA / 'windows'
+        self.assertIn(metadata_directory, native_image.configurations('windows-x64', agent=None))
+        metadata = json.loads((metadata_directory / 'reachability-metadata.json').read_text())
+        registration = next(
+            entry for entry in metadata['reflection']
+            if entry['type'] == 'com.sun.jna.Callback$UncaughtExceptionHandler'
+        )
+        self.assertTrue(registration['jniAccessible'])
+        self.assertEqual(
+            [{'name': 'uncaughtException', 'parameterTypes': ['com.sun.jna.Callback', 'java.lang.Throwable']}],
+            registration['methods'],
+        )
+
     def test_nucleus_natives_use_nucleus_platform_names(self):
         with tempfile.TemporaryDirectory() as directory:
             for target, platform in [('linux-arm64', 'linux-aarch64'), ('macos-arm64', 'darwin-aarch64')]:
