@@ -97,6 +97,9 @@ class PipelineTest(unittest.TestCase):
             self.assertIn(f'-H:NativeLinkerOption={work / "windows-resources/metrolist.res"}', command)
             linux = native_image.arguments(work, work, work/'image/Metrolist', 'linux-x64')
             self.assertFalse(any('metrolist.res' in arg for arg in linux))
+            # Main.kt renames the X11 window class through this package.
+            self.assertIn('--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED', linux)
+            self.assertNotIn('--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED', command)
 
     def test_output_argument_leaves_exe_suffix_to_native_image(self):
         with tempfile.TemporaryDirectory() as directory:
