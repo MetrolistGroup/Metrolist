@@ -114,6 +114,7 @@ import io.ktor.utils.io.jvm.javaio.toByteReadChannel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
@@ -255,7 +256,10 @@ private fun CachedPlaylistScreen() {
         songs = songs,
         emptyMessage = stringResource(Res.string.cached_songs_empty),
         emptyHint = stringResource(Res.string.cached_songs_empty_hint),
-        collectionMetadata = entries.associate { it.songId to CollectionMeta(it.cachedAt, it.fileSize) },
+        collectionMetadata =
+            entries.associate {
+                it.songId to CollectionMeta(it.cachedAt, it.fileSize, lastAccessed = it.lastAccessedAt)
+            },
         onRemoveSongs = SongCacheManager::removeSongsFromCache,
         onClearCollection = { SongCacheManager.clearCache() },
         extraInfo = { _, song ->
@@ -386,10 +390,20 @@ private fun LocalPlaylistLayout(
     val isCachedCollection = type == "cached"
     val cachedSorting = if (isCachedCollection) Settings.shared.cachedCollectionSorting() else null
     var countSort by remember(type) { mutableStateOf(cachedSorting?.sort == CollectionSort.MOST_PLAYED) }
-    val countIds = remember(collectionMetadata, countSort) { if (countSort) collectionMetadata?.keys?.toList().orEmpty() else emptyList() }
-    val playCounts by remember(database, countIds) {
-        if (countIds.isEmpty()) flowOf(emptyMap()) else database.collectionPlayCounts(countIds)
-    }.collectAsState(emptyMap())
+    val needsPlayCounts = countSort || cachedSorting?.sort == CollectionSort.MOST_PLAYED
+    val countIds =
+        remember(collectionMetadata, needsPlayCounts) {
+            if (needsPlayCounts) collectionMetadata?.keys?.toList().orEmpty() else emptyList()
+        }
+    val playCountsState by remember(database, countIds) {
+        if (countIds.isEmpty()) {
+            flowOf(countIds to emptyMap<String, Int>())
+        } else {
+            database.collectionPlayCounts(countIds).map { countIds to it }
+        }
+    }.collectAsState(null)
+    val playCountsLoaded = countIds.isEmpty() || playCountsState?.first == countIds
+    val playCounts = if (playCountsState?.first == countIds) playCountsState?.second.orEmpty() else emptyMap()
     val cachedCustomOrder =
         remember(isCachedCollection, cachedSorting, Settings.shared.cachedSongsCustomOrder) {
             if (isCachedCollection && cachedSorting?.sort == CollectionSort.MANUAL) {
@@ -399,18 +413,35 @@ private fun LocalPlaylistLayout(
             }
         }
     val menuSongs =
-        remember(songs, hasMoreSongs, isCachedCollection, cachedSorting, cachedCustomOrder, collectionMetadata, playCounts) {
+        remember(
+            songs,
+            hasMoreSongs,
+            isCachedCollection,
+            cachedSorting,
+            cachedCustomOrder,
+            collectionMetadata,
+            playCounts,
+            playCountsLoaded,
+        ) {
             val baseSongs = songs.takeUnless { hasMoreSongs }.orEmpty()
-            if (isCachedCollection && cachedSorting != null) {
-                baseSongs.presentCollectionWithPlayCounts(
-                    sort = cachedSorting.sort,
-                    direction = cachedSorting.direction,
-                    customOrder = cachedCustomOrder,
-                    metadata = collectionMetadata.orEmpty(),
-                    playCounts = playCounts,
-                )
-            } else {
-                baseSongs
+            when {
+                !isCachedCollection || cachedSorting == null -> {
+                    baseSongs
+                }
+
+                cachedSorting.sort == CollectionSort.MOST_PLAYED && !playCountsLoaded -> {
+                    emptyList()
+                }
+
+                else -> {
+                    baseSongs.presentCollectionWithPlayCounts(
+                        sort = cachedSorting.sort,
+                        direction = cachedSorting.direction,
+                        customOrder = cachedCustomOrder,
+                        metadata = collectionMetadata.orEmpty(),
+                        playCounts = playCounts,
+                    )
+                }
             }
         }
 

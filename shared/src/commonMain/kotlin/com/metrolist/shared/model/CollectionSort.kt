@@ -149,6 +149,11 @@ fun List<SongItem>.presentCollectionWithPlayCounts(
         direction = direction,
         customOrder = if (sort == CollectionSort.MANUAL) customOrder else emptyList(),
     ) { song ->
-        metadata[song.id]?.let { it.copy(playCount = playCounts[song.id] ?: it.playCount) }
-            ?: playCounts[song.id]?.let { CollectionMeta(0L, 0L, playCount = it) }
+        val meta = metadata[song.id]
+        if (sort == CollectionSort.MOST_PLAYED) {
+            meta?.let { it.copy(playCount = playCounts[song.id] ?: it.playCount) }
+                ?: playCounts[song.id]?.let { CollectionMeta(0L, 0L, playCount = it) }
+        } else {
+            meta
+        }
     }

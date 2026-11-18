@@ -312,6 +312,27 @@ class PlaylistSongSortingTest {
                 metadata = metadata,
             ),
         )
+        val oldestMetadata =
+            mapOf(
+                "1" to CollectionMeta(timestamp = 100L, fileSize = 500L, lastAccessed = 30L),
+                "3" to CollectionMeta(timestamp = 300L, fileSize = 900L, lastAccessed = 10L),
+            )
+        assertEquals(
+            listOf(alpha, gamma, beta),
+            songs.presentCollectionWithPlayCounts(
+                sort = CollectionSort.OLDEST,
+                metadata = oldestMetadata,
+                playCounts = playCounts,
+            ),
+        )
+        assertEquals(
+            listOf(alpha, gamma, beta),
+            songs.presentCollectionWithPlayCounts(
+                sort = CollectionSort.LAST_USED,
+                metadata = oldestMetadata,
+                playCounts = playCounts,
+            ),
+        )
     }
 
     private fun song(

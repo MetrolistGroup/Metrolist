@@ -935,7 +935,10 @@ private suspend fun loadMediaSongs(
                         } else {
                             emptyMap()
                         }
-                    val metadata = entries.associate { it.songId to CollectionMeta(it.cachedAt, it.fileSize) }
+                    val metadata =
+                        entries.associate {
+                            it.songId to CollectionMeta(it.cachedAt, it.fileSize, lastAccessed = it.lastAccessedAt)
+                        }
                     entries
                         .map { entry ->
                             SongItem(
