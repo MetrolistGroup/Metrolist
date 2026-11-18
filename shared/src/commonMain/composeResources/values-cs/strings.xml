@@ -2340,6 +2340,6 @@
     <string name="active_lyrics_alignment">Zarovnání aktivního řádku textu skladby</string>
     <string name="lyrics_accessibility">Přístupnost</string>
     <string name="duration_three_units"></string>
-    <string name="switch_to_video"></string>
+    <string name="switch_to_video">Přepnout na video</string>
     <string name="duration_two_units"></string>
 </resources>
