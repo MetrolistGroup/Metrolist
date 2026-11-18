@@ -114,7 +114,7 @@ X11 detection leaves automatic AWT scaling intact so saved window sizes, minimum
 
 Desktop scroll containers use Compose Foundation's built-in wheel animation. Startup leaves `compose.scrolling.smooth.enabled` at its enabled default, including on Windows. The shared carousel modifier lets the container handle wheel input, so lists, rows, grids and scroll pages share Foundation's tick accumulation and precise-input handling. Foundation also settles carousel and pager snapping after wheel input. Android uses its own wheel handler and settling delay.
 
-In Compose 1.13.0-beta02, Foundation recognizes fractional wheel rotation as precise input on Linux and macOS, but its Windows config classifies all AWT wheel events as non-precise. `DesktopScrollConfig.kt` applies the same fractional-rotation check on Windows and delegates all other behavior to Foundation. The config API is internal in this pinned version; check it when upgrading Compose. See the pinned [Foundation sources](https://repo.maven.apache.org/maven2/org/jetbrains/compose/foundation/foundation-desktop/1.13.0-beta02/foundation-desktop-1.13.0-beta02-sources.jar), `DesktopScrollable.desktop.kt`.
+In Compose 1.13.0-rc01, Foundation recognizes fractional wheel rotation as precise input on Linux and macOS, but its Windows config classifies all AWT wheel events as non-precise. `DesktopScrollConfig.kt` applies the same fractional-rotation check on Windows and delegates all other behavior to Foundation. The config API is internal in this pinned version; check it when upgrading Compose. See the pinned [Foundation sources](https://repo.maven.apache.org/maven2/org/jetbrains/compose/foundation/foundation-desktop/1.13.0-rc01/foundation-desktop-1.13.0-rc01-sources.jar), `DesktopScrollable.desktop.kt`.
 
 Mouse drags continue scrolling at the release velocity with the container's fling behavior. This also applies to Linux touchscreens that report touches as mouse input. Lists, grids and scroll columns use Compose's default deceleration; carousels and pagers keep their snap behavior. Movement thresholds and direction locking preserve taps and gestures handled by child controls. Precise touchpad input must track the gesture directly.
 
@@ -122,7 +122,7 @@ Mouse drags continue scrolling at the release velocity with the container's flin
 
 Horizontal Home rows show arrow buttons at each edge that has more content. The buttons fade at the scroll limits and animate scrolling. Artwork and video shelves use Material carousel snapping; Speed Dial and song grids scroll freely. Home chips and moods use the same controls. Android and iOS do not show these buttons.
 
-Compose 1.13.0-beta02's `CarouselState` inherits scroll flags that always return true. The controls read its internal pager's measured limits so arrows follow scrolling, window resizing and content changes. Check this accessor when upgrading Compose.
+Compose 1.13.0-rc01's `CarouselState` inherits scroll flags that always return true. The controls read its internal pager's measured limits so arrows follow scrolling, window resizing and content changes. Check this accessor when upgrading Compose.
 
 Desktop category pages such as Moods & genres fit as many columns as the available width allows, with a minimum chip width of 240 dp. Chips in the final row share its full width. Category-only pages use 6 dp gaps in both directions.
 
