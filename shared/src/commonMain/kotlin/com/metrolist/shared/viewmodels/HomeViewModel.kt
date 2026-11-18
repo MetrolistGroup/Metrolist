@@ -1953,12 +1953,14 @@ internal fun classicQuickPicks(
     localQuickPicks: List<SongItem>,
     localForgottenFavorites: List<SongItem>,
 ): List<SongItem> =
-    // Filter before sampling so blocked rows do not consume the quota.
+    // Filter before sampling so rejected rows do not consume the quota. Home
+    // shelves always strip non-musical videos, so the local pool does too.
     BlockedContent
         .filterSongs(
             (localQuickPicks + localForgottenFavorites.take(8)).distinctBy { it.id },
             BlockedContent.snapshot(),
-        ).shuffled()
+        ).filterNot { it.isNonMusicalVideo }
+        .shuffled()
         .take(20)
 
 private fun preferredQuickPicks(

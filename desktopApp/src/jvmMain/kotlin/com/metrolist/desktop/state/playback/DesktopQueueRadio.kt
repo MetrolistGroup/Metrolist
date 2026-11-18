@@ -35,6 +35,7 @@ internal class DesktopQueueRadio(
     // Classic mode keeps YouTube's order: songs not yet enqueued from the last
     // fetched page are served before fetching the next one.
     private var pendingClassicSongs: List<SongItem> = emptyList()
+    private var radioClassicMode: Boolean = Settings.shared.classicRecommendations
 
     fun reset() {
         cancelPrefetch()
@@ -89,6 +90,12 @@ internal class DesktopQueueRadio(
             if (seed.id.isBlank()) return@withLock null
             try {
                 val classic = Settings.shared.classicRecommendations
+                // Continuations and the buffer belong to the mode that fetched them.
+                if (radioClassicMode != classic) {
+                    radioClassicMode = classic
+                    continuation = null
+                    pendingClassicSongs = emptyList()
+                }
 
                 fun currentFilter(songs: List<SongItem>): List<SongItem> =
                     buildRadioQueueRecommendations(
@@ -127,6 +134,8 @@ internal class DesktopQueueRadio(
                         }
                 }
                 if (page != null) continuation = page.continuation
+                // The buffered path skips select()'s freshness check; recheck here.
+                if (!canLoad()) return@withLock null
                 val available = buffered + (page?.songs ?: emptyList())
                 val candidates = available.take(limit)
                 pendingClassicSongs = if (classic) available.drop(limit) else emptyList()

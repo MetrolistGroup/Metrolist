@@ -339,6 +339,7 @@ internal class IosPlaybackController(
     private val recommendationHistory = RadioRecommendationHistory()
     private var radioJob: Job? = null
     private var radioContinuation: String? = null
+    private var radioContinuationClassic: Boolean = Settings.shared.classicRecommendations
     private var deferredRadioBootstrap = false
     private var currentRadioSeedId: String? = null
     private var currentRadioPlaylistId: String? = null
@@ -1336,6 +1337,7 @@ internal class IosPlaybackController(
                     suggestedTracks.value = page.songs
                     recommendationHistory.remember(page.songs)
                     radioContinuation = page.continuation
+                    radioContinuationClassic = Settings.shared.classicRecommendations
                     val chips =
                         if (selectedChipId != null) {
                             page.chips.selectRadioQueueChip(selectedChipId)
@@ -1357,7 +1359,9 @@ internal class IosPlaybackController(
 
     private fun continueRadioIfNeeded(seedSongId: String) {
         if (!canAutoLoadMore) return
-        val continuation = radioContinuation ?: return
+        // Continuations belong to the recommendations mode that fetched them.
+        val continuation =
+            radioContinuation.takeIf { radioContinuationClassic == Settings.shared.classicRecommendations } ?: return
         if (radioJob?.isActive == true) return
         radioJob =
             scope.launch {
@@ -1369,6 +1373,7 @@ internal class IosPlaybackController(
                     suggestedTracks.value += page.songs
                     recommendationHistory.remember(page.songs)
                     radioContinuation = page.continuation
+                    radioContinuationClassic = Settings.shared.classicRecommendations
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

@@ -87,6 +87,7 @@ internal class AndroidQueueCoordinator(
     var recommendationSeedSongId: String? = null
         private set
     private var radioQueueContinuation: String? = null
+    private var radioQueueContinuationClassic: Boolean = Settings.shared.classicRecommendations
     private var radioQueuePlaylistId: String? = null
     private var radioQueueParams: String? = null
     private var isRadioQueue = false
@@ -519,7 +520,12 @@ internal class AndroidQueueCoordinator(
                                 !AndroidDeviceConnect.manager.remote.isFollowing &&
                                 !AndroidListenTogetherManager.isGuestPlaybackLocked
                         },
-                        nextContinuation = { radioQueueContinuation },
+                        nextContinuation = {
+                            // Continuations belong to the recommendations mode that fetched them.
+                            radioQueueContinuation.takeIf {
+                                radioQueueContinuationClassic == Settings.shared.classicRecommendations
+                            }
+                        },
                         applyPage = { page, initial ->
                             applyMixPage(
                                 firstPage = page,
@@ -663,6 +669,7 @@ internal class AndroidQueueCoordinator(
         val chips = page.chips.ifEmpty { queueChipsState.value }
         queueChipsState.value = selectedChipId?.let(chips::selectRadioQueueChip) ?: chips
         radioQueueContinuation = page.continuation
+        radioQueueContinuationClassic = Settings.shared.classicRecommendations
         radioQueuePlaylistId = playlistId ?: radioQueuePlaylistId
         radioQueueParams = if (playlistId != null) params else radioQueueParams
         if (additions.isEmpty()) {
@@ -904,6 +911,7 @@ internal class AndroidQueueCoordinator(
         if (rawAdditions.isEmpty()) return false
 
         radioQueueContinuation = page.continuation
+        radioQueueContinuationClassic = Settings.shared.classicRecommendations
         radioQueuePlaylistId = radioQueuePlaylistId ?: "RDAMVM$seedSongId"
 
         val (toQueue, toSuggest) =
