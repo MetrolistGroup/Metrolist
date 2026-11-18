@@ -28,6 +28,7 @@ internal class SingleInstanceLock(
     private var fileLock: FileLock? = null
     private var watchService: WatchService? = null
     private var watcherThread: Thread? = null
+    private var restoreRequestHandler: ((String?) -> Unit)? = null
     private val released = AtomicBoolean(true)
 
     @Synchronized
@@ -56,8 +57,8 @@ internal class SingleInstanceLock(
 
         channel = candidateChannel
         fileLock = candidateLock
+        restoreRequestHandler = onRestoreRequest
         released.set(false)
-        startRestoreWatcher(onRestoreRequest)
         return true
     }
 
@@ -82,7 +83,10 @@ internal class SingleInstanceLock(
         }
     }
 
-    private fun startRestoreWatcher(onRestoreRequest: (String?) -> Unit) {
+    @Synchronized
+    fun startRestoreWatcher() {
+        if (released.get() || watcherThread != null) return
+        val onRestoreRequest = restoreRequestHandler ?: return
         val watcher = FileSystems.getDefault().newWatchService()
         val highSensitivity =
             runCatching {
@@ -119,6 +123,7 @@ internal class SingleInstanceLock(
         watcherThread?.interrupt()
         watcherThread = null
         watchService = null
+        restoreRequestHandler = null
         runCatching { fileLock?.release() }
         fileLock = null
         runCatching { channel?.close() }
@@ -157,6 +162,8 @@ object DesktopSingleInstance {
         }
         return acquired
     }
+
+    fun startRestoreWatcher() = lock.startRestoreWatcher()
 
     fun setRestoreHandler(handler: (String?) -> Unit) {
         restoreHandler = handler

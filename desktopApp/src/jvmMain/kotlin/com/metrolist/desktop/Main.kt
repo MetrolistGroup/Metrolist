@@ -891,6 +891,7 @@ private fun runDesktopApp(args: Array<String>) {
         WaylandScale.detectAndApply()
         configureLinuxWindowIdentity()
     }
+    DesktopSingleInstance.startRestoreWatcher()
 
     // Initialize logging only after settings migration to avoid java.util.prefs/JUL class-init deadlocks.
     AppLogger.initialize(applicationScope)
