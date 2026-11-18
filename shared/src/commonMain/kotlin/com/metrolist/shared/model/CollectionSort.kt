@@ -134,3 +134,21 @@ val CollectionSort.defaultDirection: SortDirection
         } else {
             SortDirection.DESCENDING
         }
+
+/** Presents a collection using [sort]/[direction] while merging external [playCounts] into [metadata]. */
+fun List<SongItem>.presentCollectionWithPlayCounts(
+    sort: CollectionSort,
+    direction: SortDirection = sort.defaultDirection,
+    customOrder: List<String> = emptyList(),
+    metadata: Map<String, CollectionMeta> = emptyMap(),
+    playCounts: Map<String, Int> = emptyMap(),
+): List<SongItem> =
+    presentCollection(
+        query = "",
+        sort = sort,
+        direction = direction,
+        customOrder = if (sort == CollectionSort.MANUAL) customOrder else emptyList(),
+    ) { song ->
+        metadata[song.id]?.let { it.copy(playCount = playCounts[song.id] ?: it.playCount) }
+            ?: playCounts[song.id]?.let { CollectionMeta(0L, 0L, playCount = it) }
+    }

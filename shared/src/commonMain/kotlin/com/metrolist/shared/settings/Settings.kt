@@ -747,6 +747,10 @@ class Settings(
         cachedSongsCustomOrder = Json.encodeToString(order.distinct())
     }
 
+    /** Resolves the persisted sort option for the cached collection. */
+    fun cachedCollectionSorting(): SavedPlaylistCollectionSorting =
+        playlistCollectionSorting("special:cached", cachedCollectionSort, cachedCollectionSortDirection)
+
     var downloadedCollectionSort by preference(DownloadedCollectionSortKey, CollectionSort.NEWEST)
     var downloadedCollectionSortDirection by preference(DownloadedCollectionSortDirectionKey, SortDirection.DESCENDING)
     private var collectionCoversJson by preference(CollectionCoversKey, "{}")

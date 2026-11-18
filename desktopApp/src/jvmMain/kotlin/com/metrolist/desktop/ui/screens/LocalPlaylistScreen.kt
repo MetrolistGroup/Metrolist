@@ -93,9 +93,11 @@ import com.metrolist.shared.model.CollectionMeta
 import com.metrolist.shared.model.CollectionSort
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.presentCollectionWithPlayCounts
 import com.metrolist.shared.settings.HiddenLibraryItem
 import com.metrolist.shared.settings.HiddenLibraryItemType
 import com.metrolist.shared.settings.HiddenLibraryItems
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.ui.components.CollectionHeaderNavigation
@@ -381,11 +383,36 @@ private fun LocalPlaylistLayout(
     loadCompleteSongs: (suspend () -> List<SongItem>?)? = null,
 ) {
     val database = remember { GlobalContext.get().get<MusicDatabase>() }
-    var countSort by remember(type) { mutableStateOf(false) }
+    val isCachedCollection = type == "cached"
+    val cachedSorting = if (isCachedCollection) Settings.shared.cachedCollectionSorting() else null
+    var countSort by remember(type) { mutableStateOf(cachedSorting?.sort == CollectionSort.MOST_PLAYED) }
     val countIds = remember(collectionMetadata, countSort) { if (countSort) collectionMetadata?.keys?.toList().orEmpty() else emptyList() }
     val playCounts by remember(database, countIds) {
         if (countIds.isEmpty()) flowOf(emptyMap()) else database.collectionPlayCounts(countIds)
     }.collectAsState(emptyMap())
+    val cachedCustomOrder =
+        remember(isCachedCollection, cachedSorting, Settings.shared.cachedSongsCustomOrder) {
+            if (isCachedCollection && cachedSorting?.sort == CollectionSort.MANUAL) {
+                Settings.shared.cachedSongsOrder()
+            } else {
+                emptyList()
+            }
+        }
+    val menuSongs =
+        remember(songs, hasMoreSongs, isCachedCollection, cachedSorting, cachedCustomOrder, collectionMetadata, playCounts) {
+            val baseSongs = songs.takeUnless { hasMoreSongs }.orEmpty()
+            if (isCachedCollection && cachedSorting != null) {
+                baseSongs.presentCollectionWithPlayCounts(
+                    sort = cachedSorting.sort,
+                    direction = cachedSorting.direction,
+                    customOrder = cachedCustomOrder,
+                    metadata = collectionMetadata.orEmpty(),
+                    playCounts = playCounts,
+                )
+            } else {
+                baseSongs
+            }
+        }
 
     var editingCover by remember(type) { mutableStateOf(false) }
     if (editingCover) CollectionCoverEditor(type, onDismiss = { editingCover = false })
@@ -448,7 +475,7 @@ private fun LocalPlaylistLayout(
 
         PlaylistContextMenu(
             playlist = PlaylistItem(id = "auto:$type", title = title, thumbnail = null, author = subtitle),
-            songs = songs.takeUnless { hasMoreSongs }.orEmpty(),
+            songs = menuSongs,
             fallbackIcon = icon,
             expanded = collectionMenu.expanded,
             offset = collectionMenu.offset,

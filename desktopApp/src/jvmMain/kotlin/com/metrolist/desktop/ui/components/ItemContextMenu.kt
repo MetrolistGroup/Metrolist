@@ -83,6 +83,7 @@ import com.metrolist.desktop.state.content.PlaylistAlbumState
 import com.metrolist.desktop.state.content.PodcastState
 import com.metrolist.desktop.state.playback.ListenTogetherState
 import com.metrolist.desktop.state.playback.PlayerState
+import com.metrolist.desktop.storage.CachedSongEntry
 import com.metrolist.desktop.storage.DownloadManager
 import com.metrolist.desktop.storage.DownloadState
 import com.metrolist.desktop.storage.SongCacheManager
@@ -91,6 +92,7 @@ import com.metrolist.desktop.storage.playlistDownloadState
 import com.metrolist.desktop.utils.exportCollection
 import com.metrolist.shared.api.playlistSongs
 import com.metrolist.shared.db.MusicDatabase
+import com.metrolist.shared.db.collectionPlayCounts
 import com.metrolist.shared.db.loadAndCachePlaylist
 import com.metrolist.shared.db.refreshHistoryPlaylist
 import com.metrolist.shared.generated.resources.Res
@@ -145,15 +147,19 @@ import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.BuiltinPlaylist
+import com.metrolist.shared.model.CollectionMeta
+import com.metrolist.shared.model.CollectionSort
 import com.metrolist.shared.model.EpisodeItem
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.PodcastItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
+import com.metrolist.shared.model.presentCollectionWithPlayCounts
 import com.metrolist.shared.model.previewThumbnailUrl
 import com.metrolist.shared.model.speedDialItemId
 import com.metrolist.shared.model.toSongItem
 import com.metrolist.shared.settings.BlockedContent
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.ui.components.AlertDialog
@@ -900,7 +906,8 @@ private suspend fun loadMediaSongs(
     if (existingSongs.isNotEmpty()) return existingSongs
     return withContext(Dispatchers.IO) {
         if (item is PlaylistItem && item.id.startsWith("auto:")) {
-            val dao = GlobalContext.get().get<MusicDatabase>().dao()
+            val database = GlobalContext.get().get<MusicDatabase>()
+            val dao = database.dao()
             when (item.id.removePrefix("auto:")) {
                 "liked" -> {
                     SongLikeState.awaitCompleteLikes().orEmpty()
@@ -919,15 +926,32 @@ private suspend fun loadMediaSongs(
                 }
 
                 "cached" -> {
-                    SongCacheManager.getCachedSongs().map { entry ->
-                        SongItem(
-                            id = entry.songId,
-                            title = entry.title,
-                            artists = listOf(ArtistTiny(null, entry.artist)),
-                            thumbnail = null,
-                            album = null,
+                    val sorting = Settings.shared.cachedCollectionSorting()
+                    val customOrder = if (sorting.sort == CollectionSort.MANUAL) Settings.shared.cachedSongsOrder() else emptyList()
+                    val entries = SongCacheManager.getCachedSongs()
+                    val playCounts =
+                        if (sorting.sort == CollectionSort.MOST_PLAYED && entries.isNotEmpty()) {
+                            database.collectionPlayCounts(entries.map(CachedSongEntry::songId)).first()
+                        } else {
+                            emptyMap()
+                        }
+                    val metadata = entries.associate { it.songId to CollectionMeta(it.cachedAt, it.fileSize) }
+                    entries
+                        .map { entry ->
+                            SongItem(
+                                id = entry.songId,
+                                title = entry.title,
+                                artists = listOf(ArtistTiny(null, entry.artist)),
+                                thumbnail = null,
+                                album = null,
+                            )
+                        }.presentCollectionWithPlayCounts(
+                            sort = sorting.sort,
+                            direction = sorting.direction,
+                            customOrder = customOrder,
+                            metadata = metadata,
+                            playCounts = playCounts,
                         )
-                    }
                 }
 
                 else -> {

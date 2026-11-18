@@ -1,5 +1,6 @@
 package com.metrolist.shared.model
 
+import com.metrolist.shared.settings.SavedPlaylistCollectionSorting
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.components.resolveCollectionFilterSort
 import com.russhwolf.settings.MapSettings
@@ -258,6 +259,59 @@ class PlaylistSongSortingTest {
                 customOrder = listOf("3", "1"),
             ) { null }
         assertEquals(listOf(beta, gamma, alpha), ordered)
+    }
+
+    @Test
+    fun cachedCollectionSortingAndPlayCountPresentationMatchRestoredManualAndPlayCountPreferences() {
+        val alpha = song("1", "Alpha", "A", null, null, null)
+        val beta = song("2", "Beta", "B", null, null, null)
+        val gamma = song("3", "Gamma", "C", null, null, null)
+        val songs = listOf(alpha, beta, gamma)
+        val metadata =
+            mapOf(
+                "1" to CollectionMeta(timestamp = 100L, fileSize = 500L),
+                "2" to CollectionMeta(timestamp = 200L, fileSize = 100L),
+                "3" to CollectionMeta(timestamp = 300L, fileSize = 900L),
+            )
+        val playCounts = mapOf("1" to 3, "2" to 10, "3" to 1)
+        val settings = Settings(MapSettings())
+        assertEquals(
+            SavedPlaylistCollectionSorting(CollectionSort.NEWEST, SortDirection.DESCENDING),
+            settings.cachedCollectionSorting(),
+        )
+
+        settings.setPlaylistCollectionSorting(
+            "special:cached",
+            SavedPlaylistCollectionSorting(CollectionSort.MANUAL, SortDirection.DESCENDING),
+        )
+        settings.setCachedSongsOrder(listOf("3", "1"))
+        val restored = settings.cachedCollectionSorting()
+        assertEquals(CollectionSort.MANUAL, restored.sort)
+        assertEquals(
+            listOf(beta, gamma, alpha),
+            songs.presentCollectionWithPlayCounts(
+                sort = restored.sort,
+                direction = restored.direction,
+                customOrder = settings.cachedSongsOrder(),
+                metadata = metadata,
+                playCounts = playCounts,
+            ),
+        )
+        assertEquals(
+            listOf(beta, alpha, gamma),
+            songs.presentCollectionWithPlayCounts(
+                sort = CollectionSort.MOST_PLAYED,
+                metadata = metadata,
+                playCounts = playCounts,
+            ),
+        )
+        assertEquals(
+            listOf(gamma, alpha, beta),
+            songs.presentCollectionWithPlayCounts(
+                sort = CollectionSort.SIZE,
+                metadata = metadata,
+            ),
+        )
     }
 
     private fun song(
