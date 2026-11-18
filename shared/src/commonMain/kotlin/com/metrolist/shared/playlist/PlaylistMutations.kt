@@ -129,7 +129,7 @@ suspend fun removeSongsFromStoredPlaylist(
                     val dao = database.dao()
                     val currentEntity = dao.findPlaylistEntity(targetLocalId) ?: return@withDatabaseTransaction
                     val occurrenceIds = matchedEntities.mapTo(mutableSetOf()) { it.map.id }
-                    val allMappings = dao.playlistSongMaps(targetLocalId, 0)
+                    val allMappings = dao.playlistSongMaps(targetLocalId, Int.MIN_VALUE)
                     val currentMappings = allMappings.filter { it.id in occurrenceIds }
                     dao.deletePlaylistMappings(targetLocalId, currentMappings.map { it.id })
                     var removedBefore = 0

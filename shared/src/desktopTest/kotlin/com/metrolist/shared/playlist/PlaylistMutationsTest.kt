@@ -1794,6 +1794,31 @@ class PlaylistMutationsTest {
         }
 
     @Test
+    fun localRemovalIncludesNegativePositionOccurrences() =
+        withDatabase { database ->
+            val playlist = createStoredLocalPlaylist(database, "Restored").getOrThrow()
+            database.dao().insert(SongEntity("same", "Song"))
+            listOf(-2, -1, 0, 1).forEach { position ->
+                database.dao().insert(PlaylistSongMap(playlistId = playlist.id, songId = "same", position = position))
+            }
+            val rows = database.dao().playlistSongs(playlist.id).first()
+            removeSongsFromStoredPlaylist(
+                database,
+                authenticatedRepository(MockEngine { error("Local removal must not use the network") }),
+                playlist.id,
+                rows.take(2).map { it.toSongItem() },
+            ).getOrThrow()
+            assertEquals(
+                rows.drop(2).map { it.map.id },
+                database
+                    .dao()
+                    .playlistSongs(playlist.id)
+                    .first()
+                    .map { it.map.id },
+            )
+        }
+
+    @Test
     fun removeSongsFromStoredPlaylistOnLocalPlaylistNeverCallsNetwork() =
         withDatabase { database ->
             val engine = MockEngine { error("Local playlist removal must not issue network request") }
