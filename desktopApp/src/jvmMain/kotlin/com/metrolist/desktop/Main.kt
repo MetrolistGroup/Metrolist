@@ -177,6 +177,8 @@ import com.metrolist.shared.generated.resources.copy
 import com.metrolist.shared.generated.resources.desktop_display_unavailable
 import com.metrolist.shared.generated.resources.desktop_omarchy_unsupported
 import com.metrolist.shared.generated.resources.desktop_platform_unsupported
+import com.metrolist.shared.generated.resources.lastfm_session_expired_description
+import com.metrolist.shared.generated.resources.lastfm_session_expired_title
 import com.metrolist.shared.generated.resources.learn_more
 import com.metrolist.shared.generated.resources.liked_songs
 import com.metrolist.shared.generated.resources.ok
@@ -219,6 +221,7 @@ import com.metrolist.shared.ui.navigation.Navigator
 import com.metrolist.shared.ui.navigation.Screen
 import com.metrolist.shared.ui.navigation.rememberNavigationState
 import com.metrolist.shared.ui.playback.LocalPlaybackController
+import com.metrolist.shared.ui.settings.SettingsPageId
 import com.metrolist.shared.ui.utils.LocalMouseScrollFactors
 import com.metrolist.shared.ui.utils.desktopMouseScrollFactors
 import com.metrolist.shared.ui.utils.softwareRendering
@@ -471,6 +474,30 @@ private fun WindowScope.AppContent(
                     },
                     dismissButton = {
                         TextButton(onClick = YouTubeSessionState::dismissExpiredSessionNotice, shapes = ButtonDefaults.shapes()) {
+                            Text(stringResource(Res.string.action_not_now))
+                        }
+                    },
+                )
+            }
+            PopupVisibility(visible = ScrobbleSessions.showLastFmExpiredNotice && !YouTubeSessionState.showExpiredSessionNotice) {
+                AlertDialog(
+                    onDismissRequest = ScrobbleSessions::dismissLastFmExpiredNotice,
+                    title = { Text(stringResource(Res.string.lastfm_session_expired_title)) },
+                    text = { Text(stringResource(Res.string.lastfm_session_expired_description)) },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                ScrobbleSessions.dismissLastFmExpiredNotice()
+                                UiState.selectedSettingsPage = SettingsPageId.LAST_FM
+                                UiState.showSettings = true
+                            },
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
+                            Text(stringResource(Res.string.action_login))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = ScrobbleSessions::dismissLastFmExpiredNotice, shapes = ButtonDefaults.shapes()) {
                             Text(stringResource(Res.string.action_not_now))
                         }
                     },

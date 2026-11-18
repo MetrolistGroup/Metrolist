@@ -615,9 +615,7 @@ class ScrobbleManager internal constructor(
         failure: Throwable?,
     ): Boolean = account.provider == ScrobbleProvider.LAST_FM && (failure as? ScrobbleApiException)?.apiErrorCode == 9
 
-    private fun markLastFmSessionExpired(account: ScrobbleAccount) {
-        if (ScrobbleSessions.current(ScrobbleProvider.LAST_FM) == account) Settings.shared.lastFmSessionExpired = true
-    }
+    private fun markLastFmSessionExpired(account: ScrobbleAccount) = ScrobbleSessions.markLastFmSessionExpired(account)
 
     private fun nextAttemptAt(
         attempt: Int,

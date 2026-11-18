@@ -21,6 +21,12 @@ object ScrobbleSessions {
 
     private var listenBrainzAccount: ScrobbleAccount? by mutableStateOf(loadListenBrainzAccount())
 
+    var showLastFmExpiredNotice by mutableStateOf(Settings.shared.lastFmSessionExpired)
+        private set
+
+    /** Shows (true) or clears (false) a system notification for an expired Last.fm session; platforms set it at startup. */
+    var onLastFmSessionExpiredChanged: ((Boolean) -> Unit)? = null
+
     fun current(provider: ScrobbleProvider): ScrobbleAccount? =
         when (provider) {
             ScrobbleProvider.LAST_FM -> lastFmAccount
@@ -31,6 +37,18 @@ object ScrobbleSessions {
         lastFmAccount = loadLastFmAccount()
         LastFM.sessionKey = lastFmAccount?.credential
         listenBrainzAccount = loadListenBrainzAccount()
+        showLastFmExpiredNotice = Settings.shared.lastFmSessionExpired
+    }
+
+    internal fun markLastFmSessionExpired(account: ScrobbleAccount) {
+        if (current(ScrobbleProvider.LAST_FM) != account || Settings.shared.lastFmSessionExpired) return
+        Settings.shared.lastFmSessionExpired = true
+        showLastFmExpiredNotice = true
+        onLastFmSessionExpiredChanged?.invoke(true)
+    }
+
+    fun dismissLastFmExpiredNotice() {
+        showLastFmExpiredNotice = false
     }
 
     suspend fun enqueueIfCurrent(
@@ -54,6 +72,8 @@ object ScrobbleSessions {
         val resumesExpiredAccount = Settings.shared.lastFmSessionExpired && account == Settings.shared.lastFmUsername
         if (!resumesExpiredAccount) PendingScrobbleStore.clear(ScrobbleProvider.LAST_FM)
         Settings.shared.lastFmSessionExpired = false
+        showLastFmExpiredNotice = false
+        onLastFmSessionExpiredChanged?.invoke(false)
         Settings.shared.lastFmUsername = account
         Settings.shared.lastFmSession = credential
         LastFM.sessionKey = credential
@@ -85,6 +105,8 @@ object ScrobbleSessions {
                     LastFM.sessionKey = null
                     Settings.shared.lastFmSession = ""
                     Settings.shared.lastFmSessionExpired = false
+                    showLastFmExpiredNotice = false
+                    onLastFmSessionExpiredChanged?.invoke(false)
                     Settings.shared.lastFmUsername = ""
                 }
 

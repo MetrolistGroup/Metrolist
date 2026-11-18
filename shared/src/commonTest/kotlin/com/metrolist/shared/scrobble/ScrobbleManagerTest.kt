@@ -67,16 +67,30 @@ class ScrobbleManagerTest {
             val invalidSession =
                 ScrobbleApiException("Invalid session key", ScrobbleFailureDisposition.AUTHENTICATION, apiErrorCode = 9)
             val manager = testManager(account, sends, submissionResult = Result.failure(invalidSession))
+            val notifications = mutableListOf<Boolean>()
+            ScrobbleSessions.onLastFmSessionExpiredChanged = { notifications += it }
 
-            manager.retryPendingScrobblesForTest()
-            assertTrue(Settings.shared.lastFmSessionExpired)
-            assertEquals(listOf(held), PendingScrobbleStore.all())
-            manager.retryPendingScrobblesForTest()
-            assertEquals(listOf("held"), sends, "Expired sessions must not be retried")
+            try {
+                manager.retryPendingScrobblesForTest()
+                assertTrue(Settings.shared.lastFmSessionExpired)
+                assertTrue(ScrobbleSessions.showLastFmExpiredNotice)
+                assertEquals(listOf(held), PendingScrobbleStore.all())
+                manager.retryPendingScrobblesForTest()
+                assertEquals(listOf("held"), sends, "Expired sessions must not be retried")
+                assertEquals(listOf(true), notifications, "The expiry must notify once")
 
-            ScrobbleSessions.connectLastFm(account.account, "new-key-session")
-            assertFalse(Settings.shared.lastFmSessionExpired)
-            assertEquals(listOf(held), PendingScrobbleStore.all())
+                ScrobbleSessions.dismissLastFmExpiredNotice()
+                ScrobbleSessions.restorePersistedAccounts()
+                assertTrue(ScrobbleSessions.showLastFmExpiredNotice, "A restart must show the notice again while expired")
+
+                ScrobbleSessions.connectLastFm(account.account, "new-key-session")
+                assertFalse(Settings.shared.lastFmSessionExpired)
+                assertFalse(ScrobbleSessions.showLastFmExpiredNotice)
+                assertEquals(listOf(true, false), notifications)
+                assertEquals(listOf(held), PendingScrobbleStore.all())
+            } finally {
+                ScrobbleSessions.onLastFmSessionExpiredChanged = null
+            }
 
             Settings.shared.lastFmSessionExpired = true
             ScrobbleSessions.connectLastFm("another-listener", "session")
