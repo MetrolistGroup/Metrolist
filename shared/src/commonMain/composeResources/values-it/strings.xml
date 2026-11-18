@@ -1898,7 +1898,7 @@
     <string name="csv_mapping_hint">Scegli una colonna di titoli o URL YouTube. Artista e album sono opzionali. Usa una colonna diversa per ciascun campo.</string>
     <string name="display_density">Densità display</string>
     <string name="enable_landscape_scaling">Ridimensionamento orizzontale</string>
-    <string name="enable_landscape_scaling_desc">Ridimensiona l\u0027interfaccia in orizzontale per gli schermi grandi</string>
+    <string name="enable_landscape_scaling_desc">Ridimensiona l'interfaccia in orizzontale per gli schermi grandi</string>
     <string name="force_bottom_navbar">Forza la barra di navigazione inferiore</string>
     <string name="density_large">Grande (125%)</string>
     <string name="density_slightly_large">Leggermente grande (115%)</string>
@@ -1909,8 +1909,8 @@
     <string name="density_ultra_compact">Ultra compatto (55%)</string>
     <string name="loudness_level">Livello volume</string>
     <string name="loudness_level_aggressive">Aggressivo (-7 dB)</string>
-    <string name="loudness_level_loud">Forte (-11 dB)</string>
-    <string name="loudness_level_balanced">Bilanciato (-14 dB)</string>
+    <string name="loudness_level_loud">Forte (-11 dB)</string>
+    <string name="loudness_level_balanced">Bilanciato (-14 dB)</string>
     <string name="loudness_level_quiet">Tenue (-19 dB)</string>
     <string name="lyrics_share_limit">Puoi selezionare fino a %1$d righe.</string>
     <string name="lyrics_share_selected_count">%1$d / %2$d selezionate</string>
@@ -2482,7 +2482,7 @@
     <string name="settings_discord_activity_type_summary">Scegli come Discord etichetta la tua attività musicale</string>
     <string name="settings_discord_activity_name_summary">Nome visualizzato accanto al tipo di attività su Discord</string>
     <string name="settings_discord_link_button_summary">Mostra un pulsante di collegamento sul tuo profilo Discord</string>
-    <string name="settings_quick_add_summary">Playlist per il pulsante "Aggiungi alla playlist" in Android Auto</string>
+    <string name="settings_quick_add_summary">Playlist per il pulsante Aggiungi alla playlist in Android Auto</string>
     <string name="settings_room_server_summary">Scegli il server che connette i membri della stanza</string>
     <string name="settings_room_blocks_summary">Persone che blocchi dall'accesso alle tue stanze</string>
     <string name="settings_room_help_summary">Codici delle stanze, controlli dell'host e suggerimenti musicali</string>
