@@ -1552,7 +1552,7 @@
     <string name="shortcut_open_search">Apri ricerca</string>
     <string name="shortcut_open_settings">Apri impostazioni</string>
     <string name="shortcut_developer_log">Visualizzatore log sviluppatore</string>
-    <string name="shortcut_dismiss_dialogs">Ignora / chiudi finestre di dialogo o schermo intero</string>
+    <string name="shortcut_dismiss_dialogs">Ignora / chiudi finestre di dialogo o schermo intero</string>
     <string name="shortcut_reload_app">Ricarica applicazione</string>
     <string name="add_romanization_below_lyrics">Aggiungi romanizzazione sotto i testi</string>
     <string name="ai_translation">Traduzione IA</string>
@@ -1596,7 +1596,7 @@
     <string name="could_not_open_file_picker">Impossibile aprire il selettore di file: %1$s</string>
     <string name="listen_together_how_it_works">Come funziona</string>
     <string name="listen_together_how_it_works_body">Ascolta la musica in contemporanea con i tuoi amici. L'host controlla la riproduzione e gli ospiti la seguono automaticamente.</string>
-    <string name="listen_together_how_it_works_bullets">• Crea una stanza per diventare l\u0027host\n• Condividi il codice stanza con i tuoi amici\n• Gli ospiti possono unirsi con il codice stanza\n• Solo l\u0027host può controllare la riproduzione</string>
+    <string name="listen_together_how_it_works_bullets">• Crea una stanza per diventare l'host\n• Condividi il codice stanza con i tuoi amici\n• Gli ospiti possono unirsi con il codice stanza\n• Solo l'host può controllare la riproduzione</string>
     <string name="remove_server">Rimuovi server</string>
     <string name="discord_disconnected">Disconnesso</string>
     <string name="discord_logged_in">Accesso effettuato</string>
@@ -1641,7 +1641,7 @@
     <string name="downloaded_songs_subtitle">Disponibili offline</string>
     <string name="downloaded_songs_empty">Nessun brano scaricato</string>
     <string name="cached_songs_title">Brani nella cache</string>
-    <string name="cached_songs_subtitle">%1$s MB in cache durante lo streaming</string>
+    <string name="cached_songs_subtitle">%1$s MB in cache durante lo streaming</string>
     <string name="cached_songs_empty">Nessun brano in cache</string>
     <string name="cached_songs_empty_hint">I brani memorizzati nella cache durante la riproduzione compariranno qui.</string>
     <string name="uploaded_songs_title">Brani caricati</string>
