@@ -84,7 +84,7 @@
     <string name="bitrate">Rată de biți</string>
     <string name="sample_rate">Rată de eșantionare</string>
     <string name="loudness">Intensitate sonoră</string>
-    <string name="loudness_value">%1$s dB</string>
+    <string name="loudness_value">%1$s dB</string>
     <string name="volume">Volum</string>
     <string name="file_size">Dimensiune fișier</string>
     <string name="unknown">Necunoscut</string>
@@ -2618,4 +2618,5 @@
     <string name="density_massive">Masivă (200%)</string>
     <string name="density_huge">Imensă (175%)</string>
     <string name="density_extra_large">Foarte mare (150%)</string>
+    <string name="add_to_library"></string>
 </resources>
