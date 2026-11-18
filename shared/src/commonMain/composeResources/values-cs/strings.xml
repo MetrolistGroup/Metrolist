@@ -905,7 +905,7 @@
     <string name="statistics_listening_habits">Posluchačské zvyky</string>
     <string name="statistics_overview">Přehled</string>
     <string name="statistics_period_summary">Během %1$s jsi poslouchal %2$s, %3$s.</string>
-    <string name="statistics_play_count_duration">%1$s · %2$s</string>
+    <string name="statistics_play_count_duration">%1$s · %2$s</string>
     <string name="statistics_time">Čas</string>
     <string name="statistics_top_albums">Top alba</string>
     <string name="statistics_top_artists">Top umělci</string>
@@ -987,10 +987,10 @@
         <item quantity="other">Před %1$d minutami</item>
     </plurals>
     <plurals name="hours">
-        <item quantity="one">%1$d hodina</item>
-        <item quantity="few">%1$d hodiny</item>
-        <item quantity="many">%1$d hodin</item>
-        <item quantity="other">%1$d hodin</item>
+        <item quantity="one">%1$d hodina</item>
+        <item quantity="few">%1$d hodiny</item>
+        <item quantity="many">%1$d hodin</item>
+        <item quantity="other">%1$d hodin</item>
     </plurals>
     <plurals name="listening_times">
         <item quantity="one">%1$skrát</item>
@@ -1011,10 +1011,10 @@
         <item quantity="other">Navrhni %1$d skladeb hostovi. Jenom host muže nahradit frontu.</item>
     </plurals>
     <plurals name="minutes">
-        <item quantity="one">%1$d minuta</item>
-        <item quantity="few">%1$d minuty</item>
-        <item quantity="many">%1$d minut</item>
-        <item quantity="other">%1$d minut</item>
+        <item quantity="one">%1$d minuta</item>
+        <item quantity="few">%1$d minuty</item>
+        <item quantity="many">%1$d minut</item>
+        <item quantity="other">%1$d minut</item>
     </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d skladba</item>
@@ -1119,10 +1119,10 @@
     <string name="subscribe">Odebírat</string>
     <string name="subscribed">Odebíráno</string>
     <plurals name="seconds">
-        <item quantity="one">%1$d sekunda</item>
-        <item quantity="few">%1$d sekundy</item>
-        <item quantity="many">%1$d sekund</item>
-        <item quantity="other">%1$d sekund</item>
+        <item quantity="one">%1$d sekunda</item>
+        <item quantity="few">%1$d sekundy</item>
+        <item quantity="many">%1$d sekund</item>
+        <item quantity="other">%1$d sekund</item>
     </plurals>
     <string name="beta_tag">[BETA]</string>
     <string name="crossfade">Plynulý přechod</string>
@@ -1346,7 +1346,7 @@
     <string name="settings_artist_icon_source">Zdroj ikonky umělce</string>
     <string name="settings_artist_banner_source">Zdroj banneru umělce</string>
     <string name="settings_artist_source_custom">Vlastní</string>
-    <string name="settings_seconds_value">%1$d sekund</string>
+    <string name="settings_seconds_value">%1$d sekund</string>
     <string name="settings_playback_speed_locked_listen_together">Rychlost přehrávání je pevný při používání Poslouchat společně</string>
     <string name="settings_diagnostic_logging">Diagnostické záznamy</string>
     <string name="settings_diagnostic_logging_description">Ukládat diagnostiku aplikace do místního souboru záznamů</string>
@@ -1859,7 +1859,7 @@
     <string name="shortcut_toggle_shortcuts">Přepnout panel zkratek</string>
     <string name="seek_duration_description_android">Počet sekund posunu při dvojitém klepnutí na obal nebo použití ovládacích prvků posunu</string>
     <string name="seek_duration_description_skip_controls">Počet sekund posunu při použití ovládacích prvků posunu</string>
-    <string name="seek_feedback_seconds">%1$d s</string>
+    <string name="seek_feedback_seconds">%1$d s</string>
     <string name="seek_feedback_description">%2$s, %1$s</string>
     <string name="keep_screen_on">Nechat zapnutý displej</string>
     <string name="keep_screen_on_both">%1$s + %2$s</string>
@@ -2206,7 +2206,7 @@
     <string name="backup_invalid_data">Zálohu se nepodařilo přečíst nebo ověřit. Může být poškozená nebo obsahovat nepodporovaná data.</string>
     <string name="search_history_removal_failed">Nepodařilo se vymazat historii vyhledávání účtu. Zkuste to znovu po připojení.</string>
     <string name="top_period_all_time">Za celou dobu</string>
-    <string name="top_period_past_24_hours">Posledních 24 hodin</string>
+    <string name="top_period_past_24_hours">Posledních 24 hodin</string>
     <string name="top_period_past_week">Poslední týden</string>
     <string name="top_period_past_month">Poslední měsíc</string>
     <string name="top_period_past_year">Poslední rok</string>
@@ -2615,4 +2615,5 @@
     <string name="listen_together_host_action">Hostitel</string>
     <string name="updates_nightly_builds">Vývojová sestavení</string>
     <string name="updates_nightly_builds_desc">Získejte nové sestavení po každé změně. Vývojová sestavení mohou být nestabilní.</string>
+    <string name="search_episodes"></string>
 </resources>
