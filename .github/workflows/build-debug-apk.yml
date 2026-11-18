@@ -22,7 +22,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Build debug APK
-        run: ./gradlew :androidApp:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx6g -Dfile.encoding=UTF-8"
+        run: ./gradlew :androidApp:assembleRelease --no-daemon -Dorg.gradle.jvmargs="-Xmx6g -Dfile.encoding=UTF-8"
 
       - uses: actions/upload-artifact@v4
         with:
