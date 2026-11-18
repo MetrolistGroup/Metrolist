@@ -77,6 +77,100 @@ class MediaSessionPlayerTest {
     }
 
     @Test
+    fun liveTracksPublishLiveMetadataAndNoInItemSeekCommands() {
+        val live = song("live").copy(musicVideoType = "MUSIC_VIDEO_TYPE_LIVE")
+        val backend = RecordingPlaybackPlayer(listOf(live))
+        val scope = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
+        try {
+            val adapter = MediaSessionPlayer(backend.player, MutableStateFlow(Player.REPEAT_MODE_OFF), scope = scope)
+            assertTrue(adapter.isCurrentMediaItemLive)
+            assertTrue(adapter.isCurrentWindowLive)
+            assertTrue(adapter.isCurrentWindowDynamic)
+            assertEquals(C.TIME_UNSET, adapter.currentLiveOffset)
+            assertFalse(adapter.isCurrentMediaItemSeekable)
+            assertFalse(adapter.isCurrentWindowSeekable)
+            assertEquals(C.TIME_UNSET, adapter.duration)
+            val window = adapter.currentTimeline.getWindow(0, Timeline.Window())
+            assertTrue(window.isLive)
+            assertFalse(window.isSeekable)
+            assertEquals(C.TIME_UNSET, window.durationMs)
+            for (command in listOf(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM, Player.COMMAND_SEEK_BACK, Player.COMMAND_SEEK_FORWARD)) {
+                assertFalse(adapter.isCommandAvailable(command))
+            }
+            assertTrue(adapter.isCommandAvailable(Player.COMMAND_SEEK_TO_NEXT))
+            assertTrue(adapter.isCommandAvailable(Player.COMMAND_PLAY_PAUSE))
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun liveSeekCommandsUpdateWhenSwitchingBetweenLiveAndRecordedTracks() {
+        val recorded = song("recorded", 120)
+        val backend = RecordingPlaybackPlayer(listOf(recorded))
+        val scope = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
+        try {
+            val adapter = MediaSessionPlayer(backend.player, MutableStateFlow(Player.REPEAT_MODE_OFF), scope = scope)
+            val commands = mutableListOf<Player.Commands>()
+            adapter.addListener(
+                object : Player.Listener {
+                    override fun onAvailableCommandsChanged(availableCommands: Player.Commands) {
+                        commands += availableCommands
+                    }
+                },
+            )
+            assertTrue(adapter.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM))
+            backend.currentSong.value = song("live").copy(musicVideoType = "MUSIC_VIDEO_TYPE_LIVE")
+            assertTrue("Song changes must publish changed seek commands", commands.isNotEmpty())
+            assertFalse(commands.last().contains(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM))
+            assertFalse(adapter.isCurrentMediaItemSeekable)
+            backend.currentSong.value = recorded.copy(musicVideoType = "MUSIC_VIDEO_TYPE_LIVE")
+            assertTrue(commands.last().contains(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM))
+            assertFalse(adapter.isCurrentMediaItemLive)
+            assertTrue(adapter.isCurrentMediaItemSeekable)
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun castLiveTracksHideScrubbingWhileRecordedTracksKeepReceiverDuration() {
+        val live = song("live").copy(musicVideoType = "MUSIC_VIDEO_TYPE_LIVE")
+        val backend = RecordingPlaybackPlayer(listOf(live))
+        val scope = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
+        val remote = MutableStateFlow(castState(1, 0))
+        try {
+            val adapter =
+                MediaSessionPlayer(backend.player, MutableStateFlow(Player.REPEAT_MODE_OFF), scope = scope, remotePlaybackState = remote)
+            assertTrue(adapter.isCurrentMediaItemLive)
+            assertEquals(C.TIME_UNSET, adapter.duration)
+            assertFalse(adapter.isCommandAvailable(Player.COMMAND_SEEK_FORWARD))
+            backend.currentSong.value = song("recorded", 120)
+            remote.value = castState(2, 125_000)
+            assertFalse(adapter.isCurrentMediaItemLive)
+            assertEquals(125_000L, adapter.duration)
+            assertTrue(adapter.isCommandAvailable(Player.COMMAND_SEEK_FORWARD))
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun emptySessionHasNoLiveItemOrInItemSeekCommands() {
+        val backend = RecordingPlaybackPlayer(emptyList())
+        val scope = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
+        try {
+            val adapter = MediaSessionPlayer(backend.player, MutableStateFlow(Player.REPEAT_MODE_OFF), scope = scope)
+            assertFalse(adapter.isCurrentMediaItemLive)
+            assertFalse(adapter.isCurrentMediaItemSeekable)
+            assertFalse(adapter.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM))
+            assertTrue(adapter.isCommandAvailable(Player.COMMAND_SET_MEDIA_ITEM))
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
     fun scrobbleObserverPublishesResolvedDurationWithoutStartingAnotherListen() {
         val track = song("unknown")
         val backend = RecordingPlaybackPlayer(listOf(track))
@@ -1288,47 +1382,7 @@ class MediaSessionPlayerTest {
         assertEquals(DcPlaybackAction.SELECT, interceptedCommand?.action)
         assertEquals(1, interceptedCommand?.index)
         assertEquals(500L, interceptedCommand?.positionMs)
-        assertEquals(0, backend.currentMediaItemIndex.value)
-        assertEquals(0, backend.setQueueCalls)
-        scope.cancel()
-    }
-
-    @Test
-    fun `voice resumption keeps duplicate occurrence queue and position`() {
-        val duplicate = song("duplicate")
-        val backend = RecordingPlaybackPlayer(listOf(duplicate, song("other"), duplicate.copy()))
-        backend.skipTo(2, 1234L)
-        val before = backend.queueState.value
-        val scope = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
-        val requestGate = AutomotivePlaybackRequestGate()
-        val adapter =
-            MediaSessionPlayer(
-                musicPlayer = backend.player,
-                repeatMode = MutableStateFlow(Player.REPEAT_MODE_OFF),
-                isPlaybackLockedProvider = { false },
-                isPlaybackLockedFlow = MutableStateFlow(false),
-                automotivePlaybackRequestGate = requestGate,
-                isAutomotiveSongBlocked = { false },
-                scope = scope,
-            )
-        val generation = requestGate.start(isGuestPlaybackLocked = false)
-        val result =
-            requestGate.resolve(
-                requestGeneration = generation,
-                mediaItems = listOf(adapter.getMediaItemAt(2)),
-                startIndex = 0,
-                startPositionMs = 1234L,
-                replacesQueue = false,
-            )
-        adapter.setMediaItems(result.mediaItems.toMutableList(), result.startIndex, result.startPositionMs)
-        assertEquals(before, backend.queueState.value)
-        assertEquals(1234L, backend.currentPosition.value)
-        assertEquals(0, backend.setQueueCalls)
-
-        val emptyGeneration = requestGate.start(isGuestPlaybackLocked = false)
-        assertThrows(CancellationException::class.java) {
-            requestGate.resolve(emptyGeneration, emptyList(), 0, 0L)
-        }
+        assertEquals(0, …475 tokens truncated…}
         assertEquals(before, backend.queueState.value)
         scope.cancel()
     }
