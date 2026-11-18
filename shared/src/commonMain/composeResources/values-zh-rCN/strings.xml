@@ -530,8 +530,8 @@
     <string name="file_size_unit_terabyte">TB</string>
     <string name="partial_song_count">≥ %1$s</string>
     <string name="http_status_code">HTTP %1$d</string>
-    <string name="lyrics_offset_decrease">−%1$d 毫秒</string>
-    <string name="lyrics_offset_increase">+%1$d 毫秒</string>
+    <string name="lyrics_offset_decrease">−%1$d 毫秒</string>
+    <string name="lyrics_offset_increase">+%1$d 毫秒</string>
     <string name="milliseconds_unit">毫秒</string>
     <string name="playlist_add_progress">已处理 %1$d 首歌曲，共 %2$d 首</string>
     <string name="playlist_add_stopped">%1$d 首歌曲已添加或已存在；%2$d 首歌曲的添加状态仍未确认。已添加的歌曲已保留。</string>
