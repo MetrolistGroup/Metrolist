@@ -542,7 +542,7 @@
     <string name="hide_non_musical_videos">Скрыть видео не музыкального характера</string>
     <string name="hide_non_musical_videos_desc">Оставляет официальные клипы и скрывает другие видео, например, влоги и трейлеры</string>
     <string name="hide_podcasts">Скрыть подкасты</string>
-    <string name="hide_podcasts_desc">Скрывает подкасты и эпизоды из обзора, поиска и воспроизведения</string>
+    <string name="hide_podcasts_desc">Скрывает подкасты и выпуски из обзора, поиска и воспроизведения</string>
     <string name="hide_short_songs">Скрыть короткие песни</string>
     <string name="hide_short_songs_desc">Скрывает превью, аудио Shorts, и другие треки длительностью ниже порога</string>
     <string name="minimum_song_duration">Мин. длительность песни</string>
@@ -696,7 +696,7 @@
     <string name="delete_all_recent_from_searches_question">Удалить все песни из недавних поисков?</string>
     <string name="delete_all_recent_searches_question">Удалить все недавние поиски?</string>
     <string name="delete_downloaded_audio">Удалить скачанное аудио</string>
-    <string name="delete_downloaded_episodes">Удалить скачанные эпизоды</string>
+    <string name="delete_downloaded_episodes">Удалить скачанные выпуски</string>
     <string name="delete_failed">Не удалось удалить</string>
     <string name="delete_playlist">Удалить плейлист</string>
     <string name="delete_playlist_question">Удалить плейлист?</string>
@@ -713,7 +713,7 @@
     <string name="duplicate_song">Дубликат песни</string>
     <string name="duration">Длительность</string>
     <string name="edit_song_description">Отредактируйте название песни и исполнителя</string>
-    <string name="episode">Эпизод</string>
+    <string name="episode">Выпуск</string>
     <string name="episode_actions">Действия эпизода</string>
     <string name="error_occurred">Произошла ошибка</string>
     <string name="expand">Развернуть</string>
@@ -2069,7 +2069,7 @@
     <string name="settings_notification_access_summary">Выберите, какие уведомления Android разрешает для Metrolist</string>
     <string name="settings_crash_reports_summary">Читайте сохранённые отчёты о сбоях и делитесь ими</string>
     <string name="settings_content_language_summary">Язык поиска и рекомендаций YouTube Music</string>
-    <string name="settings_content_country_summary">Регион чартов и рекомендаций YouTube Music</string>
+    <string name="settings_content_country_summary">Регион для хит-парадов и рекомендаций YouTube Music</string>
     <string name="settings_artist_icon_summary">Выберите изображения профиля из YouTube, Apple Music, Last.fm или свои</string>
     <string name="settings_artist_banner_summary">Выберите баннеры из YouTube, Apple Music, Last.fm или свои</string>
     <string name="settings_auto_playlist_summary">Показывать этот автоматический плейлист в библиотеке</string>
@@ -2683,5 +2683,5 @@
     <string name="account_nightly_update_available">Доступна новая ночная сборка</string>
     <string name="tray_hide_miniplayer">Скрыть мини-плеер</string>
     <string name="updates_nightly_builds_desc">После каждого изменения будет создаваться новая сборка. Ночные сборки могут быть нестабильными.</string>
-    <string name="playlist_lock">Заблокировать</string>
+    <string name="playlist_lock">Блокировка</string>
 </resources>
