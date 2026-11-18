@@ -812,4 +812,9 @@
     <string name="discord_activity_type"></string>
     <string name="reject"></string>
     <string name="approve"></string>
+    <string name="password"></string>
+    <string name="listen_together"></string>
+    <string name="username"></string>
+    <string name="disable"></string>
+    <string name="enable_song_cache"></string>
 </resources>
