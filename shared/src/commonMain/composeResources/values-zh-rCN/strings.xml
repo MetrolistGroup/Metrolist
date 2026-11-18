@@ -837,4 +837,7 @@
     <string name="listen_together_auto_approval_suggestions">自动批准歌曲推荐</string>
     <string name="continue_action">继续</string>
     <string name="listen_together_disconnected">已断开连接</string>
+    <string name="widget_playlists_description"></string>
+    <string name="listen_together_description"></string>
+    <string name="choose_something_below"></string>
 </resources>
