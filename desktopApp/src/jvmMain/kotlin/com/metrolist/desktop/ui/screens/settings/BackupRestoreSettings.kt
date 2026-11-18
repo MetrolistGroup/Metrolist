@@ -426,6 +426,8 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                         if (dup != null) {
                             duplicateWarning = dup
                             pendingDuplicateDestination = destination
+                            // The destination picker cleared it; "Import anyway" needs it again.
+                            pendingImportData = data
                             PlaylistImportStatusManager.clear(statusId)
                             return@launch
                         }
