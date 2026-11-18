@@ -652,7 +652,6 @@ class Settings(
     var disableLoadMoreWhenRepeatAll by preference(false)
     var preventDuplicateTracksInQueue by preference(false)
     var innerTubeCookie by preference("")
-    var isQueueLocked by preference(true)
     var playerConfigRemoteJson by preference("")
     var playerConfigRemoteFetchedAt by preference(0L)
     var playerConfigRemoteSourceUrl by preference(PlayerConfigRemoteSourceUrlKey, "")

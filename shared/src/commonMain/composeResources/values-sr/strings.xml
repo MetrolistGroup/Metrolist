@@ -486,7 +486,6 @@
     <string name="loading">Učitavanje…</string>
     <string name="local">Lokalno</string>
     <string name="local_file">Lokalni fajl</string>
-    <string name="lock_queue">Zaključaj red</string>
     <string name="lyrics_romanization_display">Displej</string>
     <string name="lyrics_romanization_enable">Текстови песама латиницом</string>
     <string name="manual">Ručno</string>
@@ -555,7 +554,6 @@
     <string name="theme_mode_light">Svetlo</string>
     <string name="unavailable">Nije dostupno</string>
     <string name="unlike">Ukloni oznaku "sviđa mi se"</string>
-    <string name="unlock_queue">Otključaj red</string>
     <string name="upload">Otpremi</string>
     <string name="song">Pesma</string>
     <string name="video">Video</string>

@@ -127,7 +127,7 @@ Player-driven keyboard suppression in Android search uses actual expansion; tran
 
 ### Android TV
 
-Long-press a queue track and choose **Move**. Up/Down moves the grabbed occurrence; OK places it, and OK on another row picks that row up without leaving movement mode. Back places a grabbed track, then exits movement mode. **Multi-select** enables row selection; Right or a long press opens a side menu with playlist, remove, download and like actions. Sleep timer, shuffle and repeat are in the queue menu as well as the main player. TV uses these menus instead of the touch queue lock and floating toolbars. Verify long queues, duplicates, first and last rows and bulk actions with a remote.
+Long-press a queue track and choose **Move**. Up/Down moves the grabbed occurrence; OK places it, and OK on another row picks that row up without leaving movement mode. Back places a grabbed track, then exits movement mode. **Multi-select** enables row selection; Right or a long press opens a side menu with playlist, remove, download and like actions. Sleep timer, shuffle and repeat are in the queue menu as well as the main player. TV uses these menus instead of the floating toolbars. Verify long queues, duplicates, first and last rows and bulk actions with a remote.
 
 The TV queue takes D-pad focus after its opening animation settles and returns focus to Play/Pause after closing.
 
@@ -167,7 +167,7 @@ iOS screen privacy covers app content while the app is inactive and during scree
 
 Queue rows show the title, artist and duration without source subtitles. Source metadata still controls recommendations, auto-mix and the suggested section. Rows fill missing durations from the song database, including Cache, Downloaded and incomplete restored or transferred queues; known incoming durations take precedence.
 
-The shared queue header and rows use a 12 dp horizontal inset, 12 dp corners and 4 dp gaps. The desktop header's top corners match the panel's 16 dp radius. When unlocked, rows without a reorder handle reserve its space so artwork and text align.
+The shared queue header and rows use a 12 dp horizontal inset, 12 dp corners and 4 dp gaps. The desktop header's top corners match the panel's 16 dp radius. Rows without a reorder handle reserve its space so artwork and text align.
 
 Legacy shuffle is on by default. It puts the current occurrence first and randomizes every other occurrence, including played songs and generated recommendations, matching legacy Metrolist's [`MusicService.applyShuffleOrder`](https://github.com/MetrolistGroup/Metrolist/blob/e6fea3b36c68841bad21daa6252e1d69ecd3afbe/app/src/main/kotlin/com/metrolist/music/playback/MusicService.kt#L2876). The queue shows the reordered list directly instead of a Media3 shuffle permutation. With Legacy shuffle off, shuffling keeps the current occurrence and played history, randomizes only upcoming explicit entries and keeps generated and auto-mix entries afterward in order. Both modes preserve duplicate occurrences and active playback. Disabling shuffle restores the canonical order of unplayed entries. Changing the setting applies the next time shuffle is enabled.
 

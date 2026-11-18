@@ -770,7 +770,6 @@
     <string name="loading">Yükleniyor…</string>
     <string name="local">Yerel</string>
     <string name="local_file">Yerel dosya</string>
-    <string name="lock_queue">Sırayı kilitle</string>
     <string name="login_failed_with_error">Giriş başarısız: %1$s</string>
     <string name="lyrics_romanization_as_main_description">Orijinal satırı altta gösterir. Kelime düzeyinde vurgulama yalnızca orijinal metinde kalır.</string>
     <string name="lyrics_romanization_detect_cyrillic_per_line">Satır başına Kiril alfabesini algıla</string>
@@ -918,7 +917,6 @@
     <string name="unavailable">Kullanılamıyor</string>
     <string name="unknown_artist">Bilinmeyen sanatçı</string>
     <string name="unlike">Beğenmekten vazgeç</string>
-    <string name="unlock_queue">Sıra kilidini aç</string>
     <string name="upload">Yükle</string>
     <string name="uploaded_song_to_youtube_music">Şarkı YouTube Music’e yüklendi</string>
     <string name="use_search_text">Arama metnini kullan</string>

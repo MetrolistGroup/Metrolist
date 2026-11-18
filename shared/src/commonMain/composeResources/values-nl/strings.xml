@@ -552,7 +552,6 @@
     <string name="loading">Laden…</string>
     <string name="local">Lokaal</string>
     <string name="local_file">Lokaal bestand</string>
-    <string name="lock_queue">Wachtrij vergrendelen</string>
     <string name="login_failed_with_error">Inloggen mislukt: %1$s</string>
     <string name="lyrics_romanization_as_main_description">Geeft de originele regel eronder weer. De markering op woordniveau blijft alleen op de originele tekst staan.</string>
     <string name="lyrics_romanization_detect_cyrillic_per_line">Detecteer Cyrillisch per regel</string>
@@ -691,7 +690,6 @@
     <string name="unavailable">Onbereikbaar</string>
     <string name="unknown_artist">Onbekende artiest</string>
     <string name="unlike">Vind dit niet meer leuk</string>
-    <string name="unlock_queue">Ontgrendel wachtrij</string>
     <string name="uploaded_song_to_youtube_music">Nummer geüpload naar YouTube Music</string>
     <string name="use_search_text">Gebruik zoektekst</string>
     <string name="use_suggestion">Gebruik suggestie</string>

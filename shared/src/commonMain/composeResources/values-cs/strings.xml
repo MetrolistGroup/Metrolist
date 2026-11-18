@@ -787,7 +787,6 @@
     <string name="loading">Načítání…</string>
     <string name="local">Lokální</string>
     <string name="local_file">Lokální soubor</string>
-    <string name="lock_queue">Uzamknout frontu</string>
     <string name="login_failed_with_error">Přihlášení selhalo: %1$s</string>
     <string name="lyrics_romanization_as_main_description">Zobrazí původní řádek pod ním. Zvýrazňuje jednotlivá slova pouze v původním textu.</string>
     <string name="lyrics_romanization_detect_cyrillic_per_line">Detekovat cyrilici řádek po řádku</string>
@@ -936,7 +935,6 @@
     <string name="unavailable">Nedostupné</string>
     <string name="unknown_artist">Neznámý umělec</string>
     <string name="unlike">Odebrat z oblíbených</string>
-    <string name="unlock_queue">Odemknout frontu</string>
     <string name="upload">Nahrát</string>
     <string name="uploaded_song_to_youtube_music">Skladba nahrána na YouTube Music</string>
     <string name="use_search_text">Použít text vyhledávání</string>

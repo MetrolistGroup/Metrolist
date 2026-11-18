@@ -792,7 +792,6 @@
     <string name="loading">Загрузка…</string>
     <string name="local">Локально</string>
     <string name="local_file">Локальный файл</string>
-    <string name="lock_queue">Закрепить очередь</string>
     <string name="login_failed_with_error">Ошибка входа: %1$s</string>
     <string name="lyrics_romanization_as_main_description">Показывает оригинальную строку внизу. Подсветка слов остаётся только на оригинальном тексте.</string>
     <string name="lyrics_romanization_detect_cyrillic_per_line">Определять кириллицу построчно</string>
@@ -940,7 +939,6 @@
     <string name="unavailable">Недоступно</string>
     <string name="unknown_artist">Неизвестный исполнитель</string>
     <string name="unlike">Разлайкнуть</string>
-    <string name="unlock_queue">Разблокировать очередь</string>
     <string name="upload">Загрузить</string>
     <string name="uploaded_song_to_youtube_music">Песня загружена в YouTube Music</string>
     <string name="use_search_text">Использовать текст поиска</string>

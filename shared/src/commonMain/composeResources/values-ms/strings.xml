@@ -730,7 +730,6 @@
     <string name="loading">Sedang memuatkan…</string>
     <string name="local">Tempatan</string>
     <string name="local_file">Fail setempat</string>
-    <string name="lock_queue">Kunci baris gilir</string>
     <string name="login_failed_with_error">Log masuk gagal: %1$s</string>
     <string name="lyrics_romanization_as_main_description">Menunjukkan baris asal di bawah. Penonjolan peringkat perkataan kekal pada teks asal sahaja.</string>
     <string name="lyrics_romanization_detect_cyrillic_per_line">Kesan aksara Sirilik bagi setiap baris</string>
@@ -832,7 +831,6 @@
     <string name="unable_to_update_podcast">Tidak dapat mengemas kini podcast</string>
     <string name="unavailable">Tidak tersedia</string>
     <string name="unknown_artist">Artis tidak dikenali</string>
-    <string name="unlock_queue">Nyahkunci baris gilir</string>
     <string name="upload">Muat naik</string>
     <string name="uploaded_song_to_youtube_music">Lagu dimuat naik ke YouTube Music</string>
     <string name="use_search_text">Gunakan teks carian</string>

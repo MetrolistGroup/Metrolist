@@ -792,7 +792,6 @@
     <string name="loading">Ładowanie…</string>
     <string name="local">Źródło lokalne</string>
     <string name="local_file">Lokalny plik</string>
-    <string name="lock_queue">Zablokuj kolejkę</string>
     <string name="login_failed_with_error">Błąd logowania: %1$s</string>
     <string name="lyrics_romanization_as_main_description">Wyświetla oryginalny wiersz poniżej. Podświetlanie słów pozostaje tylko na tekście oryginalnym.</string>
     <string name="lyrics_romanization_detect_cyrillic_per_line">Wykrywaj cyrylicę w każdym wersie</string>
@@ -941,7 +940,6 @@
     <string name="unavailable">Niedostępne</string>
     <string name="unknown_artist">Nieznany wykonawca</string>
     <string name="unlike">Cofnij polubienie</string>
-    <string name="unlock_queue">Odblokuj kolejkę</string>
     <string name="upload">Prześlij</string>
     <string name="uploaded_song_to_youtube_music">Przesłano utwór do YouTube Music</string>
     <string name="use_search_text">Użyj tekstu wyszukiwania</string>

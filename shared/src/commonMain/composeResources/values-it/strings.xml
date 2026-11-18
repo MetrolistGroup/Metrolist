@@ -818,7 +818,6 @@
     <string name="listen_together_log_user_left">Utente uscito</string>
     <string name="loading">Caricamento…</string>
     <string name="local">Locale</string>
-    <string name="lock_queue">Blocca coda</string>
     <string name="lyrics_romanization_as_main_description">Mostra la frase originale sotto. L'evidenziazione parola per parola si applica solo sul testo originale.</string>
     <string name="lyrics_romanization_enable">Testi in alfabeto latino</string>
     <string name="lyrics_romanization_enable_description">Mostra la pronuncia in lettere latine per le lingue come il giapponese, il coreano o il russo</string>
@@ -946,7 +945,6 @@
     <string name="unable_to_update_podcast">Impossibile aggiornare il podcast</string>
     <string name="unavailable">Non disponibile</string>
     <string name="unknown_artist">Artista sconosciuto</string>
-    <string name="unlock_queue">Sblocca coda</string>
     <string name="uploaded_song_to_youtube_music">Carica il brano su YouTube Music</string>
     <string name="use_search_text">Usa testo di ricerca</string>
     <string name="use_suggestion">Usa suggerimento</string>

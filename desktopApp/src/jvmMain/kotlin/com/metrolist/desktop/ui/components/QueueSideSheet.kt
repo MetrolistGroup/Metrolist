@@ -37,7 +37,6 @@ import com.metrolist.shared.model.RepeatMode
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.previewAspectRatio
 import com.metrolist.shared.playback.QueueRemoval
-import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.state.SongMetadataState
@@ -64,7 +63,6 @@ internal fun DesktopQueueContent(
     val relatedSongs = PlayerState.relatedSongs
     val suggestionKeys = remember { SuggestedSongKeys() }
     val keyedSuggestions = remember(relatedSongs) { suggestionKeys.update(relatedSongs) }
-    val isQueueLocked = Settings.shared.isQueueLocked
     var selectedEntryKeys by remember { mutableStateOf(setOf<Long>()) }
     var menuSong by remember { mutableStateOf<Pair<Long, SongItem>?>(null) }
     var menuExpanded by remember { mutableStateOf(false) }
@@ -111,7 +109,7 @@ internal fun DesktopQueueContent(
         isSaved = false,
         isDownloaded = downloadStates[id] == DownloadState.DOWNLOADED,
         isSuggested = isSuggested,
-        canRemove = !isSuggested && queueIndex > queueState.currentIndex && !isQueueLocked,
+        canRemove = !isSuggested && queueIndex > queueState.currentIndex,
         queueIndex = queueIndex,
         entryKey = entryKey,
         uniqueKey = if (isSuggested) "rec_$entryKey" else entryKey.toString(),
@@ -177,7 +175,6 @@ internal fun DesktopQueueContent(
                 isDesktopPanel = true,
                 onDismiss = onDismiss,
                 backHandlerEnabled = false,
-                reorderEnabled = !isQueueLocked,
                 snackbarHostState = snackbarHostState,
                 onEvent = { event ->
                     when (event) {
@@ -242,14 +239,12 @@ internal fun DesktopQueueContent(
                         }
 
                         QueueEvent.DeleteSelected -> {
-                            if (!isQueueLocked) {
-                                val indices =
-                                    queueState.entries
-                                        .withIndex()
-                                        .filter { (index, entry) -> entry.key in selectedEntryKeys && index > queueState.currentIndex }
-                                        .mapTo(mutableSetOf()) { it.index }
-                                PlayerState.removeQueueItems(indices)?.let { pendingRemoval = it }
-                            }
+                            val indices =
+                                queueState.entries
+                                    .withIndex()
+                                    .filter { (index, entry) -> entry.key in selectedEntryKeys && index > queueState.currentIndex }
+                                    .mapTo(mutableSetOf()) { it.index }
+                            PlayerState.removeQueueItems(indices)?.let { pendingRemoval = it }
                             selectedEntryKeys = emptySet()
                         }
 

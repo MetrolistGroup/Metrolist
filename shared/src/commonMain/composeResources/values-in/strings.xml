@@ -649,7 +649,6 @@
     <string name="loading">Memuat…</string>
     <string name="local">Lokal</string>
     <string name="local_file">File lokal</string>
-    <string name="lock_queue">Kunci antrean</string>
     <string name="login_failed_with_error">Gagal masuk: %1$s</string>
     <string name="lyrics_romanization_enable_description">Tampilkan cara membaca lirik dalam huruf Latin untuk bahasa seperti Jepang, Korea, atau Rusia</string>
     <string name="lyrics_romanization_languages_description">Baris bahasa Mandarin yang hanya menggunakan hanzi memerlukan mode romanisasi AI untuk menghasilkan pinyin yang akurat</string>
@@ -762,7 +761,6 @@
     <string name="unable_to_update_podcast">Tidak dapat memperbarui podcast</string>
     <string name="unavailable">Tidak tersedia</string>
     <string name="unknown_artist">Artis tidak dikenal</string>
-    <string name="unlock_queue">Buka kunci antrean</string>
     <string name="upload">Unggah</string>
     <string name="uploaded_song_to_youtube_music">Mengunggah lagu ke YouTube Music</string>
     <string name="song">Lagu</string>

@@ -2267,8 +2267,6 @@
     <string name="local">Local</string>
     <!-- Translators: Label for local file in the playlist screen and song details. -->
     <string name="local_file">Local file</string>
-    <!-- Translators: Label for lock queue in the playback queue. -->
-    <string name="lock_queue">Lock queue</string>
     <!-- Translators: Error message about login failed with in the sign-in flow and app-wide dialogs. %1$s is the error details. -->
     <string name="login_failed_with_error">Login failed: %1$s</string>
     <!-- Translators: Label for offset short; retained for translation compatibility but not currently referenced by app code. -->
@@ -2612,8 +2610,6 @@
     <!-- Translators: Label for unknown track; retained for translation compatibility but not currently referenced by app code. -->
     <!-- Translators: Imperative action label for unlike in the multiple app screens. -->
     <string name="unlike">Unlike</string>
-    <!-- Translators: Label for unlock queue in the playback queue. -->
-    <string name="unlock_queue">Unlock queue</string>
     <!-- Translators: Imperative action label for upload in the playlist screen. -->
     <string name="upload">Upload</string>
     <!-- Translators: Confirmation message about uploaded song to YouTube music in the playlist screen. -->
