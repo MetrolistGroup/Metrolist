@@ -2480,6 +2480,7 @@
     <string name="search_recognized_songs">Search songs</string>
     <!-- Translators: Imperative action label for songs in the search. -->
     <string name="search_songs">Search songs</string>
+    <string name="search_episodes">Search episodes</string>
     <!-- Translators: Imperative action label for songs artists podcasts in the search. -->
     <string name="search_songs_artists_podcasts">Search songs, artists, podcasts</string>
     <!-- Translators: Label for see all in the artist screen and Home screen. -->
