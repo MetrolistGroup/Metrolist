@@ -817,4 +817,7 @@
     <string name="username"></string>
     <string name="disable"></string>
     <string name="enable_song_cache"></string>
+    <string name="lyrics"></string>
+    <string name="information"></string>
+    <string name="description"></string>
 </resources>
