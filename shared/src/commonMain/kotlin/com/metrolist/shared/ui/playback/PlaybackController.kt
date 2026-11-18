@@ -68,6 +68,8 @@ interface PlaybackController {
     val supportsCasting: Boolean get() = true
     val explicitPlaybackGeneration: Long get() = 0L
 
+    fun reserveExplicitPlaybackGeneration(): Long = 0L
+
     fun currentPositionMs(): Long = state.value.positionMs
 
     fun play(
@@ -75,6 +77,15 @@ interface PlaybackController {
         queue: List<SongItem> = listOf(song),
         songsOnly: Boolean = false,
     )
+
+    fun playAtGeneration(
+        expectedGeneration: Long,
+        song: SongItem,
+        queue: List<SongItem> = listOf(song),
+        songsOnly: Boolean = false,
+    ) {
+        if (explicitPlaybackGeneration == expectedGeneration) play(song, queue, songsOnly)
+    }
 
     fun playQueue(
         songs: List<SongItem>,
@@ -85,11 +96,29 @@ interface PlaybackController {
         play(song, songs)
     }
 
+    fun playQueueAtGeneration(
+        expectedGeneration: Long,
+        songs: List<SongItem>,
+        startIndex: Int = 0,
+        queueTitle: String? = null,
+    ) {
+        if (explicitPlaybackGeneration == expectedGeneration) playQueue(songs, startIndex, queueTitle)
+    }
+
     fun shuffleQueue(
         songs: List<SongItem>,
         queueTitle: String? = null,
         songsOnly: Boolean = false,
     )
+
+    fun shuffleQueueAtGeneration(
+        expectedGeneration: Long,
+        songs: List<SongItem>,
+        queueTitle: String? = null,
+        songsOnly: Boolean = false,
+    ) {
+        if (explicitPlaybackGeneration == expectedGeneration) shuffleQueue(songs, queueTitle, songsOnly)
+    }
 
     fun togglePlayPause()
 

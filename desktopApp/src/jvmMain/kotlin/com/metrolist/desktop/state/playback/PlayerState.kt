@@ -431,6 +431,8 @@ object PlayerState {
     val explicitPlaybackGeneration: Long
         get() = _explicitPlaybackGeneration.get()
 
+    fun reserveExplicitPlaybackGeneration(): Long = _explicitPlaybackGeneration.incrementAndGet()
+
     private val _listenTogetherPlaybackRequests = MutableSharedFlow<ListenTogetherPlaybackRequest>(extraBufferCapacity = 1)
     val listenTogetherPlaybackRequests: SharedFlow<ListenTogetherPlaybackRequest> = _listenTogetherPlaybackRequests.asSharedFlow()
     private val database by lazy { GlobalContext.get().get<MusicDatabase>() }
@@ -2643,9 +2645,12 @@ object PlayerState {
     fun shuffleQueue(
         songs: List<SongItem>,
         songsOnly: Boolean = false,
+        advanceGeneration: Boolean = true,
     ) {
         val playable = BlockedContent.filterPlayableSongs(songs)
-        playable.randomOrNull()?.let { playTrack(it, playable, songsOnly, shuffleModeEnabled = true) }
+        playable.randomOrNull()?.let {
+            playTrack(it, playable, songsOnly, shuffleModeEnabled = true, advanceGeneration = advanceGeneration)
+        }
     }
 
     fun playTrack(
@@ -2653,13 +2658,16 @@ object PlayerState {
         list: List<SongItem>? = null,
         songsOnly: Boolean = false,
         shuffleModeEnabled: Boolean? = null,
+        advanceGeneration: Boolean = true,
     ) {
         if (track.isUnavailable) return
         if (list?.any { it.isUnavailable } == true) {
-            playTrack(track, list.filterNot { it.isUnavailable }, songsOnly, shuffleModeEnabled)
+            playTrack(track, list.filterNot { it.isUnavailable }, songsOnly, shuffleModeEnabled, advanceGeneration)
             return
         }
-        _explicitPlaybackGeneration.incrementAndGet()
+        if (advanceGeneration) {
+            _explicitPlaybackGeneration.incrementAndGet()
+        }
         val songs = list?.takeIf { it.isNotEmpty() } ?: listOf(track)
         val index = songs.indexOfPlaylistOccurrence(track).coerceAtLeast(0)
         val action = if (list === queue.items.value) DcPlaybackAction.SELECT else DcPlaybackAction.REPLACE_QUEUE
@@ -3190,13 +3198,13 @@ object PlayerState {
         fromRemoteControl: Boolean = false,
         fromFailure: Boolean = false,
     ) {
+        if (!fromEOF && !fromFailure && !fromListenTogether) _explicitPlaybackGeneration.incrementAndGet()
         if ((fromEOF || fromFailure) && deviceConnect.isActive) {
             deviceConnect.playbackEnded()
             return
         }
         if (!fromEOF && !fromFailure && !fromListenTogether && deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.NEXT))) return
         if ((!fromEOF || fromFailure) && !fromListenTogether && isListenTogetherGuest()) return
-        if (!fromEOF && !fromFailure && !fromListenTogether) _explicitPlaybackGeneration.incrementAndGet()
 
         if (fromEOF && sleepTimerStopAfterCurrentSong) {
             setPlaybackPlaying(false)

@@ -60,17 +60,49 @@ class DesktopPlaybackController(
     override val explicitPlaybackGeneration: Long
         get() = PlayerState.explicitPlaybackGeneration
 
+    override fun reserveExplicitPlaybackGeneration(): Long = PlayerState.reserveExplicitPlaybackGeneration()
+
     override fun play(
         song: SongItem,
         queue: List<SongItem>,
         songsOnly: Boolean,
     ) = PlayerState.playTrack(song, queue.ifEmpty { listOf(song) }, songsOnly = songsOnly)
 
+    override fun playAtGeneration(
+        expectedGeneration: Long,
+        song: SongItem,
+        queue: List<SongItem>,
+        songsOnly: Boolean,
+    ) {
+        if (explicitPlaybackGeneration != expectedGeneration) return
+        PlayerState.playTrack(song, queue.ifEmpty { listOf(song) }, songsOnly = songsOnly, advanceGeneration = false)
+    }
+
+    override fun playQueueAtGeneration(
+        expectedGeneration: Long,
+        songs: List<SongItem>,
+        startIndex: Int,
+        queueTitle: String?,
+    ) {
+        val song = songs.getOrNull(startIndex) ?: return
+        playAtGeneration(expectedGeneration, song, songs)
+    }
+
     override fun shuffleQueue(
         songs: List<SongItem>,
         queueTitle: String?,
         songsOnly: Boolean,
     ) = PlayerState.shuffleQueue(songs, songsOnly)
+
+    override fun shuffleQueueAtGeneration(
+        expectedGeneration: Long,
+        songs: List<SongItem>,
+        queueTitle: String?,
+        songsOnly: Boolean,
+    ) {
+        if (explicitPlaybackGeneration != expectedGeneration) return
+        PlayerState.shuffleQueue(songs, songsOnly, advanceGeneration = false)
+    }
 
     override fun currentPositionMs(): Long = PlayerState.currentMediaPositionMs()
 

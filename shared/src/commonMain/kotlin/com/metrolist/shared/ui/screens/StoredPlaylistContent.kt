@@ -75,7 +75,6 @@ import com.metrolist.shared.ui.components.rememberDownloadPlaylistFilter
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.playback.LocalPlaybackController
-import com.metrolist.shared.ui.playback.PlaybackController
 import com.metrolist.shared.ui.playback.listState
 import com.metrolist.shared.ui.selection.rememberSelectionState
 import kotlinx.coroutines.Job
@@ -275,8 +274,7 @@ fun StoredPlaylistContent(
         if (collectionSort == CollectionSort.MOST_PLAYED && !currentPlayCountsReady.value) {
             onRetryPlayCounts?.invoke()
         }
-        val initialQueueIds = playback.currentQueueIds()
-        val expectedGeneration = playback.explicitPlaybackGeneration
+        val expectedGeneration = playback.reserveExplicitPlaybackGeneration()
         pendingPlayState.track(
             scope.launch {
                 val complete =
@@ -293,19 +291,19 @@ fun StoredPlaylistContent(
                             .first { (ready, _) -> ready }
                             .second
                     }
-                if (playback.explicitPlaybackGeneration != expectedGeneration ||
-                    playback.currentQueueIds() != initialQueueIds
-                ) {
+                if (playback.explicitPlaybackGeneration != expectedGeneration) {
                     return@launch
                 }
                 val playable =
                     (if (song == null) complete.filterForPlaylistSearch(currentQuery.value) else complete)
                         .filterNot { it.isUnavailable }
                 if (shuffle) {
-                    playback.shuffleQueue(playable)
+                    playback.shuffleQueueAtGeneration(expectedGeneration, playable)
                 } else {
                     val target = song?.let { playable.indexOfPlaylistOccurrence(it) } ?: 0
-                    if (target in playable.indices) playback.playQueue(playable, target)
+                    if (target in playable.indices) {
+                        playback.playQueueAtGeneration(expectedGeneration, playable, target)
+                    }
                 }
             },
         )
@@ -590,5 +588,3 @@ fun StoredPlaylistContent(
 }
 
 private fun Set<String>.toggle(id: String): Set<String> = if (id in this) this - id else this + id
-
-private fun PlaybackController.currentQueueIds(): List<String> = state.value.queue.map(SongItem::id)

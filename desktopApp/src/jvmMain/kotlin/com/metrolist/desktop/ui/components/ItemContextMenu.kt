@@ -187,6 +187,7 @@ import com.metrolist.shared.ui.menu.rememberCursorContextMenuState
 import com.metrolist.shared.ui.menu.rememberDeleteUploadAction
 import com.metrolist.shared.ui.menu.songMediaMenuModel
 import com.metrolist.shared.ui.playback.LocalPlaybackController
+import com.metrolist.shared.ui.playback.PlaybackController
 import com.metrolist.shared.ui.screens.PendingCollectionPlayState
 import com.metrolist.shared.ui.theme.ComponentShapes
 import com.metrolist.shared.utils.CollectionExportFormat
@@ -344,8 +345,8 @@ fun AlbumContextMenu(
             onFavorite = onFavorite,
             onDismiss = onDismiss,
             isPinned = isPinned,
-            onPlay = playbackActions::play,
-            onShuffle = playbackActions::shuffle,
+            onPlay = { launchTrackedMenuPlayback(album, songs, playback, invoke = MediaMenuPlaybackActions::play) },
+            onShuffle = { launchTrackedMenuPlayback(album, songs, playback, invoke = MediaMenuPlaybackActions::shuffle) },
             onShare = { AppState.copyToClipboard(ShareUrls.album(album.id)) },
             onPlayNext = playbackActions::playNext,
             onAddToQueue = playbackActions::addToQueue,
@@ -389,8 +390,8 @@ fun ArtistContextMenu(
             isPinned = isPinned,
             isBlocked = isBlocked,
             isSubscribed = isSubscribed,
-            onPlay = playbackActions::play,
-            onShuffle = playbackActions::shuffle,
+            onPlay = { launchTrackedMenuPlayback(artist, emptyList(), playback, invoke = MediaMenuPlaybackActions::play) },
+            onShuffle = { launchTrackedMenuPlayback(artist, emptyList(), playback, invoke = MediaMenuPlaybackActions::shuffle) },
             onShare = { AppState.copyToClipboard(ShareUrls.artist(artist.id)) },
             onPlayNext = playbackActions::playNext,
             onAddToQueue = playbackActions::addToQueue,
@@ -497,31 +498,6 @@ fun PlaylistContextMenu(
                 playback,
                 withSongs = { action -> withMediaSongs(playlist, actionSongs, action) },
             )
-
-        fun startMenuPlayback(invoke: MediaMenuPlaybackActions.() -> Unit) {
-            val expectedGeneration = playback.explicitPlaybackGeneration
-            onPlaybackAction()
-            sharedMenuPlayState.cancel()
-            pendingPlayState?.cancel()
-            var launched: Job? = null
-            val guardedActions =
-                MediaMenuPlaybackActions(
-                    playlist,
-                    playback,
-                    withSongs = { action ->
-                        launched =
-                            withMediaSongs(playlist, actionSongs) { loadedSongs ->
-                                if (playback.explicitPlaybackGeneration == expectedGeneration) {
-                                    action(loadedSongs)
-                                }
-                            }
-                    },
-                )
-            guardedActions.invoke()
-            sharedMenuPlayState.track(launched)
-            pendingPlayState?.track(launched)
-        }
-
         playlistMediaMenuModel(
             playlist = playlist,
             isFavorite = isFavorite,
@@ -531,8 +507,26 @@ fun PlaylistContextMenu(
             fallbackIcon = fallbackIcon,
             downloadState = downloadState,
             downloadProgress = downloadProgress,
-            onPlay = { startMenuPlayback(MediaMenuPlaybackActions::play) },
-            onShuffle = { startMenuPlayback(MediaMenuPlaybackActions::shuffle) },
+            onPlay = {
+                launchTrackedMenuPlayback(
+                    playlist,
+                    actionSongs,
+                    playback,
+                    pendingPlayState = pendingPlayState,
+                    onPlaybackAction = onPlaybackAction,
+                    invoke = MediaMenuPlaybackActions::play,
+                )
+            },
+            onShuffle = {
+                launchTrackedMenuPlayback(
+                    playlist,
+                    actionSongs,
+                    playback,
+                    pendingPlayState = pendingPlayState,
+                    onPlaybackAction = onPlaybackAction,
+                    invoke = MediaMenuPlaybackActions::shuffle,
+                )
+            },
             onShare =
                 if (isLocal) {
                     null
@@ -670,9 +664,11 @@ fun PodcastContextMenu(
             onDismiss = onDismiss,
             isPinned = isPinned,
             isSaved = isSaved,
-            onPlay = playbackActions::play,
-            onShuffle = playbackActions::shuffle,
-            onPlayOldestFirst = playbackActions::playOldestFirst,
+            onPlay = { launchTrackedMenuPlayback(podcast, songs, playback, invoke = MediaMenuPlaybackActions::play) },
+            onShuffle = { launchTrackedMenuPlayback(podcast, songs, playback, invoke = MediaMenuPlaybackActions::shuffle) },
+            onPlayOldestFirst = {
+                launchTrackedMenuPlayback(podcast, songs, playback, invoke = MediaMenuPlaybackActions::playOldestFirst)
+            },
             onShare = { AppState.copyToClipboard(ShareUrls.podcast(podcast.id)) },
             onPlayNext = playbackActions::playNext,
             onAddToQueue = playbackActions::addToQueue,
@@ -725,6 +721,7 @@ fun EpisodeContextMenu(
                         enabled =
                             !isGuest && !episode.isUnavailable,
                     ) {
+                        sharedMenuPlayState.cancel()
                         PlayerState.playTrack(song)
                         onDismiss()
                     },
@@ -923,6 +920,61 @@ internal fun songDownloadAction(
             }
         }
     }
+}
+
+private class ReservedPlaybackController(
+    private val delegate: PlaybackController,
+    private val expectedGeneration: Long,
+) : PlaybackController by delegate {
+    override fun play(
+        song: SongItem,
+        queue: List<SongItem>,
+        songsOnly: Boolean,
+    ) = delegate.playAtGeneration(expectedGeneration, song, queue, songsOnly)
+
+    override fun playQueue(
+        songs: List<SongItem>,
+        startIndex: Int,
+        queueTitle: String?,
+    ) = delegate.playQueueAtGeneration(expectedGeneration, songs, startIndex, queueTitle)
+
+    override fun shuffleQueue(
+        songs: List<SongItem>,
+        queueTitle: String?,
+        songsOnly: Boolean,
+    ) = delegate.shuffleQueueAtGeneration(expectedGeneration, songs, queueTitle, songsOnly)
+}
+
+private fun launchTrackedMenuPlayback(
+    item: YTItem,
+    existingSongs: List<SongItem>,
+    playback: PlaybackController,
+    pendingPlayState: PendingCollectionPlayState? = null,
+    onPlaybackAction: () -> Unit = {},
+    invoke: MediaMenuPlaybackActions.() -> Unit,
+) {
+    val expectedGeneration = playback.reserveExplicitPlaybackGeneration()
+    onPlaybackAction()
+    sharedMenuPlayState.cancel()
+    pendingPlayState?.cancel()
+    var launched: Job? = null
+    val reservedPlayback = ReservedPlaybackController(playback, expectedGeneration)
+    val guardedActions =
+        MediaMenuPlaybackActions(
+            item,
+            reservedPlayback,
+            withSongs = { action ->
+                launched =
+                    withMediaSongs(item, existingSongs) { loadedSongs ->
+                        if (playback.explicitPlaybackGeneration == expectedGeneration) {
+                            action(loadedSongs)
+                        }
+                    }
+            },
+        )
+    guardedActions.invoke()
+    sharedMenuPlayState.track(launched)
+    pendingPlayState?.track(launched)
 }
 
 private fun withMediaSongs(
