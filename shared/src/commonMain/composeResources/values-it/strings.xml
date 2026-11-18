@@ -274,7 +274,7 @@
     <string name="discord_status_authorized">Autorizzato</string>
     <string name="discord_error_denied">Autorizzazione negata da Discord.</string>
     <string name="discord_error_connection_failed">Impossibile connettersi a Discord. Metrolist riproverà automaticamente.</string>
-    <string name="discord_error_no_browser">Nessuna app disponibile per aprire l\u0027autorizzazione di Discord.</string>
+    <string name="discord_error_no_browser">Nessuna app disponibile per aprire l'autorizzazione di Discord.</string>
     <string name="discord_error_token_exchange_failed">Scambio del token non riuscito. Riprova.</string>
     <string name="discord_error_token_refresh_failed">Aggiornamento del token non riuscito. Accedi di nuovo.</string>
     <string name="discord_error_invalid_scope">Autorizzazioni non valide. Accedi di nuovo.</string>
