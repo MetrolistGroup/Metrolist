@@ -4474,6 +4474,8 @@
     <string name="desktop_tray_toggle_on_click_desc_mac">Right-clicking the tray icon will open or close the Metrolist window</string>
     <!-- Translators: Imperative action label for show miniplayer in the desktop system tray. -->
     <string name="tray_show_miniplayer">Show miniplayer</string>
+    <!-- Translators: Imperative action label for hide miniplayer in the desktop system tray. -->
+    <string name="tray_hide_miniplayer">Hide miniplayer</string>
     <!-- Translators: Label for tray settings in the desktop system tray. -->
     <string name="tray_settings">Settings</string>
     <!-- Translators: Label for quit metrolist in the desktop system tray. -->
