@@ -335,6 +335,7 @@ kotlin {
         getByName("jvmTest") {
             dependencies {
                 implementation(kotlin("test"))
+                implementation(libs.multiplatform.settings.test)
                 implementation(libs.ktor.client.mock)
                 // Only the transcoder test reads M4A tags back through JavaCV.
                 implementation("org.bytedeco:javacv:${libs.versions.javacv.get()}") {
