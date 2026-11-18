@@ -30,10 +30,17 @@ class DirectCanvasProviderTest {
     // Canvas lookups always fetch anonymous Spotify tokens before searching.
     private fun anonymousTokenBody(host: String): String? =
         when (host) {
-            "open.spotify.com" ->
+            "open.spotify.com" -> {
                 """{"accessToken":"anonymous-access","accessTokenExpirationTimestampMs":4000000000000,"isAnonymous":true}"""
-            "clienttoken.spotify.com" -> """{"granted_token":{"token":"anonymous-client"}}"""
-            else -> null
+            }
+
+            "clienttoken.spotify.com" -> {
+                """{"granted_token":{"token":"anonymous-client"}}"""
+            }
+
+            else -> {
+                null
+            }
         }
 
     @Test
