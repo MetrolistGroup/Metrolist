@@ -1382,7 +1382,47 @@ class MediaSessionPlayerTest {
         assertEquals(DcPlaybackAction.SELECT, interceptedCommand?.action)
         assertEquals(1, interceptedCommand?.index)
         assertEquals(500L, interceptedCommand?.positionMs)
-        assertEquals(0, …475 tokens truncated…}
+        assertEquals(0, backend.currentMediaItemIndex.value)
+        assertEquals(0, backend.setQueueCalls)
+        scope.cancel()
+    }
+
+    @Test
+    fun `voice resumption keeps duplicate occurrence queue and position`() {
+        val duplicate = song("duplicate")
+        val backend = RecordingPlaybackPlayer(listOf(duplicate, song("other"), duplicate.copy()))
+        backend.skipTo(2, 1234L)
+        val before = backend.queueState.value
+        val scope = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
+        val requestGate = AutomotivePlaybackRequestGate()
+        val adapter =
+            MediaSessionPlayer(
+                musicPlayer = backend.player,
+                repeatMode = MutableStateFlow(Player.REPEAT_MODE_OFF),
+                isPlaybackLockedProvider = { false },
+                isPlaybackLockedFlow = MutableStateFlow(false),
+                automotivePlaybackRequestGate = requestGate,
+                isAutomotiveSongBlocked = { false },
+                scope = scope,
+            )
+        val generation = requestGate.start(isGuestPlaybackLocked = false)
+        val result =
+            requestGate.resolve(
+                requestGeneration = generation,
+                mediaItems = listOf(adapter.getMediaItemAt(2)),
+                startIndex = 0,
+                startPositionMs = 1234L,
+                replacesQueue = false,
+            )
+        adapter.setMediaItems(result.mediaItems.toMutableList(), result.startIndex, result.startPositionMs)
+        assertEquals(before, backend.queueState.value)
+        assertEquals(1234L, backend.currentPosition.value)
+        assertEquals(0, backend.setQueueCalls)
+
+        val emptyGeneration = requestGate.start(isGuestPlaybackLocked = false)
+        assertThrows(CancellationException::class.java) {
+            requestGate.resolve(emptyGeneration, emptyList(), 0, 0L)
+        }
         assertEquals(before, backend.queueState.value)
         scope.cancel()
     }
