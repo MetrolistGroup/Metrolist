@@ -3609,13 +3609,14 @@ object PlayerState {
             } else {
                 null
             }
+        val connectedSession = deviceConnect.isActive
         val removal =
-            if (deviceConnect.isActive) {
+            if (connectedSession) {
                 syncSession.remove(indices, expectedQueue)
             } else {
                 queue.removeAt(indices).also { if (it != null) queueChanged() }
             } ?: return null
-        if (currentRemoved) {
+        if (currentRemoved && !connectedSession) {
             if (nextEntryKey == null) stop() else playQueueOccurrence(nextEntryKey)
         }
         return removal
@@ -3669,9 +3670,11 @@ object PlayerState {
     fun restoreQueueItems(removal: QueueRemoval) {
         if (isListenTogetherGuest()) return
         if (syncSession.restore(removal)) return
+        val previousSize = queue.state.value.entries.size
         queue.restore(removal)
+        val restored = queue.state.value.entries.size == previousSize + removal.items.size
         queueChanged()
-        if (removal.items.any { it.index == removal.previousCurrentIndex } &&
+        if (restored && removal.items.any { it.index == removal.previousCurrentIndex } &&
             queue.currentIndex.value == removal.previousCurrentIndex
         ) {
             queue.state.value.entries
