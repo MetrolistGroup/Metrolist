@@ -2041,7 +2041,7 @@
     <string name="top_period_past_year">За последний год</string>
     <string name="new_badge">Новое</string>
     <string name="metroeq_q_value">Q: %1$s</string>
-    <string name="metroeq_frequency_value">%1$s Гц</string>
+    <string name="metroeq_frequency_value">%1$s Гц</string>
     <string name="sponsorblock_podcasts">SponsorBlock (подкасты)</string>
     <string name="sponsorblock_podcasts_description">Пропускать спонсорские вставки, саморекламу и напоминания о взаимодействии только в выпусках подкастов. (https://sponsor.ajay.app)</string>
     <string name="sponsorblock_skipped">Рекламный сегмент пропущен</string>
