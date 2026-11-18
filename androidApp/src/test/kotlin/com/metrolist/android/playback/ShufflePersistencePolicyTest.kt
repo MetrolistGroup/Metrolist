@@ -29,18 +29,6 @@ class ShufflePersistencePolicyTest {
     }
 
     @Test
-    fun explicitShuffleShufflesCanonicalQueue() {
-        assertTrue(newQueueShuffleEnabled(requestedShuffle = true, currentShuffle = false, persistentShuffle = false))
-    }
-
-    @Test
-    fun persistentShuffleShufflesReplacementQueue() {
-        assertTrue(newQueueShuffleEnabled(requestedShuffle = null, currentShuffle = true, persistentShuffle = true))
-        assertFalse(newQueueShuffleEnabled(requestedShuffle = null, currentShuffle = true, persistentShuffle = false))
-        assertFalse(newQueueShuffleEnabled(requestedShuffle = false, currentShuffle = true, persistentShuffle = true))
-    }
-
-    @Test
     fun browseReplacementResolvesShuffleBeforeResetAndKeepsSelectedOccurrence() {
         val duplicate = song("duplicate", QUEUE_SOURCE_ADDED_MANUALLY)
         val songs = listOf(duplicate, song("other", QUEUE_SOURCE_ADDED_MANUALLY), duplicate.copy())

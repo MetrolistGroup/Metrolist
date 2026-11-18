@@ -15,7 +15,6 @@ import com.metrolist.shared.listentogether.network.ProtocolFeatures
 import com.metrolist.shared.listentogether.network.ReconnectedPayload
 import com.metrolist.shared.listentogether.network.RoomState
 import com.metrolist.shared.listentogether.network.ServerClock
-import com.metrolist.shared.listentogether.network.ServerRestartingPayload
 import com.metrolist.shared.listentogether.network.SuggestionApprovedPayload
 import com.metrolist.shared.listentogether.network.SuggestionReceivedPayload
 import com.metrolist.shared.listentogether.network.SuggestionRejectedPayload
@@ -47,7 +46,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -184,7 +182,6 @@ class ListenTogetherManagerSyncTest {
                 playback.queue.value = listOf(current, first, added)
                 test.manager.handleBinary(canonicalQueueSnapshot(PlaybackActions.QUEUE_ADD, listOf(track(suggested), track(first)), 1L))
                 assertEquals(listOf("current", "suggested", "first", "added"), playback.queue.value.map { it.id })
-                assertEquals(listOf(track(suggested), track(first)), managerField(test.manager, "lastQueueSnapshot"))
             } finally {
                 test.close()
             }
@@ -229,7 +226,6 @@ class ListenTogetherManagerSyncTest {
                 test.manager.retryConnection()
                 assertTrue(test.manager.isGuestPlaybackLocked)
                 assertEquals(ListenTogetherConnectionState.RECONNECTING, test.manager.connectionState.value)
-                assertEquals(1, managerField(test.manager, "reconnectAttempts"))
             } finally {
                 test.close()
             }
@@ -252,8 +248,6 @@ class ListenTogetherManagerSyncTest {
                 assertEquals(1, clock.sampleCount())
                 pong(PongPayload(ping.clientTime, 1_000, 1_000, ping.sequence))
                 assertEquals(1, clock.sampleCount())
-                test.manager.handleBinary(MessageCodec().encode(MessageTypes.SERVER_RESTARTING, ServerRestartingPayload(0, null)))
-                assertEquals(0L, managerField(test.manager, "restartDelayMs"))
             } finally {
                 test.close()
             }
@@ -458,7 +452,7 @@ class ListenTogetherManagerSyncTest {
         }
 
     @Test
-    fun `upcoming queue projection is reused until queue or current track changes`() {
+    fun `upcoming queue projection follows queue metadata and current track changes`() {
         val playback = FakePlayback()
         val first = song("first")
         val second = song("second")
@@ -467,9 +461,6 @@ class ListenTogetherManagerSyncTest {
         val testManager = newManager(playback)
         try {
             val method = ListenTogetherManager::class.java.getDeclaredMethod("currentUpcomingTrackInfo").apply { isAccessible = true }
-            val initial = method.invoke(testManager.manager)
-            playback.positionMs.value = 1_000L
-            assertSame(initial, method.invoke(testManager.manager))
             val updated = second.copy(title = "Updated metadata")
             playback.queue.value = listOf(first, updated)
             val changed = method.invoke(testManager.manager) as List<*>

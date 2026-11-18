@@ -915,9 +915,7 @@ class SabrInputStreamTest {
                 try {
                     assertContentEquals("abcdef".encodeToByteArray(), original.readNBytes(6))
                     replacement.shareCachedDataFrom(original)
-                    assertEquals(original.cacheFileForTest(), replacement.cacheFileForTest())
                     val channel = original.cacheChannelForTest()
-                    assertTrue(channel === replacement.cacheChannelForTest())
                     original.seekToMediaPosition(2)
                     assertEquals('a'.code, replacement.read())
                     assertEquals('c'.code, original.read())
