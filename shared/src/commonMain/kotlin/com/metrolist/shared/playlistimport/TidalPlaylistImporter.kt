@@ -6,7 +6,6 @@ import com.metrolist.shared.generated.resources.import_error_album_tracks_unavai
 import com.metrolist.shared.generated.resources.import_error_playlist_tracks_unavailable
 import com.metrolist.shared.generated.resources.import_provider_tidal
 import com.metrolist.shared.generated.resources.playlist
-import com.metrolist.shared.generated.resources.track
 import com.metrolist.shared.network.bodyAsTextLimited
 import com.metrolist.shared.network.createHttpClient
 import io.ktor.client.HttpClient
@@ -18,6 +17,8 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -28,7 +29,9 @@ object TidalPlaylistImporter {
     private const val UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     private const val MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 
-    private val httpClient: HttpClient by lazy { createHttpClient() }
+    private val defaultHttpClient: HttpClient by lazy { createHttpClient() }
+    internal var clientProvider: () -> HttpClient = { defaultHttpClient }
+    private val httpClient: HttpClient get() = clientProvider()
     private val json =
         Json {
             ignoreUnknownKeys = true
@@ -53,7 +56,7 @@ object TidalPlaylistImporter {
             when (type) {
                 Type.PLAYLIST -> loadPlaylistTracks(id, fallbackTitles, onProgress)
                 Type.ALBUM -> loadAlbumTracks(id, fallbackTitles, onProgress)
-                Type.TRACK -> loadSingleTrack(id, fallbackTitles, onProgress)
+                Type.TRACK -> loadSingleTrack(id, onProgress)
             }
         } catch (e: CancellationException) {
             throw e
@@ -278,7 +281,6 @@ object TidalPlaylistImporter {
 
     private suspend fun loadSingleTrack(
         trackId: String,
-        fallbackTitles: PlaylistImportFallbackTitles?,
         onProgress: (loaded: Int, total: Int?) -> Unit,
     ): Result<ImportedPlaylistData> {
         val embedUrl = "https://embed.tidal.com/tracks/$trackId"
@@ -293,20 +295,26 @@ object TidalPlaylistImporter {
             return Result.failure(IllegalStateException("Tidal track not found (HTTP ${response.status.value})"))
         }
 
+        val metadata = trackMetadata(html, trackId)
         val title =
-            Regex("""<meta\s+property="og:title"\s+content="([^"]+)"""", RegexOption.IGNORE_CASE)
-                .find(html)
-                ?.groupValues
-                ?.get(1)
-                ?: fallbackTitles?.track ?: getString(Res.string.track)
-
+            if (metadata != null) {
+                (metadata["title"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+            } else {
+                Regex("""<meta\s+property="og:title"\s+content="([^"]+)"""", RegexOption.IGNORE_CASE)
+                    .find(html)
+                    ?.groupValues
+                    ?.get(1)
+            }?.trim()?.takeIf(String::isNotEmpty)
+                ?: throw ImportException(ImportErrorKey.NoTracksRecognized)
         val artistName =
-            Regex("""<meta\s+property="og:description"\s+content="([^"]+)"""", RegexOption.IGNORE_CASE)
-                .find(html)
-                ?.groupValues
-                ?.get(1)
-                ?: ""
-
+            if (metadata != null) {
+                (metadata["artist"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+            } else {
+                Regex("""<meta\s+property="og:description"\s+content="([^"]+)"""", RegexOption.IGNORE_CASE)
+                    .find(html)
+                    ?.groupValues
+                    ?.get(1)
+            }.orEmpty().trim()
         val tracks = listOf(PlaylistImportManager.CsvTrack(title, artistName, null))
         onProgress(1, 1)
 
@@ -317,5 +325,48 @@ object TidalPlaylistImporter {
                 source = "Tidal",
             ),
         )
+    }
+
+    private fun trackMetadata(
+        html: String,
+        trackId: String,
+    ): JsonObject? {
+        val assignment = Regex("""window\.tidalMediaSessionMetadata\s*=\s*""").find(html) ?: return null
+        val start = assignment.range.last + 1
+        if (html.getOrNull(start) != '{') throw ImportException(ImportErrorKey.NoTracksRecognized)
+        var depth = 0
+        var quoted = false
+        var escaped = false
+        // Read JSON only, never execute the embed's JavaScript. Braces inside titles are ordinary text.
+        for (index in start until html.length) {
+            val char = html[index]
+            if (quoted) {
+                when {
+                    escaped -> escaped = false
+                    char == '\\' -> escaped = true
+                    char == '"' -> quoted = false
+                }
+            } else {
+                when (char) {
+                    '"' -> {
+                        quoted = true
+                    }
+
+                    '{' -> {
+                        depth++
+                    }
+
+                    '}' -> {
+                        depth--
+                        if (depth == 0) {
+                            val metadata = json.parseToJsonElement(html.substring(start, index + 1)).jsonObject
+                            return metadata[trackId] as? JsonObject
+                                ?: throw ImportException(ImportErrorKey.NoTracksRecognized)
+                        }
+                    }
+                }
+            }
+        }
+        throw ImportException(ImportErrorKey.NoTracksRecognized)
     }
 }
