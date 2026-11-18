@@ -108,10 +108,20 @@ fun StoredPlaylistContent(
     trackContainer: @Composable (SongItem, Boolean, @Composable () -> Unit) -> Unit = { _, _, content -> content() },
 ) {
     val isDownloadedCollection = id == "local:downloaded"
+    val isCachedCollection = id == "local:cached"
     val playlistSortingKey = "special:${id.removePrefix("local:")}"
-    val defaultCollectionSort = if (isDownloadedCollection) Settings.shared.downloadedCollectionSort else CollectionSort.NEWEST
+    val defaultCollectionSort =
+        when {
+            isDownloadedCollection -> Settings.shared.downloadedCollectionSort
+            isCachedCollection -> Settings.shared.cachedCollectionSort
+            else -> CollectionSort.NEWEST
+        }
     val defaultCollectionDirection =
-        if (isDownloadedCollection) Settings.shared.downloadedCollectionSortDirection else SortDirection.DESCENDING
+        when {
+            isDownloadedCollection -> Settings.shared.downloadedCollectionSortDirection
+            isCachedCollection -> Settings.shared.cachedCollectionSortDirection
+            else -> SortDirection.DESCENDING
+        }
     val defaultPlaylistSorting =
         Settings.shared.playlistSongSorting(
             playlistSortingKey,
@@ -138,7 +148,10 @@ fun StoredPlaylistContent(
                     playlistSortingKey,
                     defaultCollectionSort,
                     defaultCollectionDirection,
-                ).sort,
+                ).sort
+                .let { saved ->
+                    if (isCachedCollection || saved != CollectionSort.MANUAL) saved else CollectionSort.NEWEST
+                },
         )
     }
     LaunchedEffect(id, collectionSort) { onCollectionSortChange(collectionSort) }
@@ -154,6 +167,10 @@ fun StoredPlaylistContent(
     val metadataRevision by SongMetadataState.revision.collectAsState()
     val listeningTimes = if (playlistSort == PlaylistSongSort.LISTENING_TIME) SongMetadataState.listeningTimes else emptyMap()
     val likedSongRecency = SongLikeState.likedSongRecency
+    val cachedCustomOrder =
+        remember(isCachedCollection, Settings.shared.cachedSongsCustomOrder) {
+            if (isCachedCollection) Settings.shared.cachedSongsOrder() else emptyList()
+        }
     val orderedSongs =
         remember(
             songs,
@@ -165,6 +182,8 @@ fun StoredPlaylistContent(
             playCounts,
             collectionDirection,
             collectionSort,
+            cachedCustomOrder,
+            isCachedCollection,
             playlistSort,
             playlistSortDirection,
             reorderMode,
@@ -172,7 +191,12 @@ fun StoredPlaylistContent(
         ) {
             when {
                 collectionMetadata != null -> {
-                    (downloadFilterState?.apply(songs) ?: songs).presentCollection("", collectionSort, collectionDirection) { song ->
+                    (downloadFilterState?.apply(songs) ?: songs).presentCollection(
+                        "",
+                        collectionSort,
+                        collectionDirection,
+                        customOrder = if (isCachedCollection) cachedCustomOrder else emptyList(),
+                    ) { song ->
                         collectionMetadata[song.id]?.copy(playCount = playCounts[song.id] ?: 0)
                     }
                 }
@@ -339,7 +363,11 @@ fun StoredPlaylistContent(
                         Column {
                             CollectionFilterBar(
                                 showSearch = false,
-                                text = collectionFilterBarText(includeClear = true),
+                                text =
+                                    collectionFilterBarText(
+                                        includeClear = true,
+                                        includeManual = isCachedCollection && collectionSort == CollectionSort.MANUAL,
+                                    ),
                                 query = query,
                                 onQueryChange = { query = it },
                                 sort = collectionSort,

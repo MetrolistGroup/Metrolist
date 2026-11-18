@@ -1,6 +1,7 @@
 package com.metrolist.shared.model
 
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.ui.components.resolveCollectionFilterSort
 import com.russhwolf.settings.MapSettings
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -225,6 +226,38 @@ class PlaylistSongSortingTest {
         assertEquals(listOf("al"), items.filterForLibrarySearch("lofi").map { it.id })
         assertEquals(listOf("po", "ep"), items.filterForLibrarySearch("studio").map { it.id })
         assertEquals(items, items.filterForLibrarySearch("  "))
+    }
+
+    @Test
+    fun collectionFilterBarFallsBackWhenManualSortIsUnavailable() {
+        val defaultSorts =
+            setOf(
+                CollectionSort.NEWEST,
+                CollectionSort.TITLE,
+                CollectionSort.ARTIST,
+                CollectionSort.SIZE,
+                CollectionSort.LAST_USED,
+                CollectionSort.MOST_PLAYED,
+            )
+        assertEquals(CollectionSort.NEWEST, resolveCollectionFilterSort(CollectionSort.MANUAL, defaultSorts))
+        assertEquals(CollectionSort.TITLE, resolveCollectionFilterSort(CollectionSort.TITLE, defaultSorts))
+        assertEquals(CollectionSort.MANUAL, resolveCollectionFilterSort(CollectionSort.MANUAL, defaultSorts + CollectionSort.MANUAL))
+        assertEquals(null, resolveCollectionFilterSort(CollectionSort.MANUAL, emptySet()))
+    }
+
+    @Test
+    fun presentCollectionAppliesManualCustomOrderAndPlacesNewSongsFirst() {
+        val alpha = song("1", "Alpha", "A", null, null, null)
+        val beta = song("2", "Beta", "B", null, null, null)
+        val gamma = song("3", "Gamma", "C", null, null, null)
+        val ordered =
+            listOf(alpha, beta, gamma).presentCollection(
+                query = "",
+                sort = CollectionSort.MANUAL,
+                direction = SortDirection.DESCENDING,
+                customOrder = listOf("3", "1"),
+            ) { null }
+        assertEquals(listOf(beta, gamma, alpha), ordered)
     }
 
     private fun song(

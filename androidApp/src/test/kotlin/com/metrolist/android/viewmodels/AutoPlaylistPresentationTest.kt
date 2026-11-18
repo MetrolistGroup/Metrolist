@@ -7,6 +7,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.Snapshot
 import com.metrolist.shared.db.entities.CachedAudioEntity
 import com.metrolist.shared.db.entities.PlaylistEntity
+import com.metrolist.shared.db.entities.Song
+import com.metrolist.shared.db.entities.SongEntity
 import com.metrolist.shared.model.CollectionSort
 import com.metrolist.shared.model.PlaylistSongSort
 import com.metrolist.shared.model.SongItem
@@ -406,4 +408,81 @@ class AutoPlaylistPresentationTest {
             settings.playlistCollectionSorting("special:cached", CollectionSort.NEWEST, SortDirection.DESCENDING),
         )
     }
+
+    @Test
+    fun prepareCachedCollectionSongsAppliesStoredSortingAndCustomOrder() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val entries =
+                listOf(
+                    CachedAudioEntity(
+                        songId = "c",
+                        title = "Charlie",
+                        artist = "Artist C",
+                        filePath = "c",
+                        fileSize = 300L,
+                        cachedAt = 30L,
+                        lastAccessedAt = 30L,
+                        cacheLocation = "internal",
+                    ),
+                    CachedAudioEntity(
+                        songId = "a",
+                        title = "Alpha",
+                        artist = "Artist A",
+                        filePath = "a",
+                        fileSize = 100L,
+                        cachedAt = 10L,
+                        lastAccessedAt = 10L,
+                        cacheLocation = "internal",
+                    ),
+                    CachedAudioEntity(
+                        songId = "b",
+                        title = "Bravo",
+                        artist = "Artist B",
+                        filePath = "b",
+                        fileSize = 200L,
+                        cachedAt = 20L,
+                        lastAccessedAt = 20L,
+                        cacheLocation = "internal",
+                    ),
+                )
+            val storedSongs =
+                mapOf(
+                    "a" to Song(SongEntity(id = "a", title = "Alpha Override", duration = 123), emptyList()),
+                )
+
+            val manualOrdered =
+                prepareCachedCollectionSongs(
+                    entries = entries,
+                    storedSongs = storedSongs,
+                    playCounts = emptyMap(),
+                    sorting = SavedPlaylistCollectionSorting(CollectionSort.MANUAL, SortDirection.ASCENDING),
+                    customOrder = listOf("a", "b"),
+                    dispatcher = dispatcher,
+                )
+            assertEquals(listOf("c", "a", "b"), manualOrdered.map { it.id })
+            assertEquals("Alpha Override", manualOrdered[1].title)
+
+            val mostPlayed =
+                prepareCachedCollectionSongs(
+                    entries = entries,
+                    storedSongs = storedSongs,
+                    playCounts = mapOf("b" to 10, "a" to 4),
+                    sorting = SavedPlaylistCollectionSorting(CollectionSort.MOST_PLAYED, SortDirection.DESCENDING),
+                    customOrder = listOf("a", "b"),
+                    dispatcher = dispatcher,
+                )
+            assertEquals(listOf("b", "a", "c"), mostPlayed.map { it.id })
+
+            assertTrue(
+                prepareCachedCollectionSongs(
+                    entries = emptyList(),
+                    storedSongs = emptyMap(),
+                    playCounts = emptyMap(),
+                    sorting = SavedPlaylistCollectionSorting(CollectionSort.MANUAL, SortDirection.ASCENDING),
+                    customOrder = listOf("a", "b"),
+                    dispatcher = dispatcher,
+                ).isEmpty(),
+            )
+        }
 }

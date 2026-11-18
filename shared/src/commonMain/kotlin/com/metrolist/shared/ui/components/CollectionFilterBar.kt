@@ -66,6 +66,16 @@ import com.metrolist.shared.ui.tv.tvFocusHighlight
 import com.metrolist.shared.ui.utils.carouselScroll
 import org.jetbrains.compose.resources.stringResource
 
+internal fun resolveCollectionFilterSort(
+    sort: CollectionSort,
+    availableSorts: Set<CollectionSort>,
+): CollectionSort? =
+    when {
+        sort in availableSorts -> sort
+        CollectionSort.NEWEST in availableSorts -> CollectionSort.NEWEST
+        else -> availableSorts.firstOrNull()
+    }
+
 data class CollectionFilterBarText(
     val searchLabel: String,
     val sortLabels: Map<CollectionSort, String>,
@@ -159,6 +169,7 @@ fun CollectionFilterBar(
                 shadowElevation = 0.dp,
             )
         }
+        val effectiveSort = resolveCollectionFilterSort(sort, text.sortLabels.keys)
         val controlsRowModifier =
             if (canReorder) {
                 Modifier.fillMaxWidth()
@@ -196,7 +207,7 @@ fun CollectionFilterBar(
                                     .semantics { contentDescription = text.sortOptions },
                         ) {
                             Text(
-                                text = text.sortLabels.getValue(sort),
+                                text = effectiveSort?.let { text.sortLabels[it] }.orEmpty(),
                                 maxLines = 1,
                                 softWrap = false,
                                 overflow = TextOverflow.Ellipsis,
@@ -218,7 +229,7 @@ fun CollectionFilterBar(
                                     },
                                 )
                             },
-                            enabled = !reorderMode && !sort.allowsReordering(),
+                            enabled = !reorderMode && effectiveSort?.allowsReordering() != true,
                             modifier =
                                 Modifier
                                     .tvFocusHighlight(
@@ -267,15 +278,15 @@ fun CollectionFilterBar(
                     onDismissRequest = { sortExpanded = false },
                     anchorOffset = sortMenuOffset,
                     options = text.sortLabels.keys.toList(),
-                    selectedOption = sort,
-                    optionLabel = { text.sortLabels.getValue(it) },
+                    selectedOption = effectiveSort,
+                    optionLabel = { text.sortLabels[it].orEmpty() },
                     onOptionSelected = { option -> onSortChange(option) },
                 )
             }
             if (canReorder) {
                 FilledTonalButton(
                     onClick = { onReorderModeChange(!reorderMode) },
-                    enabled = reorderMode || sort.allowsReordering(),
+                    enabled = reorderMode || effectiveSort?.allowsReordering() == true,
                     modifier = Modifier.tvFocusHighlight(CircleShape).semantics { selected = reorderMode },
                     colors =
                         ButtonDefaults.filledTonalButtonColors(
