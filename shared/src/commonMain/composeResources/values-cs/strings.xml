@@ -116,22 +116,22 @@
         <item quantity="other">%1$d alb</item>
     </plurals>
     <plurals name="n_week">
-        <item quantity="one">%1$d týden</item>
-        <item quantity="few">%1$d týdny</item>
-        <item quantity="many">%1$d týdnů</item>
-        <item quantity="other">%1$d týdnů</item>
+        <item quantity="one">%1$d týden</item>
+        <item quantity="few">%1$d týdny</item>
+        <item quantity="many">%1$d týdnů</item>
+        <item quantity="other">%1$d týdnů</item>
     </plurals>
     <plurals name="n_month">
-        <item quantity="one">%1$d měsíc</item>
-        <item quantity="few">%1$d měsíce</item>
-        <item quantity="many">%1$d měsíců</item>
-        <item quantity="other">%1$d měsíců</item>
+        <item quantity="one">%1$d měsíc</item>
+        <item quantity="few">%1$d měsíce</item>
+        <item quantity="many">%1$d měsíců</item>
+        <item quantity="other">%1$d měsíců</item>
     </plurals>
     <plurals name="n_year">
-        <item quantity="one">%1$d rok</item>
-        <item quantity="few">%1$d roky</item>
-        <item quantity="many">%1$d let</item>
-        <item quantity="other">%1$d let</item>
+        <item quantity="one">%1$d rok</item>
+        <item quantity="few">%1$d roky</item>
+        <item quantity="many">%1$d let</item>
+        <item quantity="other">%1$d let</item>
     </plurals>
     <string name="undo">Zrušit</string>
     <string name="lyrics_not_found">Texty nenalezeny</string>
@@ -150,10 +150,10 @@
     <string name="queue_loading">Načítání fronty…</string>
     <string name="calculating">Vypočítavám…</string>
     <plurals name="queue_track_count_duration">
-        <item quantity="one">%1$d skladba · %2$s</item>
-        <item quantity="few">%1$d skladby · %2$s</item>
-        <item quantity="many">%1$d skladeb · %2$s</item>
-        <item quantity="other">%1$d skladeb · %2$s</item>
+        <item quantity="one">%1$d skladba · %2$s</item>
+        <item quantity="few">%1$d skladby · %2$s</item>
+        <item quantity="many">%1$d skladeb · %2$s</item>
+        <item quantity="other">%1$d skladeb · %2$s</item>
     </plurals>
     <string name="suggested_tracks">Navrhované</string>
     <string name="playback_notification_channel_name">Přehrávání</string>
@@ -2305,7 +2305,7 @@
     <string name="show_on_home">Zobrazit na Domovské stránce</string>
     <string name="show_again">Zobrazit znovu</string>
     <string name="restore_hidden_item_title">Zobrazit znovu?</string>
-    <string name="restore_hidden_item_message">Zobrazit "%1$s" znovu?</string>
+    <string name="restore_hidden_item_message">Zobrazit %1$s znovu?</string>
     <string name="unblock_artist_title">Odblokovat umělce?</string>
     <string name="advanced">Pokročilé</string>
     <string name="integration_on">Zapnuto</string>
