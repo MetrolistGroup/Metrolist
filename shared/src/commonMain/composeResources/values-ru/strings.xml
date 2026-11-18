@@ -714,7 +714,7 @@
     <string name="duration">Длительность</string>
     <string name="edit_song_description">Отредактируйте название песни и исполнителя</string>
     <string name="episode">Выпуск</string>
-    <string name="episode_actions">Действия эпизода</string>
+    <string name="episode_actions">Действия с выпуском</string>
     <string name="error_occurred">Произошла ошибка</string>
     <string name="expand">Развернуть</string>
     <string name="collapse">Свернуть</string>
@@ -853,7 +853,7 @@
     <string name="remove_from_device">Удалить с устройства</string>
     <string name="remove_from_favorites">Удалить из Любимых</string>
     <string name="remove_from_recent_question">Удалить из недавних?</string>
-    <string name="remove_from_saved_episodes">Удалить из сохраненных эпизодов</string>
+    <string name="remove_from_saved_episodes">Удалить из сохраненных выпусков</string>
     <string name="remove_from_speed_dial">Удалить из Быстрого набора</string>
     <string name="remove_recent_search_description">Удалить %1$s из недавних поисков?</string>
     <string name="remove_recent_search_item_description">Удалить %1$s из недавних поисков?</string>
@@ -868,7 +868,7 @@
     <string name="required">Обязательно</string>
     <string name="saved">Сохранено</string>
     <string name="saved_to_library">Сохранено в библиотеку</string>
-    <string name="save_episode">Сохранить эпизод</string>
+    <string name="save_episode">Сохранить выпуск</string>
     <string name="search_recognized_songs">Поиск песен</string>
     <string name="search_songs">Поиск песен</string>
     <string name="search_songs_artists_podcasts">Поиск песен, исполнителей, подкастов</string>
@@ -1269,11 +1269,11 @@
     <string name="ready_to_migrate">Готово к переносу</string>
     <string name="discord_logout">Выйти</string>
     <string name="new_episodes">Новые эпизоды</string>
-    <string name="episodes_for_later">Эпизоды на потом</string>
-    <string name="downloaded_episodes">Скачанные эпизоды</string>
+    <string name="episodes_for_later">Сохраненные выпуски</string>
+    <string name="downloaded_episodes">Скачанные выпуски</string>
     <string name="no_subscribed_channels">Нет подписанных каналов</string>
-    <string name="no_downloaded_episodes">Нет скачанных эпизодов</string>
-    <string name="filter_episodes">Эпизоды</string>
+    <string name="no_downloaded_episodes">Нет скачанных выпусков</string>
+    <string name="filter_episodes">Выпуски</string>
     <string name="filter_channels">Каналы</string>
     <string name="app_language">Язык приложения</string>
     <string name="app_language_system">По умолчанию системы</string>
