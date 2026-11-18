@@ -744,11 +744,6 @@
     <string name="settings_localization">Langue et région</string>
     <string name="app_language">Langue de l\u0027application</string>
     <string name="fonts">Police</string>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d s</item>
-        <item quantity="many">%1$d s</item>
-        <item quantity="other">%1$d s</item>
-    </plurals>
     <plurals name="seconds">
         <item quantity="one">%1$d seconde</item>
         <item quantity="many">%1$d secondes</item>
@@ -1216,11 +1211,6 @@
         <item quantity="one">%1$d minute</item>
         <item quantity="many">%1$d minutes</item>
         <item quantity="other">%1$d minutes</item>
-    </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d min</item>
-        <item quantity="many">%1$d min</item>
-        <item quantity="other">%1$d min</item>
     </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d titre</item>

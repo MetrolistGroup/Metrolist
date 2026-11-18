@@ -984,11 +984,6 @@
         <item quantity="other">%1$d minuts</item>
         <item quantity="many">%1$d minuts</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d min</item>
-        <item quantity="other">%1$d min</item>
-        <item quantity="many">%1$d min</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d pista</item>
         <item quantity="other">%1$d pistes</item>
@@ -1018,11 +1013,6 @@
         <item quantity="one">Eliminada %1$d cançó de la llista</item>
         <item quantity="other">Eliminades %1$d cançons de la llista</item>
         <item quantity="many">Eliminades %1$d cançons de la llista</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d s</item>
-        <item quantity="other">%1$d s</item>
-        <item quantity="many">%1$d s</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d cançó</item>

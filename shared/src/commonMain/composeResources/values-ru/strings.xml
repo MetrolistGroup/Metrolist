@@ -1020,12 +1020,6 @@
         <item quantity="many">%1$d минут</item>
         <item quantity="other">%1$d минут</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d мин</item>
-        <item quantity="few">%1$d мин</item>
-        <item quantity="many">%1$d мин</item>
-        <item quantity="other">%1$d мин</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d трек</item>
         <item quantity="few">%1$d трека</item>
@@ -1061,12 +1055,6 @@
         <item quantity="few">Удалены %1$d песни из плейлиста</item>
         <item quantity="many">Удалено %1$d песен из плейлиста</item>
         <item quantity="other">Удалено %1$d песен из плейлиста</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d с</item>
-        <item quantity="few">%1$d с</item>
-        <item quantity="many">%1$d с</item>
-        <item quantity="other">%1$d с</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d песня</item>

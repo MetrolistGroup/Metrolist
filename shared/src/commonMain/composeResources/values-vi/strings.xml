@@ -1454,9 +1454,6 @@
     <plurals name="minutes">
         <item quantity="other">%1$d phút</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="other">%1$d phút</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="other">%1$d bài</item>
     </plurals>
@@ -1474,9 +1471,6 @@
     </plurals>
     <plurals name="removed_songs_from_playlist">
         <item quantity="other">Đã xóa %1$d bài hát khỏi danh sách phát</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="other">%1$d giây</item>
     </plurals>
     <plurals name="statistics_tracks">
         <item quantity="other">%1$d bài</item>
