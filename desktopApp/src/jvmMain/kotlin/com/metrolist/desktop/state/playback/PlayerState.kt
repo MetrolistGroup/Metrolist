@@ -2697,22 +2697,31 @@ object PlayerState {
         song: SongItem,
         showError: Boolean = false,
         onFailure: (Throwable) -> Unit = {},
-    ): PlaybackResource? {
-        val wantVideo =
-            shouldRequestDesktopVideo(
-                showVideoViewer = UiState.showVideoViewer,
-                showVideoFullscreen = UiState.showVideoFullscreen,
-                isVideoSong = song.isVideoSong,
-                synchronizedPlayback = keepsCanonicalMedia(),
-                videoPlaybackEnabled = Settings.shared.musicVideoPlaybackEnabled,
-            )
-        val hints = song.toContentHints().copy(wantVideo = wantVideo)
-        val resource = fetchPlaybackResource(song.id, hints, showError && !wantVideo, song, onFailure = onFailure)
-        if (resource == null && wantVideo) {
-            return fetchPlaybackResource(song.id, hints.copy(wantVideo = false), showError, song, onFailure = onFailure)
-        }
-        return resource
-    }
+    ): PlaybackResource? =
+        selectDesktopPlaybackResource(
+            song = song,
+            showVideoViewer = UiState.showVideoViewer,
+            showVideoFullscreen = UiState.showVideoFullscreen,
+            synchronizedPlayback = keepsCanonicalMedia(),
+            videoPlaybackEnabled = Settings.shared.musicVideoPlaybackEnabled,
+            forcedClientId = forcedPlaybackClientId(),
+            showError = showError,
+            storedAudio = {
+                withContext(Dispatchers.IO) {
+                    DownloadManager.getLocalPlaybackResource(song.id, song)
+                        ?: try {
+                            SongCacheManager.getCachedPlaybackResource(song.id, song)
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (_: Exception) {
+                            null
+                        }
+                }
+            },
+            fetchByHints = { hints, reportError ->
+                fetchPlaybackResource(song.id, hints, reportError, song, onFailure = onFailure)
+            },
+        )
 
     internal suspend fun fetchPlaybackResource(
         videoId: String,
