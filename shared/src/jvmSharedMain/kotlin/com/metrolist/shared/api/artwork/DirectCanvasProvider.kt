@@ -221,7 +221,8 @@ class DirectCanvasProvider(
             ) {
                 continue
             }
-            val canvas =
+            // Pathfinder can return no canvas for tracks that have one, so signed-in lookups fall back to the public source.
+            val signedInCanvas =
                 if (client.session.hasLoginCookie) {
                     client
                         .canvasQuery("canvas", SPOTIFY_CANVAS_HASH, buildJsonObject { put("trackUri", "spotify:track:$id") })
@@ -229,9 +230,11 @@ class DirectCanvasProvider(
                         ?.obj("trackUnion")
                         ?.obj("canvas")
                         ?.text("url")
+                        ?.takeIf { trustedMedia(it, false) }
                 } else {
-                    publicSpotifyCanvas(id)
+                    null
                 }
+            val canvas = signedInCanvas ?: publicSpotifyCanvas(id)
             if (trustedMedia(canvas, false)) {
                 YtLogger.d("Canvas", "Resolved Spotify Canvas")
                 return canvas

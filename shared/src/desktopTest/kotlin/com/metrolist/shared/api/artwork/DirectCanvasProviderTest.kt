@@ -89,6 +89,54 @@ class DirectCanvasProviderTest {
         }
 
     @Test
+    fun signedInLookupFallsBackToThePublicCanvasWhenPathfinderHasNone() =
+        runBlocking {
+            val session =
+                Json.encodeToString(
+                    SpotifySession(mapOf("sp_dc" to "own-cookie"), "access", clientToken = "client"),
+                )
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        when {
+                            request.url.host == "api-partner.spotify.com" &&
+                                (request.body as TextContent).text.contains("searchTopResultsList") -> {
+                                respond(
+                                    """{"data":{"searchV2":{"topResultsV2":{"itemsV2":[{"item":{"data":{"__typename":"Track","id":"0000000000000000000000","name":"Song","artists":{"items":[{"profile":{"name":"Artist"}}]},"albumOfTrack":{"name":"Album"},"duration":{"totalMilliseconds":200000}}}}]}}}}""",
+                                    HttpStatusCode.OK,
+                                    headersOf(HttpHeaders.ContentType, "application/json"),
+                                )
+                            }
+
+                            request.url.host == "api-partner.spotify.com" -> {
+                                respond(
+                                    """{"data":{"trackUnion":{"__typename":"Track","canvas":null}}}""",
+                                    HttpStatusCode.OK,
+                                    headersOf(HttpHeaders.ContentType, "application/json"),
+                                )
+                            }
+
+                            request.url.host == "spotify-canva.vercel.app" -> {
+                                respond(
+                                    """{"canvasesList":[{"trackUri":"spotify:track:0000000000000000000000","canvasUrl":"https://canvaz.scdn.co/canvas.mp4"}]}""",
+                                    HttpStatusCode.OK,
+                                    headersOf(HttpHeaders.ContentType, "application/json"),
+                                )
+                            }
+
+                            else -> {
+                                error("Unexpected URL ${request.url}")
+                            }
+                        }
+                    },
+                )
+            client.use {
+                val provider = DirectCanvasProvider(client, { session }, now = { now })
+                assertEquals("https://canvaz.scdn.co/canvas.mp4", provider.getSpotifyCanvas("Song", "Artist", 200_000, "Album"))
+            }
+        }
+
+    @Test
     fun spotifyOnlyLookupLeavesAppleArtworkToTheResolutionAwareService() =
         runBlocking {
             var appleRequests = 0
