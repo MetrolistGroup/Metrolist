@@ -226,7 +226,7 @@
     <string name="settings_show_secret">Mostra segreto</string>
     <string name="settings_hide_secret">Nascondi segreto</string>
     <string name="block_screenshots">Blocca gli screenshot</string>
-    <string name="block_screenshots_desc">Impedisce screenshot e registrazioni dello schermo. Nasconde anche il contenuto dell\u0027app dalla schermata Recenti e da altre schermate non sicure.</string>
+    <string name="block_screenshots_desc">Impedisce screenshot e registrazioni dello schermo. Nasconde anche il contenuto dell'app dalla schermata Recenti e da altre schermate non sicure.</string>
     <string name="hidden_playlists">Elementi nascosti della libreria</string>
     <string name="hidden_playlists_desc">Ripristina gli elementi nascosti dalla libreria</string>
     <string name="hidden_playlists_empty">Nessun elemento nascosto</string>
@@ -313,7 +313,7 @@
     <string name="appearance_title">Aspetto</string>
     <string name="appearance_theme">Tema</string>
     <string name="appearance_style">Stile</string>
-    <string name="appearance_app_icon">Icona dell\u0027app</string>
+    <string name="appearance_app_icon">Icona dell'app</string>
     <string name="appearance_app_icon_credit">Icone alternative realizzate da Kayé (@thy_k su Discord)</string>
     <string name="material_you_description">Utilizza uno schema di colori generato in stile Material</string>
     <string name="song_artwork_colors">Colori dalla copertina del brano</string>
@@ -334,7 +334,7 @@
     <string name="app_icon_zenith_black">Zenith Black</string>
     <string name="app_icon_zenith_white">Zenith White</string>
     <string name="app_font_choose">Scegli file per il font</string>
-    <string name="app_font_picker_desc">Seleziona un file TTF od OTF. Metrolist lo copierà nell\u0027archiviazione privata dell\u0027app.</string>
+    <string name="app_font_picker_desc">Seleziona un file TTF od OTF. Metrolist lo copierà nell'archiviazione privata dell'app.</string>
     <string name="app_font_system">Predefinito di sistema</string>
     <string name="app_font_applied">Utilizzando %1$s</string>
     <string name="app_font_invalid">Impossibile utilizzare questo font. Seleziona un file TTF o OTF valido di dimensioni inferiori a 20MB.</string>
@@ -441,7 +441,7 @@
     <string name="uploaded_playlist_name">Caricata</string>
     <string name="prompt_continue_playback">Chiedi prima di proseguire con la riproduzione</string>
     <string name="continue_playback_title">Continuare riproduzione?</string>
-    <string name="continue_playback_message">Continuare a riprodurre "%1$s"?</string>
+    <string name="continue_playback_message">Continuare a riprodurre %1$s?</string>
     <string name="yes">Sì</string>
     <string name="no">No</string>
     <string name="voice_search">Ricerca vocale</string>
@@ -1745,14 +1745,14 @@
     <string name="import_status_completed">Importazione completata</string>
     <string name="import_notification_channel_name">Importazione playlist</string>
     <string name="import_notification_channel_desc">Mostra l\u0027avanzamento e i risultati dell\u0027importazione delle playlist</string>
-    <string name="import_notification_in_progress">Sto importando "%1$s"</string>
+    <string name="import_notification_in_progress">Sto importando %1$s</string>
     <string name="import_notification_success">Importati %1$d brani in "%2$s"</string>
     <string name="import_notification_partial">Importati %1$d brani in "%2$s" (%3$d non sono stati trovati)</string>
     <string name="import_error_empty_playlist">La playlist non ha brani importabili.</string>
     <string name="import_error_details_title">Dettagli ed errori nell'importazione</string>
     <string name="import_error_details_summary">Impossibile caricare o abbinare %1$d brani:</string>
     <string name="import_duplicate_playlist_title">La playlist esiste già</string>
-    <string name="import_duplicate_playlist_message">Una playlist nominata "%1$s" con %2$d brani esiste già. Importare comunque?</string>
+    <string name="import_duplicate_playlist_message">Una playlist nominata %1$s con %2$d brani esiste già. Importare comunque?</string>
     <string name="import_duplicate_playlist_import_anyway">Importa comunque</string>
     <string name="import_duplicate_playlist_skip">Salta</string>
     <string name="import_action_start">Inizia importazione</string>
@@ -1955,7 +1955,7 @@
     <string name="ai_test_detection_result">Rilevamento: traduzione necessaria = %1$s</string>
     <string name="ai_test_translation_result">Traduzione d\u0027esempio: %1$s</string>
     <string name="openrouter_signed_in_description">Accesso effettuato. L'app ignora la tua chiave API finché la sessione è attiva.</string>
-    <string name="export_as_format">Esporta come "%1$s"</string>
+    <string name="export_as_format">Esporta come %1$s</string>
     <string name="exporting_collection">Esportando %1$s</string>
     <string name="device_connect_pair_hint">Per abbinare un nuovo dispositivo, apri Servizi collegati nelle Impostazioni.</string>
     <string name="playlist_order_original">Ordine playlist</string>
@@ -2247,7 +2247,7 @@
     <string name="remove_all_downloads">Rimuovi tutti i download</string>
     <string name="disable_animated_artwork_on_mobile_data">Disabilità copertine animate con i dati mobili</string>
     <string name="disable_animated_artwork_on_mobile_data_desc">Mostra le copertine statiche con la rete dati, anche quando le animate sono in cache</string>
-    <string name="hide_recent_searches">Nascondi da "Ricerche recenti"</string>
+    <string name="hide_recent_searches">Nascondi da Ricerche recenti</string>
     <string name="advanced">Avanzate</string>
     <string name="integration_on">Attivata</string>
     <string name="integration_off">Disattivata</string>
@@ -2512,9 +2512,9 @@
     <string name="show_on_home">Mostra sulla Home</string>
     <string name="show_again">Mostra di nuovo</string>
     <string name="restore_hidden_item_title">Mostrare di nuovo?</string>
-    <string name="restore_hidden_item_message">Mostrare "%1$s" di nuovo?</string>
+    <string name="restore_hidden_item_message">Mostrare %1$s di nuovo?</string>
     <string name="unblock_artist_title">Sbloccare artista?</string>
-    <string name="unblock_artist_message">Vuoi consentire di nuovo "%1$s" nelle code, raccomandazioni e statistiche?</string>
+    <string name="unblock_artist_message">Vuoi consentire di nuovo %1$s nelle code, raccomandazioni e statistiche?</string>
     <string name="theme_palette_content">Contenuto</string>
     <string name="appearance_floating_top_bar">Barra superiore fluttuante</string>
     <string name="appearance_floating_top_bar_description">Mostra nella barra superiore bottoni fluttuanti e separati invece di una ancorata nella parte superiore dello schermo.</string>
