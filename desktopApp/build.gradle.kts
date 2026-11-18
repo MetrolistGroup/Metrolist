@@ -759,7 +759,7 @@ compose.desktop {
                 } else {
                     versionComponents.joinToString(".")
                 }
-            description = "Metrolist music player"
+            description = "Metrolist"
             copyright = "© 2026 Metrolist"
             vendor = "MetrolistGroup"
 
