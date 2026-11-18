@@ -129,7 +129,6 @@ data class SharedSettingsHost(
     val fontDownloadActions: List<SettingsHostAction> = emptyList(),
     val privacyDiagnosticActions: List<SettingsHostAction> = emptyList(),
     val onClearSearchHistory: (() -> Unit)? = null,
-    val onSpotifySignIn: (() -> Unit)? = null,
     val onSwitchYouTubeChannel: (() -> Unit)? = null,
     val customPageIcons: Map<SettingsPageId, @Composable (Color) -> Unit> = emptyMap(),
     val pageContent: @Composable (SettingsPageId, onBack: () -> Unit, onNavigate: (SettingsPageId) -> Unit) -> Unit = { _, _, _ -> },

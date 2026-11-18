@@ -797,7 +797,7 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                     id = "canvasContentOrder",
                     title = stringResource(Res.string.canvas_content_order),
                 ) {
-                    CanvasContentOrderSetting(host.platform, canvasEnabled, settings.enableAnimatedCovers, host.onSpotifySignIn)
+                    CanvasContentOrderSetting(host.platform, canvasEnabled, settings.enableAnimatedCovers)
                 }
             }
             if (host.platform != SettingsPlatform.IOS) {

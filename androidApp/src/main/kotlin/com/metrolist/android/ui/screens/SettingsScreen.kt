@@ -363,9 +363,6 @@ fun SettingsScreen(
         if (fallback.resolveActivity(context.packageManager) != null) context.startActivity(fallback)
     }
 
-    var showSpotifyLogin by remember { mutableStateOf(false) }
-    var spotifyCookie by remember { mutableStateOf<String?>(null) }
-    var spotifyError by remember { mutableStateOf<String?>(null) }
     Box(Modifier.fillMaxSize()) {
         SharedSettingsScreen(
             host =
@@ -384,7 +381,6 @@ fun SettingsScreen(
                     rememberMetroEqProfilePicker = { onPicked -> rememberMetroEqProfilePicker(onPicked) },
                     onClose = onNavigateBack,
                     onOpenArtist = onNavigateToArtist,
-                    onSpotifySignIn = { showSpotifyLogin = true },
                     homeSections = settingsHomeSections(homeState),
                     onHomeSectionVisibilityChanged = SharedPreferences.shared::toggleHomeSectionVisibility,
                     bottomContentPadding = miniPlayerInset,
@@ -576,32 +572,6 @@ fun SettingsScreen(
                 ),
             modifier = Modifier.fillMaxSize(),
         )
-        if (showSpotifyLogin) {
-            LaunchedEffect(spotifyCookie) {
-                val cookie = spotifyCookie ?: return@LaunchedEffect
-                try {
-                    androidSpotifyImportManager.authenticate(cookie)
-                    showSpotifyLogin = false
-                } catch (error: CancellationException) {
-                    throw error
-                } catch (_: Exception) {
-                    spotifyError = getString(Res.string.spotify_import_error_sign_in_failed)
-                } finally {
-                    spotifyCookie = null
-                }
-            }
-            SpotifyLoginScreen(
-                isAuthenticating = spotifyCookie != null,
-                authenticationError = spotifyError,
-                onClearAuthenticationError = { spotifyError = null },
-                onSessionCookie = { spotifyCookie = it },
-                onNavigateBack = {
-                    showSpotifyLogin = false
-                    spotifyCookie = null
-                    spotifyError = null
-                },
-            )
-        }
     }
 }
 
