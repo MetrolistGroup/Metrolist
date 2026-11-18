@@ -2409,7 +2409,7 @@
         <item quantity="other">Importez vos playlists</item>
     </plurals>
     <plurals name="import_playlists_notice">
-        <item quantity="one">%1$s vont être importés depuis une playlist. L'importation va s'effectuer en arrière-plan, vous recevrez une notification quand elle sera terminée.</item>
+        <item quantity="one">%1$s vont être importés depuis %2$d playlist. L'importation va s'effectuer en arrière-plan, vous recevrez une notification quand elle sera terminée.</item>
         <item quantity="many">%1$s vont être importés depuis %2$d playlists. L'importation va s'effectuer en arrière-plan, vous recevrez une notification quand elle sera terminée.</item>
         <item quantity="other">%1$s vont être importés depuis %2$d playlists. L'importation va s'effectuer en arrière-plan, vous recevrez une notification quand elle sera terminée.</item>
     </plurals>
