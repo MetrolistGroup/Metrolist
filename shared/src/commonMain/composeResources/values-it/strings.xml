@@ -2598,4 +2598,24 @@
     <string name="density_massive">Gigante (200%)</string>
     <string name="density_huge">Enorme (175%)</string>
     <string name="density_extra_large">Molto grande (150%)</string>
+    <string name="learn_more"></string>
+    <string name="cast_stream_unreachable"></string>
+    <string name="listen_together_location_custom"></string>
+    <string name="auto_download_saved_collections"></string>
+    <string name="desktop_tray_toggle_on_click_desc_mac"></string>
+    <string name="listen_together_custom_server_name"></string>
+    <string name="add_to_library"></string>
+    <string name="spotify_import_create_new_local_playlist"></string>
+    <string name="updates_nightly_builds_desc"></string>
+    <string name="window_title_now_playing"></string>
+    <string name="desktop_omarchy_unsupported"></string>
+    <string name="listen_together_custom_server_maintainer"></string>
+    <string name="listen_together_location_poland"></string>
+    <string name="updates_nightly_builds"></string>
+    <string name="search_episodes"></string>
+    <string name="duration_three_units"></string>
+    <string name="switch_to_video"></string>
+    <string name="matugen_colors_description"></string>
+    <string name="duration_two_units"></string>
+    <string name="matugen_colors"></string>
 </resources>
