@@ -1,5 +1,6 @@
 package com.metrolist.shared.playlistimport
 
+import com.metrolist.shared.api.lyrics.parseXml
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.album
 import com.metrolist.shared.generated.resources.import_error_album_tracks_unavailable
@@ -28,6 +29,9 @@ import kotlin.time.Duration.Companion.milliseconds
 object TidalPlaylistImporter {
     private const val UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     private const val MAX_RESPONSE_BYTES = 4 * 1024 * 1024
+
+    // The public embed server caps collections at 50 without exposing the original total.
+    private const val EMBED_TRACK_LIMIT = 50
 
     private val defaultHttpClient: HttpClient by lazy { createHttpClient() }
     internal var clientProvider: () -> HttpClient = { defaultHttpClient }
@@ -107,6 +111,11 @@ object TidalPlaylistImporter {
         val html = response.bodyAsTextLimited(MAX_RESPONSE_BYTES)
         if (!response.status.isSuccess() || html.isNullOrBlank()) {
             return Result.failure(IllegalStateException("Tidal playlist not found (HTTP ${response.status.value})"))
+        }
+
+        currentCollection(html)?.let { collection ->
+            onProgress(collection.tracks.size, collection.tracks.size)
+            return Result.success(collection)
         }
 
         val title =
@@ -210,6 +219,11 @@ object TidalPlaylistImporter {
         val html = response.bodyAsTextLimited(MAX_RESPONSE_BYTES)
         if (!response.status.isSuccess() || html.isNullOrBlank()) {
             return Result.failure(IllegalStateException("Tidal album not found (HTTP ${response.status.value})"))
+        }
+
+        currentCollection(html)?.let { collection ->
+            onProgress(collection.tracks.size, collection.tracks.size)
+            return Result.success(collection)
         }
 
         val title =
@@ -331,6 +345,62 @@ object TidalPlaylistImporter {
         html: String,
         trackId: String,
     ): JsonObject? {
+        val metadata = embedMetadata(html) ?: return null
+        return metadata[trackId] as? JsonObject ?: throw ImportException(ImportErrorKey.NoTracksRecognized)
+    }
+
+    private fun currentCollection(html: String): ImportedPlaylistData? {
+        val metadata = embedMetadata(html) ?: return null
+        val list =
+            Regex("""<media-item-list\b[^>]*>(.*?)</media-item-list\s*>""", RegexOption.DOT_MATCHES_ALL)
+                .findAll(html)
+                .singleOrNull()
+                ?.groupValues
+                ?.get(1)
+                ?: throw ImportException(ImportErrorKey.NoTracksRecognized)
+        val entries = Regex("""<list-item\b([^>]*)>""").findAll(list).toList()
+        if (entries.size >= EMBED_TRACK_LIMIT) throw ImportException(ImportErrorKey.IncompleteSource)
+        if (entries.isEmpty() || Regex("""</list-item\s*>""").findAll(list).count() != entries.size) {
+            throw ImportException(ImportErrorKey.IncompleteSource)
+        }
+        val ids =
+            entries.map { entry ->
+                val attributes = parseXml("<entry ${entry.groupValues[1]}/>")
+                if (attributes.getAttribute("product-type") != "track") {
+                    throw ImportException(ImportErrorKey.UnsupportedPlaylistEntries)
+                }
+                attributes.getAttribute("product-id").takeIf { id -> id.isNotEmpty() && id.all(Char::isDigit) }
+                    ?: throw ImportException(ImportErrorKey.IncompleteSource)
+            }
+        if (metadata.keys != ids.toSet()) throw ImportException(ImportErrorKey.IncompleteSource)
+        val tracks =
+            ids.map { id ->
+                val item = metadata[id] as? JsonObject ?: throw ImportException(ImportErrorKey.IncompleteSource)
+                val title =
+                    (item["title"] as? JsonPrimitive)
+                        ?.takeIf { it.isString }
+                        ?.contentOrNull
+                        ?.trim()
+                        ?.takeIf(String::isNotEmpty)
+                        ?: throw ImportException(ImportErrorKey.IncompleteSource)
+                val artist =
+                    (item["artist"] as? JsonPrimitive)
+                        ?.takeIf { it.isString }
+                        ?.contentOrNull
+                        .orEmpty()
+                        .trim()
+                PlaylistImportManager.CsvTrack(title, artist, null)
+            }
+        val heading =
+            Regex("""<h1\b[^>]*>.*?</h1\s*>""", RegexOption.DOT_MATCHES_ALL).findAll(html).singleOrNull()?.value
+                ?: throw ImportException(ImportErrorKey.NoTracksRecognized)
+        val title =
+            parseXml(heading).textContent.trim().takeIf(String::isNotEmpty)
+                ?: throw ImportException(ImportErrorKey.NoTracksRecognized)
+        return ImportedPlaylistData(title = title, tracks = tracks, source = "Tidal")
+    }
+
+    private fun embedMetadata(html: String): JsonObject? {
         val assignment = Regex("""window\.tidalMediaSessionMetadata\s*=\s*""").find(html) ?: return null
         val start = assignment.range.last + 1
         if (html.getOrNull(start) != '{') throw ImportException(ImportErrorKey.NoTracksRecognized)
@@ -359,9 +429,7 @@ object TidalPlaylistImporter {
                     '}' -> {
                         depth--
                         if (depth == 0) {
-                            val metadata = json.parseToJsonElement(html.substring(start, index + 1)).jsonObject
-                            return metadata[trackId] as? JsonObject
-                                ?: throw ImportException(ImportErrorKey.NoTracksRecognized)
+                            return json.parseToJsonElement(html.substring(start, index + 1)).jsonObject
                         }
                     }
                 }
