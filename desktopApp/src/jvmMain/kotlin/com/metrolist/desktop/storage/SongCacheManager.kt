@@ -325,9 +325,14 @@ object SongCacheManager {
 
     fun getCachedSongs(): List<CachedSongEntry> = _cachedSongs.value.filter { it.songId in _cachedSongIds.value }
 
-    /** Returns the latest access timestamp per entry across persisted and pending in-memory updates. */
+    /** Returns the latest access timestamp per entry across persisted, published, and pending in-memory updates. */
     fun effectiveLastAccessedTimes(entries: List<CachedSongEntry>): Map<String, Long> =
-        synchronized(indexLock) { entries.associate { it.songId to accessTimes.effective(it) } }
+        synchronized(indexLock) {
+            entries.associate { entry ->
+                val publishedLastAccessed = entriesById[entry.songId]?.lastAccessedAt ?: Long.MIN_VALUE
+                entry.songId to maxOf(publishedLastAccessed, accessTimes.effective(entry))
+            }
+        }
 
     /** Builds collection sorting metadata for [entries] with effective in-memory access times. */
     fun cachedCollectionMetadata(entries: List<CachedSongEntry>): Map<String, CollectionMeta> =

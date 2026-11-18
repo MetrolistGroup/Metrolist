@@ -80,6 +80,7 @@ import com.metrolist.shared.ui.selection.rememberSelectionState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -258,9 +259,11 @@ fun StoredPlaylistContent(
                                 listeningTimes,
                             ) ?: return@launch
                     } else {
-                        snapshotFlow { currentPlayCountsReady.value to currentOrderedSongs.value }
-                            .first { (ready, _) -> ready }
-                            .second
+                        withTimeoutOrNull(2_000L) {
+                            snapshotFlow { currentPlayCountsReady.value to currentOrderedSongs.value }
+                                .first { (ready, _) -> ready }
+                                .second
+                        } ?: currentOrderedSongs.value
                     }
                 val playable =
                     (if (song == null) complete.filterForPlaylistSearch(currentQuery.value) else complete)
@@ -316,8 +319,16 @@ fun StoredPlaylistContent(
             SongSelectionControls(
                 selectedCount = selectedSongs.size,
                 selectedSongs = selectedSongs,
-                onPlay = { selectedSongs.firstOrNull { !it.isUnavailable }?.let { playback.play(it, selectedSongs) } },
-                onShuffle = { playback.shuffleQueue(selectedSongs) },
+                onPlay = {
+                    playJob?.cancel()
+                    playJob = null
+                    selectedSongs.firstOrNull { !it.isUnavailable }?.let { playback.play(it, selectedSongs) }
+                },
+                onShuffle = {
+                    playJob?.cancel()
+                    playJob = null
+                    playback.shuffleQueue(selectedSongs)
+                },
                 allSelected = selection.allSelected(displayedIds),
                 onDone = selection::exit,
                 onSelectAll = { selection.toggleAll(displayedIds) },

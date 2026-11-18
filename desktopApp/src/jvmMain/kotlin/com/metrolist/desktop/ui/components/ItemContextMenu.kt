@@ -415,6 +415,7 @@ fun PlaylistContextMenu(
     pinnedId: String? = null,
     fallbackIcon: ImageVector? = null,
     additionalActions: List<PlayerMenuAction> = emptyList(),
+    downloadSongs: List<SongItem> = songs,
 ) {
     val playlist = localizedBuiltinPlaylist(playlist)
     var showExportDialog by remember(playlist.id) { mutableStateOf(false) }
@@ -422,6 +423,12 @@ fun PlaylistContextMenu(
     val isDownloadedCollection = playlist.id == "auto:downloaded"
     val actionSongs =
         if (isDownloadedCollection && songs.isEmpty()) LibraryState.downloadedFiles.map { it.toSongItem() } else songs
+    val downloadActionSongs =
+        if (isDownloadedCollection && downloadSongs.isEmpty()) {
+            LibraryState.downloadedFiles.map { it.toSongItem() }
+        } else {
+            downloadSongs.ifEmpty { actionSongs }
+        }
     MediaContextMenu(expanded = expanded, offset = offset, onDismiss = onDismiss) {
         val playback = LocalPlaybackController.current
         val isPinned = HomeState.uiState.speedDialPinnedIds.any { speedDialItemId(it) == speedDialItemId(playlist.id) }
@@ -439,7 +446,7 @@ fun PlaylistContextMenu(
         }
         val isAuto = playlist.id.startsWith("auto:")
         val isLocal = playlist.isLocal || isAuto
-        val loadedSongs = actionSongs.takeIf { it.isNotEmpty() }
+        val loadedSongs = downloadActionSongs.takeIf { it.isNotEmpty() }
         val loadedDownloadState = loadedSongs?.let { playlistDownloadState(it, LibraryState.downloadStates) }
         val downloadKey = "playlist:${playlist.id.removePrefix("VL")}"
         val downloadedKeys =
@@ -498,7 +505,7 @@ fun PlaylistContextMenu(
                 if (isPinned) HomeState.unpinSpeedDialItem(playlist.id) else HomeState.pinSpeedDialItem(playlist)
             },
             onDownload = {
-                withMediaSongs(playlist, actionSongs) { playlistSongs ->
+                withMediaSongs(playlist, downloadActionSongs) { playlistSongs ->
                     if (downloadState == MediaDownloadState.DOWNLOADED) {
                         if (isDownloadedCollection) {
                             removal.request(playlistSongs.map(SongItem::id))

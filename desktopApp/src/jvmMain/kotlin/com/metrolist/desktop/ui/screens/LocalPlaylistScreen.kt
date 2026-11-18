@@ -113,6 +113,7 @@ import com.metrolist.shared.ui.utils.rememberFileSizeFormatter
 import io.ktor.utils.io.jvm.javaio.toByteReadChannel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -427,7 +428,10 @@ private fun LocalPlaylistLayout(
         if (countIds.isEmpty()) {
             flowOf(playCountsRequest to emptyMap<String, Int>())
         } else {
-            database.collectionPlayCounts(countIds).map { counts -> playCountsRequest to counts }
+            database
+                .collectionPlayCounts(countIds)
+                .catch { emit(emptyMap()) }
+                .map { counts -> playCountsRequest to counts }
         }
     }.collectAsState(null)
     val playCountsLoaded = countIds.isEmpty() || playCountsState?.first === playCountsRequest
@@ -440,10 +444,10 @@ private fun LocalPlaylistLayout(
                 emptyList()
             }
         }
+    val availableSongs = remember(songs, hasMoreSongs) { songs.takeUnless { hasMoreSongs }.orEmpty() }
     val menuSongs =
         remember(
-            songs,
-            hasMoreSongs,
+            availableSongs,
             isCachedCollection,
             cachedSorting,
             cachedCustomOrder,
@@ -451,10 +455,9 @@ private fun LocalPlaylistLayout(
             playCounts,
             playCountsLoaded,
         ) {
-            val baseSongs = songs.takeUnless { hasMoreSongs }.orEmpty()
             when {
                 !isCachedCollection || cachedSorting == null -> {
-                    baseSongs
+                    availableSongs
                 }
 
                 cachedSorting.sort == CollectionSort.MOST_PLAYED && !playCountsLoaded -> {
@@ -462,7 +465,7 @@ private fun LocalPlaylistLayout(
                 }
 
                 else -> {
-                    baseSongs.presentCollectionWithPlayCounts(
+                    availableSongs.presentCollectionWithPlayCounts(
                         sort = cachedSorting.sort,
                         direction = cachedSorting.direction,
                         customOrder = cachedCustomOrder,
@@ -536,6 +539,7 @@ private fun LocalPlaylistLayout(
         PlaylistContextMenu(
             playlist = PlaylistItem(id = "auto:$type", title = title, thumbnail = null, author = subtitle),
             songs = menuSongs,
+            downloadSongs = availableSongs,
             fallbackIcon = icon,
             expanded = collectionMenu.expanded,
             offset = collectionMenu.offset,
