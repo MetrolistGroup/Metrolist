@@ -6,6 +6,10 @@ import androidx.media3.common.Player
 import androidx.room3.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.metrolist.shared.api.musicvideo.MusicVideoResolver
+import com.metrolist.shared.cast.CastConnectionStatus
+import com.metrolist.shared.cast.CastDevice
+import com.metrolist.shared.cast.CastProtocol
+import com.metrolist.shared.cast.CastState
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.model.MUSIC_VIDEO_TYPE_LIVE
 import com.metrolist.shared.model.RadioQueuePage
@@ -59,6 +63,10 @@ class AndroidRadioRepeatTest {
         checkRepeatModes(startRadio = true, currentSongId = "seed", currentPlaybackRequested = true, liveSong = true)
 
     @Test
+    fun currentSongRadioWhileCastingLeavesTheLocalPlayerAlone() =
+        checkRepeatModes(startRadio = true, currentSongId = "seed", casting = true)
+
+    @Test
     fun differentSongRadioStartsFromZero() = checkRepeatModes(startRadio = true, currentSongId = "other")
 
     @Test
@@ -79,6 +87,7 @@ class AndroidRadioRepeatTest {
         completedPlaybackInstanceId: Long? = null,
         currentPlaybackRequested: Boolean = false,
         liveSong: Boolean = false,
+        casting: Boolean = false,
     ) {
         runTest {
             Settings.replaceSharedForTest(Settings(MapSettings()))
@@ -194,7 +203,26 @@ class AndroidRadioRepeatTest {
                                 }
                             }
                         } as AndroidPlaybackPlayer
-                    val coordinator = AndroidQueueCoordinator(context, player, backgroundScope, repeat, MutableStateFlow(false), {}, {})
+                    val coordinator =
+                        AndroidQueueCoordinator(
+                            context,
+                            player,
+                            backgroundScope,
+                            repeat,
+                            MutableStateFlow(false),
+                            {},
+                            {},
+                            castState = {
+                                if (casting) {
+                                    CastState(
+                                        CastConnectionStatus.CONNECTED,
+                                        CastDevice("receiver", "Receiver", CastProtocol.FCAST, "host", 46899),
+                                    )
+                                } else {
+                                    CastState()
+                                }
+                            },
+                        )
                     coordinator.transitions =
                         AndroidQueueTransitions(
                             player,
@@ -230,7 +258,7 @@ class AndroidRadioRepeatTest {
                         val retained = currentSongId == seed.id
                         assertEquals(if (retained) 0 else 1, playbackRequests)
                         assertEquals(if (retained) 1 else 0, queueRestores)
-                        assertEquals(if (retained && startPlaying && !currentPlaybackRequested) 1 else 0, resumeRequests)
+                        assertEquals(if (retained && startPlaying && !currentPlaybackRequested && !casting) 1 else 0, resumeRequests)
                         assertEquals(0, queue.currentIndex.value)
                         val appended =
                             suspendCoroutineUninterceptedOrReturn<Boolean> { continuation ->

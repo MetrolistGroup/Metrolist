@@ -459,6 +459,8 @@ internal class AndroidQueueCoordinator(
                 ),
             )
         ) {
+            // The target keeps a retained seed's play state, so send the play intent separately.
+            if (startPlaying) AndroidDeviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PLAY))
             return
         }
         _repeatMode.value = Player.REPEAT_MODE_OFF
@@ -472,7 +474,7 @@ internal class AndroidQueueCoordinator(
                     queue.toggleShuffle(legacyShuffle = Settings.shared.useLegacyShuffle)
                 }
                 player.restoreQueue(queue.snapshot())
-                if (startPlaying && !player.wantsPlayback) player.resume()
+                if (startPlaying && !castState().isConnected && !player.wantsPlayback) player.resume()
                 _shuffleModeEnabled.value = player.isShuffleEnabled
             }
         } else {
