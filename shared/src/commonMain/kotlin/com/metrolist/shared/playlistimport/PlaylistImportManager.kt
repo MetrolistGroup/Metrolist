@@ -668,6 +668,9 @@ class PlaylistImportManager(
         private val FEATURE_CREDIT =
             Regex("""\s*[(\[](?:feat\.?|ft\.?|featuring|with)\s[^)\]]*[)\]]|\s+(?:feat\.?|ft\.?|featuring)\s.*$""", RegexOption.IGNORE_CASE)
 
+        private val ARTIST_CREDIT_SEPARATOR =
+            Regex("""\s*(?:,|&|\+|/|;|\b(?:featuring|feat|ft|with|vs|and|x)\b\.?)\s*""", RegexOption.IGNORE_CASE)
+
         internal fun bestTrackMatch(
             track: CsvTrack,
             candidates: List<SongItem>,
@@ -678,7 +681,10 @@ class PlaylistImportManager(
             fun normalizedTitle(value: String): String = normalized(value.replace(FEATURE_CREDIT, ""))
             val title = normalizedTitle(track.title)
             if (title.isEmpty()) return null
+
+            fun normalizedArtist(value: String): String = value.split(ARTIST_CREDIT_SEPARATOR).joinToString(",") { normalized(it) }
             val artist = normalized(track.artist)
+            val sourceArtists = ",${normalizedArtist(track.artist)},"
             val album = normalized(track.album)
             return candidates
                 .filter { song ->
@@ -688,8 +694,10 @@ class PlaylistImportManager(
                                 track.artist.split(',').any { sourceArtist ->
                                     song.artists.any { normalized(it.name) == normalized(sourceArtist) }
                                 } ||
-                                // Names like "Tyler, The Creator" contain the separator, so match whole names too.
-                                song.artists.any { normalized(it.name).length >= 3 && normalized(it.name) in artist }
+                                // Preserve commas within names without matching substrings of other artists.
+                                song.artists.any {
+                                    normalized(it.name).length >= 3 && ",${normalizedArtist(it.name)}," in sourceArtists
+                                }
                         ) &&
                         (
                             track.durationSeconds == null || song.duration == null ||
