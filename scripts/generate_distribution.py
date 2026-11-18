@@ -101,11 +101,15 @@ def generate(assets_dir, metadata, output):
             "linux": {system: assets[key] for system, key in (
                 ("x86_64-linux", "LINUX_X64"), ("aarch64-linux", "LINUX_ARM64"),
             )},
+            "darwin": {system: assets[key] for system, key in (
+                ("aarch64-darwin", "MACOS_ARM64"), ("x86_64-darwin", "MACOS_X64"),
+            )},
         }
         nix = stage / "nix"
         (nix / "packaging/nix").mkdir(parents=True)
         shutil.copyfile(ROOT / "flake.nix", nix / "flake.nix")
-        shutil.copyfile(ROOT / "packaging/nix/package.nix", nix / "packaging/nix/package.nix")
+        for recipe in ("package.nix", "darwin.nix"):
+            shutil.copyfile(ROOT / "packaging/nix" / recipe, nix / "packaging/nix" / recipe)
         (nix / "packaging/release.json").write_text(json.dumps(release, indent=2) + "\n")
         aur = stage / "aur"
         aur.mkdir()

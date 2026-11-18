@@ -79,6 +79,7 @@ class RepositoryChecksTest(unittest.TestCase):
             'packaging/winget/MetrolistGroup.Metrolist.yaml.in',
             'packaging/homebrew/metrolist.rb.in',
             'packaging/nix/package.nix',
+            'packaging/nix/darwin.nix',
             'flake.nix',
             'shared/src/commonMain/composeResources/values/strings.xml',
             'shared/src/commonMain/composeResources/values-b+hi+Latn/strings.xml',
