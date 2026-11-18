@@ -127,8 +127,8 @@ jobs:
           summarise() {
             [[ -n "${OPENROUTER_API_KEY:-}" ]] || return 1
             jq -nc --arg model "$OPENROUTER_MODEL" --arg prompt "$PROMPT" --arg commits "$1" \
-              '{model: $model, messages: [{role: "system", content: $prompt}, {role: "user", content: $commits}]}' |
-              curl -fsS --max-time 120 https://openrouter.ai/api/v1/chat/completions \
+              '{model: $model, reasoning: {effort: "low"}, messages: [{role: "system", content: $prompt}, {role: "user", content: $commits}]}' |
+              curl -fsS --max-time 240 https://openrouter.ai/api/v1/chat/completions \
                 -H "Authorization: Bearer $OPENROUTER_API_KEY" -H 'Content-Type: application/json' --data @- |
               jq -er '.choices[0].message.content | select(length > 0)'
           }

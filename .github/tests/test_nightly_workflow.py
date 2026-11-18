@@ -188,6 +188,7 @@ class NightlyWorkflowTest(unittest.TestCase):
             self.assertIn('Summarised from commit messages by test/model.', text)
             request = json.loads((root / 'requests.txt').read_text().splitlines()[0])
             self.assertEqual('test/model', request['model'])
+            self.assertEqual({'effort': 'low'}, request['reasoning'])
             self.assertEqual('prompt', request['messages'][0]['content'])
             self.assertIn('* merge feature', request['messages'][1]['content'])
 
