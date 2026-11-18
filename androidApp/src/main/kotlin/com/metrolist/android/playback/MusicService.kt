@@ -3166,7 +3166,7 @@ class MusicService :
                     if (AndroidListenTogetherManager.isGuestPlaybackLocked) {
                         return Futures.immediateFuture(SessionResult(SessionError.ERROR_PERMISSION_DENIED))
                     }
-                    player.currentSong.value?.let(::playMix)
+                    player.currentSong.value?.let { playMix(it, startPlaying = true) }
                 }
 
                 else -> {
