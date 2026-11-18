@@ -347,14 +347,14 @@
     <string name="app_font_picker_desc">Vybrat TTF nebo OTF soubor. Metrolist ho zkopíruje do soukromého úložiště aplikace.</string>
     <string name="app_font_system">Podle systému</string>
     <string name="app_font_applied">Používá se %1$s</string>
-    <string name="app_font_invalid">Nepodařilo se použít toto písmo. Vyber platný TTF nebo OTF soubor menší než 20 MB.</string>
+    <string name="app_font_invalid">Nepodařilo se použít toto písmo. Vyber platný TTF nebo OTF soubor menší než 20 MB.</string>
     <string name="app_font_downloads">Rychlé stahování písem</string>
     <string name="app_font_checking">Kontrola nainstalovaného písma…</string>
     <string name="app_font_reset">Resetovat písmo</string>
     <string name="app_font_reset_description">Použít systémové písmo a odstranit importované písmo</string>
     <string name="app_font_downloading">Stahování %1$s…</string>
     <string name="app_font_active">Aktivní</string>
-    <string name="app_font_installed">Nainstalované · Klepni pro použití</string>
+    <string name="app_font_installed">Nainstalované · Klepni pro použití</string>
     <string name="app_font_download_and_use">Klepni pro stáhnutí a použití</string>
     <string name="app_font_download_error">Nepodařilo se stáhnout %1$s. Zkontroluj své připojení a zkus to znovu.</string>
     <string name="app_font_import_custom">Importovat TTF nebo OTF soubor</string>
@@ -452,7 +452,7 @@
     <string name="uploaded_playlist_name">Nahráno</string>
     <string name="prompt_continue_playback">Zeptat se před pokračováním přehrávání</string>
     <string name="continue_playback_title">Pokračovat v přehrávání?</string>
-    <string name="continue_playback_message">Pokračovat v přehrávání "%1$s"?</string>
+    <string name="continue_playback_message">Pokračovat v přehrávání %1$s?</string>
     <string name="yes">Ano</string>
     <string name="no">Ne</string>
     <string name="voice_search">Hlasové vyhledávání</string>
