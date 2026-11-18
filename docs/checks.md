@@ -333,3 +333,7 @@ Arch verification restores the unprivileged builder's Gradle caches and wrapper 
 When importing a custom playlist cover on Android 7/8 and Android 9+, select camera JPEGs with rotated and mirrored EXIF orientations. The saved cover should match the photo viewer orientation, remain at most 1024 pixels on either side, and keep its orientation after restarting. Also check an ordinary PNG.
 
 On Android, play a live broadcast and inspect media notifications and Android Auto. The session should report a live item without a seek bar or rewind/fast-forward commands, while Play/Pause and track navigation remain available. Switch to an ordinary track or an ended broadcast with a known duration and verify seeking returns. Repeat while casting.
+
+### Desktop direct-audio read ahead
+
+Play an uncached direct HTTP audio stream on a throttled connection that is faster than the encoded audio bitrate. Check continuous playback across range boundaries, then seek forwards and backwards, pause/resume, and switch tracks during a pending read. Repeat with a short file and a fully cached/downloaded track. Range requests stay bounded, obsolete requests stop when playback closes, and read ahead does not change the playback position. SABR playback and video range sizing remain unchanged.
