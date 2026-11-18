@@ -933,15 +933,15 @@
         <item quantity="other">Aggiunti %1$d brani a %2$s</item>
     </plurals>
     <string name="onboarding_migration_complete_description">Il tuo account, le playlist, la cronologia, i brani che ti piacciono e i dati della libreria sono pronti in questa versione di Metrolist.</string>
-    <string name="statistics_play_count_duration">%1$s · %2$s</string>
+    <string name="statistics_play_count_duration">%1$s · %2$s</string>
     <string name="stored_remove_selected_message">I file audio salvati selezionati verranno rimossi.</string>
-    <string name="suggested_to_host">Suggerito all\u0027host</string>
+    <string name="suggested_to_host">Suggerito all'host</string>
     <string name="suggestions">Suggerimenti</string>
-    <string name="token_login">Token d\u0027accesso</string>
+    <string name="token_login">Token d'accesso</string>
     <string name="total_listening">Totale ascolti</string>
     <string name="total_time_listening">Totale durata ascolti</string>
     <string name="theme_mode_dark">Scuro</string>
-    <string name="tv_sign_in_warning">L\u0027accesso a Google non è ottimizzato per il telecomando. Usa un mouse o una tastiera se non riesci a muoverti tra i campi.</string>
+    <string name="tv_sign_in_warning">L'accesso a Google non è ottimizzato per il telecomando. Usa un mouse o una tastiera se non riesci a muoverti tra i campi.</string>
     <string name="unable_to_load_podcast">Impossibile caricare il podcast</string>
     <string name="unable_to_update_podcast">Impossibile aggiornare il podcast</string>
     <string name="unavailable">Non disponibile</string>
@@ -971,7 +971,7 @@
     <string name="statistics_overview">Panoramica</string>
     <string name="statistics_lifetime">tutto il tempo</string>
     <string name="song_liked">Hai messo Mi piace a questo brano</string>
-    <string name="statistics_listening_habits">Abitudini d\u0027ascolto</string>
+    <string name="statistics_listening_habits">Abitudini d'ascolto</string>
     <string name="music_video_unavailable">Impossibile riprodurre il video.</string>
     <string name="statistics_top_albums">Album più ascoltati</string>
     <string name="statistics_time">Tempo</string>
@@ -2231,7 +2231,7 @@
     <string name="backup_invalid_data">Impossibile leggere o convalidare il backup. Potrebbe essere danneggiato o contenere dati non supportati.</string>
     <string name="search_history_removal_failed">Impossibile cancellare la cronologia ricerche dell'account. Riprova quando sei connesso.</string>
     <string name="top_period_all_time">Dall'inizio</string>
-    <string name="top_period_past_24_hours">Ultime 24 ore</string>
+    <string name="top_period_past_24_hours">Ultime 24 ore</string>
     <string name="top_period_past_week">Ultima settimana</string>
     <string name="top_period_past_month">Ultimo mese</string>
     <string name="top_period_past_year">Ultimo anno</string>
