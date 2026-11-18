@@ -2670,4 +2670,7 @@
     <string name="desktop_tray_toggle_on_click_desc_mac">Щелчок правой кнопкой мыши по значку в трее откроет или скроет окно Metrolist</string>
     <string name="desktop_omarchy_unsupported">Metrolist не работает на Omarchy. Используйте другой дистрибутив Linux, Windows 10 и выше или macOS.</string>
     <string name="learn_more">Узнать больше</string>
+    <string name="duration_three_units"></string>
+    <string name="matugen_colors_description"></string>
+    <string name="duration_two_units"></string>
 </resources>
