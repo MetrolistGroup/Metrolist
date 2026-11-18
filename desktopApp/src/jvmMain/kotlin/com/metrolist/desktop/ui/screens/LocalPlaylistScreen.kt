@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -423,19 +424,23 @@ private fun LocalPlaylistLayout(
         remember(collectionMetadata, needsPlayCounts) {
             if (needsPlayCounts) collectionMetadata?.keys?.toList().orEmpty() else emptyList()
         }
-    val playCountsRequest = remember(database, countIds) { Any() }
+    var playCountsRetryKey by remember { mutableIntStateOf(0) }
+    val playCountsRequest = remember(database, countIds, playCountsRetryKey) { Any() }
     val playCountsState by remember(database, countIds, playCountsRequest) {
         if (countIds.isEmpty()) {
-            flowOf(playCountsRequest to emptyMap<String, Int>())
+            flowOf(playCountsRequest to Result.success(emptyMap<String, Int>()))
         } else {
             database
                 .collectionPlayCounts(countIds)
-                .catch { emit(emptyMap()) }
-                .map { counts -> playCountsRequest to counts }
+                .map { counts -> playCountsRequest to Result.success(counts) }
+                .catch { emit(playCountsRequest to Result.failure(it)) }
         }
     }.collectAsState(null)
-    val playCountsLoaded = countIds.isEmpty() || playCountsState?.first === playCountsRequest
-    val playCounts = if (playCountsState?.first === playCountsRequest) playCountsState?.second.orEmpty() else emptyMap()
+    val playCountsLoaded =
+        countIds.isEmpty() ||
+            (playCountsState?.first === playCountsRequest && playCountsState?.second?.isSuccess == true)
+    val playCounts =
+        if (playCountsLoaded) playCountsState?.second?.getOrNull().orEmpty() else emptyMap()
     val cachedCustomOrder =
         remember(isCachedCollection, cachedSorting, Settings.shared.cachedSongsCustomOrder) {
             if (isCachedCollection && cachedSorting?.sort == CollectionSort.MANUAL) {
@@ -526,6 +531,7 @@ private fun LocalPlaylistLayout(
             collectionMetadata = collectionMetadata,
             playCounts = playCounts,
             playCountsLoaded = playCountsLoaded,
+            onRetryPlayCounts = { playCountsRetryKey++ },
             onCollectionSortChange = { countSort = it == CollectionSort.MOST_PLAYED },
             onRemoveSongs = onRemoveSongs?.let { action -> { ids -> launchCollectionMutation { action(ids) } } },
             onClearCollection = onClearCollection?.let { action -> { launchCollectionMutation(action) } },

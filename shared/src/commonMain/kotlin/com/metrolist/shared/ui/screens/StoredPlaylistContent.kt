@@ -80,7 +80,6 @@ import com.metrolist.shared.ui.selection.rememberSelectionState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -103,6 +102,7 @@ fun StoredPlaylistContent(
     downloadFilterDatabase: MusicDatabase? = null,
     playCounts: Map<String, Int> = emptyMap(),
     playCountsLoaded: Boolean = true,
+    onRetryPlayCounts: (() -> Unit)? = null,
     onCollectionSortChange: (CollectionSort) -> Unit = {},
     onRemoveSongs: ((Set<String>) -> Unit)? = null,
     onClearCollection: (() -> Unit)? = null,
@@ -246,6 +246,9 @@ fun StoredPlaylistContent(
         song: SongItem? = null,
         shuffle: Boolean = false,
     ) {
+        if (collectionSort == CollectionSort.MOST_PLAYED && !currentPlayCountsReady.value) {
+            onRetryPlayCounts?.invoke()
+        }
         playJob?.cancel()
         playJob =
             scope.launch {
@@ -259,11 +262,9 @@ fun StoredPlaylistContent(
                                 listeningTimes,
                             ) ?: return@launch
                     } else {
-                        withTimeoutOrNull(2_000L) {
-                            snapshotFlow { currentPlayCountsReady.value to currentOrderedSongs.value }
-                                .first { (ready, _) -> ready }
-                                .second
-                        } ?: currentOrderedSongs.value
+                        snapshotFlow { currentPlayCountsReady.value to currentOrderedSongs.value }
+                            .first { (ready, _) -> ready }
+                            .second
                     }
                 val playable =
                     (if (song == null) complete.filterForPlaylistSearch(currentQuery.value) else complete)
