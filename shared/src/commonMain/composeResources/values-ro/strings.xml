@@ -1800,7 +1800,7 @@
     <string name="device_connect_sync_conflict">Oprește redarea la distanță înainte de difuzare.</string>
     <string name="device_connect_pairing">Se asociază…</string>
     <string name="device_connect_device_type_unknown">Dispozitiv necunoscut</string>
-    <string name="device_connect_device_type_and_model">%1$s · %2$s</string>
+    <string name="device_connect_device_type_and_model">%1$s · %2$s</string>
     <string name="device_connect_picker_title">Conectează-te la un dispozitiv</string>
     <string name="device_connect_available">Disponibil</string>
     <string name="lyrics_show_translations">Traduceri</string>
@@ -1959,7 +1959,7 @@
     <string name="ai_model_custom_id">Folosește ID personalizat al modelului</string>
     <string name="ai_model_price">%1$s intrați %2$s ieșiți per 1M tokeni</string>
     <string name="ai_model_free">Gratuit</string>
-    <string name="ai_model_speed">~%1$s tokeni/s</string>
+    <string name="ai_model_speed">~%1$s tokeni/s</string>
     <string name="ai_model_load_failed">Nu s-au putut încărca modelele</string>
     <string name="ai_model_api_key_needed">Adaugă o cheie API pentru a încărca lista cu modele</string>
     <string name="ai_model_none_found">Niciun model nu corespunde căutării tale</string>
@@ -2697,4 +2697,6 @@
     <string name="slider_standard_buffered">Standard cu buffer</string>
     <string name="hide_playlist_recommendations">Ascunde recomandările pentru playlist</string>
     <string name="hide_playlist_recommendations_desc">Ascunde melodiile recomandate afișate sub playlisturi</string>
+    <string name="updates_nightly_builds_desc"></string>
+    <string name="updates_nightly_builds"></string>
 </resources>
