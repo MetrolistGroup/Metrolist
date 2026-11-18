@@ -2006,7 +2006,7 @@
     <string name="downloads_empty">Nessun download in corso</string>
     <string name="downloads_empty_hint">I brani salvati per l'ascolto offline saranno mostrati qui durante il download.</string>
     <string name="edit_playlist_cover">Modifica copertina playlist</string>
-    <string name="edit_playlist_cover_note">Il tuo account dev\u0027essere collegato ad un numero di telefono e verificato su YouTube Music per cambiare la cover della playlist</string>
+    <string name="edit_playlist_cover_note">Il tuo account dev'essere collegato ad un numero di telefono e verificato su YouTube Music per cambiare la cover della playlist</string>
     <string name="edit_playlist_cover_note_wait">Dopo aver selezionato un'immagine, attendi un momento per far mostrare la nuova copertina nella tua playlist</string>
     <string name="choose_from_library">Scegli dalla libreria</string>
     <string name="remove_custom_image">Rimuovi immagine personalizzata</string>
