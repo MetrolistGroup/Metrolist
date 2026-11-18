@@ -1146,7 +1146,6 @@
     <string name="ai_provider">Leverantör</string>
     <string name="ai_base_url">Basadress</string>
     <string name="ai_translation_model">Översättningsmodell</string>
-    <string name="ai_judge_detector_model">Bedömare/detektormodell</string>
     <string name="ai_target_language">Målspråk</string>
     <string name="ai_deepl_formality">Formalitet</string>
     <string name="ai_deepl_formality_default">Standard</string>
@@ -1644,7 +1643,6 @@
     <string name="settings_translation_mode_summary">Översätt orden eller skriv deras uttal med målskriftens tecken</string>
     <string name="settings_translation_provider_summary">Välj tjänsten som översätter låttexter</string>
     <string name="settings_translation_model_summary">Modell för översättning eller transkription av låttexter</string>
-    <string name="settings_detector_model_summary">Modell som avgör om låttexter behöver översättas</string>
     <string name="settings_translation_formality_summary">Välj formellt eller informellt språk för DeepL-översättningar</string>
     <string name="settings_discord_advanced_summary">Visa aktivitetsmallar och egna länkknappar</string>
     <string name="settings_discord_activity_type_summary">Välj hur Discord beskriver din musikaktivitet</string>

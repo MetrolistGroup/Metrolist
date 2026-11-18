@@ -111,6 +111,7 @@ import com.metrolist.shared.playback.SleepTimerState
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.LocalIsInPipMode
 import com.metrolist.shared.ui.LocalIsTv
+import com.metrolist.shared.ui.components.BlurredArtworkBackground
 import com.metrolist.shared.ui.components.PlayerConnectedButtonGroup
 import com.metrolist.shared.ui.components.PlayerLikeShareButtons
 import com.metrolist.shared.ui.components.PlayerPrimaryControls
@@ -127,6 +128,7 @@ import com.metrolist.shared.ui.navigation.blockInput
 import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.theme.uiEnhanced
 import com.metrolist.shared.ui.utils.nativeBlurCompat
+import com.metrolist.shared.ui.utils.supportsNativeBlur
 import com.metrolist.shared.utils.formatDuration
 import com.metrolist.shared.viewmodels.PlayerViewModel
 import kotlinx.coroutines.delay
@@ -155,6 +157,7 @@ fun FullscreenPlayerContent(
     onShowSleepTimer: () -> Unit,
     onOpenCast: () -> Unit,
     isCasting: Boolean,
+    isBuffering: Boolean = false,
     canControlPlayback: Boolean,
     backHandlerEnabled: Boolean = true,
 ) {
@@ -181,16 +184,25 @@ fun FullscreenPlayerContent(
         modifier = Modifier.fillMaxSize(),
     ) {
         if (currentSong?.displayThumbnail != null) {
-            AsyncImage(
-                url = currentSong.displayThumbnail,
-                contentDescription = null,
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .alpha(0.35f)
-                        .nativeBlurCompat(120f, enabled = true),
-                contentScale = ContentScale.Crop,
-            )
+            if (!supportsNativeBlur()) {
+                BlurredArtworkBackground(
+                    url = currentSong.displayThumbnail,
+                    modifier = Modifier.fillMaxSize().alpha(0.35f),
+                    blurRadiusPx = 120f,
+                    crossfade = true,
+                )
+            } else {
+                AsyncImage(
+                    url = currentSong.displayThumbnail,
+                    contentDescription = null,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .alpha(0.35f)
+                            .nativeBlurCompat(120f, enabled = true),
+                    contentScale = ContentScale.Crop,
+                )
+            }
         }
 
         Row(
@@ -280,6 +292,7 @@ fun FullscreenPlayerContent(
                         currentPositionFlow = viewModel.currentPosition,
                         isPlaying = isPlaying,
                         isCasting = isCasting,
+                        isBuffering = isBuffering,
                         offset = subtitleOffset,
                         onOffsetChange = { subtitleOffset = it },
                     )
@@ -314,6 +327,7 @@ fun FullscreenPlayerContent(
                                     isLoading = uiState.isLyricsLoading,
                                     textColor = Color.White,
                                     isCasting = isCasting,
+                                    isBuffering = isBuffering,
                                 )
                             }
                         } else if (uiState.isQueueVisible || queueClosing) {
@@ -360,6 +374,7 @@ private fun FullscreenControlsOverlay(
     onToggleSubtitle: () -> Unit,
     onOpenCast: () -> Unit,
     isCasting: Boolean,
+    isBuffering: Boolean = false,
     canControlPlayback: Boolean,
     visible: Boolean,
     onVisibilityChange: (Boolean) -> Unit,
@@ -648,6 +663,7 @@ private fun SubtitleOverlay(
     currentPositionFlow: StateFlow<Long>,
     isPlaying: Boolean,
     isCasting: Boolean,
+    isBuffering: Boolean = false,
     offset: IntOffset,
     onOffsetChange: (IntOffset) -> Unit,
 ) {
@@ -672,6 +688,7 @@ private fun SubtitleOverlay(
             songId = uiState.currentSong?.id,
             timingOffsetMs = lyricsOffsetMs,
             isCasting = isCasting,
+            isBuffering = isBuffering,
             finalLineDurationMs = LyricsUtils.FINAL_DYNAMIC_LINE_DURATION_MS,
         )
 

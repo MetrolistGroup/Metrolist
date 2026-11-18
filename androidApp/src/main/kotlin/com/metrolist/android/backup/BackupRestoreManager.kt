@@ -29,7 +29,6 @@ import com.metrolist.shared.backup.copyLegacyBackupTables
 import com.metrolist.shared.backup.requireBackupSize
 import com.metrolist.shared.backup.requireSupportedFormat
 import com.metrolist.shared.backup.shouldConvertRestoredDatabase
-import com.metrolist.shared.backup.shouldMigrateDatabaseLikes
 import com.metrolist.shared.backup.withLegacyArtistNameAliases
 import com.metrolist.shared.db.DATABASE_VERSION
 import com.metrolist.shared.db.MusicDatabase
@@ -40,6 +39,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.ArtistNameAliases
 import com.metrolist.shared.settings.PortableSettings
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.state.restoreDatabaseLikes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +52,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -145,12 +146,11 @@ class BackupRestoreManager(
                 Settings.shared.flush()
                 database.useReaderConnection { }
                 val databasePath = context.getDatabasePath(BACKUP_DATABASE_ENTRY).path
-                val snapshot = File(context.cacheDir, "backup-$BACKUP_DATABASE_ENTRY").canonicalFile
-                val archive = File(context.cacheDir, "metrolist-backup.zip.tmp").canonicalFile
-                check(snapshot.parentFile?.let { it.mkdirs() || it.isDirectory } != false) { "Could not create backup directory" }
-                snapshot.delete()
-                archive.delete()
+                val staging = File(context.cacheDir, "metrolist-backup-${UUID.randomUUID()}")
+                check(staging.mkdir()) { "Could not create backup directory" }
                 try {
+                    val snapshot = File(staging, BACKUP_DATABASE_ENTRY)
+                    val archive = File(staging, "backup.zip")
                     createDatabaseSnapshot(File(databasePath), snapshot)
                     ZipOutputStream(archive.outputStream().buffered()).use { zip ->
                         zip.putNextEntry(ZipEntry(BACKUP_MANIFEST_ENTRY))
@@ -182,8 +182,7 @@ class BackupRestoreManager(
                         output.flush()
                     } ?: error("Could not open backup destination")
                 } finally {
-                    snapshot.delete()
-                    archive.delete()
+                    staging.deleteRecursively()
                 }
             }
         }
@@ -544,9 +543,8 @@ class BackupRestoreManager(
                     }
                 if (request.settings == null) ArtistNameAliases.restore(emptyMap())
                 request.settings?.let(Settings.shared::importBackupSettings)
-                if (request.hasDatabase && shouldMigrateDatabaseLikes(request.settings?.entries?.mapTo(mutableSetOf()) { it.key })) {
-                    Settings.shared.likedSongsJson = json.encodeToString(likedSongs)
-                    Settings.shared.likedSongIds = likedSongs.joinToString(",") { it.id }
+                if (request.hasDatabase) {
+                    Settings.shared.restoreDatabaseLikes(likedSongs, request.settings?.entries?.mapTo(mutableSetOf()) { it.key })
                 }
                 Settings.shared.flush()
             }

@@ -28,6 +28,7 @@ import com.metrolist.shared.generated.resources.move_to_top
 import com.metrolist.shared.generated.resources.move_up
 import com.metrolist.shared.generated.resources.playlist_reorder
 import com.metrolist.shared.ui.icons.MetrolistIcons
+import com.metrolist.shared.ui.menu.groupedMenuItemShapes
 import com.metrolist.shared.ui.tv.tvFocusHighlight
 import org.jetbrains.compose.resources.stringResource
 
@@ -67,6 +68,7 @@ internal fun ReorderMenu(
             DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
                 DropdownMenuItem(
                     text = { Text(stringResource(Res.string.move_to_top)) },
+                    shape = groupedMenuItemShapes(0, 4).shape,
                     modifier = Modifier.tvFocusHighlight(),
                     enabled = onMoveToTop != null,
                     onClick = {
@@ -76,6 +78,7 @@ internal fun ReorderMenu(
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(Res.string.move_up)) },
+                    shape = groupedMenuItemShapes(1, 4).shape,
                     modifier = Modifier.tvFocusHighlight(),
                     enabled = onMoveUp != null,
                     onClick = {
@@ -85,6 +88,7 @@ internal fun ReorderMenu(
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(Res.string.move_down)) },
+                    shape = groupedMenuItemShapes(2, 4).shape,
                     modifier = Modifier.tvFocusHighlight(),
                     enabled = onMoveDown != null,
                     onClick = {
@@ -94,6 +98,7 @@ internal fun ReorderMenu(
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(Res.string.move_to_bottom)) },
+                    shape = groupedMenuItemShapes(3, 4).shape,
                     modifier = Modifier.tvFocusHighlight(),
                     enabled = onMoveToBottom != null,
                     onClick = {

@@ -910,7 +910,6 @@
     <string name="ai_provider">Aanbieder</string>
     <string name="ai_base_url">Basis URL</string>
     <string name="ai_translation_model">Vertaalmodel</string>
-    <string name="ai_judge_detector_model">Beoordeel/detector model</string>
     <string name="ai_target_language">Doeltaal</string>
     <string name="ai_deepl_formality">Formaliteit</string>
     <string name="ai_deepl_formality_default">Standaard</string>
@@ -1309,7 +1308,6 @@
     <string name="settings_translation_mode_summary">Vertaal woorden of schrijf hun uitspraak in het doelschrift</string>
     <string name="settings_translation_provider_summary">Kies de dienst die songteksten vertaalt</string>
     <string name="settings_translation_model_summary">Model voor het vertalen of transcriberen van songteksten</string>
-    <string name="settings_detector_model_summary">Model dat bepaalt of songteksten vertaald moeten worden</string>
     <string name="settings_translation_formality_summary">Kies formele of informele taal voor DeepL-vertalingen</string>
     <string name="settings_discord_advanced_summary">Toon activiteitssjablonen en eigen linkknoppen</string>
     <string name="settings_discord_activity_type_summary">Kies hoe Discord je muziekactiviteit benoemt</string>

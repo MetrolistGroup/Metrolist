@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.navigation.LocalNavSharedTransitionScope
 import com.metrolist.shared.ui.navigation.LocalNavVisibilityScope
 import com.metrolist.shared.ui.navigation.acceptsInput
@@ -54,6 +55,8 @@ internal fun Modifier.desktopPlayerArtwork(songId: String?): Modifier {
             rememberSharedContentState("desktop-player-artwork:$songId"),
             animatedVisibilityScope = visibility,
             boundsTransform = BoundsTransform { _, _ -> DesktopPlayerMotion.artworkBounds },
+            // Covers can arrive mid-transition. Keep their layers in the owning tree even while loading.
+            renderInOverlayDuringTransition = !Settings.shared.enableAnimatedCovers,
         )
     }
 }

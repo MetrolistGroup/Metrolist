@@ -1,4 +1,4 @@
-name: Verify Desktop
+name: Build Desktop
 
 on:
   workflow_dispatch:
@@ -13,10 +13,6 @@ on:
         required: false
         default: false
         type: boolean
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 concurrency:
   group: desktop-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -24,15 +20,13 @@ concurrency:
 
 jobs:
   changes:
-    name: Select checks
+    name: Read package version
     runs-on: blacksmith-2vcpu-ubuntu-2604
     timeout-minutes: 5
     permissions:
       contents: read
     outputs:
       version: ${{ steps.version.outputs.value }}
-      platform: ${{ steps.paths.outputs.desktop }}
-      shared-only: ${{ steps.paths.outputs.shared-only }}
     steps:
       - name: Check out repository history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -42,9 +36,6 @@ jobs:
       - name: Read installer version
         id: version
         run: echo "value=$(sed -n 's/^appVersion=//p' gradle.properties)" >> "$GITHUB_OUTPUT"
-      - name: Select platform checks
-        id: paths
-        uses: ./.github/actions/ci-changes
 
   macos:
     name: macOS packages
@@ -93,13 +84,12 @@ jobs:
 
   build:
     needs: changes
-    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.platform == 'true'
     name: Desktop
     uses: ./.github/workflows/reusable-desktop-verify.yml
     permissions:
       contents: read
     with:
-      shared-only: ${{ needs.changes.outputs.shared-only == 'true' }}
+      include-arm64: true
       cache-read-only: ${{ github.event_name == 'pull_request' }}
     secrets:
       GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}

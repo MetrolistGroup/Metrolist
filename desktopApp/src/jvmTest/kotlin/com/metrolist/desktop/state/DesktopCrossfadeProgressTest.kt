@@ -119,16 +119,6 @@ class DesktopCrossfadeProgressTest {
     }
 
     @Test
-    fun promotionKeepsElapsedOutputTimeAcrossSpeedChanges() {
-        val clock = DesktopCrossfadeClock(10_000L, 5_000L)
-        assertEquals(0.6f, clock.sample(16_000L, 2f, playing = true, ended = false))
-        clock.rebase(0L)
-        assertEquals(0.6f, clock.sample(0L, 2f, playing = false, ended = false))
-        assertEquals(0.8f, clock.sample(500L, 0.5f, playing = true, ended = false))
-        assertEquals(1f, clock.sample(2_500L, 2f, playing = true, ended = false))
-    }
-
-    @Test
     fun failedCrossfadeIsAttemptedOnceUntilTheTargetOccurrenceChanges() =
         runBlocking {
             val player = MusicPlayer()

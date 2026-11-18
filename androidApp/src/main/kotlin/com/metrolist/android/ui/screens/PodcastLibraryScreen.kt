@@ -97,6 +97,7 @@ import com.metrolist.shared.ui.components.libraryCover
 import com.metrolist.shared.ui.components.menuAnchorSemantics
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.menu.BuiltinPlaylistMenuButton
+import com.metrolist.shared.ui.menu.groupedMenuItemShapes
 import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.theme.gridCellShape
 import com.metrolist.shared.utils.formatDuration
@@ -508,8 +509,9 @@ private fun DownloadSortHeader(
             )
             DropdownMenuPopup(expanded = expanded, onDismissRequest = { expanded = false }) {
                 DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
-                    DownloadSort.entries.forEach { candidate ->
+                    DownloadSort.entries.forEachIndexed { index, candidate ->
                         DropdownMenuItem(
+                            shape = groupedMenuItemShapes(index, DownloadSort.entries.size).shape,
                             text = {
                                 Text(
                                     when (candidate) {
@@ -609,6 +611,7 @@ private fun PodcastLibraryEpisodeRow(
                     DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
                         DropdownMenuItem(
                             text = { Text(stringResource(Res.string.play_next)) },
+                            shape = groupedMenuItemShapes(0, if (onDownload == null) 1 else 2).shape,
                             onClick = {
                                 expanded = false
                                 onPlayNext()
@@ -618,6 +621,7 @@ private fun PodcastLibraryEpisodeRow(
                         onDownload?.let { download ->
                             DropdownMenuItem(
                                 text = { Text(stringResource(Res.string.action_download)) },
+                                shape = groupedMenuItemShapes(1, 2).shape,
                                 onClick = {
                                     expanded = false
                                     download()

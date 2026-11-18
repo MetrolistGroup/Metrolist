@@ -119,7 +119,8 @@ class AndroidDeviceConnectPlaybackTest {
                 val shuffle = MutableStateFlow(false)
                 val queue = AndroidQueueCoordinator(context, player, backgroundScope, repeat, shuffle, {}, {})
                 val resolver = MusicVideoResolver(search = { _, _ -> SearchResultPage(emptyList()) })
-                val video = AndroidVideoModeController(context, player, backgroundScope, resolver, { it() }, { _, _ -> null }, {})
+                val video =
+                    AndroidVideoModeController(context, player, backgroundScope, resolver, { it() }, { _, _ -> null }, {}, { false })
                 val transitions =
                     AndroidQueueTransitions(
                         player,

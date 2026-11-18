@@ -45,6 +45,11 @@ interface LayoutHitTestOwner {
         x: Float,
         y: Float,
     ): Boolean = false
+
+    fun overlayHitTest(
+        x: Float,
+        y: Float,
+    ): Boolean? = null
 }
 
 private val Any?.isPopupSourceResetObserver: Boolean
@@ -134,14 +139,9 @@ internal class CanvasLayersLayoutHitTestOwner(
         }
 
     private val layers =
-        sceneClass.getDeclaredField("_layersCopyCache").let {
+        sceneClass.getDeclaredField("layers").let {
             it.trySetAccessible()
-            it.get(scene)
-        }
-
-    private val layersWithCopyMethod =
-        layers.javaClass.getMethod("withCopy", Function1::class.java).apply {
-            trySetAccessible()
+            it.get(scene) as List<*>
         }
 
     private val focusedLayerField =
@@ -167,22 +167,31 @@ internal class CanvasLayersLayoutHitTestOwner(
     override fun hitTest(
         x: Float,
         y: Float,
-    ): Boolean {
-        var layerHitResult: Boolean? = null
-        layersWithCopyMethod.invoke(
-            layers,
-            { copy: List<*> ->
-                for (layer in copy.asReversed()) {
-                    if (layerIsInBoundMethod?.invoke(layer, packFloats(x, y)) == true) {
-                        layerHitResult = getLayoutNode(layerOwnerField.get(layer)).layoutNodeHitTest(x, y)
-                        break
-                    } else if (layer == focusedLayerField.get(scene)) {
-                        layerHitResult = false
-                        break
-                    }
-                }
-            },
+    ): Boolean = overlayHitTest(x, y) ?: getLayoutNode(mainOwnerRef).layoutNodeHitTest(x, y)
+
+    override fun overlayHitTest(
+        x: Float,
+        y: Float,
+    ): Boolean? =
+        hitTestSceneLayers(
+            layers = layers,
+            focusedLayer = focusedLayerField.get(scene),
+            isInBounds = { layer -> layerIsInBoundMethod?.invoke(layer, packFloats(x, y)) == true },
+            hitTest = { layer -> getLayoutNode(layerOwnerField.get(layer)).layoutNodeHitTest(x, y) },
         )
-        return layerHitResult ?: getLayoutNode(mainOwnerRef).layoutNodeHitTest(x, y)
+}
+
+internal fun hitTestSceneLayers(
+    layers: List<*>,
+    focusedLayer: Any?,
+    isInBounds: (Any) -> Boolean,
+    hitTest: (Any) -> Boolean,
+): Boolean? {
+    // Native Windows hit tests must not borrow Compose's render-thread copy cache.
+    for (layer in ArrayList(layers).asReversed()) {
+        if (layer == null) continue
+        if (isInBounds(layer)) return hitTest(layer)
+        if (layer == focusedLayer) return false
     }
+    return null
 }

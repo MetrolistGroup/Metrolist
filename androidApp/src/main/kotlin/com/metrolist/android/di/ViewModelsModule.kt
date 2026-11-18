@@ -51,7 +51,7 @@ val viewModelsModule =
         }
 
         viewModel { params ->
-            ArtistViewModel(params.getOrNull(), get(), get<CoroutineScope>())
+            ArtistViewModel(params.getOrNull(), get(), get(), get<CoroutineScope>())
         }
 
         viewModel { (id: String, name: String) -> AboutArtistViewModel(id, name) }

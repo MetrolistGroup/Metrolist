@@ -23,7 +23,7 @@ Android unit tests include the generated shared Compose catalog on their runtime
 
 Android lint uses `androidApp/lint-baseline.xml`. Translation and resource checks cannot see all shared Compose accessors, so lint disables `MissingTranslation`, `MissingQuantity`, `PluralsCandidate` and `UnusedResources`.
 
-`.editorconfig` changes run Android and desktop ktlint checks. Flatpak manifest and Makefile changes run manifest parsing and packaging-target dry runs in repository checks.
+`.editorconfig` changes run Android and desktop ktlint checks. Dispatch `verify-repository-checks.yml` to parse the Flatpak manifest and dry-run its Makefile targets.
 
 `make ios-test` parses all Swift host sources with the iOS Simulator SDK on macOS; it requires Xcode command-line tools.
 
@@ -47,6 +47,12 @@ For Android lookahead crashes, repeat portrait/landscape rotation, background/re
 
 ### Collections and pages
 
+On Android, desktop and iOS, choose list view for Library Tracks and grid view for Playlists, Artists and Albums. Switch tabs and restart the app. Each tab keeps its choice and the list/grid transition still animates. Sort Tracks by Downloaded in both directions; completed downloads precede tracks without downloads, with newest downloads first by default. Sort album, playlist and Liked songs by listening time, including unplayed songs and duplicate playlist entries. Check playback follows the displayed order. Save and remove a song while viewing album, playlist and artist rows; its library badge updates, including wide artist rows. Unlock an editable playlist in Playlist order, play a song, open its menu and move tracks using the handle. Reopen it and restart the app, then lock it again. Read-only, incomplete and differently sorted playlists must not expose reordering. Check touch, keyboard and TV movement, multi-selection and pull-to-refresh during a drag.
+
+In Android Library, search tracks, albums and playlists in list and grid views with swipe actions enabled and disabled. Item corners and spacing must stay the same when the query becomes nonblank. Check swipe actions and clearing the query.
+
+On Android, desktop and iOS, hide a library item, hide an artist or podcast from Home, block an artist, dislike a song and block a Listen Together user. Each restore page gets one hint with an Open settings action. Use the action to open the named list, then restore the item. Check the existing player and navigation transitions. Hide or block another item for the same page, then relaunch and repeat. The hint must not return. Repeat with existing hidden or blocked items and unset hint flags, and check that the next action shows the hint. Hide from Home must keep its Undo snackbar.
+
 Open community playlists and YouTube mixes from Home on a slow connection. Edit appears only for owned or editable local playlists, including in the overflow menu. The playlist page keeps the tapped cover through loading, pagination, refresh and Back, while custom covers and local mosaics keep priority. Check that the description and track-count line expand and fade as album descriptions do, including when no preview is cached and with system animations disabled.
 
 On iOS, open an owned YouTube Music playlist and use Edit in its header. Change its name and description, clear the description, and verify the result in YouTube Music. A failed description update after a successful rename keeps the dialog open for retry with the saved name. Signed-out and read-only playlists have no editing controls. Upload and remove a cover, including before bookmarking the playlist. A failed cover upload keeps the selected image and saved metadata for retry. Check local cover save and cancel.
@@ -57,9 +63,11 @@ For playlist headers on Android, desktop and iOS, tap or click a truncated title
 
 For album and playlist headers, scroll the title out of view in narrow and medium layouts. The title fades into the top bar and fades out when the header returns. Check long titles, search, selection and wide layouts.
 
-For album and playlist search, open the field below a large cover with the keyboard visible. The search row scrolls to the top and shows results below it. Check clearing and closing the field, repeated searches, large fonts, narrow and wide desktop layouts and duplicate songs. The unfiltered position returns when the query clears, and wide results start at the first match.
+For album and playlist search, open the field below a large cover with the keyboard visible. The search row scrolls to the top and shows results below it. In narrow and medium layouts, typing the first character keeps that position when the filtered list takes over, including while the keyboard resizes the viewport. Add and delete characters to switch between many, few and no matches in Downloaded, albums and local and online playlists. The search row must stay at the top without bringing the artwork back into view. Check clearing and closing the field, repeated searches, large fonts, narrow and wide desktop layouts and duplicate songs. The unfiltered position returns when the query clears, and wide results start at the first match even after scrolling the unfiltered list or an earlier search.
 
 Scroll Android's Liked songs, Downloads, Cached and Uploaded collections past the cover. The fixed back, edit and menu controls have an opaque background so rows do not show through them. Enter and exit selection, then open and close search. Check desktop playlists at narrow and wide widths; their navigation row keeps its reserved space above the list.
+
+Open a song menu by holding a row and by tapping its three-dot button in Liked songs, Downloads, Cached and Uploaded. Artist and album entries open the same destinations as the song menu elsewhere. Check multiple artists, uploads with and without browse IDs, and cache entries with stored song metadata. Missing artist or album IDs omit only that entry. Repeat on desktop and iOS.
 
 For current-song rows, check playlists, albums, queue, search and wide artist tracklists in light, dark and dynamic color themes. The current row has a full pill shape, scalloped artwork and readable title, metadata and overflow icon. Check metadata links on hover and keyboard focus. Pause, resume and change tracks, including duplicate queue entries. Check that current-row colors fade in and out, artwork has no dark playback scrim or moving bars, and screen readers announce the current playing or paused state. Repeat rapid track changes and disabled system animations. Check the first, middle and last collection rows, missing and video artwork, selection, reordering, large fonts and RTL. Album artwork uses the number slot without shifting the title. Queue spacing, handles and controls keep their layout.
 
@@ -69,7 +77,7 @@ For the podcast library, compare auto-playlist covers, subscribed shows, channel
 
 For Statistics, check the overview and all three detail lists in light, dark and dynamic themes at narrow and wide widths. Scroll each carousel through long titles and artist shapes; sections below stay still. Scroll the connected period group to both ends, pull to refresh, and check Share FAB expansion and bottom-player clearance. Compare page and export play/time totals, preview artwork, missing artwork and saved PNGs at phone sizes, including RTL and long names. Verify Continuous, Calendar and custom dates, locale-specific week starts, empty and failed loads, refresh dimming and ranking resets. Play and Shuffle use the period's ranked tracks. Check artwork long-press, desktop right-click and keyboard menus, each row's overflow button, sharing, large text, RTL, Back and bottom player clearance.
 
-For playlist import progress, start an import and leave Backup & import settings. Check both desktop title bars, Android phone and large-window layouts, and the shared iOS shell. The card reserves space above Android content. Cancel during matching and saving, dismiss failures and partial results, and confirm completed imports disappear after six seconds. Repeat with long titles and large text.
+For playlist import progress, start an import and leave Backup & import settings. Check both desktop title bars, Android phone and large-window layouts, and the shared iOS shell. The card reserves space above Android content and below the status bar without adding a second status-bar gap to the page title. With attached bottom navigation and playback active, showing or hiding the card must not change the mini-player's bottom offset. Open the playlist picker and preview sheets; their titles must clear the status bar and cutout. Cancel during matching and saving, dismiss failures and partial results, and confirm completed imports disappear after six seconds. Repeat with long titles and large text.
 
 ### Shelves and carousels
 
@@ -77,13 +85,15 @@ For video shelves, compare Videos, Live performances and From your library with 
 
 On Android, select audio mode, open an artist's Videos shelf and start another track. Repeat from the shelf's expanded page and from a Home video shelf, then repeat these paths in video mode. Each selection keeps the chosen mode and the shelf queue. Filtered video search starts videos explicitly.
 
-For artwork carousels on Android and desktop, check Home's Keep listening, mixes, new releases and recommended albums/playlists, plus artist albums, singles/EPs, playlists and related artists. Check square cropping, narrow and wide windows, large fonts, RTL, touch swipes, mouse drag and Shift+wheel. During dragging, flinging and at both scroll limits, artwork and captions stay inside the viewport's rounded corners at both ends. The artist library, Albums and Singles/EPs shelves use the same Material carousel behavior. Repeat the edge checks on video shelves in Home, Search and artist pages. Open and return from full and compressed album, playlist and artist cards to check shared transitions. Check see-all arrows, long-press and right-click menus, album play buttons and artist continuation/retry, plus Speed Dial, song rows, chips and desktop Home's library filtering.
+For artwork carousels on Android and desktop, check Home's Keep listening, mixes, new releases and recommended albums/playlists, plus artist albums, singles/EPs, playlists and related artists. Check square cropping, narrow and wide windows, large fonts, RTL, touch swipes, mouse drag and Shift+wheel. During dragging, flinging and at both scroll limits, artwork and captions stay inside the viewport's rounded corners at both ends. The artist library, Albums and Singles/EPs shelves use the same Material carousel behavior. Repeat the edge checks on video shelves in Home, Search and artist pages. Open and return from full and compressed album, playlist and artist cards to check shared transitions. The full album cover stays visible in flight, then each masked margin returns as its edge approaches the artist carousel slot. Vertical spring motion must not expose the horizontally masked edges over neighbouring covers. Check see-all arrows, long-press and right-click menus, album play buttons and artist continuation/retry, plus Speed Dial, song rows, chips and desktop Home's library filtering.
 
 On desktop Home, check arrow buttons on Speed Dial, Quick picks, artwork, video, mood and chip rows. Buttons appear only at edges with more content, work with mouse and keyboard, mirror in RTL, and animate scrolling. Check both ends, short rows, window resizing, large fonts, reduced motion, drag release momentum and carousel snapping. On Moods & genres, resize between one and several columns and check equal gaps, long labels, and sections with odd chip counts. The final row fills its width. Check Windows rendering and pointer input.
 
 For artwork menus, check Home shelves (including Keep listening and New releases), expanded Home sections, artist album/single/EP cards, expanded release pages and Statistics on Android, desktop and iOS. Artwork cards have no overflow overlay. Touch long-press, desktop right-click, the Menu key or Shift+F10, and the More options accessibility action open the same item menu without playing or navigating. Check keyboard access after moving focus between cards, including after dismissing another card's menu. List rows keep their overflow buttons. The artist latest-release card uses the same artwork-menu gestures and accessibility action without an overflow button; check it on iOS even when no Play button is supplied.
 
 ### Artist pages
+
+On Android, enable Swipe song gesture, expand an artist's Top songs or Songs shelf, and swipe a row left to add it to the queue and right to play it next. Repeat after loading more rows and on expanded video shelves shown as song lists. Check that taps, menus and the swipe return animation still work. Disable the setting and repeat; rows must not swipe. Unavailable songs and Listen Together guests must not allow queue swipes. Album and single cards keep their existing gestures.
 
 Open an uncached artist from Home, Search, an album and each name in the player with a slow connection. The loading page keeps known names and artwork, shows a shimmering header, actions, latest release and five track rows, and keeps Back and More usable. Check ID-only links, failed requests and Retry, then refresh a loaded page. Loaded content stays visible during refresh. Compare the loading and loaded header and row positions at narrow and wide widths, with large text and RTL. TalkBack and VoiceOver announce Loading once without exposing placeholder content; Back and More stay accessible. Check hidden and resumed pages and reduced motion.
 
@@ -92,6 +102,8 @@ Resize artist pages to narrow, wide and short windows in light and dark themes. 
 On desktop, open an artist page during playback, then open Queue and fully expand the Lyrics drawer. Open and close both drawers, reverse their animations and drag their resize handles. The artist actions stay within their slot without a layout exception. Check Subscribe, Radio, Shuffle and Play after resizing, including their press animations, large text and RTL. Repeat artist navigation and window resizing on Android and the shared iOS host.
 
 Check immediate Subscribe/Subscribed changes on a slow connection, repeated taps, failed requests and refreshes during a request. Only a successful subscribe produces confetti; repeat with the animator duration scale set to zero.
+
+While signed out, subscribe to an artist, reopen the page and restart the app. The artist stays subscribed and appears in the local library. Unsubscribe and check that the bookmark clears. While signed in, successful subscription changes also update the local bookmark; failed requests preserve it.
 
 For About Artist on Android and desktop, sign out of Last.fm and open the artist's About card with cached and uncached photos, then return. Check the photo morph in both directions with normal and reduced animations. Open the hero and a peeking neighbor, swipe several viewer pages, zoom, and close with the button and Back. The return morph lands on the displayed photo without moving the gallery underneath it. Repeat mouse drag, Shift+wheel, narrow/wide resizing, slow images, missing Last.fm data, sharing, downloads and failed detail requests. Last.fm metadata and separate YouTube text stay visible. On the shared iOS host, check gallery scrolling and the About details. Carousel captions on other screens stay inside their masks.
 
@@ -147,9 +159,13 @@ For desktop player polish, check the queue under Windows caption buttons in rest
 
 For the desktop three-column player bar, resize through 800, 880, 960 and 1280 dp with long song and artist names. The transport group stays centered between equal-width side slots; metadata stays bounded and secondary actions move into the overflow menu. Check every player style, RTL, display scaling, action overflow and the separate seek row. The swapped-controls setting places transport at the start; check the compact layout below 600 dp too.
 
+### System tray
+
+On Windows and Linux, verify that left-clicking the tray icon toggles the main window when "Hide or show on tray click" is enabled, and right-clicking opens the context menu with track info, playback controls, miniplayer toggle, settings and quit. On macOS, verify that left-clicking opens the status bar menu and right-clicking toggles window visibility when enabled. Verify that menu bar template rendering produces readable icon contrast across both light and dark macOS menu bar appearances and dynamic wallpaper changes. Check that quitting from the tray shuts down the application cleanly.
+
 ### Lyrics
 
-With Expressive and Braccato word lyrics active, check both short- and normal-duration word timings: short words fill smoothly rather than snap. Collapse the retained player, background the app and reopen it in a floating window. Hidden lyrics request no animation frames, visible lyrics resume at the current position, and visible word waves and Braccato line exits animate. Repeat with paused playback, settings previews, desktop minimize/restore and the shared iOS host.
+With Expressive and Braccato word lyrics active, check both short- and normal-duration word timings: short words fill smoothly rather than snap. Collapse the retained player, background the app and reopen it in a floating window. Hidden lyrics request no animation frames, visible lyrics resume at the current position, and visible word waves and Braccato line exits animate. Repeat with paused playback, settings previews, desktop minimize/restore and the shared iOS host. While casting, verify word-by-word and line-by-line lyrics animate smoothly between receiver polls, pause while the receiver is paused or buffering/transitioning and resume on recovery, jump immediately on seek without treating normal line gaps as seeks, and stop ticking when hidden or collapsed.
 
 For lyrics settings on Android, desktop and the shared iOS host, open the preview before opening the player's lyrics. Check a playing song with lyrics, seek, a saved timing offset and track changes. Pausing switches to the Rick Astley sample; resuming restores current lyrics and position. A song without lyrics or a dismissed player shows the sample. Opening settings while paused does not start a current-song lyrics lookup. Drag provider handles with touch and mouse, including the first and last rows and disabled providers. Reopen settings to check persistence, and check the handle's move menu with keyboard or TV D-pad.
 
@@ -165,7 +181,7 @@ In MetroEQ, drag the first, middle and last bands past the graph edges and their
 
 ### Android system surfaces
 
-Android media-session buttons and notification, widget and shortcut glyphs use Material Symbols at weight 400. Transport uses Rounded filled symbols, matching the player; hearts use Outlined filled and unfilled symbols. `MediaButtonIconsTest` checks that custom Previous and Next replace the default skip actions in Media3's platform state and notification button list on API 32 and 33. Check HyperOS and Pixel media controls, the lock screen, Android Auto, picture-in-picture and each widget. Confirm one Previous and one Next, working transport actions, system play/pause, Like and Repeat in their secondary slots, Shuffle in overflow, and distinct liked, repeat and shuffle states.
+Android media-session buttons and notification, widget and shortcut glyphs use Material Symbols at weight 400. Transport uses Rounded filled symbols, matching the player; hearts use Outlined filled and unfilled symbols. `MediaButtonIconsTest` checks that standard skip, play/pause and queue-selection actions remain in Media3's platform state on API 32 and 33. Before API 33, custom Previous and Next icons apply only to notification buttons and respect available player commands. Enter and leave Listen Together guest playback; unavailable transport buttons disappear and return when their commands become available. Check HyperOS and Pixel media controls, the lock screen, a smartwatch, Android Auto, picture-in-picture and each widget. Confirm one Previous and one Next, working transport actions, system play/pause, Like and Repeat in their secondary slots, Shuffle in overflow, and distinct liked, repeat and shuffle states. Verified external controllers can also start radio for the current song without library access.
 
 For Android music widgets, check the 4x2 picker preview, 4x1 metadata and the controls-only and square resize variants on API 24-30 and 31+. Every music layout shows Previous, Play/Pause with its localized label, Next and Like in that order. Check 200% fonts, long titles and action labels, RTL, TalkBack, D-pad focus, empty and paused states, queue-end controls and liked-state descriptions. Check light and dark modes with saturated, pale, dark and missing artwork. Album colors take precedence over wallpaper colors, and disabled icons stay readable in the empty state. During buffering or audio-focus suppression, the Play/Pause icon, label and announcement match the action it will execute. At the last loaded song of an unfinished playlist, Next stays enabled and retries a failed page fetch. While playing, check progress after 10 seconds, seek, screen unlock and resize. Unknown-duration and live tracks hide progress. Remove the last music or expanded playlist widget and confirm sampling stops. Check process recreation, the turntable, playlist quick picks and the recognition spinner.
 
@@ -219,6 +235,7 @@ python3 scripts/test_translation_mechanics.py
 python3 scripts/test_hooks.py
 python3 scripts/test_build_ios.py
 python3 scripts/test_build_appimage.py
+python3 scripts/test_linux_appimage_apprun.py
 python3 scripts/test_desktop_smoke.py
 python3 scripts/test_dmg_packaging.py
 python3 scripts/test_distribution.py
@@ -235,13 +252,13 @@ python3 scripts/test_deps.py
 python3 scripts/test_find_unused_strings.py
 ```
 
-Repository checks run for shared catalog and translation-validator changes, iOS version-script changes, and profiler changes. The workflow-trigger test ensures every Python check can trigger its own workflow and covers these script inputs.
+CI runs the cheap repository checks in its selection job on every push and PR, including docs-only changes. The workflow tests cover path selection, manual packaging, task arguments and release verification without starting builds.
 
 `test_generate_android_strings.py` compiles the production task and source filters in an isolated Gradle build, then checks scanning, missing keys, XML escaping and stale output removal. It runs in Android debug CI. Set `GRADLE` to use a different Gradle executable.
 
 `test_dmg_packaging.py` runs the production DMG task in an isolated Gradle build with mocked macOS tools. It checks both artwork updates, a single conversion cycle, and cleanup after tool and detach failures. It also checks target selection, release JAR trimming and loose Skiko natives for native and cross-architecture builds on simulated Apple Silicon and Intel hosts. `test_macos_packaging.py` rejects bundles whose configured Skiko library path has no matching loose dylib. Set `GRADLE` to use a different Gradle executable. Verify the real Finder layout and volume icon on macOS before release.
 
-The escape check rejects Android-only `\'` and `%%`, which Compose renders literally. The Weblate workflow and pruning are described in [strings.md](strings.md). Dictionary verification commands are in [japanese-romanization.md](japanese-romanization.md#verification).
+The escape check rejects Android-only `\'` and `%%`, which Compose renders literally. The Weblate workflow and pruning are described in [strings.md](strings.md). Dictionary verification commands are in [romanization.md](romanization.md#verification).
 
 ## Hooks
 
@@ -263,7 +280,7 @@ Normal build tasks run their integrity checks automatically. If one fails, inspe
 
 - Android string generation rejects referenced keys missing from the shared catalog. APK verification requires the Compose `strings.commonMain.cvr` asset.
 - Desktop checks require compiled application classes, readable JARs, the correct platform's natives and the Java 25 runtime with its CDS archive and launcher options. They reject QuickJS, reflection and pinyin dependencies. See [desktop.md](desktop.md) and [kotlin-reflect.md](kotlin-reflect.md).
-- Kuromoji checks reject bundled dictionary payloads or changed vendored engine assets. See [japanese-romanization.md](japanese-romanization.md).
+- `:shared:verifyDesktopJarIntegrity` checks the shared desktop JAR for retired romanization assets and retained glyphmind licenses. `:desktopApp:verifyReleaseDistributableJars` checks all final packaged JARs. See [romanization.md](romanization.md).
 
 ## Desktop smoke test
 
@@ -275,13 +292,25 @@ Each attempted launch uploads a `desktop-smoke-<platform>-<arch>` artifact, with
 
 ## CI path selection
 
-The platform workflow YAML files under `.github/workflows/` define triggers and the full check lists.
+[CI](../.github/workflows/ci.yml) handles PRs and pushes to main with one selection job. That job also runs the cheap repository checks, including translation validation. Docs-only changes stop there. New runs cancel unfinished checks for the same PR or branch.
 
-`.github/scripts/ci_paths.py` owns the path rules for push and PR verification. Common sources, common tests, Compose resources and documentation run one Linux x64 desktop compile and shared JVM tests. Android, desktop and iOS source sets select their platform. JVM shared sources select Android and desktop. Gradle scripts, catalogs, wrapper files, shared actions, release workflows and unknown paths select every platform. Platform workflow files select their platform. An unreadable diff runs every check. Version-only release bumps reuse the source revision's checks through the [release gate](releasing.md#reuse-verification).
+`.github/scripts/ci_paths.py` owns the path rules. Common production code and Compose resources select Android, desktop and iOS. Common tests and JVM shared sources select Android and desktop. Platform source sets select their platform. Gradle scripts, catalogs, wrapper files, shared actions, release workflows and unknown paths select every platform. Deleted paths and both sides of renames count. An unreadable diff selects every platform. Version-only release bumps reuse the source revision's checks through the [release gate](releasing.md#reuse-verification).
 
-Main pushes run the affected platform's unit tests. Shared-only changes skip the desktop ARM64 matrix and packaging-script tests. Other desktop changes verify Linux x64 and, on main, ARM64. iOS verification uses macOS; Linux cannot compile its Apple SDK targets. Arch packaging runs for its recipe and global build changes, with a manual dispatch for other packaging changes. Verification uses Ubuntu 26.04, while AppImage packaging uses 24.04 for its older glibc baseline. Run `python3 -m unittest discover -s .github/tests` and `actionlint` after workflow edits. The Python tests simulate path selection, metadata bumps, trusted check results, cache policies and manual package routing without calling Actions.
+Android runs ktlint, lint and unit tests. PRs also assemble the debug APK. Desktop verifies Linux x64 with ktlint, shared and desktop tests, and integrity checks. PRs also request desktop compilation. On main, Nightly supplies Android APK and Linux/Windows native builds, so CI omits debug APK assembly and the separate desktop compile task. Tests still compile their dependencies. iOS runs Swift validation and simulator backend tests on macOS for common production, iOS or build-input changes. Linux cannot compile Apple SDK targets.
 
-Repository checks always validate translations. Flatpak validation runs for changes to `flatpak/`, `Makefile`, workflows or its changed-path script. A failed changed-path check runs Flatpak validation too.
+ARM64 desktop verification, macOS and Windows packaging, Arch builds, Flatpak validation and packaged launch checks run only through manual workflows or the existing release paths. Native Nightly builds skip launch probes. Arch compilation can take an hour and Flatpak validation installs extra tools, so neither runs automatically for packaging edits. Dispatch `build-desktop.yml`, `verify-aur-package.yml` or `verify-repository-checks.yml` when changing their inputs. `release.yml` keeps its verification gate, signing, Sentry finalization and publication steps.
+
+The table counts jobs that acquire a runner, including selection jobs and Nightly's five jobs on eligible main pushes. It excludes skipped jobs, tags and manual runs. The before counts use the former path rules. The [main desktop run](https://github.com/MetrolistGroup/Metrolist/actions/runs/43665327533) had both Linux architectures. The [sample PR desktop run](https://github.com/MetrolistGroup/Metrolist/actions/runs/43663069470) had Linux x64 only; its four sibling Verify workflows added five runner jobs.
+
+| Change | Before | After |
+| --- | ---: | ---: |
+| Docs-only main push | 7 | 1 |
+| Common production main push | 12 | 9 |
+| Android source-only main push | 11 | 7 |
+| Desktop source-only main push | 13 | 7 |
+| Sample desktop PR, `8964d2a` | 7 | 2 |
+
+A PR touching global build inputs now runs four jobs. Run `python3 -m unittest discover -s .github/tests` and `actionlint` after workflow edits. Verification uses Ubuntu 26.04; AppImage packaging keeps Ubuntu 24.04 for its older glibc baseline.
 
 ## CI cache rules
 
@@ -291,20 +320,8 @@ Preserve these rules when changing workflows:
 - Give each distinct task graph its own `prepare-ci-gradle` cache scope. Android debug and release, and iOS tests and packaging, must not overwrite each other's caches.
 - Do not persist the configuration cache for builds that read credentials during configuration, including Android debug and iOS jobs. Release Android and desktop packaging use `--no-configuration-cache` to avoid serializing secrets into a cache entry.
 - Pull requests may restore caches but must not save them. Keep native cache keys specific to runner architecture, OS and toolchain. iOS caches `~/.konan` separately for tests and packaging, with a dependency fingerprint so changed dependencies can save an updated cache. Fallback restores must keep the full OS, architecture, Kotlin, Xcode and task-graph prefix. Releases reuse verified tests through the gate; manual IPA builds run tests and packaging. Windows caches NuGet packages by SDK and project dependencies. Rust toolchain caches include the pinned version, OS and architecture. Linux WebView compilation keys include the actual distribution and native library versions.
-- Runtime task caching fingerprints the full packaging JDK, OS, host architecture, module options and CDS JVM flags. Do not cache a jlink output using only a Java major version. Manual packaging runs the integrity checks after restoration. Gated releases set `metrolist.verifyPackaging=false`; Linux verification still checks shared JAR integrity and both dictionary packages.
+- Runtime task caching fingerprints the full packaging JDK, OS, host architecture, module options and CDS JVM flags. Do not cache a jlink output using only a Java major version. Manual packaging runs the integrity checks after restoration. Gated releases set `metrolist.verifyPackaging=false`; Linux x64 verification runs `:shared:verifyDesktopJarIntegrity`, which checks compiled classes, retained glyphmind licenses and retired romanization assets in the shared JAR. It does not run `:desktopApp:verifyReleaseDistributableJars` against a release package.
 - Release Android skips `lintVitalRelease` with `-x` because debug verification already runs lint. Do not replace this with `checkReleaseBuilds = false`, which unregisters the task.
 - Measure cache changes on hosted runners with cold and repeated warm runs. Local timings do not establish CI speedups.
 
 Arch verification restores the unprivileged builder's Gradle caches and wrapper from a separate OS, architecture and dependency-scoped cache. Only successful pushes to main save it. It does not persist the project configuration cache.
-
-## Automated issue and PR triage
-
-[LLM triage](../.github/workflows/llm-triage.yml) runs when an issue or PR opens or reopens. It skips bots and PRs from owners, members and collaborators. It reads only the default branch's script and AGENTS.md, never PR code. The repository secret `OPENROUTER_API_KEY` enables the OpenRouter request; missing credentials, failed reads or requests, and invalid responses leave the item unchanged.
-
-The script posts to [OpenRouter's Decisions API](https://openrouter.ai/docs/api/api-reference/alphadecisions/submit-a-decisions-request) with model `perplexity/pplx-decider-flash-v1.2`. The JSON `state` contains the title, up to 12,000 body characters, author association, repository label descriptions, rejected-feature policy and rules, and up to ten same-repository duplicate candidates. The questions treat item metadata as untrusted data. They ask for a verdict, a candidate number or `none`, a zero-based rule index or `none`, and one `noul` probability for each existing allowlisted label.
-
-The script adds a label only when its `noul` probability is at least 0.7 and never removes labels. Closure requires both the selected verdict probability and the selected evidence probability to be at least 0.85. Evidence must identify a supplied duplicate candidate or an exact rejected-feature rule. PRs can close only for a rejected feature. The script uses the selected entries in `probabilities`, not the response's separate `confidence` values. Missing or invalid answers and request timeouts leave the item unchanged.
-
-The `keep` verdict posts no comment. Other verdicts use fixed English templates. `needs_info` asks for the app version, device and OS, reproduction steps and a Devtools playback log. Duplicate comments link the candidate, and rejected-feature comments quote the rule with mentions and markup neutralized. Each comment includes the reopening note and hidden bot marker. The marker prevents the same verdict from commenting or closing again after reopening.
-
-For verdicts with a comment, the script records it before adding labels or closing. If a later write fails, the job fails and any missing action must be applied manually; reruns preserve the marker instead of repeating it. A `keep` verdict can reapply labels on reruns without posting a comment. Run the Node tests above, `actionlint`, and `python3 -m unittest discover -s .github/tests` when changing triage. Tests mock the Decisions response and never call the live API.

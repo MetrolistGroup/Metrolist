@@ -6,15 +6,29 @@ The desktop content surface has no tonal elevation. An elevated parent tints nes
 
 Desktop account buttons keep their avatar visible while the popup transforms. Popup bounds use window coordinates measured outside the animated layer. Dismissal waits for the return animation before navigation. Player overflow rows use the same Material menu item shapes as other desktop menus, with rounded ends and small inner corners.
 
+## Backup file dialogs
+
+Linux backup, restore and playlist-file imports keep FileKit when the XDG file-chooser portal is available, so Flatpak can grant access to files outside its sandbox. When the portal is unavailable, Swing and AWT fallback dialogs run on the Swing event dispatch thread. Onboarding restore uses the same picker. Other platforms keep FileKit. File reads and backup work run off the UI thread.
+
 ## Fullscreen player
 
 The fullscreen player's exit button restores the previous window placement and closes the expanded player. F and Escape keep the expanded player open when leaving native fullscreen. Artwork and video use the same expanded-player state, so switching between them keeps the window fullscreen. The video controls include a video button to return to artwork.
 
 Windows keeps its native borderless style and placement snapshot separate from Compose's placement. Exit restores the saved style, frame, bounds and maximized state. A window restored in native fullscreen exits to its last normal placement instead of saving fullscreen as the restore target. Fullscreen changes the existing window's style and placement; video does not embed a native surface.
 
+On Linux and macOS, restoring a maximized window first clears native fullscreen, then reapplies the saved placement. The player button and macOS menu use the same placement setter.
+
 Windows paints behind the maximized frame insets and applies the theme background to the AWT and Skiko backing components during startup and normal use.
 
+Windows caption hit testing takes its own snapshot of Compose scene layers. Native window callbacks must not use Compose's reusable layer-copy cache, because rendering can traverse that cache at the same time. Popup order, focused-popup blocking and passive popup-source observers keep their existing hit-test behavior.
+
 Connected action groups use the shared Material shapes and spacing, with fixed corners during press and selection. The fullscreen artwork player's action buttons are 40 dp tall, and its transport buttons share one height. Overflow sizing includes minimum touch targets and the gap before the overflow button so the last visible action has the trailing corners. The bottom volume button stays round beside overflow, with a 12 dp gap before the volume segment.
+
+## Miniplayer
+
+The Linux miniplayer and player top bar use the main window's X11 drag handler, which avoids Compose's JBR window-move lookup. When Java does not export its X11 peer APIs, the handler falls back to pointer-based window positioning. The player top bar uses it with both system and custom window frames. Both JVM and native packages use this handler. Linux keeps the miniplayer window opaque, because some backends stop drawing transparent undecorated windows, so both layouts use square corners there.
+
+Check both layouts on a Linux desktop with the packaged JVM AppImage and native AppImage. Verify dragging, playback buttons, seeking, opening and closing, focus-mode control fades and pressed-button springs. Repeat on X11 and XWayland with OpenGL and software rendering.
 
 ## Windows taskbar
 
@@ -24,13 +38,25 @@ The [Nucleus JNI implementation](https://github.com/NucleusFramework/Nucleus/blo
 
 With logging enabled, `WindowsWindow` records native minimize and restore sizes and whether restore reaches the EDT.
 
+## System tray
+
+On Linux and Windows, Metrolist uses `ComposeNativeTray` to integrate with native system notification areas (StatusNotifierItem/D-Bus on Linux and Shell_NotifyIcon on Windows). Left-clicking the tray icon toggles window visibility when `desktopTrayToggleOnClick` is enabled, and right-clicking opens the tray context menu.
+
+On macOS, Metrolist uses Compose Multiplatform's stock `Tray` backed by OpenJDK's `java.awt.SystemTray` (`CTrayIcon`) to avoid AWT/AppKit event loop deadlocks. On macOS, left-clicking opens the native status bar menu, and right-clicking triggers the window toggle action when `desktopTrayToggleOnClick` is enabled. Template rendering is explicitly enabled via the `apple.awt.enableTemplateImages` system property so macOS automatically adapts icon contrast to the menu bar appearance. Native macOS images register `CTrayIcon` and `CMenuItem` callbacks for JNI accessibility.
+
 ## Linux audio setup
 
-Desktop uses bundled FFmpeg to decode audio and Java Sound to send PCM through ALSA. Automatic output selection tries `default`, `pipewire` and `pulse` mixers. It does not select arbitrary hardware, loopback or null outputs.
+Desktop uses bundled FFmpeg to decode audio and Java Sound to send PCM through ALSA. Automatic output selection tries named `default`, `pipewire` and `pulse` mixers before asking Java Sound for its default line. This also supports ALSA devices whose mixer names differ. Preferred mixers keep priority so Java Sound does not select a hardware or loopback output when a system route works.
+
+Linux FFmpeg JARs exclude ALSA, PulseAudio, JACK and PipeWire libraries. JVM distributions, AppImages and native-image builds use the host's audio libraries, configuration and plugins. No Linux target keeps a bundled ALSA fallback. `verifyLinuxAudioLibraries` checks JVM package directories and JARs after packaging, including when other packaging checks are disabled. Native builds check their input classpath before compilation and their output directory before packaging. To check a directory, JAR or tarball directly, run `python3 scripts/desktop-native-image/verify_linux_audio.py <path>`.
 
 PipeWire and PulseAudio hosts need their distribution's ALSA integration. On Arch with PipeWire, install `pipewire-alsa`. If playback progresses silently, check the default ALSA route and restart Metrolist after changing it. An explicit `javax.sound.sampled.SourceDataLine` property delegates selection to Java Sound.
 
 For microcuts, export the playback event log immediately. Output-underrun records describe the buffer and time between writes; they do not identify the cause by themselves.
+
+At the end of a track, desktop waits for the remaining PCM buffer duration plus 250 ms. Pausing suspends this wait. If a mixer never reports an empty buffer, the track still completes so normal and gapless playback can advance.
+
+Crossfade starts the prepared next player muted while the outgoing track keeps playing. Both gains follow the outgoing playback clock, with user volume, normalization and sleep-timer gain applied to each track. Pausing stops both players and holds the fade. The next track becomes current when the fade completes or the outgoing track ends; promotion then closes the outgoing player. Cancelling the fade stops the incoming player and restores the outgoing gain. Same-album gapless playback skips the fade.
 
 ## Linux login
 
@@ -42,7 +68,11 @@ Linux launchers default `WEBKIT_DISABLE_DMABUF_RENDERER` and `WEBKIT_DISABLE_COM
 
 The hidden PO-token WebView is created on first use and reused until shutdown. Idle release navigates it to `about:blank`; the next request loads a fresh attestation document. This bounds native views and contexts because Wry 0.54.2 can retain them after disposal. One idle WebKit process can remain resident. Login and Last.fm views keep their own lifecycles.
 
+On Windows, native WebView creation failures show the error dialog and disable embedded browsers until restart. Pending PO-token requests fail without waiting for the browser timeout, and playback can continue without a PO token. WebView2 error `0x80070002` means the runtime could not be found. Install or repair the [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/). The PO-token browser profile uses `%LOCALAPPDATA%/Metrolist/WebView2`, outside the portable ZIP or installation directory. Backup restore imports settings before startup; it does not create a WebView or validate login. Windows YouTube login runs in `metro-wv2-helper`, not the hidden PO-token WebView.
+
 ## Discord login
+
+Hiding the window to the tray keeps Discord presence, because playback continues. Quit, SIGTERM and the JVM shutdown hook clear presence before closing the connection. A fresh connection sends an empty presence before publishing the current track. A forced process kill cannot run cleanup; Discord controls how long the disconnected Gateway session remains visible. Track-end timestamps describe playback progress and do not guarantee presence expiry.
 
 Desktop Discord login opens the default browser with a PKCE authorization URL and the `metrolist-auth://discord/callback` redirect. The waiting dialog offers Cancel and Open again. Callbacks use the saved two-minute session, require the exact redirect and state, and consume the verifier before token exchange. macOS open-URI events and second-launch arguments on Windows and Linux enter the desktop URL handler. A callback can restore a pending session after an app restart.
 
@@ -52,7 +82,9 @@ The embedded login is used when registration fails, when a macOS launch lacks a 
 
 ## Display density
 
-Appearance's Display density scales text, icons and controls on top of the system scale. Desktop uses the same 55% to 125% presets and saved preference as Android. Changes apply live to the main window, mini player, Compose dialogs and popups. Library grid columns controls only the library column count.
+Linux JVM and native launchers preserve `XCURSOR_THEME` and `XCURSOR_SIZE`. In KDE sessions they read Plasma's `kcminputrc` through `kreadconfig6` or `kreadconfig5`, without applying GNOME cursor defaults. Missing or automatic cursor sizes stay unset for the toolkit to resolve.
+
+Appearance's Display density scales text, icons and controls on top of the system scale. Desktop uses the same 55% to 200% presets and saved preference as Android. Changes apply live to the main window, mini player, Compose dialogs and popups. Library grid columns controls only the library column count.
 
 Linux uses X11 or Xwayland by default. Scale setup runs before AWT window identity, URL-handler registration and Swing dispatcher initialization. In Wayland sessions, scale detection checks the compositor before toolkit environment variables, so a neutral `GDK_SCALE=1` cannot hide KDE's fractional output scale. Without compositor tools, detection uses `QT_SCALE_FACTOR`, the product of `GDK_SCALE` and `GDK_DPI_SCALE`, `XDG_SCALE`, Xft DPI from `xrdb -query`, or `[KScreen] ScaleFactor` in `kdeglobals`. Configuration follows `XDG_CONFIG_HOME`. X11 sessions also use these fallbacks.
 
@@ -73,6 +105,8 @@ Mouse drags continue scrolling at the release velocity with the container's flin
 ### Horizontal scrolling
 
 Horizontal Home rows show arrow buttons at each edge that has more content. The buttons fade at the scroll limits and animate scrolling. Artwork and video shelves use Material carousel snapping; Speed Dial and song grids scroll freely. Home chips and moods use the same controls. Android and iOS do not show these buttons.
+
+Compose 1.13.0-beta02's `CarouselState` inherits scroll flags that always return true. The controls read its internal pager's measured limits so arrows follow scrolling, window resizing and content changes. Check this accessor when upgrading Compose.
 
 Desktop category pages such as Moods & genres fit as many columns as the available width allows, with a minimum chip width of 240 dp. Chips in the final row share its full width. Category-only pages use 6 dp gaps in both directions.
 
@@ -107,6 +141,10 @@ Bytedeco publishes no `windows-arm64` FFmpeg natives. `scripts/build_windows_arm
 
 The AppImage script writes `dist/Metrolist.AppImage` and accepts `GRADLE` to select the Gradle command. The DMG task requires macOS and writes under `desktopApp/build/compose/binaries/main-release/dmg/`. Packages include their own runtime.
 
+The AppImage script and Windows and macOS release workflows pass `-Pmetrolist.debug=false` so release packages use the release title and settings.
+
+On launch, JVM and native AppImages install a per-user `Metrolist.desktop` with the persistent AppImage path and a copied icon. Pinned launchers can reopen it after the temporary mount disappears. An installed system `Metrolist.desktop` takes precedence. Moving the AppImage requires launching it once from its new location to update the entry.
+
 The Arch recipe is in [`aur/`](../aur/). `make aur-install` builds from the local tree. Standalone recipes fetch remote source. `bash aur/test-recipe.sh` checks recipe behavior without building the app.
 
 Windows login uses `metro-wv2-helper`. With the .NET SDK selected by `metro-wv2-helper/global.json`, run `metro-wv2-helper/build_helper.bat`. It copies the self-contained x64 helper into desktop resources. Run `dotnet run --project metro-wv2-helper/tests/LoginCompletion.Tests.csproj` for backend checks.
@@ -127,7 +165,7 @@ Linux cannot validate DMG packaging or Rosetta. Before release, inspect Finder b
 
 ### Flatpak
 
-The local manifest is `flatpak/com.metrolist.desktop.yaml`, with app ID `com.metrolist.desktop`. It builds the working tree and needs initialized submodules.
+The local manifest is `flatpak/com.metrolist.desktop.yaml`, with app ID `com.metrolist.desktop`. It builds the committed `main` branch with its submodules, so commit changes before building.
 
 ```sh
 make flatpak-deps
@@ -136,11 +174,13 @@ make flatpak-run-installed
 make flatpak-bundle
 ```
 
-`make flatpak-run` uses the build directory without installation. Keep the manifest's GNOME runtime version and `FLATPAK_RUNTIME_VERSION` in `Makefile` synchronized. The [distribution reference](distribution.md#flatpak-and-flathub) covers the separate offline recipe and Flathub requirements.
+`make flatpak-run` uses the build directory without installation. Keep the manifest's GNOME runtime version and `FLATPAK_RUNTIME_VERSION` in `Makefile` synchronized. The [distribution reference](distribution.md#flatpak) covers flatpark, which ships the Flatpak users install.
 
 ## Runtime and CDS
 
 `desktopApp/build.gradle.kts` defines launcher options. Packaging generates a Java 25 base CDS archive with the target jlinked VM, without running the app. [AutoCreateSharedArchive](https://docs.oracle.com/en/java/javase/25/docs/specs/man/java.html#creating-dynamic-cds-archive-file-with--xxautocreatesharedarchive) saves an optional `appcds-<bundle-id>.jsa` dynamic archive on normal exit and reuses it on later launches.
+
+JVM packages include `jdk.accessibility` so Windows can load Java Access Bridge when assistive technology is enabled. Native-image builds use the full GraalVM JDK and the existing AWT AccessBridge metadata rather than a jlink module list.
 
 | OS | CDS cache |
 | --- | --- |
@@ -158,6 +198,8 @@ AppImage packaging uses `createReleaseRuntimeImage`. A second jpackage runtime l
 
 `Main.kt` runs crash-report handoff, JVM crash-file configuration, allocator setup, CDS cache creation, platform/display checks and the single-instance lock before the window. Pending backup restore and settings/credential migration finish before database access or logging. Saved locale, geometry, window frame and Wayland scale also apply before creating the window. Secure-store reads stay in this settings step; they must not race restore or credential migration.
 
+Windows startup enables the [JDK system proxy selector](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/doc-files/net-properties.html) before creating network clients. This lets shared HTTP clients use the Windows proxy configuration, including a local proxy configured by Clash/Mihomo. Explicit JVM proxy properties take precedence, and an explicit `java.net.useSystemProxies` value is preserved. Test Home, search, sign-in and playback on Windows with the reporter's proxy mode and port before treating a TLS connection reset as resolved.
+
 The CDS directory is created before crash recovery or a JVM relaunch can exit. Otherwise HotSpot fails with `Unable to create shared archive file` followed by an unrecoverable archive-loading error. The Linux wrapper resolves the HotSpot error-file path from an absolute `XDG_STATE_HOME` before starting the VM, which avoids a crash-path relaunch for custom profiles. Other launcher overrides keep the relaunch guard. Windows uses `$USERPROFILE/.local/state/metrolist/logs` by default and guards custom profiles.
 
 Initial Linux scale detection has a shared 2 s command-probe budget before AWT, including `xrdb`, `gsettings` and compositor queries through `gdbus`. These results configure JVM/Skiko scaling; deferring them would initialize AWT at the wrong scale. The Swing application scope stays lazy until after this step. Monitor refresh runs on a background watcher. Both the loading frame and full window use `DesktopDensityProvider`, so the user's density preset also applies to the first frame. Linux URL-handler registration waits for the full app frame.
@@ -166,7 +208,7 @@ The loading window draws the Home shimmer under the saved theme and locale-aware
 
 The Linux loading shell and full app share the custom caption controls. Minimize, maximize/restore and close stay available during initialization when system decorations are disabled. The shell frame must not access `PlayerState`. Fullscreen hides the custom controls.
 
-After that frame, consent-controlled Sentry, enabled Discord integration, native media controls, tray and miniplayer start. Windows registry registration runs after the shell and must finish before SMTC attaches. The process AppUserModelID applies before any UI, as [Microsoft requires](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-setcurrentprocessexplicitappusermodelid). Taskbar icons fill their cache on IO; taskbar registration uses its COM worker and delayed retry. The Rust WebView/WebView2 paths load on demand for login, token minting or Last.fm browsing, as [Microsoft advises for WebView2](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/performance). FFmpeg loads when playback or a download needs decoding. Downloaded fonts load on IO; the first frame uses the locale-matched system font.
+After that frame, consent-controlled Sentry on stable releases, enabled Discord integration, native media controls, tray and miniplayer start. Nightlies never initialize Sentry and preserve the saved consent. Windows registry registration runs after the shell and must finish before SMTC attaches. The process AppUserModelID applies before any UI, as [Microsoft requires](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-setcurrentprocessexplicitappusermodelid). Taskbar icons fill their cache on IO; taskbar registration uses its COM worker and delayed retry. The Rust WebView/WebView2 paths load on demand for login, token minting or Last.fm browsing, as [Microsoft advises for WebView2](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/performance). FFmpeg loads when playback or a download needs decoding. Downloaded fonts load on IO; the first frame uses the locale-matched system font.
 
 `METROLIST_STARTUP_TRACE=1` with detailed logging enabled writes process ID and JVM uptime for `main`, `settings`, `shell-frame`, `runtime`, `database`, `backend` and `app-frame` to stdout/app.log. Frame markers mean Compose draw completion, not display presentation. Leave this variable unset for normal launches.
 
@@ -176,7 +218,7 @@ After that frame, consent-controlled Sentry, enabled Discord integration, native
 
 Windows protects credentials with DPAPI. macOS uses AES-GCM with a Keychain key. An unavailable Keychain is retried; never replace an existing encrypted file with plaintext. Authentication failure preserves a unique encrypted backup. Only the original key can decrypt it.
 
-Linux reads and writes Secret Service through libsecret. Missing tools, locked collections, timeouts and failed reads leave recovery pending. They do not imply sign-out. Startup shows account loading until the initial read resolves; retries can recover without restart.
+Linux reads and writes Secret Service through libsecret. Missing tools, locked collections, timeouts and failed reads leave recovery pending. They do not imply sign-out. The account menu explains that a running, unlocked keyring and the package providing `secret-tool` are needed instead of showing an indefinite loading indicator. Recovery retries automatically without restart. macOS shows an unlock message while its Keychain is unavailable.
 
 Linux records pending mutations in owner-only `secrets.properties` before acknowledging them. The journal keeps values and deletion markers through restart. Keyring I/O stays outside the settings lock. Remove the journal only after writing and reading back matching values. Truncated writes and unreadable duplicates must leave it intact.
 
@@ -211,7 +253,7 @@ A successful run prints `PASS isolated Secret Service`. KDE Wallet, macOS Keycha
 
 ## Render backend
 
-The hidden desktop Devtools page has a Render backend setting and a Restart app action. Auto keeps the platform defaults, including OpenGL on Linux and Metal on macOS. Launchers and Gradle run tasks leave `SKIKO_RENDER_API` unset unless the user supplies it, so their defaults do not block the preference. Direct3D appears only on Windows, Metal only on macOS, and OpenGL is hidden on Windows ARM64. Software is available on each desktop platform.
+The hidden desktop Devtools page has a Render backend setting and a Restart app action. Auto keeps the platform defaults, including OpenGL on Linux and Metal on macOS. Launchers and Gradle run tasks leave `SKIKO_RENDER_API` unset unless the user supplies it, so their defaults do not block the preference. Direct3D appears only on Windows, Metal only on macOS, and OpenGL is hidden on Windows ARM64. Software is available on each desktop platform. Skiko maps `SOFTWARE` to `SOFTWARE_COMPAT` on macOS and `SOFTWARE_FAST` elsewhere. In Linux playback measurements, COMPAT costs about three times the CPU per frame because it copies each frame through Java2D.
 
 The preference takes effect on restart, before AWT and Skiko initialize. An explicit `SKIKO_RENDER_API` or `-Dskiko.renderApi` takes priority. Skiko uses its own fallback when a selected renderer cannot initialize. With logging enabled, the first painted window logs the requested and actual APIs as `Skiko render API: requested=... actual=...`. Include that line when reporting backend comparisons.
 
@@ -225,9 +267,15 @@ The logger buffers writes. Export or normal shutdown flushes them; native termin
 
 Packaged JVMs write fatal HotSpot reports as `hs_err_pid<PID>.log` in the log directory. A termination outside HotSpot's fatal handler may produce no file.
 
-Desktop playback installs FFmpeg's native log callback. Warnings and errors go to both `app.log` and the playback event log; the file logger flushes these records immediately. FFmpeg runs inside the JVM, so it has no separate process exit code or stderr pipe. Unexpected demuxer errors and video decoder errors include the native return code. FFmpeg decodes video into Skia bitmap storage. Video teardown joins decoder threads and uses draw locking; keep both, along with padded scaler rows.
+Desktop playback installs FFmpeg's native log callback. Warnings and errors go to both `app.log` and the playback event log; the file logger flushes these records immediately. FFmpeg runs inside the JVM, so it has no separate process exit code or stderr pipe. Unexpected demuxer errors and video decoder errors include the native return code. Desktop tempo and pitch processing uses float samples and combines both settings into one `atempo` ratio; it skips WSOLA when the ratio is one, as in varispeed. FFmpeg decodes video into Skia bitmap storage. Video teardown joins decoder threads and uses draw locking; keep both, along with padded scaler rows.
 
-`session-running.txt` records an active desktop session. Normal app shutdown removes it. On the next start, a remaining marker or an unreported `hs_err_pid` file produces a diagnostic in both logs. When crash reporting is enabled and an unreported crash file exists, the Sentry client sends a previous-exit event with `previous-desktop-exit.txt` attached. The attachment contains the session description and a bounded, redacted summary of each crash header and native stack. It omits VM arguments, environment variables and memory dumps. The original crash files stay on disk; `.reported` files prevent repeated uploads. An unfinished shutdown alone also covers forced termination and power loss, so it does not prove a native crash. Sentry events include `desktop.os`, `desktop.os_version` and `desktop.arch` tags.
+Animated covers keep one decoder at a time per artwork slot. Track changes wait for the previous load, decoder and draw to finish before creating the next cover player. Failed loads or ended playback clear the animated frame so static artwork remains visible. Cover cancellation aborts pending downloads and waits for native cleanup off the UI thread.
+
+Player artwork keeps its video drawing node mounted when switching between static and animated covers. With animated covers enabled, shared-element bounds and player fades still animate, but artwork draws in its owning tree rather than the shared transition overlay. Static artwork keeps the overlay when animated covers are disabled. Video paints and shader builders belong to each draw, so composition disposal cannot close them before a queued draw runs. The renderer copies mutable decoder bitmaps into Skia images under the frame lock; recorded draws retain those images after decoder reuse or teardown. Backend tests cover deferred shader replay and disposal ordering, not Windows GPU rendering. Retest rapid expansion, collapse and track changes with Canvas and music video enabled on Windows. Native packages write fatal diagnostics to `native_err_pid*.log` in the same log directory; see [Native Image diagnostics](desktop-native-image.md#test-and-inspect).
+
+The Spotify sign-in button in player artwork settings opens the same login window as playlist imports. Successful authentication saves the Spotify session for Canvas artwork; failures leave the login window open for retry.
+
+`session-running.txt` records an active desktop session. Normal app shutdown removes it. On the next start, a remaining marker or an unreported `hs_err_pid` file produces a diagnostic in both logs. On stable releases, when crash reporting is enabled and an unreported crash file exists, the Sentry client sends a previous-exit event with `previous-desktop-exit.txt` attached. The attachment contains the session description and a bounded, redacted summary of each crash header and native stack. It omits VM arguments, environment variables and memory dumps. The original crash files stay on disk; `.reported` files prevent repeated uploads. An unfinished shutdown alone also covers forced termination and power loss, so it does not prove a native crash. Sentry events include `desktop.os`, `desktop.os_version` and `desktop.arch` tags.
 
 `scripts/metromem --help` lists profiling modes. Keep heap dumps and traces private; they can contain account data.
 

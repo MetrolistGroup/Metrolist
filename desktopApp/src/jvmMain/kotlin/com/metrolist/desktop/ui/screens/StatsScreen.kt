@@ -278,8 +278,7 @@ fun StatsScreen() {
                 scope.launch {
                     try {
                         val songs = HistoryRepository.getStatisticsSongs(ranking)
-                        val queue = if (shuffle) songs.shuffled() else songs
-                        queue.firstOrNull()?.let { PlayerState.playTrack(it, queue) }
+                        if (shuffle) PlayerState.shuffleQueue(songs) else songs.firstOrNull()?.let { PlayerState.playTrack(it, songs) }
                     } catch (error: CancellationException) {
                         throw error
                     } catch (_: Exception) {

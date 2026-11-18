@@ -38,17 +38,42 @@ internal suspend fun MusicDatabase.updateArtistSubscribed(
     artistId: String,
     artistName: String,
     subscribed: Boolean? = null,
+    thumbnailUrl: String? = null,
 ): Boolean =
     withDatabaseTransaction {
         val entity = dao().getArtistById(artistId) ?: ArtistEntity(id = artistId, name = artistName)
         val nextSubscribed = subscribed ?: (entity.bookmarkedAt == null)
         dao().upsert(
             entity.copy(
+                thumbnailUrl = entity.thumbnailUrl ?: thumbnailUrl,
                 bookmarkedAt = if (nextSubscribed) entity.bookmarkedAt ?: Clock.System.now().toLocalDateTime(TimeZone.UTC) else null,
             ),
         )
         nextSubscribed
     }
+
+suspend fun MusicDatabase.resolveArtistSubscribed(
+    repository: YouTubeRepository,
+    artistId: String,
+    browseSubscribed: Boolean,
+): Boolean =
+    if (repository.hasAuthenticatedSession) {
+        browseSubscribed
+    } else {
+        dao().getArtistById(artistId)?.bookmarkedAt != null
+    }
+
+suspend fun MusicDatabase.setArtistSubscribed(
+    repository: YouTubeRepository,
+    artistId: String,
+    artistName: String,
+    subscribed: Boolean,
+    thumbnailUrl: String? = null,
+): Boolean {
+    if (repository.hasAuthenticatedSession && !repository.subscribeChannel(artistId, subscribed)) return false
+    updateArtistSubscribed(artistId, artistName, subscribed, thumbnailUrl)
+    return true
+}
 
 private val artistSubscriptionMutex = Mutex()
 
@@ -65,11 +90,11 @@ fun toggleArtistSubscription(
         val subscribed =
             try {
                 val nextSubscribed = database.dao().getArtistById(artistId)?.bookmarkedAt == null
-                if (repository.hasAuthenticatedSession && !repository.subscribeChannel(artistId, nextSubscribed)) {
+                if (!database.setArtistSubscribed(repository, artistId, artistName, nextSubscribed)) {
                     onError()
                     return@withLock
                 }
-                database.updateArtistSubscribed(artistId, artistName, nextSubscribed)
+                nextSubscribed
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {

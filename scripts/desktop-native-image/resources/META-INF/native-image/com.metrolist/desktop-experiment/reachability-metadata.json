@@ -885,6 +885,12 @@
       "jniAccessible": true,
       "fields": [
         {
+          "name": "BROWSE"
+        },
+        {
+          "name": "MAIL"
+        },
+        {
           "name": "OPEN"
         }
       ]
@@ -1924,16 +1930,20 @@
       "type": "okhttp3.internal.connection.RealCall"
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVBSFContext"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVBSFContext",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVBSFList"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVBSFList",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVBitStreamFilter"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVBitStreamFilter",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCPBProperties"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCPBProperties",
+      "unsafeAllocated": true
     },
     {
       "type": "org.bytedeco.ffmpeg.avcodec.AVCodec",
@@ -1944,191 +1954,248 @@
       "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Draw_horiz_band_AVCodecContext_AVFrame_IntPointer_int_int_int"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Draw_horiz_band_AVCodecContext_AVFrame_IntPointer_int_int_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Execute2_AVCodecContext_Func_AVCodecContext_Pointer_int_int_Pointer_IntPointer_int"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Execute2_AVCodecContext_Func_AVCodecContext_Pointer_int_int_Pointer_IntPointer_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Execute_AVCodecContext_Func_AVCodecContext_Pointer_Pointer_IntPointer_int_int"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Execute_AVCodecContext_Func_AVCodecContext_Pointer_Pointer_IntPointer_int_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Func_AVCodecContext_Pointer"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Func_AVCodecContext_Pointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Func_AVCodecContext_Pointer_int_int"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Func_AVCodecContext_Pointer_int_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Get_buffer2_AVCodecContext_AVFrame_int"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Get_buffer2_AVCodecContext_AVFrame_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Get_encode_buffer_AVCodecContext_AVPacket_int"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Get_encode_buffer_AVCodecContext_AVPacket_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Get_format_AVCodecContext_IntPointer"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecContext$Get_format_AVCodecContext_IntPointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecDescriptor"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecDescriptor",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecHWConfig"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecHWConfig",
+      "unsafeAllocated": true
     },
     {
       "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParameters",
       "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParser"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParser",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParser$Parser_close_AVCodecParserContext"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParser$Parser_close_AVCodecParserContext",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParser$Parser_init_AVCodecParserContext"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParser$Parser_init_AVCodecParserContext",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParser$Parser_parse_AVCodecParserContext_AVCodecContext_PointerPointer_IntPointer_BytePointer_int"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParser$Parser_parse_AVCodecParserContext_AVCodecContext_PointerPointer_IntPointer_BytePointer_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParser$Split_AVCodecContext_BytePointer_int"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParser$Split_AVCodecContext_BytePointer_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParserContext"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVCodecParserContext",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVHWAccel"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVHWAccel",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVPacket"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVPacket",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVPacketList"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVPacketList",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVPacketSideData"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVPacketSideData",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVPanScan"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVPanScan",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVProducerReferenceTime"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVProducerReferenceTime",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVProfile"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVProfile",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVRTCPSenderReport"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVRTCPSenderReport",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVSubtitle"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVSubtitle",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.AVSubtitleRect"
+      "type": "org.bytedeco.ffmpeg.avcodec.AVSubtitleRect",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.Func_AVCodecContext_Pointer"
+      "type": "org.bytedeco.ffmpeg.avcodec.Func_AVCodecContext_Pointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.Func_AVCodecContext_Pointer_int_int"
+      "type": "org.bytedeco.ffmpeg.avcodec.Func_AVCodecContext_Pointer_int_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avcodec.RcOverride"
+      "type": "org.bytedeco.ffmpeg.avcodec.RcOverride",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVChapter"
+      "type": "org.bytedeco.ffmpeg.avformat.AVChapter",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVCodecTag"
+      "type": "org.bytedeco.ffmpeg.avformat.AVCodecTag",
+      "unsafeAllocated": true
     },
     {
       "type": "org.bytedeco.ffmpeg.avformat.AVFormatContext",
       "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVFormatContext$Io_close2_AVFormatContext_AVIOContext"
+      "type": "org.bytedeco.ffmpeg.avformat.AVFormatContext$Io_close2_AVFormatContext_AVIOContext",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVFormatContext$Io_open_AVFormatContext_PointerPointer_BytePointer_int_PointerPointer"
+      "type": "org.bytedeco.ffmpeg.avformat.AVFormatContext$Io_open_AVFormatContext_PointerPointer_BytePointer_int_PointerPointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVIAMFAudioElement"
+      "type": "org.bytedeco.ffmpeg.avformat.AVIAMFAudioElement",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVIAMFMixPresentation"
+      "type": "org.bytedeco.ffmpeg.avformat.AVIAMFMixPresentation",
+      "unsafeAllocated": true
     },
     {
       "type": "org.bytedeco.ffmpeg.avformat.AVIOContext",
       "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Read_packet_Pointer_BytePointer_int"
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Read_packet_Pointer_BytePointer_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Read_pause_Pointer_int"
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Read_pause_Pointer_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Read_seek_Pointer_int_long_int"
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Read_seek_Pointer_int_long_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Seek_Pointer_long_int"
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Seek_Pointer_long_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Update_checksum_long_BytePointer_int"
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Update_checksum_long_BytePointer_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Write_data_type_Pointer_BytePointer_int_int_long"
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Write_data_type_Pointer_BytePointer_int_int_long",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Write_packet_Pointer_BytePointer_int"
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOContext$Write_packet_Pointer_BytePointer_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVIODirEntry"
+      "type": "org.bytedeco.ffmpeg.avformat.AVIODirEntry",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVIOInterruptCB"
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOInterruptCB",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVIOInterruptCB$Callback_Pointer"
+      "type": "org.bytedeco.ffmpeg.avformat.AVIOInterruptCB$Callback_Pointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVIndexEntry"
+      "type": "org.bytedeco.ffmpeg.avformat.AVIndexEntry",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVInputFormat"
+      "type": "org.bytedeco.ffmpeg.avformat.AVInputFormat",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVOpenCallback"
+      "type": "org.bytedeco.ffmpeg.avformat.AVOpenCallback",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVOutputFormat"
+      "type": "org.bytedeco.ffmpeg.avformat.AVOutputFormat",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVProbeData"
+      "type": "org.bytedeco.ffmpeg.avformat.AVProbeData",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVProgram"
+      "type": "org.bytedeco.ffmpeg.avformat.AVProgram",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVRTSPCommandRequest"
+      "type": "org.bytedeco.ffmpeg.avformat.AVRTSPCommandRequest",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVRTSPResponse"
+      "type": "org.bytedeco.ffmpeg.avformat.AVRTSPResponse",
+      "unsafeAllocated": true
     },
     {
       "type": "org.bytedeco.ffmpeg.avformat.AVStream",
       "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVStreamGroup"
+      "type": "org.bytedeco.ffmpeg.avformat.AVStreamGroup",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVStreamGroupLCEVC"
+      "type": "org.bytedeco.ffmpeg.avformat.AVStreamGroupLCEVC",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.AVStreamGroupTileGrid"
+      "type": "org.bytedeco.ffmpeg.avformat.AVStreamGroupTileGrid",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.Read_packet_Pointer_ByteBuffer_int"
+      "type": "org.bytedeco.ffmpeg.avformat.Read_packet_Pointer_ByteBuffer_int",
+      "unsafeAllocated": true
     },
     {
       "type": "org.bytedeco.ffmpeg.avformat.Read_packet_Pointer_BytePointer_int",
@@ -2142,10 +2209,12 @@
             "int"
           ]
         }
-      ]
+      ],
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.Read_packet_Pointer_byte___int"
+      "type": "org.bytedeco.ffmpeg.avformat.Read_packet_Pointer_byte___int",
+      "unsafeAllocated": true
     },
     {
       "type": "org.bytedeco.ffmpeg.avformat.Seek_Pointer_long_int",
@@ -2159,280 +2228,368 @@
             "int"
           ]
         }
-      ]
+      ],
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.Write_packet_Pointer_ByteBuffer_int"
+      "type": "org.bytedeco.ffmpeg.avformat.Write_packet_Pointer_ByteBuffer_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.Write_packet_Pointer_BytePointer_int"
+      "type": "org.bytedeco.ffmpeg.avformat.Write_packet_Pointer_BytePointer_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.Write_packet_Pointer_byte___int"
+      "type": "org.bytedeco.ffmpeg.avformat.Write_packet_Pointer_byte___int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avformat.av_format_control_message"
+      "type": "org.bytedeco.ffmpeg.avformat.av_format_control_message",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVAES"
+      "type": "org.bytedeco.ffmpeg.avutil.AVAES",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVAESCTR"
+      "type": "org.bytedeco.ffmpeg.avutil.AVAESCTR",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVAudioFifo"
+      "type": "org.bytedeco.ffmpeg.avutil.AVAudioFifo",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVBPrint"
+      "type": "org.bytedeco.ffmpeg.avutil.AVBPrint",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVBlowfish"
+      "type": "org.bytedeco.ffmpeg.avutil.AVBlowfish",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVBuffer"
+      "type": "org.bytedeco.ffmpeg.avutil.AVBuffer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVBufferPool"
+      "type": "org.bytedeco.ffmpeg.avutil.AVBufferPool",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVBufferRef"
+      "type": "org.bytedeco.ffmpeg.avutil.AVBufferRef",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVCAMELLIA"
+      "type": "org.bytedeco.ffmpeg.avutil.AVCAMELLIA",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVCAST5"
+      "type": "org.bytedeco.ffmpeg.avutil.AVCAST5",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVChannelCustom"
+      "type": "org.bytedeco.ffmpeg.avutil.AVChannelCustom",
+      "unsafeAllocated": true
     },
     {
       "type": "org.bytedeco.ffmpeg.avutil.AVChannelLayout",
       "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVClass"
+      "type": "org.bytedeco.ffmpeg.avutil.AVClass",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVClass$Child_class_iterate_PointerPointer"
+      "type": "org.bytedeco.ffmpeg.avutil.AVClass$Child_class_iterate_PointerPointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVClass$Child_next_Pointer_Pointer"
+      "type": "org.bytedeco.ffmpeg.avutil.AVClass$Child_next_Pointer_Pointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVClass$Get_category_Pointer"
+      "type": "org.bytedeco.ffmpeg.avutil.AVClass$Get_category_Pointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVClass$Item_name_Pointer"
+      "type": "org.bytedeco.ffmpeg.avutil.AVClass$Item_name_Pointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVClass$Query_ranges_PointerPointer_Pointer_BytePointer_int"
+      "type": "org.bytedeco.ffmpeg.avutil.AVClass$Query_ranges_PointerPointer_Pointer_BytePointer_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVComplexDouble"
+      "type": "org.bytedeco.ffmpeg.avutil.AVComplexDouble",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVComplexFloat"
+      "type": "org.bytedeco.ffmpeg.avutil.AVComplexFloat",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVComplexInt32"
+      "type": "org.bytedeco.ffmpeg.avutil.AVComplexInt32",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVComponentDescriptor"
+      "type": "org.bytedeco.ffmpeg.avutil.AVComponentDescriptor",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVContainerFifo"
+      "type": "org.bytedeco.ffmpeg.avutil.AVContainerFifo",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVContentLightMetadata"
+      "type": "org.bytedeco.ffmpeg.avutil.AVContentLightMetadata",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVDES"
+      "type": "org.bytedeco.ffmpeg.avutil.AVDES",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVDictionary"
+      "type": "org.bytedeco.ffmpeg.avutil.AVDictionary",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVDictionaryEntry"
+      "type": "org.bytedeco.ffmpeg.avutil.AVDictionaryEntry",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVDownmixInfo"
+      "type": "org.bytedeco.ffmpeg.avutil.AVDownmixInfo",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVDynamicHDRPlus"
+      "type": "org.bytedeco.ffmpeg.avutil.AVDynamicHDRPlus",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVEncryptionInfo"
+      "type": "org.bytedeco.ffmpeg.avutil.AVEncryptionInfo",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVEncryptionInitInfo"
+      "type": "org.bytedeco.ffmpeg.avutil.AVEncryptionInitInfo",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVFifo"
+      "type": "org.bytedeco.ffmpeg.avutil.AVFifo",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVFifoCB"
+      "type": "org.bytedeco.ffmpeg.avutil.AVFifoCB",
+      "unsafeAllocated": true
     },
     {
       "type": "org.bytedeco.ffmpeg.avutil.AVFrame",
       "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVFrameSideData"
+      "type": "org.bytedeco.ffmpeg.avutil.AVFrameSideData",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVHDRPlusColorTransformParams"
+      "type": "org.bytedeco.ffmpeg.avutil.AVHDRPlusColorTransformParams",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVHDRPlusPercentile"
+      "type": "org.bytedeco.ffmpeg.avutil.AVHDRPlusPercentile",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVHMAC"
+      "type": "org.bytedeco.ffmpeg.avutil.AVHMAC",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVHWDeviceContext"
+      "type": "org.bytedeco.ffmpeg.avutil.AVHWDeviceContext",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVHWDeviceContext$Free_AVHWDeviceContext"
+      "type": "org.bytedeco.ffmpeg.avutil.AVHWDeviceContext$Free_AVHWDeviceContext",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVHWFramesConstraints"
+      "type": "org.bytedeco.ffmpeg.avutil.AVHWFramesConstraints",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVHWFramesContext"
+      "type": "org.bytedeco.ffmpeg.avutil.AVHWFramesContext",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVHWFramesContext$Free_AVHWFramesContext"
+      "type": "org.bytedeco.ffmpeg.avutil.AVHWFramesContext$Free_AVHWFramesContext",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVLFG"
+      "type": "org.bytedeco.ffmpeg.avutil.AVLFG",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVMD5"
+      "type": "org.bytedeco.ffmpeg.avutil.AVMD5",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVMasteringDisplayMetadata"
+      "type": "org.bytedeco.ffmpeg.avutil.AVMasteringDisplayMetadata",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVMotionVector"
+      "type": "org.bytedeco.ffmpeg.avutil.AVMotionVector",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVOption"
+      "type": "org.bytedeco.ffmpeg.avutil.AVOption",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVOptionArrayDef"
+      "type": "org.bytedeco.ffmpeg.avutil.AVOptionArrayDef",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVOptionRange"
+      "type": "org.bytedeco.ffmpeg.avutil.AVOptionRange",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVOptionRanges"
+      "type": "org.bytedeco.ffmpeg.avutil.AVOptionRanges",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVPixFmtDescriptor"
+      "type": "org.bytedeco.ffmpeg.avutil.AVPixFmtDescriptor",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVRC4"
+      "type": "org.bytedeco.ffmpeg.avutil.AVRC4",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVRIPEMD"
+      "type": "org.bytedeco.ffmpeg.avutil.AVRIPEMD",
+      "unsafeAllocated": true
     },
     {
       "type": "org.bytedeco.ffmpeg.avutil.AVRational",
       "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVRegionOfInterest"
+      "type": "org.bytedeco.ffmpeg.avutil.AVRegionOfInterest",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVReplayGain"
+      "type": "org.bytedeco.ffmpeg.avutil.AVReplayGain",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVSHA"
+      "type": "org.bytedeco.ffmpeg.avutil.AVSHA",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVSHA512"
+      "type": "org.bytedeco.ffmpeg.avutil.AVSHA512",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVSideDataDescriptor"
+      "type": "org.bytedeco.ffmpeg.avutil.AVSideDataDescriptor",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVSphericalMapping"
+      "type": "org.bytedeco.ffmpeg.avutil.AVSphericalMapping",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVStereo3D"
+      "type": "org.bytedeco.ffmpeg.avutil.AVStereo3D",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVSubsampleEncryptionInfo"
+      "type": "org.bytedeco.ffmpeg.avutil.AVSubsampleEncryptionInfo",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVTEA"
+      "type": "org.bytedeco.ffmpeg.avutil.AVTEA",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVTWOFISH"
+      "type": "org.bytedeco.ffmpeg.avutil.AVTWOFISH",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVTXContext"
+      "type": "org.bytedeco.ffmpeg.avutil.AVTXContext",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVTimecode"
+      "type": "org.bytedeco.ffmpeg.avutil.AVTimecode",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVTreeNode"
+      "type": "org.bytedeco.ffmpeg.avutil.AVTreeNode",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.AVXTEA"
+      "type": "org.bytedeco.ffmpeg.avutil.AVXTEA",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Alloc_Pointer_long"
+      "type": "org.bytedeco.ffmpeg.avutil.Alloc_Pointer_long",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Alloc_long"
+      "type": "org.bytedeco.ffmpeg.avutil.Alloc_long",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Callback_Pointer_int_BytePointer_Pointer"
+      "type": "org.bytedeco.ffmpeg.avutil.Callback_Pointer_int_BytePointer_Pointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Callback_Pointer_int_String_Pointer"
+      "type": "org.bytedeco.ffmpeg.avutil.Callback_Pointer_int_String_Pointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Cmp_Const_Pointer_Const_Pointer"
+      "type": "org.bytedeco.ffmpeg.avutil.Cmp_Const_Pointer_Const_Pointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Cmp_Pointer_Pointer"
+      "type": "org.bytedeco.ffmpeg.avutil.Cmp_Pointer_Pointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Container_alloc_Pointer"
+      "type": "org.bytedeco.ffmpeg.avutil.Container_alloc_Pointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Container_free_Pointer_Pointer"
+      "type": "org.bytedeco.ffmpeg.avutil.Container_free_Pointer_Pointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Container_reset_Pointer_Pointer"
+      "type": "org.bytedeco.ffmpeg.avutil.Container_reset_Pointer_Pointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Enu_Pointer_Pointer"
+      "type": "org.bytedeco.ffmpeg.avutil.Enu_Pointer_Pointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Fifo_transfer_Pointer_Pointer_Pointer_int"
+      "type": "org.bytedeco.ffmpeg.avutil.Fifo_transfer_Pointer_Pointer_Pointer_int",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Free_Pointer_ByteBuffer"
+      "type": "org.bytedeco.ffmpeg.avutil.Free_Pointer_ByteBuffer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Free_Pointer_BytePointer"
+      "type": "org.bytedeco.ffmpeg.avutil.Free_Pointer_BytePointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Free_Pointer_byte__"
+      "type": "org.bytedeco.ffmpeg.avutil.Free_Pointer_byte__",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Free_func_Pointer"
+      "type": "org.bytedeco.ffmpeg.avutil.Free_func_Pointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Funcs1_Pointer_double"
+      "type": "org.bytedeco.ffmpeg.avutil.Funcs1_Pointer_double",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Funcs2_Pointer_double_double"
+      "type": "org.bytedeco.ffmpeg.avutil.Funcs2_Pointer_double_double",
+      "unsafeAllocated": true
     },
     {
       "type": "org.bytedeco.ffmpeg.avutil.LogCallback",
@@ -2445,43 +2602,56 @@
             "org.bytedeco.javacpp.BytePointer"
           ]
         }
-      ]
+      ],
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.Pool_free_Pointer"
+      "type": "org.bytedeco.ffmpeg.avutil.Pool_free_Pointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.av_alias16"
+      "type": "org.bytedeco.ffmpeg.avutil.av_alias16",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.av_alias32"
+      "type": "org.bytedeco.ffmpeg.avutil.av_alias32",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.av_alias64"
+      "type": "org.bytedeco.ffmpeg.avutil.av_alias64",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.av_intfloat32"
+      "type": "org.bytedeco.ffmpeg.avutil.av_intfloat32",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.av_intfloat64"
+      "type": "org.bytedeco.ffmpeg.avutil.av_intfloat64",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.av_pixelutils_sad_fn"
+      "type": "org.bytedeco.ffmpeg.avutil.av_pixelutils_sad_fn",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.av_tx_fn"
+      "type": "org.bytedeco.ffmpeg.avutil.av_tx_fn",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.ff_pad_helper_AVBPrint"
+      "type": "org.bytedeco.ffmpeg.avutil.ff_pad_helper_AVBPrint",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.unaligned_16"
+      "type": "org.bytedeco.ffmpeg.avutil.unaligned_16",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.unaligned_32"
+      "type": "org.bytedeco.ffmpeg.avutil.unaligned_32",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.avutil.unaligned_64"
+      "type": "org.bytedeco.ffmpeg.avutil.unaligned_64",
+      "unsafeAllocated": true
     },
     {
       "type": "org.bytedeco.ffmpeg.global.avcodec"
@@ -2499,41 +2669,52 @@
       "type": "org.bytedeco.ffmpeg.global.swscale"
     },
     {
-      "type": "org.bytedeco.ffmpeg.swresample.SwrContext"
+      "type": "org.bytedeco.ffmpeg.swresample.SwrContext",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.swscale.SwsContext"
+      "type": "org.bytedeco.ffmpeg.swscale.SwsContext",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.swscale.SwsFilter"
+      "type": "org.bytedeco.ffmpeg.swscale.SwsFilter",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.ffmpeg.swscale.SwsVector"
+      "type": "org.bytedeco.ffmpeg.swscale.SwsVector",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.javacpp.BoolPointer"
+      "type": "org.bytedeco.javacpp.BoolPointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.javacpp.BooleanPointer"
+      "type": "org.bytedeco.javacpp.BooleanPointer",
+      "unsafeAllocated": true
     },
     {
       "type": "org.bytedeco.javacpp.BytePointer",
       "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.javacpp.CLongPointer"
+      "type": "org.bytedeco.javacpp.CLongPointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.javacpp.CharPointer"
+      "type": "org.bytedeco.javacpp.CharPointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.javacpp.DoublePointer"
+      "type": "org.bytedeco.javacpp.DoublePointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.javacpp.FloatPointer"
+      "type": "org.bytedeco.javacpp.FloatPointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.javacpp.IntPointer"
+      "type": "org.bytedeco.javacpp.IntPointer",
+      "unsafeAllocated": true
     },
     {
       "type": "org.bytedeco.javacpp.Loader",
@@ -2553,7 +2734,8 @@
       "type": "org.bytedeco.javacpp.Loader$Helper"
     },
     {
-      "type": "org.bytedeco.javacpp.LongPointer"
+      "type": "org.bytedeco.javacpp.LongPointer",
+      "unsafeAllocated": true
     },
     {
       "type": "org.bytedeco.javacpp.Pointer",
@@ -2598,13 +2780,16 @@
       ]
     },
     {
-      "type": "org.bytedeco.javacpp.PointerPointer"
+      "type": "org.bytedeco.javacpp.PointerPointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.javacpp.ShortPointer"
+      "type": "org.bytedeco.javacpp.ShortPointer",
+      "unsafeAllocated": true
     },
     {
-      "type": "org.bytedeco.javacpp.SizeTPointer"
+      "type": "org.bytedeco.javacpp.SizeTPointer",
+      "unsafeAllocated": true
     },
     {
       "type": "org.bytedeco.javacpp.presets.javacpp",
@@ -4746,6 +4931,169 @@
           "com.metrolist.shared.settings.LinuxSecretServiceWriter$Secret"
         ]
       }
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avdevice.AVDeviceInfo",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avdevice.AVDeviceInfoList",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avdevice.AVDeviceRect",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avfilter.AVBufferSrcParameters",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avfilter.AVFilter",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avfilter.avfilter_action_func",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avfilter.AVFilterChain",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avfilter.AVFilterContext",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avfilter.avfilter_execute_func",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avfilter.AVFilterFormats",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avfilter.AVFilterFormatsConfig",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avfilter.AVFilterGraph",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avfilter.AVFilterGraphSegment",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avfilter.AVFilterInOut",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avfilter.AVFilterLink",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avfilter.AVFilterPad",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avfilter.AVFilterPadParams",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avfilter.AVFilterParams",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avformat.AVIODirContext",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVExpr",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVHashContext",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.AVThreadMessageQueue",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.ffmpeg.avutil.tm",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.HighResolutionClock",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.HighResolutionDuration",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.HighResolutionTime",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.Hours",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.Microseconds",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.Milliseconds",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.Minutes",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.Nanoseconds",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.Seconds",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.SecondsDouble",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.SecondsFloat",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.SteadyClock",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.SteadyDuration",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.SteadyTime",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.SystemClock",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.SystemDuration",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "org.bytedeco.javacpp.chrono.SystemTime",
+      "unsafeAllocated": true
+    },
+    {
+      "type": "androidx.compose.ui.awt.ComposeDialog"
     }
   ],
   "resources": [

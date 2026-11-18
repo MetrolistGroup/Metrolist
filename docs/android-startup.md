@@ -8,6 +8,8 @@ Backup restore finishes before infrastructure and database readers initialize. K
 
 `App.infrastructureReady` permits platform/session objects after DI, locale, migration checks and notification channels. `App.startup.await()` also waits for liked songs, saved accounts and database-dependent setup. Controllers, browsing, downloads, widgets and activity content must wait for completion.
 
+The recognition status collector skips widget updates when Android provides no app-widget service. Widget broadcasts share one async completion handler. It finishes once after success, failure or cancellation, cancels unfinished work after eight seconds and tolerates a result Android has already finished.
+
 Saved account restoration runs on I/O. Apply its result only while the originating credentials and visitor data still match. Login, logout and account changes invalidate pending work.
 
 Samsung's quick-panel "Play music" chooser sends `android.intent.action.MUSIC_PLAYER` in [decompiled SystemUI](https://github.com/488315/android_samsung_frameworks_base/blob/d7c13fe69a1ad46f8dff0254f1abd32596fef5cd/packages/SystemUI/src/com/android/systemui/media/PlayLastSongHelper.java#L109-L119). `MainActivity` accepts this action with `CATEGORY_DEFAULT` and opens the app without requesting playback.
@@ -23,6 +25,10 @@ Keep legacy browser connection authorization immediate. Those browsers can block
 Read Listen Together guest-lock state without constructing its network manager. Create the manager for room screens, invitations or saved sessions. Position synchronization reads the player on demand rather than forwarding an idle UI clock.
 
 ## Background playback
+
+Media3's [manifest media-button receiver](https://github.com/androidx/media/blob/1.12.0-beta01/libraries/session/src/main/java/androidx/media3/session/MediaButtonReceiver.java) and [paused-play notification actions](https://github.com/androidx/media/blob/1.12.0-beta01/libraries/session/src/main/java/androidx/media3/session/DefaultActionFactory.java) start `MusicService` as a foreground service. Acknowledge these intents before dispatching their commands or waiting for queue restoration, including repeated starts and rejected startup. Media3's actionless self-start intents need the same acknowledgement. Reuse the current media notification when available, otherwise show a temporary app notification with the same ID. After ten seconds, let Media3 reconcile empty, idle or paused media-button requests and late idle self-starts. A prepared self-start keeps Media3's existing foreground lifetime.
+
+Widget refreshes and Android Auto library refreshes use ordinary service starts. Widget playback binds through `PlayerConnection`; Android Auto and other controllers bind through Media3. There is no boot playback receiver. Keep these paths free of foreground-service starts until playback requires one. Preserve widget resume promotion before its playback command and the idle-notification suppression for browsing and restored queues.
 
 Keep playback ownership in the service. Screen, activity and rendering visibility must not stop audio. Use the common player factory so primary, preloaded and replacement players retain noisy-audio handling.
 

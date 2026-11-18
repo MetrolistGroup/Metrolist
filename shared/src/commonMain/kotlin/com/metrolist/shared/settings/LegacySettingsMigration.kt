@@ -23,6 +23,18 @@ private const val LEGACY_MIGRATION_VERSION_KEY = "settingsMigrationVersion"
 private const val LEGACY_VALUE_MIGRATION_VERSION = 2
 private const val LEGACY_MIGRATION_VERSION = 14
 
+private val localeSettingKeys = setOf("appLanguage", "contentLanguage", "contentCountry")
+
+internal fun normalizeLegacyStringSetting(
+    key: String,
+    value: String,
+): String =
+    when {
+        key in localeSettingKeys && (value.equals("SYSTEM_DEFAULT", true) || value.equals("SYSTEM", true)) -> "SYSTEM"
+        key == "visitorData" && value == "null" -> ""
+        else -> value
+    }
+
 private val removedPlayerSettingsKeys =
     setOf(
         "enableMusicVideos",
@@ -303,6 +315,20 @@ private val floatKeys =
     )
 
 internal fun migrateLegacySettings(settings: KmpSettings) {
+    // Earlier migrations could mark the store complete with legacy enum names still present.
+    enumTypes.keys.forEach { key ->
+        val raw = settings.readStringOrNull(key) ?: return@forEach
+        val converted = convertLegacyValue(key, raw)
+        if (converted != null) {
+            writeValue(settings, key, converted)
+        } else if (settings.readIntOrNull(key) == null) {
+            settings.remove(key)
+        }
+    }
+    // Earlier v14 migrations could leave these legacy values in otherwise migrated stores.
+    (localeSettingKeys + "visitorData").forEach { key ->
+        normalizeStringSetting(settings, key) { normalizeLegacyStringSetting(key, it).takeIf { normalized -> normalized != it } }
+    }
     val migrationVersion = settings.readIntOrNull(LEGACY_MIGRATION_VERSION_KEY) ?: 0
     if (migrationVersion < LEGACY_MIGRATION_VERSION) removedUnusedSettingsKeys.forEach(settings::remove)
     if (migrationVersion in 11 until LEGACY_MIGRATION_VERSION) restoreCanvasToggle(settings)
@@ -326,27 +352,11 @@ internal fun migrateLegacySettings(settings: KmpSettings) {
     }
     settings.remove("pureBlack")
     if (migrationVersion >= LEGACY_VALUE_MIGRATION_VERSION) {
-        listOf(
-            LoudnessLevelKey,
-            AnimatedCoverResolutionKey,
-            AppleMusicArtistVideoResolutionKey,
-            YouTubeCanvasQualityKey,
-            YouTubeCanvasModeKey,
-        ).forEach { key ->
-            settings.readStringOrNull(key)?.let { value ->
-                convertLegacyValue(key, value)?.let { writeValue(settings, key, it) }
-            }
-        }
         (removedPlayerSettingsKeys + removedArtworkSettingsKeys + removedUnusedSettingsKeys).forEach(settings::remove)
         settings.putInt(LEGACY_MIGRATION_VERSION_KEY, LEGACY_MIGRATION_VERSION)
         return
     }
 
-    enumTypes.forEach { (key, _) ->
-        val raw = settings.readStringOrNull(key) ?: return@forEach
-        convertLegacyValue(key, raw)?.let { writeValue(settings, key, it) }
-    }
-    normalizeStringSetting(settings, "appLanguage") { if (it == "SYSTEM_DEFAULT") "SYSTEM" else it }
     normalizeStringSetting(settings, "miniPlayerBackgroundStyle", ::legacyMiniPlayerBackground)
     if (settings.readLongOrNull("selectedThemeColor") == null) {
         settings.readIntOrNull("selectedThemeColor")?.toLong()?.let { settings.putLong("selectedThemeColor", it) }
@@ -462,8 +472,8 @@ internal fun convertLegacyValue(
             ThemeMode.AUTO.ordinal
         }
 
-        key == "appLanguage" && value == "SYSTEM_DEFAULT" -> {
-            "SYSTEM"
+        (key in localeSettingKeys || key == "visitorData") && value is String -> {
+            normalizeLegacyStringSetting(key, value)
         }
 
         key == "selectedThemeColor" -> {

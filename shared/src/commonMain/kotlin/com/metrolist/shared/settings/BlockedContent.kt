@@ -220,6 +220,7 @@ object BlockedContent {
                 thumbnail = thumbnail,
             )
         saveArtists(listOf(blockedArtist) + artists().filterNot { it.id == id })
+        ContentUndoHints.request(ContentUndoPage.BLOCKED_ARTISTS)
     }
 
     fun unblockArtist(artistId: String) {

@@ -23,9 +23,9 @@ class AudioOffloadEligibilityTest {
         )
 
     @Test
-    fun flatOrBypassedEqWithAttenuationCanOffload() {
+    fun flatOrBypassedEqWithoutNormalizationCanOffload() {
         assertTrue(eligible.canOffload)
-        assertTrue(eligible.copy(equalizer = EqualizerConfiguration(null, 0.0), normalizationGain = 0.7f).canOffload)
+        assertTrue(eligible.copy(equalizer = EqualizerConfiguration(null, 0.0)).canOffload)
         assertTrue(
             eligible
                 .copy(
@@ -42,6 +42,7 @@ class AudioOffloadEligibilityTest {
     fun everyPcmRequirementDisablesOffload() {
         val ineligible =
             listOf(
+                eligible.copy(normalizationGain = 0.7f),
                 eligible.copy(normalizationGain = 1.1f),
                 eligible.copy(normalizationGain = Float.NaN),
                 eligible.copy(skipSilence = true),

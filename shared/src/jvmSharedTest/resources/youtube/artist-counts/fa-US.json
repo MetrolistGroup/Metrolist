@@ -1,0 +1,41 @@
+{
+  "header": {
+    "musicImmersiveHeaderRenderer": {
+      "subscriptionButton": {
+        "subscribeButtonRenderer": {
+          "subscriberCountText": {
+            "runs": [
+              {
+                "text": "59.3 میلیون"
+              }
+            ]
+          },
+          "longSubscriberCountText": {
+            "runs": [
+              {
+                "text": "59.3 میلیون مشترک"
+              }
+            ],
+            "accessibility": {
+              "accessibilityData": {
+                "label": "59.3 میلیون مشترک"
+              }
+            }
+          }
+        }
+      },
+      "monthlyListenerCount": {
+        "runs": [
+          {
+            "text": "‫240 میلیون مخاطب ماهانه"
+          }
+        ],
+        "accessibility": {
+          "accessibilityData": {
+            "label": "‫240 میلیون مخاطب ماهانه"
+          }
+        }
+      }
+    }
+  }
+}

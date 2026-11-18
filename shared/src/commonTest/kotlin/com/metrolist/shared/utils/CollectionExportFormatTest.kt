@@ -3,6 +3,7 @@ package com.metrolist.shared.utils
 import com.metrolist.shared.model.AlbumTiny
 import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.playlistimport.UniversalPlaylistParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -45,6 +46,24 @@ class CollectionExportFormatTest {
                 listOf(song.copy(title = "Title"), song.copy(id = "next-id", title = "Next", duration = null)),
             ),
         )
+    }
+
+    @Test
+    fun m3uWithMultilineMetadataReimportsAsOneTrack() {
+        val source =
+            song.copy(
+                id = "abcdefghijk",
+                title = "First line\r\nSecond line",
+                artists = listOf(ArtistTiny("a", "First\nArtist")),
+            )
+
+        val exported = CollectionExportFormat.M3U.render(listOf(source))
+        val prepared = UniversalPlaylistParser.prepareFile(exported, "playlist.m3u", "Playlist", "File")
+        val track = UniversalPlaylistParser.importableTracks(prepared.tracks).single()
+
+        assertEquals("abcdefghijk", track.videoId)
+        assertEquals("First Artist", track.artist)
+        assertEquals("First line Second line", track.title)
     }
 
     @Test

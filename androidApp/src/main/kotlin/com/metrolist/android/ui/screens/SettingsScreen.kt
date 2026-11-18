@@ -105,6 +105,7 @@ import com.metrolist.shared.ui.settings.SettingsPageId
 import com.metrolist.shared.ui.settings.SettingsPlatform
 import com.metrolist.shared.ui.settings.SharedSettingsHost
 import com.metrolist.shared.ui.settings.SharedSettingsScreen
+import com.metrolist.shared.ui.settings.settingsHomeSections
 import com.metrolist.shared.ui.utils.rememberFileSizeFormatter
 import com.metrolist.shared.viewmodels.PlayerViewModel
 import kotlinx.coroutines.CancellationException
@@ -124,6 +125,7 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToDownloads: () -> Unit,
     onNavigateToArtist: (String) -> Unit = {},
+    initialPage: SettingsPageId? = null,
 ) {
     val pageViewModels = rememberViewModelStoreProvider()
     var currentPage by remember { mutableStateOf<SettingsPageId?>(null) }
@@ -133,6 +135,7 @@ fun SettingsScreen(
     val playerConnection = LocalPlayerConnection.current
     val audioCacheManager: AudioCacheManager = koinInject()
     val homeViewModel: HomeViewModel = koinViewModel()
+    val homeState by homeViewModel.shared.uiState.collectAsState()
     val searchViewModel: SearchViewModel = koinViewModel()
     val searchState by searchViewModel.shared.uiState.collectAsState()
     val historyRemovalFailed = stringResource(Res.string.search_history_removal_failed)
@@ -232,15 +235,7 @@ fun SettingsScreen(
                 title = stringResource(Res.string.app_font_choose),
                 description = if (hasCustomFont) SharedPreferences.shared.androidCustomFontName else importCustomFontLabel,
                 onClick = {
-                    fontPicker.launch(
-                        arrayOf(
-                            "font/ttf",
-                            "font/otf",
-                            "application/x-font-ttf",
-                            "application/x-font-opentype",
-                            "application/octet-stream",
-                        ),
-                    )
+                    fontPicker.launch(arrayOf("*/*"))
                 },
             ),
         )
@@ -295,11 +290,10 @@ fun SettingsScreen(
         scope.launch {
             isCalculatingCacheSize = true
             try {
-                val exoplayerDir = context.filesDir.resolve("exoplayer")
                 val coilDir = context.cacheDir.resolve("coil")
                 val songCacheSize =
                     withContext(Dispatchers.IO) {
-                        audioCacheManager.getCacheSizeBytes() + exoplayerDir.calculateDirectorySize()
+                        audioCacheManager.getCacheSizeBytes()
                     }
                 val downloadSize = withContext(Dispatchers.IO) { audioCacheManager.getDownloadSizeBytes() }
                 val imageCacheSize =
@@ -337,6 +331,7 @@ fun SettingsScreen(
             add(SettingsPageId.HIDDEN_HOME_ITEMS)
             add(SettingsPageId.HIDDEN_LIBRARY_ITEMS)
             add(SettingsPageId.BLOCKED_ARTISTS)
+            add(SettingsPageId.BLOCKED_SONGS)
             add(SettingsPageId.STORAGE)
             add(SettingsPageId.BACKUP_RESTORE)
             add(SettingsPageId.UPDATES)
@@ -359,6 +354,8 @@ fun SettingsScreen(
                     context.startActivity(intent)
                     return
                 } catch (_: ActivityNotFoundException) {
+                } catch (_: SecurityException) {
+                    // Some vendor settings apps do not export this screen.
                 }
             }
         }
@@ -381,12 +378,15 @@ fun SettingsScreen(
                             viewModel = viewModel,
                             modifier = modifier,
                             isCasting = castState?.isConnected == true,
+                            isBuffering = castState?.isBuffering == true,
                         )
                     },
                     rememberMetroEqProfilePicker = { onPicked -> rememberMetroEqProfilePicker(onPicked) },
                     onClose = onNavigateBack,
                     onOpenArtist = onNavigateToArtist,
                     onSpotifySignIn = { showSpotifyLogin = true },
+                    homeSections = settingsHomeSections(homeState),
+                    onHomeSectionVisibilityChanged = SharedPreferences.shared::toggleHomeSectionVisibility,
                     bottomContentPadding = miniPlayerInset,
                     storageSummary =
                         if (isCalculatingCacheSize) {
@@ -410,6 +410,7 @@ fun SettingsScreen(
                             stringResource(Res.string.updates_no_updates)
                         },
                     availablePages = availablePages,
+                    initialPage = initialPage,
                     externalPages = setOf(SettingsPageId.SUPPORTED_LINKS),
                     onPageChanged = { page ->
                         if (page != currentPage) {
@@ -553,6 +554,14 @@ fun SettingsScreen(
                                     requireDownloadNotifications { SharedPreferences.shared.autoDownloadOnLike = true }
                                 } else {
                                     SharedPreferences.shared.autoDownloadOnLike = false
+                                }
+                            }
+
+                            SettingsChangeEffect.AUTO_DOWNLOAD_SAVED_COLLECTIONS -> {
+                                if (value == true) {
+                                    requireDownloadNotifications { SharedPreferences.shared.autoDownloadSavedCollections = true }
+                                } else {
+                                    SharedPreferences.shared.autoDownloadSavedCollections = false
                                 }
                             }
 

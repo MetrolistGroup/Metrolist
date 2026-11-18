@@ -18,12 +18,14 @@ import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -40,64 +42,29 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class LyricsTranslationClientTest {
     @Test
-    fun presetModelsDisableReasoningForDetectionAndTranslation() =
+    fun presetModelsDisableReasoningForTranslation() =
         runBlocking {
             for (model in AiProviderPresets.openRouterOfflineModels) {
                 var requests = 0
                 HttpClient(
                     MockEngine { request ->
                         val body = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
-                        assertEquals("Bearer oauth-key", request.headers[HttpHeaders.Authorization])
-                        assertEquals("openrouter.ai", request.url.host)
-                        assertEquals("/api/v1/chat/completions", request.url.encodedPath)
+                        assertEquals(JsonPrimitive(false), body["reasoning"]?.jsonObject?.get("enabled"))
                         assertEquals(model.id, body["model"]?.jsonPrimitive?.content)
                         requests++
-                        if (body["reasoning"]?.jsonObject?.get("enabled") != JsonPrimitive(false)) {
-                            respond("""{"choices":[{"message":{"content":null},"finish_reason":"length"}]}""")
-                        } else {
-                            val payload =
-                                when (requests) {
-                                    1 -> """{"foreign_text":"bonjour"}"""
-                                    2 -> """{"lines":["bonjour"]}"""
-                                    else -> """{"lines":["Hello"]}"""
-                                }
-                            respond("{\"choices\":[{\"message\":{\"content\":${JsonPrimitive(payload)}},\"finish_reason\":\"stop\"}]}")
-                        }
+                        val payload = """{"lines":["Hello"]}"""
+                        respond("{\"choices\":[{\"message\":{\"content\":${JsonPrimitive(payload)}}}]}")
                     },
                 ).use { client ->
-                    val translation = LyricsTranslationClient(client)
                     val endpoint = checkNotNull(AiProviderPresets.find("OpenRouter")).endpoint
-                    assertTrue(
-                        translation
-                            .shouldTranslateLyrics(
-                                listOf("bonjour"),
-                                "OpenRouter",
-                                "en",
-                                "oauth-key",
-                                endpoint,
-                                model.id,
-                            ).getOrThrow(),
-                    )
-                    assertEquals(
-                        listOf(true),
-                        translation
-                            .shouldTranslateLyricsLines(
-                                listOf("bonjour"),
-                                "OpenRouter",
-                                "en",
-                                "oauth-key",
-                                endpoint,
-                                model.id,
-                            ).getOrThrow(),
-                    )
                     assertEquals(
                         listOf("Hello"),
-                        translation
+                        LyricsTranslationClient(client)
                             .translateLyricsLines(listOf("bonjour"), "OpenRouter", "en", "Literal", "oauth-key", endpoint, model.id)
                             .getOrThrow()
                             .translatedLines,
                     )
-                    assertEquals(3, requests)
+                    assertEquals(1, requests)
                 }
             }
         }
@@ -226,159 +193,59 @@ class LyricsTranslationClientTest {
         }
 
     @Test
-    fun perVocalDetectionBatchesUniqueTextAndRestoresOriginalOrder() =
+    fun localDetectionPreservesOrderAndNeedsNoCredentialsOrNetwork() =
         runBlocking {
-            val batchSizes = mutableListOf<Int>()
-            HttpClient(
-                MockEngine { request ->
-                    val body = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
-                    val prompt =
-                        body
-                            .getValue("messages")
-                            .jsonArray
-                            .last()
-                            .jsonObject
-                            .getValue("content")
-                            .jsonPrimitive.content
-                    val input =
-                        Json
-                            .parseToJsonElement(prompt.substringAfter("\n\n"))
-                            .jsonObject
-                            .getValue("lines")
-                            .jsonArray
-                    batchSizes += input.size
-                    val flags =
-                        input.map {
-                            JsonPrimitive(
-                                if (it.jsonPrimitive.content
-                                        .removePrefix("Lyric ")
-                                        .toInt() % 2 == 0
-                                ) {
-                                    it.jsonPrimitive.content
-                                } else {
-                                    ""
-                                },
-                            )
-                        }
-                    val payload = "{\"lines\":${JsonArray(flags)}}"
-                    respond("{\"choices\":[{\"message\":{\"content\":${JsonPrimitive(payload)}}}]}")
-                },
-            ).use { client ->
-                val lines = (0..40).map { "Lyric $it" } + listOf("", "Lyric 1", "Lyric 0")
-                val result =
-                    LyricsTranslationClient(client)
-                        .shouldTranslateLyricsLines(
-                            lines = lines,
-                            provider = "OpenRouter",
-                            targetLanguage = "fr",
-                            apiKey = "test-key",
-                            baseUrl = "",
-                            model = "test-model",
-                        ).getOrThrow()
-                assertEquals((0..40).map { it % 2 == 0 } + listOf(false, false, true), result)
-                assertEquals(listOf(40, 1), batchSizes)
-            }
-        }
-
-    @Test
-    fun mixedLinesUseForeignPassagesRegardlessOfTheirProportionOrScript() =
-        runBlocking {
-            val scenarios =
-                listOf(
-                    Triple("en", "English", listOf("I will remember this song forever 忘れない" to "忘れない", "I will remember" to "")),
-                    Triple("en", "English", listOf("(Warning? Don't worry) 溺れて" to "溺れて", "(Warning? Don't worry)" to "")),
-                    Triple("ja", "Japanese", listOf("この歌をいつまでも覚えている I remember" to "I remember", "この歌を覚えている" to "")),
-                    Triple(
-                        "fr",
-                        "French",
-                        listOf("Je garde cette chanson dans mon cœur I remember" to "I remember", "Je me souviens" to ""),
-                    ),
-                    Triple("ko", "Korean", listOf("이 노래를 언제까지나 기억할게 忘れない" to "忘れない", "이 노래를 기억할게" to "")),
-                )
-            for ((target, targetName, lyrics) in scenarios) {
-                HttpClient(
-                    MockEngine { request ->
-                        val body = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
-                        val prompt =
-                            body
-                                .getValue("messages")
-                                .jsonArray
-                                .last()
-                                .jsonObject
-                                .getValue("content")
-                                .jsonPrimitive.content
-                        assertTrue(prompt.contains("inside a line otherwise written in $targetName"))
-                        assertTrue(prompt.contains("Do not use the majority or dominant language or a minimum percentage"))
-                        assertTrue(prompt.contains("languages sharing a script"))
-                        assertTrue(prompt.contains("A script used by $targetName is not by itself foreign"))
-                        val input =
-                            Json
-                                .parseToJsonElement(prompt.substringAfter("\n\n"))
-                                .jsonObject
-                                .getValue("lines")
-                                .jsonArray
-                        assertEquals(lyrics.map { it.first } + "123 🎵", input.map { it.jsonPrimitive.content })
-                        val payload = "{\"lines\":${JsonArray((lyrics.map { it.second } + "").map(::JsonPrimitive))}}"
-                        respond("{\"choices\":[{\"message\":{\"content\":${JsonPrimitive(payload)}}}]}")
-                    },
-                ).use { client ->
-                    val lines = lyrics.map { it.first } + listOf("", "123 🎵", lyrics.first().first)
-                    val result =
-                        LyricsTranslationClient(client)
-                            .shouldTranslateLyricsLines(
-                                lines = lines,
-                                provider = "OpenRouter",
-                                targetLanguage = target,
-                                apiKey = "test-key",
-                                baseUrl = "",
-                                model = "test-model",
-                            ).getOrThrow()
-                    assertEquals(listOf(true, false, false, false, true), result)
-                }
-            }
-        }
-
-    @Test
-    fun perVocalDetectionRejectsMalformedResponses() =
-        runBlocking {
-            for (payload in listOf(
-                "{}",
-                """{"lines":["Hello"]}""",
-                """{"lines":[true,false]}""",
-                """{"lines":["Hello",null]}""",
-            )) {
-                HttpClient(
-                    MockEngine {
-                        respond("{\"choices\":[{\"message\":{\"content\":${JsonPrimitive(payload)}}}]}")
-                    },
-                ).use { client ->
-                    val result =
-                        LyricsTranslationClient(client).shouldTranslateLyricsLines(
-                            lines = listOf("Hello", "Goodbye"),
-                            provider = "OpenRouter",
-                            targetLanguage = "fr",
-                            apiKey = "test-key",
-                            baseUrl = "",
-                            model = "test-model",
-                        )
-                    assertTrue(result.isFailure, payload)
-                }
-            }
-        }
-
-    @Test
-    fun perVocalDetectionPreservesCancellation() =
-        runBlocking<Unit> {
-            HttpClient(MockEngine { throw CancellationException("Cancelled") }).use { client ->
-                assertFailsWith<CancellationException> {
-                    LyricsTranslationClient(client).shouldTranslateLyricsLines(
-                        lines = listOf("Hello"),
-                        provider = "OpenRouter",
-                        targetLanguage = "fr",
-                        apiKey = "test-key",
-                        baseUrl = "",
-                        model = "test-model",
+            HttpClient(MockEngine { error("Local detection must not send requests") }).use { http ->
+                val client = LyricsTranslationClient(http)
+                val lines =
+                    listOf(
+                        "Je ne veux pas oublier cette chanson",
+                        "I will remember this song forever",
+                        "",
+                        "123 🎵",
+                        "Je ne veux pas oublier cette chanson",
                     )
+                assertEquals(listOf(true, false, false, false, true), client.shouldTranslateLyricsLines(lines, "en").getOrThrow())
+                assertTrue(client.shouldTranslateLyrics(lines, "en").getOrThrow())
+                assertEquals(listOf(false), client.shouldTranslateLyricsLines(listOf("Eu quero cantar esta canção"), "pt-BR").getOrThrow())
+            }
+        }
+
+    @Test
+    fun localDetectionChecksMixedScriptsAndPassages() =
+        runBlocking {
+            HttpClient(MockEngine { error("Local detection must not send requests") }).use { http ->
+                val client = LyricsTranslationClient(http)
+                assertEquals(
+                    listOf(true, false),
+                    client
+                        .shouldTranslateLyricsLines(
+                            listOf("I will remember this song forever 忘れない", "I will remember this song forever"),
+                            "en",
+                        ).getOrThrow(),
+                )
+                assertEquals(
+                    listOf(true, false),
+                    client.shouldTranslateLyricsLines(listOf("この歌をいつまでも覚えている I will remember you", "この歌をいつまでも覚えている"), "ja").getOrThrow(),
+                )
+                assertTrue(
+                    client
+                        .shouldTranslateLyricsLines(
+                            listOf("Je garde cette chanson dans mon cœur I will remember you"),
+                            "fr",
+                        ).getOrThrow()
+                        .single(),
+                )
+            }
+        }
+
+    @Test
+    fun localDetectionPreservesCancellation() =
+        runBlocking<Unit> {
+            HttpClient(MockEngine { error("No requests expected") }).use { http ->
+                val job = Job().apply { cancel() }
+                assertFailsWith<CancellationException> {
+                    withContext(job) { LyricsTranslationClient(http).shouldTranslateLyricsLines(listOf("Hello"), "fr") }
                 }
             }
         }
@@ -583,6 +450,75 @@ class LyricsTranslationClientTest {
         }
 
     @Test
+    fun geminiRequestResolvesDefaultAndSelectedModelUrls() =
+        runBlocking {
+            val capturedUrls = mutableListOf<String>()
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        capturedUrls += request.url.toString()
+                        respond(
+                            """{"candidates":[{"content":{"parts":[{"text":"{\"lines\":[\"Hola\"]}"}]}}]}""",
+                            HttpStatusCode.OK,
+                            JSON_HEADERS,
+                        )
+                    },
+                )
+
+            val geminiPreset = AiProviderPresets.find("Gemini")!!
+            LyricsTranslationClient(client)
+                .translateLyricsLines(
+                    lines = listOf("Hello"),
+                    provider = "Gemini",
+                    targetLanguage = "es",
+                    mode = "Literal",
+                    apiKey = "test-key",
+                    baseUrl = "",
+                    model = "",
+                ).getOrThrow()
+            LyricsTranslationClient(client)
+                .translateLyricsLines(
+                    lines = listOf("Hello"),
+                    provider = "Gemini",
+                    targetLanguage = "es",
+                    mode = "Literal",
+                    apiKey = "test-key",
+                    baseUrl = geminiPreset.endpoint,
+                    model = "gemini-2.5-flash",
+                ).getOrThrow()
+            LyricsTranslationClient(client)
+                .translateLyricsLines(
+                    lines = listOf("Hello"),
+                    provider = "Gemini",
+                    targetLanguage = "es",
+                    mode = "Literal",
+                    apiKey = "test-key",
+                    baseUrl = AiProviderPresets.LEGACY_GEMINI_ENDPOINT,
+                    model = "",
+                ).getOrThrow()
+            LyricsTranslationClient(client)
+                .translateLyricsLines(
+                    lines = listOf("Hello"),
+                    provider = "Gemini-compatible",
+                    targetLanguage = "es",
+                    mode = "Literal",
+                    apiKey = "test-key",
+                    baseUrl = geminiPreset.endpoint,
+                    model = "custom\$1",
+                ).getOrThrow()
+
+            assertEquals(
+                listOf(
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+                    "https://generativelanguage.googleapis.com/v1beta/models/custom\$1:generateContent",
+                ),
+                capturedUrls,
+            )
+        }
+
+    @Test
     fun anthropicRequestUsesToolSchemaAndAnthropicHeaders() =
         runBlocking {
             var capturedBody = ""
@@ -661,127 +597,22 @@ class LyricsTranslationClientTest {
         }
 
     @Test
-    fun languageDetectionFindsForeignInteriorLinesAndSuffixes() =
+    fun localDetectionChecksForeignPassagesAfterLongLyrics() =
         runBlocking {
-            val foreign = "Je ne veux pas oublier cette chanson"
-            val englishLines = List(120) { index -> "English line $index ${"a".repeat(60)}" }
-            val scenarios =
-                listOf(
-                    englishLines.toMutableList().apply { this[2] = foreign },
-                    englishLines + foreign,
-                    englishLines.toMutableList().apply { this[110] = foreign },
-                    englishLines.toMutableList().apply { this[1] += " ${"a".repeat(150)} $foreign" },
-                    listOf("English words ".repeat(700) + foreign),
+            HttpClient(MockEngine { error("No requests expected") }).use { http ->
+                val client = LyricsTranslationClient(http)
+                val english = List(120) { "I will remember this song forever and sing it every day" }
+                assertEquals(false, client.shouldTranslateLyrics(english, "en").getOrThrow())
+                assertEquals(true, client.shouldTranslateLyrics(english + "Je ne veux pas oublier cette chanson", "en").getOrThrow())
+                assertEquals(
+                    true,
+                    client
+                        .shouldTranslateLyrics(
+                            listOf(english.joinToString(" ") + " Je ne veux pas oublier cette chanson"),
+                            "en",
+                        ).getOrThrow(),
                 )
-            for (lines in scenarios) {
-                val batches = mutableListOf<String>()
-                val result =
-                    detectLyrics(lines) { prompt ->
-                        assertTrue(prompt.contains("every lyric line"))
-                        assertTrue(prompt.contains("majority or dominant"))
-                        val batch = prompt.substringAfter("\n\n")
-                        batches += batch
-                        """{"foreign_text":${JsonPrimitive(if (foreign in batch) foreign else "")}}"""
-                    }
-
-                assertEquals(true, result.getOrThrow())
-                assertTrue(batches.all { it.length <= 8_000 })
-                assertTrue(foreign in batches.last())
             }
-        }
-
-    @Test
-    fun negativeLanguageDetectionChecksEveryCharacterInBoundedBatches() =
-        runBlocking {
-            val lines =
-                listOf(" ", " English intro ") +
-                    List(120) { index -> "English line $index ${"a".repeat(60)}" } +
-                    ("a".repeat(7_999) + "🎵" + "b".repeat(8_001)) +
-                    "English outro"
-            val batches = mutableListOf<String>()
-            val result =
-                detectLyrics(lines) { prompt ->
-                    batches += prompt.substringAfter("\n\n")
-                    """{"foreign_text":""}"""
-                }
-
-            assertEquals(false, result.getOrThrow())
-            assertTrue(batches.size > 1)
-            assertTrue(batches.all { it.length in 1..8_000 && !it.last().isHighSurrogate() && !it.first().isLowSurrogate() })
-            assertEquals(lines.map { it.trim() }.filter { it.isNotBlank() }.joinToString("\n"), batches.joinToString(""))
-        }
-
-    @Test
-    fun languageDetectionStopsAfterFirstPositiveBatch() =
-        runBlocking {
-            var requests = 0
-            val result =
-                detectLyrics(List(120) { "English line ${"a".repeat(100)}" }) {
-                    requests++
-                    """{"foreign_text":"English line"}"""
-                }
-
-            assertEquals(true, result.getOrThrow())
-            assertEquals(1, requests)
-        }
-
-    @Test
-    fun languageDetectionDoesNotReturnNegativeWhenLaterBatchFails() =
-        runBlocking {
-            for (response in listOf(null, "not JSON", """{"error":"unavailable"}""")) {
-                var requests = 0
-                val result =
-                    detectLyrics(List(120) { "English line ${"a".repeat(100)}" }) {
-                        requests++
-                        if (requests == 1) """{"foreign_text":""}""" else response ?: error("Request failed")
-                    }
-
-                assertEquals(2, requests)
-                assertTrue(result.isFailure)
-            }
-        }
-
-    @Test
-    fun languageDetectionPropagatesLaterBatchCancellation() =
-        runBlocking {
-            var requests = 0
-            assertFailsWith<CancellationException> {
-                detectLyrics(List(120) { "English line ${"a".repeat(100)}" }) {
-                    requests++
-                    if (requests == 2) throw CancellationException("cancel detection")
-                    """{"foreign_text":""}"""
-                }
-            }
-            assertEquals(2, requests)
-        }
-
-    private suspend fun detectLyrics(
-        lines: List<String>,
-        response: (String) -> String,
-    ): Result<Boolean> =
-        HttpClient(
-            MockEngine { request ->
-                val body = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
-                val prompt =
-                    body
-                        .getValue("messages")
-                        .jsonArray
-                        .last()
-                        .jsonObject
-                        .getValue("content")
-                        .jsonPrimitive.content
-                val content = Json.encodeToString(response(prompt))
-                respond("""{"choices":[{"message":{"content":$content}}]}""", HttpStatusCode.OK, JSON_HEADERS)
-            },
-        ).use { client ->
-            LyricsTranslationClient(client).shouldTranslateLyrics(
-                lines = lines,
-                provider = "OpenAI",
-                targetLanguage = "en",
-                apiKey = "test-key",
-                baseUrl = "https://example.test/chat/completions",
-                model = "test-model",
-            )
         }
 
     @Test

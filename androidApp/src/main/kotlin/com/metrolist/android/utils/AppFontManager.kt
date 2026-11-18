@@ -11,11 +11,12 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.compose.ui.text.font.FontFamily
 import java.io.File
+import java.util.UUID
 
 object AppFontManager {
     private const val MAX_FONT_BYTES = 20L * 1024L * 1024L
     private val supportedExtensions = setOf("ttf", "otf")
-    private val storedFileNames = supportedExtensions.mapTo(mutableSetOf()) { "app_font.$it" }
+    private val storedFileName = Regex("app_font(?:_[a-f0-9-]{36})?\\.(?:ttf|otf)")
 
     data class ImportedFont(
         val fileName: String,
@@ -35,7 +36,7 @@ object AppFontManager {
             require(extension in supportedExtensions) { "Only TTF and OTF fonts are supported" }
 
             val directory = fontDirectory(context).apply { mkdirs() }
-            val temporaryFile = File(directory, "app_font.importing")
+            val temporaryFile = File.createTempFile("app_font_", ".importing", directory)
             try {
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     temporaryFile.outputStream().use { output ->
@@ -52,13 +53,15 @@ object AppFontManager {
                 } ?: error("Font could not be opened")
 
                 Typeface.createFromFile(temporaryFile)
-                val target = File(directory, "app_font.$extension")
-                storedFileNames
-                    .asSequence()
-                    .map(directory::resolve)
+                // A new path invalidates both Compose's state and Android's path-based typeface cache.
+                val target = File(directory, "app_font_${UUID.randomUUID()}.$extension")
+                check(temporaryFile.renameTo(target)) { "Font could not be saved" }
+                directory
+                    .listFiles()
+                    .orEmpty()
+                    .filter { storedFileName.matches(it.name) }
                     .filterNot { it == target }
                     .forEach(File::delete)
-                temporaryFile.copyTo(target, overwrite = true)
                 ImportedFont(target.name, displayName)
             } finally {
                 temporaryFile.delete()
@@ -69,19 +72,23 @@ object AppFontManager {
         context: Context,
         fileName: String,
     ): FontFamily {
-        if (fileName !in storedFileNames) return FontFamily.Default
+        if (!storedFileName.matches(fileName)) return FontFamily.Default
         val file = File(fontDirectory(context), fileName)
         return runCatching { FontFamily(Typeface.createFromFile(file)) }.getOrDefault(FontFamily.Default)
     }
 
     fun removeImportedFont(context: Context) {
-        storedFileNames.forEach { File(fontDirectory(context), it).delete() }
+        fontDirectory(context)
+            .listFiles()
+            .orEmpty()
+            .filter { storedFileName.matches(it.name) }
+            .forEach(File::delete)
     }
 
     fun hasImportedFont(
         context: Context,
         fileName: String,
-    ): Boolean = fileName in storedFileNames && File(fontDirectory(context), fileName).isFile
+    ): Boolean = storedFileName.matches(fileName) && File(fontDirectory(context), fileName).isFile
 
     private fun fontDirectory(context: Context) = File(context.filesDir, "fonts")
 

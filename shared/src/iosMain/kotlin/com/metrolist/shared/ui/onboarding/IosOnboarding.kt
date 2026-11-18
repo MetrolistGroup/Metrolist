@@ -53,12 +53,18 @@ import com.metrolist.shared.generated.resources.restore_from_backup
 import com.metrolist.shared.generated.resources.side_menu_welcome
 import com.metrolist.shared.generated.resources.yes
 import com.metrolist.shared.ui.icons.MetrolistIcons
+import com.metrolist.shared.utils.isCrashReportingAvailable
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun IosOnboarding(onComplete: (sendCrashReports: Boolean, login: Boolean, restore: Boolean) -> Unit) {
-    val pages = listOf(OnboardingPage.WELCOME, OnboardingPage.CRASH_REPORTS, OnboardingPage.FINISH)
+    val pages =
+        buildList {
+            add(OnboardingPage.WELCOME)
+            if (isCrashReportingAvailable()) add(OnboardingPage.CRASH_REPORTS)
+            add(OnboardingPage.FINISH)
+        }
     var pageIndex by rememberSaveable { mutableIntStateOf(0) }
     var consent by rememberSaveable { mutableStateOf(false) }
     val page = pages[pageIndex]

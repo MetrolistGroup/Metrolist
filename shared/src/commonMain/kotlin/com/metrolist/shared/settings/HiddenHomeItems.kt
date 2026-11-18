@@ -28,6 +28,7 @@ object HiddenHomeItems {
         val hiddenItem = HiddenLibraryItem.from(item)
         store.hide(hiddenItem)
         _hidden.tryEmit(hiddenItem)
+        ContentUndoHints.request(ContentUndoPage.HIDDEN_HOME_ITEMS)
     }
 
     fun restore(key: HiddenLibraryItemKey) {

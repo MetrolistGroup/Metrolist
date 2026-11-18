@@ -33,7 +33,7 @@ Read these when working on the corresponding feature. They are not prerequisites
 - [Build performance](build-performance.md) covers release build bottlenecks, caching and compiler settings.
 - [Running without kotlin-reflect](kotlin-reflect.md) lists restrictions on the embedded server.
 - [Test fixtures](test-fixtures.md) records provenance and regeneration commands.
-- [Japanese romanization](japanese-romanization.md) and [Android and desktop Mandarin data](desktop-mandarin.md) cover dictionary sources, packaging and compatibility.
+- [Romanization and language detection](romanization.md) covers glyphmind, dictionary downloads and local translation decisions.
 - [Translation attribution](translation-attribution.md) records imported translation credits and revisions.
 
 Stable release history is in [changelog.md](changelog.md).

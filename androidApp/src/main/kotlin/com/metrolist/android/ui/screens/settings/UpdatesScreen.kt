@@ -111,6 +111,8 @@ import com.metrolist.shared.generated.resources.updates_installer_failed
 import com.metrolist.shared.generated.resources.updates_installing_description
 import com.metrolist.shared.generated.resources.updates_installing_title
 import com.metrolist.shared.generated.resources.updates_last_check
+import com.metrolist.shared.generated.resources.updates_nightly_builds
+import com.metrolist.shared.generated.resources.updates_nightly_builds_desc
 import com.metrolist.shared.generated.resources.updates_no_updates
 import com.metrolist.shared.generated.resources.updates_notification_settings
 import com.metrolist.shared.generated.resources.updates_notifications
@@ -131,6 +133,9 @@ import com.metrolist.shared.ui.settings.settingsPageSubtitle
 import com.metrolist.shared.ui.update.GitHubMarkdown
 import com.metrolist.shared.ui.update.UpdateInfo
 import com.metrolist.shared.ui.utils.rememberFileSizeFormatter
+import com.metrolist.shared.update.UPDATE_CHANNEL_NIGHTLY
+import com.metrolist.shared.update.UPDATE_CHANNEL_STABLE
+import com.metrolist.shared.update.followsNightlyUpdates
 import com.metrolist.shared.utils.FileSizeUnits
 import com.metrolist.shared.utils.formatFileSize
 import kotlinx.coroutines.CancellationException
@@ -170,6 +175,10 @@ fun UpdatesScreen(
             notificationsAllowed = NotificationManagerCompat.from(context).areNotificationsEnabled()
         }
 
+    var nightlyBuilds by remember {
+        mutableStateOf(followsNightlyUpdates(AppSettings.shared.updateChannel, AppUpdateManager.currentVersion))
+    }
+
     LaunchedEffect(Unit) {
         AppUpdateManager.loadReleaseHistory()
         if (state is AppUpdateState.Idle) AppUpdateManager.check(context)
@@ -190,6 +199,17 @@ fun UpdatesScreen(
                         wrapTitle = true,
                         checked = AppSettings.shared.checkForUpdates,
                         onCheckedChange = { AppSettings.shared.checkForUpdates = it },
+                    ),
+                    switchSettingsItem(
+                        title = stringResource(Res.string.updates_nightly_builds),
+                        description = stringResource(Res.string.updates_nightly_builds_desc),
+                        wrapTitle = true,
+                        checked = nightlyBuilds,
+                        onCheckedChange = { enabled ->
+                            AppSettings.shared.updateChannel = if (enabled) UPDATE_CHANNEL_NIGHTLY else UPDATE_CHANNEL_STABLE
+                            nightlyBuilds = enabled
+                            scope.launch { AppUpdateManager.check(context) }
+                        },
                     ),
                     switchSettingsItem(
                         title = stringResource(Res.string.updates_notifications),

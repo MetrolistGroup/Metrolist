@@ -67,7 +67,7 @@ fun Settings.toPlaybackLogDetails(): Map<String, String> =
         put("skipSilence", skipSilence.toString())
         put("crossfadeEnabled", crossfadeEnabled.toString())
         put("crossfadeDuration", crossfadeDuration.toString())
-        put("githubNTransformEnabled", githubNTransformEnabled.toString())
+        put("playerConfigRemoteEnabled", MetrolistPlayerConfigRepository.enabled.toString())
         put("playerConfigRemoteSourceUrl", presenceLabel(playerConfigRemoteSourceUrl))
         put("playerConfigRemoteFetchedAt", playerConfigRemoteFetchedAt.toString())
         put("volume", volume.toString())

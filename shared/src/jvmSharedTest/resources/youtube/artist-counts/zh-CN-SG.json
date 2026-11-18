@@ -1,0 +1,41 @@
+{
+  "header": {
+    "musicImmersiveHeaderRenderer": {
+      "subscriptionButton": {
+        "subscribeButtonRenderer": {
+          "subscriberCountText": {
+            "runs": [
+              {
+                "text": "5930万"
+              }
+            ]
+          },
+          "longSubscriberCountText": {
+            "runs": [
+              {
+                "text": "5930万位订阅者"
+              }
+            ],
+            "accessibility": {
+              "accessibilityData": {
+                "label": "5930万位订阅者"
+              }
+            }
+          }
+        }
+      },
+      "monthlyListenerCount": {
+        "runs": [
+          {
+            "text": "每月听众：2.4亿"
+          }
+        ],
+        "accessibility": {
+          "accessibilityData": {
+            "label": "每月听众：2.4亿"
+          }
+        }
+      }
+    }
+  }
+}

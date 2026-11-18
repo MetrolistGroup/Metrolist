@@ -129,7 +129,7 @@ suspend fun removeSongsFromStoredPlaylist(
                     val dao = database.dao()
                     val currentEntity = dao.findPlaylistEntity(targetLocalId) ?: return@withDatabaseTransaction
                     val occurrenceIds = matchedEntities.mapTo(mutableSetOf()) { it.map.id }
-                    val allMappings = dao.playlistSongMaps(targetLocalId, 0)
+                    val allMappings = dao.playlistSongMaps(targetLocalId, Int.MIN_VALUE)
                     val currentMappings = allMappings.filter { it.id in occurrenceIds }
                     dao.deletePlaylistMappings(targetLocalId, currentMappings.map { it.id })
                     var removedBefore = 0
@@ -174,17 +174,7 @@ suspend fun moveSongInLocalPlaylist(
                 val dao = database.dao()
                 val entity = checkNotNull(dao.findPlaylistEntity(playlistId))
                 check(remotePlaylistId(entity, playlistId) == null && entity.isEditable)
-                val mappings = dao.playlistSongMaps(entity.id, 0)
-                val moving = checkNotNull(mappings.firstOrNull { it.id == mappingId })
-                val successor = successorMappingId?.let { id -> checkNotNull(mappings.firstOrNull { it.id == id }) }
-                require(successor?.id != moving.id)
-                val destination =
-                    when {
-                        successor == null -> mappings.last().position
-                        successor.position > moving.position -> successor.position - 1
-                        else -> successor.position
-                    }
-                dao.move(entity.id, moving.position, destination)
+                dao.moveMappingBefore(entity.id, mappingId, successorMappingId)
                 dao.update(entity.copy(lastUpdateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC)))
             }
         }
@@ -202,7 +192,7 @@ suspend fun moveSongInStoredPlaylist(
             val dao = database.dao()
             val entity = checkNotNull(dao.findPlaylistEntity(playlistId))
             check(entity.isEditable)
-            val mappings = dao.playlistSongMaps(entity.id, 0)
+            val mappings = dao.playlistSongMaps(entity.id, Int.MIN_VALUE)
             val moving = checkNotNull(mappings.firstOrNull { it.id == mappingId })
             val successor = successorMappingId?.let { id -> checkNotNull(mappings.firstOrNull { it.id == id }) }
             require(successor?.id != moving.id)
@@ -218,16 +208,7 @@ suspend fun moveSongInStoredPlaylist(
             }
             database.withDatabaseTransaction {
                 val currentEntity = checkNotNull(dao.findPlaylistEntity(entity.id))
-                val currentMappings = dao.playlistSongMaps(entity.id, 0)
-                val currentMoving = checkNotNull(currentMappings.firstOrNull { it.id == moving.id })
-                val currentSuccessor = successor?.let { next -> checkNotNull(currentMappings.firstOrNull { it.id == next.id }) }
-                val destination =
-                    when {
-                        currentSuccessor == null -> currentMappings.last().position
-                        currentSuccessor.position > currentMoving.position -> currentSuccessor.position - 1
-                        else -> currentSuccessor.position
-                    }
-                dao.move(entity.id, currentMoving.position, destination)
+                dao.moveMappingBefore(entity.id, moving.id, successor?.id)
                 dao.update(currentEntity.copy(lastUpdateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC)))
             }
         }
@@ -268,10 +249,7 @@ suspend fun moveSongInLocalPlaylist(
             val dao = database.dao()
             val playlist = checkNotNull(dao.findPlaylistEntity(playlistId))
             check(playlist.browseId == null && playlist.isEditable)
-            val mappings = dao.playlistSongMaps(playlist.id, 0)
-            val from = checkNotNull(mappings.firstOrNull { it.id == fromMappingId })
-            val to = checkNotNull(mappings.firstOrNull { it.id == toMappingId })
-            dao.move(playlist.id, from.position, to.position)
+            dao.moveMapping(playlist.id, fromMappingId, toMappingId)
         }
     }
 

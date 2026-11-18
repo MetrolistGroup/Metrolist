@@ -282,7 +282,13 @@ fun SongListItem(
                 .focusOutline(if (isCurrent) CircleShape else RoundedCornerShape(8.dp))
                 .currentSongSemantics(isCurrent, isPlaying)
                 .combinedClickable(
-                    onClick = { if (enabled) onClick() },
+                    onClick = {
+                        if (enabled) {
+                            onClick()
+                        } else if (song.isUnavailable) {
+                            UnavailableSongTaps.tapped()
+                        }
+                    },
                     onLongClick = if (longClickEnabled) onLongClick ?: onShowMenu else null,
                 ).onSecondaryClick(onShowMenu)
                 .padding(horizontal = 8.dp, vertical = 8.dp),
@@ -506,11 +512,13 @@ fun YTGridItem(
                 .artworkMenuActions(onMenuClick, menuActionLabel)
                 .then(if (pageArtwork != null) Modifier.navigationPageSource(pageArtwork.token) else Modifier)
                 .combinedClickable(
-                    enabled = itemEnabled || onMenuClick != null,
+                    enabled = itemEnabled || onMenuClick != null || item.isUnavailable,
                     onClick = {
                         if (itemEnabled && onClick != null) {
                             CollectionPreviews.record(item)
                             onClick()
+                        } else if (item.isUnavailable) {
+                            UnavailableSongTaps.tapped()
                         }
                     },
                     onLongClick = onLongClick ?: onMenuClick,
@@ -785,11 +793,13 @@ fun YTListItem(
                 .currentSongSemantics(currentSong, isPlaying)
                 .then(if (pageArtwork != null) Modifier.navigationPageSource(pageArtwork.token) else Modifier)
                 .combinedClickable(
-                    enabled = itemEnabled || onLongClick != null || onShowMenu != null,
+                    enabled = itemEnabled || onLongClick != null || onShowMenu != null || item.isUnavailable,
                     onClick = {
                         if (itemEnabled) {
                             CollectionPreviews.record(item)
                             onClick()
+                        } else if (item.isUnavailable) {
+                            UnavailableSongTaps.tapped()
                         }
                     },
                     onLongClick = onLongClick ?: onShowMenu,

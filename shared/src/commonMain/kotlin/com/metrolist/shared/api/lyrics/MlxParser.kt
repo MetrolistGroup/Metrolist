@@ -5,7 +5,6 @@
 
 package com.metrolist.shared.api.lyrics
 
-import com.metrolist.shared.api.lyrics.romanizer.containsJapaneseKanji
 import com.metrolist.shared.model.AgentInfo
 import com.metrolist.shared.model.AgentType
 import com.metrolist.shared.model.LyricsEntry
@@ -15,6 +14,7 @@ import com.metrolist.shared.model.MlxMeta
 import com.metrolist.shared.model.MlxSong
 import com.metrolist.shared.model.MlxSongPart
 import com.metrolist.shared.model.WordTimestamp
+import meow.nyx.glyphmind.containsJapaneseKanji
 
 object MlxParser {
     private const val MAX_DOCUMENT_CHARS = 8 * 1024 * 1024
@@ -48,7 +48,7 @@ object MlxParser {
     private val WORD_TS = """<(\d+):(\d{2})(?:[.:](\d{1,3}))?>""".toRegex()
     private val INLINE_BG = """\s*\[bg:(.*)\]$""".toRegex()
     private val LEGACY_AGENT = """\{agent:([^}]+)\}""".toRegex()
-    private val LEGACY_PREFIX = """^(v\d+):\s*""".toRegex()
+    private val LEGACY_PREFIX = """^(v\d+|bg):\s*""".toRegex()
     private val LRC_METADATA = """^\[(?:ar|al|ti|au|by|re|ve|length|offset):.*\]$""".toRegex(RegexOption.IGNORE_CASE)
 
     fun isMlxFormat(text: String): Boolean {
@@ -149,7 +149,10 @@ object MlxParser {
             } else {
                 linesWithSongParts
             }
-        val translatedSection = sections["translatedlyrics"] ?: sections["translated_lyrics"]
+        val song = parseSong(sections["song"] ?: emptyList())
+        val translationMatches =
+            song.translationLanguage?.let { lyricsTranslationLanguageMatches(it, lyricsTranslationTargetLanguage()) } != false
+        val translatedSection = (sections["translatedlyrics"] ?: sections["translated_lyrics"]).takeIf { translationMatches }
         val finalLines =
             if (!translatedSection.isNullOrEmpty()) {
                 val translatedLines = parseLyricsSection(translatedSection, agents)
@@ -158,7 +161,11 @@ object MlxParser {
                     val matchingTranslation =
                         translatedMap[mainEntry.time]?.removeFirstOrNull()
                             ?: translatedLines.getOrNull(index).takeIf { mainEntry.time !in translatedMap }
-                    mainEntry.copy(translatedText = matchingTranslation?.text?.takeIf { it.isNotBlank() })
+                    mainEntry.copy(
+                        translatedText = matchingTranslation?.text?.takeIf { it.isNotBlank() },
+                        backgroundTranslatedText = matchingTranslation?.backgroundText?.takeIf { it.isNotBlank() },
+                        translationLanguage = song.translationLanguage,
+                    )
                 }
             } else {
                 romanizedLines
@@ -166,7 +173,7 @@ object MlxParser {
 
         return MlxDocument(
             meta = parseMeta(sections["meta"] ?: emptyList()),
-            song = parseSong(sections["song"] ?: emptyList()),
+            song = song,
             agents =
                 finalLines.mapNotNull { it.agent }.distinct().associateWith { id ->
                     agents[id] ?: AgentInfo(
@@ -345,9 +352,18 @@ object MlxParser {
         agents: Map<String, AgentInfo>,
         outSongParts: MutableList<MlxSongPart>? = null,
     ): List<LyricsEntry> {
+        val joinedLines = mutableListOf<String>()
+        for (line in lines) {
+            val previous = joinedLines.lastOrNull()?.trim()
+            if (previous != null && LINE_HEADER.matches(previous) && WORD_TS.matchAt(line.trimStart(), 0) != null) {
+                joinedLines[joinedLines.lastIndex] = previous + line.trimStart()
+            } else {
+                joinedLines.add(line)
+            }
+        }
         val result = mutableListOf<LyricsEntry>()
         val lineStarts =
-            lines
+            joinedLines
                 .flatMap {
                     LINE_HEADER
                         .findAll(it)
@@ -361,7 +377,7 @@ object MlxParser {
         var precedingLines = emptyList<Int>()
         var hasLineTimestamps = false
 
-        for (rawLine in lines) {
+        for (rawLine in joinedLines) {
             val trimmed = rawLine.trim()
             if (trimmed.isBlank() || trimmed.startsWith("//")) continue
             if (LRC_METADATA.matches(trimmed)) {
@@ -419,16 +435,23 @@ object MlxParser {
             var afterHeader = trimmed.substring(contentStart).trimStart()
             val legacyAgent = LEGACY_AGENT.find(afterHeader)?.groupValues?.get(1)
             afterHeader = LEGACY_AGENT.replace(afterHeader, "")
-            val prefix = LEGACY_PREFIX.find(afterHeader)
-            if (prefix != null) afterHeader = afterHeader.substring(prefix.range.last + 1)
+            val prefixStart =
+                WORD_TS
+                    .matchAt(afterHeader, 0)
+                    ?.range
+                    ?.last
+                    ?.plus(1) ?: 0
+            val prefix = LEGACY_PREFIX.find(afterHeader.substring(prefixStart))
+            if (prefix != null) afterHeader = afterHeader.removeRange(prefixStart, prefixStart + prefix.value.length)
+            val prefixAgent = prefix?.groupValues?.get(1)
             val standaloneBackground = headers.isEmpty() && afterHeader.startsWith("[bg:") && afterHeader.endsWith(']')
-            val isBackground = afterHeader.contains("{bg}") || legacyAgent == "bg" || standaloneBackground
+            val isBackground = afterHeader.contains("{bg}") || legacyAgent == "bg" || prefixAgent == "bg" || standaloneBackground
             afterHeader = afterHeader.replace("{bg}", "")
             if (standaloneBackground) afterHeader = afterHeader.removePrefix("[bg:").removeSuffix("]")
             val agentId =
                 headerMatch?.groupValues?.get(3)?.takeIf { it.isNotBlank() }
                     ?: legacyAgent?.takeUnless { it == "bg" }
-                    ?: prefix?.groupValues?.get(1)
+                    ?: prefixAgent?.takeUnless { it == "bg" }
                     ?: lastAgent.takeIf { isBackground }
             if (!isBackground && agentId != null) lastAgent = agentId
 
@@ -493,6 +516,10 @@ object MlxParser {
         }
         return completed
     }
+
+    internal fun isLegacyWordLine(line: String): Boolean =
+        line.startsWith('<') && line.endsWith('>') && !WORD_TS.containsMatchIn(line) &&
+            parseLegacyWords(line.substring(1, line.lastIndex)).size == line.count { it == '|' } + 1
 
     private fun parseLegacyWords(content: String): List<WordTimestamp> {
         val segments = content.split('|')

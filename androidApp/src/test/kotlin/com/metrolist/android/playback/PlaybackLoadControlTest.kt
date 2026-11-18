@@ -57,7 +57,7 @@ class PlaybackLoadControlTest {
         control.onTracksSelected(parameters(0), TrackGroupArray(audio), arrayOf(FixedTrackSelection(audio, 0)))
         assertTrue(control.shouldContinueLoading(parameters(0)))
         val allocator = control.getAllocator(PlayerId.UNSET)
-        val allocations = List(32) { allocator.allocate() }
+        val allocations = List(audioBudgetSegments) { allocator.allocate() }
         assertFalse(control.shouldContinueLoading(parameters(50_000_000)))
         allocations.forEach(allocator::release)
         assertFalse(control.shouldContinueLoading(parameters(30_000_000)))
@@ -164,7 +164,7 @@ class PlaybackLoadControlTest {
         control.onPrepared(PlayerId.UNSET)
         control.onTracksSelected(parameters, TrackGroupArray(audio), arrayOf(FixedTrackSelection(audio, 0)))
         val allocator = control.getAllocator(PlayerId.UNSET)
-        val allocations = List(32) { allocator.allocate() }
+        val allocations = List(audioBudgetSegments) { allocator.allocate() }
         assertFalse(control.shouldContinueLoading(parameters))
         control.onTracksSelected(
             parameters,
@@ -191,6 +191,10 @@ class PlaybackLoadControlTest {
         primary.onReleased(PlayerId.UNSET)
         next.onReleased(PlayerId.UNSET)
     }
+
+    // Media3 segments are not a power of two, so round up to reach the audio byte budget.
+    private val audioBudgetSegments =
+        (playbackTargetBufferBytes(hasVideo = false) + C.DEFAULT_BUFFER_SEGMENT_SIZE - 1) / C.DEFAULT_BUFFER_SEGMENT_SIZE
 
     private fun parameters(
         bufferedUs: Long,

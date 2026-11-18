@@ -8,6 +8,7 @@ import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.QueryRecordingDriver
 import com.metrolist.shared.db.cacheRemotePlaylist
+import com.metrolist.shared.db.cachedRemotePlaylistSections
 import com.metrolist.shared.db.entities.ArtistEntity
 import com.metrolist.shared.db.entities.PlaylistEntity
 import com.metrolist.shared.db.entities.PlaylistSongMap
@@ -15,6 +16,7 @@ import com.metrolist.shared.db.entities.SongArtistMap
 import com.metrolist.shared.db.entities.SongEntity
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.db.getDesktopDatabaseBuilder
+import com.metrolist.shared.db.loadAndCachePlaylistPage
 import com.metrolist.shared.db.syncRemotePlaylists
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.ArtistTiny
@@ -277,6 +279,74 @@ class PlaylistMutationsTest {
             assertEquals(before, database.dao().playlistSongMaps(playlist.id, 0))
             assertEquals(1, database.dao().findPlaylistEntity(playlist.id)?.remoteSongCount)
             assertEquals(1, engine.requestHistory.size)
+        }
+
+    @Test
+    fun localSuccessorReorderSeparatesRestoredOccurrencesWithRepeatedPositions() =
+        verifyRepeatedPositionReorder { database, playlistId, ids, toEnd ->
+            moveSongInLocalPlaylist(
+                database,
+                playlistId,
+                if (toEnd) ids[0] else ids[1],
+                successorMappingId = if (toEnd) null else ids[0],
+            ).getOrThrow()
+        }
+
+    @Test
+    fun storedSuccessorReorderSeparatesRestoredOccurrencesWithRepeatedPositions() =
+        verifyRepeatedPositionReorder { database, playlistId, ids, toEnd ->
+            moveSongInStoredPlaylist(
+                database,
+                authenticatedRepository(MockEngine { error("Local reorder must not use the network") }),
+                playlistId,
+                if (toEnd) ids[0] else ids[1],
+                if (toEnd) null else ids[0],
+            ).getOrThrow()
+        }
+
+    @Test
+    fun targetReorderSeparatesRestoredOccurrencesWithRepeatedPositions() =
+        verifyRepeatedPositionReorder { database, playlistId, ids, toEnd ->
+            moveSongInLocalPlaylist(
+                database,
+                playlistId,
+                fromMappingId = if (toEnd) ids[0] else ids[1],
+                toMappingId = if (toEnd) ids[2] else ids[0],
+            ).getOrThrow()
+        }
+
+    private fun verifyRepeatedPositionReorder(move: suspend (MusicDatabase, String, List<Int>, Boolean) -> Unit) =
+        withDatabase { database ->
+            database.dao().insert(SongEntity("same", "Song"))
+            for (positionOffset in listOf(0, -1)) {
+                for (toEnd in listOf(true, false)) {
+                    val playlist = createStoredLocalPlaylist(database, "Restored repeated positions").getOrThrow()
+                    listOf(0, 0, 1).forEachIndexed { index, position ->
+                        database.dao().insert(
+                            PlaylistSongMap(
+                                playlistId = playlist.id,
+                                songId = "same",
+                                position = position + positionOffset,
+                                setVideoId = "set-$index",
+                            ),
+                        )
+                    }
+                    val original = database.dao().playlistSongMaps(playlist.id, Int.MIN_VALUE)
+                    val ids = original.map { it.id }
+                    assertTrue(moveSongInLocalPlaylist(database, playlist.id, ids[0], successorMappingId = -1).isFailure)
+                    assertEquals(original, database.dao().playlistSongMaps(playlist.id, Int.MIN_VALUE))
+                    assertTrue(moveSongInLocalPlaylist(database, playlist.id, fromMappingId = -1, toMappingId = ids[0]).isFailure)
+                    assertEquals(original, database.dao().playlistSongMaps(playlist.id, Int.MIN_VALUE))
+                    move(database, playlist.id, ids, toEnd)
+                    val reordered = database.dao().playlistSongMaps(playlist.id, Int.MIN_VALUE)
+                    assertEquals(
+                        if (toEnd) listOf(ids[1], ids[2], ids[0]) else listOf(ids[1], ids[0], ids[2]),
+                        reordered.map { it.id },
+                    )
+                    assertEquals(listOf(0, 1, 2), reordered.map { it.position })
+                    assertEquals(original.associate { it.id to it.setVideoId }, reordered.associate { it.id to it.setVideoId })
+                }
+            }
         }
 
     @Test
@@ -1724,6 +1794,31 @@ class PlaylistMutationsTest {
         }
 
     @Test
+    fun localRemovalIncludesNegativePositionOccurrences() =
+        withDatabase { database ->
+            val playlist = createStoredLocalPlaylist(database, "Restored").getOrThrow()
+            database.dao().insert(SongEntity("same", "Song"))
+            listOf(-2, -1, 0, 1).forEach { position ->
+                database.dao().insert(PlaylistSongMap(playlistId = playlist.id, songId = "same", position = position))
+            }
+            val rows = database.dao().playlistSongs(playlist.id).first()
+            removeSongsFromStoredPlaylist(
+                database,
+                authenticatedRepository(MockEngine { error("Local removal must not use the network") }),
+                playlist.id,
+                rows.take(2).map { it.toSongItem() },
+            ).getOrThrow()
+            assertEquals(
+                rows.drop(2).map { it.map.id },
+                database
+                    .dao()
+                    .playlistSongs(playlist.id)
+                    .first()
+                    .map { it.map.id },
+            )
+        }
+
+    @Test
     fun removeSongsFromStoredPlaylistOnLocalPlaylistNeverCallsNetwork() =
         withDatabase { database ->
             val engine = MockEngine { error("Local playlist removal must not issue network request") }
@@ -1821,6 +1916,78 @@ class PlaylistMutationsTest {
                     .first()
                     .isEmpty(),
             )
+        }
+
+    @Test
+    fun addedRemoteOccurrencesReloadTheirServerIdsBeforeReorderAndRemoval() = checkAddedRemoteOccurrence(remoteOnly = false)
+
+    @Test
+    fun remoteOnlyAddsReloadTheStoredSnapshotBeforeReorderAndRemoval() = checkAddedRemoteOccurrence(remoteOnly = true)
+
+    private fun checkAddedRemoteOccurrence(remoteOnly: Boolean) =
+        withDatabase { database ->
+            val song = createSongItem("same", "Song", "original")
+            database.cacheRemotePlaylist("PLadd", PlaylistItem("PLadd", "Playlist", null, isEditable = true), listOf(song))
+            val serverIds = mutableListOf("original")
+            val edits = mutableListOf<String>()
+            val engine =
+                MockEngine { request ->
+                    if (request.url.encodedPath.endsWith("/browse/edit_playlist")) {
+                        val action =
+                            Json
+                                .parseToJsonElement(
+                                    (request.body as TextContent).text,
+                                ).jsonObject["actions"]!!
+                                .jsonArray
+                                .single()
+                                .jsonObject
+                        val type = action["action"]!!.jsonPrimitive.content
+                        edits += type
+                        if (type == "ACTION_ADD_VIDEO") {
+                            serverIds += "added"
+                        } else {
+                            assertEquals("added", action["setVideoId"]!!.jsonPrimitive.content)
+                        }
+                        respondJson(PLAYLIST_EDIT_SUCCEEDED)
+                    } else {
+                        val rows =
+                            serverIds.joinToString(",") { id ->
+                                """{"musicResponsiveListItemRenderer":{"playlistItemData":{"videoId":"same","playlistSetVideoId":"$id"},
+                        "flexColumns":[{"musicResponsiveListItemFlexColumnRenderer":{"text":{"simpleText":"Song"}}}]}}"""
+                            }
+                        respondJson(
+                            """{"header":{"musicEditablePlaylistDetailHeaderRenderer":{"header":{"musicDetailHeaderRenderer":{"title":{"simpleText":"Playlist"}}}}},
+                        "contents":{"sectionListRenderer":{"contents":[{"musicPlaylistShelfRenderer":{"contents":[$rows]}}]}}}""",
+                        )
+                    }
+                }
+            val repository = authenticatedRepository(engine)
+            if (remoteOnly) {
+                repository.addToPlaylist("PLadd", song.id, allowDuplicate = true).getOrThrow()
+                assertEquals(1, database.dao().findPlaylistEntity("PLadd")!!.remoteSongCount)
+                assertEquals(listOf("original"), database.dao().playlistSongMaps("PLadd", 0).map { it.setVideoId })
+            } else {
+                addSongToStoredPlaylist(database, repository, "PLadd", song, allowDuplicate = true).getOrThrow()
+                assertEquals(2, database.dao().findPlaylistEntity("PLadd")!!.remoteSongCount)
+                assertNull(
+                    database
+                        .dao()
+                        .playlistSongMaps("PLadd", 0)
+                        .last()
+                        .setVideoId,
+                )
+                assertNull(database.cachedRemotePlaylistSections("PLadd"))
+            }
+
+            database.loadAndCachePlaylistPage(repository, "PLadd")
+            assertTrue(database.cachedRemotePlaylistSections("PLadd") != null)
+            val rows = database.dao().playlistSongs("PLadd").first()
+            assertEquals(listOf("original", "added"), rows.map { it.map.setVideoId })
+            moveSongInStoredPlaylist(database, repository, "PLadd", rows[1].map.id, rows[0].map.id).getOrThrow()
+            assertEquals(listOf("added", "original"), database.dao().playlistSongMaps("PLadd", 0).map { it.setVideoId })
+            removeSongsFromStoredPlaylist(database, repository, "PLadd", listOf(rows[1].toSongItem())).getOrThrow()
+            assertEquals(listOf("original"), database.dao().playlistSongMaps("PLadd", 0).map { it.setVideoId })
+            assertEquals(3, edits.size)
         }
 
     @Test

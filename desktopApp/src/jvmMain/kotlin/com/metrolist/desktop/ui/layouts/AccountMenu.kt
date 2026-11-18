@@ -38,14 +38,16 @@ import com.metrolist.desktop.state.auth.AuthState
 import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.account_downloading_update
+import com.metrolist.shared.generated.resources.account_keyring_required
+import com.metrolist.shared.generated.resources.account_linux_keyring_required
 import com.metrolist.shared.generated.resources.account_logout_webview_failed
 import com.metrolist.shared.generated.resources.account_retry_cleanup
 import com.metrolist.shared.generated.resources.account_update_available
 import com.metrolist.shared.generated.resources.account_webview_remove_failed
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
-import com.metrolist.shared.ui.components.ContainedLoadingIndicator
 import com.metrolist.shared.ui.icons.MetrolistIcons
+import com.metrolist.shared.utils.OsUtil
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import com.metrolist.shared.ui.components.AccountMenu as SharedAccountMenu
@@ -111,13 +113,15 @@ fun AccountMenu(onDismiss: () -> Unit) {
         menuMaxWidth = 432.dp,
         afterMenuContent = { dismiss ->
             if (Settings.shared.credentialsPending) {
-                Row(
-                    Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    ContainedLoadingIndicator(Modifier.size(32.dp))
-                }
+                Text(
+                    text =
+                        stringResource(
+                            if (OsUtil.isLinux) Res.string.account_linux_keyring_required else Res.string.account_keyring_required,
+                        ),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorScheme.onSurfaceVariant,
+                )
             }
             logoutError?.let { error ->
                 Surface(shape = RoundedCornerShape(12.dp), color = colorScheme.errorContainer) {

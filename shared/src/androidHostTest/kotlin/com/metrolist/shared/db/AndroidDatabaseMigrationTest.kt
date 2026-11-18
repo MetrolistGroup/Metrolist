@@ -46,6 +46,7 @@ class AndroidDatabaseMigrationTest {
                     )
                     assertEquals(1, database.dao().eventCount().first())
                     assertEquals(425, database.dao().cachedLyrics("song")?.offsetMs)
+                    assertEquals(version < 66, database.dao().cachedLyrics("song")?.isLegacyProtected)
                     assertEquals(listOf(historicalSpeedDialItem(version)), database.speedDialDao().getAllOnce())
                 } finally {
                     database.close()

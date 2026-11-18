@@ -108,6 +108,7 @@ internal class MobilePlayerPlatform(
     override fun PlayerWindowEffects(
         hideSystemBars: Boolean,
         lockLandscape: Boolean,
+        lightStatusBars: Boolean?,
     ) = Unit
 
     override fun enterPictureInPicture(
@@ -162,6 +163,7 @@ internal class MobilePlayerPlatform(
         onNavigateToArtist: (String) -> Unit,
         onNavigateToListenTogether: () -> Unit,
         onShowSongDetails: () -> Unit,
+        extraActions: List<PlayerMenuAction>,
     ) {
         val uiState by viewModel.uiState.collectAsState()
         val song = uiState.currentSong?.toSongItem() ?: return onDismiss()
@@ -280,32 +282,33 @@ internal class MobilePlayerPlatform(
                     isPlayerMenu = true,
                     onShowDetails = onShowSongDetails,
                     additionalActions =
-                        listOfNotNull(
-                            equalizerMenuAction(
-                                onOpen = {
-                                    scope.launch {
-                                        if (menuSheetState.hide()) showEqualizer = true
-                                    }
+                        extraActions +
+                            listOfNotNull(
+                                equalizerMenuAction(
+                                    onOpen = {
+                                        scope.launch {
+                                            if (menuSheetState.hide()) showEqualizer = true
+                                        }
+                                    },
+                                    showDescription = false,
+                                ),
+                                tempoPitchMenuAction(varispeed = Settings.shared.varispeed) { showTempoPitch = true },
+                                playerSession?.takeUnless { isGuest }?.let {
+                                    PlayerMenuAction(
+                                        icon = MetrolistIcons.Outlined.Bedtime,
+                                        title = stringResource(Res.string.sleep_timer),
+                                        onClick = { showSleepTimer = true },
+                                    )
                                 },
-                                showDescription = false,
-                            ),
-                            tempoPitchMenuAction(varispeed = Settings.shared.varispeed) { showTempoPitch = true },
-                            playerSession?.takeUnless { isGuest }?.let {
                                 PlayerMenuAction(
-                                    icon = MetrolistIcons.Outlined.Bedtime,
-                                    title = stringResource(Res.string.sleep_timer),
-                                    onClick = { showSleepTimer = true },
-                                )
-                            },
-                            PlayerMenuAction(
-                                icon = MetrolistIcons.Outlined.Group,
-                                title = stringResource(Res.string.listen_together),
-                                onClick = {
-                                    onDismiss()
-                                    onNavigateToListenTogether()
-                                },
-                            ).takeIf { Settings.shared.listenTogetherEnabled },
-                        ),
+                                    icon = MetrolistIcons.Outlined.Group,
+                                    title = stringResource(Res.string.listen_together),
+                                    onClick = {
+                                        onDismiss()
+                                        onNavigateToListenTogether()
+                                    },
+                                ).takeIf { Settings.shared.listenTogetherEnabled },
+                            ),
                 ),
             )
         }

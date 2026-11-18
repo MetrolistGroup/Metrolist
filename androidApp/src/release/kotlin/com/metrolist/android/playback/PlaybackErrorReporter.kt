@@ -4,6 +4,7 @@ import com.metrolist.innertubex.extraction.StreamDiagnostics
 import com.metrolist.innertubex.extraction.StreamResolveException
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playback.PlaybackErrorContext
+import com.metrolist.shared.utils.isCrashReportingAvailable
 import com.metrolist.shared.utils.redactDiagnosticText
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import com.metrolist.shared.youtube.playback.PlaybackResource
@@ -44,6 +45,7 @@ internal object PlaybackErrorReporter {
         song: SongItem,
         resource: PlaybackResource,
     ) {
+        if (!isCrashReportingAvailable()) return
         Sentry.setTag("playback.video_id", song.id)
         Sentry.setTag("playback.client", resource.clientName)
         Sentry.setTag("playback.profile", resource.profileId)
@@ -68,6 +70,7 @@ internal object PlaybackErrorReporter {
 
     fun clearActivePlayback() {
         lastPlaybackBreadcrumbKey = null
+        if (!isCrashReportingAvailable()) return
         listOf("playback.video_id", "playback.client", "playback.profile").forEach(Sentry::removeTag)
         playbackExtraKeys.forEach(Sentry::removeExtra)
     }
@@ -76,7 +79,7 @@ internal object PlaybackErrorReporter {
         error: Throwable,
         context: PlaybackErrorContext,
     ) {
-        if (!error.shouldReportPlaybackFailure(context)) return
+        if (!isCrashReportingAvailable() || !error.shouldReportPlaybackFailure(context)) return
 
         Sentry.captureException(error) { scope ->
             scope.level = SentryLevel.ERROR

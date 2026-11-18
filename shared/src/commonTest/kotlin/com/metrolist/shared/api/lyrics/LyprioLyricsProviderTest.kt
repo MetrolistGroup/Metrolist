@@ -253,6 +253,28 @@ class LyprioLyricsProviderTest {
         }
 
     @Test
+    fun terminalUnavailableEndsWithoutRetryingAllSources() =
+        runBlocking {
+            var requestCount = 0
+            val client =
+                HttpClient(
+                    MockEngine {
+                        requestCount++
+                        respond(
+                            v2Response("unavailable", complete = true),
+                            HttpStatusCode.ServiceUnavailable,
+                            headersOf(HttpHeaders.ContentType, "application/json", "X-Lyprio-Protocol", "2"),
+                        )
+                    },
+                )
+
+            client.use {
+                assertNull(provider(client).getLyrics("Busy", "Everyone", null))
+                assertEquals(1, requestCount)
+            }
+        }
+
+    @Test
     fun cleanV2MissRetriesAllSourcesOnlyOnce() =
         runBlocking {
             var requestCount = 0

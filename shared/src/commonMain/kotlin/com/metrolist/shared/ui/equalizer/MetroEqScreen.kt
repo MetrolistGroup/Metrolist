@@ -34,6 +34,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -303,16 +304,10 @@ private fun ProfilesPage(
                         )
                     }
                     DropdownMenu(expanded = selectingProfile, onDismissRequest = { selectingProfile = false }) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(Res.string.eq_disabled)) },
-                            onClick = {
-                                selectingProfile = false
-                                EqualizerProfiles.setEnabled(false)
-                            },
-                        )
                         Text(
                             stringResource(Res.string.metroeq_presets),
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 4.dp),
+                            color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.labelLarge,
                         )
                         EqualizerPreset.entries.forEach { choice ->
@@ -326,9 +321,11 @@ private fun ProfilesPage(
                             )
                         }
                         if (profiles.isNotEmpty()) {
+                            HorizontalDivider(Modifier.padding(vertical = 8.dp))
                             Text(
                                 stringResource(Res.string.metroeq_profiles),
-                                modifier = Modifier.padding(16.dp),
+                                modifier = Modifier.padding(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 4.dp),
+                                color = MaterialTheme.colorScheme.primary,
                                 style = MaterialTheme.typography.labelLarge,
                             )
                             profiles.forEach { profile ->

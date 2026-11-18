@@ -14,11 +14,14 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.AfterTest
@@ -120,6 +123,114 @@ class HistoryAccountSyncTest {
             assertEquals(listOf("remote"), removed)
             assertEquals(listOf(local), database.recentVisibleHistory(100).map { it.id })
             assertEquals(2, database.history().size)
+        }
+
+    @Test
+    fun failedHistoryContinuationKeepsOlderOccurrencesUntilACompleteScan() =
+        runBlocking {
+            var failContinuation = true
+            var requests = 0
+
+            fun row(token: String) =
+                """{"musicResponsiveListItemRenderer":{"playlistItemData":{"videoId":"same"},
+                "flexColumns":[{"musicResponsiveListItemFlexColumnRenderer":{"text":{"simpleText":"Song"}}}],
+                "menu":{"menuRenderer":{"items":[{"menuServiceItemRenderer":{"icon":{"iconType":"REMOVE_FROM_HISTORY"},
+                "serviceEndpoint":{"feedbackEndpoint":{"feedbackToken":"$token"}}}}]}}}}"""
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        requests++
+                        val continuation = Json.parseToJsonElement((request.body as TextContent).text).jsonObject["continuation"] != null
+                        val response =
+                            if (continuation) {
+                                """{"continuationContents":{"musicShelfContinuation":{"contents":[${row("old-play")}]}}}"""
+                            } else {
+                                """{"contents":{"sectionListRenderer":{"contents":[{"musicShelfRenderer":{"title":{"simpleText":"Today"},
+                    "contents":[${row("new-play")}],"continuations":[{"nextContinuationData":{"continuation":"older"}}]}}]}}}"""
+                            }
+                        respond(
+                            response,
+                            if (continuation && failContinuation) HttpStatusCode.ServiceUnavailable else HttpStatusCode.OK,
+                            headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    },
+                ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+            val tube = InnerTube(client, retryDelay = {}).apply { replaceSession("SAPISID=a", "visitor", "a", "0", true) }
+            try {
+                val repository = YouTubeRepository(tube)
+                val date = RemoteHistoryDate(1_765_000_000_000, "date")
+                val parseDate = { _: String, _: Long, _: String -> date }
+                database.applyYouTubeHistoryEntry(
+                    YouTubeHistoryEntry(SongItem("same", "Song", null, emptyList(), null), "Today", "old-play"),
+                    date,
+                    accountKey = repository.playbackReportingAccountKey(),
+                )
+                val before = database.history()
+
+                assertFalse(database.syncYouTubeHistory(repository, parseDate))
+                assertTrue(requests >= 2)
+                assertEquals(before, database.history())
+                failContinuation = false
+                assertTrue(database.syncYouTubeHistory(repository, parseDate))
+                assertEquals(2, database.history().size)
+                assertEquals(setOf("old-play", "new-play"), database.history().map { it.remoteFeedbackToken }.toSet())
+                assertEquals(before.single().id, database.history().single { it.remoteFeedbackToken == "old-play" }.id)
+            } finally {
+                tube.close()
+                client.close()
+            }
+        }
+
+    @Test
+    fun rotatedHistoryTokensMatchOccurrencesAndKeepRealRepeatedPlays() =
+        runBlocking {
+            val song = SongItem("song", "Song", null, emptyList(), null)
+            val date = RemoteHistoryDate(1_765_000_000_000, "date")
+            val account = "datasync:a:0"
+            val local = database.recordHistoryPlay(song, date.startMs + 1000, playTimeMs = 30_000)
+            database.recordHistoryPlay(song, date.startMs, "YOUTUBE", "other-account", remoteAccountKey = "datasync:b:0")
+
+            suspend fun sync(tokens: List<String?>): Boolean {
+                val entries = tokens.map { YouTubeHistoryEntry(song, "date", it) to date }
+                val known = database.historySyncIndex(entries, account)
+                return entries
+                    .mapIndexed { index, (entry, bucket) ->
+                        database.applyYouTubeHistoryEntry(entry, bucket, known, -index, account)
+                    }.any { it }
+            }
+
+            assertTrue(sync(listOf("first", "second")))
+            val importedIds =
+                database
+                    .history()
+                    .filter { it.remoteFeedbackToken in setOf("first", "second") }
+                    .map { it.id }
+                    .toSet()
+            assertTrue(sync(listOf("rotated-first", "rotated-second")))
+            assertEquals(4, database.history().size)
+            assertEquals(
+                importedIds,
+                database
+                    .history()
+                    .filter { it.remoteFeedbackToken?.startsWith("rotated-") == true }
+                    .map { it.id }
+                    .toSet(),
+            )
+            assertFalse(sync(listOf("rotated-first", "rotated-second")))
+            assertTrue(sync(listOf("new-play", "rotated-first", "rotated-second")))
+            assertEquals(5, database.history().size)
+            database.close()
+            database = getDesktopDatabaseBuilder(directory.resolve("music.db").toFile()).build()
+            assertTrue(sync(listOf("next-new", "next-first", "next-second")))
+            assertEquals(5, database.history().size)
+            assertEquals(30_000L, database.history().single { it.id == local }.playTimeMs)
+            assertEquals(3, database.history().count { it.source == "YOUTUBE" && it.remoteFeedbackToken != "other-account" })
+            assertFalse(sync(listOf(null, null, null)))
+            assertFalse(sync(listOf(null, null, null)))
+            assertEquals(5, database.history().size)
+            assertEquals(3, database.history().count { it.remoteFeedbackToken?.startsWith("next-") == true })
+            assertFalse(database.applyYouTubeHistoryEntry(YouTubeHistoryEntry(song, "date", "other-account"), date, accountKey = account))
+            assertEquals(5, database.history().size)
         }
 
     @Test

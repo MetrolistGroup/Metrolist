@@ -26,6 +26,8 @@ Artist failures retain available offline data. Without it, propagate the origina
 
 ## Search
 
+Spotify account imports first search with the source album in the query, then retry without it if no exact title, artist and duration match is found. This handles YouTube Music catalog entries whose album metadata differs while keeping the match checks unchanged.
+
 Android, desktop and iOS request suggestions after a 300 ms typing debounce and load results on submit. Only an empty field shows the search start page. Nonempty input keeps the suggestions page, with the typed query available as a search action while suggestions are unavailable. Existing suggestions stay visible while their replacement loads or fails. Clearing, submission and edits shorter than two characters discard remote suggestions; cancelled requests cannot publish old suggestions.
 
 Verify typing after submitted results, rapid edits, deletion to one character, clearing, failed requests, submission and Back. Desktop inline search uses the shared debounce and does not start a separate preview search.
@@ -42,6 +44,14 @@ Mobile API library shelves show saved music albums while podcast shelves remain 
 
 Home cache identity respects account, locale and browse policy. Visitor publication must pass InnerTubeX's session compatibility check before accepting an in-flight response.
 
+Legacy settings migration and backup imports convert `SYSTEM_DEFAULT` and lowercase `system` to `SYSTEM` for app language, content language and content country. Invalid saved content languages and countries return to the system locale before requests, including settings already migrated to v14. Language validation uses the platform locale catalog and bundled resource tags. Imports also clear v13's literal `null` visitor data without discarding valid session values. Failed restores keep their exact settings snapshot.
+
+Artist subscriber and monthly-audience counts use the same extractor without consulting the app or content locale. It preserves YouTube's digits, separators and compact unit, including counts after a translated label. Unknown or ambiguous formats retain YouTube's full text and omit the app's audience label. The shared Compose artist page, About view, menus and song details use that distinction on Android, desktop and iOS. Captured request pairs and refresh instructions are in [test fixtures](test-fixtures.md#artist-audience-counts).
+
+## Audio counterparts
+
+Video-to-audio lookup prefers YouTube's explicit counterpart and rejects changes between studio and alternate versions. Search fallback requires the complete title after artist-prefix and presentation-decorator removal and an exact artist name or shared artist ID. Known durations use the existing music-video ratio and intro/outro limits; the audio track may exceed the video's duration by at most 30 seconds. Matching tracks rank by shared artist ID, audio type, closest known duration and search order. The selected video stays when the title names a live performance, remix or other alternate version. Title normalization preserves Unicode combining marks. Audio-to-video selection rules and counterpart position maps remain unchanged. With music videos turned off, Android plays a requested video's own audio and looks up no audio counterpart; only Song mode with videos on swaps to the audio track.
+
 ## History and uploads
 
 Imported history keeps localized absolute date-bucket labels and server row order. Refresh repairs matched remote rows without overwriting measured local timestamps. Date buckets count in daily/total statistics, not hourly charts. Preserve offline labels and cancellation during synchronization.
@@ -56,6 +66,8 @@ Providers advertise capabilities. Do not substitute a generic sidecar token for 
 
 A CDN 403 for an explicitly untokenized `_nopo` profile excludes that profile without discarding unrelated cached attestation. Tokenized or unidentified profiles invalidate attestation. Retain provider cooldowns, bounded mint deadlines and account/visitor validation.
 
+After a web-token rejection, audio requests try tokenless VISIONOS first. A failed probe continues through the normal clients. Video and YouTube canvas requests keep their video requirement and skip this audio-only preference.
+
 Token callbacks keep request-local results. A canceled Kotlin caller does not cancel a WebView promise; late results cannot overwrite another request. Check this with `node --test scripts/test_page_bound_po_token.mjs`.
 
 ## SABR
@@ -67,6 +79,12 @@ Playback validates overlapping ranges against emitted bytes. Identical repeats a
 `shareCachedDataFrom` requires an unopened replacement with the same encoded representation. Reference-counted storage is shared, but each stream owns its cursor, producer and failure state. Gaps are incomplete streams, not EOF. Normal producer completion must cover the expected duration when timestamps are available.
 
 Android closes storage off the playback thread. Video hiding must wait until the initial container probe completes. Reattachment resumes from the audio clock with seek preroll and retained bytes. See [cache transfer rules](audio-cache.md#formats), [iOS preparation](ios-opus.md#capture-limits) and [error policy](playback.md#error-policy).
+
+## Live stream classification
+
+Player metadata uses current-live flags or an HLS-only response without a finite duration. `isLiveContent` alone does not mark an active stream. Recordings with a finite duration keep seeking and the normal client fallback, including saved songs with a live performance type. Confirmed live playback clears the song duration so extraction and player controls use the same classification.
+
+Stream resolution uses the same rule for Android HLS responses. Extracted streams retain finite durations from client metadata, SABR or the queued song. Playback resources carry the resolver's classification; client profiles and URL markers alone do not mark a song live.
 
 ## Live tests
 

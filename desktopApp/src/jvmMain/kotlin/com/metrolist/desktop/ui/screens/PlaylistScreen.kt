@@ -95,9 +95,11 @@ import com.metrolist.shared.generated.resources.remove_from_playlist
 import com.metrolist.shared.generated.resources.retry
 import com.metrolist.shared.generated.resources.song_already_in_playlist
 import com.metrolist.shared.model.PlaylistItem
+import com.metrolist.shared.model.PlaylistSongSort
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.canEdit
 import com.metrolist.shared.model.filterForPlaylistSearch
+import com.metrolist.shared.model.isReordering
 import com.metrolist.shared.model.playlistOccurrenceKey
 import com.metrolist.shared.model.sortedForPlaylist
 import com.metrolist.shared.playlist.PlaylistPartiallyUpdatedException
@@ -160,13 +162,31 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
         )
     val sortMode = sorting.sort
     val sortDirection = sorting.direction
-    var reorderMode by remember(playlistInfo?.id) { mutableStateOf(false) }
+    val isEditable = playlistInfo.isUserCreatedPlaylist() && !PlaylistAlbumState.playlistHasMore
+    val reorderMode = sortMode.isReordering(Settings.shared.playlistEditLock, isEditable)
     var searchQuery by remember(playlistInfo?.id) { mutableStateOf("") }
     val selection = rememberSelectionState(playlistInfo?.id)
     val metadataRevision by SongMetadataState.revision.collectAsState()
+    val listeningTimes = if (sortMode == PlaylistSongSort.LISTENING_TIME) SongMetadataState.listeningTimes else emptyMap()
     val displayedSongs =
-        remember(songs, sortMode, sortDirection, reorderMode, searchQuery, metadataRevision, PlaylistAlbumState.playlistHasMore) {
-            val ordered = if (reorderMode || PlaylistAlbumState.playlistHasMore) songs else songs.sortedForPlaylist(sortMode, sortDirection)
+        remember(
+            songs,
+            sortMode,
+            sortDirection,
+            reorderMode,
+            searchQuery,
+            metadataRevision,
+            listeningTimes,
+            PlaylistAlbumState.playlistHasMore,
+        ) {
+            val ordered =
+                if (reorderMode ||
+                    PlaylistAlbumState.playlistHasMore
+                ) {
+                    songs
+                } else {
+                    songs.sortedForPlaylist(sortMode, sortDirection, listeningTimes = listeningTimes)
+                }
             ordered.filterForPlaylistSearch(searchQuery)
         }
 
@@ -209,7 +229,6 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
     var deleteFailed by remember { mutableStateOf(false) }
     var showAddSongDialog by remember { mutableStateOf(false) }
 
-    val isEditable = playlistInfo.isUserCreatedPlaylist() && !PlaylistAlbumState.playlistHasMore
     val isLocal = playlistInfo?.isLocal == true || playlistInfo?.id?.startsWith("LP") == true
     val canRemoveFromLibrary = !isLocal && (PlaylistAlbumState.isPlaylistBookmarked || isEditable)
     val canEditSingle = playlistInfo?.canEdit == true
@@ -407,6 +426,7 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
                                         id,
                                         PlaylistAlbumState.pendingPlaylistThumbnail,
                                         addToHistory = false,
+                                        forceRefresh = true,
                                     )
                                 }
                             },
@@ -419,14 +439,26 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
             text = playlistContentText(),
             onPlayAll = {
                 PlaylistAlbumState.withCompletePlaylist { all ->
-                    val queue = all.sortedForPlaylist(sortMode, sortDirection).filterForPlaylistSearch(searchQuery)
+                    val queue =
+                        all
+                            .sortedForPlaylist(
+                                sortMode,
+                                sortDirection,
+                                listeningTimes = listeningTimes,
+                            ).filterForPlaylistSearch(searchQuery)
                     queue.firstOrNull { !it.isUnavailable }?.let { PlayerState.playTrack(it, queue) }
                 }
             },
             onShuffle = {
                 PlaylistAlbumState.withCompletePlaylist { all ->
-                    val shuffled = all.filterForPlaylistSearch(searchQuery).shuffled()
-                    shuffled.firstOrNull { !it.isUnavailable }?.let { PlayerState.playTrack(it, shuffled) }
+                    PlayerState.shuffleQueue(
+                        all
+                            .sortedForPlaylist(
+                                sortMode,
+                                sortDirection,
+                                listeningTimes = listeningTimes,
+                            ).filterForPlaylistSearch(searchQuery),
+                    )
                 }
             },
             isFavorite = PlaylistAlbumState.isPlaylistBookmarked,
@@ -442,7 +474,10 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
                     selection.toggle(occurrenceKey(song))
                 } else {
                     PlaylistAlbumState.withCompletePlaylist { all ->
-                        PlayerState.playTrack(song, if (reorderMode) all else all.sortedForPlaylist(sortMode, sortDirection))
+                        PlayerState.playTrack(
+                            song,
+                            if (reorderMode) all else all.sortedForPlaylist(sortMode, sortDirection, listeningTimes = listeningTimes),
+                        )
                     }
                 }
             },
@@ -505,7 +540,7 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
                     },
                     onReorderModeChange = {
                         searchQuery = ""
-                        reorderMode = it
+                        Settings.shared.playlistEditLock = !it
                     },
                 )
             },
@@ -517,9 +552,7 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
                     selectedSongs = selectedSongs,
                     onPlay = { selectedSongs.firstOrNull { !it.isUnavailable }?.let { PlayerState.playTrack(it, selectedSongs) } },
                     onShuffle = {
-                        selectedSongs.shuffled().let { s ->
-                            s.firstOrNull { !it.isUnavailable }?.let { PlayerState.playTrack(it, s) }
-                        }
+                        PlayerState.shuffleQueue(selectedSongs)
                     },
                     allSelected = selection.allSelected(displayedKeys),
                     onDone = selection::exit,

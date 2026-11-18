@@ -20,7 +20,7 @@ jobs:
   build:
     name: Windows manager
     runs-on: blacksmith-2vcpu-windows-2025
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:

@@ -1,0 +1,41 @@
+{
+  "header": {
+    "musicImmersiveHeaderRenderer": {
+      "subscriptionButton": {
+        "subscribeButtonRenderer": {
+          "subscriberCountText": {
+            "runs": [
+              {
+                "text": "5930万"
+              }
+            ]
+          },
+          "longSubscriberCountText": {
+            "runs": [
+              {
+                "text": "チャンネル登録者数 5930万人"
+              }
+            ],
+            "accessibility": {
+              "accessibilityData": {
+                "label": "チャンネル登録者数 5930万人"
+              }
+            }
+          }
+        }
+      },
+      "monthlyListenerCount": {
+        "runs": [
+          {
+            "text": "月間視聴者数: 2.4億 人"
+          }
+        ],
+        "accessibility": {
+          "accessibilityData": {
+            "label": "月間視聴者数: 2.4億 人"
+          }
+        }
+      }
+    }
+  }
+}

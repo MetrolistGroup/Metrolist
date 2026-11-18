@@ -2,9 +2,11 @@ package com.metrolist.shared.api
 
 import com.metrolist.innertubex.models.response.BrowseResponse
 import com.metrolist.shared.api.YouTubeResponseParser.bestChannelThumbnailUrl
+import com.metrolist.shared.api.YouTubeResponseParser.cleanSubscriberCount
 import com.metrolist.shared.api.YouTubeResponseParser.descriptionRunsToTextWithUrls
 import com.metrolist.shared.api.YouTubeResponseParser.pageTitle
 import com.metrolist.shared.api.YouTubeResponseParser.parseBrowseResponse
+import com.metrolist.shared.api.YouTubeResponseParser.runText
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.ArtistPageResult
@@ -59,6 +61,26 @@ internal object YouTubeArtistParser {
             ?: header?.musicResponsiveHeaderRenderer
             ?: responsiveHeader
     }
+
+    internal fun parseSubscriberCount(header: JsonObject?): String? {
+        val button =
+            header
+                ?.get("subscriptionButton")
+                ?.jsonObject
+                ?.get("subscribeButtonRenderer")
+                ?.jsonObject
+        return (
+            button
+                ?.get("subscriberCountText")
+                ?.jsonObject
+                .runText()
+                ?.takeIf(String::isNotBlank)
+                ?: button?.get("longSubscriberCountText")?.jsonObject.runText()
+        ).cleanSubscriberCount()
+    }
+
+    internal fun parseMonthlyListenerCount(header: JsonObject?): String? =
+        monthlyListenersCount(header?.get("monthlyListenerCount")?.jsonObject.runText())
 
     fun parseArtist(
         response: BrowseResponse,
@@ -125,41 +147,7 @@ internal object YouTubeArtistParser {
                     ?.contentOrNull
                     ?.replace(Regex("=w\\d+-h\\d+.*$"), "=s0")
 
-        val subscribers =
-            h
-                ?.get(
-                    "subscriptionButton",
-                )?.jsonObject
-                ?.get(
-                    "subscribeButtonRenderer",
-                )?.jsonObject
-                ?.get(
-                    "subscriberCountText",
-                )?.jsonObject
-                ?.get("runs")
-                ?.jsonArray
-                ?.getOrNull(0)
-                ?.jsonObject
-                ?.get("text")
-                ?.jsonPrimitive
-                ?.contentOrNull
-                ?: h
-                    ?.get(
-                        "subscriptionButton",
-                    )?.jsonObject
-                    ?.get(
-                        "subscribeButtonRenderer",
-                    )?.jsonObject
-                    ?.get(
-                        "longSubscriberCountText",
-                    )?.jsonObject
-                    ?.get("runs")
-                    ?.jsonArray
-                    ?.getOrNull(0)
-                    ?.jsonObject
-                    ?.get("text")
-                    ?.jsonPrimitive
-                    ?.contentOrNull
+        val subscribers = parseSubscriberCount(h)
 
         val isSubscribed =
             h
@@ -179,15 +167,7 @@ internal object YouTubeArtistParser {
                 ?.jsonArray
                 ?.descriptionRunsToTextWithUrls()
 
-        val monthlyListeners =
-            h
-                ?.get("monthlyListenerCount")
-                ?.jsonObject
-                ?.get("runs")
-                ?.jsonArray
-                ?.joinToString("") { it.jsonObject["text"]?.jsonPrimitive?.contentOrNull ?: "" }
-                ?.takeIf { it.isNotBlank() }
-                ?.let(::monthlyListenersCount)
+        val monthlyListeners = parseMonthlyListenerCount(h)
 
         val exactArtistItem =
             parsed.sections.values

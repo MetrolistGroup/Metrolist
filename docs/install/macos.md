@@ -14,6 +14,19 @@ Choose the ARM64 DMG for Apple Silicon or x64 for Intel from [the download chann
 
 Packages are unsigned and unnotarized. Do not disable Gatekeeper globally.
 
+## Homebrew
+
+The [Metrolist tap](https://github.com/MetrolistGroup/homebrew-tap) installs the matching DMG for your Mac and follows stable releases:
+
+```sh
+brew trust metrolistgroup/tap
+brew install --cask metrolistgroup/tap/metrolist
+```
+
+Homebrew only installs from trusted taps, so `brew trust` is needed once.
+
+Update with `brew upgrade --cask metrolist`. The first launch still needs Open Anyway as in step 4. `brew uninstall --zap --cask metrolist` also deletes settings, the library database and downloads, so export a backup first.
+
 ## Update and uninstall
 
 Back up and quit before replacing the app in Applications. Deleting the app leaves profile data, Keychain credentials and music outside it. Sign out before removing credentials and preserve backups before clearing data.

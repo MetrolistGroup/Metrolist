@@ -15,13 +15,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
+import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.utils.DesktopFontManager
 import com.metrolist.shared.settings.FontOption
 import com.metrolist.shared.settings.Settings
-import com.metrolist.shared.ui.theme.DefaultThemeColor
 import com.metrolist.shared.ui.theme.MetrolistTypography
 import com.metrolist.shared.ui.theme.currentAppLocaleList
-import com.metrolist.shared.ui.theme.resolveThemeSeedColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.metrolist.shared.ui.theme.MetrolistTheme as SharedMetrolistTheme
@@ -78,20 +77,14 @@ fun AppTypography(): Typography {
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MetrolistTheme(
-    seedColor: Color = DefaultThemeColor,
+    seedColor: Color = UiState.seedColor,
     pureBlack: Boolean = Settings.shared.isPureBlackTheme(),
     content: @Composable () -> Unit,
 ) {
     val isDark = Settings.shared.getCurrentThemeIsDark()
 
     SharedMetrolistTheme(
-        seedColor =
-            resolveThemeSeedColor(
-                materialYouEnabled = Settings.shared.materialYouEnabled,
-                songArtworkColorsEnabled = Settings.shared.dynamicTheme,
-                selectedThemeColor = Settings.shared.selectedThemeColor,
-                artworkSeedColor = seedColor,
-            ),
+        seedColor = seedColor,
         darkTheme = isDark,
         pureBlack = pureBlack,
     ) {

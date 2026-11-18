@@ -1,0 +1,41 @@
+{
+  "header": {
+    "musicImmersiveHeaderRenderer": {
+      "subscriptionButton": {
+        "subscribeButtonRenderer": {
+          "subscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 млн"
+              }
+            ]
+          },
+          "longSubscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 млн підписників"
+              }
+            ],
+            "accessibility": {
+              "accessibilityData": {
+                "label": "59,3 мільйона підписників"
+              }
+            }
+          }
+        }
+      },
+      "monthlyListenerCount": {
+        "runs": [
+          {
+            "text": "240 млн слухачів на місяць"
+          }
+        ],
+        "accessibility": {
+          "accessibilityData": {
+            "label": "240 мільйонів слухачів на місяць"
+          }
+        }
+      }
+    }
+  }
+}

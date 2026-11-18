@@ -31,6 +31,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.metrolist.desktop.ui.components.WebViewAvailabilityLoading
 import com.metrolist.desktop.ui.components.WebViewUnavailableContent
 import com.metrolist.desktop.ui.components.rememberLinuxWebKitAvailable
+import com.metrolist.desktop.web.DesktopWebView
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.import_error_generic
@@ -38,7 +39,6 @@ import com.metrolist.shared.playlistimport.awaitProviderCredentials
 import com.metrolist.shared.ui.components.Dialog
 import com.metrolist.shared.utils.OsUtil
 import io.github.kdroidfilter.webview.web.LoadingState
-import io.github.kdroidfilter.webview.web.WebView
 import io.github.kdroidfilter.webview.web.WebViewState
 import io.github.kdroidfilter.webview.web.rememberWebViewNavigator
 import io.github.kdroidfilter.webview.web.rememberWebViewState
@@ -113,7 +113,7 @@ private fun <T : Any> ProviderLoginContent(
         if (webViewState.loadingState is LoadingState.Loading) {
             LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
-        WebView(
+        DesktopWebView(
             state = webViewState,
             navigator = navigator,
             modifier = Modifier.fillMaxWidth().weight(1f),

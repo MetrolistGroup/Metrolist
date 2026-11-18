@@ -72,7 +72,7 @@ class MusicVideoResolverTest {
             val video =
                 song(
                     "W5ww34C76Gk",
-                    "MYTH IN SLAUGHTER | Hoax chase theme | BITE BY NIGHT OST",
+                    "MYTH IN SLAUGHTER (Official Music Video)",
                     "DxPrism",
                     "MUSIC_VIDEO_TYPE_UGC",
                 )
@@ -550,6 +550,56 @@ class MusicVideoResolverTest {
             assertEquals(MusicVideoResult.Found("MVID"), resolver.resolveMusicVideo(song("TRACK", "Title", "Artist")))
         }
     }
+
+    @Test
+    fun audioCounterpartCannotReplaceALiveRecordingWithTheStudioVersion() =
+        runBlocking {
+            val video = song("Yfwlj0gba_k", "You Raise Me Up (Live)", "Celtic Woman", "MUSIC_VIDEO_TYPE_OMV")
+            val studio = song("Y1EVlyYZEPk", "You Raise Me Up", "Celtic Woman", "MUSIC_VIDEO_TYPE_ATV")
+            val resolver =
+                MusicVideoResolver(
+                    counterpartLookup = { MusicVideoCounterpart(it.id, studio.id, studio.musicVideoType, positionMap = null) },
+                    songLookup = { studio },
+                    search = { _, _ -> SearchResultPage(listOf(studio)) },
+                    settings = Settings(MapSettings()),
+                )
+            assertEquals(MusicTrackResult.NotFound, resolver.resolveMusicTrack(video))
+        }
+
+    @Test
+    fun authoritativeAudioKeepsMatchingLiveVersionsAndDoesNotTreatArtistNamesAsVersions() =
+        runBlocking {
+            for ((title, artist) in listOf("Song (Live)" to "Artist", "Song" to "Live", "Song" to "Ai")) {
+                val video = song("VIDEO", "$artist - $title (Official Music Video)", artist, "MUSIC_VIDEO_TYPE_OMV")
+                val track = song("TRACK", title, artist, "MUSIC_VIDEO_TYPE_ATV")
+                val map = CounterpartPositionMap(listOf(CounterpartSegment(4_492L, 0L, 120_000L)))
+                val resolver =
+                    MusicVideoResolver(
+                        counterpartLookup = { MusicVideoCounterpart(it.id, track.id, track.musicVideoType, map) },
+                        songLookup = { track },
+                        search = { _, _ -> error("A matching authoritative version should not search") },
+                        settings = Settings(MapSettings()),
+                    )
+                assertEquals(
+                    MusicTrackResult.Found(track, map, CounterpartResolutionSource.AUTHORITATIVE),
+                    resolver.resolveMusicTrack(video),
+                )
+            }
+        }
+
+    @Test
+    fun counterpartMetadataCannotReturnAnotherRecordingId() =
+        runBlocking {
+            val video = song("VIDEO", "Title", "Artist", "MUSIC_VIDEO_TYPE_OMV")
+            val resolver =
+                MusicVideoResolver(
+                    counterpartLookup = { MusicVideoCounterpart(it.id, "TRACK", "MUSIC_VIDEO_TYPE_ATV", null) },
+                    songLookup = { song("OTHER", "Title", "Artist", "MUSIC_VIDEO_TYPE_ATV") },
+                    search = { _, _ -> SearchResultPage(emptyList()) },
+                    settings = Settings(MapSettings()),
+                )
+            assertEquals(MusicTrackResult.NotFound, resolver.resolveMusicTrack(video))
+        }
 
     @Test
     fun authoritativeTrackCounterpartReturnsMetadataAndReverseMap() {

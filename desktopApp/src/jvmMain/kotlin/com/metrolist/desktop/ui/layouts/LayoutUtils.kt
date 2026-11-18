@@ -140,6 +140,7 @@ object LayoutUtils {
                 when (route) {
                     is Screen.Podcast -> PodcastState.page?.podcast?.title ?: podcast
                     is Screen.Browse -> BrowseState.selectedBrowseTitle ?: route.title ?: browse
+                    is Screen.HomeSection -> route.title
                     is Screen.AutoPlaylist -> autoPlaylistTitle ?: navigationTitle
                     else -> navigationTitle
                 }

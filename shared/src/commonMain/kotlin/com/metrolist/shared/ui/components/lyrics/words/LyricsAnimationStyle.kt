@@ -6,6 +6,9 @@
 package com.metrolist.shared.ui.components.lyrics.words
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -58,11 +61,17 @@ fun WordLevelLyrics(
     romanizedWords: List<WordTimestamp>? = null,
     romanizedText: String? = null,
     showSyllableRomanization: Boolean =
-        Settings.shared.lyricsRomanizationEnabled &&
-            Settings.shared.lyricsSyllableRomanizationEnabled,
+        Settings.shared.isLyricsRomanizationActive &&
+            Settings.shared.lyricsSyllableRomanizationEnabled &&
+            (!Settings.shared.lyricsRomanizeAsMain || Settings.shared.lyricsShowOriginalLyrics),
     prewarmMasks: Boolean = isActiveLine,
     useFixedTone: Boolean = true,
 ) {
+    val vocalRange = remember(words) { lyricsWordAnimationRangeMs(words) }
+    // Scroll focus can leave a row before its last word finishes.
+    val isVocalActive by remember(isActiveLine, vocalRange, positionProvider) {
+        derivedStateOf { isActiveLine || vocalRange?.contains(positionProvider()) == true }
+    }
     when (animationStyle) {
         LyricsAnimationStyle.APPLE -> {
             AppleWordAnimation(
@@ -90,7 +99,7 @@ fun WordLevelLyrics(
             BraccatoWordAnimation(
                 mainText = mainText,
                 words = words,
-                isActiveLine = isActiveLine,
+                isActiveLine = isVocalActive,
                 positionProvider = positionProvider,
                 adjustedEndTimeMs = adjustedEndTimeMs,
                 lyricStyle = lyricStyle,
@@ -113,7 +122,7 @@ fun WordLevelLyrics(
                 useFixedTone = useFixedTone,
                 mainText = mainText,
                 words = words,
-                isActiveLine = isActiveLine,
+                isActiveLine = isVocalActive,
                 positionProvider = positionProvider,
                 adjustedEndTimeMs = adjustedEndTimeMs,
                 lyricStyle = lyricStyle,

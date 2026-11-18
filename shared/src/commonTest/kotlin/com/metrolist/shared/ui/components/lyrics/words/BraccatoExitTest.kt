@@ -6,15 +6,15 @@ import kotlin.test.assertTrue
 
 class BraccatoExitTest {
     @Test
-    fun highlightFadesDuringTheCompletionWipeAndReachesZeroBeforeTheGlowTailEnds() {
-        assertEquals(1f, braccatoExitOpacity(0f))
-        val duringWipe = braccatoExitOpacity(100f)
-        val afterWipe = braccatoExitOpacity(180f)
-        val nearEnd = braccatoExitOpacity(499f)
-        assertTrue(duringWipe in 0f..1f && duringWipe < 1f)
-        assertTrue(afterWipe > 0f && afterWipe < duringWipe)
+    fun highlightStaysLitThroughTheCompletionWipeThenFadesBeforeTheGlowTailEnds() {
+        assertEquals(1f, braccatoExitOpacity(0f, 180f))
+        assertEquals(1f, braccatoExitOpacity(100f, 180f))
+        assertEquals(1f, braccatoExitOpacity(180f, 180f))
+        val afterWipe = braccatoExitOpacity(280f, 180f)
+        val nearEnd = braccatoExitOpacity(679f, 180f)
+        assertTrue(afterWipe > 0f && afterWipe < 1f)
         assertTrue(nearEnd >= 0f && nearEnd < afterWipe)
-        assertEquals(0f, braccatoExitOpacity(500f))
+        assertEquals(0f, braccatoExitOpacity(680f, 180f))
         assertEquals(0f, braccatoExitOpacity(1_200f))
     }
 

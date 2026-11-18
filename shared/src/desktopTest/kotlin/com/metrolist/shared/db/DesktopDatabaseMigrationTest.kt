@@ -58,6 +58,7 @@ class DesktopDatabaseMigrationTest {
                         assertEquals(425, cached.offsetMs)
                         assertEquals("Saved translation", cached.translatedLyrics)
                         assertFalse(cached.isUserSelected)
+                        assertEquals(version < 66, cached.isLegacyProtected)
                         assertNull(cached.missLookupKey)
                         assertNull(cached.missExpiresAt)
                         assertTrue(requireNotNull(database.dao().cachedLyrics("local")).let { it.isUserSelected || it.userLyrics != null })
@@ -107,6 +108,33 @@ class DesktopDatabaseMigrationTest {
                     } finally {
                         database.close()
                     }
+                }
+            } finally {
+                directory.deleteRecursively()
+            }
+        }
+
+    @Test
+    fun version38MergesLegacySpeedDialTableIntoExistingOne() =
+        runBlocking<Unit> {
+            val directory = createTempDirectory("speed-dial-merge").toFile()
+            try {
+                val file = File(directory, "library.db")
+                createHistoricalLibrary(file.absolutePath, 38, JdbcSQLiteDriver())
+                JdbcSQLiteDriver().open(file.path).use { connection ->
+                    connection.execSQL("CREATE TABLE speed_dial_item AS SELECT * FROM speed_dial")
+                    connection.execSQL("UPDATE speed_dial_item SET title = 'Stale copy'")
+                    connection.execSQL(
+                        "INSERT INTO speed_dial_item SELECT 'legacy', secondaryId, title, subtitle, thumbnailUrl, type, " +
+                            "explicit, 5, createDate FROM speed_dial",
+                    )
+                }
+                val database = getDesktopDatabaseBuilder(file).build()
+                try {
+                    val current = historicalSpeedDialItem(38)
+                    assertEquals(listOf(current, current.copy(id = "legacy", index = 5)), database.speedDialDao().getAllOnce())
+                } finally {
+                    database.close()
                 }
             } finally {
                 directory.deleteRecursively()

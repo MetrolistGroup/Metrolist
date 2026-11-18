@@ -176,6 +176,7 @@ jobs:
           fi
           ./gradlew "${verification[@]}" \
             :desktopApp:assembleWindowsRelease \
+            -Pmetrolist.debug=false \
             -Pmetrolist.verifyPackaging=${{ inputs.run-verification }} \
             -Pmetrolist.desktop.arch=${{ matrix.arch == 'arm64' && 'aarch64' || 'x86_64' }} \
             --no-daemon \

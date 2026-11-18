@@ -494,6 +494,12 @@ private class RecordingPlaybackController : PlaybackController {
         playedSong = song
     }
 
+    override fun shuffleQueue(
+        songs: List<SongItem>,
+        queueTitle: String?,
+        songsOnly: Boolean,
+    ) = Unit
+
     override fun togglePlayPause() = Unit
 
     override fun seekTo(positionMs: Long) = Unit

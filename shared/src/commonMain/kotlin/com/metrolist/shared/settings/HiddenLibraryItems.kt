@@ -29,13 +29,13 @@ object HiddenLibraryItems {
     fun isHidden(item: YTItem): Boolean = store.isHidden(HiddenLibraryItem.from(item).key)
 
     fun hide(item: YTItem) {
-        store.hide(HiddenLibraryItem.from(item))
-        _version.value++
+        hide(HiddenLibraryItem.from(item))
     }
 
     fun hide(item: HiddenLibraryItem) {
         store.hide(item)
         _version.value++
+        ContentUndoHints.request(ContentUndoPage.HIDDEN_LIBRARY_ITEMS)
     }
 
     fun restore(key: HiddenLibraryItemKey) {

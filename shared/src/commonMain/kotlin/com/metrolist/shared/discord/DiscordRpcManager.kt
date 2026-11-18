@@ -77,6 +77,7 @@ object DiscordRpcManager {
     @Volatile private var gatewayRequested = false
     private var lifecycleJob: Job? = null
     private val reconnectMutex = Mutex()
+    private val destroyMutex = Mutex()
     private val accountGeneration = DiscordConnectionGeneration()
     private var profileJob: Job? = null
 
@@ -555,11 +556,14 @@ object DiscordRpcManager {
         return if (setActivity(activity, songId, isPlaying, force = true)) RefreshResult.Queued else RefreshResult.NotReady
     }
 
-    private fun handleGatewayEvent(event: GatewayEvent) {
+    private suspend fun handleGatewayEvent(event: GatewayEvent) {
         if (!connectionAllowed()) return
         when (event) {
             is GatewayEvent.Ready, is GatewayEvent.Resumed -> {
                 gateway?.markReady()
+                if (event is GatewayEvent.Ready) {
+                    gateway?.sendAndAwait(DiscordPresence.buildPresenceUpdate(PresenceStatus.Online, activities = emptyList()))
+                }
                 ready = true
                 authorized = true
                 _connectionStatus.value = Status.Connected
@@ -604,50 +608,53 @@ object DiscordRpcManager {
         gateway?.close()
     }
 
-    suspend fun destroy() {
-        if (!initialized || shuttingDown) return
-        val shouldClear = ready
-        shuttingDown = true
-        gatewayRequested = false
-        lifecycleJob?.cancelAndJoin()
-        lifecycleJob = null
-        accountGeneration.next()
-        profileJob?.cancel()
-        profileJob = null
-        refreshRetryJob?.cancel()
-        refreshRetryJob = null
-        ready = false
-        authorized = false
-        val activeGateway = gateway
-        presenceSender?.stop()
-        presenceSender = null
-        presenceGeneration++
-        pendingActivity = null
-        imageResolutionJob?.cancel()
-        imageResolutionJob = null
-        try {
-            flushDiscordPresenceBeforeClose(shouldClear) { clearPresence ->
-                val finalFrame =
-                    if (clearPresence) {
-                        DiscordPresence.buildPresenceUpdate(PresenceStatus.Online, activities = emptyList())
-                    } else {
-                        null
+    suspend fun destroy() =
+        withContext(NonCancellable) {
+            destroyMutex.withLock {
+                if (!initialized || shuttingDown) return@withLock
+                val shouldClear = ready
+                shuttingDown = true
+                gatewayRequested = false
+                lifecycleJob?.cancelAndJoin()
+                lifecycleJob = null
+                accountGeneration.next()
+                profileJob?.cancel()
+                profileJob = null
+                refreshRetryJob?.cancel()
+                refreshRetryJob = null
+                ready = false
+                authorized = false
+                val activeGateway = gateway
+                presenceSender?.stop()
+                presenceSender = null
+                presenceGeneration++
+                pendingActivity = null
+                imageResolutionJob?.cancel()
+                imageResolutionJob = null
+                try {
+                    flushDiscordPresenceBeforeClose(shouldClear) { clearPresence ->
+                        val finalFrame =
+                            if (clearPresence) {
+                                DiscordPresence.buildPresenceUpdate(PresenceStatus.Online, activities = emptyList())
+                            } else {
+                                null
+                            }
+                        activeGateway?.closeAndAwait(finalFrameJson = finalFrame)
                     }
-                activeGateway?.closeAndAwait(finalFrameJson = finalFrame)
+                } finally {
+                    initialized = false
+                    currentSongId = null
+                    currentIsPlaying = false
+                    playbackActive.value = false
+                    pendingPresence = null
+                    lastActivity = null
+                    needsPresenceResend = false
+                    gateway = null
+                    _connectionStatus.value = Status.Disconnected
+                    scope.cancel()
+                }
             }
-        } finally {
-            initialized = false
-            currentSongId = null
-            currentIsPlaying = false
-            playbackActive.value = false
-            pendingPresence = null
-            lastActivity = null
-            needsPresenceResend = false
-            gateway = null
-            _connectionStatus.value = Status.Disconnected
-            scope.cancel()
         }
-    }
 
     suspend fun reloadAfterRestore(httpClient: HttpClient) {
         destroy()

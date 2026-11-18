@@ -10,4 +10,5 @@ self-hosted-runner:
     - blacksmith-6vcpu-macos-latest
     - blacksmith-8vcpu-ubuntu-2404-arm
     - blacksmith-8vcpu-ubuntu-2404
+    - blacksmith-8vcpu-ubuntu-2604
     - blacksmith-8vcpu-windows-2025

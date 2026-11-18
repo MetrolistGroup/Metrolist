@@ -21,6 +21,7 @@ import kotlinx.cinterop.ObjCObjectVar
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
+import kotlinx.cinterop.readBytes
 import kotlinx.cinterop.value
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -55,10 +56,12 @@ import platform.CoreFoundation.CFRunLoopRunInMode
 import platform.CoreFoundation.kCFRunLoopDefaultMode
 import platform.CoreMedia.CMTimeGetSeconds
 import platform.CoreMedia.CMTimeMakeWithSeconds
+import platform.Foundation.NSData
 import platform.Foundation.NSError
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSUUID
+import platform.Foundation.dataWithContentsOfFile
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -402,6 +405,53 @@ class IosPlaybackCacheTest {
                         .isEmpty(),
                 )
             } finally {
+                cache.close()
+                client.close()
+                Settings.replaceSharedForTest(null)
+                Dispatchers.resetMain()
+            }
+        }
+
+    @Test
+    fun opusCapturePublishesRemuxedMp4WhenCachingIsOn() =
+        runTest {
+            Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+            Settings.replaceSharedForTest(Settings(MapSettings()).apply { songCacheEnabled = true })
+            val input = opusWebmFixture()
+            val client =
+                HttpClient(MockEngine) {
+                    engine {
+                        addHandler { respond(input, headers = headersOf(HttpHeaders.ContentLength, input.size.toString())) }
+                    }
+                }
+            val cache = IosPlaybackCache(client, backgroundScope)
+            val resource =
+                PlaybackResource(
+                    "opus-cached",
+                    "https://rr1.googlevideo.com/videoplayback",
+                    emptyMap(),
+                    null,
+                    null,
+                    contentLengthBytes = input.size.toLong(),
+                    itag = 251,
+                    mimeType = "audio/webm",
+                    codecs = "opus",
+                    requireBoundedRange = true,
+                )
+            val destination = "${NSTemporaryDirectory()}opus-${NSUUID.UUID().UUIDString}.m4a"
+            try {
+                val capture = assertNotNull(cache.acquire(resource))
+                assertTrue(capture.mayPublish)
+                assertTrue(capture.isRemuxed)
+                val publication = assertNotNull(cache.acquireForPublication(resource))
+                val mp4 = OpusMp4Remuxer.remux(input)
+                assertEquals("audio/mp4" to mp4.size.toLong(), publication.copyCompleted(destination))
+                val stored = assertNotNull(NSData.dataWithContentsOfFile(destination))
+                assertContentEquals(mp4, stored.bytes!!.readBytes(stored.length.toInt()))
+                cache.release(publication)
+                cache.release(capture)
+            } finally {
+                NSFileManager.defaultManager.removeItemAtPath(destination, null)
                 cache.close()
                 client.close()
                 Settings.replaceSharedForTest(null)

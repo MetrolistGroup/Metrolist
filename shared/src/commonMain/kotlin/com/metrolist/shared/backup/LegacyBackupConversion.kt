@@ -2,6 +2,8 @@ package com.metrolist.shared.backup
 
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
+import com.metrolist.shared.db.PROTECT_LEGACY_LYRICS_SQL
+import com.metrolist.shared.db.recoverLegacyUserLyrics
 
 private val VERSION_ONE_EXPLICIT_TABLES = setOf("song", "artist", "playlist", "song_artist_map", "playlist_song_map")
 
@@ -20,6 +22,8 @@ fun copyLegacyBackupTables(
             database.userTables("main").forEach { table -> database.copyLegacyTable(table, legacyVersion) }
             if (legacyVersion == 1) database.importVersionOne()
             legacyBackupDataMigrations(legacyVersion).forEach(database::execSQL)
+            if (legacyVersion < 66) database.execSQL(PROTECT_LEGACY_LYRICS_SQL)
+            database.recoverLegacyUserLyrics()
             database.removeLegacyOrphans()
             database.prepare("PRAGMA foreign_key_check").use {
                 check(!it.step()) { "Legacy database contains invalid relationships" }

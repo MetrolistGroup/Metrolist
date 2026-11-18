@@ -9,6 +9,9 @@ import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.SQLiteStatement
 import androidx.sqlite.throwSQLiteException
+import org.sqlite.core.CoreResultSet
+import org.sqlite.core.CoreStatement
+import org.sqlite.jdbc4.JDBC4ResultSet
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
@@ -62,22 +65,14 @@ private class JdbcSQLiteStatement(
     private val delegate: PreparedStatement,
     private val onExecuted: () -> Unit,
 ) : SQLiteStatement {
-    private val columnNames: List<String>
-    private val columnTypes: IntArray
+    private val sqliteStatement = delegate as CoreStatement
+
+    // Reuse sqlite-jdbc's prepared names; its live result set clears metadata on reset.
+    private val columnNames = sqliteCall { (delegate.metaData as CoreResultSet).colsMeta }
+    private val metadata by lazy { JDBC4ResultSet(sqliteStatement).apply { colsMeta = columnNames } }
+    private val columnTypes by lazy { IntArray(columnNames.size) { index -> sqliteCall { metadata.getColumnType(index + 1) } } }
     private var resultSet: ResultSet? = null
     private var executed = false
-
-    init {
-        val metadata = sqliteCall { delegate.metaData }
-        val columnCount =
-            try {
-                metadata.columnCount
-            } catch (_: SQLException) {
-                0
-            }
-        columnNames = List(columnCount) { index -> sqliteCall { metadata.getColumnName(index + 1) } }
-        columnTypes = IntArray(columnCount) { index -> sqliteCall { metadata.getColumnType(index + 1) } }
-    }
 
     override fun bindBlob(
         index: Int,
@@ -109,12 +104,7 @@ private class JdbcSQLiteStatement(
 
     override fun getText(index: Int): String = sqliteCall { requireResultSet().getString(index + 1) }
 
-    override fun isNull(index: Int): Boolean =
-        sqliteCall {
-            val result = requireResultSet()
-            result.getObject(index + 1)
-            result.wasNull()
-        }
+    override fun isNull(index: Int): Boolean = sqliteCall { rowColumnType(requireResultSet(), index) == SQLITE_DATA_NULL }
 
     override fun getColumnCount(): Int = columnNames.size
 
@@ -122,15 +112,7 @@ private class JdbcSQLiteStatement(
 
     override fun getColumnType(index: Int): Int =
         resultSet?.let { result ->
-            sqliteCall {
-                when (result.getObject(index + 1)) {
-                    null -> SQLITE_DATA_NULL
-                    is ByteArray -> SQLITE_DATA_BLOB
-                    is Float, is Double -> SQLITE_DATA_FLOAT
-                    is Number, is Boolean -> SQLITE_DATA_INTEGER
-                    else -> SQLITE_DATA_TEXT
-                }
-            }
+            sqliteCall { rowColumnType(result, index) }
         } ?: when (columnTypes[index]) {
             Types.BLOB, Types.BINARY, Types.VARBINARY, Types.LONGVARBINARY -> SQLITE_DATA_BLOB
             Types.FLOAT, Types.REAL, Types.DOUBLE, Types.NUMERIC, Types.DECIMAL -> SQLITE_DATA_FLOAT
@@ -169,6 +151,15 @@ private class JdbcSQLiteStatement(
             resultSet?.close()
             delegate.close()
         }
+    }
+
+    private fun rowColumnType(
+        result: ResultSet,
+        index: Int,
+    ): Int {
+        val column = (result as CoreResultSet).checkCol(index + 1)
+        // JDBC metadata uses declared types for typed NULLs; SQLite's row type preserves NULL without decoding values.
+        return sqliteStatement.pointer.safeRunInt<SQLException> { db, pointer -> db.column_type(pointer, column) }
     }
 
     private fun requireResultSet(): ResultSet = checkNotNull(resultSet) { "Statement has no result row" }

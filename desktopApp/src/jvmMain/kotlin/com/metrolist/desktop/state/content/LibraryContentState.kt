@@ -9,6 +9,7 @@ import com.metrolist.desktop.storage.DownloadState
 import com.metrolist.shared.auth.YouTubeSyncState
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.PlaylistEntity
+import com.metrolist.shared.db.preserveKnownPlaylistEditability
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.UserPlaylist
@@ -25,6 +26,7 @@ import com.metrolist.shared.youtube.logging.YtLogger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -66,6 +68,10 @@ object LibraryContentState {
             AppState.scope,
             database,
             DownloadManager.downloadStates.map { states -> states.filterValues { it == DownloadState.DOWNLOADED }.keys },
+            downloadedSongDates =
+                combine(DownloadManager.downloadedFiles, DownloadManager.downloadStates) { files, states ->
+                    files.filter { states[it.songId] == DownloadState.DOWNLOADED }.associate { it.songId to it.downloadDate }
+                },
         )
     var librarySections by mutableStateOf<Map<String, List<YTItem>>>(emptyMap())
         private set
@@ -221,7 +227,9 @@ object LibraryContentState {
                                 return@launch
                             }
                             YouTubeSyncState.succeeded("playlists")
-                            result.items.filterIsInstance<PlaylistItem>()
+                            database
+                                .preserveKnownPlaylistEditability(result.items, result.unresolvedPlaylistEditabilityIds)
+                                .filterIsInstance<PlaylistItem>()
                         } else {
                             emptyList()
                         }

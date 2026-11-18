@@ -10,6 +10,7 @@ import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import androidx.core.app.NotificationCompat
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import androidx.media3.session.CommandButton
@@ -17,16 +18,40 @@ import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaNotification
 import androidx.media3.session.MediaSession
 import com.google.common.collect.ImmutableList
+import com.metrolist.android.R
 import kotlin.math.abs
 
 @UnstableApi
 internal class PromotedMediaNotificationProvider(
-    private val delegate: DefaultMediaNotificationProvider,
+    private val context: Context,
+    private val delegate: DefaultMediaNotificationProvider = DefaultMediaNotificationProvider(context),
 ) : MediaNotification.Provider {
-    constructor(context: Context) : this(DefaultMediaNotificationProvider(context))
+    // Session preferences in these slots remove the standard skip actions used by watches and lock screens.
+    private fun transportButtons(): List<CommandButton> =
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            listOf(
+                CommandButton
+                    .Builder(CommandButton.ICON_PREVIOUS)
+                    .setCustomIconResId(R.drawable.ic_notification_skip_previous)
+                    .setPlayerCommand(Player.COMMAND_SEEK_TO_PREVIOUS)
+                    .setDisplayName(context.getString(R.string.previous))
+                    .setSlots(CommandButton.SLOT_BACK)
+                    .build(),
+                CommandButton
+                    .Builder(CommandButton.ICON_NEXT)
+                    .setCustomIconResId(R.drawable.ic_notification_skip_next)
+                    .setPlayerCommand(Player.COMMAND_SEEK_TO_NEXT)
+                    .setDisplayName(context.getString(R.string.next))
+                    .setSlots(CommandButton.SLOT_FORWARD)
+                    .build(),
+            )
+        } else {
+            emptyList()
+        }
 
     private var cachedKey: List<Any?>? = null
     private var cachedNotification: MediaNotification? = null
+    internal val latestNotification: MediaNotification? get() = cachedNotification
     private var cachedStartTimeMs: Long? = null
     private var generation = 0L
     private var latestCallback: MediaNotification.Provider.Callback? = null
@@ -61,8 +86,9 @@ internal class PromotedMediaNotificationProvider(
         cachedKey = key
         cachedStartTimeMs = startTimeMs
         val requestGeneration = ++generation
+        val notificationButtons = transportButtons().filter { player.isCommandAvailable(it.playerCommand) } + mediaButtonPreferences
         return delegate
-            .createNotification(mediaSession, mediaButtonPreferences, actionFactory) { updated ->
+            .createNotification(mediaSession, ImmutableList.copyOf(notificationButtons), actionFactory) { updated ->
                 if (generation == requestGeneration) {
                     val promoted = updated.promoteIfPlaying(mediaSession)
                     cachedNotification = promoted

@@ -115,6 +115,21 @@ class DownloadedArtworkTest {
         }
 
     @Test
+    fun exportReadsRetainedPngWhenImageRequestsAreOffline() =
+        runBlocking {
+            val exported = checkNotNull(artwork.exportArtwork(url))
+            assertEquals(8, exported.width)
+            assertEquals(8, exported.height)
+            val bitmap = checkNotNull(BitmapFactory.decodeByteArray(exported.png, 0, exported.png.size))
+            assertEquals(exported.width, bitmap.width)
+            assertEquals(exported.height, bitmap.height)
+
+            failArtwork = true
+            assertArrayEquals(exported.png, checkNotNull(artwork.exportArtwork(url)).png)
+            assertEquals(1, imageRequests)
+        }
+
+    @Test
     fun newDownloadRetainsCoverWithImageCachingDisabledAndProviderReadsItOffline() =
         runBlocking {
             val song = song("new")

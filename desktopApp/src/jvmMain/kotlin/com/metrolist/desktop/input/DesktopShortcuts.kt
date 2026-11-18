@@ -21,6 +21,7 @@ import com.metrolist.desktop.state.app.DesktopNavigation
 import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.state.playback.LyricsState
 import com.metrolist.desktop.state.playback.PlayerState
+import com.metrolist.desktop.web.DesktopWebViewAvailability
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.navigation.NavigationBackHandler
 import com.metrolist.shared.ui.playback.LocalPlaybackKeyFocus
@@ -181,7 +182,11 @@ private fun installGlobalShortcutDispatcher(
                 ) {
                     return
                 }
-                super.dispatchEvent(event)
+                if (OsUtil.isWindows) {
+                    DesktopWebViewAvailability.shared.dispatchEvent { super.dispatchEvent(event) }
+                } else {
+                    super.dispatchEvent(event)
+                }
                 if (event is MouseEvent && event.id == MouseEvent.MOUSE_RELEASED && event.button == MouseEvent.BUTTON1) {
                     EventQueue.invokeLater { restorePointerFocus() }
                 }

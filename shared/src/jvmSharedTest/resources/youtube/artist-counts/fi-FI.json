@@ -1,0 +1,41 @@
+{
+  "header": {
+    "musicImmersiveHeaderRenderer": {
+      "subscriptionButton": {
+        "subscribeButtonRenderer": {
+          "subscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 milj."
+              }
+            ]
+          },
+          "longSubscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 milj. tilaajaa"
+              }
+            ],
+            "accessibility": {
+              "accessibilityData": {
+                "label": "59,3 miljoonaa tilaajaa"
+              }
+            }
+          }
+        }
+      },
+      "monthlyListenerCount": {
+        "runs": [
+          {
+            "text": "240 milj. katsojaa kuukaudessa"
+          }
+        ],
+        "accessibility": {
+          "accessibilityData": {
+            "label": "240 miljoonaa katsojaa kuukaudessa"
+          }
+        }
+      }
+    }
+  }
+}

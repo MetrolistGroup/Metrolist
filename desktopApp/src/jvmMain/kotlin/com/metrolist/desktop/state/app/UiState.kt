@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.desktop.update.GitHubDesktopRelease
+import com.metrolist.desktop.utils.resolveDesktopSeedColor
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.settings.SettingsPageId
 import com.metrolist.shared.ui.theme.resolveThemeSeedColor
@@ -19,11 +20,15 @@ object UiState {
     internal var artworkSeedColor by mutableStateOf<Color?>(null)
     val seedColor: Color
         get() =
-            resolveThemeSeedColor(
-                materialYouEnabled = Settings.shared.materialYouEnabled,
-                songArtworkColorsEnabled = Settings.shared.dynamicTheme,
-                selectedThemeColor = Settings.shared.selectedThemeColor,
-                artworkSeedColor = artworkSeedColor,
+            resolveDesktopSeedColor(
+                configured =
+                    resolveThemeSeedColor(
+                        materialYouEnabled = Settings.shared.materialYouEnabled,
+                        songArtworkColorsEnabled = Settings.shared.dynamicTheme,
+                        selectedThemeColor = Settings.shared.selectedThemeColor,
+                        artworkSeedColor = artworkSeedColor,
+                    ),
+                useSystemAccent = Settings.shared.materialYouEnabled && (!Settings.shared.dynamicTheme || artworkSeedColor == null),
             )
     var isWindowFocused by mutableStateOf(false)
     var isMaximized by mutableStateOf(false)

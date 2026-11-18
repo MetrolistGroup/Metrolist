@@ -1281,7 +1281,14 @@ internal class AutomotiveMediaLibrary(
                 .dao()
                 .cachedAudioByKind(kind)
                 .first()
-                .filter { entry -> File(entry.filePath).let { it.exists() && it.length() > 0L } }
+                .filter { entry ->
+                    val legacy = LegacyAudioFile.fromPath(context, entry.filePath)
+                    if (legacy != null) {
+                        runCatching { LegacyAudioFile.read(legacy).verify() }.isSuccess
+                    } else {
+                        File(entry.filePath).let { it.exists() && it.length() > 0L }
+                    }
+                }
         if (cached.isEmpty()) return emptyList()
         val localSongs = database.dao().getSongsByIds(cached.map { it.songId }).associateBy { it.id }
         return cached.map { entry ->

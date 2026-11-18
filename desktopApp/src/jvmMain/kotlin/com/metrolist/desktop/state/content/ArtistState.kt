@@ -15,6 +15,7 @@ import com.metrolist.desktop.state.playback.DiscordRpcState
 import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.shared.api.artwork.ArtistArtworkFetchResult
 import com.metrolist.shared.api.lastfm.LastFM
+import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.error_occurred
 import com.metrolist.shared.model.ArtistItem
@@ -26,6 +27,8 @@ import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalInnerTube
 import com.metrolist.shared.state.GlobalYouTubeRepository
+import com.metrolist.shared.state.resolveArtistSubscribed
+import com.metrolist.shared.state.setArtistSubscribed
 import com.metrolist.shared.ui.components.CollectionPreviews
 import com.metrolist.shared.ui.localizedPageLoadError
 import com.metrolist.shared.ui.navigation.Screen
@@ -47,8 +50,10 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.compose.resources.getString
+import org.koin.core.context.GlobalContext
 
 object ArtistState {
+    private val database: MusicDatabase by lazy { GlobalContext.get().get() }
     private var artistLoadJob: Job? = null
     private var artistTracksJob: Job? = null
     private var artistTracksLoader: ArtistTracksLoader? = null
@@ -190,6 +195,12 @@ object ArtistState {
             AppState.scope.launch {
                 try {
                     val result = withContext(Dispatchers.IO) { GlobalYouTubeRepository.instance.getArtist(id) }
+                    val subscribed =
+                        database.resolveArtistSubscribed(
+                            GlobalYouTubeRepository.instance,
+                            id,
+                            (result.sections["header"]?.firstOrNull() as? ArtistItem)?.isSubscribed == true,
+                        )
                     if (retainedArtistId != id) return@launch
                     unfilteredArtistData = result.sections
                     artistData = markedBlockedHeader(BlockedContent.filterItemSections(unfilteredArtistData))
@@ -222,7 +233,7 @@ object ArtistState {
                         }
                     }
                     val header = (artistData["header"]?.firstOrNull() as? ArtistItem)
-                    subscription.applyBrowse(header?.isSubscribed ?: false, subscriptionRevision)
+                    subscription.applyBrowse(subscribed, subscriptionRevision)
 
                     header?.title?.let { name ->
                         loadArtistLastFmMetadata(name, header.id)
@@ -376,7 +387,15 @@ object ArtistState {
         artistSubscription
             .toggle(
                 AppState.scope,
-                request = { GlobalYouTubeRepository.instance.subscribeChannel(artistInfo.id, it) },
+                request = {
+                    database.setArtistSubscribed(
+                        GlobalYouTubeRepository.instance,
+                        artistInfo.id,
+                        artistInfo.title,
+                        it,
+                        artistInfo.thumbnail,
+                    )
+                },
                 onError = { AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred)) },
             )?.let { artistSubscriptionJob = it }
     }
@@ -407,10 +426,13 @@ object ArtistState {
                 GlobalYouTubeRepository.instance.getArtistSongs(artist.id, page) {
                     AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
                 }
-            val queue = if (shuffle) songs.shuffled() else songs
-            queue.firstOrNull()?.let {
-                if (!shuffle && PlayerState.shuffleEnabled) PlayerState.toggleShuffle()
-                PlayerState.playTrack(it, queue, songsOnly = true)
+            if (shuffle) {
+                PlayerState.shuffleQueue(songs, songsOnly = true)
+            } else {
+                songs.firstOrNull()?.let {
+                    if (PlayerState.shuffleEnabled) PlayerState.toggleShuffle()
+                    PlayerState.playTrack(it, songs, songsOnly = true)
+                }
             }
         }
     }

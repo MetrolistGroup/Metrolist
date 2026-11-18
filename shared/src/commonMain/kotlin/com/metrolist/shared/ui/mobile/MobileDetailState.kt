@@ -4,11 +4,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.metrolist.shared.api.YouTubeRepository
+import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.model.AlbumPage
 import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.ArtistPageResult
 import com.metrolist.shared.model.HomeSection
 import com.metrolist.shared.state.GlobalYouTubeRepository
+import com.metrolist.shared.state.resolveArtistSubscribed
 import com.metrolist.shared.viewmodels.ArtistSubscriptionState
 import com.metrolist.shared.viewmodels.BrowseViewModel
 import kotlinx.coroutines.CancellationException
@@ -75,12 +77,21 @@ internal class MobileDetailState(
             checkNotNull(repository.getAlbum(id))
         }.also { albumLoader = it }
 
-    fun artist(id: String): MobileDetailLoader<ArtistPageResult> =
+    fun artist(
+        id: String,
+        database: MusicDatabase,
+    ): MobileDetailLoader<ArtistPageResult> =
         artistLoader ?: MobileDetailLoader(scope) {
             val revision = subscription.revision
             repository.getArtist(id).also { page ->
                 check(page.sections.isNotEmpty()) { "Artist load failed" }
-                subscription.applyBrowse((page.sections["header"]?.firstOrNull() as? ArtistItem)?.isSubscribed == true, revision)
+                val subscribed =
+                    database.resolveArtistSubscribed(
+                        repository,
+                        id,
+                        (page.sections["header"]?.firstOrNull() as? ArtistItem)?.isSubscribed == true,
+                    )
+                subscription.applyBrowse(subscribed, revision)
             }
         }.also { artistLoader = it }
 

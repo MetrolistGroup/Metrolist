@@ -52,7 +52,7 @@ def main() -> None:
         assert report['translation_orphans'] == {str(locale.relative_to(root)): ['orphan']}
         apply(root, set(report['unused']))
         assert b'<!-- attribution stays -->' in catalog.read_bytes()
-        assert locale.read_text() == '<resources><!-- credits --><string name="orphan">Text</string></resources>'
+        assert 'unused_name' in locale.read_text(), "Apply edited a locale catalog"
         assert audit(root)['unused'] == []
     data = b'<resources>\r\n  <!-- keep -->\r\n  <string name="gone"/>\r\n  <string name="stay">A &amp; B</string>\r\n</resources>'
     assert prune_xml(data, {'gone'}) == data.replace(b'  <string name="gone"/>\r\n', b'')

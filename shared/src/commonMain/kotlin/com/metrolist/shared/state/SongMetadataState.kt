@@ -34,9 +34,12 @@ object SongMetadataState {
         val loaded: Boolean = false,
         val values: Map<String, SongDisplayMetadata> = emptyMap(),
         val durations: Map<String, Long> = emptyMap(),
+        val libraryMemberships: Map<String, Boolean> = emptyMap(),
     )
 
     private var snapshot by mutableStateOf(MetadataSnapshot())
+    var listeningTimes by mutableStateOf<Map<String, Long>>(emptyMap())
+        private set
     private val snapshotLock = SynchronizedObject()
     private val _revision = MutableStateFlow(0L)
     val revision: StateFlow<Long> = _revision.asStateFlow()
@@ -54,10 +57,25 @@ object SongMetadataState {
             synchronized(snapshotLock) {
                 this.database = database
                 snapshot = MetadataSnapshot()
+                listeningTimes = emptyMap()
                 ++bindingGeneration
             }
         collectionJob =
             scope.launch {
+                launch {
+                    database
+                        .dao()
+                        .songPlayTimes()
+                        .map { rows -> rows.associate { it.id to it.totalPlayTime } }
+                        .distinctUntilChanged()
+                        .collect { times ->
+                            synchronized(snapshotLock) {
+                                if (generation == bindingGeneration && this@SongMetadataState.database === database) {
+                                    listeningTimes = times
+                                }
+                            }
+                        }
+                }
                 combine(
                     database.dao().allSongsWithCustomMetadata().displayMetadataChanges(),
                     database
@@ -66,24 +84,31 @@ object SongMetadataState {
                         .distinctUntilChanged()
                         .map { rows -> rows.associate { it.id to it.duration } }
                         .distinctUntilChanged(),
-                ) { metadata, durations -> metadata to durations }
-                    .collect { (metadata, durations) ->
-                        synchronized(snapshotLock) {
-                            if (generation != bindingGeneration || this@SongMetadataState.database !== database) return@synchronized
-                            val reset = snapshot.values.mapValues { (_, value) -> value.copy(customTitle = null, customArtist = null) }
-                            val updated = MetadataSnapshot(loaded = true, values = reset + metadata, durations = durations)
-                            if (snapshot != updated) {
-                                snapshot = updated
-                                _revision.value++
-                            }
+                    database
+                        .dao()
+                        .songLibraryMemberships()
+                        .map { rows -> rows.associate { it.id to it.inLibrary } }
+                        .distinctUntilChanged(),
+                ) { metadata, durations, libraryMemberships ->
+                    MetadataSnapshot(loaded = true, values = metadata, durations = durations, libraryMemberships = libraryMemberships)
+                }.collect { collected ->
+                    synchronized(snapshotLock) {
+                        if (generation != bindingGeneration || this@SongMetadataState.database !== database) return@synchronized
+                        val reset = snapshot.values.mapValues { (_, value) -> value.copy(customTitle = null, customArtist = null) }
+                        val updated = collected.copy(values = reset + collected.values)
+                        if (snapshot != updated) {
+                            snapshot = updated
+                            _revision.value++
                         }
                     }
+                }
             }
         collectionJob?.invokeOnCompletion {
             synchronized(snapshotLock) {
                 if (generation == bindingGeneration && this.database === database) {
                     this.database = null
                     snapshot = MetadataSnapshot()
+                    listeningTimes = emptyMap()
                     _revision.value++
                 }
             }
@@ -129,6 +154,12 @@ object SongMetadataState {
         val displayed = song.withStoredMetadata(metadata)
         val duration = song.duration?.takeIf { it > 0L } ?: current.durations[song.id]
         return if (displayed.duration == duration) displayed else displayed.copy(duration = duration)
+    }
+
+    fun isInLibrary(song: SongItem): Boolean {
+        val current = synchronized(snapshotLock) { snapshot }
+        // History and playlist caching create rows without inLibrary, so only a saved row adds to the remote token.
+        return current.libraryMemberships[song.id] == true || song.libraryRemoveToken != null
     }
 }
 

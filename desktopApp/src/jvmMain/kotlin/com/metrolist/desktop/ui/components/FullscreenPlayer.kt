@@ -167,7 +167,6 @@ fun FullscreenPlayerView(
                         url = PlayerState.currentArtworkUrl ?: "",
                         artworkPreview = PlayerState.artworkPreview,
                         modifier = Modifier.fillMaxSize(),
-                        extractColor = true,
                         contentScale = ContentScale.Crop,
                         saturation = 1.25f,
                         blur =

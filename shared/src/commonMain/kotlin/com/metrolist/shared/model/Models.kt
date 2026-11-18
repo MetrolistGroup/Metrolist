@@ -53,6 +53,7 @@ data class SongItem(
     val playbackPositionMs: Long? = null,
     val playbackProgressPercent: Int? = null,
     override val isUnavailable: Boolean = false,
+    val downloadedAt: Long? = null,
 ) : YTItem()
 
 val SongItem.artworkExplicitness: Boolean?
@@ -413,7 +414,7 @@ val SongItem.isVideoSong: Boolean
     get() = !isUploaded && isVideoType(musicVideoType)
 
 val SongItem.isLive: Boolean
-    get() = isLiveType(musicVideoType)
+    get() = isLiveType(musicVideoType) && duration?.let { it > 0L } != true
 
 val SongItem.isOfficialMusicVideo: Boolean
     get() = isOfficialVideoType(musicVideoType)

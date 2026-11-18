@@ -35,11 +35,13 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntOffset
 import com.metrolist.android.extensions.findActivity
 
+// A fullscreen tablet's app handle reports a caption inset no taller than the status bar, which then covers the caption.
 internal fun shouldUseDesktopCaption(
     sdkInt: Int,
     captionHeight: Int,
     hasPointerDevice: Boolean,
-): Boolean = sdkInt >= Build.VERSION_CODES.VANILLA_ICE_CREAM && captionHeight > 0 && hasPointerDevice
+    statusBarHeight: Int = 0,
+): Boolean = sdkInt >= Build.VERSION_CODES.VANILLA_ICE_CREAM && captionHeight > statusBarHeight && hasPointerDevice
 
 @Composable
 internal fun DesktopCaptionBar(

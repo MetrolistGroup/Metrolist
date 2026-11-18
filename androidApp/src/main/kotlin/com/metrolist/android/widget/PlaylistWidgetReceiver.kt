@@ -12,6 +12,8 @@ import android.content.Intent
 import android.os.Bundle
 import com.metrolist.android.App
 import com.metrolist.android.playback.MusicService
+import com.metrolist.android.utils.launchAsync
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -62,8 +64,7 @@ class PlaylistWidgetReceiver :
     }
 
     private fun requestWidgetRefresh(context: Context) {
-        val pendingResult = goAsync()
-        CoroutineScope(Dispatchers.Main).launch {
+        launchAsync {
             try {
                 (context.applicationContext as App).startup.await()
                 playlistWidgetManager.updateObservation()
@@ -74,10 +75,10 @@ class PlaylistWidgetReceiver :
                     playlistWidgetManager.updateIdleWidgets()
                     if (MusicService.isRunning) requestServiceSnapshot(context)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.tag(TAG).e(e, "Failed to refresh playlist widgets")
-            } finally {
-                pendingResult.finish()
             }
         }
     }

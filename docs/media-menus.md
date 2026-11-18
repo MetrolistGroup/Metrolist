@@ -37,6 +37,8 @@ Built-in collections use the Speed Dial pin action and playlist rows: Liked song
 
 In TV playlist reorder mode, holding a song row or pressing Menu opens that row's Move actions.
 
+Menu action descriptions wrap within the menu width to keep their full text visible. `groupedMenuItemShapes` matches the outer corners of the first, last and only item to the group shape. Inner corners and Material selection and hover animations keep their existing behavior.
+
 Desktop menu hosts capture presses with the shared `contextMenuAnchor` modifier, which converts local pointer positions to window coordinates before child click handlers run. Every menu state a host opens must use that capture, including separate header and item states. Artist shelves share one item state for songs, videos, albums, playlists, related artists, podcasts and episodes.
 
 Desktop media, video, podcast episode and lyrics-panel menus share `CursorDropdownMenu` and stock Material dropdown motion. Hosts keep the selected item while dismissing so Material can finish its exit. Right-click menus start at the cursor and flip at window edges. Button menus use the trigger bounds captured by `navigationPopupSource`, leave an 8 dp gap, and open below or flip above. Tall button menus scroll within the larger space above or below the trigger. The player More menu opens beside its button, uses the window height and level-3 tonal elevation, flips sides at window edges and falls back above or below when neither side fits.
@@ -68,6 +70,8 @@ Queue keeps its rounded header container, shape and dimensions. During selection
 ## Song details
 
 `SongDetailsContent.kt` supplies shared detail content; Android and shared mobile hosts provide their sheet containers. Keep format, source and audio details tied to the active playback instance rather than stale UI metadata.
+
+Desktop song details use the shared draggable scrollbar when the content exceeds the available height. Text selection and mouse-drag scrolling remain available.
 
 ## Verification
 

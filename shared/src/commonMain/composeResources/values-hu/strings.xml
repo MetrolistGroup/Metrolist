@@ -482,7 +482,6 @@
     <string name="settings_translation_mode_summary">A szavak fordítása vagy a kiejtés átírása a célnyelv írásrendszerébe</string>
     <string name="settings_translation_provider_summary">Válaszd ki a dalszövegeket fordító szolgáltatást</string>
     <string name="settings_translation_model_summary">A dalszövegek fordításához vagy átírásához használt modell</string>
-    <string name="settings_detector_model_summary">A dalszöveg fordításának szükségességét eldöntő modell</string>
     <string name="settings_translation_formality_summary">Válassz formális vagy kötetlen nyelvezetet a DeepL-fordításokhoz</string>
     <string name="settings_discord_advanced_summary">Jelenjenek meg a tevékenységsablonok és az egyéni hivatkozásgombok</string>
     <string name="settings_discord_activity_type_summary">Válaszd ki, hogyan nevezze meg a Discord a zenei tevékenységedet</string>

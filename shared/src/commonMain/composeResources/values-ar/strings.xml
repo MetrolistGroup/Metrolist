@@ -624,7 +624,6 @@
     <string name="settings_translation_mode_summary">ترجم الكلمات أو اكتب نطقها بأحرف نظام الكتابة المستهدف</string>
     <string name="settings_translation_provider_summary">اختر الخدمة التي تترجم كلمات الأغاني</string>
     <string name="settings_translation_model_summary">النموذج المستخدم لترجمة كلمات الأغاني أو كتابة نطقها</string>
-    <string name="settings_detector_model_summary">النموذج الذي يحدد ما إذا كانت الكلمات تحتاج إلى ترجمة</string>
     <string name="settings_translation_formality_summary">اختر أسلوبًا رسميًا أو غير رسمي لترجمات DeepL</string>
     <string name="settings_discord_advanced_summary">أظهر قوالب النشاط وأزرار الروابط المخصصة</string>
     <string name="settings_discord_activity_type_summary">اختر طريقة وصف Discord لنشاطك الموسيقي</string>

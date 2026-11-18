@@ -132,6 +132,8 @@
     <!-- Translators: Imperative action label for add to queue in the multiple app screens. -->
     <string name="add_to_queue">Add to queue</string>
     <!-- Translators: Imperative action label for remove from library in the multiple app screens. -->
+    <!-- Translators: Song menu action that saves the song to the library. -->
+    <string name="add_to_library">Add to library</string>
     <string name="remove_from_library">Remove from library</string>
     <!-- Translators: Imperative action that downloads media for offline playback. -->
     <string name="action_download">Download</string>
@@ -1237,6 +1239,16 @@
     <string name="history_duration_desc">Minimum playback time before saving to history</string>
     <!-- Translators: Option or section label for blocklists in the Privacy settings. -->
     <string name="privacy_blocklists">Blocklists</string>
+    <!-- Translators: Option or section label for blocked songs in the Privacy settings. -->
+    <string name="blocked_songs">Blocked songs</string>
+    <!-- Translators: Supporting text beneath the blocked songs option in the settings. -->
+    <string name="blocked_songs_desc">Restore songs you disliked or blocked</string>
+    <!-- Translators: Empty state shown when no songs are blocked. -->
+    <string name="blocked_songs_empty">No blocked songs</string>
+    <!-- Translators: One-time message after hiding or blocking something. %1$s is a settings path such as "Settings > Privacy > Blocked artists". -->
+    <string name="content_undo_hint">You can undo this in %1$s.</string>
+    <!-- Translators: Settings navigation path; keep the separators. %1$s, %2$s and %3$s are page names. -->
+    <string name="content_undo_path">%1$s > %2$s > %3$s</string>
     <!-- Translators: Option or section label for blocked artists in the settings. -->
     <string name="blocked_artists">Blocked artists</string>
     <!-- Translators: Supporting text beneath the blocked artists option in the settings. -->
@@ -1663,6 +1675,10 @@
     <string name="updates_auto_check">Automatically check for updates</string>
     <!-- Translators: Imperative action label for notifications in the update settings. -->
     <string name="updates_notifications">Update notifications</string>
+    <!-- Translators: Switch label in the update settings for receiving nightly (daily development) builds instead of stable releases. -->
+    <string name="updates_nightly_builds">Nightly builds</string>
+    <!-- Translators: Description under the nightly builds switch in the update settings. -->
+    <string name="updates_nightly_builds_desc">Get a new build after every change. Nightly builds may be unstable.</string>
     <!-- Translators: Heading for the app sharing section in the update settings. -->
     <string name="updates_share_app">Share app</string>
     <!-- Translators: Action label to share the installed Android app APK from the update settings. -->
@@ -1788,8 +1804,6 @@
     <string name="crash_upload_disclosure" translatable="false">Crash logs can contain sensitive device and account details. Review the log before uploading it to the public paste service.</string>
     <!-- Translators: Progress or status message for uploading in the crash reporting. -->
     <string name="crash_uploading" translatable="false">Uploading crash log…</string>
-    <!-- Translators: Confirmation message about uploaded in the crash reporting. -->
-    <string name="crash_uploaded" translatable="false">Crash log uploaded</string>
     <!-- Translators: Error message about upload in the crash reporting. -->
     <string name="crash_upload_failed" translatable="false">Could not upload the crash log. You can still share it manually.</string>
     <!-- Translators: Label for paste ID in the crash reporting. %1$s is the uploaded paste identifier. -->
@@ -1827,7 +1841,6 @@
     <!-- Translators: Label for API key; retained for translation compatibility but not currently referenced by app code. -->
     <!-- Translators: Option or section label for default json array prompt in the AI lyrics translation settings. -->
     <string name="ai_default_json_array_prompt">Default precise JSON-array prompt</string>
-    <!-- Translators: Option or section label for detector model automatic only in the AI lyrics translation settings. -->
     <!-- Translators: Option or section label for prompt in the AI lyrics translation settings. -->
     <string name="ai_prompt">Prompt</string>
     <!-- Translators: Supporting text beneath the prompt line count option in the AI lyrics translation settings. -->
@@ -2290,6 +2303,18 @@
     <string name="lyrics_romanization_enable_description">Show how lyrics sound in Latin letters, for languages such as Japanese, Korean or Russian</string>
     <!-- Translators: Supporting text beneath the languages option in the lyrics romanization settings. -->
     <string name="lyrics_romanization_languages_description">Chinese hanzi-only lines need AI romanization mode for accurate pinyin</string>
+    <!-- Translators: Option label for choosing whether lyrics or romanization appears larger. -->
+    <string name="lyrics_romanization_larger_text">Larger text: Romanization or lyrics</string>
+    <!-- Translators: Supporting text beneath the larger text option in the lyrics romanization settings. -->
+    <string name="lyrics_romanization_larger_text_description">Choose whether lyrics or romanization appears larger when both are displayed.</string>
+    <!-- Translators: Option label for showing original lyrics below romanized lyrics. -->
+    <string name="lyrics_romanization_show_original">Show original</string>
+    <!-- Translators: Supporting text beneath the show original option in the lyrics romanization settings. -->
+    <string name="lyrics_romanization_show_original_description">Show the original line below</string>
+    <!-- Translators: Option label for showing romanization below original lyrics. -->
+    <string name="lyrics_romanization_show_romanization">Show romanization</string>
+    <!-- Translators: Supporting text beneath the show romanization option in the lyrics romanization settings. -->
+    <string name="lyrics_romanization_show_romanization_description">Show romanization below lyrics</string>
     <!-- Translators: Option or section label for manual in the Home and browse screens and settings. -->
     <string name="manual">Manual</string>
     <!-- Translators: Label for metadata refreshed in the Home screen. -->
@@ -2663,6 +2688,7 @@
     <!-- Translators: Label for the listening period of the last year in the My top playlist. -->
     <string name="top_period_past_year">Past year</string>
     <!-- Translators: Label for playlist reorder in the Home and browse screens. -->
+    <string name="playlist_lock">Lock</string>
     <string name="playlist_reorder">Reorder</string>
     <!-- Translators: Label for no data in the listening statistics. -->
     <string name="statistics_no_data">No data</string>
@@ -2883,10 +2909,13 @@
     <string name="remember_shuffle_and_repeat_desc">Remember shuffle and repeat mode when restarting the app</string>
     <!-- Translators: Imperative action label for export playlist in the media item menus and playlist screen. -->
     <string name="export_playlist">Export playlist</string>
+    <string name="sync_playlist">Sync playlist</string>
     <!-- Translators: Error message about export in the collection export dialog. -->
     <string name="export_failed">Failed to export playlist</string>
     <!-- Translators: Option or section label for auto download on like in the settings. -->
     <string name="auto_download_on_like">Auto download on like</string>
+    <!-- Translators: Settings switch that downloads every song of an album or playlist when it is saved to the library. -->
+    <string name="auto_download_saved_collections">Auto download saved albums and playlists</string>
     <!-- Translators: Supporting text beneath the auto download on like option; retained for translation compatibility but not currently referenced by app code. -->
     <!-- Translators: Confirmation prompt for clear song cache dialog in the settings. -->
     <string name="clear_song_cache_dialog">Clear all cached songs?</string>
@@ -2989,6 +3018,8 @@
     <string name="cast_connection_failed">Could not connect to the casting device.</string>
     <!-- Translators: Error message about playback in the casting. -->
     <string name="cast_playback_failed">The casting device could not complete that playback action.</string>
+    <string name="cast_stream_port_unavailable">Could not open TCP port 57643 for casting. Check that this network is available and no other app is using the port.</string>
+    <string name="cast_stream_unreachable">The speaker has not requested the audio stream. Check that your firewall allows incoming TCP port 57643 from the speaker and that both devices are on the same network.</string>
     <!-- Translators: Label for FCast in the Cast device dialog. -->
     <string name="fcast" translatable="false">FCast</string>
     <!-- Translators: Label for google cast in the Cast device dialog. -->
@@ -3097,6 +3128,10 @@
     <string name="listen_together_server_url">Server URL</string>
     <string name="listen_together_server_name">Server name</string>
     <string name="listen_together_server_maintainer">Maintainer</string>
+    <string name="listen_together_location_poland">Poland</string>
+    <string name="listen_together_location_custom">Custom</string>
+    <string name="listen_together_custom_server_name">Custom server</string>
+    <string name="listen_together_custom_server_maintainer">User</string>
     <string name="listen_together_edit_server">Edit server details</string>
     <!-- Translators: Label for custom server; retained for translation compatibility but not currently referenced by app code. -->
     <!-- Translators: Listen Together room connection status. -->
@@ -3174,8 +3209,6 @@
     <!-- Translators: Option or section label for model; retained for translation compatibility but not currently referenced by app code. -->
     <!-- Translators: Option or section label for translation model in the AI lyrics translation settings. -->
     <string name="ai_translation_model">Translation model</string>
-    <!-- Translators: Option or section label for judge detector model in the AI lyrics translation settings. -->
-    <string name="ai_judge_detector_model">Detector model</string>
     <!-- Translators: Option or section label for translation mode; retained for translation compatibility but not currently referenced by app code. -->
     <!-- Translators: Option or section label for target language in the AI lyrics translation settings. -->
     <string name="ai_target_language">Target language</string>
@@ -3392,6 +3425,8 @@
     <string name="account_logout_confirm">Log out?</string>
     <!-- Translators: Imperative action label for sign in in the account menu. -->
     <string name="account_sign_in">Sign in</string>
+    <string name="account_keyring_required">Metrolist needs access to your system keyring to restore your account. Unlock the keyring. Metrolist will retry automatically.</string>
+    <string name="account_linux_keyring_required">Metrolist needs a system keyring to restore your account. Install libsecret-tools or your distribution's package that provides secret-tool, and make sure your keyring is running and unlocked. Metrolist will retry automatically.</string>
     <!-- Translators: Error message about logout WebView in the account menu. -->
     <string name="account_logout_webview_failed">Signed out, but the WebView login profile could not be removed.</string>
     <!-- Translators: Error message about WebView remove in the account menu. -->
@@ -3453,6 +3488,8 @@
     <string name="spotify_import_destination_description">Create a synced YouTube Music playlist or add these songs to one you can edit.</string>
     <!-- Translators: Imperative action label for create new playlist in the Spotify playlist import. -->
     <string name="spotify_import_create_new_playlist">Create a new YouTube Music playlist</string>
+    <!-- Translators: Import destination option that saves the imported songs in a new playlist stored only in Metrolist. -->
+    <string name="spotify_import_create_new_local_playlist">Create a new local playlist</string>
     <!-- Translators: Label for existing playlists in the Spotify playlist import. -->
     <string name="spotify_import_existing_playlists">Existing playlists</string>
     <!-- Translators: Progress or status message for playlist progress; retained for translation compatibility but not currently referenced by app code. %1$d is the current playlist number; %2$d is the total playlist count. -->
@@ -3985,6 +4022,8 @@
     <!-- Translators: Imperative action label for close video fullscreen in the music video player. -->
     <string name="close_video_fullscreen">Close video fullscreen</string>
     <string name="switch_to_audio">Switch to audio</string>
+    <!-- Translators: Player menu action that plays the music video of the current song. -->
+    <string name="switch_to_video">Switch to video</string>
     <string name="prefer_word_synced_lyrics">Prefer word-synced lyrics</string>
     <string name="prefer_word_synced_lyrics_description">Search enabled sources for word timings before using line-synced or plain lyrics</string>
     <!-- Translators: Label for thumbnail in the music video player. -->
@@ -4410,6 +4449,8 @@
     <string name="tray_tooltip_playing">Playing: %1$s • %2$s</string>
     <!-- Translators: Label for tooltip paused in the desktop system tray. %1$s is the song title; %2$s is the artist name. -->
     <string name="tray_tooltip_paused">Paused: %1$s • %2$s</string>
+    <!-- Translators: Desktop window title while a song is loaded. %1$s is the song title; %2$s is the artist name. -->
+    <string name="window_title_now_playing">%1$s • %2$s</string>
     <!-- Translators: Imperative action label for pause in the desktop system tray. -->
     <string name="tray_pause">Pause</string>
     <!-- Translators: Imperative action label for play in the desktop system tray. -->
@@ -4426,6 +4467,7 @@
     <string name="desktop_minimize_to_tray_desc">Closing the window will minimize Metrolist to the tray instead</string>
     <string name="desktop_tray_toggle_on_click">Hide or show on tray click</string>
     <string name="desktop_tray_toggle_on_click_desc">Left-clicking the tray icon will open or close the Metrolist window</string>
+    <string name="desktop_tray_toggle_on_click_desc_mac">Right-clicking the tray icon will open or close the Metrolist window</string>
     <!-- Translators: Imperative action label for show miniplayer in the desktop system tray. -->
     <string name="tray_show_miniplayer">Show miniplayer</string>
     <!-- Translators: Label for tray settings in the desktop system tray. -->
@@ -4881,6 +4923,9 @@
     <string name="enable_landscape_scaling">Landscape scaling</string>
     <string name="enable_landscape_scaling_desc">Scale the interface for larger screens in landscape mode</string>
     <string name="force_bottom_navbar">Force bottom navigation bar</string>
+    <string name="density_massive">Massive (200%)</string>
+    <string name="density_huge">Huge (175%)</string>
+    <string name="density_extra_large">Extra large (150%)</string>
     <string name="density_large">Large (125%)</string>
     <string name="density_slightly_large">Slightly large (115%)</string>
     <string name="density_native">Native (100%)</string>
@@ -5130,6 +5175,8 @@
     <string name="widget_recognizer_open_result">Open identified song</string>
     <string name="statistics_load_failed">Could not refresh statistics. Try again.</string>
     <string name="desktop_platform_unsupported">This operating system is not supported by Metrolist. Use Windows 10 or later, macOS, or a Linux distribution other than Omarchy.</string>
+    <string name="desktop_omarchy_unsupported">Metrolist does not run on Omarchy. Use another Linux distribution, Windows 10 or later, or macOS.</string>
+    <string name="learn_more">Learn more</string>
     <string name="shortcut_toggle_expanded">Toggle expanded player</string>
     <string name="desktop_display_unavailable">Metrolist could not connect to this session’s X display. Launch it from your desktop session with DISPLAY set.</string>
     <string name="webkit_install_hint">Embedded sign-in requires WebKitGTK 4.1 (%1$s). Install it using your system package manager.</string>
@@ -5288,6 +5335,9 @@
     <string name="crash_clear" translatable="false">Clear</string>
     <string name="crash_close" translatable="false">Close</string>
     <string name="crash_copy_logs" translatable="false">Copy logs</string>
+    <string name="crash_screenshot_title" translatable="false">Share the crash report</string>
+    <string name="crash_screenshot_description" translatable="false">Screenshots do not include the details needed to fix a crash. Share the report link or crash log instead.</string>
+    <string name="crash_screenshot_hint" translatable="false">Share the report link or log, not a screenshot.</string>
     <string name="crash_file_size_unit_byte" translatable="false">B</string>
     <string name="crash_file_size_unit_gigabyte" translatable="false">GB</string>
     <string name="crash_file_size_unit_kilobyte" translatable="false">kB</string>
@@ -5296,6 +5346,9 @@
     <string name="crash_menu_reload" translatable="false">Reload</string>
     <string name="crash_retry" translatable="false">Retry</string>
     <string name="crash_updates_action" translatable="false">Update</string>
+    <string name="crash_updates_prompt_title" translatable="false">A newer build is available</string>
+    <string name="crash_updates_prompt_text" translatable="false">Metrolist %1$s may already fix this crash. Install it now?</string>
+    <string name="crash_updates_prompt_later" translatable="false">Not now</string>
     <string name="crash_updates_changelog" translatable="false">Changelog</string>
     <string name="crash_updates_check" translatable="false">Check for updates</string>
     <string name="crash_updates_checking" translatable="false">Checking for updates…</string>
@@ -5391,7 +5444,6 @@
     <string name="settings_translation_mode_summary">Translate words or transcribe pronunciation into the target script</string>
     <string name="settings_translation_provider_summary">Choose the service that translates lyrics</string>
     <string name="settings_translation_model_summary">Model for translating or transcribing lyrics</string>
-    <string name="settings_detector_model_summary">Model that decides whether lyrics need translation</string>
     <string name="settings_translation_formality_summary">Choose formal or casual language for DeepL translations</string>
     <string name="settings_discord_advanced_summary">Show activity templates and custom link buttons</string>
     <string name="settings_discord_activity_type_summary">Choose how Discord labels your music activity</string>

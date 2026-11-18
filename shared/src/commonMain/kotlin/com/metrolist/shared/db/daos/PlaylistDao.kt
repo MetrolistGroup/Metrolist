@@ -68,7 +68,7 @@ interface PlaylistDao {
     fun widgetPlaylists(): Flow<List<WidgetPlaylist>>
 
     @Transaction
-    @Query("SELECT * FROM playlist_song_map WHERE playlistId = :playlistId ORDER BY position")
+    @Query("SELECT * FROM playlist_song_map WHERE playlistId = :playlistId ORDER BY position, id")
     fun playlistSongs(playlistId: String): Flow<List<PlaylistSong>>
 
     @Query(
@@ -185,6 +185,59 @@ interface PlaylistDao {
         playlistIds.distinct().chunked(SQLITE_MAX_BIND_PARAMETERS).flatMap { playlistLibraryStatsChunk(it) }
 
     @Transaction
+    suspend fun moveMapping(
+        playlistId: String,
+        fromMappingId: Int,
+        toMappingId: Int,
+    ) {
+        val mappings = playlistSongMaps(playlistId, Int.MIN_VALUE)
+        val from = mappings.indexOfFirst { it.id == fromMappingId }
+        val to = mappings.indexOfFirst { it.id == toMappingId }
+        require(from >= 0 && to >= 0)
+        if (from == to) return
+        normalizePositions(playlistId, mappings)
+        move(playlistId, from, to)
+    }
+
+    @Transaction
+    suspend fun moveMappingBefore(
+        playlistId: String,
+        mappingId: Int,
+        successorMappingId: Int?,
+    ) {
+        val mappings = playlistSongMaps(playlistId, Int.MIN_VALUE)
+        val from = mappings.indexOfFirst { it.id == mappingId }
+        val successor = successorMappingId?.let { id -> mappings.indexOfFirst { it.id == id } }
+        require(from >= 0 && (successor == null || successor >= 0))
+        require(successor != from)
+        val to =
+            when {
+                successor == null -> mappings.lastIndex
+                successor > from -> successor - 1
+                else -> successor
+            }
+        normalizePositions(playlistId, mappings)
+        move(playlistId, from, to)
+    }
+
+    private suspend fun normalizePositions(
+        playlistId: String,
+        mappings: List<PlaylistSongMap>,
+    ) {
+        // Restored playlists can contain repeated positions; move one occurrence, not the whole tied group.
+        mappings.forEachIndexed { position, mapping ->
+            if (mapping.position != position) updateMappingPosition(playlistId, mapping.id, position)
+        }
+    }
+
+    @Query("UPDATE playlist_song_map SET position = :position WHERE playlistId = :playlistId AND id = :mappingId")
+    suspend fun updateMappingPosition(
+        playlistId: String,
+        mappingId: Int,
+        position: Int,
+    )
+
+    @Transaction
     @Query(
         """
         UPDATE playlist_song_map SET position =
@@ -218,7 +271,7 @@ interface PlaylistDao {
     suspend fun playlistSongMaps(songId: String): List<PlaylistSongMap>
 
     @Transaction
-    @Query("SELECT * FROM playlist_song_map WHERE playlistId = :playlistId AND position >= :from ORDER BY position")
+    @Query("SELECT * FROM playlist_song_map WHERE playlistId = :playlistId AND position >= :from ORDER BY position, id")
     suspend fun playlistSongMaps(
         playlistId: String,
         from: Int,

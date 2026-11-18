@@ -318,6 +318,12 @@ class PlayerCanvasRestoreTest {
             songsOnly: Boolean,
         ) = Unit
 
+        override fun shuffleQueue(
+            songs: List<SongItem>,
+            queueTitle: String?,
+            songsOnly: Boolean,
+        ) = Unit
+
         override fun togglePlayPause() = Unit
 
         override fun seekTo(positionMs: Long) = Unit

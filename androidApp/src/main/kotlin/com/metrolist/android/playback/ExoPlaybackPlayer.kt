@@ -1,13 +1,16 @@
 package com.metrolist.android.playback
 
+import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.Process
 import android.os.SystemClock
 import android.view.Surface
 import android.view.SurfaceHolder
@@ -53,7 +56,6 @@ import com.metrolist.shared.deviceconnect.DcLocalPlaybackState
 import com.metrolist.shared.deviceconnect.DeviceConnectControllerClock
 import com.metrolist.shared.equalizer.AudioSpectrumMeter
 import com.metrolist.shared.equalizer.EqualizerProfiles
-import com.metrolist.shared.model.MUSIC_VIDEO_TYPE_LIVE
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.isLive
 import com.metrolist.shared.playback.MusicQueue
@@ -78,6 +80,7 @@ import com.metrolist.shared.playback.findPlaybackHttpStatusCode
 import com.metrolist.shared.playback.playbackFailureCategoryFromSabr
 import com.metrolist.shared.playback.playbackNormalizationGain
 import com.metrolist.shared.playback.playbackOutputGain
+import com.metrolist.shared.playback.songsShareAlbum
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.state.GlobalYouTubeRepository
@@ -89,6 +92,7 @@ import com.metrolist.shared.youtube.playback.PlaybackBandwidthMeter
 import com.metrolist.shared.youtube.playback.PlaybackEventKind
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import com.metrolist.shared.youtube.playback.PlaybackResource
+import com.metrolist.shared.youtube.playback.matchingLiveState
 import com.metrolist.shared.youtube.playback.sabrAudioPlaybackChunks
 import com.metrolist.shared.youtube.playback.toPlaybackLogDetails
 import com.metrolist.shared.youtube.playback.withClientPlaybackNonce
@@ -197,6 +201,27 @@ internal fun shouldRestartCurrentItem(
     currentQueueIndex: Int,
 ): Boolean = playbackPositionMs >= RESTART_CURRENT_ITEM_THRESHOLD_MS || currentQueueIndex <= 0
 
+internal fun shouldWrapToLastItem(
+    repeatAll: Boolean,
+    playbackPositionMs: Long,
+    currentQueueIndex: Int,
+    lastQueueIndex: Int,
+): Boolean = repeatAll && currentQueueIndex == 0 && lastQueueIndex > 0 && playbackPositionMs < RESTART_CURRENT_ITEM_THRESHOLD_MS
+
+internal fun AndroidPlaybackPlayer.skipToPrevious(
+    repeatAll: Boolean,
+    resumePlayback: Boolean,
+) {
+    val lastIndex = songQueue.value.lastIndex
+    if (currentSong.value?.isLive != true &&
+        shouldWrapToLastItem(repeatAll, currentPosition.value, currentMediaItemIndex.value, lastIndex)
+    ) {
+        skipToQueueItem(lastIndex, resumePlayback = resumePlayback)
+    } else {
+        skipToPrevious(resumePlayback)
+    }
+}
+
 internal fun MusicQueue.selectFirstIfUnselected(): Boolean {
     if (currentSong() != null || items.value.isEmpty()) return false
     skipTo(0)
@@ -270,6 +295,23 @@ internal enum class AndroidPlaybackPlayerRole(
     PRIMARY(true),
     SECONDARY(false),
 }
+
+// Users who deny the take-audio-focus app op to mix with other apps could play in v13. Media3 refuses to play
+// when the focus request fails, so skip its focus handling for them.
+internal fun appMayTakeAudioFocus(context: Context): Boolean =
+    runCatching {
+        val appOps = context.getSystemService(AppOpsManager::class.java) ?: return true
+        val mode =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                appOps.unsafeCheckOpNoThrow(OPSTR_TAKE_AUDIO_FOCUS, Process.myUid(), context.packageName)
+            } else {
+                @Suppress("DEPRECATION")
+                appOps.checkOpNoThrow(OPSTR_TAKE_AUDIO_FOCUS, Process.myUid(), context.packageName)
+            }
+        mode != AppOpsManager.MODE_IGNORED && mode != AppOpsManager.MODE_ERRORED
+    }.getOrDefault(true)
+
+private const val OPSTR_TAKE_AUDIO_FOCUS = "android:take_audio_focus"
 
 internal fun transferPlaybackAudioFocus(
     retirePrimary: () -> Unit,
@@ -352,6 +394,7 @@ class ExoPlaybackPlayer(
     private val playerInstanceIds = WeakHashMap<Player, Long>()
     private val pendingVolumeLogs = mutableMapOf<Player, Job>()
     private val systemAudioEffects = SystemAudioEffects(this.context)
+    private var sharedAudioSessionId = Util.generateAudioSessionIdV21(this.context)
     private var exo = createPlayer()
     private val _playbackState = MutableStateFlow(exo.playbackState)
     private val tempoPitchLock = Any()
@@ -359,6 +402,7 @@ class ExoPlaybackPlayer(
     private val forwardedPlayerListeners = linkedSetOf<Player.Listener>()
     private var preferredAudioDevice: AudioDeviceInfo? = null
     private var offloadFailed = false
+    private val offloadSleepStallTracker = OffloadSleepStallTracker()
     private val progressWatchdog = PlaybackProgressWatchdog()
     private var audioOutputEnabled = true
     private var outputRecoveryState = AudioOutputRecoveryState()
@@ -367,6 +411,7 @@ class ExoPlaybackPlayer(
     private fun createPlayer(
         bufferForPlaybackMs: Int = 2_000,
         role: AndroidPlaybackPlayerRole = AndroidPlaybackPlayerRole.PRIMARY,
+        audioSessionId: Int = sharedAudioSessionId,
     ): ExoPlayer {
         val normalization = NormalizationAudioProcessor { it.normalizationGain() }
         lateinit var createdPlayer: ExoPlayer
@@ -398,16 +443,16 @@ class ExoPlaybackPlayer(
             .Builder(context)
             .setRenderersFactory(silence.renderersFactory)
             .setLoadControl(createPlaybackLoadControl(bufferForPlaybackMs))
-            .setAudioAttributes(playbackAudioAttributes, role.handlesAudioFocus)
+            .setAudioAttributes(playbackAudioAttributes, role.handlesAudioFocus && appMayTakeAudioFocus(context))
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
             .apply {
                 createdPlayer = this
+                setAudioSessionId(audioSessionId)
                 setHandleAudioBecomingNoisy(true)
                 normalizationProcessors[this] = normalization
                 silenceSupport[this] = silence
                 silence.attach(this)
-                systemAudioEffects.attach(this)
                 val player = this
                 PlaybackEventLog.info(
                     PlaybackEventKind.PLAYER,
@@ -562,6 +607,12 @@ class ExoPlaybackPlayer(
             activeVideoSourcePrepared = false
         }
     private var nextPlayer: ExoPlayer? = null
+    private var nextPlaylistIndex = C.INDEX_UNSET
+    private var nextPlaylistQueueEntryKey: Long? = null
+    private var nextPlaylistSong: SongItem? = null
+    private var nextPlaylistSourceSong: SongItem? = null
+    private var nextPlaylistPreviousPositionMs: Long? = null
+    private var nextPlaylistFailure: ((Throwable) -> Unit)? = null
     private var nextAudioSource: SeekableMediaSource? = null
     private var nextVideoSource: SeekableMediaSource? = null
     private var nextResource: PlaybackResource? = null
@@ -720,6 +771,14 @@ class ExoPlaybackPlayer(
                             "toPositionMs" to newPosition.positionMs.toString(),
                         ),
                 )
+                if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION &&
+                    nextPlaylistIndex != C.INDEX_UNSET && newPosition.mediaItemIndex == nextPlaylistIndex
+                ) {
+                    val completedInstance = currentInstance
+                    nextPlaylistPreviousPositionMs = oldPosition.positionMs.coerceAtLeast(0L)
+                    removeFinishedPlaylistItems()
+                    if (currentInstance == completedInstance) completePlaybackAtEof(oldPosition.positionMs.coerceAtLeast(0L))
+                }
             }
 
             override fun onPlaybackStateChanged(state: Int) {
@@ -860,6 +919,16 @@ class ExoPlaybackPlayer(
                 wasCanceled: Boolean,
             ) {
                 if (source !== exo) return
+                if (nextPlaylistIndex != C.INDEX_UNSET && eventTime.windowIndex == nextPlaylistIndex &&
+                    source.currentMediaItemIndex != nextPlaylistIndex
+                ) {
+                    if (wasCanceled) {
+                        val onFailure = nextPlaylistFailure
+                        cancelNextInternal()
+                        onFailure?.invoke(error)
+                    }
+                    return
+                }
                 val category = error.media3PlaybackFailureCategory()
                 if (!wasCanceled && (PlaybackNetworkRecovery.handles(category) || PlaybackRecoveryPolicy.requiresFreshUrl(category))) {
                     reportPlaybackFailure(error)
@@ -873,6 +942,14 @@ class ExoPlaybackPlayer(
         object : ExoPlayer.AudioOffloadListener {
             override fun onSleepingForOffloadChanged(sleepingForOffload: Boolean) {
                 if (source !== exo) return
+                if (sleepingForOffload && offloadRequested()) {
+                    offloadSleepStallTracker.onSleepingForOffload(
+                        nowMs = SystemClock.elapsedRealtime(),
+                        outputPosition = silenceSupport[source]?.playbackHeadPosition,
+                    )
+                } else if (!sleepingForOffload) {
+                    offloadSleepStallTracker.reset()
+                }
                 recordPlaybackState("Android offload sleep changed.")
             }
         }
@@ -1342,7 +1419,9 @@ class ExoPlaybackPlayer(
 
     override fun skipToNext(resumePlayback: Boolean) {
         advanceWithPreloadedNext(
-            ready = resumePlayback && wantsPlayback && !nextStarted && nextPlayer?.playbackState == Player.STATE_READY,
+            ready =
+                resumePlayback && wantsPlayback && !nextStarted &&
+                    (nextPlaylistIndex != C.INDEX_UNSET || nextPlayer?.playbackState == Player.STATE_READY),
             consume = { consumePreloadedNext?.invoke() == true },
             advance = { request(queue.next(), resumePlayback = resumePlayback) },
         )
@@ -1563,6 +1642,7 @@ class ExoPlaybackPlayer(
     }
 
     private fun attachPlayerListeners(player: ExoPlayer) {
+        systemAudioEffects.attach(player)
         _playbackState.value = player.playbackState
         playbackListener = createPlaybackListener(player)
         networkLoadListener = createNetworkLoadListener(player)
@@ -1641,6 +1721,8 @@ class ExoPlaybackPlayer(
         startPaused: Boolean,
         queueSongId: String,
         positionMs: Long,
+        playbackSong: SongItem?,
+        sourceSong: SongItem?,
         onFailure: (Throwable) -> Unit,
     ): AndroidPlaybackPlayer.PlaybackPreloadToken? =
         withContext(Dispatchers.Main.immediate) {
@@ -1652,7 +1734,7 @@ class ExoPlaybackPlayer(
             }
             PlaybackEventLog.info(
                 PlaybackEventKind.PLAYER,
-                "Android next player preparation started.",
+                "Android next track preparation started.",
                 videoId = resource.videoId,
                 details =
                     mapOf(
@@ -1663,6 +1745,54 @@ class ExoPlaybackPlayer(
                     ),
             )
             cancelNextInternal(preserveTransitionGain = !nextStarted && transitionGain < 1f)
+            if (currentInstance != expectedCurrentPlaybackInstanceId || currentResource?.videoId != expectedCurrentVideoId) {
+                return@withContext null
+            }
+            if (startPaused && positionMs == 0L && !resource.hasVideo && !resource.isLive &&
+                currentResource?.hasVideo == false && currentResource?.isLive == false &&
+                (
+                    !Settings.shared.crossfadeEnabled ||
+                        (Settings.shared.crossfadeGapless && songsShareAlbum(queue.currentSong(), queue.peekNext()))
+                )
+            ) {
+                return@withContext try {
+                    val mediaSource =
+                        buildSource(
+                            resource,
+                            onAudioSourceOpened = { nextAudioSource = it },
+                            onVideoSourceOpened = { nextVideoSource = it },
+                        )
+                    val token =
+                        AndroidPlaybackPlayer.PlaybackPreloadToken(
+                            generation = ++nextGeneration,
+                            playerInstanceId = instanceCounter.incrementAndGet(),
+                            videoId = resource.videoId,
+                            queueSongId = queueSongId,
+                        )
+                    nextResource = resource
+                    nextToken = token
+                    nextExpectedCurrentInstanceId = expectedCurrentPlaybackInstanceId
+                    nextExpectedCurrentVideoId = expectedCurrentVideoId
+                    nextPlaybackReporter =
+                        YouTubePlaybackReporter.create(scope, GlobalYouTubeRepository.instance).also(playbackReporters::add)
+                    nextPlaylistFailure = onFailure
+                    nextPlaylistIndex = exo.currentMediaItemIndex + 1
+                    nextPlaylistQueueEntryKey =
+                        queue.state.value.entries
+                            .getOrNull(queue.currentIndex.value + 1)
+                            ?.key
+                    nextPlaylistSourceSong = sourceSong ?: queue.peekNext()?.let(SongMetadataState::apply)
+                    nextPlaylistSong = playbackSong ?: nextPlaylistSourceSong
+                    exo.addMediaSource(nextPlaylistIndex, mediaSource)
+                    updateOffloadPreferences(exo)
+                    token
+                } catch (error: Exception) {
+                    cancelNextInternal()
+                    if (error is CancellationException) throw error
+                    onFailure(error)
+                    null
+                }
+            }
             val candidate =
                 createPlayer(
                     bufferForPlaybackMs = SWITCH_READY_BUFFER_MS.toInt(),
@@ -1925,6 +2055,7 @@ class ExoPlaybackPlayer(
         val normalizationGain = normalizationProcessors[player]?.normalizationGain
         val canOffload =
             player === exo && normalizationGain != null &&
+                (nextPlaylistIndex == C.INDEX_UNSET || nextResource.normalizationGain() == 1f) &&
                 AudioOffloadEligibility(
                     equalizer = EqualizerProfiles.configuration,
                     normalizationGain = normalizationGain,
@@ -1972,13 +2103,11 @@ class ExoPlaybackPlayer(
         }
         updateOffloadPreferences(exo)
         nextPlayer?.let { updateOffloadPreferences(it) }
-        // Output gain also covers PCM already buffered by a paused preload.
         exo.volume =
             playbackOutputGain(
                 effectivePlaybackVolume(_volume.value, audioOutputEnabled),
                 sleepTimerGain,
                 transitionGain,
-                (normalizationProcessors[exo]?.normalizationGain ?: 1f).coerceAtMost(1f),
             )
         nextPlayer?.let { player ->
             player.volume =
@@ -1986,7 +2115,6 @@ class ExoPlaybackPlayer(
                     effectivePlaybackVolume(_volume.value, audioOutputEnabled),
                     sleepTimerGain,
                     nextTransitionGain,
-                    (normalizationProcessors[player]?.normalizationGain ?: 1f).coerceAtMost(1f),
                 )
         }
     }
@@ -2001,6 +2129,7 @@ class ExoPlaybackPlayer(
 
     override fun startNextPlayback(): Boolean {
         if (playbackTransitions.recovering) return false
+        if (nextPlaylistIndex != C.INDEX_UNSET) return exo.currentMediaItemIndex == nextPlaylistIndex
         val candidate = nextPlayer ?: return false
         if (nextFailed || candidate.playerError != null || candidate.playbackState == Player.STATE_ENDED) return false
         nextStarted = true
@@ -2026,13 +2155,14 @@ class ExoPlaybackPlayer(
     }
 
     private fun syncNextPlayback() {
+        if (nextStarted) nextPlayer?.let(systemAudioEffects::attach)
         nextPlayer?.playWhenReady =
             exo.playWhenReady && nextStarted && !nextHeldAtStart &&
             exo.playbackSuppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
     }
 
     override fun isPreloadedPlaybackActive(token: AndroidPlaybackPlayer.PlaybackPreloadToken): Boolean {
-        val candidate = nextPlayer ?: return false
+        val candidate = if (nextPlaylistIndex != C.INDEX_UNSET) exo else nextPlayer ?: return false
         return token == nextToken &&
             !nextFailed &&
             candidate.playerError == null &&
@@ -2069,13 +2199,55 @@ class ExoPlaybackPlayer(
     }
 
     private fun cancelNextIfQueueTargetChanged() {
-        if (isPreloadedQueueTargetChanged(nextToken, queue.peekNext()?.id)) cancelNextInternal()
+        if (isPreloadedQueueTargetChanged(nextToken, queue.peekNext()?.id) ||
+            (
+                nextPlaylistIndex != C.INDEX_UNSET &&
+                    nextPlaylistQueueEntryKey !=
+                    queue.state.value.entries
+                        .getOrNull(queue.currentIndex.value + 1)
+                        ?.key
+            )
+        ) {
+            cancelNextInternal()
+        }
+    }
+
+    private fun removeFinishedPlaylistItems() {
+        val currentIndex = exo.currentMediaItemIndex
+        if (currentIndex <= 0) return
+        // Queue promotion can run later, so keep its preload index aligned with the trimmed playlist.
+        if (nextPlaylistIndex != C.INDEX_UNSET) nextPlaylistIndex -= currentIndex
+        exo.removeMediaItems(0, currentIndex)
     }
 
     private fun cancelNextInternal(preserveTransitionGain: Boolean = false) {
         nextGeneration++
-        val candidate = nextPlayer
+        val playlistIndex = nextPlaylistIndex
+        val isPlayingPreload = playlistIndex in 0 until exo.mediaItemCount && playlistIndex == exo.currentMediaItemIndex
         val token = nextToken
+        val resource = nextResource
+        if (isPlayingPreload && token != null && resource != null) {
+            val selectedSong = nextPlaylistSong
+            val sourceSong = nextPlaylistSourceSong
+            val queueSong = queue.peekNext()?.let(SongMetadataState::apply)
+            val song =
+                if (selectedSong != null && sourceSong != null && queueSong != null) {
+                    mergeSelectedQueueSong(selectedSong, sourceSong, queueSong)
+                } else {
+                    selectedSong
+                }
+            if (swapToPreloaded(token, resource, song, 1f)) return
+        }
+        val restorePositionMs = nextPlaylistPreviousPositionMs ?: _currentPosition.value
+        if (isPlayingPreload) exo.stop()
+        nextPlaylistIndex = C.INDEX_UNSET
+        nextPlaylistQueueEntryKey = null
+        nextPlaylistSong = null
+        nextPlaylistSourceSong = null
+        nextPlaylistPreviousPositionMs = null
+        nextPlaylistFailure = null
+        if (playlistIndex in 0 until exo.mediaItemCount && !isPlayingPreload) exo.removeMediaItem(playlistIndex)
+        val candidate = nextPlayer
         val reporter = nextPlaybackReporter
         val listener = nextPlayerListener
         val audioSource = nextAudioSource
@@ -2101,8 +2273,8 @@ class ExoPlaybackPlayer(
                 videoSource?.closePlaybackSource()
             },
             stopReporting = {
-                if (token != null && reporter != null && candidate != null) {
-                    reporter.onPlaybackStopped(token.playerInstanceId, candidate.currentPosition.coerceAtLeast(0L))
+                if (token != null && reporter != null) {
+                    reporter.onPlaybackStopped(token.playerInstanceId, candidate?.currentPosition?.coerceAtLeast(0L) ?: 0L)
                     retirePlaybackReporter(reporter)
                 }
             },
@@ -2110,7 +2282,39 @@ class ExoPlaybackPlayer(
         )
         if (!preserveTransitionGain) transitionGain = 1f
         nextTransitionGain = 0f
+        if (isPlayingPreload) restoreCurrentPlaylistItem(restorePositionMs)
         applyPlaybackGains()
+    }
+
+    private fun restoreCurrentPlaylistItem(positionMs: Long) {
+        val resource = currentResource ?: return
+        sabrPlaybackCache.release(activeAudioSource)
+        activeAudioSource?.closePlaybackSource()
+        activeVideoSource?.closePlaybackSource()
+        activeAudioSource = null
+        activeVideoSource = null
+        try {
+            val source =
+                buildSource(
+                    resource,
+                    onAudioSourceOpened = { activeAudioSource = it },
+                    onVideoSourceOpened = { activeVideoSource = it },
+                    deferAudioStart = true,
+                )
+            activeAudioSource?.updatePlaybackPosition(positionMs)
+            recordSeek(exo, positionMs, PlaybackSeekSource("queue_restore", mapOf("reason" to "cancel_playing_preload")), resource.videoId)
+            exo.setMediaSource(source, positionMs)
+            exo.prepare()
+            sabrPlaybackCache.start(
+                currentSongValue?.id ?: resource.videoId,
+                resource,
+                activeAudioSource,
+                exo.isPlaying,
+                newPlayback = false,
+            )
+        } catch (error: Exception) {
+            reportPlaybackFailure(error)
+        }
     }
 
     private fun swapToPreloaded(
@@ -2119,7 +2323,9 @@ class ExoPlaybackPlayer(
         playbackSong: SongItem?,
         initialTransitionGain: Float,
     ): Boolean {
-        val candidate = nextPlayer ?: return false
+        val playlistIndex = nextPlaylistIndex
+        val usesPlaylist = playlistIndex != C.INDEX_UNSET
+        val candidate = if (usesPlaylist) exo else nextPlayer ?: return false
         if (
             token != nextToken ||
             resource != nextResource ||
@@ -2131,6 +2337,14 @@ class ExoPlaybackPlayer(
         ) {
             return false
         }
+        if (usesPlaylist &&
+            nextPlaylistQueueEntryKey !=
+            queue.state.value.entries
+                .getOrNull(queue.currentIndex.value + 1)
+                ?.key
+        ) {
+            return false
+        }
         val queueSong = queue.peekNext()?.takeIf { it.id == token.queueSongId } ?: return false
         val song = playbackSong ?: queueSong
         if (song.id != resource.videoId) return false
@@ -2138,15 +2352,20 @@ class ExoPlaybackPlayer(
         val previous = exo
         val previousReporter = playbackReporter
         val previousInstance = currentInstance
-        val previousPosition = previous.currentPosition.coerceAtLeast(0L)
+        val previousPosition = nextPlaylistPreviousPositionMs ?: previous.currentPosition.coerceAtLeast(0L)
         val shouldPlay = previous.playWhenReady
-        removeVideoSurface(previous, activeVideoSurface)
-        detachPlayerListeners(previous)
+        if (usesPlaylist) {
+            if (candidate.currentMediaItemIndex != playlistIndex) candidate.seekTo(playlistIndex, 0L)
+        } else {
+            removeVideoSurface(previous, activeVideoSurface)
+            detachPlayerListeners(previous)
+        }
         nextProgressJob?.cancel()
         nextProgressJob = null
         nextPlayerListener?.let(candidate::removeListener)
         nextPlayerListener = null
         exo = candidate
+        if (!usesPlaylist) offloadSleepStallTracker.reset()
         sabrPlaybackCache.release(activeAudioSource)
         activeAudioSource?.closePlaybackSource()
         activeVideoSource?.closePlaybackSource()
@@ -2154,6 +2373,12 @@ class ExoPlaybackPlayer(
         activeVideoSource = nextVideoSource
         updateVideoProducer(activeVideoSource, activeVideoSurface != null)
         nextPlayer = null
+        nextPlaylistIndex = C.INDEX_UNSET
+        nextPlaylistQueueEntryKey = null
+        nextPlaylistSong = null
+        nextPlaylistSourceSong = null
+        nextPlaylistPreviousPositionMs = null
+        nextPlaylistFailure = null
         nextAudioSource = null
         nextVideoSource = null
         nextResource = null
@@ -2173,12 +2398,7 @@ class ExoPlaybackPlayer(
         minimumPositionMs = candidate.currentPosition.coerceAtLeast(0L)
         _currentPosition.value = minimumPositionMs
         _bufferedPosition.value = candidate.bufferedPosition.coerceAtLeast(0L)
-        val effectiveSong =
-            if (resource.isLive && !song.isLive) {
-                song.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE)
-            } else {
-                song
-            }
+        val effectiveSong = song.matchingLiveState(resource)
         _duration.value =
             playbackDurationMs(
                 backendDurationMs = candidate.duration,
@@ -2186,25 +2406,30 @@ class ExoPlaybackPlayer(
                 playbackPrepared = true,
                 isLive = resource.isLive || effectiveSong.isLive || candidate.isCurrentMediaItemLive,
             )
-        attachPlayerListeners(candidate)
+        if (!usesPlaylist) attachPlayerListeners(candidate)
         setVideoTrackEnabled(candidate, activeVideoSurface != null)
         applyVideoSurface(candidate, activeVideoSurface)
         transitionGain = initialTransitionGain.coerceIn(0f, 1f)
         nextTransitionGain = 0f
-        transferPlaybackAudioFocus(
-            retirePrimary = {
-                previous.playWhenReady = false
-                releasePlayer(previous)
-            },
-            enablePromotedPlayer = {
-                applyPlaybackGains()
-                candidate.setAudioAttributes(playbackAudioAttributes, true)
-                candidate.playWhenReady = shouldPlay
-            },
-        )
+        if (usesPlaylist) {
+            removeFinishedPlaylistItems()
+            applyPlaybackGains()
+        } else {
+            transferPlaybackAudioFocus(
+                retirePrimary = {
+                    previous.playWhenReady = false
+                    releasePlayer(previous)
+                },
+                enablePromotedPlayer = {
+                    applyPlaybackGains()
+                    candidate.setAudioAttributes(playbackAudioAttributes, appMayTakeAudioFocus(context))
+                    candidate.playWhenReady = shouldPlay
+                },
+            )
+        }
         _isPlaying.value = candidate.isPlaying
         queue.next()
-        if (effectiveSong.id != queueSong.id || (effectiveSong.isLive && !queueSong.isLive)) queue.replaceCurrent(effectiveSong)
+        if (effectiveSong.id != queueSong.id || effectiveSong.isLive != queueSong.isLive) queue.replaceCurrent(effectiveSong)
         sabrPlaybackCache.start(effectiveSong.id, resource, activeAudioSource, candidate.isPlaying, newPlayback = true)
         onPreloadedPlaybackCommitted?.invoke(effectiveSong, resource)
         currentSongValue = effectiveSong
@@ -2212,7 +2437,7 @@ class ExoPlaybackPlayer(
         _loadError.value = null
         PlaybackEventLog.info(
             PlaybackEventKind.PLAYER,
-            "Android next player promoted to main.",
+            if (usesPlaylist) "Android playlist advanced to next track." else "Android next player promoted to main.",
             videoId = resource.videoId,
             details =
                 mapOf(
@@ -2454,6 +2679,7 @@ class ExoPlaybackPlayer(
                     createPlayer(
                         bufferForPlaybackMs = SWITCH_READY_BUFFER_MS.toInt(),
                         role = AndroidPlaybackPlayerRole.SECONDARY,
+                        audioSessionId = if (freshAudioSession) Util.generateAudioSessionIdV21(context) else sharedAudioSessionId,
                     )
                 } else {
                     previousPlayer
@@ -2705,12 +2931,16 @@ class ExoPlaybackPlayer(
                     val surface = activeVideoSurface
                     removeVideoSurface(previousPlayer, surface)
                     detachPlayerListeners(previousPlayer)
+                    // Keep the shared effects session open while the outgoing player releases.
+                    if (!freshAudioSession) systemAudioEffects.attach(candidate)
                     replaceAudioOutput(
                         outgoing = previousPlayer,
                         incoming = candidate,
                         releaseOutgoing = { releasePlayer(previousPlayer) },
                         promoteIncoming = {
+                            offloadSleepStallTracker.reset()
                             exo = candidate
+                            if (freshAudioSession) sharedAudioSessionId = candidate.audioSessionId
                             currentResource = preparedResource
                             activeAudioSource = nextAudioSource
                             activeVideoSource = nextVideoSource
@@ -2719,7 +2949,7 @@ class ExoPlaybackPlayer(
                             attachPlayerListeners(candidate)
                             setVideoTrackEnabled(candidate, shouldEnableVideoTrackAfterWarmup(preparedResource.hasVideo, surface != null))
                             applyVideoSurface(candidate, surface)
-                            candidate.setAudioAttributes(playbackAudioAttributes, true)
+                            candidate.setAudioAttributes(playbackAudioAttributes, appMayTakeAudioFocus(context))
                             applyPlaybackGains()
                             candidate.playWhenReady = continuePlaying
                         },
@@ -2798,12 +3028,7 @@ class ExoPlaybackPlayer(
                     } else {
                         song
                     }
-                val committedSong =
-                    if (preparedResource.isLive && !baseSong.isLive) {
-                        baseSong.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE)
-                    } else {
-                        baseSong
-                    }
+                val committedSong = baseSong.matchingLiveState(preparedResource)
                 sabrPlaybackCache.release(previousAudioSource)
                 previousAudioSource?.closePlaybackSource()
                 previousVideoSource?.closePlaybackSource()
@@ -2868,7 +3093,7 @@ class ExoPlaybackPlayer(
                 }
                 eofInstance = currentInstance
                 lastEofInstance = 0L
-                if (!stageQueueReplacement && (replaceCurrentQueueItem || (preparedResource.isLive && currentQueueSong?.isLive != true))) {
+                if (!stageQueueReplacement && (replaceCurrentQueueItem || committedSong.isLive != (currentQueueSong?.isLive == true))) {
                     queue.replaceCurrent(committedSong)
                 }
                 Timber.tag(MUSIC_VIDEO_TAG).d(
@@ -2978,6 +3203,7 @@ class ExoPlaybackPlayer(
         if (controllerClock != null) return
         val isLive = currentResource?.isLive == true || currentSongValue?.isLive == true || exo.isCurrentMediaItemLive
         val position = if (isLive) getLiveSessionPositionMs() else getRealtimePositionMs()
+        val progressPosition = playbackProgressPositionMs(isLive, exo.currentPosition, position)
         _currentPosition.value = position
         _bufferedPosition.value = if (isLive) position else exo.bufferedPosition.coerceAtLeast(0L)
         _duration.value =
@@ -3022,21 +3248,39 @@ class ExoPlaybackPlayer(
             reportPlaybackFailure(streamFailure)
         }
         maybeRecoverAudioOutput()
-        if (progressWatchdog.observe(
+        if (!offloadRequested()) offloadSleepStallTracker.reset()
+        val expectProgress =
+            shouldMonitorPlaybackProgress(
+                playWhenReady = exo.playWhenReady,
+                suppressionReason = exo.playbackSuppressionReason,
+                playbackState = exo.playbackState,
+                transitionPending = playbackTransitions.pending.value,
+                offloadRequested = offloadRequested(),
+            )
+        val playbackProgressTimedOut =
+            progressWatchdog.observe(
                 playbackInstanceId = currentInstance,
-                positionMs = position,
+                positionMs = progressPosition,
                 durationMs = _duration.value,
-                expectProgress =
-                    shouldMonitorPlaybackProgress(
-                        playWhenReady = exo.playWhenReady,
-                        suppressionReason = exo.playbackSuppressionReason,
-                        playbackState = exo.playbackState,
-                        transitionPending = playbackTransitions.pending.value,
-                        offloadRequested = offloadRequested(),
-                    ),
+                expectProgress = expectProgress,
+                nowMs = now,
+            )
+        val playbackProgressStalledMs = progressWatchdog.stalledForMs(now)
+        if (offloadRequested() &&
+            offloadSleepStallTracker.shouldDisableOffload(
+                outputPosition = silenceSupport[exo]?.playbackHeadPosition,
+                expectProgress = expectProgress,
                 nowMs = now,
             )
         ) {
+            offloadFailed = true
+            updateOffloadPreferences(exo)
+            nextPlayer?.let { updateOffloadPreferences(it) }
+            recordPlaybackState(
+                "Android audio offload disabled after playback stalled.",
+                mapOf("progressStalledMs" to playbackProgressStalledMs.toString()),
+            )
+        } else if (playbackProgressTimedOut) {
             reportPlaybackFailure(
                 PlaybackException(
                     "Playback output stopped advancing",
@@ -3084,13 +3328,16 @@ class ExoPlaybackPlayer(
         activeVideoSource = null
     }
 
-    private fun completePlaybackAtEof() {
+    private fun completePlaybackAtEof() = completePlaybackAtEof(exo.currentPosition.coerceAtLeast(0L))
+
+    private fun completePlaybackAtEof(positionMs: Long) {
         if (controllerClock != null) return
         if (eofInstance != currentInstance || lastEofInstance == currentInstance) return
         val completedInstance = currentInstance
+        val completedReporter = playbackReporter
         lastEofInstance = completedInstance
         startPreloadedNextAtEof?.invoke(completedInstance)
-        playbackReporter.onPlaybackEnded(completedInstance, exo.currentPosition.coerceAtLeast(0L))
+        completedReporter.onPlaybackEnded(completedInstance, positionMs)
         onEOFPlaybackInstanceState.tryEmit(completedInstance)
     }
 
@@ -3573,6 +3820,7 @@ private fun buildAudioMediaSource(
         if (resource.isSabr) "metrolist://sabr/${resource.videoId}" else resource.url,
         resource.mimeType,
         keepBufferDuringNetworkRecovery = true,
+        tag = resource,
     )
 }
 
@@ -3671,12 +3919,14 @@ internal fun buildStreamingMediaSource(
     uri: String,
     mimeType: String?,
     keepBufferDuringNetworkRecovery: Boolean = false,
+    tag: Any? = null,
 ): MediaSource {
     val item =
         MediaItem
             .Builder()
             .setUri(uri)
             .setMimeType(mimeType)
+            .setTag(tag)
             .build()
     val type = Util.inferContentTypeForUriAndMimeType(checkNotNull(item.localConfiguration).uri, mimeType)
     val factory =
@@ -3703,6 +3953,12 @@ private fun buildDirectDataSourceFactory(
 ): DataSource.Factory {
     val size = if (video) resource.videoContentLengthBytes else resource.contentLengthBytes
     val url = if (video) checkNotNull(resource.videoUrl) else resource.url
+    if (url.startsWith("${LegacyAudioFile.SCHEME}:")) {
+        val path = checkNotNull(Uri.parse(url).path)
+        val manifest = checkNotNull(LegacyAudioFile.fromPath(context, path))
+        val source = LegacyAudioSource(manifest).also(onSourceOpened)
+        return DataSource.Factory { SeekableMediaDataSource(source) }
+    }
     val boundedHttp = url.startsWith("https://")
     if ((boundedHttp || resource.requireBoundedRange || resource.useRangeChunks) && size != null && size > 0L) {
         val source =
@@ -3842,7 +4098,7 @@ private fun resourceSummary(resource: PlaybackResource): String =
 
 private class SeekableMediaDataSource(
     private val source: SeekableMediaSource,
-) : BaseDataSource(true) {
+) : BaseDataSource(source !is LegacyAudioSource) {
     private var opened = false
     private var uri = android.net.Uri.EMPTY
     private var readPosition = 0L

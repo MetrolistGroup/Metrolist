@@ -1,0 +1,41 @@
+{
+  "header": {
+    "musicImmersiveHeaderRenderer": {
+      "subscriptionButton": {
+        "subscribeButtonRenderer": {
+          "subscriberCountText": {
+            "runs": [
+              {
+                "text": "‫59.3M‏‬"
+              }
+            ]
+          },
+          "longSubscriberCountText": {
+            "runs": [
+              {
+                "text": "‏‫59.3M‏‬‏ ‏מנויים‏"
+              }
+            ],
+            "accessibility": {
+              "accessibilityData": {
+                "label": "‏‫‏59.3 מיליון‬‏ ‏מנויים‏"
+              }
+            }
+          }
+        }
+      },
+      "monthlyListenerCount": {
+        "runs": [
+          {
+            "text": "קהל של ‫240M‏‬ צופים בחודש"
+          }
+        ],
+        "accessibility": {
+          "accessibilityData": {
+            "label": "קהל של ‫‏240 מיליון‬ צופים בחודש"
+          }
+        }
+      }
+    }
+  }
+}

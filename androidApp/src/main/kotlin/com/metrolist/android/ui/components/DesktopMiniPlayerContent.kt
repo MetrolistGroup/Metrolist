@@ -55,6 +55,7 @@ import com.metrolist.shared.generated.resources.volume
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.isLive
 import com.metrolist.shared.playback.PendingSeekPosition
+import com.metrolist.shared.settings.MiniPlayerType
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.SliderStyle
 import com.metrolist.shared.settings.displayName
@@ -71,7 +72,9 @@ internal val DesktopMiniPlayerHeight = 112.dp
 internal fun shouldUseDesktopMiniPlayer(
     useDesktopUi: Boolean,
     smallestScreenWidthDp: Int,
-): Boolean = useDesktopUi && smallestScreenWidthDp >= WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND
+    miniPlayerType: MiniPlayerType,
+): Boolean =
+    useDesktopUi && smallestScreenWidthDp >= WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND && miniPlayerType == MiniPlayerType.VINTAGE
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @UnstableApi

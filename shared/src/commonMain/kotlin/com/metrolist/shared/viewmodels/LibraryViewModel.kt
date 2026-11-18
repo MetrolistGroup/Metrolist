@@ -39,6 +39,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -61,11 +62,16 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 const val LIBRARY_REFRESH_TTL_MILLIS = 5 * 60 * 1000L
 const val LIBRARY_SEARCH_DEBOUNCE_MILLIS = 300L
 internal const val LIBRARY_SEARCH_PAGE_SIZE = 200
+
+// A refresh makes ~100 requests; retry the whole sync quietly before reporting a blip as a failure.
+private val LIBRARY_SYNC_RETRY_DELAYS = listOf(5.seconds, 15.seconds, 45.seconds)
 
 fun shouldRefreshLibrary(
     nowEpochMillis: Long,
@@ -92,6 +98,14 @@ private fun YTItem.withDownloadedState(downloadedKeys: Set<String>): YTItem =
 
 private fun YTItem.withLibraryMetadata(local: YTItem?): YTItem =
     when {
+        this is SongItem && local is SongItem -> {
+            copy(
+                downloadedAt = local.downloadedAt,
+                libraryAddedAt = local.libraryAddedAt ?: libraryAddedAt,
+                libraryUpdatedAt = local.libraryUpdatedAt ?: libraryUpdatedAt,
+            )
+        }
+
         this is ArtistItem && local is ArtistItem -> {
             copy(
                 songCount = local.songCount ?: songCount,
@@ -146,6 +160,8 @@ class LibraryViewModel(
     private val database: MusicDatabase? = null,
     private val downloadedSongIds: Flow<Set<String>>? = null,
     private val repository: YouTubeRepository = GlobalYouTubeRepository.instance,
+    private val downloadedSongDates: Flow<Map<String, Long>>? = null,
+    private val syncRetryDelays: List<Duration> = LIBRARY_SYNC_RETRY_DELAYS,
 ) {
     private val _uiState = MutableStateFlow(LibraryUiState(isLoading = database != null))
     private var downloadedKeys: Set<String> = emptySet()
@@ -171,6 +187,7 @@ class LibraryViewModel(
     private var hasRefreshedAfterHomeLoaded = false
     private var refreshInProgress = false
     private var countResolutionJob: Job? = null
+    private var syncRetryJob: Job? = null
     private var pendingRefresh = false
     private var refreshGeneration = 0L
     private var playlistDeletionVersion = 0L
@@ -201,6 +218,12 @@ class LibraryViewModel(
         searchRequest.value = request.copy(revision = request.revision + 1L)
     }
 
+    // Desktop keeps download dates outside Room, so search pages need the same hydration as library rows.
+    private suspend fun List<SongItem>.withDownloadDates(): List<SongItem> {
+        val dates = downloadedSongDates?.first() ?: return this
+        return map { it.copy(downloadedAt = dates[it.id]) }
+    }
+
     fun loadMoreContentMatches() {
         val request = loadedSearchRequest ?: return
         if (!localActive.value || !_contentSearchHasMore.value || searchPageJob?.isActive == true) return
@@ -216,6 +239,7 @@ class LibraryViewModel(
                                 descending = request.descending,
                             )
                         }.orEmpty()
+                        .withDownloadDates()
                 if (loadedSearchRequest == request && searchRequest.value == request) {
                     _contentMatchedSongs.value += page
                     _contentSearchHasMore.value = page.size == LIBRARY_SEARCH_PAGE_SIZE
@@ -294,9 +318,11 @@ class LibraryViewModel(
                 }
             }
             launch {
-                database?.dao()?.albumsLikedByCreateDateAsc()?.distinctUntilChanged()?.collect {
-                    localReloads.trySend(Unit)
-                }
+                database
+                    ?.dao()
+                    ?.albumsLikedByCreateDateAsc(includeSaved = !repository.canManagePlaylists())
+                    ?.distinctUntilChanged()
+                    ?.collect { localReloads.trySend(Unit) }
             }
             launch {
                 val dao = database?.dao() ?: return@launch
@@ -309,6 +335,9 @@ class LibraryViewModel(
                 }
             }
             launch {
+                downloadedSongDates?.distinctUntilChanged()?.collect { localReloads.trySend(Unit) }
+            }
+            launch {
                 snapshotFlow { Settings.shared.historyPlaylistsEnabled }
                     .drop(1)
                     .collect { localReloads.trySend(Unit) }
@@ -318,7 +347,16 @@ class LibraryViewModel(
                     .debounce(LIBRARY_SEARCH_DEBOUNCE_MILLIS.milliseconds)
                     .distinctUntilChanged()
                     .collectLatest { request ->
-                        val page = database?.let { contentMatchedSongs(it, request.query, descending = request.descending) }.orEmpty()
+                        val page =
+                            database
+                                ?.let {
+                                    contentMatchedSongs(
+                                        it,
+                                        request.query,
+                                        descending = request.descending,
+                                    )
+                                }.orEmpty()
+                                .withDownloadDates()
                         if (searchRequest.value == request) {
                             loadedSearchRequest = request
                             _contentMatchedSongs.value = page
@@ -329,7 +367,14 @@ class LibraryViewModel(
             localReloads.trySend(Unit)
         }
 
-    fun refresh(force: Boolean = true) {
+    fun refresh(force: Boolean = true) = refresh(force, retryAttempt = 0)
+
+    private fun refresh(
+        force: Boolean,
+        retryAttempt: Int,
+    ) {
+        syncRetryJob?.cancel()
+        syncRetryJob = null
         val accountKey = currentLibraryAccountKey()
         val accountChanged =
             observedAccountKey != accountKey ||
@@ -446,13 +491,13 @@ class LibraryViewModel(
                     "Refresh complete=$completeRefresh music=${musicResult.items.size} " +
                         "musicComplete=${musicResult.complete} podcastsOk=${podcastsResult.isSuccess} episodesOk=${episodesResult.isSuccess}",
                 )
-                _uiState.update { it.copy(isLoading = false, isRefreshing = false, error = !completeRefresh) }
                 if (completeRefresh) {
+                    _uiState.update { it.copy(isLoading = false, isRefreshing = false, error = false) }
                     Settings.shared.lastLibraryRefreshEpoch = Clock.System.now().toEpochMilliseconds()
                     Settings.shared.lastLibraryRefreshAccount = accountKey
                     YouTubeSyncState.succeeded("library")
                 } else {
-                    YouTubeSyncState.failed("library") { if (currentLibraryAccountKey() == accountKey) refresh(force = true) }
+                    onRefreshFailed(accountKey, retryAttempt)
                 }
                 localReloads.trySend(Unit)
                 countResolutionJob =
@@ -517,8 +562,7 @@ class LibraryViewModel(
             } catch (e: Exception) {
                 if (generation == refreshGeneration && currentLibraryAccountKey() == accountKey) {
                     YtLogger.e("LibrarySync", "Refresh failed type=${e::class.simpleName}")
-                    _uiState.update { it.copy(isLoading = false, isRefreshing = false, error = true) }
-                    YouTubeSyncState.failed("library") { if (currentLibraryAccountKey() == accountKey) refresh(force = true) }
+                    onRefreshFailed(accountKey, retryAttempt)
                 }
             } finally {
                 refreshInProgress = false
@@ -528,6 +572,26 @@ class LibraryViewModel(
                 }
             }
         }
+    }
+
+    private fun onRefreshFailed(
+        accountKey: String,
+        retryAttempt: Int,
+    ) {
+        val retryDelay = syncRetryDelays.getOrNull(retryAttempt)
+        _uiState.update {
+            it.copy(isLoading = retryDelay != null && it.items.isEmpty(), isRefreshing = false, error = retryDelay == null)
+        }
+        if (retryDelay == null) {
+            YouTubeSyncState.failed("library") { if (currentLibraryAccountKey() == accountKey) refresh(force = true) }
+            return
+        }
+        syncRetryJob =
+            scope.launch {
+                delay(retryDelay)
+                syncRetryJob = null
+                if (currentLibraryAccountKey() == accountKey) refresh(force = true, retryAttempt = retryAttempt + 1)
+            }
     }
 
     fun refreshAfterHomeLoaded() {
@@ -648,9 +712,12 @@ class LibraryViewModel(
                     customThumbnail = entity.customThumbnailUrl,
                 )
             }
+        val downloadDates = downloadedSongDates?.first()
         val songs =
             dao.songsByCreateDateAsc().first().filterNot { it.song.isEpisode }.map { song ->
-                song.toSongItem().copy(
+                val item = song.toSongItem()
+                item.copy(
+                    downloadedAt = if (downloadDates != null) downloadDates[song.id] else item.downloadedAt,
                     libraryAddedAt = song.song.inLibrary.toEpochMilliseconds(),
                     libraryUpdatedAt = song.song.inLibrary.toEpochMilliseconds(),
                 )
@@ -687,7 +754,7 @@ class LibraryViewModel(
                 )
             }
         val albums =
-            dao.albumsLikedByCreateDateAsc().first().map {
+            dao.albumsLikedByCreateDateAsc(includeSaved = !repository.canManagePlaylists()).first().map {
                 AlbumItem(
                     id = it.album.id,
                     isDownloaded = "album:${it.album.id}" in downloadedKeys,
@@ -706,7 +773,7 @@ class LibraryViewModel(
                             .takeIf { duration -> duration > 0 }
                             ?.toLong(),
                     playtime = it.timeListened,
-                    libraryAddedAt = it.album.bookmarkedAt.toEpochMilliseconds(),
+                    libraryAddedAt = (it.album.bookmarkedAt ?: it.album.inLibrary).toEpochMilliseconds(),
                     libraryUpdatedAt = it.album.lastUpdateTime.toEpochMilliseconds(),
                 )
             }

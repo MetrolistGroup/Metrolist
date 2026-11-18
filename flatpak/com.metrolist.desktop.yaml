@@ -18,12 +18,18 @@ finish-args:
   - --device=dri
   - --talk-name=org.freedesktop.secrets
   - --own-name=org.mpris.MediaPlayer2.metrolist
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --own-name=org.kde.StatusNotifierItem-2-1
   - --filesystem=xdg-download:rw
   - --filesystem=xdg-music:rw
 
 modules:
   - name: openjdk
     buildsystem: simple
+    # jlink rejects a JDK whose native libraries were stripped after installation.
+    build-options:
+      no-debuginfo: true
+      strip: false
     sources:
       - type: archive
         only-arches: [x86_64]
@@ -46,9 +52,10 @@ modules:
         PATH: /app/jdk/bin:/usr/bin:/bin
         JAVA_HOME: /app/jdk
     sources:
-      - type: dir
+      # Committed tree and submodules only; ignored local leftovers stay out of the build.
+      - type: git
         path: ..
-        skip-if-not-changed: false
+        branch: main
       - type: file
         path: com.metrolist.desktop.desktop
       - type: file

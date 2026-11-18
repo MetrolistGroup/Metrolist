@@ -19,12 +19,12 @@ import release_verification as release
 
 
 class PathSelectionTest(unittest.TestCase):
-    def test_common_sources_resources_and_docs_use_linux_only(self):
+    def test_common_sources_and_resources_select_all_platforms(self):
         result = ci_paths.classify([
             "shared/src/commonMain/kotlin/Player.kt", "shared/src/commonTest/kotlin/Test.kt",
             "shared/src/commonMain/composeResources/values-pl/strings.xml", "docs/checks.md",
         ])
-        self.assertEqual(result, {"android": False, "desktop": True, "ios": False, "repository": True, "arch": False, "shared-only": True})
+        self.assertEqual(result, {"android": True, "desktop": True, "ios": True, "repository": True, "shared-only": True})
 
     def test_platform_sources_and_workflows_select_only_their_platform(self):
         for key, paths in {
@@ -53,7 +53,8 @@ class PathSelectionTest(unittest.TestCase):
 
     def test_mixed_common_and_android_changes_preserve_android_tests(self):
         result = ci_paths.classify(["docs/checks.md", "androidApp/src/Player.kt"])
-        self.assertTrue(result["android"] and result["desktop"])
+        self.assertTrue(result["android"])
+        self.assertFalse(result["desktop"])
         self.assertFalse(result["shared-only"])
 
     def test_diff_failure_runs_every_check(self):
@@ -64,22 +65,87 @@ class PathSelectionTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0)
             self.assertIn("ios=true", output.read_text())
 
-    def test_shared_only_main_push_has_one_desktop_matrix_entry(self):
+    def test_automatic_runs_have_one_desktop_matrix_entry(self):
         text = (ROOT / ".github/workflows/reusable-desktop-verify.yml").read_text()
         expression = re.search(r"fromJSON\((.*?)\) }}", text, re.S)[1]
-        for shared_only in (False, True):
+        for arm64 in (False, True):
             for event in ("push", "pull_request"):
-                guard = expression.replace("inputs.shared-only", repr(shared_only)).replace("github.event_name", repr(event))
+                guard = expression.replace("!inputs.include-arm64", repr(not arm64))
                 guard = guard.replace("&&", "and").replace("||", "or")
                 matrix = json.loads(eval("(" + guard + ")", {"__builtins__": {}}))
-                self.assertEqual(len(matrix), 1 if shared_only or event == "pull_request" else 2)
+                self.assertEqual(len(matrix), 2 if arm64 else 1)
                 self.assertEqual(matrix[0]["arch"], "x64")
+
+
+class CIWorkflowTest(unittest.TestCase):
+    def test_scheduled_jobs_for_each_change_type(self):
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text()
+        jobs = dict(re.findall(r"(?ms)^  ([\w-]+):\n(.*?)(?=^  [\w-]+:|\Z)", workflow.split("jobs:\n", 1)[1]))
+        for paths, expected in (
+            (["docs/checks.md", "README.md"], {"changes"}),
+            (["shared/src/commonMain/kotlin/Player.kt"], {"changes", "android", "desktop", "ios"}),
+            (["androidApp/src/main/Player.kt"], {"changes", "android"}),
+            (["desktopApp/src/jvmMain/Player.kt"], {"changes", "desktop"}),
+            (["packaging/flatpak/manifest.json.in", "aur/PKGBUILD"], {"changes"}),
+            (["gradle/libs.versions.toml"], {"changes", "android", "desktop", "ios"}),
+        ):
+            selected = ci_paths.classify(paths)
+            scheduled = set()
+            for name, body in jobs.items():
+                condition = re.search(r"^    if: (.*)$", body, re.M)
+                if not condition or selected[re.search(r"outputs.([\w-]+)", condition[1])[1]]:
+                    scheduled.add(name)
+            self.assertEqual(scheduled, expected, paths)
+        self.assertEqual(workflow.count("uses: ./.github/actions/ci-changes"), 1)
+        self.assertIn("cancel-in-progress: true", workflow)
+        self.assertIn("assemble: ${{ github.event_name != 'push' }}", jobs["android"])
+        self.assertIn("compile: ${{ github.event_name != 'push' }}", jobs["desktop"])
+
+    def task_arguments(self, workflow, step, replacements=None, **environment):
+        from test_release_workflows import step_script
+        script = step_script(workflow, step)
+        for key, value in (replacements or {}).items():
+            script = script.replace(key, value)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "gradlew").write_text('#!/bin/bash\nprintf "%s\\n" "$@" > "$TASK_LOG"\n')
+            (root / "gradlew").chmod(0o755)
+            log = root / "tasks"
+            result = subprocess.run(["bash", "-c", script], cwd=root, capture_output=True, text=True,
+                                    env={**os.environ, "TASK_LOG": str(log), **environment})
+            self.assertEqual(result.returncode, 0, result.stderr)
+            return log.read_text().splitlines()
+
+    def test_android_keeps_tests_and_lint_without_push_assembly(self):
+        for assemble in ("true", "false"):
+            tasks = self.task_arguments("reusable-android-build.yml", "Build Android",
+                                        BUILD_VARIANT="debug", ASSEMBLE=assemble, VERIFICATION_ONLY="true")
+            for task in (":androidApp:ktlintCheck", ":androidApp:lintDebug",
+                         ":androidApp:testDebugUnitTest", ":shared:testAndroidHostTest"):
+                self.assertIn(task, tasks)
+            self.assertEqual(":androidApp:assembleDebug" in tasks, assemble == "true")
+            self.assertIn("-Pmetrolist.sourceRevision=", tasks)
+        release_tasks = self.task_arguments("reusable-android-build.yml", "Build Android",
+                                            BUILD_VARIANT="release", ASSEMBLE="true", VERIFICATION_ONLY="false")
+        self.assertIn(":androidApp:assembleRelease", release_tasks)
+        self.assertNotIn(":androidApp:testDebugUnitTest", release_tasks)
+        self.assertIn("--no-configuration-cache", release_tasks)
+
+    def test_desktop_keeps_tests_and_lint_without_push_compile_task(self):
+        for compile in ("true", "false"):
+            tasks = self.task_arguments("reusable-desktop-verify.yml", "Build and verify desktop app",
+                                        {"${{ matrix.arch }}": "x64", "${{ inputs.compile }}": compile})
+            for task in (":shared:desktopTest", ":desktopApp:jvmTest", ":desktopApp:ktlintCheck",
+                         ":shared:ktlintCheck", ":listenTogetherProto:ktlintCheck"):
+                self.assertIn(task, tasks)
+            self.assertEqual(":desktopApp:compileKotlinJvm" in tasks, compile == "true")
+            self.assertNotIn(":desktopApp:assemble", tasks)
 
 
 class ReleaseGateTest(unittest.TestCase):
     def setUp(self):
         self.sha = "a" * 40
-        self.run = dict(id=12, head_sha=self.sha, head_branch="main", event="push", path=".github/workflows/build-android.yml",
+        self.run = dict(id=12, head_sha=self.sha, head_branch="main", event="push", path=".github/workflows/ci.yml",
                         run_number=7, run_attempt=1, status="completed", conclusion="success", html_url="https://github.com/test/run/12")
         self.job = dict(name="Android / APK", conclusion="success", check_run_url="https://api.github.com/repos/test/repo/check-runs/42",
                         steps=[{"name": "Test Android string generation", "conclusion": "success"}])
@@ -93,7 +159,7 @@ class ReleaseGateTest(unittest.TestCase):
         return [{"workflow_runs": [self.run]}]
 
     def verify(self):
-        return release.verify_run("test/repo", self.sha, "build-android.yml", "Android / APK", self.api)
+        return release.verify_run("test/repo", self.sha, "ci.yml", "Android / APK", self.api)
 
     def test_accepts_a_successful_trusted_check(self):
         self.assertEqual(self.verify(), self.run["html_url"])
@@ -110,6 +176,11 @@ class ReleaseGateTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "required job"):
             self.verify()
 
+    def test_rejects_android_without_verification_steps(self):
+        self.job["steps"] = []
+        with self.assertRaisesRegex(ValueError, "lacks Android verification"):
+            self.verify()
+
     def test_rejects_check_from_another_revision_or_app(self):
         for change in ({"head_sha": "b" * 40}, {"app": {"slug": "fake"}}, {"conclusion": "skipped"}):
             with patch.dict(self.check, change), self.assertRaises(ValueError):
@@ -118,24 +189,24 @@ class ReleaseGateTest(unittest.TestCase):
     def test_latest_run_must_pass_across_all_api_pages(self):
         failed = {**self.run, "run_number": 8, "conclusion": "failure"}
         with self.assertRaisesRegex(ValueError, "latest run"):
-            release.verify_run("test/repo", self.sha, "build-android.yml", "Android / APK",
+            release.verify_run("test/repo", self.sha, "ci.yml", "Android / APK",
                                lambda _: [{"workflow_runs": [self.run]}, {"workflow_runs": [failed]}])
 
     def test_no_runs_and_api_errors_fail_closed(self):
         with self.assertRaisesRegex(ValueError, "no trusted"):
-            release.verify_run("test/repo", self.sha, "build-android.yml", "Android / APK", lambda _: [{"workflow_runs": []}])
+            release.verify_run("test/repo", self.sha, "ci.yml", "Android / APK", lambda _: [{"workflow_runs": []}])
         with patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 1, "", "secret")):
             with self.assertRaisesRegex(ValueError, "permissions"):
                 release.api("test/path")
 
     def test_non_applicable_workflow_can_be_absent_but_cannot_fail(self):
-        self.assertIsNone(release.verify_run("test/repo", self.sha, "build-android.yml", "Android / APK",
+        self.assertIsNone(release.verify_run("test/repo", self.sha, "ci.yml", "Android / APK",
                                             lambda _: [{"workflow_runs": []}], required=False))
         self.job["conclusion"] = "skipped"
-        self.assertIsNone(release.verify_run("test/repo", self.sha, "build-android.yml", "Android / APK", self.api, required=False))
+        self.assertIsNone(release.verify_run("test/repo", self.sha, "ci.yml", "Android / APK", self.api, required=False))
         self.run["conclusion"] = "failure"
         with self.assertRaises(ValueError):
-            release.verify_run("test/repo", self.sha, "build-android.yml", "Android / APK", self.api, required=False)
+            release.verify_run("test/repo", self.sha, "ci.yml", "Android / APK", self.api, required=False)
 
     def test_installer_verification_remains_available_without_serializing_releases(self):
         text = (ROOT / ".github/workflows/release.yml").read_text().split("  windows-manager:\n", 1)[1].split("  publish:", 1)[0]
@@ -233,16 +304,18 @@ class ReleaseGateTest(unittest.TestCase):
                         sys.exit(1)
                     if '/workflows/' in path:
                         runs = []
-                        if 'build-android.yml' in path and 'head_sha={source}' in path:
+                        if 'ci.yml' in path and 'head_sha={source}' in path:
                             runs = [dict(id=12, head_sha='{source}', head_branch='main', event='push',
-                                         path='.github/workflows/build-android.yml', run_number=7,
+                                         path='.github/workflows/ci.yml', run_number=7,
                                          status='completed', conclusion='failure' if os.environ.get('CHECK_FAILED') else 'success',
                                          html_url='https://github.com/test/run/12')]
                         print(json.dumps([dict(workflow_runs=runs)]))
                     elif '/jobs?' in path:
                         print(json.dumps([dict(jobs=[dict(name='Android / APK', conclusion='success',
                             check_run_url='https://api.github.com/repos/test/repo/check-runs/42',
-                            steps=[dict(name='Test Android string generation', conclusion='success')])])]))
+                            steps=[dict(name='Test Android string generation', conclusion='success')]),
+                            dict(name='Select checks and repository checks', conclusion='success',
+                            check_run_url='https://api.github.com/repos/test/repo/check-runs/43')])]))
                     else:
                         print(json.dumps([dict(head_sha='{source}', status='completed', conclusion='success', app=dict(slug='github-actions'))]))
                     '''))

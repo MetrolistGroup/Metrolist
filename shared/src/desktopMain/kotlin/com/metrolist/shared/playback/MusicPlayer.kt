@@ -447,16 +447,7 @@ class MusicPlayer(
                             )
                         }
                     }
-                stateChanged =
-                    if (waitMs == null) {
-                        sampleChanges.receive()
-                        true
-                    } else {
-                        withTimeoutOrNull(waitMs) {
-                            sampleChanges.receive()
-                            true
-                        } == true
-                    }
+                stateChanged = sampleChanges.awaitPlaybackSample(waitMs)
             }
         }
     }
@@ -1328,6 +1319,14 @@ class MusicPlayer(
             val next = nextPlayer ?: return false
             !next.hasFailed && token.generation == nextGeneration && token.playerInstanceId == nextPlaybackInstanceId &&
                 currentPlaybackInstanceId == nextExpectedCurrentInstanceId && primaryVideoId == nextExpectedCurrentVideoId
+        }
+
+    fun startNextPlayback(token: PlaybackPreloadToken): Boolean =
+        synchronized(playerLock) {
+            if (!isPreloadedNextActive(token) || nextPlayerFailed) return false
+            nextStartsPaused = false
+            if (audioPlayer.wantsPlayback) nextPlayer?.resume()
+            true
         }
 
     fun swapToNext(

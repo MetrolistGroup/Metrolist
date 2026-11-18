@@ -28,6 +28,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
@@ -41,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -110,7 +112,8 @@ fun StorageSummary(
                             addStyle(
                                 SpanStyle(fontSize = MaterialTheme.typography.displayLarge.fontSize),
                                 start,
-                                start + size.substringBeforeLast(' ').length,
+                                // Formatters may put a non-breaking space before the unit; keep the unit small.
+                                start + (size.indexOfLast(Char::isWhitespace).takeIf { it > 0 } ?: size.length),
                             )
                         }
                     },
@@ -127,11 +130,22 @@ fun StorageSummary(
             }
         }
         if (totalBytes != null && totalBytes > 0) {
+            val stopColor = MaterialTheme.colorScheme.primary
             LinearProgressIndicator(
                 progress = { storageUsageFraction(usedBytes, totalBytes) },
-                modifier = Modifier.fillMaxWidth().height(40.dp).clip(RoundedCornerShape(16.dp)),
+                modifier = Modifier.fillMaxWidth().height(40.dp).clip(RoundedCornerShape(12.dp)),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.secondaryContainer,
+                strokeCap = StrokeCap.Butt,
+                gapSize = 4.dp,
+                drawStopIndicator = {
+                    ProgressIndicatorDefaults.drawStopIndicator(
+                        drawScope = this,
+                        stopSize = ProgressIndicatorDefaults.LinearTrackStopIndicatorSize,
+                        color = stopColor,
+                        strokeCap = StrokeCap.Round,
+                    )
+                },
             )
         }
     }

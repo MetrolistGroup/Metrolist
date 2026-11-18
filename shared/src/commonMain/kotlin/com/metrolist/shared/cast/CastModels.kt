@@ -31,12 +31,15 @@ enum class CastError {
     UNSUPPORTED_STREAM,
     CONNECTION_FAILED,
     PLAYBACK_FAILED,
+    STREAM_PORT_UNAVAILABLE,
+    STREAM_UNREACHABLE,
 }
 
 data class CastState(
     val status: CastConnectionStatus = CastConnectionStatus.DISCONNECTED,
     val device: CastDevice? = null,
     val isPlaying: Boolean = false,
+    val isBuffering: Boolean = false,
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
     val volume: Float = 1f,
@@ -66,7 +69,11 @@ internal fun castPlaybackEndedNearDuration(
     isStopped: Boolean,
     positionMs: Long,
     durationMs: Long,
-): Boolean = wasPlaying && isStopped && durationMs > 0L && positionMs >= durationMs - 1_500L
+    lastPlayingPositionMs: Long = positionMs,
+    pollIntervalMs: Long = 0L,
+): Boolean =
+    wasPlaying && isStopped && durationMs > 0L &&
+        maxOf(positionMs, lastPlayingPositionMs) >= durationMs - 1_500L - pollIntervalMs.coerceAtLeast(0L)
 
 fun CastState.forQueueEntry(queue: MusicQueueState): CastState? {
     val current = queue.entries.getOrNull(queue.currentIndex) ?: return null

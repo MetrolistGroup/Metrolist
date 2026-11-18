@@ -60,7 +60,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -159,6 +159,7 @@ import com.metrolist.shared.ui.utils.desktopArrowScroll
 import com.metrolist.shared.ui.utils.segmentedGroupShape
 import com.metrolist.shared.ui.utils.toPolygonShape
 import com.metrolist.shared.utils.formatDuration
+import com.metrolist.shared.utils.isPullToRefreshSupported
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.pluralStringResource
@@ -323,23 +324,17 @@ fun StatisticsScreen(
                                 snapshotFlow { isLoading }.first { !it }
                                 userRefreshing = false
                             }
-                            PullToRefreshBox(
-                                isRefreshing = userRefreshing,
-                                onRefresh = {
-                                    userRefreshing = true
-                                    if (!isLoading) onRefresh?.invoke()
-                                },
-                                state = pullState,
-                                modifier = Modifier.weight(1f).fillMaxWidth(),
-                                indicator = {
-                                    if (onRefresh != null) {
-                                        RefreshIndicator(
-                                            state = pullState,
-                                            isRefreshing = userRefreshing,
-                                            modifier = Modifier.align(Alignment.TopCenter),
-                                        )
-                                    }
-                                },
+                            Box(
+                                modifier =
+                                    Modifier.weight(1f).fillMaxWidth().pullToRefresh(
+                                        isRefreshing = userRefreshing,
+                                        enabled = isPullToRefreshSupported && onRefresh != null && !listState.canScrollBackward,
+                                        onRefresh = {
+                                            userRefreshing = true
+                                            if (!isLoading) onRefresh?.invoke()
+                                        },
+                                        state = pullState,
+                                    ),
                             ) {
                                 DragScrollableColumn(
                                     state = listState,
@@ -420,6 +415,13 @@ fun StatisticsScreen(
                                             ) { HourlyActivityChart(state.hourlyStats) }
                                         }
                                     }
+                                }
+                                if (isPullToRefreshSupported && onRefresh != null) {
+                                    RefreshIndicator(
+                                        state = pullState,
+                                        isRefreshing = userRefreshing,
+                                        modifier = Modifier.align(Alignment.TopCenter),
+                                    )
                                 }
                             }
                         }

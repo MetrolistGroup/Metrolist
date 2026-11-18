@@ -54,6 +54,55 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class DiscordReconnectTest {
     @Test
+    fun freshConnectionClearsStalePresenceBeforePublishing() =
+        runTest {
+            withManager(refreshAvailable = true) { server, _ ->
+                assertEquals(listOf("clear"), server.presenceEvents)
+                DiscordRpcManager.setActivity(activity("Track"), "song")
+                runCurrent()
+                assertEquals(listOf("clear", "publish"), server.presenceEvents)
+            }
+        }
+
+    @Test
+    fun shutdownClearsBeforeClosingAndReopenPublishesAgain() =
+        runTest {
+            withManager(refreshAvailable = true) { server, _ ->
+                DiscordRpcManager.setActivity(activity("Track"), "song")
+                runCurrent()
+                server.presenceEvents.clear()
+                DiscordRpcManager.destroy()
+                runCurrent()
+                assertEquals(listOf("clear", "close"), server.presenceEvents)
+                assertEquals(DiscordRpcManager.Status.Disconnected, DiscordRpcManager.connectionStatus.value)
+
+                DiscordRpcManager.init(checkNotNull(clientForRestart), StandardTestDispatcher(testScheduler))
+                DiscordRpcManager.setActivity(activity("Resumed"), "song")
+                runCurrent()
+                assertEquals(listOf("clear", "close", "clear", "publish"), server.presenceEvents)
+                assertEquals("Resumed", server.lastDetails)
+            }
+        }
+
+    @Test
+    fun cancelledShutdownCallerStillClearsPresenceAndCloses() =
+        runTest {
+            withManager(refreshAvailable = true) { server, _ ->
+                DiscordRpcManager.setActivity(activity("Track"), "song")
+                runCurrent()
+                server.presenceEvents.clear()
+                val shutdown =
+                    launch {
+                        coroutineContext.cancel()
+                        DiscordRpcManager.destroy()
+                    }
+                shutdown.join()
+                runCurrent()
+                assertEquals(listOf("clear", "close"), server.presenceEvents)
+            }
+        }
+
+    @Test
     fun timedOutHandshakesRetryAndReplayPresenceWithoutLifecycleChanges() =
         runTest {
             withManager(refreshAvailable = true, settingsVisible = false, stalledHandshakes = 2) { server, _ ->
@@ -531,6 +580,7 @@ class DiscordReconnectTest {
         server.stalledHandshakes = stalledHandshakes
         val dispatcher = StandardTestDispatcher(testScheduler)
         val client = server.client(dispatcher)
+        clientForRestart = client
         try {
             DiscordRpcManager.init(client, dispatcher)
             runCurrent()
@@ -547,8 +597,11 @@ class DiscordReconnectTest {
             discordSettingsVisible = false
             PlaybackNetworkStateStore.publish(previousNetwork)
             Settings.replaceSharedForTest(null)
+            clientForRestart = null
         }
     }
+
+    private var clientForRestart: HttpClient? = null
 
     private class TestServer(
         private val scope: TestScope,
@@ -563,6 +616,7 @@ class DiscordReconnectTest {
         var handshakes = 0
         var cancelledHandshakes = 0
         var clears = 0
+        val presenceEvents = mutableListOf<String>()
         var heartbeats = 0
         var lastDetails: String? = null
         var profileGate: CompletableDeferred<Unit>? = null
@@ -660,6 +714,7 @@ class DiscordReconnectTest {
             scope.backgroundScope.launch {
                 for (frame in session.outgoing) {
                     if (frame is Frame.Close) {
+                        presenceEvents += "close"
                         session.incoming.trySend(frame)
                         session.incoming.close()
                         break
@@ -695,6 +750,7 @@ class DiscordReconnectTest {
                                     ?.isNotEmpty() == true
                             ) {
                                 presenceCount++
+                                presenceEvents += "publish"
                                 lastDetails =
                                     json["d"]!!
                                         .jsonObject["activities"]!!
@@ -706,6 +762,7 @@ class DiscordReconnectTest {
                                 presence.complete(Unit)
                             } else {
                                 clears++
+                                presenceEvents += "clear"
                             }
                         }
                     }

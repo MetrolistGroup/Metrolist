@@ -2,6 +2,7 @@ package com.metrolist.shared.youtube.extraction
 
 import com.metrolist.innertubex.extraction.strategy.PlaybackClientCatalog
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.isLive
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.youtube.extraction.models.automaticVideoMaxHeight
 import com.metrolist.shared.youtube.extraction.models.toContentHints
@@ -17,6 +18,36 @@ import kotlin.test.assertTrue
 
 class ContentHintsTest {
     private val previousNetwork = PlaybackNetworkStateStore.current
+
+    @Test
+    fun finiteLivePerformancesUseVodPlaybackEvenWithAPersistedLiveType() {
+        val previousSettings = Settings.sharedOverrideForTest()
+        Settings.replaceSharedForTest(Settings(MapSettings()))
+        try {
+            val song =
+                SongItem(
+                    id = "recording",
+                    title = "Track (Live at Wembley)",
+                    thumbnail = null,
+                    artists = emptyList(),
+                    album = null,
+                    duration = 240,
+                    musicVideoType = "MUSIC_VIDEO_TYPE_LIVE",
+                )
+            assertFalse(song.isLive)
+            assertEquals(null, song.toContentHints().isLive)
+            assertEquals(null, song.toContentHints().playbackClientOverrideId)
+            assertTrue(song.toContentHints().wantVideo)
+            for (duration in listOf(null, 0L)) {
+                val live = song.copy(duration = duration)
+                assertTrue(live.isLive)
+                assertEquals(true, live.toContentHints().isLive)
+                assertEquals("ANDROID", live.toContentHints().playbackClientOverrideId)
+            }
+        } finally {
+            Settings.replaceSharedForTest(previousSettings)
+        }
+    }
 
     @Test
     fun automaticAudioPrefersDirectAndManualOverridesKeepTheirSelection() {

@@ -16,10 +16,8 @@ import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import androidx.core.net.toUri
-import androidx.media3.database.StandaloneDatabaseProvider
-import androidx.media3.datasource.cache.ContentMetadata
-import androidx.media3.datasource.cache.NoOpCacheEvictor
-import androidx.media3.datasource.cache.SimpleCache
+import androidx.media3.common.ParserException
+import androidx.media3.exoplayer.offline.Download
 import coil3.annotation.ExperimentalCoilApi
 import coil3.decode.BlackholeDecoder
 import coil3.imageLoader
@@ -61,6 +59,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import okhttp3.Call
 import okhttp3.OkHttpClient
@@ -146,7 +145,7 @@ internal fun cacheableAudioResource(
     now: Instant = Clock.System.now(),
 ): PlaybackResource? =
     resource?.takeIf {
-        (it.isDirectFile || it.isSabr) && it.profileId != "cached-audio" && !it.url.startsWith("file:") &&
+        (it.isDirectFile || it.isSabr) && it.profileId != CACHED_AUDIO_PROFILE_ID && !it.url.startsWith("file:") &&
             (it.expiresAt?.let { expiry -> expiry > now + 60.seconds } != false)
     }
 
@@ -296,13 +295,31 @@ class AudioCacheManager(
             if (touch) database.dao().touchCachedAudio(songId, System.currentTimeMillis(), System.currentTimeMillis() - 60_000L)
             PlaybackResource(
                 videoId = songId,
-                url = entry.filePath.takeIf(::isContentUri) ?: File(entry.filePath).toUri().toString(),
+                url =
+                    when {
+                        isContentUri(entry.filePath) -> {
+                            entry.filePath
+                        }
+
+                        LegacyAudioFile.fromPath(context, entry.filePath) != null -> {
+                            File(entry.filePath)
+                                .toUri()
+                                .buildUpon()
+                                .scheme(LegacyAudioFile.SCHEME)
+                                .build()
+                                .toString()
+                        }
+
+                        else -> {
+                            File(entry.filePath).toUri().toString()
+                        }
+                    },
                 headers = emptyMap(),
                 loudnessDb = null,
                 expiresAt = null,
                 contentLengthBytes = fileSize.takeIf { it >= 0L },
                 clientName = "local",
-                profileId = "cached-audio",
+                profileId = CACHED_AUDIO_PROFILE_ID,
                 requireBoundedRange = false,
                 allowPlaybackTrackingFallback = !song.isLocal && !song.isUploaded && !song.isPodcast && !song.id.startsWith("local_"),
             ).withCachedFormat(database.dao().format(songId).first())
@@ -433,6 +450,9 @@ class AudioCacheManager(
         }
 
     suspend fun removeDownload(songId: String): Boolean = removeAudio(songId, KIND_DOWNLOAD)
+
+    // A corrupt cached file fails on every play; dropping it lets the next play stream and cache again.
+    suspend fun removeCorruptCache(songId: String): Boolean = removeAudio(songId, KIND_CACHE)
 
     suspend fun removeCache(
         songId: String,
@@ -572,7 +592,13 @@ class AudioCacheManager(
                                 copiedFile,
                                 "audio/webm",
                                 publicStorage = true,
-                                metadata = AudioExportMetadata(candidate.title, candidate.artist, candidate.album),
+                                metadata =
+                                    AudioExportMetadata(
+                                        candidate.title,
+                                        candidate.artist,
+                                        candidate.album,
+                                        downloadedArtwork.exportArtwork(candidate.thumbnailUrl),
+                                    ),
                                 export = export,
                             )
                         val size = source.length()
@@ -616,94 +642,95 @@ class AudioCacheManager(
             }
         }
 
-    /**
-     * Moves downloads made by the legacy v13 app, which kept them in an ExoPlayer cache keyed by song id,
-     * into internal download storage. Imported entries leave the legacy cache one by one, so a failed run
-     * resumes on the next storage audit; the cache directory is removed once every entry is handled.
-     */
-    internal suspend fun importLegacyDownloads(directory: File = File(context.filesDir, LEGACY_DOWNLOAD_DIRECTORY)) =
-        withContext(Dispatchers.IO) {
-            if (!directory.isDirectory) return@withContext
-            // The legacy app indexed this cache in StandaloneDatabaseProvider's database; SimpleCache deletes spans it cannot index.
-            val databaseProvider = StandaloneDatabaseProvider(context)
-            val cache = SimpleCache(directory, NoOpCacheEvictor(), databaseProvider)
-            var failure: Exception? = null
-            try {
-                for (songId in cache.keys.toList()) {
-                    try {
-                        storageLock.song(songId) { importLegacyDownload(cache, songId) }
-                        cache.removeResource(songId)
-                    } catch (cancelled: CancellationException) {
-                        throw cancelled
-                    } catch (error: Exception) {
-                        Timber.tag(TAG).w(error, "Failed to import legacy download songId=%s", songId)
-                        if (failure == null) failure = error
-                    }
+    internal fun needsLegacyAudioImport(): Boolean =
+        !File(context.filesDir, LEGACY_IMPORT_COMPLETE).exists() &&
+            listOf(LEGACY_DOWNLOAD_DIRECTORY, LEGACY_PLAYER_DIRECTORY).any { File(context.filesDir, it).isDirectory }
+
+    // Index spans in place so recovery needs no second copy and never opens a destructive SimpleCache.
+    internal suspend fun importLegacyDownloads(
+        directory: File = File(context.filesDir, LEGACY_DOWNLOAD_DIRECTORY),
+        playerDirectory: File = File(context.filesDir, LEGACY_PLAYER_DIRECTORY),
+    ) = withContext(Dispatchers.IO) {
+        storageLock.all {
+            database.dao().restoreDownloadDates()
+            val snapshot = readLegacyCache(context, directory, playerDirectory)
+            var failure: Exception? = snapshot.failures.firstOrNull()
+            for (entry in snapshot.entries) {
+                try {
+                    val download = snapshot.downloads.find { it.key == entry.key || it.songId == entry.key }
+                    val songId = download?.songId ?: entry.key
+                    importLegacyAudio(entry, download, songId)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    Timber.tag(TAG).w(error, "Failed to import legacy audio key=%s; retaining spans", entry.key)
+                    if (failure == null) failure = error
                 }
-            } finally {
-                cache.release()
             }
             failure?.let { throw it }
-            SimpleCache.delete(directory, databaseProvider)
+            File(context.filesDir, LEGACY_IMPORT_COMPLETE).writeText("")
         }
+    }
 
-    private suspend fun importLegacyDownload(
-        cache: SimpleCache,
+    private suspend fun importLegacyAudio(
+        entry: LegacyCacheEntry,
+        download: LegacyDownload?,
         songId: String,
     ) {
-        val length = ContentMetadata.getContentLength(cache.getContentMetadata(songId))
-        // Partial entries were never completed downloads in the legacy app.
-        if (length <= 0L || !cache.isCached(songId, 0L, length)) return
-        val song = database.dao().song(songId).first() ?: return
-        if (isDownloaded(songId)) return
-        val downloads = internalDirectory(KIND_DOWNLOAD).also(File::mkdirs)
-        check(downloads.usableSpace - length >= MIN_FREE_SPACE_BYTES) { "Not enough space to import legacy download" }
-        val safeId = songId.replace(Regex("[^A-Za-z0-9._-]"), "_")
-        val temporary = File(downloads, "$safeId.legacy.tmp")
-        try {
-            temporary.outputStream().use { output ->
-                var position = 0L
-                cache.getCachedSpans(songId).sortedBy { it.position }.forEach { span ->
-                    val file = checkNotNull(span.file?.takeIf { span.position == position }) { "Legacy download has a gap" }
-                    file.inputStream().use { it.copyTo(output) }
-                    position += span.length
-                }
-                check(position == length && temporary.length() == length) { "Legacy download is incomplete" }
-                output.fd.sync()
+        val manifest = LegacyAudioFile.manifest(context, songId)
+        if (manifest.exists() && LegacyAudioFile.read(manifest).spans.isEmpty()) return
+        if (download?.state == Download.STATE_REMOVING || download?.state == Download.STATE_RESTARTING) return
+        val song = database.dao().song(songId).first()
+        if (song == null) {
+            Timber.tag(TAG).w("Legacy audio has no migrated song key=%s; retaining spans", entry.key)
+            return
+        }
+        val length =
+            entry.length
+                ?: download?.length?.takeIf { it > 0 }
+                ?: song.format?.contentLength?.takeIf { it > 0 }
+                ?: download?.bytesDownloaded?.takeIf { download.state == Download.STATE_COMPLETED && it > 0 }
+                ?: return
+        val audio = entry.completeAudio(length) ?: return
+        audio.verify()
+        val kind =
+            if (entry.downloadCache || download?.state == Download.STATE_COMPLETED || song.song.isDownloaded) KIND_DOWNLOAD else KIND_CACHE
+        val existing = database.dao().cachedAudio(songId)?.takeIf { audioAvailable(it.filePath) }
+        if (existing != null && (existing.kind == KIND_DOWNLOAD || kind == KIND_CACHE)) {
+            // A receipt prevents a removed or replaced v14 entry from resurrecting these legacy bytes.
+            if (existing.filePath != manifest.path) LegacyAudioFile(emptyList()).write(manifest)
+            return
+        }
+        val cachedAt =
+            song.song.dateDownload
+                ?.toInstant(TimeZone.UTC)
+                ?.toEpochMilliseconds()
+                ?: download?.startedAt?.takeIf { it > 0 }
+                ?: entry.spans.minOf { it.touchedAt }
+        val artist = song.orderedArtists.joinToString(", ") { it.name }.ifBlank { getString(Res.string.unknown_artist) }
+        audio.write(manifest)
+        // Keep the manifest and all source spans after a failed transaction so the next audit can resume.
+        database.withDatabaseTransaction {
+            database.dao().upsert(
+                CachedAudioEntity(
+                    songId = songId,
+                    title = song.title,
+                    artist = artist,
+                    album = song.album?.title ?: song.song.albumName,
+                    thumbnailUrl = song.thumbnailUrl,
+                    filePath = manifest.path,
+                    mimeType = song.format?.mimeType,
+                    fileSize = length,
+                    cachedAt = cachedAt,
+                    lastAccessedAt = entry.spans.maxOf { it.touchedAt },
+                    cacheLocation = if (kind == KIND_DOWNLOAD) "DOWNLOAD_$LOCATION_INTERNAL" else LOCATION_INTERNAL,
+                    kind = kind,
+                ),
+            )
+            if (kind == KIND_DOWNLOAD) {
+                database.dao().updateDownloadedInfo(songId, true, Instant.fromEpochMilliseconds(cachedAt).toLocalDateTime(TimeZone.UTC))
             }
-            val mimeType = song.format?.mimeType
-            val artist = song.orderedArtists.joinToString(", ") { it.name }.ifBlank { getString(Res.string.unknown_artist) }
-            publishStoredAudio(null, {
-                moveAudioToDirectory(temporary, downloads, "$safeId${extensionForMimeType(mimeType)}")
-            }) { path ->
-                val now = System.currentTimeMillis()
-                database.withDatabaseTransaction {
-                    database.dao().upsert(
-                        CachedAudioEntity(
-                            songId = songId,
-                            title = song.title,
-                            artist = artist,
-                            album = song.album?.title,
-                            thumbnailUrl = song.thumbnailUrl,
-                            filePath = path,
-                            mimeType = mimeType,
-                            fileSize = length,
-                            cachedAt = now,
-                            lastAccessedAt = now,
-                            cacheLocation = "DOWNLOAD_$LOCATION_INTERNAL",
-                            kind = KIND_DOWNLOAD,
-                        ),
-                    )
-                    database.dao().updateDownloadedInfo(
-                        songId,
-                        true,
-                        song.song.dateDownload ?: Clock.System.now().toLocalDateTime(TimeZone.UTC),
-                    )
-                    database.dao().updateCachedInfo(songId, false)
-                }
-            }
-        } finally {
-            temporary.delete()
+            database.dao().updateCachedInfo(songId, kind == KIND_CACHE)
         }
     }
 
@@ -729,7 +756,8 @@ class AudioCacheManager(
                             }
 
                             else -> {
-                                !isContentUri(entry.filePath) && File(entry.filePath).parentFile == internalDirectory(KIND_DOWNLOAD)
+                                LegacyAudioFile.fromPath(context, entry.filePath) != null ||
+                                    (!isContentUri(entry.filePath) && File(entry.filePath).parentFile == internalDirectory(KIND_DOWNLOAD))
                             }
                         }
                     if (alreadyMigrated) return@forEach
@@ -745,7 +773,14 @@ class AudioCacheManager(
                                 copiedFile,
                                 entry.mimeType,
                                 publicStorage = targetShared || targetCustom,
-                                metadata = AudioExportMetadata(entry.title, entry.artist, entry.album),
+                                metadata =
+                                    AudioExportMetadata(
+                                        entry.title,
+                                        entry.artist,
+                                        entry.album,
+                                        artwork =
+                                            if (targetShared || targetCustom) downloadedArtwork.exportArtwork(entry.thumbnailUrl) else null,
+                                    ),
                             )
 
                         val extension = extensionForMimeType(mimeType)
@@ -925,7 +960,13 @@ class AudioCacheManager(
                     tempFile,
                     mimeType,
                     publicStorage = isShared(kind) || isCustom(kind),
-                    metadata = AudioExportMetadata(song.title, song.artists.joinToString(", ") { it.name }, song.album?.name),
+                    metadata =
+                        AudioExportMetadata(
+                            song.title,
+                            song.artists.joinToString(", ") { it.name },
+                            song.album?.name,
+                            artwork = if (isShared(kind) || isCustom(kind)) downloadedArtwork.exportArtwork(song.thumbnail) else null,
+                        ),
                 )
 
             currentCoroutineContext().ensureActive()
@@ -1465,6 +1506,10 @@ class AudioCacheManager(
         target: File,
     ) {
         target.parentFile?.mkdirs()
+        LegacyAudioFile.fromPath(context, sourcePath)?.let {
+            LegacyAudioFile.read(it).copyTo(target)
+            return
+        }
         val input =
             if (isContentUri(sourcePath)) {
                 context.contentResolver.openInputStream(sourcePath.toUri()) ?: error("Could not open downloaded audio")
@@ -1479,7 +1524,10 @@ class AudioCacheManager(
         throwOnError: Boolean = false,
     ): Long =
         runCatching {
-            if (isContentUri(path)) {
+            val legacy = LegacyAudioFile.fromPath(context, path)
+            if (legacy != null) {
+                LegacyAudioFile.read(legacy).also { it.verify() }.size
+            } else if (isContentUri(path)) {
                 context.contentResolver.openAssetFileDescriptor(path.toUri(), "r")?.use { descriptor ->
                     descriptor.length.takeIf { it >= 0L } ?: descriptor.parcelFileDescriptor.statSize
                 } ?: -1L
@@ -1520,7 +1568,18 @@ class AudioCacheManager(
 
     private fun deleteAudio(path: String): Boolean =
         runCatching {
-            if (isContentUri(path)) {
+            val legacy = LegacyAudioFile.fromPath(context, path)
+            if (legacy != null) {
+                val audio = LegacyAudioFile.read(legacy)
+                val deleted =
+                    audio.spans
+                        .map { File(it.path) }
+                        .distinct()
+                        .map { !it.exists() || it.delete() }
+                        .all { it }
+                if (deleted) LegacyAudioFile(emptyList()).write(legacy)
+                deleted
+            } else if (isContentUri(path)) {
                 val uri = path.toUri()
                 if (DocumentsContract.isDocumentUri(context, uri)) {
                     DocumentsContract.deleteDocument(context.contentResolver, uri)
@@ -1535,7 +1594,11 @@ class AudioCacheManager(
 
     private fun audioAbsent(path: String): Boolean =
         runCatching {
-            if (!isContentUri(path)) {
+            val legacy = LegacyAudioFile.fromPath(context, path)
+            if (legacy != null) {
+                !legacy.exists() ||
+                    LegacyAudioFile.read(legacy).let { audio -> audio.spans.isEmpty() || audio.spans.any { !File(it.path).exists() } }
+            } else if (!isContentUri(path)) {
                 !File(path).exists()
             } else {
                 context.contentResolver
@@ -1617,6 +1680,8 @@ class AudioCacheManager(
         private const val MAX_AUDIO_BYTES = 512L * 1024 * 1024
         private const val MIN_FREE_SPACE_BYTES = 16L * 1024 * 1024
         private const val LEGACY_DOWNLOAD_DIRECTORY = "download"
+        private const val LEGACY_PLAYER_DIRECTORY = "exoplayer"
+        private const val LEGACY_IMPORT_COMPLETE = "legacy-audio-import-v2.complete"
         private val CONTENT_RANGE = Regex("bytes ([0-9]+)-([0-9]+)/([0-9]+)")
         private const val TAG = "AudioCacheManager"
     }
@@ -1671,3 +1736,12 @@ internal class DownloadSpaceBudget(
 }
 
 internal class InsufficientAudioStorageException : IOException("Insufficient space for audio download")
+
+internal const val CACHED_AUDIO_PROFILE_ID = "cached-audio"
+
+internal fun isCorruptCachedAudioFailure(
+    resource: PlaybackResource?,
+    error: Throwable?,
+): Boolean =
+    resource?.profileId == CACHED_AUDIO_PROFILE_ID &&
+        generateSequence(error) { it.cause?.takeUnless { cause -> cause === it } }.any { it is ParserException }

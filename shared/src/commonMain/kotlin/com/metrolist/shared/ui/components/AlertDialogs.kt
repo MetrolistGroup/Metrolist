@@ -50,11 +50,16 @@ fun AlertDialog(
     textContentColor: Color = AlertDialogDefaults.textContentColor,
     tonalElevation: Dp = AlertDialogDefaults.TonalElevation,
     properties: DialogProperties = DialogProperties(),
+    outlineActions: Boolean = true,
 ) {
     val density = LocalDensity.current
     val scaled = { slot: @Composable () -> Unit -> @Composable { WithDensity(density, slot) } }
     // Material buttons only draw a faint focus layer; outline the focused action for remotes and keyboards.
-    val action = { slot: @Composable () -> Unit -> @Composable { Box(Modifier.focusOutline(CircleShape)) { WithDensity(density, slot) } } }
+    val action = { slot: @Composable () -> Unit ->
+        @Composable {
+            Box(if (outlineActions) Modifier.focusOutline(CircleShape) else Modifier) { WithDensity(density, slot) }
+        }
+    }
     MaterialAlertDialog(
         onDismissRequest = onDismissRequest,
         confirmButton = action(confirmButton),

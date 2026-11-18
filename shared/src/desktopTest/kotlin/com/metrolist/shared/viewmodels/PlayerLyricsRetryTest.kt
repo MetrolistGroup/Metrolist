@@ -291,7 +291,7 @@ class PlayerLyricsRetryTest {
     fun aTranslationCompletionCannotReplaceANewerSourceSelection() {
         val preparing = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
-        withLyricsPlayer(prepareJapaneseDictionary = {
+        withLyricsPlayer(prepareDictionaries = {
             preparing.complete(Unit)
             withContext(NonCancellable) { release.await() }
             false
@@ -358,7 +358,7 @@ class PlayerLyricsRetryTest {
         val release = CompletableDeferred<Unit>()
         withLyricsPlayer(
             audioResponse = { LyricsWithProvider("[00:01]あい\n[00:02]うえ", "LRCLIB") },
-            prepareJapaneseDictionary = {
+            prepareDictionaries = {
                 preparing.complete(Unit)
                 release.await()
                 false
@@ -392,14 +392,19 @@ class PlayerLyricsRetryTest {
         val releaseProvider = CompletableDeferred<Unit>()
         val preparing = CompletableDeferred<Unit>()
         val releaseDictionary = CompletableDeferred<Unit>()
-        val fallback = MlxBuilder().line(1_000, "Original lyrics").build() + "\n[translatedLyrics]\n[00:01.000]Traduction"
+        val fallback =
+            MlxBuilder()
+                .song(translationLanguage = "fr")
+                .line(1_000, "Original lyrics")
+                .translatedLine(1_000, "Traduction")
+                .build()
         val replacement = "[00:03]あい"
         withLyricsPlayer(
             audioResponse = {
                 releaseProvider.await()
                 LyricsWithProvider(replacement, "LRCLIB")
             },
-            prepareJapaneseDictionary = {
+            prepareDictionaries = {
                 if (preparationCalls.incrementAndGet() == 2) preparingAgain.complete(Unit)
                 preparing.complete(Unit)
                 releaseDictionary.await()
@@ -409,6 +414,7 @@ class PlayerLyricsRetryTest {
             try {
                 Settings.shared.lyricsRomanizationEnabled = true
                 Settings.shared.lyricsRomanizeLanguages = "Japanese:true"
+                Settings.shared.lyricsAiTargetLanguage = "fr"
                 val song = requireNotNull(controller.state.value.currentSong)
                 database.dao().saveLyrics(LyricsEntity(song.id, fallback, "PAXSENIX"))
                 vm.loadLyrics(song.id, song.title)
@@ -451,7 +457,7 @@ class PlayerLyricsRetryTest {
                 releaseProvider.await()
                 LyricsWithProvider(replacement, "LRCLIB")
             },
-            prepareJapaneseDictionary = {
+            prepareDictionaries = {
                 preparing.complete(Unit)
                 releaseDictionary.await()
                 false
@@ -498,7 +504,7 @@ class PlayerLyricsRetryTest {
         withLyricsPlayer(
             audioResponse = { LyricsWithProvider("[00:01]あい", "LRCLIB") },
             videoResponse = { LyricsWithProvider("[00:20]うえ", "SimpMusic", isUserSelected = true) },
-            prepareJapaneseDictionary = {
+            prepareDictionaries = {
                 val index = calls.getAndIncrement()
                 preparing.getOrNull(index)?.complete(Unit)
                 release.getOrNull(index)?.await()
@@ -544,7 +550,7 @@ class PlayerLyricsRetryTest {
         val release = CompletableDeferred<Unit>()
         withLyricsPlayer(
             audioResponse = { LyricsWithProvider("[00:01]あい", "LRCLIB") },
-            prepareJapaneseDictionary = {
+            prepareDictionaries = {
                 preparing.complete(Unit)
                 withContext(NonCancellable) { release.await() }
                 false
@@ -1405,7 +1411,7 @@ class PlayerLyricsRetryTest {
         onRepository: (LyricsRepository) -> Unit = {},
         translationClient: LyricsTranslationClient? = null,
         audioResponse: (suspend (LyricsProvider) -> LyricsWithProvider?)? = null,
-        prepareJapaneseDictionary: suspend () -> Boolean = { error("Unexpected dictionary preparation") },
+        prepareDictionaries: suspend () -> Boolean = { error("Unexpected dictionary preparation") },
         videoResponse: suspend () -> LyricsWithProvider = {
             val lyrics =
                 MlxBuilder()
@@ -1463,7 +1469,7 @@ class PlayerLyricsRetryTest {
                             fetcher,
                             translationClient ?: LyricsTranslationClient(client),
                             database.dao(),
-                            prepareJapaneseDictionary = prepareJapaneseDictionary,
+                            prepareDictionaries = { _, _ -> prepareDictionaries() },
                         ).also(onRepository),
                         AnimatedArtworkService(client),
                         MusicVideoResolver(
@@ -1516,6 +1522,12 @@ class PlayerLyricsRetryTest {
         ) {
             state.value = PlaybackUiState(currentSong = song, queue = queue, currentQueueIndex = queue.indexOf(song), isPlaying = true)
         }
+
+        override fun shuffleQueue(
+            songs: List<SongItem>,
+            queueTitle: String?,
+            songsOnly: Boolean,
+        ) = Unit
 
         override fun togglePlayPause() = Unit
 

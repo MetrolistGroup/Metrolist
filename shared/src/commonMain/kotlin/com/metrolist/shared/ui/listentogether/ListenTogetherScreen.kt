@@ -149,6 +149,8 @@ import com.metrolist.shared.generated.resources.listen_together_connection_lost_
 import com.metrolist.shared.generated.resources.listen_together_copy_code
 import com.metrolist.shared.generated.resources.listen_together_copy_link
 import com.metrolist.shared.generated.resources.listen_together_create_room_title
+import com.metrolist.shared.generated.resources.listen_together_custom_server_maintainer
+import com.metrolist.shared.generated.resources.listen_together_custom_server_name
 import com.metrolist.shared.generated.resources.listen_together_description
 import com.metrolist.shared.generated.resources.listen_together_disconnected
 import com.metrolist.shared.generated.resources.listen_together_edit_server
@@ -258,6 +260,7 @@ import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.settings.SettingsChoice
 import com.metrolist.shared.ui.settings.SettingsPageId
+import com.metrolist.shared.ui.settings.SettingsPageRegistration
 import com.metrolist.shared.ui.settings.SettingsPageScreen
 import com.metrolist.shared.ui.settings.SettingsTone
 import com.metrolist.shared.ui.settings.SettingsUiRegistryBuilder
@@ -464,16 +467,49 @@ fun ListenTogetherSettingsScreen(
         return
     }
 
-    val username by manager.username.collectAsState()
-    val serverUrl by manager.serverUrl.collectAsState()
-    val servers by manager.servers.collectAsState()
-    val blockedUsers by manager.blockedUsernames.collectAsState()
-    val autoApproveJoinRequests by manager.autoApproveJoinRequests.collectAsState()
-    val autoApproveSongSuggestions by manager.autoApproveSongSuggestions.collectAsState()
-    val syncHostVolume by manager.syncHostVolume.collectAsState()
-    val role by manager.role.collectAsState()
-    val inRoom by manager.isInRoom.collectAsState()
     var showHelp by remember { mutableStateOf(false) }
+    val page = listenTogetherSettingsPage(manager, onNavigateToServer, onNavigateToBlockedUsers, onNavigateToLogs) { showHelp = true }
+    SettingsPageScreen(
+        page = page,
+        onNavigateBack = onNavigateBack,
+        bottomContentPadding = bottomInset,
+    )
+    PopupVisibility(visible = showHelp && Settings.shared.listenTogetherEnabled) {
+        AlertDialog(
+            onDismissRequest = { showHelp = false },
+            title = { Text(stringResource(Res.string.listen_together_how_it_works)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(stringResource(Res.string.listen_together_how_it_works_body))
+                    Text(stringResource(Res.string.listen_together_how_it_works_bullets))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showHelp = false }, shapes = ButtonDefaults.shapes()) {
+                    Text(stringResource(Res.string.ok))
+                }
+            },
+        )
+    }
+}
+
+@Composable
+internal fun listenTogetherSettingsPage(
+    manager: ListenTogetherManager,
+    onNavigateToServer: () -> Unit = {},
+    onNavigateToBlockedUsers: () -> Unit = {},
+    onNavigateToLogs: () -> Unit = {},
+    onShowHelp: () -> Unit = {},
+): SettingsPageRegistration {
+    val username = manager.username.collectAsState().value
+    val serverUrl = manager.serverUrl.collectAsState().value
+    val servers = manager.servers.collectAsState().value
+    val blockedUsers = manager.blockedUsernames.collectAsState().value
+    val autoApproveJoinRequests = manager.autoApproveJoinRequests.collectAsState().value
+    val autoApproveSongSuggestions = manager.autoApproveSongSuggestions.collectAsState().value
+    val syncHostVolume = manager.syncHostVolume.collectAsState().value
+    val role = manager.role.collectAsState().value
+    val inRoom = manager.isInRoom.collectAsState().value
     val enabled = Settings.shared.listenTogetherEnabled
     val settingsEnabled = listenTogetherControls(enabled, role, inRoom).settingsEnabled
     val builder = SettingsUiRegistryBuilder()
@@ -504,12 +540,12 @@ fun ListenTogetherSettingsScreen(
             choice(
                 id = "listenTogetherServer",
                 title = stringResource(Res.string.listen_together_server),
-                valueLabel = servers.firstOrNull { it.url == serverUrl }?.name ?: serverUrl,
+                valueLabel = servers.firstOrNull { it.url == serverUrl }?.let { serverName(it) } ?: serverUrl,
                 choices =
                     servers.map {
                         SettingsChoice(
                             it.url,
-                            stringResource(Res.string.listen_together_server_label, it.name, it.location),
+                            stringResource(Res.string.listen_together_server_label, serverName(it), stringResource(it.location)),
                         )
                     },
                 selectedChoiceId = serverUrl,
@@ -554,7 +590,7 @@ fun ListenTogetherSettingsScreen(
                 id = "listenTogetherHelp",
                 title = stringResource(Res.string.listen_together_how_it_works),
                 description = stringResource(Res.string.settings_room_help_summary),
-            ) { showHelp = true }
+            ) { onShowHelp() }
         }
         group("listenTogetherAdvanced", stringResource(Res.string.advanced), enabled = settingsEnabled) {
             action(
@@ -571,28 +607,7 @@ fun ListenTogetherSettingsScreen(
             )
         }
     }
-    SettingsPageScreen(
-        page = builder.build().pages.single(),
-        onNavigateBack = onNavigateBack,
-        bottomContentPadding = bottomInset,
-    )
-    PopupVisibility(visible = showHelp && settingsEnabled) {
-        AlertDialog(
-            onDismissRequest = { showHelp = false },
-            title = { Text(stringResource(Res.string.listen_together_how_it_works)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(stringResource(Res.string.listen_together_how_it_works_body))
-                    Text(stringResource(Res.string.listen_together_how_it_works_bullets))
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showHelp = false }, shapes = ButtonDefaults.shapes()) {
-                    Text(stringResource(Res.string.ok))
-                }
-            },
-        )
-    }
+    return builder.build().pages.single()
 }
 
 @Composable
@@ -670,8 +685,8 @@ fun ListenTogetherServerScreen(
         )
     }
     editingServer?.let { server ->
-        var name by remember(server.url) { mutableStateOf(server.name) }
-        var operator by remember(server.url) { mutableStateOf(server.operator) }
+        var name by remember(server.url) { mutableStateOf(server.name.orEmpty()) }
+        var operator by remember(server.url) { mutableStateOf(server.operator.orEmpty()) }
         AlertDialog(
             onDismissRequest = { editingServer = null },
             title = { Text(stringResource(Res.string.listen_together_edit_server)) },
@@ -2280,9 +2295,11 @@ private fun ServerRow(
     ) {
         RadioButton(selected = selected, onClick = onClick)
         Column(modifier = Modifier.weight(1f)) {
-            Text(server.name, style = MaterialTheme.typography.titleMedium)
+            Text(serverName(server), style = MaterialTheme.typography.titleMedium)
             Text(
-                "${server.location} -\u00a0${server.operator}",
+                "${stringResource(
+                    server.location,
+                )} -\u00a0${server.operator ?: stringResource(Res.string.listen_together_custom_server_maintainer)}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -2503,3 +2520,6 @@ private fun List<ListenTogetherLogEntry>.toShareText(): String =
             append(entry.message)
         }
     }
+
+@Composable
+private fun serverName(server: ListenTogetherServer): String = server.name ?: stringResource(Res.string.listen_together_custom_server_name)

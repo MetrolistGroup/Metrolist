@@ -3,6 +3,7 @@ package com.metrolist.shared.playlistimport
 import com.metrolist.shared.model.AlbumTiny
 import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.SongItem
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
@@ -11,6 +12,26 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PlaylistImportCommonTest {
+    @Test
+    fun unresolvedVideoIdFallsBackToTrackSearch() =
+        runTest {
+            val searchedSong = SongItem("search-result", "Song", null, emptyList(), null)
+            var fallbackUsed = false
+
+            val resolved =
+                resolveSongByVideoIdOrFallback(
+                    videoId = "stale-video-id",
+                    metadataLookup = { null },
+                    fallback = {
+                        fallbackUsed = true
+                        searchedSong
+                    },
+                )
+
+            assertEquals(searchedSong, resolved)
+            assertTrue(fallbackUsed)
+        }
+
     @Test
     fun matchingRejectsDifferentRecordingsAndUsesAlbumAndDurationToRankCandidates() {
         val track = PlaylistImportManager.CsvTrack("Song!", "Artist", null, album = "Album", durationSeconds = 180)
@@ -40,6 +61,47 @@ class PlaylistImportCommonTest {
                 track,
                 listOf(destinationSong.copy(artists = listOf(ArtistTiny(null, "Different artist")))),
             ),
+        )
+    }
+
+    @Test
+    fun matchingKeepsArtistNamesThatContainCommas() {
+        val track = PlaylistImportManager.CsvTrack("See You Again (feat. Kali Uchis)", "Tyler, The Creator, Kali Uchis", null)
+        val song = SongItem("song", "See You Again (feat. Kali Uchis)", null, listOf(ArtistTiny(null, "Tyler, The Creator")), null, 181)
+
+        assertEquals(song, PlaylistImportManager.bestTrackMatch(track, listOf(song)))
+        assertEquals(null, PlaylistImportManager.bestTrackMatch(track, listOf(song.copy(artists = listOf(ArtistTiny(null, "MHD"))))))
+    }
+
+    @Test
+    fun matchingIgnoresFeaturingCreditsButNotOtherTitleVariants() {
+        val track = PlaylistImportManager.CsvTrack("Starboy", "The Weeknd, Daft Punk", null)
+        val featured = SongItem("featured", "Starboy (feat. Daft Punk)", null, listOf(ArtistTiny(null, "The Weeknd")), null, 231)
+        val remix = featured.copy(id = "remix", title = "Starboy (Remix)")
+
+        assertEquals(featured, PlaylistImportManager.bestTrackMatch(track, listOf(remix, featured)))
+        assertEquals(null, PlaylistImportManager.bestTrackMatch(track, listOf(remix)))
+        assertEquals(
+            "featured",
+            PlaylistImportManager.bestTrackMatch(track.copy(title = "Starboy ft. Daft Punk"), listOf(featured.copy(title = "Starboy")))?.id,
+        )
+        assertEquals(
+            "featured",
+            PlaylistImportManager.bestTrackMatch(track, listOf(featured.copy(title = "Starboy [with Daft Punk]")))?.id,
+        )
+    }
+
+    @Test
+    fun spotifyResolutionRetriesWithoutAlbumMetadataButKeepsOtherProvidersSinglePass() {
+        val track = PlaylistImportManager.CsvTrack("Song", "Artist", null, album = "Spotify Album")
+
+        assertEquals(
+            listOf("Song Artist Spotify Album", "Song Artist"),
+            PlaylistImportManager.resolutionSearchQueries(track, ImportSourceType.SPOTIFY),
+        )
+        assertEquals(
+            listOf("Song Artist Spotify Album"),
+            PlaylistImportManager.resolutionSearchQueries(track, ImportSourceType.APPLE_MUSIC),
         )
     }
 

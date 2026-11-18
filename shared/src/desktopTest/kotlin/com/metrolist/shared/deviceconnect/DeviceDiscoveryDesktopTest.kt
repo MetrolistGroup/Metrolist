@@ -52,12 +52,78 @@ class DeviceDiscoveryDesktopTest {
 
     @Test
     fun ignoresContainerAndTunnelInterfaces() {
-        listOf("docker0", "br-deadbeef", "veth0", "tun0", "wg0").forEach {
+        listOf("docker0", "br-deadbeef", "veth0", "tun0", "wg0", "utun3", "awdl0", "llw0", "anpi1", "bridge0", "ap1").forEach {
             assertFalse(isDeviceConnectLanInterfaceName(it), it)
         }
-        listOf("eth0", "enp1s0", "wlan0").forEach {
+        listOf("eth0", "enp1s0", "wlan0", "en0", "Wi-Fi", "Ethernet", "Apple Ethernet").forEach {
             assertTrue(isDeviceConnectLanInterfaceName(it), it)
         }
+    }
+
+    @Test
+    fun ignoresWindowsVirtualAndPeerToPeerAdaptersByNameOrDescription() {
+        listOf(
+            "vEthernet (Default Switch)",
+            "Hyper-V Virtual Ethernet Adapter",
+            "Bluetooth Device (Personal Area Network)",
+            "Microsoft Wi-Fi Direct Virtual Adapter",
+            "Microsoft Hosted Network Adapter",
+        ).forEach {
+            assertFalse(isDeviceConnectLanInterfaceName(it), it)
+            assertFalse(isDeviceConnectLanInterfaceName("eth3", it), it)
+        }
+        assertTrue(isDeviceConnectLanInterfaceName("eth3", "Intel(R) Wi-Fi 6 AX201"))
+    }
+
+    @Test
+    fun discoveryUsesOneAddressPerFamilyOnADualStackInterface() {
+        val addresses = listOf("fe80::1234%1", "fd00::1", "192.168.1.5", "192.168.1.4").map(InetAddress::getByName)
+        val expected = listOf(ipv4("192.168.1.4"), InetAddress.getByName("fd00::1"))
+        assertEquals(expected, selectDesktopDiscoveryAddresses(addresses))
+        assertEquals(expected, selectDesktopDiscoveryAddresses(addresses.reversed()))
+        assertEquals(expected, selectDesktopDiscoveryAddresses(addresses + addresses))
+    }
+
+    @Test
+    fun discoveryKeepsIpv6OnlyInterfacesAndUsesLinkLocalOnlyWhenNeeded() {
+        val linkLocal = InetAddress.getByName("fe80::1234%1")
+        val uniqueLocal = InetAddress.getByName("fd00::1")
+        val public = InetAddress.getByName("2001:db8::1")
+        assertEquals(listOf(uniqueLocal), selectDesktopDiscoveryAddresses(listOf(linkLocal, public, uniqueLocal)))
+        assertEquals(listOf(linkLocal), selectDesktopDiscoveryAddresses(listOf(public, linkLocal)))
+        assertEquals(emptyList(), selectDesktopDiscoveryAddresses(listOf(public, InetAddress.getLoopbackAddress())))
+        assertEquals(emptyList(), selectDesktopDiscoveryAddresses(emptyList()))
+    }
+
+    @Test
+    fun discoveryKeepsLinkLocalIpv6AlongsideIpv4WhenThereIsNoUla() {
+        val ipv4 = ipv4("192.168.1.4")
+        val linkLocal = InetAddress.getByName("fe80::1234%1")
+        val global = InetAddress.getByName("2001:db8::1")
+        assertEquals(listOf(ipv4, linkLocal), selectDesktopDiscoveryAddresses(listOf(global, linkLocal, ipv4)))
+    }
+
+    @Test
+    fun incompleteLookupCallbacksCannotStartAnotherLookupUntilTheServiceReappears() {
+        val lookups = DesktopDiscoveryLookups()
+        assertTrue(lookups.start("service"))
+        assertFalse(lookups.start("service"))
+        lookups.finish("service")
+        repeat(100) { assertFalse(lookups.start("service")) }
+        lookups.remove("service")
+        assertTrue(lookups.start("service"))
+        lookups.clear()
+        assertTrue(lookups.start("service"))
+    }
+
+    @Test
+    fun lookupCapacityIsReleasedWithoutRetryingCompletedIncompleteRecords() {
+        val lookups = DesktopDiscoveryLookups()
+        repeat(32) { assertTrue(lookups.start("service-$it")) }
+        assertFalse(lookups.start("next"))
+        lookups.finish("service-0")
+        assertFalse(lookups.start("service-0"))
+        assertTrue(lookups.start("next"))
     }
 
     @Test

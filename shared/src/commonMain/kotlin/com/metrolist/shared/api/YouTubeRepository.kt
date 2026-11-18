@@ -66,6 +66,7 @@ import com.metrolist.shared.model.EpisodeItem
 import com.metrolist.shared.model.HomePageData
 import com.metrolist.shared.model.HomeSection
 import com.metrolist.shared.model.MUSIC_VIDEO_TYPE_LIVE
+import com.metrolist.shared.model.MUSIC_VIDEO_TYPE_VIDEO
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.PodcastItem
 import com.metrolist.shared.model.PodcastPage
@@ -78,6 +79,7 @@ import com.metrolist.shared.model.SearchSummaryPage
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.model.isEditablePlaylistId
+import com.metrolist.shared.model.isLiveType
 import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.model.isVideoSong
 import com.metrolist.shared.model.parseDisplayCount
@@ -578,7 +580,7 @@ class YouTubeRepository(
                                         complete = true,
                                     )
                                 } else {
-                                    getAllBrowseItems(browseId, requestSession = requestSession).let {
+                                    getAllBrowseItems(browseId, requestSession = requestSession, includeRecommendations = false).let {
                                         LibraryItemsResult(it.items, it.complete)
                                     }
                                 },
@@ -624,7 +626,7 @@ class YouTubeRepository(
         val uploadedIds = uploadedSongs?.mapTo(mutableSetOf()) { it.id }
         return LibraryItemsResult(
             items = items.filterNot { it is SongItem && it.isUploaded && uploadedIds != null && it.id !in uploadedIds },
-            complete = results.all { it.getOrNull()?.complete == true } && unresolvedPlaylistEditabilityIds.isEmpty(),
+            complete = results.all { it.getOrNull()?.complete == true },
             unresolvedPlaylistEditabilityIds = unresolvedPlaylistEditabilityIds,
             uploadedSongs = uploadedSongs,
         )
@@ -634,6 +636,7 @@ class YouTubeRepository(
         browseId: String,
         params: String? = null,
         requestSession: InnerTube.SessionSnapshot = innerTube.sessionSnapshot(),
+        includeRecommendations: Boolean = true,
     ): PaginationResult<YTItem> {
         val voteRevision = SongLikeState.voteObservationRevision()
         requireCurrentSession(requestSession)
@@ -642,7 +645,7 @@ class YouTubeRepository(
                 innerTube.browse(YouTubeClient.WEB_REMIX, browseId = browseId, params = params, setLogin = true)
             }
         check(firstResponse.contents != null) { "Missing library contents: $browseId" }
-        val first = parseBrowseResponse(firstResponse)
+        val first = parseBrowseResponse(firstResponse, includeRecommendations = includeRecommendations)
         requireCurrentSession(requestSession)
         return collectPages(
             initial = ParsedPage(first.sections.values.flatten(), first.continuation, first.continuationAmbiguous),
@@ -654,7 +657,7 @@ class YouTubeRepository(
                 readAccountBrowse(requestSession, browseId, continuation = true, voteRevision = continuationRevision) {
                     innerTube.browse(YouTubeClient.WEB_REMIX, continuation = continuation, setLogin = true)
                 }
-            val next = parseBrowseResponse(nextResponse)
+            val next = parseBrowseResponse(nextResponse, includeRecommendations = includeRecommendations)
             requireCurrentSession(requestSession)
             ParsedPage(next.sections.values.flatten(), next.continuation, next.continuationAmbiguous)
         }
@@ -1244,7 +1247,7 @@ class YouTubeRepository(
 
     suspend fun getLibraryPodcastsForSync(): List<PodcastItem> {
         require(innerTube.hasSapCookieAuth()) { "YouTube Music sign-in is required" }
-        val result = getAllBrowseItems("FEmusic_library_non_music_audio_list")
+        val result = getAllBrowseItems("FEmusic_library_non_music_audio_list", includeRecommendations = false)
         check(result.complete) { "Podcast library pagination ended before the final page" }
         return result.items
             .filterIsInstance<PodcastItem>()
@@ -1267,7 +1270,7 @@ class YouTubeRepository(
 
     suspend fun getSavedEpisodesForSync(): List<EpisodeItem> {
         require(innerTube.hasSapCookieAuth()) { "YouTube Music sign-in is required" }
-        val result = getAllBrowseItems("VLSE")
+        val result = getAllBrowseItems("VLSE", includeRecommendations = false)
         check(result.complete) { "Saved episode pagination ended before the final page" }
         return result.items
             .mapNotNull { item ->
@@ -1408,7 +1411,6 @@ class YouTubeRepository(
                 return loadLocal()
             }
             val albumItem = albumHeader.item
-            val playlistId = albumItem.playlistId ?: return loadLocal()
 
             val secondaryContents =
                 response.contents
@@ -1422,7 +1424,28 @@ class YouTubeRepository(
 
             requireCurrentSession(requestSession)
             stage = "tracks"
-            val initialTracks = getPlaylistPlaybackPage(playlistId).copy(album = albumItem)
+            val playlistTracks =
+                if (albumId.startsWith("FEmusic_library_privately_owned_release")) {
+                    val parsed = parseBrowseResponse(response)
+                    PlaylistPage(
+                        sections =
+                            mapOf("Tracks" to response.uploadShelfObjects().flatMap { parseUploadedSongItems(it["contents"].asArray()) }),
+                        pending = parsed.continuationBranches.map { it.copy(sectionTitle = "Tracks") },
+                        seen = emptySet(),
+                        session = requestSession,
+                        album = albumItem,
+                    )
+                } else {
+                    getPlaylistPlaybackPage(albumItem.playlistId ?: return loadLocal()).copy(album = albumItem)
+                }
+            // An album's playlist comes back empty when the account cannot play most of it; the browse shelf still lists every track.
+            val shelfSongs =
+                if (playlistTracks.songs.isEmpty() && !playlistTracks.hasMore) secondaryContents.albumShelfSongs() else emptyList()
+            val initialTracks =
+                if (shelfSongs.isEmpty()) playlistTracks else playlistTracks.copy(sections = mapOf("songs" to shelfSongs))
+            if (initialTracks.songs.isEmpty() && !initialTracks.hasMore) {
+                loadLocal()?.let { return it }
+            }
             val tracks =
                 (
                     if (loadAllPages) {
@@ -1467,6 +1490,14 @@ class YouTubeRepository(
         )
     }
 
+    private fun JsonArray.albumShelfSongs(): List<SongItem> =
+        firstNotNullOfOrNull { it.jsonObject["musicShelfRenderer"] ?: it.jsonObject["musicPlaylistShelfRenderer"] }
+            ?.jsonObject
+            ?.get("contents")
+            ?.jsonArray
+            ?.mapNotNull { parseItem(it.jsonObject["musicResponsiveListItemRenderer"]?.jsonObject) as? SongItem }
+            .orEmpty()
+
     suspend fun getAlbumVideoPage(albumId: String): AlbumPage? {
         return try {
             val response =
@@ -1487,21 +1518,7 @@ class YouTubeRepository(
                     ?.get("contents")
                     ?.jsonArray ?: JsonArray(emptyList())
 
-            val songsShelf =
-                secondaryContents
-                    .mapNotNull {
-                        it.jsonObject["musicShelfRenderer"]?.jsonObject
-                            ?: it.jsonObject["musicPlaylistShelfRenderer"]?.jsonObject
-                    }.firstOrNull() ?: return null
-
-            val directSongs = mutableListOf<SongItem>()
-            val shelfContents = songsShelf["contents"]?.jsonArray ?: emptyList()
-            shelfContents.forEach {
-                val item = parseItem(it.jsonObject["musicResponsiveListItemRenderer"]?.jsonObject)
-                if (item is SongItem) {
-                    directSongs.add(item)
-                }
-            }
+            val directSongs = secondaryContents.albumShelfSongs()
             if (directSongs.isEmpty()) return null
 
             AlbumPage(
@@ -1685,20 +1702,28 @@ class YouTubeRepository(
 
     suspend fun getSongPlayerInformation(videoId: String): SongPlayerInformation? =
         try {
-            // WEB can omit live-video details; ANDROID exposes isLiveContent for those responses.
+            // WEB can omit video details, so retain the ANDROID metadata fallback.
             val webResponse =
-                innerTube.player(YouTubeClient.WEB, videoId).bodyLimited<PlayerResponse>(PLAYER_NEXT_RESPONSE_LIMIT)
-            val details =
-                webResponse.videoDetails?.takeIf {
-                    it.title?.isNotBlank() == true && webResponse.playabilityStatus.status == "OK"
+                innerTube.player(YouTubeClient.WEB, videoId).bodyLimited<JsonObject>(PLAYER_NEXT_RESPONSE_LIMIT)
+            val response =
+                webResponse.takeIf {
+                    it["videoDetails"]
+                        .asObject()
+                        ?.get("title")
+                        .primitiveText()
+                        ?.isNotBlank() == true &&
+                        it["playabilityStatus"].asObject()?.get("status").primitiveText() == "OK"
                 } ?: run {
-                    val androidResponse =
-                        innerTube
-                            .player(YouTubeClient.ANDROID, videoId)
-                            .bodyLimited<PlayerResponse>(PLAYER_NEXT_RESPONSE_LIMIT)
-                    androidResponse.videoDetails
+                    innerTube
+                        .player(YouTubeClient.ANDROID, videoId)
+                        .bodyLimited<JsonObject>(PLAYER_NEXT_RESPONSE_LIMIT)
+                }
+            val details =
+                withContext(responseDecodeDispatcher) {
+                    repositoryJson.decodeFromJsonElement<PlayerResponse>(response).videoDetails
                 } ?: return null
-            val isLive = details.isLiveContent == true
+            val duration = details.lengthSeconds?.toLongOrNull()?.takeIf { it > 0L }
+            val isLive = response.isLivePlayerResponse()
             SongPlayerInformation(
                 title = details.title?.takeIf { it.isNotBlank() },
                 artist = details.author?.takeIf { it.isNotBlank() },
@@ -1707,9 +1732,14 @@ class YouTubeRepository(
                         ?.thumbnails
                         ?.lastOrNull()
                         ?.url,
-                durationSeconds = details.lengthSeconds?.toLongOrNull(),
+                durationSeconds = duration.takeUnless { isLive },
                 viewCount = details.viewCount?.toLongOrNull(),
-                musicVideoType = if (isLive) MUSIC_VIDEO_TYPE_LIVE else details.musicVideoType,
+                musicVideoType =
+                    when {
+                        isLive -> MUSIC_VIDEO_TYPE_LIVE
+                        isLiveType(details.musicVideoType) -> MUSIC_VIDEO_TYPE_VIDEO
+                        else -> details.musicVideoType
+                    },
                 isLive = isLive,
             )
         } catch (e: CancellationException) {
@@ -2098,7 +2128,7 @@ class YouTubeRepository(
                 }
             }
             try {
-                val result = getAllBrowseItems("FEmusic_liked_playlists", requestSession = requestSession)
+                val result = getAllBrowseItems("FEmusic_liked_playlists", requestSession = requestSession, includeRecommendations = false)
                 val unresolvedIds = mutableSetOf<String>()
                 val items =
                     coroutineScope {
@@ -2125,7 +2155,7 @@ class YouTubeRepository(
                             }
                     }
                 requireCurrentSession(requestSession)
-                return LibraryItemsResult(items, result.complete && unresolvedIds.isEmpty(), unresolvedIds).also(request::complete)
+                return LibraryItemsResult(items, result.complete, unresolvedIds).also(request::complete)
             } catch (error: Throwable) {
                 request.completeExceptionally(error)
                 throw error

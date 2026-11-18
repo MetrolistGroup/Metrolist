@@ -43,6 +43,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -189,6 +190,7 @@ import com.metrolist.android.ui.components.DesktopCaptionBar
 import com.metrolist.android.ui.components.DesktopMiniPlayerHeight
 import com.metrolist.android.ui.components.MiniPlayer
 import com.metrolist.android.ui.components.calculateMiniPlayerInsets
+import com.metrolist.android.ui.components.calculateNavigationContentInset
 import com.metrolist.android.ui.components.shouldUseDesktopCaption
 import com.metrolist.android.ui.components.shouldUseDesktopMiniPlayer
 import com.metrolist.android.ui.player.AndroidPlayerPlatform
@@ -314,6 +316,7 @@ import com.metrolist.shared.ui.components.EXPANDED_ANCHOR
 import com.metrolist.shared.ui.components.LocalDownloadedSongIds
 import com.metrolist.shared.ui.components.PopupContent
 import com.metrolist.shared.ui.components.PopupVisibility
+import com.metrolist.shared.ui.components.UnavailableSongSnackbar
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.lyrics.LyricsTranslationSnackbar
 import com.metrolist.shared.ui.components.rememberBottomSheetState
@@ -322,10 +325,12 @@ import com.metrolist.shared.ui.haptics.HapticEvent
 import com.metrolist.shared.ui.haptics.rememberMetrolistHaptics
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.listentogether.ListenTogetherGlobalEvents
+import com.metrolist.shared.ui.menu.ContentUndoHintsSnackbar
 import com.metrolist.shared.ui.menu.HiddenHomeItemsSnackbar
 import com.metrolist.shared.ui.menu.LocalContextMenuAnchor
 import com.metrolist.shared.ui.menu.contextMenuAnchor
 import com.metrolist.shared.ui.menu.rememberCursorContextMenuState
+import com.metrolist.shared.ui.menu.settingsPage
 import com.metrolist.shared.ui.mobile.rememberSongsPlaylistAdder
 import com.metrolist.shared.ui.navigation.AdaptiveFormFactor
 import com.metrolist.shared.ui.navigation.AdaptiveWidthBreakpoint
@@ -348,6 +353,7 @@ import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.navigation.rememberNavigationMotion
 import com.metrolist.shared.ui.navigation.rememberNavigationState
 import com.metrolist.shared.ui.navigation.toEntries
+import com.metrolist.shared.ui.navigation.visibleSidebarScreens
 import com.metrolist.shared.ui.navigation.withPointerInput
 import com.metrolist.shared.ui.playback.LocalPlaybackController
 import com.metrolist.shared.ui.player.LocalPlayerPlatform
@@ -382,6 +388,7 @@ import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
 import coil3.compose.AsyncImage as CoilAsyncImage
 import com.metrolist.android.ui.screens.settings.IntegrationsScreen as SettingsIntegrationsScreen
@@ -570,8 +577,8 @@ fun MetrolistApp(
             if (available == null) {
                 Settings.shared.updatePromptVersion = ""
                 Settings.shared.launchesSinceUpdatePrompt = 0
-            } else if (Settings.shared.updatePromptVersion != available.version) {
-                Settings.shared.updatePromptVersion = available.version
+            } else if (Settings.shared.updatePromptVersion != available.updateKey) {
+                Settings.shared.updatePromptVersion = available.updateKey
                 Settings.shared.launchesSinceUpdatePrompt = 0
                 updatePrompt = available
             } else {
@@ -590,6 +597,14 @@ fun MetrolistApp(
             }
             if (!wasUpdated || installedReleaseNotes != null || AppUpdateManager.releases.value.isNotEmpty()) {
                 Settings.shared.lastRunAppVersion = BuildConfig.VERSION_NAME
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            // Hourly keeps nightly users current while staying far below GitHub's unauthenticated rate limit.
+            while (true) {
+                delay(1.hours)
+                if (Settings.shared.checkForUpdates) AppUpdateManager.checkAtStartup(context, networkEnabled = true)
             }
         }
 
@@ -666,6 +681,7 @@ fun MetrolistApp(
             }.collectAsStateWithLifecycle(initialValue = emptySet())
         val snackbarHostState = remember { SnackbarHostState() }
         HiddenHomeItemsSnackbar(snackbarHostState)
+        UnavailableSongSnackbar(snackbarHostState)
         YouTubeSyncSnackbar(snackbarHostState)
         LyricsTranslationSnackbar(snackbarHostState, playerViewModel.lyricsTranslationFailures)
         listenTogetherManager?.let { manager ->
@@ -727,9 +743,11 @@ fun MetrolistApp(
                 Settings.shared.forceBottomNavBar,
             ).withPointerInput(useDesktopLayout)
         val useDesktopUi = adaptiveLayout.formFactor == AdaptiveFormFactor.DESKTOP
-        val useDesktopMiniPlayer = shouldUseDesktopMiniPlayer(useDesktopUi, LocalConfiguration.current.smallestScreenWidthDp)
+        val useDesktopMiniPlayer =
+            shouldUseDesktopMiniPlayer(useDesktopUi, LocalConfiguration.current.smallestScreenWidthDp, Settings.shared.miniPlayerType)
         val captionHeight = WindowInsets.captionBar.getTop(LocalDensity.current)
-        val hasDesktopCaption = shouldUseDesktopCaption(Build.VERSION.SDK_INT, captionHeight, useDesktopLayout)
+        val statusBarHeight = WindowInsets.statusBars.getTop(LocalDensity.current)
+        val hasDesktopCaption = shouldUseDesktopCaption(Build.VERSION.SDK_INT, captionHeight, useDesktopLayout, statusBarHeight)
         val shouldShowNavigationBar =
             (useDesktopUi || currentRoute in topLevelRoutes) &&
                 !(currentRoute == Screen.Search && searchResultsVisible)
@@ -1043,6 +1061,12 @@ fun MetrolistApp(
                             expandedBound = maxHeight,
                             initialAnchor = DISMISSED_ANCHOR,
                         )
+                    ContentUndoHintsSnackbar(snackbarHostState) { page ->
+                        coroutineScope.launch {
+                            if (hasMedia) playerBottomSheetState.collapseSoft()
+                            navigator.navigate(page.settingsPage?.let { Screen.SettingsPage(it) } ?: Screen.ListenTogetherBlockedUsers)
+                        }
+                    }
                     val calculateFloatingActionsBottomInset by rememberUpdatedState {
                         if (shouldShowMiniPlayer) {
                             (miniPlayerContentInset() - (miniPlayerCollapsedBound - playerBottomSheetState.value).coerceAtLeast(0.dp))
@@ -1397,7 +1421,23 @@ fun MetrolistApp(
                                             },
                                         ),
                             ) {
-                                Column(Modifier.fillMaxSize()) {
+                                Column(
+                                    // Measure the full content slot before the import card and top inset reduce the scaffold.
+                                    Modifier
+                                        .fillMaxSize()
+                                        .onSizeChanged { size ->
+                                            if (hasBottomNavigation && !useFloatingNavBar) {
+                                                navigationBarContentInset =
+                                                    calculateNavigationContentInset(maxHeight, with(density) { size.height.toDp() })
+                                            }
+                                        }.then(
+                                            if (activeImport != null) {
+                                                Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                                            } else {
+                                                Modifier
+                                            },
+                                        ),
+                                ) {
                                     PlaylistImportProgressCard()
                                     Scaffold(
                                         containerColor = Color.Transparent,
@@ -1434,8 +1474,17 @@ fun MetrolistApp(
                                                         Text(stringResource(Res.string.offline_mode))
                                                     }
                                                 }
+                                                // The desktop rail already lists these destinations, so the app bar must not repeat them.
+                                                val railScreens =
+                                                    if (useDesktopUi) {
+                                                        visibleSidebarScreens(
+                                                            Settings.shared.sidebarNavItems,
+                                                        )
+                                                    } else {
+                                                        emptyList()
+                                                    }
                                                 val topBarActions: @Composable RowScope.() -> Unit = {
-                                                    if (navigationState.topLevelRoute == Screen.Home) {
+                                                    if (navigationState.topLevelRoute == Screen.Home && Screen.History !in railScreens) {
                                                         TopBarIconButton(
                                                             floating = useFloatingTopBar,
                                                             onClick = { navigator.navigate(Screen.History) },
@@ -1484,7 +1533,7 @@ fun MetrolistApp(
                                                             )
                                                         }
                                                     }
-                                                    if (Settings.shared.listenTogetherEnabled) {
+                                                    if (Settings.shared.listenTogetherEnabled && Screen.ListenTogether !in railScreens) {
                                                         TopBarIconButton(
                                                             floating = useFloatingTopBar,
                                                             onClick = { navigator.navigate(Screen.ListenTogether) },
@@ -1545,13 +1594,7 @@ fun MetrolistApp(
                                         },
                                         modifier =
                                             Modifier
-                                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
-                                                .onSizeChanged { size ->
-                                                    if (hasBottomNavigation && !useFloatingNavBar) {
-                                                        navigationBarContentInset =
-                                                            (maxHeight - with(density) { size.height.toDp() }).coerceAtLeast(0.dp)
-                                                    }
-                                                },
+                                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                                     ) { scaffoldPadding ->
                                         Box(
                                             Modifier
@@ -1598,8 +1641,6 @@ fun MetrolistApp(
                                                             authManager,
                                                             context,
                                                             coroutineScope,
-                                                            pendingSearchQuery,
-                                                            pendingRoomCode,
                                                             floatingActionsBottomInset,
                                                             homeScrollToTopEvents,
                                                             libraryScrollToTopEvents,
@@ -1610,8 +1651,9 @@ fun MetrolistApp(
                                                                 authManager,
                                                                 context,
                                                                 coroutineScope,
-                                                                pendingSearchQuery,
-                                                                pendingRoomCode,
+                                                                { pendingSearchQuery },
+                                                                { pendingSearchQuery = null },
+                                                                { pendingRoomCode },
                                                                 floatingActionsBottomInset,
                                                                 homeScrollToTopEvents,
                                                                 libraryScrollToTopEvents,
@@ -2375,8 +2417,10 @@ fun getEntryProvider(
     authManager: AuthManager,
     context: Context,
     scope: CoroutineScope,
-    pendingSearchQuery: String?,
-    pendingRoomCode: String?,
+    // Getters: nav3 keeps a retained entry's content across provider changes, so entries must read the current value.
+    pendingSearchQuery: () -> String?,
+    onSearchQueryConsumed: () -> Unit,
+    pendingRoomCode: () -> String?,
     floatingActionsBottomInset: State<Dp>,
     homeScrollToTopEvents: SharedFlow<Long>,
     libraryScrollToTopEvents: SharedFlow<Long>,
@@ -2470,7 +2514,8 @@ fun getEntryProvider(
             SearchScreen(
                 navigator = navigator,
                 floatingActionsBottomInset = floatingActionsBottomInset,
-                initialQuery = pendingSearchQuery,
+                initialQuery = pendingSearchQuery(),
+                onInitialQueryConsumed = onSearchQueryConsumed,
                 onSearchResultsVisible = onSearchResultsVisible,
             )
         }
@@ -2595,6 +2640,7 @@ fun getEntryProvider(
                         type = collectionType,
                         onBackClick = { navigator.goBack() },
                         onArtistClick = { navigator.navigate(Screen.Artist(it)) },
+                        onAlbumClick = { navigator.navigate(Screen.Album(it)) },
                         onOpenDownloadQueue = { navigator.navigate(Screen.Downloads) },
                     )
                 }
@@ -2624,6 +2670,7 @@ fun getEntryProvider(
                 type = autoPlaylist.type,
                 onBackClick = { navigator.goBack() },
                 onArtistClick = { artistId -> navigator.navigate(Screen.Artist(artistId)) },
+                onAlbumClick = { albumId -> navigator.navigate(Screen.Album(albumId)) },
                 onOpenDownloadQueue = { navigator.navigate(Screen.Downloads) },
             )
         }
@@ -2664,7 +2711,7 @@ fun getEntryProvider(
 
         entry<Screen.ListenTogether>(metadata = navTabMetadata) {
             ListenTogetherScreen(
-                initialRoomCode = pendingRoomCode,
+                initialRoomCode = pendingRoomCode(),
                 onNavigateBack = { navigator.goBack() },
                 onNavigateToSettings = { navigator.navigate(Screen.ListenTogetherSettings) },
             )
@@ -2713,6 +2760,20 @@ fun getEntryProvider(
                 },
                 onNavigateToDownloads = { navigator.navigate(Screen.AutoPlaylist("downloaded")) },
                 onNavigateToArtist = { artistId -> navigator.navigate(Screen.Artist(artistId)) },
+            )
+        }
+
+        entry<Screen.SettingsPage>(metadata = navTabMetadata) { route ->
+            SettingsScreen(
+                initialPage = route.page,
+                onNavigateBack = {
+                    val target = resolveAndPersistStartupScreen()
+                    navigator.state.startRoute = target
+                    navigator.goBack()
+                    if (!navigator.state.topLevelRoute.isVisibleNavigationScreen()) navigator.navigate(target)
+                },
+                onNavigateToDownloads = { navigator.navigate(Screen.AutoPlaylist("downloaded")) },
+                onNavigateToArtist = { navigator.navigate(Screen.Artist(it)) },
             )
         }
 

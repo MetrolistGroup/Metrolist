@@ -5,6 +5,7 @@ import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.PodcastItem
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.playback.MusicQueue
 import com.metrolist.shared.ui.playback.PlaybackController
 import com.metrolist.shared.ui.playback.PlaybackUiState
 import kotlinx.coroutines.CancellationException
@@ -73,15 +74,39 @@ class MediaMenuPlaybackActionsTest {
     }
 
     @Test
-    fun albumShuffleInitializesTheQueueAndPreservesOccurrences() {
-        val controller = MenuPlaybackController()
-        val albumSongs = songs + songs.first()
-        MediaMenuPlaybackActions(AlbumItem("album", "Album", null, emptyList()), controller, { it(albumSongs) }).shuffle()
+    fun collectionShuffleEnablesTheModeAndKeepsCanonicalOccurrencesRegardlessOfPreviousMode() {
+        val collections =
+            listOf(
+                AlbumItem("album", "Album", null, emptyList()),
+                PlaylistItem("playlist", "Playlist", null),
+                PlaylistItem("local", "Local", null, isLocal = true),
+                ArtistItem("artist", "Artist", null),
+            )
+        val collectionSongs = songs + songs.first()
+        for (item in collections) {
+            for (previousShuffle in listOf(false, true)) {
+                val controller = MenuPlaybackController()
+                controller.state.value = PlaybackUiState(isShuffled = previousShuffle)
+                MediaMenuPlaybackActions(item, controller, { it(collectionSongs) }).shuffle()
 
-        assertEquals(1, controller.queueStarts)
-        assertEquals(albumSongs.groupingBy { it.id }.eachCount(), controller.queue.groupingBy { it.id }.eachCount())
-        assertEquals(controller.queue.first(), controller.playedSong)
-        assertFalse(controller.songsOnly)
+                assertTrue(controller.state.value.isShuffled)
+                assertEquals(collectionSongs, controller.queueModel.snapshot().originalItems)
+                assertEquals(collectionSongs.groupingBy { it.id }.eachCount(), controller.queue.groupingBy { it.id }.eachCount())
+                assertEquals(controller.queue.first(), controller.playedSong)
+                assertEquals(item is ArtistItem, controller.songsOnly)
+                val selectedIndex =
+                    controller.queueModel
+                        .snapshot()
+                        .originalIndices
+                        .first()
+                controller.toggleShuffle()
+                assertFalse(controller.state.value.isShuffled)
+                assertEquals(
+                    listOf(collectionSongs[selectedIndex]) + collectionSongs.filterIndexed { index, _ -> index != selectedIndex },
+                    controller.queue,
+                )
+            }
+        }
     }
 
     @Test
@@ -158,6 +183,7 @@ class MediaMenuPlaybackActionsTest {
 
 private class MenuPlaybackController : PlaybackController {
     override val state = MutableStateFlow(PlaybackUiState())
+    val queueModel = MusicQueue()
     var playedSong: SongItem? = null
     var queue = emptyList<SongItem>()
     var songsOnly = false
@@ -175,7 +201,24 @@ private class MenuPlaybackController : PlaybackController {
         this.songsOnly = songsOnly
     }
 
+    override fun shuffleQueue(
+        songs: List<SongItem>,
+        queueTitle: String?,
+        songsOnly: Boolean,
+    ) {
+        val index = songs.indices.randomOrNull() ?: return
+        queueModel.setQueue(songs, index)
+        queueModel.toggleShuffle(preserveHistory = false)
+        queueStarts++
+        play(checkNotNull(queueModel.currentItem()), queueModel.items.value, songsOnly)
+        state.value = state.value.copy(isShuffled = queueModel.isShuffled)
+    }
+
     override fun toggleShuffle() {
+        if (queueModel.items.value.isNotEmpty()) {
+            queueModel.toggleShuffle()
+            queue = queueModel.items.value
+        }
         state.value = state.value.copy(isShuffled = !state.value.isShuffled)
     }
 

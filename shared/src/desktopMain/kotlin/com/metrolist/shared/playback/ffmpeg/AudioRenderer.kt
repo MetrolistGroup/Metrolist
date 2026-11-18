@@ -16,6 +16,11 @@ import javax.sound.sampled.FloatControl
 import javax.sound.sampled.SourceDataLine
 import kotlin.math.log10
 
+private data class RenderedAudioChunk(
+    val data: ByteArray,
+    val playbackSpeed: Float,
+)
+
 class AudioRenderer private constructor(
     private val sampleRate: Int,
     private val channelCount: Int,
@@ -63,6 +68,7 @@ class AudioRenderer private constructor(
 
     private var playbackSpeed = 1f
     private var playbackPitch = 1f
+    private var processorSpeed = 1f
     private var processorPitch = 1f
     private var positionSpeed = 1f
     private var writtenFrameCount = 0L
@@ -110,7 +116,7 @@ class AudioRenderer private constructor(
         isCurrent: () -> Boolean = { true },
     ) {
         if (data == null || data.isEmpty()) return
-        val (output, generation, outputSpeed) =
+        val (output, generation) =
             synchronized(safeLock) {
                 if (!line.isOpen || !isCurrent()) return
                 val current = configuration()
@@ -121,22 +127,38 @@ class AudioRenderer private constructor(
                 val input = silenceSkipper.process(equalized, enabled, instant, positionClock::skipSilence)
                 val chunks =
                     buildList {
-                        if (tempoProcessor != null && (processorPitch != playbackPitch || (playbackSpeed == 1f && playbackPitch == 1f))) {
-                            tempoProcessor?.process(null, ::add)
+                        if (
+                            tempoProcessor != null &&
+                            (
+                                processorPitch != playbackPitch ||
+                                    (playbackSpeed == 1f && playbackPitch == 1f) ||
+                                    tempoProcessor?.requiresRebuild(playbackSpeed, playbackPitch) == true
+                            )
+                        ) {
+                            val previousSpeed = processorSpeed
+                            tempoProcessor?.process(null) { add(RenderedAudioChunk(it, previousSpeed)) }
                             tempoProcessor?.close()
                             tempoProcessor = null
                         }
                         if ((playbackSpeed != 1f || playbackPitch != 1f) && tempoProcessor == null) {
                             tempoProcessor = AudioTempoProcessor(sampleRate, channelCount, playbackSpeed, playbackPitch)
+                            processorSpeed = playbackSpeed
                             processorPitch = playbackPitch
                         }
-                        if (input.isNotEmpty()) tempoProcessor?.process(input, ::add) ?: add(input)
+                        if (tempoProcessor != null && processorSpeed != playbackSpeed) {
+                            tempoProcessor?.setSpeed(playbackSpeed)
+                            processorSpeed = playbackSpeed
+                        }
+                        if (input.isNotEmpty()) {
+                            tempoProcessor?.process(input) { add(RenderedAudioChunk(it, processorSpeed)) }
+                                ?: add(RenderedAudioChunk(input, 1f))
+                        }
                     }
-                Triple(chunks, outputGeneration, playbackSpeed)
+                chunks to outputGeneration
             }
         if (output.isNotEmpty()) recordOutputUnderrun(generation)
         for (chunk in output) {
-            if (!writeOutput(chunk, generation, outputSpeed, isCurrent)) return
+            if (!writeOutput(chunk.data, generation, chunk.playbackSpeed, isCurrent)) return
         }
     }
 
@@ -356,43 +378,56 @@ class AudioRenderer private constructor(
         require(speed.isFinite() && speed in 0.5f..2f)
         synchronized(safeLock) {
             if (speed != playbackSpeed) {
-                tempoProcessor?.setSpeed(speed)
+                val processor = tempoProcessor
+                if (processor != null && !processor.requiresRebuild(speed, playbackPitch)) {
+                    processor.setSpeed(speed)
+                    processorSpeed = speed
+                }
                 playbackSpeed = speed
             }
         }
     }
 
     fun drain(shouldContinue: () -> Boolean): Boolean {
-        val (pending, generation, outputSpeed) =
+        val (pending, generation) =
             synchronized(safeLock) {
                 if (!shouldContinue()) return false
                 expectingOutput = false
-                Triple(
+                val chunks =
                     buildList {
                         val tail = silenceSkipper.drain()
-                        if (tail.isNotEmpty()) tempoProcessor?.process(tail, ::add) ?: add(tail)
-                        tempoProcessor?.process(null, ::add)
-                    },
-                    outputGeneration,
-                    playbackSpeed,
-                )
+                        if (tail.isNotEmpty()) {
+                            tempoProcessor?.process(tail) { add(RenderedAudioChunk(it, processorSpeed)) }
+                                ?: add(RenderedAudioChunk(tail, 1f))
+                        }
+                        tempoProcessor?.process(null) { add(RenderedAudioChunk(it, processorSpeed)) }
+                    }
+                chunks to outputGeneration
             }
-        for (data in pending) {
-            if (!shouldContinue() || !writeOutput(data, generation, outputSpeed)) return false
+        for (chunk in pending) {
+            if (!shouldContinue() || !writeOutput(chunk.data, generation, chunk.playbackSpeed)) return false
         }
-        synchronized(safeLock) {
-            if (generation != outputGeneration || !shouldContinue()) return false
-            expectingOutput = false
-            positionClock.finishSilence(writtenFrameCount, silenceSkipper.outputFrames)
-        }
+        val drainTimeoutMs =
+            synchronized(safeLock) {
+                if (generation != outputGeneration || !shouldContinue()) return false
+                expectingOutput = false
+                positionClock.finishSilence(writtenFrameCount, silenceSkipper.outputFrames)
+                val bufferedBytes = (line.bufferSize.toLong() - line.available()).coerceAtLeast(0L)
+                val bytesPerSecond = sampleRate.toLong() * audioFormat.frameSize
+                (bufferedBytes * 1_000L + bytesPerSecond - 1L) / bytesPerSecond + 250L
+            }
         // SourceDataLine.drain() cannot be interrupted reliably on every mixer.
+        // Some Linux mixers never report an empty buffer, so allow the queued duration plus scheduling margin.
         return awaitAudioDrain(
+            timeoutMs = drainTimeoutMs,
             shouldContinue = { generation == outputGeneration && shouldContinue() },
-            hasPendingAudio = {
+            awaitResume = {
                 synchronized(safeLock) {
                     while (generation == outputGeneration && line.isOpen && !isPlaying && shouldContinue()) safeLock.wait()
-                    line.isOpen && line.available() < line.bufferSize
                 }
+            },
+            hasPendingAudio = {
+                synchronized(safeLock) { line.isOpen && line.available() < line.bufferSize }
             },
         )
     }

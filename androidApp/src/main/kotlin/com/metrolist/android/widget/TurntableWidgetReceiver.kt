@@ -12,9 +12,8 @@ import android.content.Intent
 import android.os.Bundle
 import com.metrolist.android.App
 import com.metrolist.android.playback.MusicService
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.metrolist.android.utils.launchAsync
+import kotlinx.coroutines.CancellationException
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import timber.log.Timber
@@ -46,8 +45,7 @@ class TurntableWidgetReceiver :
         context: Context,
         appWidgetIds: IntArray,
     ) {
-        val pendingResult = goAsync()
-        CoroutineScope(Dispatchers.Main).launch {
+        launchAsync {
             try {
                 (context.applicationContext as App).startup.await()
                 if (MusicService.isRunning) {
@@ -56,10 +54,10 @@ class TurntableWidgetReceiver :
                     widgetManager.updateIdleTurntableWidgets(appWidgetIds)
                     if (MusicService.isRunning) requestServiceSnapshot(context)
                 }
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 Timber.e(error, "Failed to refresh turntable widgets")
-            } finally {
-                pendingResult.finish()
             }
         }
     }

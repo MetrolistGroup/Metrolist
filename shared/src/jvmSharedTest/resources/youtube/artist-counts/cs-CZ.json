@@ -1,0 +1,41 @@
+{
+  "header": {
+    "musicImmersiveHeaderRenderer": {
+      "subscriptionButton": {
+        "subscribeButtonRenderer": {
+          "subscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 mil."
+              }
+            ]
+          },
+          "longSubscriberCountText": {
+            "runs": [
+              {
+                "text": "59,3 mil. odběratelů"
+              }
+            ],
+            "accessibility": {
+              "accessibilityData": {
+                "label": "59,3 milionu odběratelů"
+              }
+            }
+          }
+        }
+      },
+      "monthlyListenerCount": {
+        "runs": [
+          {
+            "text": "240 mil. posluchačů měsíčně"
+          }
+        ],
+        "accessibility": {
+          "accessibilityData": {
+            "label": "240 milionů posluchačů měsíčně"
+          }
+        }
+      }
+    }
+  }
+}

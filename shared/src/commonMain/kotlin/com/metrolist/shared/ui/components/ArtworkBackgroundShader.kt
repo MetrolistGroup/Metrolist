@@ -1,5 +1,7 @@
 package com.metrolist.shared.ui.components
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -30,7 +32,9 @@ import coil3.compose.LocalPlatformContext
 import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import com.metrolist.shared.ui.player.LocalPlayerTrackArtwork
+import com.metrolist.shared.ui.utils.configurePreparedArtwork
 import com.metrolist.shared.ui.utils.nativeBlurCompat
+import com.metrolist.shared.ui.utils.supportsNativeBlur
 import com.metrolist.shared.ui.utils.toImageBitmap
 import kotlin.math.PI
 import kotlin.math.ceil
@@ -223,10 +227,11 @@ internal fun artworkBackdropRequest(
         .data(url)
         .size(256, 256)
         .memoryCacheKeyExtra("artwork_backdrop", "256")
+        .apply { if (!supportsNativeBlur()) configurePreparedArtwork() }
         .build()
 
 @Composable
-internal fun BlurredArtworkBackground(
+fun BlurredArtworkBackground(
     url: String?,
     modifier: Modifier = Modifier,
     blurRadiusPx: Float,
@@ -234,13 +239,24 @@ internal fun BlurredArtworkBackground(
     lyricsGradient: Boolean = false,
     verticalBias: Float = 0f,
     pendingScrimAlpha: Float = scrimAlpha,
+    crossfade: Boolean = false,
 ) {
     val prepared = LocalPlayerTrackArtwork.current?.takeIf { it.url == url }
-    if (prepared != null) {
-        prepared.bitmap?.let {
+    val bitmap =
+        if (prepared != null) {
+            prepared.bitmap
+        } else {
+            val context = LocalPlatformContext.current
+            val request = remember(url, context) { artworkBackdropRequest(context, url) }
+            val painter = key(url) { rememberAsyncImagePainter(request) }
+            val state by painter.state.collectAsState()
+            remember(state) { (state as? AsyncImagePainter.State.Success)?.result?.image?.toImageBitmap() }
+        }
+    val content: @Composable (ImageBitmap?, Modifier) -> Unit = { image, imageModifier ->
+        image?.let {
             BlurredArtworkBackground(
                 it,
-                modifier,
+                imageModifier,
                 blurRadiusPx,
                 scrimAlpha,
                 lyricsGradient,
@@ -248,23 +264,11 @@ internal fun BlurredArtworkBackground(
                 pendingScrimAlpha = pendingScrimAlpha,
             )
         }
-        return
     }
-    val context = LocalPlatformContext.current
-    val request = remember(url, context) { artworkBackdropRequest(context, url) }
-    val painter = key(url) { rememberAsyncImagePainter(request) }
-    val state by painter.state.collectAsState()
-    val bitmap = remember(state) { (state as? AsyncImagePainter.State.Success)?.result?.image?.toImageBitmap() }
-    bitmap?.let {
-        BlurredArtworkBackground(
-            it,
-            modifier,
-            blurRadiusPx,
-            scrimAlpha,
-            lyricsGradient,
-            verticalBias,
-            pendingScrimAlpha = pendingScrimAlpha,
-        )
+    if (crossfade) {
+        Crossfade(bitmap, modifier, animationSpec = tween(200)) { content(it, Modifier.fillMaxSize()) }
+    } else {
+        content(bitmap, modifier)
     }
 }
 

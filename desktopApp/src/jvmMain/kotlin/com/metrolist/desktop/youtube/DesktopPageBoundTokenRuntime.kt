@@ -14,13 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.metrolist.desktop.utils.isLinuxWebKitAvailable
 import com.metrolist.desktop.utils.prepareDesktopWebViewDataDirectory
+import com.metrolist.desktop.web.DesktopWebView
+import com.metrolist.desktop.web.DesktopWebViewAvailability
 import com.metrolist.shared.utils.OsUtil
 import com.metrolist.shared.youtube.playback.DesktopPoTokenJavaScriptRuntime
 import com.metrolist.shared.youtube.playback.PAGE_BOUND_PO_TOKEN_USER_AGENT
 import com.metrolist.shared.youtube.playback.PAGE_BOUND_TOKEN_ORIGIN_URL
 import com.metrolist.shared.youtube.playback.PAGE_BOUND_TOKEN_SCRIPT
 import io.github.kdroidfilter.webview.web.LoadingState
-import io.github.kdroidfilter.webview.web.WebView
 import io.github.kdroidfilter.webview.web.WebViewNavigator
 import io.github.kdroidfilter.webview.web.rememberWebViewNavigator
 import io.github.kdroidfilter.webview.web.rememberWebViewState
@@ -146,10 +147,14 @@ class DesktopPageBoundTokenRuntime(
 
 @Composable
 fun DesktopPageBoundTokenHost(runtime: DesktopPageBoundTokenRuntime) {
+    val creationFailure by DesktopWebViewAvailability.shared.creationFailure.collectAsState()
+    LaunchedEffect(runtime, creationFailure) {
+        creationFailure?.let(runtime::failInitialization)
+    }
     val hostRequested by runtime.hostRequested.collectAsState()
     val requested by runtime.requested.collectAsState()
     val session by runtime.session.collectAsState()
-    if (!hostRequested || !runtime.available) return
+    if (!hostRequested || creationFailure != null || !runtime.available) return
     // Wry's native WebViews can survive disposal. Reuse one view and unload the attestation page on idle.
     DesktopPageBoundTokenSession(runtime, session, requested)
 }
@@ -186,7 +191,7 @@ private fun DesktopPageBoundTokenSession(
         onDispose { runtime.detach(session) }
     }
     Box(Modifier.size(1.dp)) {
-        WebView(
+        DesktopWebView(
             state = state,
             navigator = navigator,
             modifier = Modifier.fillMaxSize(),

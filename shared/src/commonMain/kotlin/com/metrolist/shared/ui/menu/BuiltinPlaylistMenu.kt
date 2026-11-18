@@ -37,12 +37,14 @@ import org.jetbrains.compose.resources.stringResource
 fun SpeedDialPinMenuItem(
     playlist: PlaylistItem,
     database: MusicDatabase,
+    count: Int = 1,
     onDismiss: () -> Unit,
 ) {
     val pin = rememberSpeedDialToggle(playlist, database)
     val action = pinAction(pin.isPinned, onDismiss, pin.toggle) ?: return
     DropdownMenuItem(
         text = { Text(action.title) },
+        shape = groupedMenuItemShapes(0, count).shape,
         leadingIcon = { Icon(action.icon, null) },
         onClick = action.onClick,
     )

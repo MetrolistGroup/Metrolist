@@ -9,6 +9,7 @@ import androidx.room3.ColumnInfo
 import androidx.room3.Entity
 import androidx.room3.Index
 import androidx.room3.PrimaryKey
+import com.metrolist.shared.model.PlaylistItem
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -36,6 +37,7 @@ data class PlaylistEntity(
     val isAutoSync: Boolean = false,
     val description: String? = null,
     val customThumbnailUrl: String? = null,
+    val remoteHeader: PlaylistItem? = null,
 ) {
     companion object {
         const val LIKED_PLAYLIST_ID = "LP_LIKED"
@@ -53,3 +55,17 @@ data class PlaylistEntity(
         }
     }
 }
+
+fun PlaylistEntity.toPlaylistItem(songCount: Int): PlaylistItem =
+    (remoteHeader ?: PlaylistItem(browseId ?: id, name, thumbnailUrl)).copy(
+        id = browseId ?: id,
+        title = name,
+        thumbnail = thumbnailUrl,
+        songCount = songCount.toString(),
+        playEndpointParams = playEndpointParams,
+        radioEndpointParams = radioEndpointParams,
+        isEditable = isEditable,
+        description = description,
+        isLocal = isLocal || browseId == null,
+        customThumbnail = customThumbnailUrl,
+    )

@@ -25,11 +25,10 @@ import com.metrolist.android.R
 import com.metrolist.android.recognition.MusicRecognitionService
 import com.metrolist.android.recognition.RecognitionLaunchActivity
 import com.metrolist.android.recognition.RecognitionWidgetService
+import com.metrolist.android.utils.launchAsync
 import com.metrolist.shared.recognition.RecognitionStatus
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -55,15 +54,14 @@ class RecognizerWidgetReceiver : AppWidgetProvider() {
     }
 
     private fun refresh(context: Context) {
-        val pendingResult = goAsync()
-        CoroutineScope(Dispatchers.Main).launch {
+        launchAsync {
             try {
                 (context.applicationContext as App).startup.await()
                 RecognizerWidgets.update(context)
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 Timber.e(error, "Failed to refresh recognizer widgets")
-            } finally {
-                pendingResult.finish()
             }
         }
     }
@@ -74,7 +72,7 @@ object RecognizerWidgets : KoinComponent {
     private val imageLoader: ImageLoader by inject()
 
     suspend fun update(context: Context) {
-        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val appWidgetManager = AppWidgetManager.getInstance(context) ?: return
         val widgetIds = appWidgetManager.getAppWidgetIds(ComponentName(context, RecognizerWidgetReceiver::class.java))
         if (widgetIds.isEmpty()) return
         val status = MusicRecognitionService.status.value

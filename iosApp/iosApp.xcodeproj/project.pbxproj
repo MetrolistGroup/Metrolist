@@ -10,10 +10,6 @@
 		48D55D6E3B0150F6A3E5DBD2 /* iosApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E06ED7E670B5D21A160DA9E /* iosApp.swift */; };
 		9FE61069A71042D393E7AA0B /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 9FE61069A71042D393E7AA0C /* Sentry */; };
 		A6A0F9B42F3D4A2B91B6C814 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1E6D6B4964F047A8A6DC43F5 /* Assets.xcassets */; };
-		B161A9B6D7F34140A19AC001 /* kuromoji.js in Resources */ = {isa = PBXBuildFile; fileRef = B161A9B6D7F34140A19AC101 /* kuromoji.js */; };
-		B161A9B6D7F34140A19AC002 /* kuromoji-bootstrap.js in Resources */ = {isa = PBXBuildFile; fileRef = B161A9B6D7F34140A19AC102 /* kuromoji-bootstrap.js */; };
-		B161A9B6D7F34140A19AC003 /* kuromoji-LICENSE-2.0.txt in Resources */ = {isa = PBXBuildFile; fileRef = B161A9B6D7F34140A19AC103 /* kuromoji-LICENSE-2.0.txt */; };
-		B161A9B6D7F34140A19AC004 /* kuromoji-NOTICE.md in Resources */ = {isa = PBXBuildFile; fileRef = B161A9B6D7F34140A19AC104 /* kuromoji-NOTICE.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -22,10 +18,6 @@
 		0418C23F19355BB18E625B53 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Configuration/Config.xcconfig; sourceTree = "<group>"; };
 		B0FD6575DF35547EA4A7F264 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Configuration/Info.plist; sourceTree = "<group>"; };
 		1E6D6B4964F047A8A6DC43F5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		B161A9B6D7F34140A19AC101 /* kuromoji.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = ../shared/src/iosMain/resources/kuromoji.js; sourceTree = SOURCE_ROOT; };
-		B161A9B6D7F34140A19AC102 /* kuromoji-bootstrap.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = ../shared/src/iosMain/resources/kuromoji-bootstrap.js; sourceTree = SOURCE_ROOT; };
-		B161A9B6D7F34140A19AC103 /* kuromoji-LICENSE-2.0.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ../shared/src/iosMain/resources/kuromoji-LICENSE-2.0.txt; sourceTree = SOURCE_ROOT; };
-		B161A9B6D7F34140A19AC104 /* kuromoji-NOTICE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = ../shared/src/iosMain/resources/kuromoji-NOTICE.md; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,10 +45,6 @@
 			children = (
 				5E06ED7E670B5D21A160DA9E /* iosApp.swift */,
 				1E6D6B4964F047A8A6DC43F5 /* Assets.xcassets */,
-				B161A9B6D7F34140A19AC101 /* kuromoji.js */,
-				B161A9B6D7F34140A19AC102 /* kuromoji-bootstrap.js */,
-				B161A9B6D7F34140A19AC103 /* kuromoji-LICENSE-2.0.txt */,
-				B161A9B6D7F34140A19AC104 /* kuromoji-NOTICE.md */,
 				A2402BE361735165BE944747 /* Configuration */,
 			);
 			sourceTree = "<group>";
@@ -142,10 +130,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				A6A0F9B42F3D4A2B91B6C814 /* Assets.xcassets in Resources */,
-				B161A9B6D7F34140A19AC001 /* kuromoji.js in Resources */,
-				B161A9B6D7F34140A19AC002 /* kuromoji-bootstrap.js in Resources */,
-				B161A9B6D7F34140A19AC003 /* kuromoji-LICENSE-2.0.txt in Resources */,
-				B161A9B6D7F34140A19AC004 /* kuromoji-NOTICE.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

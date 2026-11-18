@@ -27,12 +27,18 @@ probe_cursor() {
     timeout --kill-after=1s 2s "$@" 2>/dev/null
 }
 if [ -z "$XCURSOR_THEME" ]; then
-    # Try Hyprland
-    CURSOR_THEME="$(probe_cursor hyprctl getoption cursor:theme | sed -n 's/.*string: *//p')"
-    if [ -z "$CURSOR_THEME" ]; then
-        # Try GNOME / gsettings
-        CURSOR_THEME="$(probe_cursor gsettings get org.gnome.desktop.interface cursor-theme | tr -d "'")"
-    fi
+    case "$XDG_CURRENT_DESKTOP:$KDE_FULL_SESSION" in
+        *KDE*|*:true)
+            CURSOR_THEME="$(probe_cursor kreadconfig6 --file kcminputrc --group Mouse --key cursorTheme ||
+                probe_cursor kreadconfig5 --file kcminputrc --group Mouse --key cursorTheme)"
+            ;;
+        *)
+            CURSOR_THEME="$(probe_cursor hyprctl getoption cursor:theme | sed -n 's/.*string: *//p')"
+            if [ -z "$CURSOR_THEME" ]; then
+                CURSOR_THEME="$(probe_cursor gsettings get org.gnome.desktop.interface cursor-theme | tr -d "'")"
+            fi
+            ;;
+    esac
     if [ -n "$CURSOR_THEME" ]; then
         export XCURSOR_THEME="$CURSOR_THEME"
         export GDK_CURSOR_THEME="$CURSOR_THEME"
@@ -40,13 +46,19 @@ if [ -z "$XCURSOR_THEME" ]; then
 fi
 
 if [ -z "$XCURSOR_SIZE" ]; then
-    # Try Hyprland
-    CURSOR_SIZE="$(probe_cursor hyprctl getoption cursor:size | sed -n 's/.*int: *//p')"
-    if [ -z "$CURSOR_SIZE" ]; then
-        # Try GNOME / gsettings
-        CURSOR_SIZE="$(probe_cursor gsettings get org.gnome.desktop.interface cursor-size)"
-    fi
-    if [ -n "$CURSOR_SIZE" ] && [ "$CURSOR_SIZE" -eq "$CURSOR_SIZE" ] 2>/dev/null; then
+    case "$XDG_CURRENT_DESKTOP:$KDE_FULL_SESSION" in
+        *KDE*|*:true)
+            CURSOR_SIZE="$(probe_cursor kreadconfig6 --file kcminputrc --group Mouse --key cursorSize ||
+                probe_cursor kreadconfig5 --file kcminputrc --group Mouse --key cursorSize)"
+            ;;
+        *)
+            CURSOR_SIZE="$(probe_cursor hyprctl getoption cursor:size | sed -n 's/.*int: *//p')"
+            if [ -z "$CURSOR_SIZE" ]; then
+                CURSOR_SIZE="$(probe_cursor gsettings get org.gnome.desktop.interface cursor-size)"
+            fi
+            ;;
+    esac
+    if [ -n "$CURSOR_SIZE" ] && [ "$CURSOR_SIZE" -gt 0 ] 2>/dev/null; then
         export XCURSOR_SIZE="$CURSOR_SIZE"
     fi
 fi

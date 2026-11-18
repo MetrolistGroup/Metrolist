@@ -41,6 +41,15 @@ import kotlin.time.Duration.Companion.milliseconds
 
 private fun uriScheme(value: String): String? = Regex("^([A-Za-z][A-Za-z0-9+.-]*):").find(value)?.groupValues?.get(1)
 
+internal suspend fun resolveSongByVideoIdOrFallback(
+    videoId: String?,
+    metadataLookup: suspend (String) -> SongItem?,
+    fallback: suspend () -> SongItem?,
+): SongItem? {
+    if (videoId != null) metadataLookup(videoId)?.let { return it }
+    return fallback()
+}
+
 class PlaylistImportManager(
     private val database: MusicDatabase,
     private val repository: YouTubeRepository,
@@ -86,7 +95,7 @@ class PlaylistImportManager(
                             cached[track.matchKey()]?.takeIf {
                                 track.isResolvedLocalReference || track.videoId == it.id || bestTrackMatch(track, listOf(it)) != null
                             }
-                        val song = cachedSong ?: resolveTrack(track)
+                        val song = cachedSong ?: resolveTrack(track, provider)
                         results[index] =
                             song?.let {
                                 val customTitle = track.customTitle?.takeIf(String::isNotBlank)
@@ -137,7 +146,7 @@ class PlaylistImportManager(
     }
 
     private fun CsvTrack.matchKey(): String =
-        listOf(title.trim().lowercase(), artist.trim().lowercase(), directReference.orEmpty()).joinToString("\u0000")
+        listOfNotNull(title.trim().lowercase(), artist.trim().lowercase(), directReference.orEmpty(), videoId).joinToString("\u0000")
 
     suspend fun loadYouTubePlaylist(
         input: String,
@@ -408,7 +417,10 @@ class PlaylistImportManager(
         }
     }
 
-    private suspend fun resolveTrack(track: CsvTrack): SongItem? {
+    private suspend fun resolveTrack(
+        track: CsvTrack,
+        provider: ImportSourceType?,
+    ): SongItem? {
         if (track.isResolvedLocalReference) {
             val uri = track.directReference ?: return null
             return SongItem(
@@ -425,20 +437,30 @@ class PlaylistImportManager(
                 isLocal = true,
             )
         }
-        val searchQuery = resolutionSearchQuery(track) ?: return null
+        val searchQueries = resolutionSearchQueries(track, provider)
+        if (searchQueries.isEmpty()) return null
         repeat(RESOLVE_RETRIES) { attempt ->
             try {
-                return track.videoId?.let { repository.getSongMetadata(it) }
-                    ?: bestTrackMatch(
-                        track,
-                        repository
-                            .searchFiltered(
-                                searchQuery,
-                                SearchFilter.SONG,
-                                allowOfflineFallback = false,
-                            ).items
-                            .filterIsInstance<SongItem>(),
-                    )
+                return resolveSongByVideoIdOrFallback(
+                    track.videoId,
+                    metadataLookup = { videoId -> repository.getSongMetadata(videoId) },
+                ) {
+                    for (searchQuery in searchQueries) {
+                        val match =
+                            bestTrackMatch(
+                                track,
+                                repository
+                                    .searchFiltered(
+                                        searchQuery,
+                                        SearchFilter.SONG,
+                                        allowOfflineFallback = false,
+                                    ).items
+                                    .filterIsInstance<SongItem>(),
+                            )
+                        if (match != null) return@resolveSongByVideoIdOrFallback match
+                    }
+                    null
+                }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -640,23 +662,31 @@ class PlaylistImportManager(
             return scheme == null || scheme.equals("file", ignoreCase = true)
         }
 
+        private val FEATURE_CREDIT =
+            Regex("""\s*[(\[](?:feat\.?|ft\.?|featuring|with)\s[^)\]]*[)\]]|\s+(?:feat\.?|ft\.?|featuring)\s.*$""", RegexOption.IGNORE_CASE)
+
         internal fun bestTrackMatch(
             track: CsvTrack,
             candidates: List<SongItem>,
         ): SongItem? {
             fun normalized(value: String): String = value.lowercase().filter(Char::isLetterOrDigit)
-            val title = normalized(track.title)
+
+            // YouTube Music titles credit guests ("Starboy (feat. Daft Punk)") that Spotify lists as co-artists.
+            fun normalizedTitle(value: String): String = normalized(value.replace(FEATURE_CREDIT, ""))
+            val title = normalizedTitle(track.title)
             if (title.isEmpty()) return null
             val artist = normalized(track.artist)
             val album = normalized(track.album)
             return candidates
                 .filter { song ->
-                    normalized(song.title) == title &&
+                    normalizedTitle(song.title) == title &&
                         (
                             artist.isEmpty() || normalized(song.artists.joinToString { it.name }) == artist ||
                                 track.artist.split(',').any { sourceArtist ->
                                     song.artists.any { normalized(it.name) == normalized(sourceArtist) }
-                                }
+                                } ||
+                                // Names like "Tyler, The Creator" contain the separator, so match whole names too.
+                                song.artists.any { normalized(it.name).length >= 3 && normalized(it.name) in artist }
                         ) &&
                         (
                             track.durationSeconds == null || song.duration == null ||
@@ -678,6 +708,16 @@ class PlaylistImportManager(
                 return null
             }
             return listOf(track.title, track.artist, track.album).filter(String::isNotBlank).joinToString(" ")
+        }
+
+        internal fun resolutionSearchQueries(
+            track: CsvTrack,
+            provider: ImportSourceType?,
+        ): List<String> {
+            val primary = resolutionSearchQuery(track) ?: return emptyList()
+            if (provider != ImportSourceType.SPOTIFY || track.album.isBlank()) return listOf(primary)
+            val withoutAlbum = listOf(track.title, track.artist).filter(String::isNotBlank).joinToString(" ")
+            return listOf(primary, withoutAlbum).distinct()
         }
 
         fun parseCsv(

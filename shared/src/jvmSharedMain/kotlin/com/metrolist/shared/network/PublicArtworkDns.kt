@@ -5,13 +5,22 @@ import java.net.InetAddress
 import java.net.UnknownHostException
 
 object PublicArtworkDns : Dns {
-    override fun lookup(hostname: String): List<InetAddress> {
-        val addresses = Dns.SYSTEM.lookup(hostname)
-        if (addresses.isEmpty() || addresses.any { !it.isPublicArtworkAddress() }) {
-            throw UnknownHostException("Artwork host does not resolve exclusively to public addresses")
-        }
-        return addresses
+    override fun lookup(hostname: String): List<InetAddress> = artworkAddresses(hostname, Dns.SYSTEM.lookup(hostname))
+}
+
+internal fun artworkAddresses(
+    hostname: String,
+    addresses: List<InetAddress>,
+): List<InetAddress> {
+    val host = hostname.lowercase().removeSuffix(".")
+    val isYouTubeArtworkHost = host.endsWith(".googleusercontent.com") || host.endsWith(".ggpht.com") || host.endsWith(".ytimg.com")
+    // VPN DNS can map official CDN hosts to private addresses. HTTPS still verifies their certificates.
+    if (addresses.isEmpty() ||
+        (!isYouTubeArtworkHost && addresses.any { !it.isPublicArtworkAddress() })
+    ) {
+        throw UnknownHostException("Artwork host does not resolve exclusively to public addresses")
     }
+    return addresses
 }
 
 internal fun InetAddress.isPublicArtworkAddress(): Boolean {

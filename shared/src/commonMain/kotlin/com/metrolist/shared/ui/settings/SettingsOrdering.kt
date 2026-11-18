@@ -96,6 +96,7 @@ internal fun List<SettingsGroupRegistration>.prioritized(page: SettingsPageId): 
                     listOf(
                         "autoLoadMore",
                         "autoDownloadOnLike",
+                        "autoDownloadSavedCollections",
                         "persistentQueue",
                         "promptContinuePlayback",
                         "rememberShuffleRepeat",

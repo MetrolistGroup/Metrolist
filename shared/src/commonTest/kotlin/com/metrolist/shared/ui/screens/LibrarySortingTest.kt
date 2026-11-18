@@ -6,6 +6,7 @@ import com.metrolist.shared.model.SortDirection
 import com.metrolist.shared.settings.HiddenLibraryItem
 import com.metrolist.shared.settings.moveLibraryItems
 import com.metrolist.shared.viewmodels.libraryAccountKey
+import com.metrolist.shared.viewmodels.mergeLibraryItems
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -27,6 +28,33 @@ class LibrarySortingTest {
                 sorted.map { it.id },
             )
         }
+    }
+
+    @Test
+    fun downloadedSortKeepsNewestDownloadsFirstAndUndownloadedTracksLast() {
+        val older = SongItem("old", "Older", null, emptyList(), null, downloadedAt = 10)
+        val newer = older.copy(id = "new", downloadedAt = 20)
+        val duplicateDate = newer.copy(id = "tie")
+        val missing = older.copy(id = "missing", downloadedAt = null)
+        val songs = listOf(missing, older, newer, duplicateDate)
+        assertEquals(SortDirection.DESCENDING, LibrarySortType.DOWNLOADED.defaultDirection)
+        assertEquals(
+            listOf(newer, duplicateDate, older, missing),
+            sortLibraryItems(songs, LibrarySortType.DOWNLOADED, ""),
+        )
+        assertEquals(
+            listOf(older, newer, duplicateDate, missing),
+            sortLibraryItems(songs, LibrarySortType.DOWNLOADED, "", SortDirection.ASCENDING),
+        )
+    }
+
+    @Test
+    fun remoteLibraryRowsKeepTheLocalDownloadDate() {
+        val local = SongItem("song", "Local", null, emptyList(), null, downloadedAt = 20)
+        val remote = local.copy(title = "Remote", downloadedAt = null)
+        val merged = mergeLibraryItems(listOf(local), listOf(remote)).single() as SongItem
+        assertEquals(20L, merged.downloadedAt)
+        assertEquals("Remote", merged.title)
     }
 
     @Test

@@ -84,6 +84,7 @@ fun SearchResultsList(
                 menuAnchor.open()
             },
             onSongSave = { PlayerState.showAddToPlaylistSong = it },
+            onAlbumPlay = { PlaylistAlbumState.playAlbum(it.id) },
             onHistoryItemClick = { query ->
                 SearchState.search(query)
             },
@@ -112,10 +113,9 @@ fun SearchResultsList(
                         GlobalYouTubeRepository.instance
                             .getArtistSongs(
                                 item.id,
-                            ).shuffled()
-                            .takeIf { it.isNotEmpty() }
+                            ).takeIf { it.isNotEmpty() }
                             ?.let {
-                                PlayerState.playTrack(it.first(), it, songsOnly = true)
+                                PlayerState.shuffleQueue(it, songsOnly = true)
                             }
                     }
                 }

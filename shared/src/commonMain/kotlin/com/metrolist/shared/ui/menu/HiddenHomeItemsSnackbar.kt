@@ -16,7 +16,9 @@ import org.jetbrains.compose.resources.getString
 fun HiddenHomeItemsSnackbar(snackbarHostState: SnackbarHostState) {
     LaunchedEffect(snackbarHostState) {
         HiddenHomeItems.hidden.collectLatest { item ->
-            snackbarHostState.currentSnackbarData?.dismiss()
+            if (snackbarHostState.currentSnackbarData?.visuals !is ContentUndoHintVisuals) {
+                snackbarHostState.currentSnackbarData?.dismiss()
+            }
             val result =
                 snackbarHostState.showSnackbar(
                     message = getString(Res.string.hidden_from_home, item.title),

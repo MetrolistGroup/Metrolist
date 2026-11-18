@@ -5,6 +5,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playback.MusicQueueSnapshot
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.Serializable
+import org.jetbrains.compose.resources.StringResource
 
 enum class PlaybackReadiness {
     IDLE,
@@ -123,10 +124,10 @@ data class ListenTogetherServerMetadata(
 )
 
 data class ListenTogetherServer(
-    val name: String,
+    val name: String?,
     val url: String,
-    val location: String,
-    val operator: String,
+    val location: StringResource,
+    val operator: String?,
     val isCustom: Boolean = false,
 )
 

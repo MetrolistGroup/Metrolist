@@ -13,10 +13,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.metrolist.desktop.utils.isLinuxWebKitAvailable
+import com.metrolist.desktop.web.DesktopWebView
 import io.github.kdroidfilter.webview.request.RequestInterceptor
 import io.github.kdroidfilter.webview.request.WebRequest
 import io.github.kdroidfilter.webview.request.WebRequestInterceptResult
-import io.github.kdroidfilter.webview.web.WebView
 import io.github.kdroidfilter.webview.web.WebViewNavigator
 import io.github.kdroidfilter.webview.web.rememberWebViewNavigator
 import io.github.kdroidfilter.webview.web.rememberWebViewState
@@ -115,7 +115,7 @@ internal fun LastFmArtistBrowserHost(browser: LastFmArtistBrowser) {
             }
         }
         Box(Modifier.size(1.dp)) {
-            WebView(state = state, navigator = navigator, modifier = Modifier.fillMaxSize())
+            DesktopWebView(state = state, navigator = navigator, modifier = Modifier.fillMaxSize())
         }
     }
 }

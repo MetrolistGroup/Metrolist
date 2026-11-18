@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.9.0.schema.json
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.28.0.schema.json
 PackageIdentifier: MetrolistGroup.Metrolist
 PackageVersion: '@VERSION@'
 PackageLocale: en-US
@@ -12,4 +12,4 @@ LicenseUrl: https://github.com/MetrolistGroup/Metrolist/blob/v@VERSION@/LICENSE
 ShortDescription: YouTube Music desktop client
 ReleaseNotesUrl: https://github.com/MetrolistGroup/Metrolist/releases/tag/v@VERSION@
 ManifestType: defaultLocale
-ManifestVersion: 1.9.0
+ManifestVersion: 1.28.0

@@ -128,7 +128,7 @@ ios-sim-run:
 
 ios-test:
 	@echo "Testing iOS App Swift syntax integrity..."
-	find iosApp -name "*.swift" -print0 | xargs -0 xcrun --sdk iphonesimulator swiftc -target arm64-apple-ios17.0-simulator -parse
+	find iosApp -name "*.swift" -print0 | xargs -0 xcrun --sdk iphonesimulator swiftc -target arm64-apple-ios15.0-simulator -parse
 	@echo "All iOS Swift files verified successfully."
 
 ios-clean:

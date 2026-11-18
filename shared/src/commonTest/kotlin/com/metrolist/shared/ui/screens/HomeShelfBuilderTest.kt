@@ -200,6 +200,38 @@ class HomeShelfBuilderTest {
     }
 
     @Test
+    fun speedDialDoesNotBorrowTheListenAgainHeaderWhenSongsOverlap() {
+        val songs = (1..6).map { song("song-$it") }
+        val section = HomeSection("Listen again", songs, subtitle = "Account", thumbnail = "avatar")
+        val shelves = build(HomeUiState(data = listOf(section), keepListening = songs, speedDialItems = songs))
+
+        assertEquals(listOf(text.speedDial, section.title), shelves.map { it.title })
+        assertNull(shelves.first().label)
+        assertNull(shelves.first().thumbnail)
+        assertEquals(HomeShelfStyle.SPEED_DIAL, shelves.first().style)
+        assertEquals(section.subtitle, shelves.last().label)
+    }
+
+    @Test
+    fun speedDialDropsRecommendationsFromHiddenShelvesButKeepsPins() {
+        val hidden = HomeSection("Hidden mixes", listOf(song("hidden-api")), browseId = "FEmusic_hidden")
+        Settings.shared.toggleHomeSectionVisibility("section:FEmusic_hidden:", false)
+        Settings.shared.toggleHomeSectionVisibility("quick_picks", false)
+        val shelf =
+            build(
+                HomeUiState(
+                    data = listOf(hidden),
+                    quickPicks = listOf(song("quick"), song("pinned")),
+                    speedDialItems = listOf(song("pinned"), song("quick"), song("hidden-api"), song("other")),
+                    speedDialPinnedIds = listOf("pinned"),
+                ),
+            ).first()
+
+        assertEquals(HomeShelfStyle.SPEED_DIAL, shelf.style)
+        assertEquals(listOf("pinned", "other"), shelf.items.map { it.id })
+    }
+
+    @Test
     fun sourceSongRowsDoNotReplaceTheSpeedDialProjection() {
         val section = HomeSection(text.speedDial, listOf(song("source")), isResponsiveList = true)
         val shelf = build(HomeUiState(data = listOf(section), speedDialItems = listOf(song("pinned")))).single()
