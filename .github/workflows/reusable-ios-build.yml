@@ -123,7 +123,7 @@ jobs:
         run: |
           echo "Validating Swift source files in iosApp/..."
           swift --version
-          find iosApp -name "*.swift" -print0 | xargs -0 xcrun --sdk iphonesimulator swiftc -target arm64-apple-ios17.0-simulator -parse
+          find iosApp -name "*.swift" -print0 | xargs -0 xcrun --sdk iphonesimulator swiftc -target arm64-apple-ios15.0-simulator -parse
           echo "Static Swift validation passed."
 
       # AVPlayerItem fails with -12746 on a simulator when the host has no audio device.
