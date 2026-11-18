@@ -1359,9 +1359,14 @@ internal class IosPlaybackController(
 
     private fun continueRadioIfNeeded(seedSongId: String) {
         if (!canAutoLoadMore) return
-        // Continuations belong to the recommendations mode that fetched them.
-        val continuation =
-            radioContinuation.takeIf { radioContinuationClassic == Settings.shared.classicRecommendations } ?: return
+        // Continuations belong to the recommendations mode that fetched them; a
+        // mode change starts a fresh radio instead of reusing the old feed.
+        if (radioContinuationClassic != Settings.shared.classicRecommendations) {
+            radioContinuation = null
+            bootstrapRecommendations(seedSongId)
+            return
+        }
+        val continuation = radioContinuation ?: return
         if (radioJob?.isActive == true) return
         radioJob =
             scope.launch {
