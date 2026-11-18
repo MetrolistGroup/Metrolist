@@ -1652,6 +1652,7 @@ fun MetrolistApp(
                                                                 context,
                                                                 coroutineScope,
                                                                 { pendingSearchQuery },
+                                                                { pendingSearchQuery = null },
                                                                 { pendingRoomCode },
                                                                 floatingActionsBottomInset,
                                                                 homeScrollToTopEvents,
@@ -2418,6 +2419,7 @@ fun getEntryProvider(
     scope: CoroutineScope,
     // Getters: nav3 keeps a retained entry's content across provider changes, so entries must read the current value.
     pendingSearchQuery: () -> String?,
+    onSearchQueryConsumed: () -> Unit,
     pendingRoomCode: () -> String?,
     floatingActionsBottomInset: State<Dp>,
     homeScrollToTopEvents: SharedFlow<Long>,
@@ -2513,6 +2515,7 @@ fun getEntryProvider(
                 navigator = navigator,
                 floatingActionsBottomInset = floatingActionsBottomInset,
                 initialQuery = pendingSearchQuery(),
+                onInitialQueryConsumed = onSearchQueryConsumed,
                 onSearchResultsVisible = onSearchResultsVisible,
             )
         }
