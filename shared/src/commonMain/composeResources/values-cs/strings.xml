@@ -1954,10 +1954,10 @@
     <string name="density_very_compact">Hodně kompaktní (65%)</string>
     <string name="density_ultra_compact">Ultra kompaktní (55%)</string>
     <string name="loudness_level">Úroveň hlasitosti</string>
-    <string name="loudness_level_aggressive">Agresivní (-7 dB)</string>
-    <string name="loudness_level_loud">Hlasité (-11 dB)</string>
-    <string name="loudness_level_balanced">Vyvážené (-14 dB)</string>
-    <string name="loudness_level_quiet">Tiché (-19 dB)</string>
+    <string name="loudness_level_aggressive">Agresivní (-7 dB)</string>
+    <string name="loudness_level_loud">Hlasité (-11 dB)</string>
+    <string name="loudness_level_balanced">Vyvážené (-14 dB)</string>
+    <string name="loudness_level_quiet">Tiché (-19 dB)</string>
     <string name="lyrics_share_limit">Můžeš vybrat až %1$d řádků.</string>
     <string name="lyrics_share_selected_count">Vybráno %1$d z %2$d</string>
     <string name="lyrics_share_text_size">Velikost textu: %1$d%</string>
