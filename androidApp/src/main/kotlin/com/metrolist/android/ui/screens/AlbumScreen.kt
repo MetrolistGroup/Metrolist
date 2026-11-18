@@ -451,8 +451,12 @@ fun AlbumScreen(
                     showMenu = false
                 },
                 onDownload = { withAllSongs(::downloadSongs) },
-                onPlayNext = { withAllSongs { all -> playerConnection?.addToQueue(all, playNext = true) } },
-                onAddToQueue = { withAllSongs { all -> playerConnection?.addToQueue(all) } },
+                onPlayNext = {
+                    withAllSongs { all ->
+                        playerConnection?.addDownloadedAlbumToQueue(all, downloadedSongIds, playNext = true)
+                    }
+                },
+                onAddToQueue = { withAllSongs { all -> playerConnection?.addDownloadedAlbumToQueue(all, downloadedSongIds) } },
                 onShare = {
                     context.startActivity(
                         Intent.createChooser(
