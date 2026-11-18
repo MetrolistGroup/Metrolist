@@ -546,7 +546,7 @@
     <string name="hide_short_songs">Skrýt krátké skladby</string>
     <string name="hide_short_songs_desc">Skrýt náhledy, Shorts audio a ostatní skladby kratší než stanovený limit</string>
     <string name="minimum_song_duration">Minimální délka skladby</string>
-    <string name="minimum_song_duration_desc">Skrýt skladby kratší než %1$d sekund</string>
+    <string name="minimum_song_duration_desc">Skrýt skladby kratší než %1$d sekund</string>
     <string name="block_ai_slop_artists">Zablokovat známé AI generované umělce</string>
     <string name="block_ai_slop_artists_desc">Skrýt kanály ze seznamu Override92/AiSList. CC BY-NC 4.0 seznam se aktualizuje denně a zůstavá dostupný offline.</string>
     <string name="listen_together_entry_subtitle">Poslouchej hudbu s přáteli v reálném čase.</string>
