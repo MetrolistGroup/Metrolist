@@ -1229,7 +1229,7 @@
     <string name="listen_together_auto_approval_joins">Approva automaticamente le richieste di partecipazione</string>
     <string name="listen_together_auto_approval_suggestions">Approva automaticamente i suggerimenti dei brani</string>
     <string name="listen_together_auto_approval_suggestions_desc">Approva e inserisce in coda automaticamente le richieste dei brani dagli ospiti</string>
-    <string name="listen_together_sync_volume">Sincronizza il volume dell\u0027host</string>
+    <string name="listen_together_sync_volume">Sincronizza il volume dell'host</string>
     <string name="listen_together_sync_volume_desc">Gli ospiti seguono il livello del volume dell'host</string>
     <string name="listen_together_not_configured">Listen Together non è configurato. Impostare l'URL del server in Impostazioni, Integrazioni, quindi Listen Together.</string>
     <string name="listen_together_room_created">Stanza creata: %1$s</string>
@@ -1240,7 +1240,7 @@
     <string name="clear">Pulisci</string>
     <string name="copy">Copia</string>
     <string name="not_set">Non impostato</string>
-    <string name="suggest_to_host">Suggerisci all\u0027host</string>
+    <string name="suggest_to_host">Suggerisci all'host</string>
     <string name="kick_user">Espelli</string>
     <string name="unblock">Sblocca</string>
     <string name="ai_provider">Provider</string>
