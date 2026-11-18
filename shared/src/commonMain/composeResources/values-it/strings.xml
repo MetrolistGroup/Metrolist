@@ -11,7 +11,7 @@
         <item quantity="many">%1$d selezionati</item>
         <item quantity="other">%1$d selezionati</item>
     </plurals>
-    <string name="history">Cronologia d\u0027ascolto</string>
+    <string name="history">Cronologia d'ascolto</string>
     <string name="mood_and_genres">Mood e generi</string>
     <string name="account">Account</string>
     <string name="quick_picks">Scelte rapide</string>
