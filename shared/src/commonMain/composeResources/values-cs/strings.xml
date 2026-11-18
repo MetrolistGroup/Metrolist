@@ -86,7 +86,7 @@
     <string name="bitrate">Přenosová rychlost</string>
     <string name="sample_rate">Vzorkovací frekvence</string>
     <string name="loudness">Hlučnost</string>
-    <string name="loudness_value">%1$s dB</string>
+    <string name="loudness_value">%1$s dB</string>
     <string name="volume">Hlasitost</string>
     <string name="file_size">Velikost souboru</string>
     <string name="unknown">Neznámé</string>
