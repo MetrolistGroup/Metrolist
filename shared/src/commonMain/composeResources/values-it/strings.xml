@@ -344,7 +344,7 @@
     <string name="app_font_reset_description">Utilizza il font di sistema e rimuovi quello importato</string>
     <string name="app_font_downloading">Download di %1$s in corso…</string>
     <string name="app_font_active">In uso</string>
-    <string name="app_font_installed">Installato · Tocca per utilizzarlo</string>
+    <string name="app_font_installed">Installato · Tocca per utilizzarlo</string>
     <string name="app_font_download_and_use">Tocca per scaricarlo ed utilizzarlo</string>
     <string name="app_font_download_error">Impossibile scaricare %1$s. Controlla la connessione e riprova.</string>
     <string name="app_font_import_custom">Importa un file TTF o OTF</string>
@@ -447,7 +447,7 @@
     <string name="voice_search">Ricerca vocale</string>
     <string name="voice_search_prompt">Cosa vuoi ascoltare?</string>
     <string name="voice_search_unavailable">La ricerca vocale non è disponibile su questo dispositivo.</string>
-    <string name="voice_search_setting_desc">Usa l\u0027icona del microfono per la ricerca vocale. Tieni premuta l\u0027icona di ricerca per riconoscere la musica riprodotta nelle vicinanze.</string>
+    <string name="voice_search_setting_desc">Usa l'icona del microfono per la ricerca vocale. Tieni premuta l'icona di ricerca per riconoscere la musica riprodotta nelle vicinanze.</string>
     <string name="backup_restore_title">Backup e importazione</string>
     <string name="spotify_sign_in">Accedi a Spotify</string>
     <string name="spotify_sign_in_again">Accedi di nuovo</string>
@@ -481,10 +481,10 @@
         <item quantity="other">Importati %1$d brani</item>
     </plurals>
     <string name="backup_restore_export_desc">Esporta le impostazioni, il database della libreria, la playlist, i Mi piace e la cronologia in un file zip</string>
-    <string name="backup_restore_import_desc">Ripristina un backup di Metrolist. In seguito ad un ripristino andato a buon fine, l\u0027app si riavvierà.</string>
+    <string name="backup_restore_import_desc">Ripristina un backup di Metrolist. In seguito ad un ripristino andato a buon fine, l'app si riavvierà.</string>
     <string name="backup_restore_busy">Elaborazione in corso…</string>
     <string name="backup_sensitive_title">Backup con dati sensibili</string>
-    <string name="backup_sensitive_message">I backup contengono le tue chiavi API, credenziali dell\u0027account, cookie di autenticazione, token di sessione e altre informazioni sensibili. Chiunque entri in possesso di questo file potrà accedere ai tuoi account. Conservalo in un luogo sicuro e non condividerlo con nessuno.</string>
+    <string name="backup_sensitive_message">I backup contengono le tue chiavi API, credenziali dell'account, cookie di autenticazione, token di sessione e altre informazioni sensibili. Chiunque entri in possesso di questo file potrà accedere ai tuoi account. Conservalo in un luogo sicuro e non condividerlo con nessuno.</string>
     <string name="restore_in_progress">Ripristinando il tuo backup...\nMetrolist si riavvierà automaticamente.</string>
     <string name="scrobble_tap_to_disconnect">Tocca per disconnettere</string>
     <string name="scrobble_enable">Scrobbling</string>
@@ -508,16 +508,16 @@
     <string name="listenbrainz_user_token">Token utente</string>
     <string name="restore_database_incompatible">Questo backup utilizza la versione %1$d del database, ma t'app supporta fino alla versione %2$d. Aggiorna Metrolist e riprova.</string>
     <string name="restore_failed_detail">Impossibile ripristinare il backup durante %1$s\n\nMotivo: %2$s</string>
-    <string name="restore_error_unknown">Nessun\u0027informazione aggiuntiva disponibile.</string>
+    <string name="restore_error_unknown">Nessun'informazione aggiuntiva disponibile.</string>
     <string name="restore_stage_reading_backup">Leggendo il file di backup</string>
     <string name="restore_stage_reading_settings">Leggendo le impostazioni legacy</string>
     <string name="restore_stage_validating_database">Controllando il database dei backup</string>
     <string name="restore_stage_converting_database">Convertendo il database legacy</string>
-    <string name="restore_stage_stopping_app">Preparando l\u0027app per il ripristino</string>
+    <string name="restore_stage_stopping_app">Preparando l'app per il ripristino</string>
     <string name="restore_stage_installing_database">Installando il database ripristinato</string>
     <string name="restore_stage_verifying_database">Aprendo il database ripristinato</string>
     <string name="restore_stage_applying_settings">Applicando le impostazioni ripristinate</string>
-    <string name="restore_stage_restarting_app">Riavviando l\u0027app</string>
+    <string name="restore_stage_restarting_app">Riavviando l'app</string>
     <string name="widget_playlists_description">Scorciatoie playlist con controlli del mini lettore</string>
     <string name="choose_something_below">Seleziona qualcosa qui sotto</string>
     <string name="content_filters_filtering">Filtri</string>
@@ -2013,7 +2013,7 @@
     <string name="playlist_cover_update_failed">Impossibile aggiornare la copertina della playlist</string>
     <string name="bottom_sheet_pane_title">Riquadro inferiore</string>
     <string name="lyrics_provider_lrcred_description">Database di testi con sincronizzazione per riga e per parola, con supporto a testi temporizzati e sincronizzati automaticamente</string>
-    <string name="foreign_import_title">Importa da un\u0027altra app</string>
+    <string name="foreign_import_title">Importa da un'altra app</string>
     <string name="foreign_import_desc">Importa i Mi piace, le playlist e la cronologia d'ascolto da un backup di InnerTune, OuterTune, ViMusic, RiMusic, Kreate, SimpMusic o Prism. La libreria attuale viene mantenuta.</string>
     <string name="foreign_import_success">Importati %1$d brani, %2$d Mi piace, %3$d playlist e %4$d riproduzioni</string>
     <string name="foreign_import_unsupported">Il file non è un backup proveniente da un servizio musicale supportato</string>
