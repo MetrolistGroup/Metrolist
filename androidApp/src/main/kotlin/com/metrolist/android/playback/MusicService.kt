@@ -2899,22 +2899,22 @@ class MusicService :
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        playbackBenchmark.cancel()
         super.onTaskRemoved(rootIntent)
         if (!::player.isInitialized) return
+        playbackBenchmark.cancel()
         saveFinalPlaybackState()
         flushPodcastProgress()
         taskRemoved.value = true
     }
 
     override fun onDestroy() {
-        playbackBenchmark.cancel()
         if (!::player.isInitialized) {
             podcastWriterScope.cancel()
             serviceScope.cancel()
             super.onDestroy()
             return
         }
+        playbackBenchmark.cancel()
         // A failure while saving state must not leak the session, or the next service fails with a duplicate session ID.
         try {
             releasePlaybackState()
