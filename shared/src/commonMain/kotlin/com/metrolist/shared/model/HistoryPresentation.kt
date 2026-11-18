@@ -86,13 +86,12 @@ internal fun groupHistory(
     entries.forEach { entry ->
         val bucket = historyDateBucket(entry.playedAt, nowMs, timeZone)
         val title =
-            entry.remoteDateLabel
-                ?: if (bucket == HistoryDateBucket.MONTH) {
-                    val date = Instant.fromEpochMilliseconds(entry.playedAt).toLocalDateTime(timeZone).date
-                    months.getOrPut(date.year to date.month) { formatMonth(entry.playedAt) }
-                } else {
-                    bucketLabels.getValue(bucket)
-                }
+            if (bucket == HistoryDateBucket.MONTH) {
+                val date = Instant.fromEpochMilliseconds(entry.playedAt).toLocalDateTime(timeZone).date
+                months.getOrPut(date.year to date.month) { formatMonth(entry.playedAt) }
+            } else {
+                bucketLabels.getValue(bucket)
+            }
         groups.getOrPut(title) { mutableListOf() }.add(entry)
     }
     return groups
