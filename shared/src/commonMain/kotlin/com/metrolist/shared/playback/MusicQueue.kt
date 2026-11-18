@@ -284,7 +284,14 @@ class MusicQueue {
             }
         displayedEntries = displayedEntries.filterNot { it in removedEntries }
         originalEntries = originalEntries.filterNot { it in removedEntries }
-        publishItems((previousCurrentIndex - validIndices.count { it < previousCurrentIndex }).coerceIn(-1, displayedEntries.lastIndex))
+        val currentIndex =
+            if (previousCurrentIndex in validIndices) {
+                val nextIndex = (previousCurrentIndex + 1 until _items.value.size).firstOrNull { it !in validIndices }
+                nextIndex?.let { it - validIndices.count { removedIndex -> removedIndex < it } } ?: -1
+            } else {
+                (previousCurrentIndex - validIndices.count { it < previousCurrentIndex }).coerceIn(-1, displayedEntries.lastIndex)
+            }
+        publishItems(currentIndex)
         return QueueRemoval(removed, removedOriginal, previousCurrentIndex, _currentIndex.value, isShuffled).also {
             it.undoIdentity = queueIdentity
         }

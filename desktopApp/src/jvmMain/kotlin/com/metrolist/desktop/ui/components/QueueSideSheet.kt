@@ -111,7 +111,7 @@ internal fun DesktopQueueContent(
         isSaved = false,
         isDownloaded = downloadStates[id] == DownloadState.DOWNLOADED,
         isSuggested = isSuggested,
-        canRemove = !isSuggested && queueIndex > queueState.currentIndex && !isQueueLocked,
+        canRemove = !isSuggested && !isQueueLocked,
         queueIndex = queueIndex,
         entryKey = entryKey,
         uniqueKey = if (isSuggested) "rec_$entryKey" else entryKey.toString(),
@@ -246,7 +246,7 @@ internal fun DesktopQueueContent(
                                 val indices =
                                     queueState.entries
                                         .withIndex()
-                                        .filter { (index, entry) -> entry.key in selectedEntryKeys && index > queueState.currentIndex }
+                                        .filter { (_, entry) -> entry.key in selectedEntryKeys }
                                         .mapTo(mutableSetOf()) { it.index }
                                 PlayerState.removeQueueItems(indices)?.let { pendingRemoval = it }
                             }
