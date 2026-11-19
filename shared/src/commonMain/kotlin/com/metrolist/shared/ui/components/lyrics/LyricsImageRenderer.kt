@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.scale
@@ -112,6 +113,12 @@ internal fun renderLyricsImage(
     val width = layout.lyricsWidth * scale
     val lyricsTop = layout.lyricsTop * scale
     val lyricsHeight = layout.lyricsHeight * scale
+    val lyricsInsetX = if (story) 12f * contentScale * scale else 0f
+    val lyricsInsetY = if (story) 10f * contentScale * scale else 0f
+    val textWidth = width - 2 * lyricsInsetX
+    val textHeight = lyricsHeight - 2 * lyricsInsetY
+    val textLeft = padding + lyricsInsetX
+    val textTop = lyricsTop + lyricsInsetY
     val textStyle =
         TextStyle(
             color = style.textColor,
@@ -136,11 +143,11 @@ internal fun renderLyricsImage(
         textMeasurer.measure(
             lyricsText(size),
             style = textStyle.copy(fontSize = size.sp, lineHeight = (size * 1.2f).sp),
-            constraints = Constraints(minWidth = width.toInt(), maxWidth = width.toInt()),
+            constraints = Constraints(minWidth = textWidth.toInt(), maxWidth = textWidth.toInt()),
             density = density,
             layoutDirection = layoutDirection,
         )
-    val fit = fitLyricsImageText(lyricsHeight, style.textScale) { measureLyrics(it).size.height.toFloat() }
+    val fit = fitLyricsImageText(textHeight, style.textScale) { measureLyrics(it).size.height.toFloat() }
     val lyricsLayout = measureLyrics(fit.fontSize)
     CanvasDrawScope().draw(density, layoutDirection, Canvas(bitmap), Size(bitmap.width.toFloat(), bitmap.height.toFloat())) {
         val path =
@@ -241,34 +248,49 @@ internal fun renderLyricsImage(
             val headerWidth = if (story) layout.lyricsWidth else 340f - layout.padding - headerX
             label(title, headerX, layout.titleTop, 20f * contentScale, style.textColor, headerWidth, centered = story)
             label(artist, headerX, layout.artistTop, 16f * contentScale, style.secondaryColor, headerWidth, centered = story)
+            if (story) {
+                drawRoundRect(
+                    Color.Black.copy(alpha = 0.22f),
+                    topLeft = Offset(padding, lyricsTop),
+                    size = Size(width, lyricsHeight),
+                    cornerRadius = CornerRadius(22f * scale),
+                )
+                drawRoundRect(
+                    Color.White.copy(alpha = 0.18f),
+                    topLeft = Offset(padding, lyricsTop),
+                    size = Size(width, lyricsHeight),
+                    cornerRadius = CornerRadius(22f * scale),
+                    style = Stroke(width = scale),
+                )
+            }
             val textX =
-                padding +
+                textLeft +
                     when (style.alignment) {
                         TextAlign.Left -> 0f
-                        TextAlign.Right -> width * (1f - fit.drawScale)
-                        else -> width * (1f - fit.drawScale) / 2f
+                        TextAlign.Right -> textWidth * (1f - fit.drawScale)
+                        else -> textWidth * (1f - fit.drawScale) / 2f
                     }
-            clipRect(padding, lyricsTop, padding + width, lyricsTop + lyricsHeight) {
-                translate(textX, lyricsTop + (lyricsHeight - lyricsLayout.size.height * fit.drawScale) / 2f) {
+            clipRect(textLeft, textTop, textLeft + textWidth, textTop + textHeight) {
+                translate(textX, textTop + (textHeight - lyricsLayout.size.height * fit.drawScale) / 2f) {
                     scale(fit.drawScale, pivot = Offset.Zero) { drawText(lyricsLayout) }
                 }
             }
             val footerScale = scale * contentScale
             drawCircle(
                 style.secondaryColor,
-                radius = 22 * footerScale,
-                center = Offset(padding + 22 * footerScale, layout.footerTop * scale + 22 * footerScale),
+                radius = 14 * footerScale,
+                center = Offset(padding + 14 * footerScale, layout.footerTop * scale + 14 * footerScale),
             )
-            translate(padding + 3 * footerScale, layout.footerTop * scale + 3 * footerScale) {
-                with(logo) { draw(Size(38 * footerScale, 38 * footerScale), colorFilter = ColorFilter.tint(style.backgroundColor)) }
+            translate(padding + 2 * footerScale, layout.footerTop * scale + 2 * footerScale) {
+                with(logo) { draw(Size(24 * footerScale, 24 * footerScale), colorFilter = ColorFilter.tint(style.backgroundColor)) }
             }
             label(
                 appName,
-                layout.padding + 52f * contentScale,
-                layout.footerTop + 13f * contentScale,
-                14f * contentScale,
+                layout.padding + 36f * contentScale,
+                layout.footerTop + 8f * contentScale,
+                12f * contentScale,
                 style.secondaryColor,
-                layout.lyricsWidth - 52f * contentScale,
+                layout.lyricsWidth - 36f * contentScale,
             )
         }
     }
