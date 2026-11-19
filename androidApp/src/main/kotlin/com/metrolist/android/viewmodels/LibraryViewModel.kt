@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.model.PlaylistItem
+import com.metrolist.shared.playlist.createStoredLocalPlaylist
 import com.metrolist.shared.playlist.createStoredPlaylist
 import com.metrolist.shared.playlist.deleteStoredPlaylist
 import com.metrolist.shared.playlist.renameStoredPlaylist
@@ -35,10 +36,16 @@ class LibraryViewModel(
 
     fun createPlaylist(
         name: String,
+        local: Boolean,
         onResult: (Result<String>) -> Unit,
     ) {
         viewModelScope.launch {
-            val result = createStoredPlaylist(database, GlobalYouTubeRepository.instance, name)
+            val result =
+                if (local) {
+                    createStoredLocalPlaylist(database, name).map { it.id }
+                } else {
+                    createStoredPlaylist(database, GlobalYouTubeRepository.instance, name)
+                }
             if (result.isSuccess) refresh()
             onResult(result)
         }
