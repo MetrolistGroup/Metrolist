@@ -67,6 +67,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
@@ -1312,10 +1313,10 @@ class ExoPlaybackPlayerTest {
         }
 
     @Test
-    fun preloadedTrackKeepsSharedEffectsSessionDuringOverlapAndAfterPromotion() = verifyPreloadedEffectsSession(overlap = true)
+    fun preloadedTrackOpensItsOwnEffectsSessionWhenOverlapStarts() = verifyPreloadedEffectsSession(overlap = true)
 
     @Test
-    fun silentPreloadKeepsSharedEffectsSessionOnPromotion() = verifyPreloadedEffectsSession(overlap = false)
+    fun silentPreloadOpensItsOwnEffectsSessionOnPromotion() = verifyPreloadedEffectsSession(overlap = false)
 
     private fun verifyPreloadedEffectsSession(overlap: Boolean) {
         player.releaseAndAwaitScope()
@@ -1356,7 +1357,7 @@ class ExoPlaybackPlayerTest {
                     it.get(player) as ExoPlayer
                 }
             assertTrue(incoming.audioSessionId > 0)
-            assertEquals(sessionId, incoming.audioSessionId)
+            assertNotEquals("A muted preload must not share the playing session", sessionId, incoming.audioSessionId)
             assertEquals(6_183L, player.getRealtimePositionMs())
             assertEquals(
                 AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED,
@@ -1382,20 +1383,24 @@ class ExoPlaybackPlayerTest {
                 player.setCrossfadeVolumes(75f, 25f)
                 assertEquals(0.3f, previous.volume, 0.00001f)
                 assertEquals(0.1f, incoming.volume, 0.00001f)
+                assertEquals(notifications + ("open" to incoming.audioSessionId), effectNotifications())
             } else {
                 assertEquals(0f, incoming.volume, 0f)
+                assertEquals(notifications, effectNotifications())
             }
-            assertEquals(notifications, effectNotifications())
             assertTrue(player.swapToPreloadedQueueNext(token, nextResource, second, transitionGain = 1f))
             assertSame(incoming, underlyingPlayer())
-            assertEquals(sessionId, player.getAudioSessionId())
+            assertEquals(incoming.audioSessionId, player.getAudioSessionId())
             assertEquals(
                 AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED,
                 incoming.trackSelectionParameters.audioOffloadPreferences.audioOffloadMode,
             )
             assertEquals(0.4f, incoming.volume, 0.00001f)
             assertSame(nextResource, normalizationProcessors().getValue(incoming).resource)
-            assertEquals(notifications, effectNotifications())
+            assertEquals(
+                notifications + listOf("open" to incoming.audioSessionId, "close" to sessionId),
+                effectNotifications(),
+            )
             player.pause()
         }
     }

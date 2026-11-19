@@ -30,7 +30,7 @@ Export the playback log immediately after a jump. Android's 500-event buffer rec
 
 Lyrics taps include line indices, timestamps and offsets. Media-session seeks identify the command. Warm replacements remain muted until the outgoing player releases, while intentional crossfades keep their gain ramps.
 
-Android keeps silent preloads out of system audio-effect session registration. A secondary player shares the primary player's session ID and registers when overlap starts or when it becomes the primary player. Releasing the outgoing player keeps that session open. Silent preparation and cancellation send no effect-session broadcasts.
+Android keeps silent preloads out of system audio-effect session registration. A secondary player uses its own session ID and registers when overlap starts or when it becomes the primary player, which then adopts that ID. Silent preparation and cancellation send no effect-session broadcasts.
 
 Seek-bar release requires a changed value and the same song and duration as the gesture. Track/duration changes cancel pending gestures. Unknown-duration and live tracks cannot use the shared scrubber.
 
