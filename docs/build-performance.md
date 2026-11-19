@@ -40,7 +40,7 @@ Android release packaging uses 8 vCPUs for compilation and R8; debug verificatio
 
 ## Native Image opt-in runners
 
-Native tester jobs run only on manual dispatch. Linux x64 and Windows x64 use 8 vCPUs for the roughly 10 GiB builder peak, without increasing existing JVM runner sizes. Native compilation keeps two compiler threads and a 12 GiB heap. Linux holds the Gradle lock and uses a 16 GiB scope; all platforms finish Gradle before starting Native Image. Linux ARM64 and macOS ARM64 jobs are prepared but disabled by repository variables. Native jobs add no push, PR or scheduled matrix. Measure hosted time and cost before enabling more targets or scheduling them.
+Native jobs run for nightlies, stable releases and manual dispatch. Linux x64 and Windows x64 use 8 vCPUs for the roughly 10 GiB builder peak, without increasing existing JVM runner sizes. Native compilation keeps two compiler threads and a 12 GiB heap. Linux holds the Gradle lock and uses a 16 GiB scope; all platforms finish Gradle before starting Native Image. Linux ARM64 and macOS ARM64 jobs are prepared but disabled by repository variables. Native jobs add no PR or scheduled matrix. Measure hosted time and cost before enabling more targets or scheduling them.
 
 Only checksum-verified GraalVM archives are cached by the native workflow. Its Gradle restore is read-only, with build/configuration caches disabled during input preparation. Native images, traces and profiles are not cached. See [Native Image](desktop-native-image.md) for the complete build and test path.
 

@@ -44,6 +44,9 @@
     },
     {
       "glob": "version.properties"
+    },
+    {
+      "glob": "sentry-debug-meta.properties"
     }
   ],
   "reflection": [

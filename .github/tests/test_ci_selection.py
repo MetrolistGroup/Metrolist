@@ -208,10 +208,11 @@ class ReleaseGateTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             release.verify_run("test/repo", self.sha, "ci.yml", "Android / APK", self.api, required=False)
 
-    def test_installer_verification_remains_available_without_serializing_releases(self):
+    def test_release_installer_verifies_the_native_payload(self):
         text = (ROOT / ".github/workflows/release.yml").read_text().split("  windows-manager:\n", 1)[1].split("  publish:", 1)[0]
-        self.assertIn("needs: prepare", text)
-        self.assertNotIn("- windows", text)
+        self.assertIn("needs: [prepare, windows-native]", text)
+        self.assertIn("portable-artifact: release-desktop-windows", text)
+        self.assertNotIn("run-verification: false", text)
         workflow = (ROOT / ".github/workflows/reusable-windows-manager.yml").read_text()
         for step in ("Test manager", "Validate portable payload", "Install, repair and uninstall end to end"):
             block = workflow.split(f"- name: {step}\n", 1)[1].split("- name:", 1)[0]
@@ -333,7 +334,7 @@ class ReleaseGateTest(unittest.TestCase):
             text = (ROOT / ".github/workflows" / workflow).read_text()
             self.assertIn("run: python3 .github/scripts/release_verification.py", text)
             self.assertIn("checks: read", text)
-            self.assertEqual(text.count("run-verification: false"), 7 if workflow == "release.yml" else 5)
+            self.assertEqual(text.count("run-verification: false"), 6 if workflow == "release.yml" else 5)
             self.assertIn("fetch-depth: 0", text)
         for name in ("android-build", "desktop-linux", "desktop-macos", "desktop-windows", "ios-build"):
             text = (ROOT / f".github/workflows/reusable-{name}.yml").read_text()

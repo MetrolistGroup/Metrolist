@@ -2,7 +2,7 @@
 
 ## Requirements and download
 
-Release AppImages target x64 and ARM64 on glibc-based distributions. The packaging workflow builds on Ubuntu 24.04; that does not establish compatibility with every older distribution. Packages include Java and FFmpeg.
+Release AppImages target x64 and ARM64 on glibc-based distributions. The packaging workflow builds on Ubuntu 24.04; that does not establish compatibility with every older distribution. The x64 AppImage is a native executable that needs no Java; the ARM64 AppImage includes Java. Both include FFmpeg.
 
 Choose x64 for `uname -m` output `x86_64`, or ARM64 for `aarch64`. Get the matching package through [the download channels](README.md#get-the-package).
 

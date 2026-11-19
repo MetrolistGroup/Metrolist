@@ -1,19 +1,21 @@
 # Desktop Native Image
 
-## Opt-in native tester builds
+## Native builds
 
 The supported path keeps Serial GC, `-Os`, a 32 MiB initial heap and a 384 MiB maximum heap. It compiles with `-march=compatibility`, because GraalVM's default x86-64-v3 target exits on x64 CPUs without AVX2, FMA or BMI2 and its default ARM target excludes Raspberry Pi 4 class cores. The measurements below used the default target. GraalVM 25.0.4 downloads and SHA-256 hashes live in [graalvm-pins.json](../scripts/graalvm-pins.json). The hashes come from Oracle's adjacent `.sha256` URLs. Local Linux builds use `/mnt/work/tools/graalvm-25`; do not download or unpack a builder under RAM-backed `/tmp`.
 
 | Target | Build and package | CI state |
 | --- | --- | --- |
-| Linux x64 | Native app directory and AppImage | Dispatch or reusable push caller |
-| Windows x64 | Native app directory and portable ZIP | Dispatch or reusable push caller |
+| Linux x64 | Native app directory and AppImage | Stable releases, nightlies and dispatch |
+| Windows x64 | Native app directory and portable ZIP | Stable releases, nightlies and dispatch |
 | macOS ARM64 | Native `.app` and ZIP built; font configuration fix awaits CI verification | Dispatch or reusable push caller |
 | Linux ARM64 | Native app directory and AppImage | Dispatch or reusable push caller |
 | Windows ARM64 | JVM only | No GraalVM distribution ships a Windows AArch64 builder |
 | macOS Intel | JVM only | Oracle GraalVM 25 dropped macOS x64 |
 
-Windows ARM64 and macOS Intel keep their JVM packages. Every existing JVM package stays the default. The native Linux artifact has a separate `metrolist-desktop-native-linux-x64-<version>.AppImage` name. Native Windows uses `Metrolist.exe`, the existing portable install-manifest schema, and `resources/windows` login helper/checksum layout. Its ZIP has a separate native filename. The native path validates Windows launcher/helper/DLL architecture and helper checksums. Linux packages require ELF64 libraries and executables with the target machine type. macOS packages require ARM64 Mach-O libraries and executables, including loose sidecars under `Contents/Resources`.
+Windows ARM64 and macOS Intel keep their JVM packages, as do Linux ARM64 and macOS ARM64 in stable releases. The native packager names its outputs `metrolist-desktop-native-<platform>-<version>`; stable and nightly publication rename them to the JVM asset names. Native Windows uses `Metrolist.exe`, the existing portable install-manifest schema, and `resources/windows` login helper/checksum layout, so the Windows installer installs and updates it unchanged. To roll a release back to the JVM x64 packages, point the `windows` and `linux` release jobs at both architectures again and remove the native jobs and renames.
+
+Crash reporting follows the JVM build. `SentryManager` treats the native image as a packaged application, the image bundles `sentry-debug-meta.properties`, and the strict smoke initializes Sentry, checks the bundle ID and serializes an event through an in-memory transport. On Windows it also reads the registry through the JNA calls the update manager handoff uses. The native path validates Windows launcher/helper/DLL architecture and helper checksums. Linux packages require ELF64 libraries and executables with the target machine type. macOS packages require ARM64 Mach-O libraries and executables, including loose sidecars under `Contents/Resources`.
 
 ### Build locally
 

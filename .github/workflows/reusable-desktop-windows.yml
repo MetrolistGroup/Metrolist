@@ -33,6 +33,11 @@ on:
         required: false
         default: false
         type: boolean
+      architectures:
+        description: JSON list of architectures to package, from x64 and arm64
+        required: false
+        default: '["x64", "arm64"]'
+        type: string
     secrets:
       GRADLE_ENCRYPTION_KEY:
         required: false
@@ -50,25 +55,16 @@ on:
 jobs:
   package:
     name: ${{ matrix.arch }} ZIP
-    runs-on: ${{ matrix.runner }}
+    # Blacksmith has no Windows ARM64 runners; GitHub's native one avoids cross-building the runtime and launcher.
+    runs-on: ${{ matrix.arch == 'arm64' && (vars.WINDOWS_ARM64_RUNNER || 'windows-11-arm') || 'blacksmith-4vcpu-windows-2025' }}
     timeout-minutes: ${{ matrix.arch == 'arm64' && 60 || 30 }}
     strategy:
       fail-fast: false
+      # Per-architecture values are expressions: include entries would add jobs for architectures left out.
       matrix:
-        include:
-          - arch: x64
-            runner: blacksmith-4vcpu-windows-2025
-            rid: win-x64
-            zip: Metrolist-Desktop-Windows.zip
-            machine: '8664'
-          # Blacksmith has no Windows ARM64 runners; GitHub's native one avoids cross-building the runtime and launcher.
-          - arch: arm64
-            runner: ${{ vars.WINDOWS_ARM64_RUNNER || 'windows-11-arm' }}
-            rid: win-arm64
-            zip: Metrolist-Desktop-Windows-arm64.zip
-            machine: AA64
+        arch: ${{ fromJSON(inputs.architectures) }}
     env:
-      PACKAGE_ZIP: dist/${{ matrix.zip }}
+      PACKAGE_ZIP: dist/${{ matrix.arch == 'arm64' && 'Metrolist-Desktop-Windows-arm64.zip' || 'Metrolist-Desktop-Windows.zip' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -154,7 +150,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Windows login helper tests failed with exit code $LASTEXITCODE" }
           }
           $output = "../desktopApp/src/desktopMain/resources/windows"
-          dotnet publish "metro-wv2-helper.csproj" --configuration Release --runtime ${{ matrix.rid }} --self-contained true --output $output -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false -p:PublishReadyToRun=true
+          dotnet publish "metro-wv2-helper.csproj" --configuration Release --runtime win-${{ matrix.arch }} --self-contained true --output $output -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false -p:PublishReadyToRun=true
           if ($LASTEXITCODE -ne 0) { throw "Windows login helper build failed with exit code $LASTEXITCODE" }
           $helper = Join-Path $output "metro-wv2-helper.exe"
           if (-not (Test-Path $helper -PathType Leaf)) { throw "Windows login helper was not produced at $helper" }
@@ -234,7 +230,8 @@ jobs:
               } finally {
                 $stream.Dispose()
               }
-              if ($machine -ne "${{ matrix.machine }}") { throw "$($entry.FullName) targets machine $machine, expected ${{ matrix.machine }}" }
+              $expected = "${{ matrix.arch == 'arm64' && 'AA64' || '8664' }}"
+              if ($machine -ne $expected) { throw "$($entry.FullName) targets machine $machine, expected $expected" }
             }
           } finally {
             $zip.Dispose()

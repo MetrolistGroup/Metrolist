@@ -14,13 +14,13 @@ The gate first tries the release revision, then each metadata-equivalent ancesto
 gh workflow run ci.yml --ref main
 ```
 
-Once the gate passes, release jobs build, sign and upload. They skip unit tests, lint, launch smoke tests, verification-only Gradle dependencies and the duplicate iOS simulator job. They still inspect archive versions and native architectures and verify APK signatures. `metrolist.verifyPackaging=false` removes the Gradle verification dependencies only in these gated jobs; normal builds keep them. Manual package dispatches keep final distributable inspection. `build-desktop.yml` with `windows-manager=true` builds and tests the pinned Windows installer against its portable ZIP, including install, repair and uninstall. Run it when changing installer or payload behavior. See [release verification gate](build-performance.md#release-verification-gate) for where skipped checks run.
+Once the gate passes, release jobs build, sign and upload. They skip unit tests, lint, JVM launch smoke tests, verification-only Gradle dependencies and the duplicate iOS simulator job. They still inspect archive versions and native architectures and verify APK signatures. `metrolist.verifyPackaging=false` removes the Gradle verification dependencies only in these gated jobs; normal builds keep them. Manual package dispatches keep final distributable inspection. `build-desktop.yml` with `windows-manager=true` builds and tests the pinned Windows installer against the native portable ZIP, including install, repair and uninstall. Run it when changing installer or payload behavior. Stable releases run the same installer test against the native Windows x64 ZIP before publishing, and the native Linux x64 and Windows x64 jobs run the strict launch smoke. See [release verification gate](build-performance.md#release-verification-gate) for where skipped checks run.
 
 The prepare jobs have read-only Actions and checks permissions for this gate. Release credentials stay in the platform and publication jobs. Credential-bearing Gradle configuration caches are never persisted.
 
-## Native tester builds
+## Native desktop builds
 
-Dispatch `build-desktop-native.yml` for one target; the package and its evidence archive are uploaded as workflow artifacts. Nightly prereleases also publish Linux x64 and Windows x64 native packages. Stable releases keep JVM desktop packages. See [Native Image](desktop-native-image.md#opt-in-native-tester-builds) for pinned builders, strict smoke coverage and rollback/promotion criteria.
+Stable releases and nightly prereleases ship Linux x64 and Windows x64 as native images. Linux ARM64, Windows ARM64 and both macOS packages stay on the JVM. The release renames the native packages to the existing stable asset names, `Metrolist-Desktop-windows.zip` and `metrolist-desktop-linux-x64-<version>.AppImage`, so the in-app updater, the Windows installer, WinGet, Homebrew, AUR and Nix recipes keep their downloads. Native release jobs upload Sentry source context under the same bundle ID as the JVM build for that OS. Dispatch `build-desktop-native.yml` to build one target as a workflow artifact. See [Native Image](desktop-native-image.md#native-builds) for pinned builders, strict smoke coverage and rollback criteria.
 
 ## Nightly prereleases
 
