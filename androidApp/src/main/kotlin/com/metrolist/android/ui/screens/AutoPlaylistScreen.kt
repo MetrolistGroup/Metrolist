@@ -419,6 +419,9 @@ fun AutoPlaylistScreen(
 
     var preparedSongs by remember(currentType) { mutableStateOf<List<SongItem>>(emptyList()) }
     var preparedSongsInput by remember(currentType) { mutableStateOf<AutoPlaylistPresentationInput?>(null) }
+    var preparedResult by remember(currentType) {
+        mutableStateOf<Pair<AutoPlaylistPresentationInput, List<SongItem>>?>(null)
+    }
     var preparedDownloadFilter by remember(currentType) { mutableStateOf(downloadFilterState) }
     LaunchedEffect(currentType) {
         snapshotFlow { presentationInput() }.collectLatest { input ->
@@ -426,6 +429,7 @@ fun AutoPlaylistScreen(
             if (presentationInput() == input) {
                 preparedSongs = prepared
                 preparedSongsInput = input
+                preparedResult = input to prepared
                 preparedDownloadFilter = input.downloadFilter
             }
         }
@@ -462,8 +466,9 @@ fun AutoPlaylistScreen(
             presentationInput()
                 .let { if (committed != null) it.copy(cachedCustomOrder = committed) else it }
                 .copy(query = "")
-        return if (committed == null && collectionQuery.isBlank() && preparedSongsInput == unfilteredInput) {
-            displayedSongs
+        val latestPrepared = preparedResult
+        return if (committed == null && collectionQuery.isBlank() && latestPrepared?.first == unfilteredInput) {
+            latestPrepared.second
         } else {
             prepareAutoPlaylistSongs(unfilteredInput)
         }
@@ -999,12 +1004,13 @@ fun AutoPlaylistScreen(
                                                         presentationInput()
                                                             .let { if (committed != null) it.copy(cachedCustomOrder = committed) else it }
                                                             .copy(query = "")
+                                                    val latestPrepared = preparedResult
                                                     val initialSongs =
                                                         if (collectionQuery.isBlank() &&
-                                                            displayedSongs.isNotEmpty() &&
-                                                            preparedSongsInput == unfilteredInput
+                                                            latestPrepared?.first == unfilteredInput &&
+                                                            latestPrepared.second.isNotEmpty()
                                                         ) {
-                                                            displayedSongs
+                                                            latestPrepared.second
                                                         } else {
                                                             val entriesById = collectionEntries.associateBy(CachedAudioEntity::songId)
                                                             songs.presentCollection("", collectionSort, collectionDirection) { song ->

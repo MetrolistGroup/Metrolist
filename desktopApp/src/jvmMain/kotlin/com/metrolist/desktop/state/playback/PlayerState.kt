@@ -2659,10 +2659,18 @@ object PlayerState {
         songs: List<SongItem>,
         songsOnly: Boolean = false,
         advanceGeneration: Boolean = true,
+        expectedReplacementGeneration: Long? = null,
     ) {
         val playable = BlockedContent.filterPlayableSongs(songs)
         playable.randomOrNull()?.let {
-            playTrack(it, playable, songsOnly, shuffleModeEnabled = true, advanceGeneration = advanceGeneration)
+            playTrack(
+                it,
+                playable,
+                songsOnly,
+                shuffleModeEnabled = true,
+                advanceGeneration = advanceGeneration,
+                expectedReplacementGeneration = expectedReplacementGeneration,
+            )
         }
     }
 
@@ -2672,10 +2680,23 @@ object PlayerState {
         songsOnly: Boolean = false,
         shuffleModeEnabled: Boolean? = null,
         advanceGeneration: Boolean = true,
+        expectedReplacementGeneration: Long? = null,
     ) {
+        if (expectedReplacementGeneration != null &&
+            playbackReplacementGeneration != expectedReplacementGeneration
+        ) {
+            return
+        }
         if (track.isUnavailable) return
         if (list?.any { it.isUnavailable } == true) {
-            playTrack(track, list.filterNot { it.isUnavailable }, songsOnly, shuffleModeEnabled, advanceGeneration)
+            playTrack(
+                track,
+                list.filterNot { it.isUnavailable },
+                songsOnly,
+                shuffleModeEnabled,
+                advanceGeneration,
+                expectedReplacementGeneration,
+            )
             return
         }
         if (advanceGeneration) {
@@ -2718,6 +2739,7 @@ object PlayerState {
             startPaused = !localSongChangeStartsPlayback(),
             songsOnly = songsOnly || (list === queue.items.value && queue.recommendationsSongsOnly),
             shuffleModeEnabled = shuffleModeEnabled,
+            expectedReplacementGeneration = expectedReplacementGeneration,
         )
     }
 
@@ -2858,6 +2880,7 @@ object PlayerState {
         desiredPlayback.value = !startPaused
         playbackTransitionJob =
             scope.launch {
+                if (!isCurrentPlaybackTransition(generation) || !isAllowedByReplacement()) return@launch
                 val playableTrack: SongItem
                 if (!list.isNullOrEmpty()) {
                     val startIndex = list.indexOfPlaylistOccurrence(track).takeIf { it >= 0 } ?: 0
@@ -2886,7 +2909,16 @@ object PlayerState {
                         ?: podcastResumePosition(playableTrack)
                 if (!isCurrentPlaybackTransition(generation) || !isAllowedByReplacement()) return@launch
                 pendingResumePosition = resumePosition?.let { playableTrack.id to it }
-                if (playCastTrack(playableTrack, generation, !startPaused, resumePosition ?: 0L)) return@launch
+                if (playCastTrack(
+                        playableTrack,
+                        generation,
+                        !startPaused,
+                        resumePosition ?: 0L,
+                        canCommit = ::isAllowedByReplacement,
+                    )
+                ) {
+                    return@launch
+                }
                 val preparePaused = startPaused || resumePosition != null
                 val forcedClientId = forcedPlaybackClientId()
                 val localResource =
@@ -3159,8 +3191,13 @@ object PlayerState {
         startPlaying: Boolean,
         positionMs: Long = 0L,
         resource: PlaybackResource? = null,
-    ): Boolean =
-        when (castPlayback.replaceTrack(song, positionMs, startPlaying, resource) { isCurrentPlaybackTransition(generation) }) {
+        canCommit: () -> Boolean = { true },
+    ): Boolean {
+        return when (
+            castPlayback.replaceTrack(song, positionMs, startPlaying, resource) {
+                isCurrentPlaybackTransition(generation) && canCommit()
+            }
+        ) {
             DesktopCastTrackResult.LOCAL -> {
                 false
             }
@@ -3170,6 +3207,7 @@ object PlayerState {
             }
 
             DesktopCastTrackResult.LOADED -> {
+                if (!isCurrentPlaybackTransition(generation) || !canCommit()) return true
                 player.beginPendingPlayback(song)
                 updateCurrentTrack(song, startArtworkFetch = true)
                 markVideoUnavailable()
@@ -3179,6 +3217,7 @@ object PlayerState {
                 true
             }
         }
+    }
 
     private suspend fun playQueueTrack(
         song: SongItem,
@@ -3932,7 +3971,7 @@ object PlayerState {
                     if (castManager.state.value.isConnected) {
                         replaceQueue(listOf(target), 0)
                         queueReplaced = true
-                        if (playCastTrack(target, generation, true)) {
+                        if (playCastTrack(target, generation, true, canCommit = ::isCurrentPlayFromIdRequest)) {
                             val songs = recommendations.await()
                             if (Settings.shared.autoLoadMore && isCurrentPlayFromIdRequest()) {
                                 appendRadioRecommendations(songs, generation)
