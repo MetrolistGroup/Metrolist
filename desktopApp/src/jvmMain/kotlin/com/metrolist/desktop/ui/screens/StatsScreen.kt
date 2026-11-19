@@ -182,11 +182,13 @@ fun StatsScreen() {
                 artists =
                     topArtists.mapIndexed { index, item ->
                         StatisticsItem(
-                            id = "artist:$index:${item.name}",
+                            id = statisticsArtistItemId(index, item.name),
                             title = item.name,
                             rankedTitle = "${index + 1}. ${item.name}",
                             subtitle = statisticsPlayCountDuration(item.playCount, item.playTimeMs),
-                            thumbnailUrl = artistThumbnails[item.name] ?: artistFallbacks[item.name],
+                            thumbnailUrl =
+                                artistThumbnails[statisticsArtistItemId(index, item.name)] ?: item.thumbnailUrl
+                                    ?: artistFallbacks[item.name],
                             circularArtwork = true,
                         )
                     },
@@ -195,8 +197,14 @@ fun StatsScreen() {
                 errorMessage = if (loadFailed) stringResource(Res.string.statistics_load_failed) else null,
             ),
         onArtistVisible = { item ->
-            val artistName = statisticsArtistName(item.id)
-            if (!artistThumbnails.containsKey(artistName)) {
+            val artistIndex = statisticsArtistIndex(item.id)
+            val statistic = artistIndex?.let(topArtists::getOrNull)
+            val artistName = statistic?.name ?: statisticsArtistName(item.id)
+            val statisticId = statistic?.id
+            if (statistic != null && statisticId != null) {
+                artistIds[item.id] = statisticId
+                artistThumbnails[item.id] = statistic.thumbnailUrl
+            } else if (!artistThumbnails.containsKey(item.id)) {
                 val match =
                     withContext(Dispatchers.IO) {
                         try {
@@ -211,8 +219,8 @@ fun StatsScreen() {
                             null
                         }
                     }
-                artistThumbnails[artistName] = match?.thumbnail
-                match?.let { artistIds[artistName] = it.id }
+                artistThumbnails[item.id] = match?.thumbnail
+                match?.let { artistIds[item.id] = it.id }
             }
         },
         onItemMenu = { item ->
@@ -333,7 +341,8 @@ fun StatsScreen() {
 
                 item.id.startsWith("artist:") -> {
                     val artistName = statisticsArtistName(item.id)
-                    val cachedId = artistIds[artistName]
+                    val artistStatistic = statisticsArtistIndex(item.id)?.let(topArtists::getOrNull)
+                    val cachedId = statisticsArtistProfileId(artistStatistic, artistIds[item.id])
                     if (cachedId != null) {
                         ArtistState.fetchArtistData(cachedId)
                     } else {
