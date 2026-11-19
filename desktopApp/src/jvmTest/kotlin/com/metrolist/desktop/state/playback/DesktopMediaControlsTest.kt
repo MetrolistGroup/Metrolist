@@ -22,19 +22,29 @@ class DesktopMediaControlsTest {
         assertTrue(controls(currentIndex = 0, positionMs = 4_000L, isLive = false).previous)
     }
 
+    @Test
+    fun repeatAllEnablesPreviousAtTheFirstSeekableTrackOnlyWhenAnotherTrackExists() {
+        assertTrue(controls(currentIndex = 0, positionMs = 0L, isLive = false, repeatMode = RepeatMode.ALL).previous)
+        assertFalse(controls(currentIndex = 0, positionMs = 0L, isLive = true, repeatMode = RepeatMode.ALL).previous)
+        assertFalse(controls(currentIndex = 0, positionMs = 0L, isLive = false, repeatMode = RepeatMode.ALL, queueSize = 1).previous)
+        assertFalse(controls(currentIndex = 0, positionMs = 0L, isLive = false, repeatMode = RepeatMode.ONE).previous)
+    }
+
     private fun controls(
         currentIndex: Int,
         positionMs: Long,
         isLive: Boolean,
+        repeatMode: RepeatMode = RepeatMode.OFF,
+        queueSize: Int = 2,
     ) = desktopMediaControls(
         hasTrack = true,
         loading = false,
         guest = false,
-        queueSize = 2,
+        queueSize = queueSize,
         currentIndex = currentIndex,
         positionMs = positionMs,
         isLiveStream = isLive,
-        repeatMode = RepeatMode.OFF,
+        repeatMode = repeatMode,
         autoLoadMore = false,
     )
 }
