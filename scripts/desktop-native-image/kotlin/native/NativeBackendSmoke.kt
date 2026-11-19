@@ -91,12 +91,14 @@ private fun sentrySmoke() {
         check(checkNotNull(configured).bundleIds.isNotEmpty()) { "Sentry found no sentry-debug-meta.properties bundle ID" }
         // Mirrors SentryManager: a session and an event with an attachment, as previous-exit reports send.
         Sentry.startSession()
-        Sentry.captureException(IllegalStateException("native smoke")) { scope ->
-            scope.addAttachment(Attachment("native smoke".encodeToByteArray(), "native-smoke.txt", "text/plain"))
+        Sentry.captureException(IllegalStateException("native smoke event")) { scope ->
+            scope.addAttachment(Attachment("previous exit summary".encodeToByteArray(), "native-smoke.txt", "text/plain"))
         }
         Sentry.endSession()
         Sentry.flush(5_000)
-        check(envelopes.any { it.decodeToString().contains("native smoke") }) { "Sentry serialized no event" }
+        val serialized = envelopes.joinToString("\n") { it.decodeToString() }
+        check("\"type\":\"event\"" in serialized && "native smoke event" in serialized) { "Sentry serialized no event" }
+        check("previous exit summary" in serialized) { "Sentry serialized no attachment" }
     } finally {
         Sentry.close()
     }
