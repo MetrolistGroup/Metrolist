@@ -78,12 +78,12 @@ internal data class LyricsImageLayout(
     val story: Boolean = false,
 ) {
     val padding = 28f * contentScale
-    val artworkSize = (if (story) 164f else 64f) * contentScale
-    val artworkX = if (story) (340f - artworkSize) / 2f else padding
+    val artworkSize = 64f * contentScale
+    val artworkX = if (story) padding + 18f * contentScale else padding
     val artworkTop = if (story) 48f * contentScale else padding
-    val titleTop = if (story) 232f * contentScale else 34f * contentScale
-    val artistTop = if (story) 260f * contentScale else 63f * contentScale
-    val lyricsTop = if (story) 282f * contentScale else 110f * contentScale
+    val titleTop = if (story) 58f * contentScale else 34f * contentScale
+    val artistTop = if (story) 84f * contentScale else 63f * contentScale
+    val lyricsTop = if (story) 138f * contentScale else 110f * contentScale
     val footerTop = if (story) 544f else 340f - 72f * contentScale
     val cardTop = if (story) 30f else 0f
     val cardBottom = if (story) 586f else 0f

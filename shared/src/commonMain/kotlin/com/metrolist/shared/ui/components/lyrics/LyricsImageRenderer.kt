@@ -113,10 +113,12 @@ internal fun renderLyricsImage(
     val width = layout.lyricsWidth * scale
     val lyricsTop = layout.lyricsTop * scale
     val lyricsHeight = layout.lyricsHeight * scale
-    val textWidth = width
-    val textHeight = lyricsHeight
-    val textLeft = padding
-    val textTop = lyricsTop
+    val lyricsInsetX = if (story) 18f * contentScale * scale else 0f
+    val lyricsInsetY = if (story) 12f * contentScale * scale else 0f
+    val textWidth = width - 2 * lyricsInsetX
+    val textHeight = lyricsHeight - 2 * lyricsInsetY
+    val textLeft = padding + lyricsInsetX
+    val textTop = lyricsTop + lyricsInsetY
     val textStyle =
         TextStyle(
             color = style.textColor,
@@ -259,8 +261,24 @@ internal fun renderLyricsImage(
                     )
                 drawText(layout, topLeft = Offset(x * scale, y * scale))
             }
-            val headerX = if (story || artwork == null) layout.padding else layout.padding + 80f * contentScale
-            val headerWidth = if (story) layout.lyricsWidth else 340f - layout.padding - headerX
+            val headerX =
+                if (story && artwork != null) {
+                    layout.artworkX + layout.artworkSize + 14f * contentScale
+                } else if (story) {
+                    layout.padding + 18f * contentScale
+                } else if (artwork == null) {
+                    layout.padding
+                } else {
+                    layout.padding + 80f * contentScale
+                }
+            val headerWidth =
+                if (story && artwork != null) {
+                    layout.lyricsWidth - (headerX - layout.padding) - 18f * contentScale
+                } else if (story) {
+                    layout.lyricsWidth - 36f * contentScale
+                } else {
+                    340f - layout.padding - headerX
+                }
             label(title, headerX, layout.titleTop, 20f * contentScale, style.textColor, headerWidth, centered = story)
             label(artist, headerX, layout.artistTop, 16f * contentScale, style.secondaryColor, headerWidth, centered = story)
             val textX =
@@ -278,19 +296,19 @@ internal fun renderLyricsImage(
             val footerScale = scale * contentScale
             drawCircle(
                 style.secondaryColor,
-                radius = 14 * footerScale,
-                center = Offset(padding + 14 * footerScale, layout.footerTop * scale + 14 * footerScale),
+                radius = 11 * footerScale,
+                center = Offset(padding + 18 * footerScale, layout.footerTop * scale + 14 * footerScale),
             )
-            translate(padding + 2 * footerScale, layout.footerTop * scale + 2 * footerScale) {
-                with(logo) { draw(Size(24 * footerScale, 24 * footerScale), colorFilter = ColorFilter.tint(style.backgroundColor)) }
+            translate(padding + 8 * footerScale, layout.footerTop * scale + 4 * footerScale) {
+                with(logo) { draw(Size(20 * footerScale, 20 * footerScale), colorFilter = ColorFilter.tint(style.backgroundColor)) }
             }
             label(
                 appName,
-                layout.padding + 36f * contentScale,
+                layout.padding + 44f * contentScale,
                 layout.footerTop + 8f * contentScale,
                 12f * contentScale,
                 style.secondaryColor,
-                layout.lyricsWidth - 36f * contentScale,
+                layout.lyricsWidth - 62f * contentScale,
             )
         }
     }
