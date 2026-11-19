@@ -48,13 +48,20 @@ fun retainedArtworkUrlCandidates(url: String): List<String> {
     // Revision fragments are volatile: derive the old canonical/persistent keys from the URL
     // before its fragment so a cover saved under a pre-stability key stays reachable.
     val revisionFree = url.substringBefore('#')
+    // Pre-stability covers were keyed by canonicalArtworkUrl, whose bucket depends on the size
+    // requested at save time. Include both historical buckets so a cover saved from a large
+    // variant stays reachable when the current metadata requests a smaller one, and vice versa.
+    val historicalBuckets =
+        listOf(CANONICAL_ARTWORK_SIZE_PX, MAX_ARTWORK_SIZE_PX).flatMap { size ->
+            listOf(sizedArtworkUrl(url, size), sizedArtworkUrl(revisionFree, size))
+        }
     return listOf(
         retainedArtworkUrl(url),
         canonicalArtworkUrl(url),
         persistentArtworkUrl(url),
         canonicalArtworkUrl(revisionFree),
         persistentArtworkUrl(revisionFree),
-    ).distinct()
+    ).plus(historicalBuckets).distinct()
 }
 
 internal class ArtworkUrlCache(

@@ -17,6 +17,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import okio.ByteString.Companion.encodeUtf8
 import timber.log.Timber
 import java.io.File
+import java.io.IOException
 
 internal class DownloadedArtwork(
     private val context: Context,
@@ -30,14 +31,18 @@ internal class DownloadedArtwork(
             if (existing.length() == 0L) return@forEach
             if (existing == stable) return stable
             // Promote a pre-stability file so later URL variants find it under the stable key.
-            val temporary = File.createTempFile("artwork-promote-", ".tmp", directory)
             try {
-                existing.inputStream().use { input ->
-                    temporary.outputStream().use { output -> input.copyTo(output) }
+                val temporary = File.createTempFile("artwork-promote-", ".tmp", directory)
+                try {
+                    existing.inputStream().use { input ->
+                        temporary.outputStream().use { output -> input.copyTo(output) }
+                    }
+                    if (temporary.renameTo(stable)) return stable
+                } finally {
+                    temporary.delete()
                 }
-                if (temporary.renameTo(stable)) return stable
-            } finally {
-                temporary.delete()
+            } catch (_: IOException) {
+                Timber.w("Could not promote retained artwork; using the existing cover")
             }
             return existing
         }
