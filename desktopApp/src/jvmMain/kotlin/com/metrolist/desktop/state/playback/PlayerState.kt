@@ -3928,18 +3928,25 @@ object PlayerState {
                     if (!isCurrentPlayFromIdRequest() || isSongBlocked(target)) {
                         return@launch
                     }
-                    val resource =
-                        if (castManager.state.value.isConnected) {
-                            null
-                        } else {
-                            withContext(Dispatchers.IO) { fetchPlaybackResource(target, showError = false) }
-                        }
-                    if (!isCurrentPlayFromIdRequest()) return@launch
+                    var queueReplaced = false
                     if (castManager.state.value.isConnected) {
                         replaceQueue(listOf(target), 0)
-                        playCastTrack(target, generation, true)
-                    } else if (resource != null) {
-                        replaceQueue(listOf(target), 0)
+                        queueReplaced = true
+                        if (playCastTrack(target, generation, true)) {
+                            val songs = recommendations.await()
+                            if (Settings.shared.autoLoadMore && isCurrentPlayFromIdRequest()) {
+                                appendRadioRecommendations(songs, generation)
+                            }
+                            return@launch
+                        }
+                        if (!isCurrentPlayFromIdRequest()) return@launch
+                    }
+                    val resource = withContext(Dispatchers.IO) { fetchPlaybackResource(target, showError = false) }
+                    if (!isCurrentPlayFromIdRequest()) return@launch
+                    if (resource != null) {
+                        if (!queueReplaced) {
+                            replaceQueue(listOf(target), 0)
+                        }
                         val pendingTransitionId = player.beginPendingPlayback(target)
                         val played =
                             withContext(Dispatchers.IO) {
