@@ -2,6 +2,7 @@ package com.metrolist.desktop.utils
 
 import dev.nucleusframework.media.control.MediaPlaybackState
 import dev.nucleusframework.media.control.MediaPlaybackStatus
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,6 +63,94 @@ class SystemMediaPlaybackUpdatesTest {
             changes.emit(MediaPlaybackState(MediaPlaybackStatus.PAUSED, 0L))
             runCurrent()
             assertEquals(0L, updates.last().positionMs, "A paused track change is immediate")
+        }
+
+    @Test
+    fun aSlowLinuxPublisherDoesNotSendQueuedPlayingAnchorsAheadOfPause() =
+        runTest {
+            val changes = MutableSharedFlow<MediaPlaybackState>()
+            val positions = MutableStateFlow(0L)
+            val releasePublisher = CompletableDeferred<Unit>()
+            val published = mutableListOf<MediaPlaybackState>()
+            backgroundScope.launch {
+                systemMediaPlaybackUpdates(changes, positions, isLinux = true) { testScheduler.currentTime }.collect {
+                    published += it
+                    if (published.size == 1) releasePublisher.await()
+                }
+            }
+            runCurrent()
+            val playing = MediaPlaybackState(MediaPlaybackStatus.PLAYING, 0L)
+            changes.emit(playing)
+            runCurrent()
+            assertEquals(listOf(playing), published)
+
+            advanceTimeBy(1_000)
+            runCurrent()
+            val paused = MediaPlaybackState(MediaPlaybackStatus.PAUSED, 1_000L)
+            changes.emit(paused)
+            runCurrent()
+            releasePublisher.complete(Unit)
+            runCurrent()
+
+            assertEquals(listOf(playing, paused), published)
+        }
+
+    @Test
+    fun aSlowLinuxPublisherKeepsExplicitSeekAndTransportUpdatesInOrder() =
+        runTest {
+            val changes = MutableSharedFlow<MediaPlaybackState>(extraBufferCapacity = 8)
+            val positions = MutableStateFlow(0L)
+            val releasePublisher = CompletableDeferred<Unit>()
+            val published = mutableListOf<MediaPlaybackState>()
+            backgroundScope.launch {
+                systemMediaPlaybackUpdates(changes, positions, isLinux = true) { testScheduler.currentTime }.collect {
+                    published += it
+                    if (published.size == 1) releasePublisher.await()
+                }
+            }
+            runCurrent()
+            val play = MediaPlaybackState(MediaPlaybackStatus.PLAYING, 0L)
+            changes.emit(play)
+            runCurrent()
+            advanceTimeBy(750)
+            runCurrent()
+
+            val seek = MediaPlaybackState(MediaPlaybackStatus.PLAYING, 30_000L)
+            val pause = MediaPlaybackState(MediaPlaybackStatus.PAUSED, 30_000L)
+            val resume = MediaPlaybackState(MediaPlaybackStatus.PLAYING, 30_000L)
+            for (change in listOf(seek, pause, resume)) {
+                changes.emit(change)
+                runCurrent()
+            }
+            releasePublisher.complete(Unit)
+            runCurrent()
+
+            assertEquals(listOf(play, seek, pause, resume), published)
+        }
+
+    @Test
+    fun aSlowLinuxPublisherKeepsTheNewPositionWhilePaused() =
+        runTest {
+            val changes = MutableSharedFlow<MediaPlaybackState>()
+            val positions = MutableStateFlow(0L)
+            val releasePublisher = CompletableDeferred<Unit>()
+            val published = mutableListOf<MediaPlaybackState>()
+            backgroundScope.launch {
+                systemMediaPlaybackUpdates(changes, positions, isLinux = true) { positions.value }.collect {
+                    published += it
+                    if (published.size == 1) releasePublisher.await()
+                }
+            }
+            runCurrent()
+            val paused = MediaPlaybackState(MediaPlaybackStatus.PAUSED, 0L)
+            changes.emit(paused)
+            runCurrent()
+            positions.value = 20_000L
+            runCurrent()
+            releasePublisher.complete(Unit)
+            runCurrent()
+
+            assertEquals(listOf(paused, paused.copy(positionMs = 20_000L)), published)
         }
 
     @Test
