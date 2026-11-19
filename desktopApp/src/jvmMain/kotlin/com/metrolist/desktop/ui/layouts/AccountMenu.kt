@@ -98,7 +98,7 @@ fun AccountMenu(onDismiss: () -> Unit) {
         onSwitchChannel = { UiState.showSwitchChannel = true },
         showStatistics = false,
         onNavigateToIntegrations = {
-            UiState.showIntegrationsSettings = true
+            UiState.openIntegrationsSettings()
             UiState.showSettings = false
             UiState.showSignIn = false
             UiState.showSwitchChannel = false

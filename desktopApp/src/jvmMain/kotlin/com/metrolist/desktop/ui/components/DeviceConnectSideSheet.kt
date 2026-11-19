@@ -215,7 +215,7 @@ private fun DeviceConnectPanelSurface(
             onClose = { UiState.showDeviceConnectPanel = false },
             onOpenIntegrations = {
                 UiState.showDeviceConnectPanel = false
-                UiState.showIntegrationsSettings = true
+                UiState.openIntegrationsSettings()
             },
             closeButtonModifier = closeButtonModifier,
         )

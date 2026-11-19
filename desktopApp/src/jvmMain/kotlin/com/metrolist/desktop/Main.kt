@@ -490,8 +490,7 @@ private fun WindowScope.AppContent(
                         TextButton(
                             onClick = {
                                 ScrobbleSessions.dismissLastFmExpiredNotice()
-                                UiState.selectedSettingsPage = SettingsPageId.LAST_FM
-                                UiState.showSettings = true
+                                UiState.openIntegrationsSettings(SettingsPageId.LAST_FM)
                             },
                             shapes = ButtonDefaults.shapes(),
                         ) {

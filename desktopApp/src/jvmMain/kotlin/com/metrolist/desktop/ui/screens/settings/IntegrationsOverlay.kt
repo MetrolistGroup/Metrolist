@@ -44,7 +44,7 @@ fun IntegrationsOverlay(colorScheme: ColorScheme) {
     val playbackDuration by PlayerState.playbackDuration.collectAsState()
 
     Dialog(
-        onDismissRequest = { UiState.showIntegrationsSettings = false },
+        onDismissRequest = UiState::closeIntegrationsSettings,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Card(
@@ -63,7 +63,8 @@ fun IntegrationsOverlay(colorScheme: ColorScheme) {
                 host =
                     SharedIntegrationsHost(
                         platform = SettingsPlatform.DESKTOP,
-                        onClose = { UiState.showIntegrationsSettings = false },
+                        onClose = UiState::closeIntegrationsSettings,
+                        initialPage = UiState.integrationsInitialPage,
                         playbackPosition = PlayerState.playbackPosition,
                         currentPositionMs = PlayerState::currentMediaPositionMs,
                         playback =
