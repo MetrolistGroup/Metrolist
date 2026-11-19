@@ -1757,7 +1757,10 @@ internal class IosPlaybackController(
         if (!skipCachedAudio && !refresh && excludedProfiles.isEmpty()) {
             try {
                 audioStorage?.getCachedPlaybackResource(song)?.let {
-                    Logger.d("IosPlaybackTiming", "cached resource id=${song.id} lookup=${lookupStartedAt.elapsedNow().inWholeMilliseconds}ms")
+                    Logger.d(
+                        "IosPlaybackTiming",
+                        "cached resource id=${song.id} lookup=${lookupStartedAt.elapsedNow().inWholeMilliseconds}ms",
+                    )
                     return it
                 }
             } catch (error: CancellationException) {

@@ -385,6 +385,59 @@ class AndroidAudioTrackSelectionTest {
         }
 
     @Test
+    fun matchingCachedSourceStopsLookupAtTheCachedSourceBudget() =
+        runTest {
+            val source = videoSong()
+            val cachedAudio = PlaybackResource(source.id, "file://cached-video", emptyMap(), null, null)
+
+            val selection =
+                resolveAndroidAudioTrackSelection(
+                    source,
+                    0L,
+                    wantVideo = false,
+                    cachedAudio = cachedAudio,
+                ) {
+                    delay(ANDROID_CACHED_SOURCE_LOOKUP_TIMEOUT_MS + 1L)
+                    MusicTrackResult.Found(audioSong())
+                }
+
+            assertEquals(AndroidAudioTrackSelection(source, 0L, cachedAudio), selection)
+        }
+
+    @Test
+    fun uncachedSourceKeepsTheLongerLookupBudget() =
+        runTest {
+            val source = videoSong()
+            val selection =
+                resolveAndroidAudioTrackSelection(source, 0L, wantVideo = false, lookupTimeoutMs = 2_000L) {
+                    delay(ANDROID_CACHED_SOURCE_LOOKUP_TIMEOUT_MS + 1L)
+                    MusicTrackResult.Found(audioSong())
+                }
+
+            assertEquals("track", selection.song.id)
+        }
+
+    @Test
+    fun cachedSourceRespectsASmallerCallerLookupBudget() =
+        runTest {
+            val source = videoSong()
+            val cachedAudio = PlaybackResource(source.id, "file://cached-video", emptyMap(), null, null)
+            val selection =
+                resolveAndroidAudioTrackSelection(
+                    source,
+                    0L,
+                    wantVideo = false,
+                    cachedAudio = cachedAudio,
+                    lookupTimeoutMs = 500L,
+                ) {
+                    delay(501L)
+                    MusicTrackResult.Found(audioSong())
+                }
+
+            assertEquals(AndroidAudioTrackSelection(source, 0L, cachedAudio), selection)
+        }
+
+    @Test
     fun offlineCachedVideoDoesNotAttemptCounterpartDiscovery() =
         runTest {
             val source = videoSong()

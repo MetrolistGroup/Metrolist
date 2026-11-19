@@ -2,6 +2,7 @@ package com.metrolist.shared.playback.ffmpeg
 
 import com.metrolist.shared.playback.SeekableMediaSource
 import com.metrolist.shared.playback.instantSilenceSeekTarget
+import com.metrolist.shared.utils.Logger
 import java.io.InputStream
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -200,7 +201,7 @@ class AudioPlayer(
             val d = createDecoder()
             val decoderMs = (System.nanoTime() - decoderStartedAt) / 1_000_000L
             if (decoderMs >= 300L) {
-                com.metrolist.shared.utils.Logger.w("DesktopPlaybackTiming", "Slow decoder open ${decoderMs}ms")
+                Logger.w("DesktopPlaybackTiming", "Slow decoder open ${decoderMs}ms")
             }
             preparedDecoder = d
             if (startPaused) {

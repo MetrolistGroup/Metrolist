@@ -23,6 +23,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
@@ -31,6 +32,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import platform.Foundation.NSFileHandle
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSTemporaryDirectory
@@ -86,8 +88,19 @@ class IosAudioDownloadManagerTest {
                         val storedSong = checkNotNull(database.dao().getSongById(song.id)).song
                         assertEquals(expectedDuration.toInt(), storedSong.duration)
                         assertEquals(storedDuration != null, storedSong.liked)
+                        val initialAccess = checkNotNull(database.dao().cachedAudio(song.id)).lastAccessedAt
                         assertEquals(expectedDuration, manager.getCachedPlaybackResource(song)?.durationSeconds)
                         assertEquals(201L, manager.getCachedPlaybackResource(song.copy(duration = 201L))?.durationSeconds)
+                        val latestAccess =
+                            withTimeout(5_000L) {
+                                while (true) {
+                                    val access = checkNotNull(database.dao().cachedAudio(song.id)).lastAccessedAt
+                                    if (access > initialAccess) return@withTimeout access
+                                    delay(10L)
+                                }
+                            }
+                        database.dao().updateCachedAudioLastAccessed(song.id, latestAccess - 1L)
+                        assertEquals(latestAccess, database.dao().cachedAudio(song.id)?.lastAccessedAt)
                     }
                 }
             } finally {

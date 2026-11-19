@@ -340,7 +340,7 @@ interface CacheDao {
     @Upsert
     suspend fun upsert(cachedAudio: CachedAudioEntity)
 
-    @Query("UPDATE cached_audio SET lastAccessedAt = :timestamp WHERE songId = :songId")
+    @Query("UPDATE cached_audio SET lastAccessedAt = :timestamp WHERE songId = :songId AND lastAccessedAt < :timestamp")
     suspend fun updateCachedAudioLastAccessed(
         songId: String,
         timestamp: Long,
