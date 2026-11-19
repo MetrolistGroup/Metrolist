@@ -1715,6 +1715,8 @@
     <string name="updates_install">Install</string>
     <!-- Translators: Imperative action label for retry in the update settings. -->
     <string name="updates_retry">Try again</string>
+    <!-- Translators: Button that installs a downloaded update without checking its checksum or signature first. -->
+    <string name="updates_force_install">Install anyway</string>
     <!-- Translators: Heading for available in the update settings. %1$s is the available app version. -->
     <string name="updates_available_title">Metrolist %1$s is available</string>
     <!-- Translators: Dialog or notice body text for available in the update settings. -->
@@ -5384,6 +5386,7 @@
     <string name="crash_updates_pending_title" translatable="false">Pending update</string>
     <string name="crash_updates_release_unavailable" translatable="false">This release does not include a compatible APK.</string>
     <string name="crash_updates_retry" translatable="false">Try again</string>
+    <string name="crash_updates_force_install" translatable="false">Install anyway</string>
     <string name="crash_updates_size" translatable="false">Update size</string>
     <string name="crash_updates_version" translatable="false">Metrolist version</string>
     <string name="crash_upload" translatable="false">Upload</string>

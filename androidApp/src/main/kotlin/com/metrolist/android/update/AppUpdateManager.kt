@@ -106,6 +106,7 @@ sealed interface AppUpdateState {
         val release: GitHubRelease,
         val file: File,
         val installing: Boolean = false,
+        val verified: Boolean = true,
     ) : AppUpdateState
 
     data class Error(
@@ -247,6 +248,7 @@ object AppUpdateManager {
         context: Context,
         release: GitHubRelease,
         crashRecovery: Boolean = false,
+        skipVerification: Boolean = false,
     ) = withContext(Dispatchers.IO) {
         operationMutex.withLock {
             when (val active = mutableState.value) {
@@ -298,19 +300,20 @@ object AppUpdateManager {
                         }
                     }
                 }
-                if (downloaded != asset.size || !verifyDigest(partial, asset.digest)) {
+                if (downloaded != asset.size || (!skipVerification && !verifyDigest(partial, asset.digest))) {
                     partial.delete()
                     mutableState.value = AppUpdateState.Error(UpdateFailure.DIGEST, release)
                     return@runCatching
                 }
                 check(partial.renameTo(output)) { "Could not finalize update" }
-                if (!verifyApkIdentity(context, output)) {
+                // Android's installer still rejects an update signed by a different key.
+                if (!skipVerification && !verifyApkIdentity(context, output)) {
                     output.delete()
                     mutableState.value = AppUpdateState.Error(UpdateFailure.DIGEST, release)
                     return@runCatching
                 }
                 if (!crashRecovery) Settings.shared.pendingUpdateReleaseJson = json.encodeToString(release)
-                mutableState.value = AppUpdateState.Downloaded(release, output)
+                mutableState.value = AppUpdateState.Downloaded(release, output, verified = !skipVerification)
             }.onFailure {
                 mutableState.value =
                     if (activeDownload?.isCanceled() == true) {
@@ -338,7 +341,7 @@ object AppUpdateManager {
     ): Boolean =
         withContext(Dispatchers.IO) {
             mutableState.value = downloaded.copy(installing = true)
-            if (!downloaded.file.isFile || !verifyApkIdentity(context, downloaded.file)) {
+            if (!downloaded.file.isFile || (downloaded.verified && !verifyApkIdentity(context, downloaded.file))) {
                 downloaded.file.delete()
                 mutableState.value = AppUpdateState.Available(downloaded.release)
                 return@withContext false
@@ -492,7 +495,8 @@ object AppUpdateManager {
             val packageManager = context.packageManager
             val flags =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    PackageManager.GET_SIGNING_CERTIFICATES
+                    // Android 9 and 10 only read archive signers when GET_SIGNATURES is set.
+                    PackageManager.GET_SIGNING_CERTIFICATES or PackageManager.GET_SIGNATURES
                 } else {
                     @Suppress("DEPRECATION")
                     PackageManager.GET_SIGNATURES
