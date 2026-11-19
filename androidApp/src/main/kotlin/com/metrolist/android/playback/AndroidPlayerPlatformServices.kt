@@ -6,6 +6,19 @@ import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Rect
+import android.graphics.RectF
+import android.graphics.Shader
+import android.graphics.Typeface
+import androidx.core.content.FileProvider
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.withClip
 import androidx.media3.datasource.DefaultHttpDataSource
 import coil3.ImageLoader
 import coil3.request.ImageRequest
@@ -30,6 +43,7 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.YouTubeCanvasMode
 import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.ui.theme.DefaultThemeColor
+import com.metrolist.shared.utils.ShareUrls
 import com.metrolist.shared.utils.canonicalArtworkUrl
 import com.metrolist.shared.viewmodels.PlayerArtworkColors
 import com.metrolist.shared.viewmodels.PlayerPlatformServices
@@ -43,6 +57,7 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 class AndroidPlayerPlatformServices(
     private val context: Context,
@@ -81,6 +96,50 @@ class AndroidPlayerPlatformServices(
                 putExtra(Intent.EXTRA_TEXT, text)
             }
         context.startActivity(Intent.createChooser(intent, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
+    override suspend fun shareSongToStory(song: SongItem) {
+        val artwork =
+            song.thumbnail?.let { url ->
+                try {
+                    val request =
+                        ImageRequest
+                            .Builder(context)
+                            .data(url)
+                            .allowHardware(false)
+                            .build()
+                    (imageLoader.execute(request) as? SuccessResult)?.image?.toBitmap()
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    null
+                }
+            }
+        val artist = song.artists.joinToString(", ") { it.name }
+        val storyImage = withContext(Dispatchers.Default) { createStoryImage(song.title, artist, artwork) }
+        val uri =
+            withContext(Dispatchers.IO) {
+                val directory = File(context.cacheDir, "images").apply { mkdirs() }
+                val file = File.createTempFile("song_story_", ".png", directory)
+                try {
+                    file.outputStream().use { check(storyImage.compress(Bitmap.CompressFormat.PNG, 100, it)) }
+                    FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                } catch (error: Exception) {
+                    file.delete()
+                    throw error
+                } finally {
+                    storyImage.recycle()
+                }
+            }
+        val shareIntent =
+            Intent(Intent.ACTION_SEND).apply {
+                type = "image/png"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_TEXT, ShareUrls.song(song.id))
+                clipData = ClipData.newUri(context.contentResolver, song.title, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        context.startActivity(Intent.createChooser(shareIntent, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
     override fun copyText(text: String) {
@@ -252,4 +311,82 @@ class AndroidPlayerPlatformServices(
         clips = emptyList(),
         cacheKey = cacheKey,
     )
+}
+
+private fun createStoryImage(
+    title: String,
+    artist: String,
+    artwork: Bitmap?,
+): Bitmap {
+    val width = 1080
+    val height = 1920
+    val bitmap = createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val background =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader =
+                LinearGradient(0f, 0f, width.toFloat(), height.toFloat(), 0xFF30233A.toInt(), 0xFF09090B.toInt(), Shader.TileMode.CLAMP)
+        }
+    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), background)
+
+    val artworkRect = RectF(92f, 260f, 988f, 1156f)
+    val artworkPath = Path().apply { addRoundRect(artworkRect, 34f, 34f, Path.Direction.CW) }
+    canvas.withClip(artworkPath) {
+        if (artwork != null) {
+            val scale = maxOf(artworkRect.width() / artwork.width, artworkRect.height() / artwork.height)
+            val cropWidth = artworkRect.width() / scale
+            val cropHeight = artworkRect.height() / scale
+            val source =
+                Rect(
+                    ((artwork.width - cropWidth) / 2).toInt(),
+                    ((artwork.height - cropHeight) / 2).toInt(),
+                    ((artwork.width + cropWidth) / 2).toInt(),
+                    ((artwork.height + cropHeight) / 2).toInt(),
+                )
+            drawBitmap(artwork, source, artworkRect, Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
+        } else {
+            drawRect(artworkRect, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF4A4050.toInt() })
+        }
+    }
+
+    val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
+    val titlePaint =
+        Paint(textPaint).apply {
+            textSize = 58f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        }
+    val artistPaint =
+        Paint(textPaint).apply {
+            textSize = 38f
+            alpha = 210
+        }
+    drawWrappedText(canvas, title, titlePaint, 92f, 1280f, 896f, 2)
+    drawWrappedText(canvas, artist, artistPaint, 92f, 1435f, 896f, 2)
+    return bitmap
+}
+
+private fun drawWrappedText(
+    canvas: Canvas,
+    text: String,
+    paint: Paint,
+    x: Float,
+    baseline: Float,
+    maxWidth: Float,
+    maxLines: Int,
+) {
+    val words = text.split(Regex("\\s+")).filter(String::isNotBlank)
+    var line = ""
+    var lineIndex = 0
+    for (word in words) {
+        val candidate = if (line.isEmpty()) word else "$line $word"
+        if (paint.measureText(candidate) > maxWidth && line.isNotEmpty()) {
+            canvas.drawText(line, x, baseline + lineIndex * paint.textSize * 1.2f, paint)
+            lineIndex++
+            if (lineIndex >= maxLines) return
+            line = word
+        } else {
+            line = candidate
+        }
+    }
+    if (line.isNotEmpty() && lineIndex < maxLines) canvas.drawText(line, x, baseline + lineIndex * paint.textSize * 1.2f, paint)
 }
