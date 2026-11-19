@@ -433,6 +433,7 @@ object PlayerState {
     private val _playbackReplacementGeneration = AtomicLong(0L)
     val playbackReplacementGeneration: Long
         get() = _playbackReplacementGeneration.get()
+    private val sleepTimerExpiryGeneration = AtomicLong(0L)
 
     fun reserveExplicitPlaybackGeneration(): Long {
         _playbackReplacementGeneration.incrementAndGet()
@@ -2918,7 +2919,11 @@ object PlayerState {
                 if (localResource != null) {
                     if (!isCurrentPlaybackTransition(generation) || !isAllowedByReplacement()) return@launch
                     val played =
-                        withContext(Dispatchers.IO) { player.playPending(playableTrack, localResource, pendingTransitionId, preparePaused) }
+                        withContext(Dispatchers.IO) {
+                            player.playPending(playableTrack, localResource, pendingTransitionId, preparePaused) {
+                                isCurrentPlaybackTransition(generation) && isAllowedByReplacement()
+                            }
+                        }
                     if (played) {
                         attachBackgroundVideoResource(playableTrack, generation)
                         Logger.i("PlayerState", "Started local playback")
@@ -2928,9 +2933,11 @@ object PlayerState {
                 } else if (cachedResource != null) {
                     if (!isCurrentPlaybackTransition(generation) || !isAllowedByReplacement()) return@launch
                     val played =
-                        withContext(
-                            Dispatchers.IO,
-                        ) { player.playPending(playableTrack, cachedResource, pendingTransitionId, preparePaused) }
+                        withContext(Dispatchers.IO) {
+                            player.playPending(playableTrack, cachedResource, pendingTransitionId, preparePaused) {
+                                isCurrentPlaybackTransition(generation) && isAllowedByReplacement()
+                            }
+                        }
                     if (played) {
                         attachBackgroundVideoResource(playableTrack, generation)
                         Logger.i("PlayerState", "Started cached playback")
@@ -2950,7 +2957,9 @@ object PlayerState {
                         if (!isCurrentPlaybackTransition(generation) || !isAllowedByReplacement()) return@launch
                         val played =
                             withContext(Dispatchers.IO) {
-                                player.playPending(liveTrack, resource, pendingTransitionId, preparePaused)
+                                player.playPending(liveTrack, resource, pendingTransitionId, preparePaused) {
+                                    isCurrentPlaybackTransition(generation) && isAllowedByReplacement()
+                                }
                             }
                         if (played) {
                             onTrackPlaybackStarted(liveTrack, resource, generation)
@@ -3847,18 +3856,30 @@ object PlayerState {
     fun playFromId(videoId: String) {
         if (isListenTogetherGuest()) return
         val expectedGeneration = reserveExplicitPlaybackGeneration()
-        if (deviceConnect.willStartRemotePlayback) {
-            val generation = playbackTransitionGeneration
+        val expectedSleepTimerGeneration = sleepTimerExpiryGeneration.get()
+        val isRemotePlayback = deviceConnect.willStartRemotePlayback
+        val generation =
+            if (isRemotePlayback) {
+                playbackTransitionGeneration
+            } else {
+                cancelCrossfadeForManualAction()
+                beginPlaybackTransition(preserveCast = true)
+            }
+
+        fun isCurrentPlayFromIdRequest(): Boolean =
+            isCurrentPlaybackTransition(generation) &&
+                explicitPlaybackGeneration == expectedGeneration &&
+                sleepTimerExpiryGeneration.get() == expectedSleepTimerGeneration
+
+        if (isRemotePlayback) {
             scope.launch {
                 val song = withContext(Dispatchers.IO) { GlobalYouTubeRepository.instance.getSongMetadata(videoId) }
-                if (song != null && isCurrentPlaybackTransition(generation) && explicitPlaybackGeneration == expectedGeneration) {
+                if (song != null && isCurrentPlayFromIdRequest()) {
                     playTrack(song, advanceGeneration = false)
                 }
             }
             return
         }
-        cancelCrossfadeForManualAction()
-        val generation = beginPlaybackTransition(preserveCast = true)
         initialRecommendationsGeneration = generation
         playbackTransitionJob =
             scope.launch {
@@ -3899,15 +3920,12 @@ object PlayerState {
                             ?: withContext(Dispatchers.IO) { GlobalYouTubeRepository.instance.getSongMetadata(videoId) }
                             ?: recommendations.await().firstOrNull { it.id == videoId }
                             ?: run {
-                                if (isCurrentPlaybackTransition(generation) && explicitPlaybackGeneration == expectedGeneration) {
+                                if (isCurrentPlayFromIdRequest()) {
                                     reportPlayerError(getString(Res.string.playback_error_track_not_found))
                                 }
                                 return@launch
                             }
-                    if (!isCurrentPlaybackTransition(generation) ||
-                        isSongBlocked(target) ||
-                        explicitPlaybackGeneration != expectedGeneration
-                    ) {
+                    if (!isCurrentPlayFromIdRequest() || isSongBlocked(target)) {
                         return@launch
                     }
                     val resource =
@@ -3916,33 +3934,36 @@ object PlayerState {
                         } else {
                             withContext(Dispatchers.IO) { fetchPlaybackResource(target, showError = false) }
                         }
-                    if (!isCurrentPlaybackTransition(generation) ||
-                        explicitPlaybackGeneration != expectedGeneration
-                    ) {
-                        return@launch
-                    }
+                    if (!isCurrentPlayFromIdRequest()) return@launch
                     if (castManager.state.value.isConnected) {
                         replaceQueue(listOf(target), 0)
                         playCastTrack(target, generation, true)
                     } else if (resource != null) {
                         replaceQueue(listOf(target), 0)
-                        withContext(Dispatchers.IO) { player.play(target, resource) }
-                        onTrackPlaybackStarted(target, resource, generation)
+                        val pendingTransitionId = player.beginPendingPlayback(target)
+                        val played =
+                            withContext(Dispatchers.IO) {
+                                player.playPending(target, resource, pendingTransitionId, startPaused = false) {
+                                    isCurrentPlayFromIdRequest()
+                                }
+                            }
+                        if (played && isCurrentPlayFromIdRequest()) {
+                            onTrackPlaybackStarted(target, resource, generation)
+                        } else if (!played && isCurrentPlayFromIdRequest()) {
+                            video.setResolving(false)
+                        }
                     } else {
                         reportPlayerError(getString(Res.string.playback_error_unable_to_play_link))
                         return@launch
                     }
                     val songs = recommendations.await()
-                    if (Settings.shared.autoLoadMore &&
-                        isCurrentPlaybackTransition(generation) &&
-                        explicitPlaybackGeneration == expectedGeneration
-                    ) {
+                    if (Settings.shared.autoLoadMore && isCurrentPlayFromIdRequest()) {
                         appendRadioRecommendations(songs, generation)
                     }
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
-                    if (isCurrentPlaybackTransition(generation) && explicitPlaybackGeneration == expectedGeneration) {
+                    if (isCurrentPlayFromIdRequest()) {
                         reportPlayerError(getString(Res.string.playback_error_unable_to_play_link))
                     }
                 }
@@ -4002,6 +4023,9 @@ object PlayerState {
         playing: Boolean,
         fromSleepTimer: Boolean = false,
     ) {
+        if (fromSleepTimer && !playing) {
+            sleepTimerExpiryGeneration.incrementAndGet()
+        }
         if (!fromSleepTimer && !isListenTogetherGuest()) {
             _explicitPlaybackGeneration.incrementAndGet()
         }
