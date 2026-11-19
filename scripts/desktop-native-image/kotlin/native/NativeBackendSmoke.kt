@@ -10,6 +10,7 @@ import com.sun.jna.platform.win32.Advapi32Util
 import com.sun.jna.platform.win32.COM.COMUtils
 import com.sun.jna.platform.win32.Ole32
 import com.sun.jna.platform.win32.WinReg
+import io.sentry.Attachment
 import io.sentry.Hint
 import io.sentry.Sentry
 import io.sentry.SentryEnvelope
@@ -88,7 +89,12 @@ private fun sentrySmoke() {
     try {
         check(Sentry.isEnabled()) { "Sentry did not initialize" }
         check(checkNotNull(configured).bundleIds.isNotEmpty()) { "Sentry found no sentry-debug-meta.properties bundle ID" }
-        Sentry.captureException(IllegalStateException("native smoke"))
+        // Mirrors SentryManager: a session and an event with an attachment, as previous-exit reports send.
+        Sentry.startSession()
+        Sentry.captureException(IllegalStateException("native smoke")) { scope ->
+            scope.addAttachment(Attachment("native smoke".encodeToByteArray(), "native-smoke.txt", "text/plain"))
+        }
+        Sentry.endSession()
         Sentry.flush(5_000)
         check(envelopes.any { it.decodeToString().contains("native smoke") }) { "Sentry serialized no event" }
     } finally {
