@@ -149,6 +149,7 @@ fun SleepTimerDialog(
     var finishCurrentSong by rememberSaveable { mutableStateOf(defaults.finishCurrentSong) }
     var fadeOut by rememberSaveable { mutableStateOf(defaults.fadeOut) }
     var expanded by rememberSaveable { mutableStateOf(true) }
+    var resetSignal by remember { mutableIntStateOf(0) }
     val durationMs = sleepTimerDurationMs(hours, minutes)
 
     SleepTimerDialogWindow(onDismiss) {
@@ -187,7 +188,14 @@ fun SleepTimerDialog(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.Top,
                         ) {
-                            DurationField(hours, { hours = it }, stringResource(Res.string.sleep_timer_hour), 23, Modifier.weight(1f))
+                            DurationField(
+                                hours,
+                                { hours = it },
+                                stringResource(Res.string.sleep_timer_hour),
+                                23,
+                                Modifier.weight(1f),
+                                resetSignal = resetSignal,
+                            )
                             Text(
                                 stringResource(Res.string.sleep_timer_separator),
                                 modifier = Modifier.padding(top = 20.dp),
@@ -200,6 +208,7 @@ fun SleepTimerDialog(
                                 59,
                                 Modifier.weight(1f),
                                 last = true,
+                                resetSignal = resetSignal,
                             )
                         }
                         if (allowEndOfSong) {
@@ -303,6 +312,7 @@ fun SleepTimerDialog(
                                 minutes = (saved.durationMinutes % 60).toString().padStart(2, '0')
                                 finishCurrentSong = saved.finishCurrentSong
                                 fadeOut = saved.fadeOut
+                                resetSignal++
                             },
                             modifier = Modifier.tvFocusHighlight(CircleShape),
                             shapes = ButtonDefaults.shapes(),
@@ -385,6 +395,7 @@ private fun DurationField(
     maximum: Int,
     modifier: Modifier,
     last: Boolean = false,
+    resetSignal: Int = 0,
 ) {
     val focusManager = LocalFocusManager.current
     val hapticFeedback = LocalHapticFeedback.current
@@ -396,6 +407,10 @@ private fun DurationField(
     var isFocused by remember { mutableStateOf(false) }
     var lastDirection by remember { mutableIntStateOf(1) }
     var flingJob by remember { mutableStateOf<Job?>(null) }
+
+    LaunchedEffect(resetSignal) {
+        if (resetSignal > 0) flingJob?.cancel()
+    }
 
     LaunchedEffect(value) {
         if (input.text != value) input = TextFieldValue(value, TextRange(0, value.length))
