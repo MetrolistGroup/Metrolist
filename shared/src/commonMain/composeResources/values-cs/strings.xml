@@ -2545,4 +2545,17 @@
     <string name="artist_photo_uploaded">Nahráno %1$s</string>
     <string name="artist_photo_view_author">Zobrazit Last.fm profil nahrávajícího</string>
     <string name="artist_photo_details_unavailable">Informace o obrázku nejsou dostupné</string>
+    <string name="updates_force_install">Přesto nainstalovat</string>
+    <plurals name="import_playlists">
+        <item quantity="one">Importovat playlist</item>
+        <item quantity="few">Importovat playlisty</item>
+        <item quantity="many">Importovat playlisty</item>
+        <item quantity="other">Importovat playlisty</item>
+    </plurals>
+    <string name="artist_lastfm_listeners">Posluchači Last.fm</string>
+    <string name="artist_similar_artists">Podobní umělci na Last.fm</string>
+    <string name="token_login_saving">Ověřuji token…</string>
+    <string name="token_login_saved">Token byl ověřen a uložen.</string>
+    <string name="token_login_save_failed">Nepodařilo se ověřit a uložit token. Zkontrolujte své připojení a token a poté to zkuste znovu.</string>
+    <string name="keep_paused_on_song_change">Ponechat pozastavené při změně skladby</string>
 </resources>
