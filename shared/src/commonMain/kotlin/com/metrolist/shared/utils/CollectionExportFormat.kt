@@ -32,8 +32,13 @@ enum class CollectionExportFormat(
                 buildString {
                     appendLine("#EXTM3U")
                     songs.forEach { song ->
-                        val label = "${song.artists.joinToString(", ") { it.name }} - ${song.title}".replace(m3uLineBreaks, " ")
-                        appendLine("#EXTINF:${song.duration ?: -1},$label")
+                        val artists =
+                            song.artists
+                                .map { it.name }
+                                .filter(String::isNotBlank)
+                                .joinToString(", ")
+                        val label = if (artists.isEmpty()) song.title else "$artists - ${song.title}"
+                        appendLine("#EXTINF:${song.duration ?: -1},${label.replace(m3uLineBreaks, " ")}")
                         appendLine(song.exportUri)
                     }
                 }

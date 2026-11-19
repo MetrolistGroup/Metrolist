@@ -67,6 +67,18 @@ class CollectionExportFormatTest {
     }
 
     @Test
+    fun m3uWithoutArtistKeepsOriginalTitleWhenReimported() {
+        val source = song.copy(id = "abcdefghijk", title = "Instrumental", artists = emptyList())
+        val exported = CollectionExportFormat.M3U.render(listOf(source))
+        val prepared = UniversalPlaylistParser.prepareFile(exported, "playlist.m3u", "Playlist", "File")
+        val track = UniversalPlaylistParser.importableTracks(prepared.tracks).single()
+
+        assertEquals("Instrumental", track.title)
+        assertEquals("Instrumental", track.customTitle)
+        assertEquals("", track.artist)
+    }
+
+    @Test
     fun mixedExportsPreserveLocalUrisAndRemoteUrls() {
         val local = song.copy(id = "file:///music/song.flac", isLocal = true)
         for (format in CollectionExportFormat.entries) {
