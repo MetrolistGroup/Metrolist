@@ -67,8 +67,11 @@ interface PlaybackController {
     val supportsVideoPlayback: Boolean get() = true
     val supportsCasting: Boolean get() = true
     val explicitPlaybackGeneration: Long get() = 0L
+    val playbackReplacementGeneration: Long get() = explicitPlaybackGeneration
 
     fun reserveExplicitPlaybackGeneration(): Long = 0L
+
+    fun reserveQueueAdditionGeneration(): Long = explicitPlaybackGeneration
 
     fun currentPositionMs(): Long = state.value.positionMs
 
@@ -148,7 +151,7 @@ interface PlaybackController {
         expectedGeneration: Long,
         songs: List<SongItem>,
     ) {
-        if (explicitPlaybackGeneration == expectedGeneration) playNext(songs)
+        if (playbackReplacementGeneration == expectedGeneration) playNext(songs)
     }
 
     fun addToQueue(songs: List<SongItem>)
@@ -157,7 +160,7 @@ interface PlaybackController {
         expectedGeneration: Long,
         songs: List<SongItem>,
     ) {
-        if (explicitPlaybackGeneration == expectedGeneration) addToQueue(songs)
+        if (playbackReplacementGeneration == expectedGeneration) addToQueue(songs)
     }
 
     fun playQueueIndex(index: Int) {

@@ -60,7 +60,12 @@ class DesktopPlaybackController(
     override val explicitPlaybackGeneration: Long
         get() = PlayerState.explicitPlaybackGeneration
 
+    override val playbackReplacementGeneration: Long
+        get() = PlayerState.playbackReplacementGeneration
+
     override fun reserveExplicitPlaybackGeneration(): Long = PlayerState.reserveExplicitPlaybackGeneration()
+
+    override fun reserveQueueAdditionGeneration(): Long = PlayerState.reserveQueueAdditionGeneration()
 
     override fun play(
         song: SongItem,
@@ -128,8 +133,8 @@ class DesktopPlaybackController(
         expectedGeneration: Long,
         songs: List<SongItem>,
     ) {
-        if (explicitPlaybackGeneration != expectedGeneration) return
-        PlayerState.playNext(songs, advanceGeneration = false)
+        if (playbackReplacementGeneration != expectedGeneration) return
+        PlayerState.playNext(songs, advanceGeneration = false, expectedReplacementGeneration = expectedGeneration)
     }
 
     override fun addToQueue(songs: List<SongItem>) = PlayerState.addToQueue(songs)
@@ -138,8 +143,8 @@ class DesktopPlaybackController(
         expectedGeneration: Long,
         songs: List<SongItem>,
     ) {
-        if (explicitPlaybackGeneration != expectedGeneration) return
-        PlayerState.addToQueue(songs, advanceGeneration = false)
+        if (playbackReplacementGeneration != expectedGeneration) return
+        PlayerState.addToQueue(songs, advanceGeneration = false, expectedReplacementGeneration = expectedGeneration)
     }
 
     override fun reorderQueue(order: List<Int>) = PlayerState.reorderQueue(order)
