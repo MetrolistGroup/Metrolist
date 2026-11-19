@@ -123,6 +123,7 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                 }
             }
         val incomingRomanizedWords = background.romanizedWords?.map(WordTimestamp::asBackground)?.takeIf { it.isNotEmpty() }
+        val incomingRomanizedTextWord = textBackgroundWord(background.romanizedText, background)
         val romanizedIncomingWords =
             if (incomingRomanizedWords != null) {
                 val romanizedText = incomingRomanizedWords.backgroundText()
@@ -130,7 +131,14 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                     incomingTextBackgroundWords
                         .filterNot {
                             romanizedText != null && normalizeBackgroundText(it.text) == normalizeBackgroundText(romanizedText)
-                        }.withBackgroundPhraseBoundary()
+                        }.withBackgroundPhraseBoundary() +
+                    listOfNotNull(
+                        incomingRomanizedTextWord?.takeUnless { word ->
+                            romanizedText != null && normalizeBackgroundText(word.text) == normalizeBackgroundText(romanizedText)
+                        },
+                    ).withBackgroundPhraseBoundary()
+            } else if (incomingRomanizedTextWord != null) {
+                listOf(incomingRomanizedTextWord).withBackgroundPhraseBoundary()
             } else {
                 incomingBackgroundWords
             }
@@ -145,13 +153,16 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
         val mergedWords =
             mainWordsWithBoundary + listOfNotNull(mainTextBackgroundWord?.copy(hasTrailingSpace = true)) + incomingBackgroundWords
         val mergedRomanizedWords =
-            if (main.romanizedWords != null || incomingRomanizedWords != null) {
+            if (main.romanizedWords != null || incomingRomanizedWords != null || incomingRomanizedTextWord != null) {
                 (
                     existingRomanizedWords.filterNot(WordTimestamp::isBackground) +
                         existingRomanizedWords.filter(WordTimestamp::isBackground) +
                         existingRawBackgroundWords.filterNot { raw ->
                             existingRomanizedWords.any { roman ->
-                                roman.isBackground && roman.startTime == raw.startTime && roman.endTime == raw.endTime
+                                roman.isBackground &&
+                                    roman.startTime == raw.startTime &&
+                                    roman.endTime == raw.endTime &&
+                                    (!raw.isLineTimed || normalizeBackgroundText(roman.text) == normalizeBackgroundText(raw.text))
                             }
                         }
                 ).withBackgroundPhraseBoundary() + romanizedIncomingWords.withBackgroundPhraseBoundary()

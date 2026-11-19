@@ -73,14 +73,90 @@ class LyricsListIndexingTest {
         assertEquals("background existing background", merged.first().backgroundText)
         assertTrue(mainTimeline.hasActiveMainVocals(1_500))
         assertEquals("Main lyric (background existing background)", selectedLyricsText(merged, setOf(0)))
-        assertEquals(
-            1,
+        assertTrue(
             merged
                 .first()
                 .romanizedWords
                 .orEmpty()
+                .any { it.isBackground && it.text == "background" },
+        )
+    }
+
+    @Test
+    fun mainTextBackgroundPhraseIsNotDuplicatedInRomanizedWords() {
+        val lyrics =
+            listOf(
+                LyricsEntry(
+                    time = 1_000,
+                    text = "Main lyric",
+                    endTime = 2_000,
+                    backgroundText = "existing background",
+                    romanizedWords = listOf(WordTimestamp("Main", 1.0, 2.0)),
+                ),
+                LyricsEntry(
+                    time = 1_500,
+                    text = "(new background)",
+                    isBackground = true,
+                    words = listOf(WordTimestamp("new background", 1.5, 2.5, isBackground = true)),
+                ),
+            )
+
+        val merged = mergeBackgroundLyricsEntries(lyrics).first()
+
+        assertEquals(
+            1,
+            merged
+                .romanizedWords
+                .orEmpty()
                 .count { it.isBackground && it.text == "existing background" },
         )
+    }
+
+    @Test
+    fun romanizedTextOnlyBackgroundIsRetainedWhenItsEntryIsMerged() {
+        val lyrics =
+            listOf(
+                LyricsEntry(time = 0, text = "Main lyric", romanizedText = "Main romanized"),
+                LyricsEntry(time = 0, text = "(background)", isBackground = true, romanizedText = "background romanized"),
+            )
+
+        val merged = mergeBackgroundLyricsEntries(lyrics).first()
+
+        assertEquals("Main romanized", merged.romanizedText)
+        assertEquals("background romanized", merged.romanizedWords.orEmpty().backgroundText())
+    }
+
+    @Test
+    fun differentBackgroundTextWithMatchingWordTimesRemainsInRomanization() {
+        val lyrics =
+            listOf(
+                LyricsEntry(
+                    time = 1_000,
+                    endTime = 2_000,
+                    text = "Main lyric",
+                    backgroundText = "Echo",
+                    words =
+                        listOf(
+                            WordTimestamp("Main", 1.0, 2.0),
+                            WordTimestamp("Harmony", 1.0, 2.0, isBackground = true),
+                        ),
+                    romanizedWords =
+                        listOf(
+                            WordTimestamp("Main roman", 1.0, 2.0),
+                            WordTimestamp("Hāmonī", 1.0, 2.0, isBackground = true),
+                        ),
+                ),
+                LyricsEntry(time = 1_500, text = "New vocal", isBackground = true),
+            )
+
+        val mergedBackgroundText =
+            mergeBackgroundLyricsEntries(lyrics)
+                .first()
+                .romanizedWords
+                .orEmpty()
+                .backgroundText()
+
+        assertEquals("Hāmonī Echo New vocal", mergedBackgroundText)
     }
 
     @Test

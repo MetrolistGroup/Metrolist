@@ -331,6 +331,12 @@ fun LyricsView(
             }
 
     val displayLyrics = remember(lyrics) { mergeBackgroundLyricsEntries(lyrics) }
+    val unsyncedDisplayLyrics =
+        remember(displayLyrics) {
+            displayLyrics.mapIndexedNotNull { index, entry ->
+                if (entry.isBackground && entry.text.isBlank() && entry.words.isNullOrEmpty()) null else index to entry
+            }
+        }
     val processedItems =
         remember(displayLyrics, provider, validSongwriters, lyricsActiveByRealTiming) {
             buildLyricsListItems(displayLyrics, provider, validSongwriters, activeByRealTiming = lyricsActiveByRealTiming)
@@ -1198,15 +1204,21 @@ fun LyricsView(
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(top = fadeTop, bottom = fadeBottom),
                             ) {
-                                itemsIndexed(lyrics, key = { index, _ -> index }) { index, entry ->
+                                itemsIndexed(unsyncedDisplayLyrics, key = { _, indexedEntry -> indexedEntry.first }) { _, indexedEntry ->
+                                    val (index, entry) = indexedEntry
+                                    val displayText =
+                                        listOfNotNull(
+                                            entry.text.takeIf(String::isNotBlank),
+                                            entry.backgroundText?.takeIf(String::isNotBlank)?.let { "($it)" },
+                                        ).joinToString(" ")
                                     Text(
-                                        text = entry.text,
+                                        text = displayText,
                                         color = textColor,
                                         modifier =
                                             Modifier
                                                 .fillMaxWidth()
                                                 .then(
-                                                    if (onShareSelection != null && entry.text.isNotBlank()) {
+                                                    if (onShareSelection != null && displayText.isNotBlank()) {
                                                         Modifier
                                                             .combinedClickable(
                                                                 onClick = { if (isSelectionMode) selection.toggle(index) },
