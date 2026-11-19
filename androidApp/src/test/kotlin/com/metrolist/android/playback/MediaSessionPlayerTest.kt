@@ -156,6 +156,33 @@ class MediaSessionPlayerTest {
     }
 
     @Test
+    fun previousFromLiveCastMovesToPreviousTrackWithoutSeekingTheStream() {
+        val live = song("live").copy(musicVideoType = "MUSIC_VIDEO_TYPE_LIVE")
+        val backend = RecordingPlaybackPlayer(listOf(song("previous"), live))
+        backend.player.skipToQueueItem(1)
+        val remote = MutableStateFlow(castState(1, 0L).copy(positionMs = 15_000L))
+        val seekPositions = mutableListOf<Long>()
+        val scope = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
+        try {
+            val adapter =
+                MediaSessionPlayer(
+                    backend.player,
+                    MutableStateFlow(Player.REPEAT_MODE_OFF),
+                    isPlaybackLockedProvider = { false },
+                    isPlaybackLockedFlow = MutableStateFlow(false),
+                    remotePlaybackState = remote,
+                    onRemoteSeek = { seekPositions += it },
+                    scope = scope,
+                )
+            adapter.seekToPrevious()
+            assertEquals(0, backend.currentMediaItemIndex.value)
+            assertTrue(seekPositions.isEmpty())
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
     fun emptySessionHasNoLiveItemOrInItemSeekCommands() {
         val backend = RecordingPlaybackPlayer(emptyList())
         val scope = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())

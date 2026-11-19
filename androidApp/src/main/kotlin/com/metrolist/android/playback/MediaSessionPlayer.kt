@@ -899,6 +899,9 @@ class MediaSessionPlayer(
         val remoteState = remotePlaybackState?.value?.takeIf { it.isConnected }
         if (remoteState == null) {
             musicPlayer.skipToPrevious(repeatAll = repeatMode.value == Player.REPEAT_MODE_ALL, resumePlayback = musicPlayer.wantsPlayback)
+        } else if (isCurrentMediaItemLive) {
+            val previousIndex = getPreviousMediaItemIndex()
+            if (previousIndex != C.INDEX_UNSET && previousIndex != getCurrentMediaItemIndex()) seekToPreviousMediaItem()
         } else if (shouldRestartCurrentItem(remoteState.positionMs, musicPlayer.currentMediaItemIndex.value)) {
             onRemoteSeek(0L)
         } else {
