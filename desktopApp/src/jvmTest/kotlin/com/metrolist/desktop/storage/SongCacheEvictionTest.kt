@@ -1,12 +1,15 @@
 package com.metrolist.desktop.storage
 
 import kotlinx.serialization.json.Json
+import java.io.File
+import java.io.IOException
 import java.nio.file.DirectoryNotEmptyException
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class SongCacheEvictionTest {
@@ -38,6 +41,38 @@ class SongCacheEvictionTest {
             assertFalse(files[1].exists())
             assertTrue(files[2].exists())
             assertTrue(blocked.exists())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun evictionReportsFailedDeletionAndKeepsTheEntryInTheIndex() {
+        val root = Files.createTempDirectory("cache-eviction-failure").toFile()
+        try {
+            val blocked = root.resolve("blocked.m4a")
+            assertTrue(blocked.mkdir())
+            val child = blocked.resolve("child").apply { writeText("keep") }
+            val removable = root.resolve("removable.m4a").apply { writeBytes(ByteArray(2048)) }
+            val entries =
+                listOf(
+                    CachedSongEntry("blocked", "Blocked", "Artist", blocked.path, fileSize = 0L, cachedAt = 0L),
+                    CachedSongEntry("removable", "Removable", "Artist", removable.path, fileSize = removable.length(), cachedAt = 1L),
+                )
+            val failures = mutableListOf<Exception>()
+            val saves = mutableListOf<List<CachedSongEntry>>()
+            removeCachedSongs(
+                entries,
+                setOf("blocked", "removable"),
+                ::File,
+                onDeleteFailure = { failures += it },
+                save = { saves += it },
+            )
+
+            assertIs<IOException>(failures.single())
+            assertEquals(listOf(listOf(entries.first())), saves)
+            assertTrue(child.isFile)
+            assertFalse(removable.exists())
         } finally {
             root.deleteRecursively()
         }
