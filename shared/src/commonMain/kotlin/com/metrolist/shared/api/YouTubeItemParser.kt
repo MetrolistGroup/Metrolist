@@ -40,13 +40,19 @@ internal object YouTubeItemParser {
             "(?i)^(?:today|yesterday|just now|\\d+\\s*(?:minutes?|hours?|days?|weeks?|months?|years?|mo|[smhdwy])\\s+ago|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?\\s+\\d{1,2}(?:,\\s*\\d{4})?|\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4})$",
         )
 
-    private val textDurationRegex = Regex("(?i)^(?:(\\d+)\\s*(?:hr|hrs|h|hours?))?\\s*(?:(\\d+)\\s*(?:min|mins|m|minutes?))?$")
+    private val textDurationRegex =
+        Regex(
+            """^(?:(\d+)\s*(?:hr|hrs|h|hours?))?\s*(?:(\d+)\s*(?:min|mins|m|minutes?))?\s*(?:(\d+)\s*(?:s|secs?|seconds?))?$""",
+            RegexOption.IGNORE_CASE,
+        )
 
     private fun parseTextDuration(text: String): Long? {
         val match = textDurationRegex.matchEntire(text.trim()) ?: return null
         val hours = match.groupValues[1].toLongOrNull()
         val minutes = match.groupValues[2].toLongOrNull()
-        return if (hours == null && minutes == null) null else (hours ?: 0) * 3600 + (minutes ?: 0) * 60
+        val seconds = match.groupValues[3].toLongOrNull()
+        if (hours == null && minutes == null && seconds == null) return null
+        return (hours ?: 0L) * 3600L + (minutes ?: 0L) * 60L + (seconds ?: 0L)
     }
 
     /** Episode rows list "views • date" in `subtitle` and the duration in `playbackProgress`; classify each piece by shape. */
