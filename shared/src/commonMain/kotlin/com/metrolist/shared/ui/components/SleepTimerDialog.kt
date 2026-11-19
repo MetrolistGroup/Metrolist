@@ -63,6 +63,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -87,6 +88,7 @@ import androidx.compose.ui.input.pointer.util.addPointerInputChange
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
@@ -387,7 +389,8 @@ private fun DurationField(
     val focusManager = LocalFocusManager.current
     val hapticFeedback = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
-    val currentValue by rememberUpdatedState(value)
+    var latestValue by remember { mutableStateOf(value) }
+    SideEffect { latestValue = value }
     val currentOnValueChange by rememberUpdatedState(onValueChange)
     var input by remember { mutableStateOf(TextFieldValue(value)) }
     var isFocused by remember { mutableStateOf(false) }
@@ -401,8 +404,9 @@ private fun DurationField(
     fun stepValue(steps: Int) {
         if (steps == 0) return
         lastDirection = if (steps > 0) 1 else -1
-        val updated = stepDurationFieldValue(currentValue, steps, maximum)
-        if (updated != currentValue) {
+        val updated = stepDurationFieldValue(latestValue, steps, maximum)
+        if (updated != latestValue) {
+            latestValue = updated
             currentOnValueChange(updated)
             hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }
@@ -537,7 +541,7 @@ private fun DurationField(
             if (!isFocused) {
                 AnimatedContent(
                     targetState = value,
-                    modifier = Modifier.clipToBounds(),
+                    modifier = Modifier.clipToBounds().clearAndSetSemantics {},
                     transitionSpec = {
                         val slideOffset: (Int) -> Int = { height ->
                             if (lastDirection > 0) (height * 0.65f).toInt() else -(height * 0.65f).toInt()
