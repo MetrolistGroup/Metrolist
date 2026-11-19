@@ -15,13 +15,14 @@ internal fun desktopMediaControls(
     queueSize: Int,
     currentIndex: Int,
     positionMs: Long,
+    isLiveStream: Boolean,
     repeatMode: RepeatMode,
     autoLoadMore: Boolean,
 ): DesktopMediaControls {
     if (!hasTrack || loading || guest) return DesktopMediaControls()
     return DesktopMediaControls(
         playPause = true,
-        previous = currentIndex > 0 || positionMs > 0L,
+        previous = currentIndex > 0 || (!isLiveStream && positionMs > 0L),
         next = currentIndex + 1 < queueSize || repeatMode == RepeatMode.ALL || (repeatMode == RepeatMode.OFF && autoLoadMore),
     )
 }
