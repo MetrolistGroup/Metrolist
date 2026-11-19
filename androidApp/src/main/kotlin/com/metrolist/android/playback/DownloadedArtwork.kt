@@ -24,11 +24,24 @@ internal class DownloadedArtwork(
     private val directory = File(context.filesDir, "downloaded-artwork")
 
     fun file(url: String): File {
+        val stable = keyedFile(retainedArtworkUrl(url))
         retainedArtworkUrlCandidates(url).forEach { candidate ->
             val existing = keyedFile(candidate)
-            if (existing.length() > 0) return existing
+            if (existing.length() == 0L) return@forEach
+            if (existing == stable) return stable
+            // Promote a pre-stability file so later URL variants find it under the stable key.
+            val temporary = File.createTempFile("artwork-promote-", ".tmp", directory)
+            try {
+                existing.inputStream().use { input ->
+                    temporary.outputStream().use { output -> input.copyTo(output) }
+                }
+                if (temporary.renameTo(stable)) return stable
+            } finally {
+                temporary.delete()
+            }
+            return existing
         }
-        return keyedFile(retainedArtworkUrl(url))
+        return stable
     }
 
     private fun keyedFile(url: String): File = File(directory, url.encodeUtf8().sha256().hex() + ".png")

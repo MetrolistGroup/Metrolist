@@ -44,8 +44,18 @@ fun retainedArtworkUrl(url: String): String {
 }
 
 /** Legacy keys are kept so covers retained before the stable identity shipped remain readable. */
-fun retainedArtworkUrlCandidates(url: String): List<String> =
-    listOf(retainedArtworkUrl(url), canonicalArtworkUrl(url), persistentArtworkUrl(url)).distinct()
+fun retainedArtworkUrlCandidates(url: String): List<String> {
+    // Revision fragments are volatile: derive the old canonical/persistent keys from the URL
+    // before its fragment so a cover saved under a pre-stability key stays reachable.
+    val revisionFree = url.substringBefore('#')
+    return listOf(
+        retainedArtworkUrl(url),
+        canonicalArtworkUrl(url),
+        persistentArtworkUrl(url),
+        canonicalArtworkUrl(revisionFree),
+        persistentArtworkUrl(revisionFree),
+    ).distinct()
+}
 
 internal class ArtworkUrlCache(
     private val capacity: Int = 512,
