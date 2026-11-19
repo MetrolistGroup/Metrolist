@@ -136,6 +136,33 @@ class CsvPlaylistTest {
     }
 
     @Test
+    fun preservesPunctuationInHeaderlessM3uLocalPaths() {
+        val path = "Music/One, Two; Three.mp3"
+        val resolved = "file:///library/one-two-three.mp3"
+        val data = UniversalPlaylistParser.prepareFile(path, "playlist.M3U", "Playlist", "File") {
+            if (it == path) resolved else null
+        }
+
+        assertNull(data.csv)
+        val track = data.tracks.single()
+        assertEquals("One, Two; Three", track.title)
+        assertEquals(resolved, track.directReference)
+        assertTrue(track.isResolvedLocalReference)
+        assertNull(track.customTitle)
+    }
+
+    @Test
+    fun preservesHeaderlessM3uVideoIdsWhenUrlHasCommas() {
+        val text =
+            "https://www.youtube.com/watch?v=abcdefghijk&feature=one,two\n" +
+                "https://youtu.be/bcdefghijkl"
+        val data = UniversalPlaylistParser.prepareFile(text, "playlist.m3u8", "Playlist", "File")
+
+        assertNull(data.csv)
+        assertEquals(listOf("abcdefghijk", "bcdefghijkl"), data.tracks.map { it.videoId })
+    }
+
+    @Test
     fun mappedFileRejectsUnresolvedLocalReferences() {
         val remote =
             UniversalPlaylistParser.prepareFile(

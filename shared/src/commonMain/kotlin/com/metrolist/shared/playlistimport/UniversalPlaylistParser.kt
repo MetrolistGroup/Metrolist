@@ -66,8 +66,13 @@ object UniversalPlaylistParser {
         source: String,
         resolveLocalReference: (String) -> String? = { null },
     ): ImportedPlaylistData {
+        val extension = fileName.substringAfterLast('.').lowercase()
         val trimmed = text.removePrefix("\uFEFF").trimStart()
-        val explicitCsv = fileName.substringAfterLast('.').lowercase() in setOf("csv", "tsv")
+        if (extension == "m3u" || extension == "m3u8") {
+            if (text.length > PlaylistImportManager.MAX_CSV_CHARACTERS) throw ImportException(ImportErrorKey.FileReadFailed)
+            return ImportedPlaylistData(title = title, source = source, tracks = parseM3u(trimmed, resolveLocalReference))
+        }
+        val explicitCsv = extension == "csv" || extension == "tsv"
         val structured =
             trimmed.startsWith("{") || trimmed.startsWith("[") || trimmed.startsWith("#EXTM3U", true) ||
                 trimmed.contains("#EXTINF:", true)
