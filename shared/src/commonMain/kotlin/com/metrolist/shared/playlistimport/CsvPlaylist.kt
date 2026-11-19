@@ -42,6 +42,7 @@ class CsvPlaylist(
         resolveLocalReference: (String) -> String? = { null },
     ): List<PlaylistImportManager.CsvTrack> {
         if (!mapping.isValid(columnCount)) throw ImportException(ImportErrorKey.NoTracksRecognized)
+        val trackLimit = PlaylistImportManager.MAX_PLAYLIST_TRACKS
         return rows
             .asSequence()
             .drop(if (mapping.hasHeader) 1 else 0)
@@ -62,8 +63,9 @@ class CsvPlaylist(
                     album = cell(mapping.album),
                     customTitle = title.takeIf(String::isNotBlank),
                 )
-            }.take(PlaylistImportManager.MAX_PLAYLIST_TRACKS)
+            }.take(trackLimit + 1)
             .toList()
+            .also { if (it.size > trackLimit) throw ImportException(ImportErrorKey.TooManyTracks) }
     }
 
     companion object {
