@@ -318,7 +318,9 @@ fun AutoPlaylistScreen(
     var topPeriod by remember { mutableStateOf(TopPlaylistPeriod.ALL_TIME) }
     var topDirection by remember { mutableStateOf(SortDirection.DESCENDING) }
     val likedReorderMode = playlistSort.isReordering(Settings.shared.playlistEditLock, currentType == "liked")
-    val cachedReorderMode = collectionSort.isReordering(Settings.shared.playlistEditLock, currentType == "cached")
+    val cachedReorderMode =
+        collectionQuery.isBlank() &&
+            collectionSort.isReordering(Settings.shared.playlistEditLock, currentType == "cached")
     val reorderMode = if (currentType == "cached") cachedReorderMode else likedReorderMode
     val addToPlaylist = LocalPlaylistAdder.current
     val selection = rememberSelectionState(currentType)
@@ -376,6 +378,8 @@ fun AutoPlaylistScreen(
         return reconciled
     }
 
+    val latestPersistCachedOrder by rememberUpdatedState(::persistCachedOrder)
+
     fun commitPendingCachedOrder(): List<String>? {
         val order = pendingCachedOrder ?: return null
         pendingCachedOrder = null
@@ -389,8 +393,8 @@ fun AutoPlaylistScreen(
             if (currentType == "cached") {
                 val pending = uncommittedCachedOrder.order
                 uncommittedCachedOrder.order = null
-                if (pending != null && pending != Settings.shared.cachedSongsOrder()) {
-                    Settings.shared.setCachedSongsOrder(pending)
+                if (pending != null) {
+                    latestPersistCachedOrder(pending)
                 }
             }
         }
@@ -925,6 +929,7 @@ fun AutoPlaylistScreen(
                             }
 
                             "cached" -> {
+                                if (collectionQuery.isNotBlank()) return@PlaylistContent
                                 val currentSongs = pendingCachedSongs ?: displayedSongs
                                 val from = currentSongs.getOrNull(fromIndex)
                                 val to = currentSongs.getOrNull(toIndex)
@@ -1053,7 +1058,7 @@ fun AutoPlaylistScreen(
                                         modifier = Modifier.padding(vertical = 8.dp),
                                         showSearch = false,
                                         reorderMode = isCachedCollection && cachedReorderMode,
-                                        canReorder = isCachedCollection,
+                                        canReorder = isCachedCollection && collectionQuery.isBlank(),
                                         onReorderModeChange = { enabled ->
                                             if (isCachedCollection) commitPendingCachedOrder()
                                             if (enabled) collectionQuery = ""

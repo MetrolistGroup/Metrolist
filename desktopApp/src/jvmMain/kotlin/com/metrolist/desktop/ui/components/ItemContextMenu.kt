@@ -244,7 +244,9 @@ private class MenuQueueAdditionCoordinator {
                         } catch (e: CancellationException) {
                             throw e
                         } catch (_: Exception) {
-                            AppState.snackbarHostState.showSnackbar(getString(Res.string.error_unknown))
+                            AppState.scope.launch {
+                                AppState.snackbarHostState.showSnackbar(getString(Res.string.error_unknown))
+                            }
                             return@launch
                         }
                     if (loadedSongs.isEmpty() ||
@@ -1009,6 +1011,7 @@ private fun launchTrackedMenuPlayback(
     invoke: MediaMenuPlaybackActions.() -> Unit,
 ) {
     val expectedGeneration = playback.reserveExplicitPlaybackGeneration()
+    val expectedSleepTimerGeneration = playback.sleepTimerExpiryGeneration
     onPlaybackAction()
     sharedMenuPlayState.cancel()
     sharedMenuQueueAdditions.cancel()
@@ -1022,7 +1025,9 @@ private fun launchTrackedMenuPlayback(
             withSongs = { action ->
                 launched =
                     withMediaSongs(item, existingSongs) { loadedSongs ->
-                        if (playback.explicitPlaybackGeneration == expectedGeneration) {
+                        if (playback.explicitPlaybackGeneration == expectedGeneration &&
+                            playback.sleepTimerExpiryGeneration == expectedSleepTimerGeneration
+                        ) {
                             action(loadedSongs)
                         }
                     }

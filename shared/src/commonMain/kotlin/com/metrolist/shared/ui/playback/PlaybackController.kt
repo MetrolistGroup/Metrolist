@@ -68,6 +68,7 @@ interface PlaybackController {
     val supportsCasting: Boolean get() = true
     val explicitPlaybackGeneration: Long get() = 0L
     val playbackReplacementGeneration: Long get() = explicitPlaybackGeneration
+    val sleepTimerExpiryGeneration: Long get() = 0L
 
     fun reserveExplicitPlaybackGeneration(): Long = 0L
 

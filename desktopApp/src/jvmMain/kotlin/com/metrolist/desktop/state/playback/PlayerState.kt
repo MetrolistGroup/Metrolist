@@ -433,7 +433,9 @@ object PlayerState {
     private val _playbackReplacementGeneration = AtomicLong(0L)
     val playbackReplacementGeneration: Long
         get() = _playbackReplacementGeneration.get()
-    private val sleepTimerExpiryGeneration = AtomicLong(0L)
+    private val _sleepTimerExpiryGeneration = AtomicLong(0L)
+    val sleepTimerExpiryGeneration: Long
+        get() = _sleepTimerExpiryGeneration.get()
 
     fun reserveExplicitPlaybackGeneration(): Long {
         _playbackReplacementGeneration.incrementAndGet()
@@ -1196,19 +1198,22 @@ object PlayerState {
     private suspend fun fetchSelectedPlaybackResource(
         song: SongItem,
         generation: Long,
+        canCommit: () -> Boolean = { true },
     ): PlaybackResource? {
         var failure: Throwable? = null
         val resource =
             if (castManager.state.value.isConnected) {
                 withContext(Dispatchers.Main) {
-                    castPlayback.resolveTrack(song, onFailure = { failure = it }) { isCurrentPlaybackTransition(generation) }
+                    castPlayback.resolveTrack(song, onFailure = { failure = it }) {
+                        isCurrentPlaybackTransition(generation) && canCommit()
+                    }
                 }
             } else {
                 fetchPlaybackResource(song, showError = true, onFailure = { failure = it })
             }
         if (resource == null) {
             withContext(Dispatchers.Main) {
-                if (isCurrentPlaybackTransition(generation)) {
+                if (isCurrentPlaybackTransition(generation) && canCommit()) {
                     player.beginPendingPlayback(song)
                     updateCurrentTrack(song, startArtworkFetch = true)
                     reportPlayerError(
@@ -2977,7 +2982,14 @@ object PlayerState {
                         video.setResolving(false)
                     }
                 } else {
-                    val resource = withContext(Dispatchers.IO) { fetchSelectedPlaybackResource(playableTrack, generation) }
+                    val resource =
+                        withContext(Dispatchers.IO) {
+                            fetchSelectedPlaybackResource(
+                                playableTrack,
+                                generation,
+                                canCommit = ::isAllowedByReplacement,
+                            )
+                        }
                     if (resource != null && isCurrentPlaybackTransition(generation) && isAllowedByReplacement()) {
                         val liveTrack = playableTrack.matchingLiveState(resource)
                         if (liveTrack !== playableTrack) {
@@ -3895,7 +3907,8 @@ object PlayerState {
     fun playFromId(videoId: String) {
         if (isListenTogetherGuest()) return
         val expectedGeneration = reserveExplicitPlaybackGeneration()
-        val expectedSleepTimerGeneration = sleepTimerExpiryGeneration.get()
+        val expectedReplacementGeneration = playbackReplacementGeneration
+        val expectedSleepTimerGeneration = _sleepTimerExpiryGeneration.get()
         val isRemotePlayback = deviceConnect.willStartRemotePlayback
         val generation =
             if (isRemotePlayback) {
@@ -3908,7 +3921,12 @@ object PlayerState {
         fun isCurrentPlayFromIdRequest(): Boolean =
             isCurrentPlaybackTransition(generation) &&
                 explicitPlaybackGeneration == expectedGeneration &&
-                sleepTimerExpiryGeneration.get() == expectedSleepTimerGeneration
+                _sleepTimerExpiryGeneration.get() == expectedSleepTimerGeneration
+
+        fun canCommitPlayFromIdPlayback(): Boolean =
+            isCurrentPlaybackTransition(generation) &&
+                playbackReplacementGeneration == expectedReplacementGeneration &&
+                _sleepTimerExpiryGeneration.get() == expectedSleepTimerGeneration
 
         if (isRemotePlayback) {
             scope.launch {
@@ -3922,6 +3940,7 @@ object PlayerState {
         initialRecommendationsGeneration = generation
         playbackTransitionJob =
             scope.launch {
+                var queueReplaced = false
                 try {
                     val recommendations =
                         async(Dispatchers.IO) {
@@ -3967,35 +3986,41 @@ object PlayerState {
                     if (!isCurrentPlayFromIdRequest() || isSongBlocked(target)) {
                         return@launch
                     }
-                    var queueReplaced = false
                     if (castManager.state.value.isConnected) {
                         replaceQueue(listOf(target), 0)
                         queueReplaced = true
-                        if (playCastTrack(target, generation, true, canCommit = ::isCurrentPlayFromIdRequest)) {
+                        if (playCastTrack(target, generation, true, canCommit = ::canCommitPlayFromIdPlayback)) {
                             val songs = recommendations.await()
-                            if (Settings.shared.autoLoadMore && isCurrentPlayFromIdRequest()) {
+                            if (Settings.shared.autoLoadMore && canCommitPlayFromIdPlayback()) {
                                 appendRadioRecommendations(songs, generation)
                             }
                             return@launch
                         }
-                        if (!isCurrentPlayFromIdRequest()) return@launch
+                        if (!canCommitPlayFromIdPlayback()) return@launch
                     }
                     val resource = withContext(Dispatchers.IO) { fetchPlaybackResource(target, showError = false) }
-                    if (!isCurrentPlayFromIdRequest()) return@launch
+                    val canContinue =
+                        if (queueReplaced) canCommitPlayFromIdPlayback() else isCurrentPlayFromIdRequest()
+                    if (!canContinue) return@launch
                     if (resource != null) {
                         if (!queueReplaced) {
                             replaceQueue(listOf(target), 0)
+                            queueReplaced = true
                         }
                         val pendingTransitionId = player.beginPendingPlayback(target)
                         val played =
                             withContext(Dispatchers.IO) {
-                                player.playPending(target, resource, pendingTransitionId, startPaused = false) {
-                                    isCurrentPlayFromIdRequest()
-                                }
+                                player.playPending(
+                                    target,
+                                    resource,
+                                    pendingTransitionId,
+                                    startPaused = false,
+                                    shouldCommit = ::canCommitPlayFromIdPlayback,
+                                )
                             }
-                        if (played && isCurrentPlayFromIdRequest()) {
+                        if (played && canCommitPlayFromIdPlayback()) {
                             onTrackPlaybackStarted(target, resource, generation)
-                        } else if (!played && isCurrentPlayFromIdRequest()) {
+                        } else if (!played && canCommitPlayFromIdPlayback()) {
                             video.setResolving(false)
                         }
                     } else {
@@ -4003,13 +4028,15 @@ object PlayerState {
                         return@launch
                     }
                     val songs = recommendations.await()
-                    if (Settings.shared.autoLoadMore && isCurrentPlayFromIdRequest()) {
+                    if (Settings.shared.autoLoadMore && canCommitPlayFromIdPlayback()) {
                         appendRadioRecommendations(songs, generation)
                     }
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
-                    if (isCurrentPlayFromIdRequest()) {
+                    val canReportError =
+                        if (queueReplaced) canCommitPlayFromIdPlayback() else isCurrentPlayFromIdRequest()
+                    if (canReportError) {
                         reportPlayerError(getString(Res.string.playback_error_unable_to_play_link))
                     }
                 }
@@ -4070,7 +4097,7 @@ object PlayerState {
         fromSleepTimer: Boolean = false,
     ) {
         if (fromSleepTimer && !playing) {
-            sleepTimerExpiryGeneration.incrementAndGet()
+            _sleepTimerExpiryGeneration.incrementAndGet()
         }
         if (!fromSleepTimer && !isListenTogetherGuest()) {
             _explicitPlaybackGeneration.incrementAndGet()

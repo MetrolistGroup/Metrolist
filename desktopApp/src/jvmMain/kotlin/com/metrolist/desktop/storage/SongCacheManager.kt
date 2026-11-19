@@ -461,7 +461,7 @@ object SongCacheManager {
     suspend fun prefetchPlayback(resource: PlaybackResource) {
         try {
             if (!automaticCachingEnabled()) return
-            if (getCachedPlaybackResource(resource.musicVideoId ?: resource.videoId, song = null) != null) return
+            if (cachedEntry(resource.musicVideoId ?: resource.videoId) != null) return
             val budget = playbackCacheBudget()
             if (budget < 1024L) return
             val size = resource.contentLengthBytes ?: return
