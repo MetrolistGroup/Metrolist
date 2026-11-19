@@ -134,12 +134,12 @@
         <item quantity="other">%1$d let</item>
     </plurals>
     <string name="undo">Zrušit</string>
-    <string name="lyrics_not_found">Texty nenalezeny</string>
+    <string name="lyrics_not_found">Text skladby nenalezen</string>
     <string name="sleep_timer">Časovač spánku</string>
     <string name="sleep_timer_end_current_song">Konec současné skladby</string>
     <string name="sleep_timer_fade_out">Postupné doznívání v poslední minutě</string>
     <string name="sleep_timer_fade_out_enabled">Zvuk se postupně zeslabí při poslední minutě.</string>
-    <string name="sleep_timer_remaining">Zbývající: %1$s</string>
+    <string name="sleep_timer_remaining">Zbývá: %1$s</string>
     <string name="sleep_timer_cancel">Zrušit časovač</string>
     <string name="error_unknown">Neznámá chyba</string>
     <string name="action_like">Oblíbené</string>
@@ -190,9 +190,9 @@
     <string name="music_video_quality_resolution" tools:ignore="MissingTranslation" translatable="false">%1$sp</string>
     <string name="music_video_resolution" tools:ignore="MissingTranslation">Rozlišení videa</string>
     <string name="music_video_resolution_desc" tools:ignore="MissingTranslation">Změnit rozlišení pro tento videoklip</string>
-    <string name="music_video_resolution_current" tools:ignore="MissingTranslation">Aktuálně hraje</string>
+    <string name="music_video_resolution_current" tools:ignore="MissingTranslation">Právě hraje</string>
     <string xmlns:tools="http://schemas.android.com/tools" name="music_video_cache" tools:ignore="MissingTranslation">Mezipaměť videoklipů</string>
-    <string name="clear_music_video_cache" tools:ignore="MissingTranslation">Vyčistit mezipaměť videoklipu</string>
+    <string name="clear_music_video_cache" tools:ignore="MissingTranslation">Vyčistit mezipaměť videoklipů</string>
     <string xmlns:tools="http://schemas.android.com/tools" name="clear_music_video_cache_desc" tools:ignore="MissingTranslation">Odstranit uložená přiřazení rozlišení skladeb k videím</string>
     <string name="image_cache">Mezipaměť obrázků</string>
     <string name="song_cache">Mezipaměť skladeb</string>
@@ -203,29 +203,29 @@
     <string name="clear_image_cache">Vymazat mezipaměť obrázků</string>
     <string name="max_song_cache_size">Maximální velikost mezipaměti skladeb</string>
     <string name="clear_song_cache">Vymazat mezipaměť skladeb</string>
-    <string name="song_cache_location">Lokace mezipaměti skladeb</string>
+    <string name="song_cache_location">Umístění mezipaměti skladeb</string>
     <string name="song_cache_location_internal">Interní úložiště aplikace</string>
     <string name="song_cache_location_internal_desc">Skryto v úložišti aplikace</string>
-    <string name="song_cache_location_shared_media">Sdílené media úložiště</string>
+    <string name="song_cache_location_shared_media">Sdílené úložiště médií</string>
     <string name="song_cache_location_shared_media_desc">Viditelné ve složce Android/media pro správce souboru a skenery médií</string>
     <string name="song_cache_location_custom">Vlastní složka</string>
     <string name="song_cache_location_custom_desc">Vlastní složka vybraná pomocí Storage Access Framework</string>
     <string name="song_cache_directory">Adresář mezipaměti skladeb</string>
-    <string name="size_used">Využito %1$s</string>
-    <string name="storage_in_total">Celkově %1$s</string>
+    <string name="size_used">Využito: %1$s</string>
+    <string name="storage_in_total">Celkově: %1$s</string>
     <string name="downloads">Stažené</string>
     <string name="youtube_playlists">YouTube playlisty</string>
     <string name="podcasts">Podcasty</string>
-    <string name="download_location">Umístění ke stažení</string>
-    <string name="animated_cover_resolution">Kvalita animovaného coveru</string>
+    <string name="download_location">Umístění pro stahování</string>
+    <string name="animated_cover_resolution">Kvalita animovaného obalu</string>
     <string name="animated_cover_resolution_low">Nízká (360p)</string>
     <string name="animated_cover_resolution_medium">Střední (720p)</string>
     <string name="animated_cover_resolution_high">Vysoká (1080p)</string>
     <string name="animated_cover_resolution_original">Původní</string>
-    <string name="enable_animated_covers">Animované obálky</string>
+    <string name="enable_animated_covers">Animované obaly</string>
     <string name="enable_animated_covers_desc">Zobrazit animované obaly alb z Apple Music, pokud jsou k dispozici. Spotřebovává více úložiště a mobilních dat.</string>
     <string name="pause_listen_history">Pozastavit historii poslechu</string>
-    <string name="queue_youtube_history_when_offline">Přidat do fronty YouTube historii v offline režimu</string>
+    <string name="queue_youtube_history_when_offline">Přidávat YouTube historii do fronty v offline režimu</string>
     <string name="queue_youtube_history_when_offline_desc">Ukládá záznamy poslechu na tomto zařízení a po obnovení připojení je odešle, pokud je aplikace spuštěná. Při pozastavené historii se poslech nezaznamenává.</string>
     <string name="search_history">Historie vyhledávání</string>
     <string name="pause_search_history">Pozastavit historii vyhledávání</string>
@@ -239,7 +239,7 @@
     <string name="hidden_playlists">Skryté položky v knihovně</string>
     <string name="hidden_playlists_desc">Obnovit položky skryté z knihovny</string>
     <string name="hidden_playlists_empty">Žádné skryté položky v knihovně</string>
-    <string name="hidden_playlists_empty_desc">Položky skryté ze stránky Knihovny se zobrazí zde</string>
+    <string name="hidden_playlists_empty_desc">Položky skryté ze stránky Knihovna se zobrazí zde</string>
     <string name="hide_from_library">Skrýt z knihovny</string>
     <string name="hide_from_library_local">Skrýt místně</string>
     <string name="hide_explicit">Skrýt explicitní obsah</string>
@@ -1685,10 +1685,10 @@
     <string name="pinned">Připnuto</string>
     <string name="animated_cover_resolution_desc">Klipy s jedním rozlišením používají své původní rozlišení</string>
     <string name="apple_music_artist_images_title">Obrázky umělců Apple Music</string>
-    <string name="apple_music_artist_videos_title">Profilová videa interpreta Apple Music</string>
-    <string name="apple_music_artist_videos_description">Přehrávejte animovaná videa profilu Apple Music na stránkách interpretů, pokud jsou k dispozici</string>
+    <string name="apple_music_artist_videos_title">Profilová videa umělce Apple Music</string>
+    <string name="apple_music_artist_videos_description">Přehrávejte animovaná videa profilu Apple Music na stránkách umělců, pokud jsou k dispozici</string>
     <string name="apple_music_artist_video_quality_title">Kvalita videa profilu umělce</string>
-    <string name="apple_music_artist_video_quality_description">Vyberte maximální rozlišení pro animovaná videa s profilem umělce</string>
+    <string name="apple_music_artist_video_quality_description">Vyberte maximální rozlišení pro animovaná videa na profilu umělce</string>
     <string name="youtube_canvas_quality">Kvalita plátna YouTube</string>
     <string name="youtube_canvas_quality_desc">Rozlišení použité pro YouTube videoklipy použitá jako pozadí plátna</string>
     <string name="youtube_canvas_mode">Přehrávání plátna YouTube</string>
@@ -1876,10 +1876,10 @@
     <string name="widget_recognizer_channel_name">Rozpoznání hudby</string>
     <string name="widget_recognizer_channel_desc">Zobrazit oznámení během identifikace skladby z widgetu</string>
     <string name="widget_recognizer_notification_text">Nahrávání zvuku pro identifikaci skladby…</string>
-    <string name="settings_history_playlists">Playlist Historie poslechu</string>
-    <string name="settings_history_playlists_desc">Vytvořit týdenní a měsíční playlisty podle tvé historie poslechu. Aktualizují se automaticky a ukazují se v tvé knihovně.</string>
-    <string name="history_playlist_monthly">Měsíční top skladby</string>
-    <string name="history_playlist_weekly">Týdenní top skladby</string>
+    <string name="settings_history_playlists">Playlisty Historie poslechu</string>
+    <string name="settings_history_playlists_desc">Vytvořit týdenní a měsíční playlisty podle vaší historie poslechu. Aktualizují se automaticky a zobrazí se v knihovně.</string>
+    <string name="history_playlist_monthly">Nejlepší měsíční skladby</string>
+    <string name="history_playlist_weekly">Nejlepší týdenní skladby</string>
     <string name="connected_devices">Připojená zařízení</string>
     <string name="available_devices">Dostupná zařízení</string>
     <string name="no_device_connected">Žádné připojené zařízení</string>
@@ -2597,4 +2597,6 @@
     <string name="ai_setup_privacy_settings">Otevřít nastavení soukromí</string>
     <string name="ai_setup_sign_in_again">Přihlásit se znovu</string>
     <string name="ai_setup_key_limits">Zkontrolovat limity klíče</string>
+    <string name="hide_recent_searches">Skrýt „Z nedávných vyhledávání“</string>
+    <string name="credits_multiplatform_developer">Multiplatformní vývojář</string>
 </resources>
