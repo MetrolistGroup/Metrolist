@@ -8,6 +8,7 @@ package com.metrolist.desktop.ui.screens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,6 +68,7 @@ fun StatsScreen() {
     var period by remember { mutableStateOf(StatisticsPeriod.WEEK) }
     var dateRange by remember { mutableStateOf<StatisticsDateRange?>(null) }
     var refreshKey by remember { mutableStateOf(0) }
+    var artistLookupGeneration by remember { mutableIntStateOf(0) }
     var songItems by remember { mutableStateOf<Map<String, SongItem>>(emptyMap()) }
     var topSongs by remember { mutableStateOf<List<HistoryStatGroup>>(emptyList()) }
     var topArtists by remember { mutableStateOf<List<HistoryArtistStatistic>>(emptyList()) }
@@ -99,6 +101,7 @@ fun StatsScreen() {
             topSongs = songs
             songItems = snapshot.songItems.associateBy { it.id }
             topArtists = artists
+            artistLookupGeneration++
             artistFallbacks =
                 topArtists.associate { artist ->
                     artist.name to snapshot.songs.firstOrNull { it.artists.contains(artist.name) }?.thumbnailUrl
@@ -115,6 +118,7 @@ fun StatsScreen() {
             throw error
         } catch (error: Exception) {
             loadFailed = true
+            artistLookupGeneration++
         } finally {
             isLoading = false
         }
@@ -150,6 +154,7 @@ fun StatsScreen() {
         exportLabel = exportLabel,
         onExport = { saveImage(it, exportLabel, "metrolist-statistics.png") },
         modifier = Modifier.cursorContextMenu(songMenu, openOnSecondaryClick = false),
+        artistLookupGeneration = artistLookupGeneration,
         state =
             StatisticsUiState(
                 period = period,
