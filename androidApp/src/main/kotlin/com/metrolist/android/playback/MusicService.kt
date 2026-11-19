@@ -41,6 +41,7 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.metrolist.android.App
@@ -272,6 +273,7 @@ class MusicService :
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val taskRemoved = MutableStateFlow(false)
     private val listenTogetherForegroundRequired = MutableStateFlow(false)
+    private val roomForegroundOwner = RoomForegroundOwner()
     private val mainHandler = Handler(Looper.getMainLooper())
     private var mediaNotificationProvider: PromotedMediaNotificationProvider? = null
     private var foregroundStartCleanupJob: Job? = null
@@ -425,9 +427,9 @@ class MusicService :
                     },
             )
         setMediaNotificationProvider(checkNotNull(mediaNotificationProvider))
-        mediaNotificationProvider?.notificationUpdatedListener = { notification ->
+        mediaNotificationProvider?.notificationUpdatedListener = {
             mainHandler.post {
-                if (listenTogetherForegroundRequired.value) promotePlaybackServiceStart(notification)
+                if (listenTogetherForegroundRequired.value) promoteRoomForeground()
             }
         }
 
@@ -618,17 +620,26 @@ class MusicService :
 
     private fun observeListenTogetherForegroundDemand() {
         serviceScope.launch {
-            var previous = false
             AndroidListenTogetherManager.foregroundRequired.collect { required ->
                 listenTogetherForegroundRequired.value = required
-                if (required != previous) {
-                    if (required) {
+                when (roomForegroundOwner.onDemandChanged(required)) {
+                    RoomForegroundAction.PROMOTE -> {
                         promoteRoomForeground()
-                    } else {
-                        // Return ownership to Media3 once the room no longer needs the service awake.
+                    }
+
+                    RoomForegroundAction.RELEASE_AND_REFRESH -> {
+                        // Media3 cannot demote a startForeground it never issued.
+                        ServiceCompat.stopForeground(this@MusicService, ServiceCompat.STOP_FOREGROUND_REMOVE)
                         triggerNotificationUpdate()
                     }
-                    previous = required
+
+                    RoomForegroundAction.REFRESH -> {
+                        triggerNotificationUpdate()
+                    }
+
+                    RoomForegroundAction.NONE -> {
+                        // Demand did not change; Media3 keeps its current ownership.
+                    }
                 }
             }
         }
@@ -640,7 +651,17 @@ class MusicService :
             mediaNotificationProvider?.latestNotification?.takeIf {
                 media3Player?.playbackState != Player.STATE_IDLE
             }
-        promotePlaybackServiceStart(notification)
+        try {
+            promotePlaybackServiceStart(notification)
+            roomForegroundOwner.onDirectPromotionStarted()
+        } catch (error: RuntimeException) {
+            if (isForegroundStartDenied(error)) {
+                roomForegroundOwner.onPromotionDenied()
+                Timber.w(error, "Room foreground promotion was not allowed")
+            } else {
+                throw error
+            }
+        }
     }
 
     private fun observeAndroidAutoConnection() {
@@ -2227,19 +2248,20 @@ class MusicService :
                 shouldKeepPlaybackServiceInForeground(roomForegroundRequired, startInForegroundRequired),
             )
         if (roomForegroundRequired) {
-            future.addListener(
-                {
-                    // Media3 can remove or detach the notification while the player is idle. A room
-                    // still needs an active foreground notification to keep its keepalives running.
-                    if (listenTogetherForegroundRequired.value) {
-                        val notification =
-                            mediaNotificationProvider?.latestNotification?.takeIf {
-                                session.player.playbackState != Player.STATE_IDLE
-                            }
-                        promotePlaybackServiceStart(notification)
+            Futures.addCallback(
+                future,
+                object : FutureCallback<Void?> {
+                    override fun onSuccess(result: Void?) {
+                        // Media3 can remove or detach the notification while the player is idle. A
+                        // room still needs an active foreground notification to keep keepalives alive.
+                        if (listenTogetherForegroundRequired.value) promoteRoomForeground()
+                    }
+
+                    override fun onFailure(error: Throwable) {
+                        // Media3 rejected its own foreground start; do not retry it outside that path.
                     }
                 },
-                ContextCompat.getMainExecutor(this),
+                ContextCompat.getMainExecutor(this@MusicService),
             )
         }
         return future
