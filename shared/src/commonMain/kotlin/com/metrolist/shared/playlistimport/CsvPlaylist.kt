@@ -69,16 +69,19 @@ class CsvPlaylist(
     }
 
     companion object {
+        private val separatorDirective = Regex("""^sep=([,;\t])(?:\r\n|\r|\n)""", RegexOption.IGNORE_CASE)
+
         fun parse(text: String): CsvPlaylist {
             if (text.length > PlaylistImportManager.MAX_CSV_CHARACTERS) throw ImportException(ImportErrorKey.FileReadFailed)
             val input = text.removePrefix("\uFEFF")
-            val delimiter = detectDelimiter(input)
+            val directive = separatorDirective.find(input)
+            val delimiter = directive?.groupValues?.get(1)?.single() ?: detectDelimiter(input)
             val rows = mutableListOf<List<String>>()
             var row = mutableListOf<String>()
             val cell = StringBuilder()
             var quoted = false
             var closedQuote = false
-            var index = 0
+            var index = directive?.range?.last?.plus(1) ?: 0
 
             fun endCell() {
                 row += cell.toString()

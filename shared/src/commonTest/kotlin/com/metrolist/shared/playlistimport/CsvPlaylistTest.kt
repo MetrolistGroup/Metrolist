@@ -45,6 +45,30 @@ class CsvPlaylistTest {
     }
 
     @Test
+    fun honorsAFirstLineSeparatorDirectiveWithoutImportingItAsATrack() {
+        for ((delimiter, newline) in listOf(';' to "\r\n", ',' to "\n", '\t' to "\r")) {
+            val text =
+                "\uFEFFSeP=$delimiter${newline}Artist${delimiter}Title${delimiter}URL$newline" +
+                    "João${delimiter}\"Song, Part Two\"${delimiter}https://youtu.be/abcdefghijk"
+            val csv = assertNotNull(UniversalPlaylistParser.prepareFile(text, "data.csv", "Playlist", "File").csv)
+
+            assertEquals(CsvColumnMapping(true, title = 1, artist = 0, url = 2), csv.guessMapping())
+            val track = csv.tracks(csv.guessMapping()).single()
+            assertEquals("Song, Part Two", track.title)
+            assertEquals("João", track.artist)
+            assertEquals("abcdefghijk", track.videoId)
+        }
+    }
+
+    @Test
+    fun onlyRecognizesAnUnquotedSupportedDirectiveOnTheFirstLine() {
+        assertEquals(listOf("sep=;"), CsvPlaylist.parse("\"sep=;\"\nSong;Artist").rows.first())
+        assertEquals(listOf("sep=|"), CsvPlaylist.parse("sep=|\nSong;Artist").rows.first())
+        assertEquals(listOf("sep=", ""), CsvPlaylist.parse("sep=;").rows.single())
+        assertEquals(listOf("sep=", ""), CsvPlaylist.parse("Song;Artist\nsep=;").rows.last())
+    }
+
+    @Test
     fun mapsReorderedHeadersAndKeepsYoutubeIdsAndAlbumForMatching() {
         val csv = CsvPlaylist.parse("Album Name,YouTube URL,Artist Name(s),Track Name\nAlbum,https://youtu.be/abcdefghijk,Artist,Song")
         val mapping = csv.guessMapping()
