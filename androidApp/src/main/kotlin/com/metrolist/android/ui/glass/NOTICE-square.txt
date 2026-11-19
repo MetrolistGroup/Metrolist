@@ -1,0 +1,10 @@
+Square / Convx Project (C) 2026
+Source: docs/Square reference checkout, dev.lelonio.square.ui.glass and data.GlassStore
+License: GNU General Public License version 3 (see repository LICENSE).
+
+NZik adapts Square's material, preference profiles, shapes, settings layout and
+navigation lens to its theme, existing actions, lifecycle and optional enable switch.
+Dropdown presentation uses an in-window overlay with anchor-directed animation.
+
+Backdrop sources are separately licensed by Kyant0 under Apache-2.0;
+see LICENSE-backdrop.txt and source attribution headers.

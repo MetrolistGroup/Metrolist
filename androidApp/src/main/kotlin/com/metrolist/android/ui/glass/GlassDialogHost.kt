@@ -117,7 +117,7 @@ internal fun GlassDialogWindow(
         val id = remember { Any() }
         NativeGlassOverlayCoverage(host, id)
         Dialog(onDismissRequest, properties = properties) {
-            val transparentSource = app.n_zik.android.components.glass.backdrop.backdrops.rememberCanvasBackdrop {}
+            val transparentSource = com.metrolist.android.ui.glass.backdrop.backdrops.rememberCanvasBackdrop {}
             CompositionLocalProvider(
                 LocalGlassBackdrop provides null,
                 LocalGlassOverlayBackdrop provides null,

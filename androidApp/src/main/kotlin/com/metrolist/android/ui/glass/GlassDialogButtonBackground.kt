@@ -112,7 +112,13 @@ internal fun GlassDialogIconButton(
 ) {
     val settings = rememberGlassSettings()
     if (!settings.usesGlassDialogButtonMaterial()) {
-        app.n_zik.android.ui.components.themed.IconButton(onClick, icon, color, modifier, enabled)
+        androidx.compose.material3.IconButton(onClick = onClick, modifier = modifier, enabled = enabled) {
+            androidx.compose.material3.Icon(
+                painter = androidx.compose.ui.res.painterResource(icon),
+                contentDescription = null,
+                tint = color
+            )
+        }
         return
     }
     val shape = uiRoundnessShape()
