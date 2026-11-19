@@ -125,12 +125,29 @@ class SearchViewModel(
 
     fun searchQuery(newQuery: String) {
         if (newQuery.isNotBlank()) {
-            suggestionsJob?.cancel()
-            _uiState.update { it.copy(query = newQuery, isQuerySubmitted = true, searchSuggestions = null) }
-            search(recordSearchHistory = !Settings.shared.pauseSearchHistory)
+            submitQuery(newQuery)
         } else if (newQuery.isEmpty()) {
             clearResults()
         }
+    }
+
+    private fun submitQuery(query: String) {
+        suggestionsJob?.cancel()
+        _uiState.update {
+            it.copy(
+                query = query,
+                isQuerySubmitted = true,
+                isSearching = true,
+                searchFailed = false,
+                searchSuggestions = null,
+                searchSummary = null,
+                unfilteredSearchSummary = null,
+                selectedFilter = null,
+                unfilteredResults = null,
+                filteredResults = null,
+            )
+        }
+        search(recordSearchHistory = !Settings.shared.pauseSearchHistory)
     }
 
     fun search(recordSearchHistory: Boolean = false) {
@@ -334,11 +351,7 @@ class SearchViewModel(
         }
     }
 
-    fun searchFromHistory(query: String) {
-        suggestionsJob?.cancel()
-        _uiState.update { it.copy(query = query, isQuerySubmitted = true, searchSuggestions = null) }
-        search(recordSearchHistory = !Settings.shared.pauseSearchHistory)
-    }
+    fun searchFromHistory(query: String) = searchQuery(query)
 
     fun refreshSearchHistory() {
         resetRemoteHistoryIfSessionChanged()

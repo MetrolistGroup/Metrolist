@@ -422,6 +422,85 @@ class SearchViewModelTest {
         }
 
     @Test
+    fun submittingAnotherQueryHidesOldResultsWhileHistoryRemovalIsPending() =
+        runTest {
+            Settings.shared.pauseSearchHistory = false
+            val started = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            val engine =
+                mockEngine { request ->
+                    val response =
+                        when (request.url.encodedPath.substringAfterLast('/')) {
+                            "feedback" -> {
+                                started.complete(Unit)
+                                release.await()
+                                "{}"
+                            }
+
+                            "get_search_suggestions" -> {
+                                historyResponse("remove", "remove-token")
+                            }
+
+                            else -> {
+                                val query =
+                                    Json
+                                        .parseToJsonElement((request.body as TextContent).text)
+                                        .jsonObject["query"]!!
+                                        .jsonPrimitive.content
+                                """{"contents":{"sectionListRenderer":{"contents":[{"musicShelfRenderer":{
+                                    "title":{"runs":[{"text":"Songs"}]},
+                                    "contents":[{"musicResponsiveListItemRenderer":{
+                                        "flexColumns":[{"musicResponsiveListItemFlexColumnRenderer":{"text":{"runs":[{"text":"$query"}]}}}],
+                                        "playlistItemData":{"videoId":"$query"}
+                                    }}]
+                                }}]}}}"""
+                            }
+                        }
+                    respond(response, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+                }
+            val client = HttpClient(engine) { install(ContentNegotiation) { json() } }
+            try {
+                val tube = InnerTube(client, retryDelay = {}).apply { cookie = "SAPISID=session" }
+                val model = SearchViewModel(backgroundScope, YouTubeRepository(tube))
+                model.searchQuery("first")
+                val initial = model.uiState.first { it.searchSummary != null && !it.isSearching }
+                assertEquals(
+                    listOf("first"),
+                    initial.searchSummary!!
+                        .summaries
+                        .flatMap { it.items }
+                        .map { it.id },
+                )
+
+                model.removeSearchHistoryItem("remove")
+                started.await()
+                model.searchQuery("second")
+                runCurrent()
+
+                val pending = model.uiState.value
+                assertEquals("second", pending.query)
+                assertTrue(pending.isQuerySubmitted)
+                assertTrue(pending.isSearching)
+                assertNull(pending.searchSummary)
+                assertEquals(1, engine.requestHistory.count { it.url.encodedPath.endsWith("search") })
+
+                release.complete(Unit)
+                val complete = model.uiState.first { it.query == "second" && !it.isSearching }
+                assertFalse(complete.searchFailed)
+                assertEquals(
+                    listOf("second"),
+                    complete.searchSummary!!
+                        .summaries
+                        .flatMap { it.items }
+                        .map { it.id },
+                )
+            } finally {
+                release.complete(Unit)
+                client.close()
+            }
+        }
+
+    @Test
     fun resubmittingDuringTokenResolutionKeepsTheNewSearch() =
         runTest {
             Settings.shared.pauseSearchHistory = false
