@@ -13,6 +13,7 @@ import com.metrolist.shared.playback.PlaybackFailureClassifier
 import com.metrolist.shared.playback.QueuePlaybackRequest
 import com.metrolist.shared.settings.AutomotiveSongPlaybackMode
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -130,7 +131,7 @@ internal suspend fun awaitAutomotiveRadioSeed(
     initialRequestId: Long,
     requests: SharedFlow<QueuePlaybackRequest>,
     currentSong: StateFlow<SongItem?>,
-    isPlaying: StateFlow<Boolean>,
+    isPlaying: Flow<Boolean>,
     transitionPending: StateFlow<Boolean>,
     latestRequestId: () -> Long,
     isCurrentSession: () -> Boolean,

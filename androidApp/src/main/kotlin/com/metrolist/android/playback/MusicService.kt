@@ -329,7 +329,9 @@ class MusicService :
                                     initialRequestId = initialRequestId,
                                     requests = player.queuePlaybackRequests,
                                     currentSong = player.currentSong,
-                                    isPlaying = player.isPlaying,
+                                    isPlaying = combine(player.isPlaying, castManager.state) { local, cast ->
+                                        local || (cast.isConnected && cast.isPlaying)
+                                    },
                                     transitionPending = player.playbackTransitionPending,
                                     latestRequestId = { player.latestQueuePlaybackRequestId },
                                     isCurrentSession = { queueCoordinator.queueSessionId == sessionId },
@@ -635,6 +637,7 @@ class MusicService :
                     )
                 ) {
                     automotivePlaybackRequestGate.cancelPendingRequests()
+                    pendingRadioJob?.cancel()
                     pauseOnMute.cancelResume()
                     // Pause even after focus loss so its delayed recovery cannot restart on the phone speaker.
                     player.pause()

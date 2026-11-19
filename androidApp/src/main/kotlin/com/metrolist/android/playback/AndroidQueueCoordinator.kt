@@ -759,6 +759,7 @@ internal class AndroidQueueCoordinator(
         recommendationBootstrapJob?.join()
         if (!PlaybackNetworkStateStore.current.connected || sessionId != queueSessionId) return false
         if (!Settings.shared.autoLoadMore || repeatMode.value != Player.REPEAT_MODE_OFF) return false
+        if (singleSongQueueSessionId == sessionId) return false
 
         val currentQueue = player.songQueue.value
         val currentIndex = player.currentMediaItemIndex.value

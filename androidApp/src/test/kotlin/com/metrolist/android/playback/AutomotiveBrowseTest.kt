@@ -61,6 +61,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -1600,7 +1601,11 @@ class AutomotiveBrowseTest {
         val songB = SongItem("B", "B", null, emptyList(), null)
         val requests = MutableSharedFlow<QueuePlaybackRequest>(replay = 1)
         val currentSong = MutableStateFlow<SongItem?>(null)
-        val isPlaying = MutableStateFlow(false)
+        val isLocalPlaying = MutableStateFlow(false)
+        val isCastPlaying = MutableStateFlow(false)
+        val isPlaying = combine(isLocalPlaying, isCastPlaying) {
+            local, cast -> local || cast
+        }
         val pending = MutableStateFlow(false)
         var latestId: Long
         var mixCalls: Int
@@ -1612,12 +1617,15 @@ class AutomotiveBrowseTest {
             request: QueuePlaybackRequest,
             expectedMixCalls: Int,
             playedSong: SongItem = request.song,
+            isLocal: Boolean = true,
             session: Long = sessionId,
             emitBeforeWaiter: Boolean = false,
             beforeResume: suspend () -> Unit = {},
         ) {
             mixCalls = 0
             mixedSong = null
+            isLocalPlaying.value = false
+            isCastPlaying.value = false
             latestId = request.requestId
             pending.value = true
             if (emitBeforeWaiter) requests.emit(request)
@@ -1630,7 +1638,7 @@ class AutomotiveBrowseTest {
             }
             if (!emitBeforeWaiter) requests.emit(request)
             currentSong.value = playedSong
-            isPlaying.value = true
+            isLocalPlaying.value = isLocal
             beforeResume()
             pending.value = false
             job.join()
@@ -1662,6 +1670,11 @@ class AutomotiveBrowseTest {
         // Queue session changed before binding
         sessionId = 1L
         runCase(30L, QueuePlaybackRequest(31L, songA), expectedMixCalls = 0, session = 0L, emitBeforeWaiter = true)
+
+        // Cast handover
+        runCase(40L, QueuePlaybackRequest(41L, songA), expectedMixCalls = 1, isLocal = false) {
+            isCastPlaying.value = true
+        }
     }
 
     private fun playlistResponse(
