@@ -1704,6 +1704,7 @@ class MusicService :
         var urlRecoveryBudget: PlaybackRecoveryBudget? = null
         val started =
             withQueueLoading(isPlaybackLoading = true) {
+                val timingStartMs = SystemClock.elapsedRealtime()
                 val cachedAudio =
                     if (!wantVideo && sourceSong.canSwitchToAudioTrack) {
                         audioCacheManager.getCachedPlaybackResource(sourceSong)
@@ -1726,6 +1727,13 @@ class MusicService :
                         isCounterpartAllowed = { !BlockedContent.isBlocked(it) },
                         resolveMusicTrack = musicVideoResolver::resolveMusicTrack,
                     )
+                Timber.tag("PlaybackTiming").d(
+                    "selection done id=%s -> %s cached=%s after=%dms",
+                    sourceSong.id,
+                    selection.song.id,
+                    cachedAudio != null,
+                    SystemClock.elapsedRealtime() - timingStartMs,
+                )
                 playbackSong = selection.song
                 playbackPosition = selection.positionMs
                 if (!isCurrentRequest(expectedWantVideo = wantVideo)) return@withQueueLoading false
@@ -1756,6 +1764,13 @@ class MusicService :
                 var result =
                     selection.cachedAudio?.let { PlaybackFetchResult(resource = it) }
                         ?: resolveWithinBudget()
+                Timber.tag("PlaybackTiming").d(
+                    "resource resolved id=%s ok=%s fromCache=%s total=%dms",
+                    playbackSong.id,
+                    result.resource != null,
+                    selection.cachedAudio != null,
+                    SystemClock.elapsedRealtime() - timingStartMs,
+                )
                 while (
                     result.resource == null &&
                     result.failure != null &&

@@ -196,7 +196,12 @@ class AudioPlayer(
         var preparedDecoder: AudioDecoder? = null
         var preparedRenderer: AudioRenderer? = null
         return try {
+            val decoderStartedAt = System.nanoTime()
             val d = createDecoder()
+            val decoderMs = (System.nanoTime() - decoderStartedAt) / 1_000_000L
+            if (decoderMs >= 300L) {
+                com.metrolist.shared.utils.Logger.w("DesktopPlaybackTiming", "Slow decoder open ${decoderMs}ms")
+            }
             preparedDecoder = d
             if (startPaused) {
                 preparedRenderer = createRenderer(d).also { it.pause() }

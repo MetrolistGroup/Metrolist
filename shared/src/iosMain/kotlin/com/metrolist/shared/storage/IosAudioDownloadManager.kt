@@ -81,6 +81,7 @@ import platform.Foundation.fileHandleForUpdatingAtPath
 import platform.Foundation.fileHandleForWritingAtPath
 import platform.Foundation.seekToFileOffset
 import kotlin.time.Clock
+import kotlin.time.TimeSource
 
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 class IosAudioDownloadManager(
@@ -373,9 +374,16 @@ class IosAudioDownloadManager(
     }
 
     suspend fun getCachedPlaybackResource(song: SongItem): PlaybackResource? {
+        val startedAt = TimeSource.Monotonic.markNow()
         ready.await()
+        val readyMs = startedAt.elapsedNow().inWholeMilliseconds
         return withContext(Dispatchers.Default) {
+            val lockRequestedAt = TimeSource.Monotonic.markNow()
             storageMutex.withLock {
+                val lockWaitMs = lockRequestedAt.elapsedNow().inWholeMilliseconds
+                if (readyMs + lockWaitMs >= 250L) {
+                    Logger.w("IosAudioStorage", "Slow cached lookup id=${song.id} readyWait=${readyMs}ms lockWait=${lockWaitMs}ms")
+                }
                 val entry = database.dao().cachedAudio(song.id) ?: return@withLock null
                 if (isQuarantinedDownload(entry)) return@withLock null
                 if (!isValidAudio(entry.filePath, entry.kind)) {
@@ -386,7 +394,16 @@ class IosAudioDownloadManager(
                 val dao = database.dao()
                 val size = audioSize(entry.filePath)
                 val format = dao.format(song.id).first()
-                dao.updateCachedAudioLastAccessed(song.id, now())
+                // The LRU timestamp is not needed to start playback, so keep this write off the playback path.
+                val touchedAt = now()
+                managerScope.launch(Dispatchers.Default) {
+                    try {
+                        dao.updateCachedAudioLastAccessed(song.id, touchedAt)
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Exception) {
+                    }
+                }
                 PlaybackResource(
                     videoId = song.id,
                     url = requireNotNull(NSURL.fileURLWithPath(entry.filePath).absoluteString),

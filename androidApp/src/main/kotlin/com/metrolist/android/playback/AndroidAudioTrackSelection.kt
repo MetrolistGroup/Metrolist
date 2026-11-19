@@ -10,8 +10,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withTimeoutOrNull
+import timber.log.Timber
 
 internal const val ANDROID_MUSIC_TRACK_LOOKUP_TIMEOUT_MS = 10_000L
+internal const val ANDROID_CACHED_SOURCE_LOOKUP_TIMEOUT_MS = 1_500L
 
 internal data class AndroidAudioTrackSelection(
     val song: SongItem,
@@ -163,14 +165,35 @@ internal suspend fun resolveAndroidAudioTrackSelection(
         return sourceSelection
     }
 
+    // A cached source can already start instantly, so never make it wait the full lookup budget.
+    val effectiveTimeoutMs =
+        if (cachedAudio?.videoId == sourceSong.id) {
+            minOf(lookupTimeoutMs, ANDROID_CACHED_SOURCE_LOOKUP_TIMEOUT_MS)
+        } else {
+            lookupTimeoutMs
+        }
+    val lookupStartMs = System.nanoTime()
     val counterpart =
         try {
-            withTimeoutOrNull(lookupTimeoutMs) { resolveMusicTrack(sourceSong) } as? MusicTrackResult.Found
+            withTimeoutOrNull(effectiveTimeoutMs) { resolveMusicTrack(sourceSong) } as? MusicTrackResult.Found
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {
             null
-        } ?: return sourceSelection
+        } ?: run {
+            Timber.tag("PlaybackTiming").d(
+                "counterpart lookup miss/timeout id=%s after=%dms cachedSource=%s",
+                sourceSong.id,
+                (System.nanoTime() - lookupStartMs) / 1_000_000L,
+                cachedAudio != null,
+            )
+            return sourceSelection
+        }
+    Timber.tag("PlaybackTiming").d(
+        "counterpart lookup hit id=%s after=%dms",
+        sourceSong.id,
+        (System.nanoTime() - lookupStartMs) / 1_000_000L,
+    )
     if (!isCounterpartAllowed(counterpart.song)) return sourceSelection
 
     val song =

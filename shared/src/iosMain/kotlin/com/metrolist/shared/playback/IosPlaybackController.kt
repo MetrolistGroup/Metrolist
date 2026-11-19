@@ -1753,9 +1753,13 @@ internal class IosPlaybackController(
         refresh: Boolean = false,
     ): PlaybackResource {
         val excludedProfiles = audioRecovery.excludedProfiles(song.id)
+        val lookupStartedAt = TimeSource.Monotonic.markNow()
         if (!skipCachedAudio && !refresh && excludedProfiles.isEmpty()) {
             try {
-                audioStorage?.getCachedPlaybackResource(song)?.let { return it }
+                audioStorage?.getCachedPlaybackResource(song)?.let {
+                    Logger.d("IosPlaybackTiming", "cached resource id=${song.id} lookup=${lookupStartedAt.elapsedNow().inWholeMilliseconds}ms")
+                    return it
+                }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
