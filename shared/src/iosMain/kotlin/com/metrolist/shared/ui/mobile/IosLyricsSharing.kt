@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.share
+import com.metrolist.shared.model.LyricsShareSelection
 import com.metrolist.shared.ui.components.lyrics.LyricsShareDialog
 import com.metrolist.shared.ui.settings.IosNativeFiles
 import com.metrolist.shared.viewmodels.PlayerViewModel
@@ -38,7 +39,7 @@ import kotlin.coroutines.resumeWithException
 internal fun iosLyricsShareAction(
     viewModel: PlayerViewModel,
     presenter: UIViewController,
-): ((String) -> Unit)? {
+): ((LyricsShareSelection) -> Unit)? {
     val uiState by viewModel.uiState.collectAsState()
     val song = uiState.currentSong ?: return null
     var selectedText by remember(song.id) { mutableStateOf<String?>(null) }
@@ -55,7 +56,7 @@ internal fun iosLyricsShareAction(
             onDismiss = { selectedText = null },
         )
     }
-    return { selectedText = it }
+    return { selectedText = it.text }
 }
 
 internal fun encodeLyricsPng(image: ImageBitmap): ByteArray =

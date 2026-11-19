@@ -181,7 +181,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.sentry.android)
 }
 
 java {
@@ -191,7 +190,6 @@ java {
     }
 }
 
-val sentryAuthToken = providers.environmentVariable("SENTRY_AUTH_TOKEN").filter(String::isNotBlank)
 val appVersion = providers.gradleProperty("appVersion").get()
 val bundledLanguageTags =
     rootProject
@@ -214,29 +212,6 @@ val bundledLanguageTags =
         .sorted()
         .toList()
         .also { require(it.isNotEmpty()) { "No bundled language resources were found" } }
-
-sentry {
-    includeProguardMapping.set(true)
-    includeSourceContext.set(sentryAuthToken.isPresent)
-    autoUploadSourceContext.set(sentryAuthToken.isPresent)
-    autoUploadProguardMapping.set(sentryAuthToken.isPresent)
-    uploadNativeSymbols.set(sentryAuthToken.isPresent)
-    autoUploadNativeSymbols.set(sentryAuthToken.isPresent)
-    additionalSourceDirsForSourceContext.set(
-        setOf(
-            rootProject.file("shared/src/commonMain/kotlin").absolutePath,
-            rootProject.file("shared/src/androidMain/kotlin").absolutePath,
-        ),
-    )
-    autoInstallation {
-        enabled.set(false)
-    }
-    ignoredBuildTypes.set(setOf("debug", "benchmark", "izzy"))
-    tracingInstrumentation.enabled.set(false)
-    org.set("metrolistgroup")
-    projectName.set("metrolist-kmp")
-    authToken.set(sentryAuthToken)
-}
 
 android {
     namespace = "com.metrolist.android"

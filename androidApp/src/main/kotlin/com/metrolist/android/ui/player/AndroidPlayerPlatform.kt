@@ -49,6 +49,8 @@ import com.metrolist.android.ui.download.rememberDownloadPermissionGate
 import com.metrolist.android.ui.screens.PlayerDeviceConnectSheet
 import com.metrolist.android.ui.theme.SystemBarAppearance
 import com.metrolist.android.utils.shareImage
+import com.metrolist.android.utils.shareLyricsAnimation
+import com.metrolist.android.utils.shareLyricsGif
 import com.metrolist.shared.api.artwork.CanvasContentSource
 import com.metrolist.shared.api.artwork.YouTubeCanvasClip
 import com.metrolist.shared.api.lyrics.LyricsUtils
@@ -62,6 +64,8 @@ import com.metrolist.shared.generated.resources.share_lyrics
 import com.metrolist.shared.generated.resources.unknown
 import com.metrolist.shared.listentogether.ListenTogetherManager
 import com.metrolist.shared.listentogether.ListenTogetherRoomRole
+import com.metrolist.shared.model.LyricsShareRequest
+import com.metrolist.shared.model.LyricsShareSelection
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.displayName
@@ -336,21 +340,30 @@ class AndroidPlayerPlatform(
     }
 
     @Composable
-    override fun lyricsShareAction(viewModel: PlayerViewModel): ((String) -> Unit)? {
+    override fun lyricsShareAction(viewModel: PlayerViewModel): ((LyricsShareSelection) -> Unit)? {
         val uiState by viewModel.uiState.collectAsState()
-        val song = uiState.currentSong ?: return null
+        val song = uiState.currentSong
         val context = LocalContext.current
-        var selectedText by remember(song.id) { mutableStateOf<String?>(null) }
+        var selection by remember { mutableStateOf<LyricsShareRequest?>(null) }
+        val videoPicker = rememberLyricsVideoPicker(selection)
         val shareTitle = stringResource(Res.string.share_lyrics)
-        PopupContent(selectedText) { text ->
+        PopupContent(selection) { request ->
             LyricsShareDialog(
-                text = text,
-                songId = song.id,
-                title = song.title,
-                artist = song.artists.joinToString { it.name },
-                artworkUrl = song.displayThumbnail,
+                text = request.selection.text,
+                songId = request.songId,
+                title = request.title,
+                artist = request.artist,
+                artworkUrl = request.artworkUrl,
                 exportLabel = stringResource(Res.string.share),
                 onExport = { shareImage(context, it, shareTitle) },
+                timedSelection = request.selection,
+                onExportTimedAnimation = { shareLyricsAnimation(context, it, shareTitle) },
+                onExportGif = { shareLyricsGif(context, it, shareTitle) },
+                videoBackground = videoPicker.background,
+                videoPreparing = videoPicker.preparing,
+                videoFailed = videoPicker.failed,
+                onPickVideo = videoPicker.pick.takeIf { Build.VERSION.SDK_INT >= 27 },
+                onRemoveVideo = videoPicker::remove,
                 onShareText = { content ->
                     context.startActivity(
                         Intent.createChooser(
@@ -362,10 +375,21 @@ class AndroidPlayerPlatform(
                         ),
                     )
                 },
-                onDismiss = { selectedText = null },
+                onDismiss = { selection = null },
             )
         }
-        return { selectedText = it }
+        if (song == null) return null
+        return { selected ->
+            if (selected.lines.isNotEmpty()) {
+                selection = LyricsShareRequest(
+                    selection = selected,
+                    songId = song.id,
+                    title = song.title,
+                    artist = song.artists.joinToString { it.name },
+                    artworkUrl = song.displayThumbnail,
+                )
+            }
+        }
     }
 
     @Composable

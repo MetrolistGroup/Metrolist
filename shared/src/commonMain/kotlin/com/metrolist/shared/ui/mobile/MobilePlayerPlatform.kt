@@ -35,6 +35,7 @@ import com.metrolist.shared.generated.resources.tempo_and_pitch
 import com.metrolist.shared.generated.resources.unavailable
 import com.metrolist.shared.listentogether.ListenTogetherManager
 import com.metrolist.shared.listentogether.ListenTogetherRoomRole
+import com.metrolist.shared.model.LyricsShareSelection
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playback.LocalPlayerSession
 import com.metrolist.shared.settings.BlockedContent
@@ -76,10 +77,10 @@ internal class MobilePlayerPlatform(
     private val onAddToPlaylist: (List<SongItem>) -> Unit,
     private val listenTogether: ListenTogetherManager,
     private val touchExplorationEnabled: Boolean,
-    private val shareLyrics: @Composable (PlayerViewModel) -> ((String) -> Unit)?,
+    private val shareLyrics: @Composable (PlayerViewModel) -> ((LyricsShareSelection) -> Unit)?,
 ) : PlayerPlatform {
     @Composable
-    override fun lyricsShareAction(viewModel: PlayerViewModel): ((String) -> Unit)? = shareLyrics(viewModel)
+    override fun lyricsShareAction(viewModel: PlayerViewModel): ((LyricsShareSelection) -> Unit)? = shareLyrics(viewModel)
 
     override val supportsPictureInPicture = false
     override val supportsVideoPlayback = false

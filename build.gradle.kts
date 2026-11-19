@@ -14,8 +14,6 @@ plugins {
     alias(libs.plugins.kotlin.ksp) apply false
     alias(libs.plugins.ktlint) apply false
     alias(libs.plugins.protobuf) apply false
-    alias(libs.plugins.sentry.android) apply false
-    alias(libs.plugins.sentry.jvm) apply false
 }
 
 tasks.register<Delete>("clean") {

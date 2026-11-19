@@ -350,7 +350,7 @@ internal fun DesktopLyricsContent(
             isCasting = castState.isConnected,
             isBuffering = castState.isBuffering,
             selectionState = selection,
-            onShareSelection = { selectedText = it },
+            onShareSelection = { selectedText = it.text },
             textColor = textColor,
         )
     }

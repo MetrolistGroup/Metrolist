@@ -119,6 +119,8 @@ import com.metrolist.shared.generated.resources.lyrics_share_limit
 import com.metrolist.shared.generated.resources.lyrics_share_selected_count
 import com.metrolist.shared.generated.resources.lyrics_written_by
 import com.metrolist.shared.generated.resources.share
+import com.metrolist.shared.model.LyricsShareSelection
+import com.metrolist.shared.model.selectedLyricsSnapshot
 import com.metrolist.shared.model.AgentInfo
 import com.metrolist.shared.model.LyricsEntry
 import com.metrolist.shared.model.LyricsTranslationProgress
@@ -246,7 +248,7 @@ fun LyricsView(
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
     selectionState: LyricsSelectionState? = null,
-    onShareSelection: ((String) -> Unit)? = null,
+    onShareSelection: ((LyricsShareSelection) -> Unit)? = null,
     textSizeMultiplier: Float = 1.0f,
     textColor: Color = Color.White,
     onLyricsClosed: () -> Unit = {},
@@ -1639,7 +1641,7 @@ fun LyricsView(
                         TextButton(
                             onClick = {
                                 onShareSelection?.invoke(
-                                    selectedLyricsText(
+                                    selectedLyricsSnapshot(
                                         lyrics,
                                         selectedIndices,
                                     ),

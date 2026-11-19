@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.Dp
 import com.metrolist.shared.api.artwork.CanvasContentSource
 import com.metrolist.shared.api.artwork.YouTubeCanvasClip
+import com.metrolist.shared.model.LyricsShareSelection
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.ui.components.PlayerMenuAction
 import com.metrolist.shared.viewmodels.PlayerViewModel
@@ -104,7 +105,7 @@ interface PlayerPlatform {
     )
 
     @Composable
-    fun lyricsShareAction(viewModel: PlayerViewModel): ((String) -> Unit)? = null
+    fun lyricsShareAction(viewModel: PlayerViewModel): ((LyricsShareSelection) -> Unit)? = null
 
     @Composable
     fun LyricsMenu(

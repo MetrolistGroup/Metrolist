@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lyrics_card_editor">Make it yours</string>
+    <string name="lyrics_card_hint">Style your lyrics, then share an image or silent animation.</string>
+    <string name="lyrics_card_classic">Classic</string>
+    <string name="lyrics_card_editorial">Editorial</string>
+    <string name="lyrics_card_spotlight">Spotlight</string>
+    <string name="lyrics_card_style">Style</string>
+    <string name="lyrics_card_adjust">Adjust</string>
+    <string name="lyrics_card_alignment">Text alignment</string>
+    <string name="lyrics_card_left">Left</string>
+    <string name="lyrics_card_center">Center</string>
+    <string name="lyrics_card_right">Right</string>
+    <string name="lyrics_card_plain">Plain</string>
+    <string name="lyrics_card_lines">Lines</string>
+    <string name="lyrics_card_words">Words</string>
+    <string name="lyrics_card_video_mode">Highlight timing</string>
+    <string name="lyrics_card_timing_hint">Timed modes need original timing and a selection up to 30 seconds. Words require genuine word timing.</string>
+    <string name="lyrics_card_share_image">Image</string>
+    <string name="lyrics_card_share_video">Video</string>
+    <string name="lyrics_card_share_gif">GIF</string>
+    <string name="lyrics_card_mp4">MP4 · higher quality</string>
+    <string name="lyrics_card_gif">GIF · small loop</string>
+    <string name="lyrics_card_video_hint">Silent MP4 · 720 × 720 · 24 fps. Plain uses 6 seconds, or the chosen video’s loop length.</string>
+    <string name="lyrics_card_gif_hint">Silent looping GIF · 320 × 320 · 10 fps. Colors and short highlights may look different from the preview.</string>
+    <string name="lyrics_card_moving_glow">Moving artwork glow</string>
+    <string name="lyrics_card_pick_video">Choose video background</string>
+    <string name="lyrics_card_remove_video">Remove video</string>
+    <string name="lyrics_card_video_preparing">Preparing silent video…</string>
+    <string name="lyrics_card_local_video_hint">Your video loops behind the lyrics. First 6 seconds at 8 fps; AVC/H.264, SDR, up to 1080p and 32 MB.</string>
+    <string name="lyrics_card_local_video_failed">Could not prepare this video. Choose a supported video or remove it to use artwork.</string>
+</resources>

@@ -75,16 +75,41 @@ internal fun blurLyricsArtwork(
 
 internal data class LyricsImageLayout(
     val contentScale: Float,
+    val template: LyricsCardTemplate = LyricsCardTemplate.CLASSIC,
 ) {
     val padding = 28f * contentScale
     val artworkSize = 64f * contentScale
-    val lyricsTop = 110f * contentScale
-    val footerTop = 340f - 72f * contentScale
+    val lyricsTop = if (template == LyricsCardTemplate.EDITORIAL) 82f else 110f * contentScale
+    val footerTop = 340f - 52f * contentScale
     val lyricsWidth = 340f - 2f * padding
     val lyricsHeight = footerTop - 12f * contentScale - lyricsTop
 }
 
-internal fun lyricsImageLayout(contentScale: Float): LyricsImageLayout = LyricsImageLayout(contentScale.coerceIn(0.6f, 1.35f))
+internal fun lyricsImageLayout(
+    contentScale: Float,
+    template: LyricsCardTemplate = LyricsCardTemplate.CLASSIC,
+): LyricsImageLayout = LyricsImageLayout(contentScale.coerceIn(0.6f, 1.35f), template)
+
+internal fun LyricsImageStyle.withTemplate(template: LyricsCardTemplate): LyricsImageStyle {
+    if (this.template == template) return this
+    return when (template) {
+        LyricsCardTemplate.CLASSIC -> LyricsImageStyle()
+        LyricsCardTemplate.EDITORIAL -> LyricsImageStyle(
+            template = template,
+            backgroundColor = Color(0xFFF3EFE5),
+            textColor = Color(0xFF25231F),
+            secondaryColor = Color(0xFF686155),
+            alignment = TextAlign.Left,
+        )
+        LyricsCardTemplate.SPOTLIGHT -> LyricsImageStyle(
+            template = template,
+            backgroundColor = Color(0xFF101217),
+            textColor = Color.White,
+            secondaryColor = Color(0xFFE3E6EC),
+            alignment = TextAlign.Left,
+        )
+    }
+}
 
 internal data class LyricsTextFit(
     val fontSize: Float,
@@ -119,6 +144,8 @@ private data class StoredLyricsImageStyle(
     val secondaryColor: Int,
     val textScale: Float,
     val contentScale: Float,
+    val template: String = LyricsCardTemplate.CLASSIC.name,
+    val alignment: String? = null,
 )
 
 internal fun LyricsImageStyle.encodeForStorage(): String =
@@ -130,6 +157,12 @@ internal fun LyricsImageStyle.encodeForStorage(): String =
             secondaryColor.toArgb(),
             textScale,
             contentScale,
+            template.name,
+            when (alignment) {
+                TextAlign.Left -> "LEFT"
+                TextAlign.Right -> "RIGHT"
+                else -> "CENTER"
+            },
         ),
     )
 
@@ -138,13 +171,19 @@ internal fun decodeLyricsImageStyle(
     alignment: TextAlign,
 ): LyricsImageStyle =
     runCatching {
-        val style = Json.decodeFromString<StoredLyricsImageStyle>(stored)
+        val style = Json { ignoreUnknownKeys = true }.decodeFromString<StoredLyricsImageStyle>(stored)
         LyricsImageStyle(
-            background = LyricsImageBackground.valueOf(style.background),
+            template = runCatching { LyricsCardTemplate.valueOf(style.template) }.getOrDefault(LyricsCardTemplate.CLASSIC),
+            background = runCatching { LyricsImageBackground.valueOf(style.background) }.getOrDefault(LyricsImageBackground.SOLID),
             backgroundColor = Color(style.backgroundColor),
             textColor = Color(style.textColor),
             secondaryColor = Color(style.secondaryColor),
-            alignment = alignment,
+            alignment = when (style.alignment) {
+                "LEFT" -> TextAlign.Left
+                "RIGHT" -> TextAlign.Right
+                "CENTER" -> TextAlign.Center
+                else -> alignment
+            },
             textScale = style.textScale.takeIf { it.isFinite() }?.coerceIn(0.5f, 2f) ?: 1f,
             contentScale = style.contentScale.takeIf { it.isFinite() }?.coerceIn(0.6f, 1.35f) ?: 1f,
         )

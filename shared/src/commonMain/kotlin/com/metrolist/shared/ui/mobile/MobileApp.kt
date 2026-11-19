@@ -166,6 +166,7 @@ import com.metrolist.shared.generated.resources.youtube_session_expired_message
 import com.metrolist.shared.generated.resources.youtube_session_expired_title
 import com.metrolist.shared.listentogether.ListenTogetherManager
 import com.metrolist.shared.listentogether.ListenTogetherRoomRole
+import com.metrolist.shared.model.LyricsShareSelection
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.EpisodeItem
 import com.metrolist.shared.model.PlaylistItem
@@ -309,7 +310,7 @@ fun MobileApp(
     playbackController: PlaybackController,
     listenTogetherManager: ListenTogetherManager,
     playerServices: PlayerPlatformServices,
-    lyricsShareAction: @Composable (PlayerViewModel) -> ((String) -> Unit)?,
+    lyricsShareAction: @Composable (PlayerViewModel) -> ((LyricsShareSelection) -> Unit)?,
     onExportStatistics: suspend (ImageBitmap) -> Boolean,
     onPickPlaylistCover: suspend () -> ByteArray?,
     onSavePlaylistCover: suspend (PlaylistItem, ByteArray?) -> Result<Unit>,
