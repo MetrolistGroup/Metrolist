@@ -7,7 +7,7 @@ data class LinkSegment(
     val url: String? = null,
 )
 
-private val URL_REGEX = Regex("""(?:https?:)?//[^\s<>"]+""")
+private val URL_REGEX = Regex("""(?:https?:)?//[^\s<>"]+""", RegexOption.IGNORE_CASE)
 
 fun String.toLinkSegments(): List<LinkSegment> {
     if (isBlank()) return emptyList()
@@ -152,7 +152,13 @@ private fun linkLabel(url: String): String =
         }
     }.getOrDefault(url)
 
-private fun normalizeUrl(url: String): String = if (url.startsWith("//")) "https:$url" else url
+private fun normalizeUrl(url: String): String =
+    if (url.startsWith("//")) {
+        "https:$url"
+    } else {
+        val scheme = url.substringBefore(':')
+        scheme.lowercase() + url.substring(scheme.length)
+    }
 
 private fun String.matchesDomain(domain: String): Boolean = this == domain || endsWith(".$domain")
 
