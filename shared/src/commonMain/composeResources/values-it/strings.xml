@@ -20,7 +20,7 @@
     <string name="similar_to">Simile a</string>
     <string name="new_releases">Nuove uscite</string>
     <string name="podcasts_for_you">Podcast per te</string>
-    <string name="recap">Riepilogo</string>
+    <string name="recap">Recap</string>
     <string name="home_unavailable">Home non disponibile</string>
     <string name="today">Oggi</string>
     <string name="yesterday">Ieri</string>
@@ -28,7 +28,7 @@
     <string name="last_week">Settimana scorsa</string>
     <string name="most_viewed_videos">Video musicali più visti</string>
     <string name="search">Cerca</string>
-    <string name="search_library">Cerca nella tua libreria</string>
+    <string name="search_library">Cerca nella libreria</string>
     <string name="filter_library">Libreria</string>
     <string name="filter_downloaded">Scaricati</string>
     <string name="filter_all">Tutto</string>
@@ -47,11 +47,11 @@
     <string name="start_radio">Avvia radio</string>
     <string name="play">Riproduci</string>
     <string name="pause">Pausa</string>
-    <string name="play_next">Riproduci come successiva</string>
-    <string name="add_to_queue">Metti in coda</string>
+    <string name="play_next">Riproduci dopo</string>
+    <string name="add_to_queue">Aggiungi alla coda</string>
     <string name="remove_from_library">Rimuovi dalla libreria</string>
     <string name="action_download">Scarica</string>
-    <string name="download_notification_title">Download brani in corso</string>
+    <string name="download_notification_title">Download dei brani in corso</string>
     <string name="download_notification_paused">Download in pausa</string>
     <string name="downloads_completed">Download completati</string>
     <string name="downloads_finished">Download terminati</string>
@@ -2243,7 +2243,7 @@
     <string name="sponsorblock_skipped">Segmento promozionale saltato</string>
     <string name="episode_played">Riprodotto</string>
     <string name="lastfm_service_error">L’accesso a Last.fm non è disponibile. Riprova più tardi.</string>
-    <string name="settings_reset_to_default">Reimposta a default</string>
+    <string name="settings_reset_to_default">Ripristina valore predefinito</string>
     <string name="remove_all_downloads">Rimuovi tutti i download</string>
     <string name="disable_animated_artwork_on_mobile_data">Disabilità copertine animate con i dati mobili</string>
     <string name="disable_animated_artwork_on_mobile_data_desc">Mostra le copertine statiche con la rete dati, anche quando le animate sono in cache</string>
