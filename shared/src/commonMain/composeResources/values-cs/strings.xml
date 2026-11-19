@@ -142,11 +142,11 @@
     <string name="sleep_timer_remaining">Zbývá: %1$s</string>
     <string name="sleep_timer_cancel">Zrušit časovač</string>
     <string name="error_unknown">Neznámá chyba</string>
-    <string name="action_like">Oblíbené</string>
+    <string name="action_like">To se mi líbí</string>
     <string name="repeat_mode_off">Režim opakování vypnut</string>
     <string name="repeat_mode_one">Opakovat aktuální skladbu</string>
     <string name="repeat_mode_all">Opakovat frontu</string>
-    <string name="up_next">Dále</string>
+    <string name="up_next">Nadcházející</string>
     <string name="queue_loading">Načítání fronty…</string>
     <string name="calculating">Vypočítavám…</string>
     <plurals name="queue_track_count_duration">
@@ -160,7 +160,7 @@
     <string name="settings">Nastavení</string>
     <string name="theme_mode">Režim vzhledu</string>
     <string name="pure_black">Čistě černá</string>
-    <string name="lyrics_provided_by">Text poskytl %1$s</string>
+    <string name="lyrics_provided_by">Text skladby poskytl %1$s</string>
     <string name="lyrics_written_by">Autor textu: %1$s</string>
     <string name="lyrics_auto_scroll_btn">Automatické posouvání</string>
     <string name="squiggly">Klikatá</string>
@@ -168,7 +168,7 @@
     <string name="action_login">Přihlásit se</string>
     <string name="action_not_now">Teď ne</string>
     <string name="youtube_session_expired_title">Byl jste pravděpodobně odhlášen</string>
-    <string name="youtube_session_expired_message">Přihlašte se znova pro používaní Youtube funkcí. Nadále můžete používat váš stáhnutý a uložený obsah offline.</string>
+    <string name="youtube_session_expired_message">Přihlašte se znovu pro používaní funkcí YouTube účtu. Nadále můžete používat váš stáhnutý a obsah v mezipaměti.</string>
     <string name="audio_quality">Kvalita zvuku</string>
     <string name="audio_quality_auto">Automatická</string>
     <string name="audio_quality_high">Vysoká</string>
@@ -193,7 +193,7 @@
     <string name="music_video_resolution_current" tools:ignore="MissingTranslation">Právě hraje</string>
     <string xmlns:tools="http://schemas.android.com/tools" name="music_video_cache" tools:ignore="MissingTranslation">Mezipaměť videoklipů</string>
     <string name="clear_music_video_cache" tools:ignore="MissingTranslation">Vyčistit mezipaměť videoklipů</string>
-    <string xmlns:tools="http://schemas.android.com/tools" name="clear_music_video_cache_desc" tools:ignore="MissingTranslation">Odstranit uložená přiřazení rozlišení skladeb k videím</string>
+    <string xmlns:tools="http://schemas.android.com/tools" name="clear_music_video_cache_desc" tools:ignore="MissingTranslation">Odstranit uložená přiřazení skladeb k videím</string>
     <string name="image_cache">Mezipaměť obrázků</string>
     <string name="song_cache">Mezipaměť skladeb</string>
     <string name="unlimited">Neomezená</string>
@@ -241,7 +241,7 @@
     <string name="hidden_playlists_empty">Žádné skryté položky v knihovně</string>
     <string name="hidden_playlists_empty_desc">Položky skryté ze stránky Knihovna se zobrazí zde</string>
     <string name="hide_from_library">Skrýt z knihovny</string>
-    <string name="hide_from_library_local">Skrýt místně</string>
+    <string name="hide_from_library_local">Skrýt lokálně</string>
     <string name="hide_explicit">Skrýt explicitní obsah</string>
     <string name="hide_explicit_desc">Skrýt explicitní skladby při procházení, vyhledávání a přehrávání</string>
     <string name="explicit_only">Pouze explicitní skladby</string>
@@ -269,25 +269,25 @@
     <string name="sponsor_developer">Podpořit vývojáře</string>
     <string name="credits_license_name">Licence</string>
     <string name="credits_license_desc">Metrolist je licencován pod GPL-3.0</string>
-    <string name="credits_collaborators_section">Tým Metrolist hrdinů</string>
+    <string name="credits_collaborators_section">Přispěvatelé</string>
     <string name="devmode_already_active" translatable="true">Vývojářský režim je již aktivní</string>
     <string name="discord_enable_rich_presence">Discord Rich Presence</string>
     <string name="discord_listen_to_metrolist">Poslouchej Metrolist</string>
-    <string name="discord_login_description">Připoj svůj Discord účet</string>
+    <string name="discord_login_description">Připojte svůj Discord účet</string>
     <string name="discord_rich_presence">Rich presence</string>
     <string name="discord_state">Stav</string>
-    <string name="discord_button1_text_default">Poslouchej na YouTube Music</string>
-    <string name="discord_button2_text_default">Navštiv Metrolist</string>
+    <string name="discord_button1_text_default">Poslouchejte na YouTube Music</string>
+    <string name="discord_button2_text_default">Navštivte Metrolist</string>
     <string name="discord_status_authorizing">Probíhá autorizace…</string>
     <string name="discord_status_not_initialized">Neinicializováno</string>
     <string name="discord_status_authorized">Autorizováno</string>
     <string name="discord_error_denied">Discord zamítl autorizaci.</string>
     <string name="discord_error_connection_failed">Nepodařilo se připojit k Discordu. Metrolist to zkusí znovu automaticky.</string>
     <string name="discord_error_no_browser">Žádná dostupná aplikace pro otevření autorizace Discordu.</string>
-    <string name="discord_error_token_exchange_failed">Výměna tokenu selhala. Zkus to znovu.</string>
-    <string name="discord_error_token_refresh_failed">Obnovení tokenu selhalo. Přihlas se znovu.</string>
-    <string name="discord_error_invalid_scope">Neplatný rozsah oprávnění. Přihlas se znovu.</string>
-    <string name="discord_error_timeout">Autorizace vypršela. Zkus to znovu.</string>
+    <string name="discord_error_token_exchange_failed">Výměna tokenu selhala. Zkuste to znovu.</string>
+    <string name="discord_error_token_refresh_failed">Obnovení tokenu selhalo. Přihlaste se znovu.</string>
+    <string name="discord_error_invalid_scope">Neplatný rozsah oprávnění. Přihlaste se znovu.</string>
+    <string name="discord_error_timeout">Autorizace vypršela. Zkuste to znovu.</string>
     <string name="discord_error_missing_code">Chybí autorizační kód v odpovědi z Discordu.</string>
     <string name="discord_button1_label">Tlačítko 1 název</string>
     <string name="discord_button1_url">Tlačítko 1 URL</string>
@@ -295,13 +295,13 @@
     <string name="discord_button2_url">Tlačítko 2 URL</string>
     <string name="discord_refresh_rpc">Obnovit Rich Presence (RPC)</string>
     <string name="discord_refresh_rpc_description">Znovu poslat současný Rich Presence na Discord</string>
-    <string name="discord_refresh_rate_limited">Počkej chvíli před obnovením znovu</string>
+    <string name="discord_refresh_rate_limited">Počkejte chvíli před obnovením</string>
     <string name="discord_refresh_error">Obnovení Rich Presence selhalo</string>
     <string name="integrations">Integrace</string>
     <string name="settings_interface">Rozhraní</string>
     <string name="settings_playback">Přehrávání</string>
     <string name="settings_player_audio_description">Zvuk, přechody, fronta</string>
-    <string name="track_transition_fade_desc">Plynulé přehratí mezi aktuální a další skladbou</string>
+    <string name="track_transition_fade_desc">Plynulý přechod mezi aktuální a další skladbou</string>
     <string name="settings_content_title">Obsah</string>
     <string name="settings_content_description">Jazyk, feed, objevování</string>
     <string name="settings_lyrics_description">Překlad a načítání textů skladeb</string>
@@ -309,16 +309,16 @@
     <string name="settings_privacy_description">Historie, omezení snímků obrazovky</string>
     <string name="settings_storage_data">Úložiště a data</string>
     <string name="settings_backup_restore_description">Uložte svou knihovnu nebo ji přeneste z jiných aplikací</string>
-    <string name="settings_application_about">Aplikace &amp; O aplikaci</string>
+    <string name="settings_application_about">O aplikaci</string>
     <string name="settings_open_supported_links_title">Otevřít podporované odkazy</string>
     <string name="settings_updates_title">Aktualizace</string>
-    <string name="settings_updates_available_description">Nová aktualizace Metrolistu je dostupná</string>
+    <string name="settings_updates_available_description">Je dostupná nová aktualizace Metrolistu</string>
     <string name="settings_about_title">O aplikaci Metrolist</string>
-    <string name="settings_search_placeholder">Prohledávat nastavení</string>
+    <string name="settings_search_placeholder">Prohledat nastavení</string>
     <string name="settings_search_no_results">Nenalezena žádná nastavení</string>
     <string name="settings_search_no_results_desc">Žádné shody pro %1$s</string>
     <string name="search_no_results">Nenalezeny žádné výsledky</string>
-    <string name="back">Zpátky</string>
+    <string name="back">Zpět</string>
     <string name="appearance_title">Vzhled</string>
     <string name="appearance_theme">Motiv</string>
     <string name="appearance_style">Styl</string>
@@ -2599,6 +2599,13 @@
     <string name="ai_setup_key_limits">Zkontrolovat limity klíče</string>
     <string name="hide_recent_searches">Skrýt „Z nedávných vyhledávání“</string>
     <string name="credits_multiplatform_developer">Multiplatformní vývojář</string>
-    <string name="matugen_colors_description"></string>
-    <string name="matugen_colors"></string>
+    <string name="matugen_colors_description">Použít paletu pozadí, kterou Matugen zapisuje do ~/.config/metrolist/matugen.properties</string>
+    <string name="matugen_colors">Barvy Matugen</string>
+    <string name="credits_leads_section">Hlavní vývojáři</string>
+    <string name="credits_creator_section">Autor</string>
+    <string name="devtools_render_backend">Vykreslovací backend</string>
+    <string name="devtools_render_backend_description">Změny se projeví po restartu. Přednost mají předvolby z prostředí a JVM renderovacího API. Pokud se vybraný backend nepodaří inicializovat, Skiko může přepnout na záložní.</string>
+    <string name="support_prompt_title">Užíváte si aplikaci?</string>
+    <string name="support_prompt_message">Podpořte vývoj aplikace Metrolist tím, že podpoříte její vývojáře. Klepnutím na někoho otevřete jeho stránku podpory.</string>
+    <string name="support_prompt_never_show">Už znovu nezobrazovat</string>
 </resources>
