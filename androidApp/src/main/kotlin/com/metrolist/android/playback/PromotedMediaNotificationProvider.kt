@@ -107,9 +107,10 @@ internal class PromotedMediaNotificationProvider(
     override fun getNotificationChannelInfo(): MediaNotification.Provider.NotificationChannelInfo = delegate.notificationChannelInfo
 
     private fun MediaNotification.promoteIfPlaying(mediaSession: MediaSession): MediaNotification {
-        if (Build.VERSION.SDK_INT < 36 || !mediaSession.player.isPlaying) return this
+        if (!mediaSession.player.isPlaying) return this
+        // Now-playing integrations such as Diffuse only track media notifications marked ongoing.
         notification.flags = notification.flags or Notification.FLAG_ONGOING_EVENT
-        notification.extras.putBoolean(NotificationCompat.EXTRA_REQUEST_PROMOTED_ONGOING, true)
+        if (Build.VERSION.SDK_INT >= 36) notification.extras.putBoolean(NotificationCompat.EXTRA_REQUEST_PROMOTED_ONGOING, true)
         return this
     }
 }
