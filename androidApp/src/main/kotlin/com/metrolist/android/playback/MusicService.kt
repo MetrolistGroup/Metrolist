@@ -1762,13 +1762,13 @@ class MusicService :
                         failure = TimeoutException("Queue stream resolution exceeded its 30000ms deadline"),
                     )
                 var result =
-                    selection.cachedAudio?.let { PlaybackFetchResult(resource = it) }
+                    selection.cachedAudio?.let { PlaybackFetchResult(resource = it, fromCache = true) }
                         ?: resolveWithinBudget()
                 Timber.tag("PlaybackTiming").d(
                     "resource resolved id=%s ok=%s fromCache=%s total=%dms",
                     playbackSong.id,
                     result.resource != null,
-                    selection.cachedAudio != null,
+                    result.fromCache,
                     SystemClock.elapsedRealtime() - timingStartMs,
                 )
                 while (
@@ -1837,7 +1837,10 @@ class MusicService :
                         playbackSong = fallback.song
                         playbackPosition = fallback.positionMs
                         hints = playbackSong.toAndroidContentHints(wantVideo = false)
-                        result = fallback.cachedAudio?.let { PlaybackFetchResult(resource = it) } ?: resolveWithinBudget(video = false)
+                        result =
+                            fallback.cachedAudio?.let {
+                                PlaybackFetchResult(resource = it, fromCache = true)
+                            } ?: resolveWithinBudget(video = false)
                     }
                 }
                 errorReason = result.errorReason
@@ -1900,7 +1903,9 @@ class MusicService :
                         playbackPosition = fallback.positionMs
                         hints = playbackSong.toAndroidContentHints(wantVideo = false)
                         val originalAudio =
-                            fallback.cachedAudio?.let { PlaybackFetchResult(resource = it) } ?: resolveWithinBudget(video = false)
+                            fallback.cachedAudio?.let {
+                                PlaybackFetchResult(resource = it, fromCache = true)
+                            } ?: resolveWithinBudget(video = false)
                         errorReason = originalAudio.errorReason
                         playbackFailure = originalAudio.failure ?: currentFailure
                         resource = originalAudio.resource ?: break
@@ -2730,7 +2735,7 @@ class MusicService :
         withContext(Dispatchers.IO) {
             val connected = PlaybackNetworkStateStore.current.connected
             cachedAudioResource(wantVideo && connected) { audioCacheManager.getCachedPlaybackResource(song) }
-                ?.let { return@withContext PlaybackFetchResult(resource = it) }
+                ?.let { return@withContext PlaybackFetchResult(resource = it, fromCache = true) }
             if (!connected && !song.isLocal && !song.id.startsWith("local_")) return@withContext PlaybackFetchResult()
             val hints = song.toAndroidContentHints(wantVideo = wantVideo)
             Timber.tag(MUSIC_VIDEO_TAG).d(
@@ -2775,7 +2780,7 @@ class MusicService :
                 if (wantVideo) {
                     cachedAudioResource(wantVideo = true, videoResolutionFailed = true) {
                         audioCacheManager.getCachedPlaybackResource(song)
-                    }?.let { return@withContext PlaybackFetchResult(resource = it) }
+                    }?.let { return@withContext PlaybackFetchResult(resource = it, fromCache = true) }
                     try {
                         Timber.tag(MUSIC_VIDEO_TAG).d("resource audio fallback start videoId=%s", song.id)
                         val audioResource =
@@ -2970,6 +2975,7 @@ class MusicService :
         val resource: PlaybackResource? = null,
         val errorReason: String? = null,
         val failure: Throwable? = null,
+        val fromCache: Boolean = false,
     )
 
     private fun isAuthorizedExternalMediaController(controller: MediaSession.ControllerInfo): Boolean =

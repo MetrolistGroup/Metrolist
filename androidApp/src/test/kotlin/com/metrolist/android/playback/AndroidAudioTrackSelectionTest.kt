@@ -405,6 +405,21 @@ class AndroidAudioTrackSelectionTest {
         }
 
     @Test
+    fun matchingCachedSourceCanResolveBeforeTheCachedSourceBudget() =
+        runTest {
+            val source = videoSong()
+            val cachedAudio = PlaybackResource(source.id, "file://cached-video", emptyMap(), null, null)
+            val selection =
+                resolveAndroidAudioTrackSelection(source, 0L, wantVideo = false, cachedAudio = cachedAudio) {
+                    delay(ANDROID_CACHED_SOURCE_LOOKUP_TIMEOUT_MS - 1L)
+                    MusicTrackResult.Found(audioSong())
+                }
+
+            assertEquals("track", selection.song.id)
+            assertNull(selection.cachedAudio)
+        }
+
+    @Test
     fun uncachedSourceKeepsTheLongerLookupBudget() =
         runTest {
             val source = videoSong()

@@ -394,15 +394,13 @@ class IosAudioDownloadManager(
                 val dao = database.dao()
                 val size = audioSize(entry.filePath)
                 val format = dao.format(song.id).first()
-                // The LRU timestamp is not needed to start playback, so keep this write off the playback path.
+                // Record the access before releasing the lock so concurrent eviction cannot remove this resource.
                 val touchedAt = now()
-                managerScope.launch(Dispatchers.Default) {
-                    try {
-                        dao.updateCachedAudioLastAccessed(song.id, touchedAt)
-                    } catch (error: CancellationException) {
-                        throw error
-                    } catch (_: Exception) {
-                    }
+                try {
+                    dao.updateCachedAudioLastAccessed(song.id, touchedAt)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
                 }
                 PlaybackResource(
                     videoId = song.id,
