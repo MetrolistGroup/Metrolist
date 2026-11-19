@@ -14,6 +14,14 @@ internal fun statisticsArtistItemId(
 
 internal fun statisticsArtistIndex(id: String): Int? = id.removePrefix("artist:").substringBefore(':').toIntOrNull()
 
+internal fun statisticsArtistStatistic(
+    id: String,
+    artists: List<HistoryArtistStatistic>,
+): HistoryArtistStatistic? =
+    statisticsArtistIndex(id)
+        ?.let(artists::getOrNull)
+        ?.takeIf { it.name == statisticsArtistName(id) }
+
 internal fun statisticsArtistProfileId(
     statistic: HistoryArtistStatistic?,
     cachedId: String?,

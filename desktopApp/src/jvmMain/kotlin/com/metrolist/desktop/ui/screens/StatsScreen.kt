@@ -187,7 +187,7 @@ fun StatsScreen() {
                             rankedTitle = "${index + 1}. ${item.name}",
                             subtitle = statisticsPlayCountDuration(item.playCount, item.playTimeMs),
                             thumbnailUrl =
-                                artistThumbnails[statisticsArtistItemId(index, item.name)] ?: item.thumbnailUrl
+                                item.thumbnailUrl ?: artistThumbnails[statisticsArtistItemId(index, item.name)]
                                     ?: artistFallbacks[item.name],
                             circularArtwork = true,
                         )
@@ -197,9 +197,8 @@ fun StatsScreen() {
                 errorMessage = if (loadFailed) stringResource(Res.string.statistics_load_failed) else null,
             ),
         onArtistVisible = { item ->
-            val artistIndex = statisticsArtistIndex(item.id)
-            val statistic = artistIndex?.let(topArtists::getOrNull)
-            val artistName = statistic?.name ?: statisticsArtistName(item.id)
+            val artistName = statisticsArtistName(item.id)
+            val statistic = statisticsArtistStatistic(item.id, topArtists)
             val statisticId = statistic?.id
             if (statistic != null && statisticId != null) {
                 artistIds[item.id] = statisticId
@@ -341,7 +340,7 @@ fun StatsScreen() {
 
                 item.id.startsWith("artist:") -> {
                     val artistName = statisticsArtistName(item.id)
-                    val artistStatistic = statisticsArtistIndex(item.id)?.let(topArtists::getOrNull)
+                    val artistStatistic = statisticsArtistStatistic(item.id, topArtists)
                     val cachedId = statisticsArtistProfileId(artistStatistic, artistIds[item.id])
                     if (cachedId != null) {
                         ArtistState.fetchArtistData(cachedId)
@@ -367,7 +366,7 @@ fun StatsScreen() {
                                     }.getOrNull()
                                 }
                             if (foundId != null) {
-                                artistIds[artistName] = foundId
+                                artistIds[item.id] = foundId
                                 ArtistState.fetchArtistData(foundId)
                             }
                         }
