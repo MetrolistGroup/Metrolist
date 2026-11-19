@@ -58,6 +58,7 @@ import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.canEdit
 import com.metrolist.shared.model.playlistLazyItemKeys
+import com.metrolist.shared.model.playlistOccurrenceIdentity
 import com.metrolist.shared.model.playlistSearchIndices
 import com.metrolist.shared.model.playlistTotalDuration
 import com.metrolist.shared.model.withLocalArtwork
@@ -144,6 +145,7 @@ fun PlaylistContent(
     preparedSongKeys: List<String>? = null,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     currentSongId: String? = null,
+    currentSongOccurrenceKey: String? = null,
     isPlaying: Boolean = false,
     suggestions: List<SongItem> = emptyList(),
     downloadedSongIds: Set<String> = emptySet(),
@@ -171,6 +173,7 @@ fun PlaylistContent(
     onAddSong: (() -> Unit)? = null,
 ) {
     val currentSongIdState = rememberUpdatedState(currentSongId)
+    val currentSongOccurrenceKeyState = rememberUpdatedState(currentSongOccurrenceKey)
     val isPlayingState = rememberUpdatedState(isPlaying)
     val canEdit = playlist?.canEdit == true
     val onAddSong = onAddSong.takeIf { canEdit }
@@ -487,6 +490,7 @@ fun PlaylistContent(
                                                     sourceIndex = displayedIndices?.get(index) ?: index,
                                                     itemKey = songKeys[index],
                                                     currentSongId = currentSongIdState,
+                                                    currentSongOccurrenceKey = currentSongOccurrenceKeyState,
                                                     isPlaying = isPlayingState,
                                                     isDownloaded = song.id in downloadedSongIds,
                                                     onTrackClick = onTrackClick,
@@ -674,6 +678,7 @@ fun PlaylistContent(
                                         itemKey = songKeys[index],
                                         modifier = itemModifier.padding(horizontal = CollectionHeaderHorizontalPadding),
                                         currentSongId = currentSongIdState,
+                                        currentSongOccurrenceKey = currentSongOccurrenceKeyState,
                                         isPlaying = isPlayingState,
                                         isDownloaded = song.id in downloadedSongIds,
                                         onTrackClick = onTrackClick,
@@ -770,6 +775,7 @@ private fun LazyItemScope.PlaylistSongItem(
     modifier: Modifier,
     container: @Composable (@Composable () -> Unit) -> Unit,
     currentSongId: State<String?>,
+    currentSongOccurrenceKey: State<String?>,
     isPlaying: State<Boolean>,
     isDownloaded: Boolean,
     onClick: () -> Unit,
@@ -784,7 +790,14 @@ private fun LazyItemScope.PlaylistSongItem(
     onMoveToTop: (() -> Unit)? = null,
     onMoveToBottom: (() -> Unit)? = null,
 ) {
-    val playback by rememberItemPlayback(song.id, currentSongId, isPlaying)
+    val playback by
+        rememberItemPlayback(
+            itemId = song.id,
+            currentSongId = currentSongId,
+            isPlaying = isPlaying,
+            occurrenceKey = song.playlistOccurrenceIdentity(),
+            currentOccurrenceKey = currentSongOccurrenceKey,
+        )
     val haptics = rememberMetrolistHaptics()
     if (reorderableState == null) {
         container {
@@ -867,6 +880,7 @@ private fun LazyItemScope.PlaylistSongItemRow(
     itemKey: String,
     modifier: Modifier = Modifier,
     currentSongId: State<String?>,
+    currentSongOccurrenceKey: State<String?>,
     isPlaying: State<Boolean>,
     isDownloaded: Boolean,
     onTrackClick: (SongItem, Int) -> Unit,
@@ -880,7 +894,14 @@ private fun LazyItemScope.PlaylistSongItemRow(
     onMove: (Int, Int) -> Unit,
     isSelected: Boolean,
 ) {
-    val playback by rememberItemPlayback(song.id, currentSongId, isPlaying)
+    val playback by
+        rememberItemPlayback(
+            itemId = song.id,
+            currentSongId = currentSongId,
+            isPlaying = isPlaying,
+            occurrenceKey = song.playlistOccurrenceIdentity(),
+            currentOccurrenceKey = currentSongOccurrenceKey,
+        )
     PlaylistSongItem(
         song = song,
         key = itemKey,
@@ -898,6 +919,7 @@ private fun LazyItemScope.PlaylistSongItemRow(
             }
         },
         currentSongId = currentSongId,
+        currentSongOccurrenceKey = currentSongOccurrenceKey,
         isPlaying = isPlaying,
         isDownloaded = isDownloaded,
         onClick = { onTrackClick(song, sourceIndex) },

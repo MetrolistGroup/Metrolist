@@ -975,6 +975,7 @@ internal fun MobileSongCollectionScreen(
                 fallbackIcon = fallbackIcon,
                 cover = if (localPlaylistId == null && customCover == null) libraryCover(type) else null,
                 currentSongId = playbackState.currentSongId,
+                currentSongOccurrenceKey = playbackState.currentSongOccurrenceKey,
                 isPlaying = playbackState.isPlaying,
                 contentPadding = PaddingValues(bottom = bottomContentPadding),
                 modifier = modifier.fillMaxSize(),

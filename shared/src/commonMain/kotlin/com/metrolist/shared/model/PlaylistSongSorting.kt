@@ -197,8 +197,9 @@ fun YTItem.librarySearchKey(): String =
         is SongItem -> "song:$id"
     }
 
-fun SongItem.playlistOccurrenceKey(fallbackIndex: Int): String =
-    playlistSetVideoId ?: playlistLocalMappingId?.let { "local:$it" } ?: "$id@$fallbackIndex"
+fun SongItem.playlistOccurrenceIdentity(): String? = playlistSetVideoId?.let { "remote:$it" } ?: playlistLocalMappingId?.let { "local:$it" }
+
+fun SongItem.playlistOccurrenceKey(fallbackIndex: Int): String = playlistOccurrenceIdentity() ?: "$id@$fallbackIndex"
 
 fun List<SongItem>.playlistLazyItemKeys(): List<String> {
     val occurrences = mutableMapOf<String, Int>()

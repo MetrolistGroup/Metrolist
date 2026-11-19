@@ -2,6 +2,7 @@ package com.metrolist.android.playback
 
 import com.metrolist.shared.cast.CastDevice
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.indexOfPlaylistOccurrence
 import com.metrolist.shared.playback.PlaybackSeekSource
 import com.metrolist.shared.ui.playback.PlaybackController
 import com.metrolist.shared.ui.playback.PlaybackUiState
@@ -63,7 +64,8 @@ class AndroidPlaybackController(
         songsOnly: Boolean,
     ) {
         val songs = queue.ifEmpty { listOf(song) }
-        connection.playQueue(songs, songs.indexOfFirst { it.id == song.id }.coerceAtLeast(0), songsOnly = songsOnly)
+        val index = songs.indexOfPlaylistOccurrence(song)
+        connection.playQueue(songs, index.coerceAtLeast(0), songsOnly = songsOnly)
     }
 
     override fun shuffleQueue(

@@ -144,6 +144,7 @@ import com.metrolist.shared.model.TopPlaylistPeriod
 import com.metrolist.shared.model.defaultDirection
 import com.metrolist.shared.model.indexOfPlaylistOccurrence
 import com.metrolist.shared.model.isReordering
+import com.metrolist.shared.model.playlistOccurrenceIdentity
 import com.metrolist.shared.model.toSongItem
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.HiddenLibraryItem
@@ -803,6 +804,7 @@ fun AutoPlaylistScreen(
                             bottom = paddingValues.calculateBottomPadding() + miniPlayerInset,
                         ),
                     currentSongId = currentSong?.id,
+                    currentSongOccurrenceKey = currentSong?.playlistOccurrenceIdentity(),
                     isPlaying = isPlaying,
                     onArtistClick = onArtistClick,
                     reorderMode = likedReorderMode,

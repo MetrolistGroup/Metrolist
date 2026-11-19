@@ -16,14 +16,24 @@ internal fun rememberItemPlayback(
     itemId: String,
     currentSongId: State<String?>,
     isPlaying: State<Boolean>,
-): State<ItemPlayback> = remember(itemId, currentSongId, isPlaying) { itemPlayback(itemId, currentSongId, isPlaying) }
+    occurrenceKey: String? = null,
+    currentOccurrenceKey: State<String?>? = null,
+): State<ItemPlayback> =
+    remember(itemId, currentSongId, isPlaying, occurrenceKey, currentOccurrenceKey) {
+        itemPlayback(itemId, currentSongId, isPlaying, occurrenceKey, currentOccurrenceKey)
+    }
 
 internal fun itemPlayback(
     itemId: String,
     currentSongId: State<String?>,
     isPlaying: State<Boolean>,
+    occurrenceKey: String? = null,
+    currentOccurrenceKey: State<String?>? = null,
 ): State<ItemPlayback> =
     derivedStateOf(structuralEqualityPolicy()) {
-        val isCurrent = itemId == currentSongId.value
+        val currentKey = currentOccurrenceKey?.value
+        val isCurrent =
+            itemId == currentSongId.value &&
+                (occurrenceKey == null || currentKey == null || occurrenceKey == currentKey)
         ItemPlayback(isCurrent = isCurrent, isPlaying = isCurrent && isPlaying.value)
     }
