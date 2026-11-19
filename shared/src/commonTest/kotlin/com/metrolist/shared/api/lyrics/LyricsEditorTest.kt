@@ -175,6 +175,100 @@ class LyricsEditorTest {
     }
 
     @Test
+    fun deletingFirstOrMiddleIdenticalLinePreservesTheOtherOccurrences() {
+        val duplicateRows =
+            """
+            {"version":2,"lines":[
+              {"startMs":1000,"text":"Same","agent":"a","backgroundText":"First"},
+              {"startMs":1000,"text":"Same","agent":"b","backgroundText":"Middle"},
+              {"startMs":1000,"text":"Same","agent":"c","custom":"Last"}
+            ]}
+            """.trimIndent()
+        for (removed in 0..2) {
+            val editor = LyricsEditor(duplicateRows)
+            val original = editor.current
+            val rowLength =
+                original.text
+                    .lineSequence()
+                    .first()
+                    .length
+            val caret = (rowLength + 1) * removed
+            editor.edit(original.text, caret)
+            val selected = editor.current
+            editor.deleteLines()
+            val expected =
+                original.document
+                    .getValue("lines")
+                    .jsonArray
+                    .filterIndexed { index, _ -> index != removed }
+            assertEquals(
+                expected,
+                editor.current.document
+                    .getValue("lines")
+                    .jsonArray,
+            )
+            assertEquals(caret.coerceAtMost(editor.current.text.length), editor.current.selectionStart)
+            assertEquals(editor.current.selectionStart, editor.current.selectionEnd)
+            val deleted = editor.current
+            editor.undo()
+            assertEquals(selected, editor.current)
+            editor.redo()
+            assertEquals(deleted, editor.current)
+        }
+    }
+
+    @Test
+    fun deleteSelectionAtRowBoundaryDoesNotDeleteTheNextLine() {
+        val editor = LyricsEditor(raw)
+        val original = editor.current
+        val lastRowStart = original.text.lastIndexOf('\n') + 1
+        editor.edit(original.text, lastRowStart, 0)
+        editor.deleteLines()
+        assertEquals(
+            original.document
+                .getValue("lines")
+                .jsonArray
+                .takeLast(1),
+            editor.current.document
+                .getValue("lines")
+                .jsonArray,
+        )
+        assertEquals(original.text.substring(lastRowStart), editor.current.text)
+        assertEquals(editor.current.text.length, editor.current.selectionStart)
+        assertEquals(editor.current.selectionStart, editor.current.selectionEnd)
+        editor.edit(editor.current.text, 0, editor.current.text.length)
+        editor.deleteLines()
+        assertEquals("", editor.current.text)
+        assertEquals(
+            emptyList(),
+            editor.current.document
+                .getValue("lines")
+                .jsonArray,
+        )
+        val deleted = editor.current
+        editor.deleteLines()
+        assertEquals(deleted, editor.current)
+        editor.undo()
+        assertEquals(original.text.substring(lastRowStart), editor.current.text)
+    }
+
+    @Test
+    fun deletingAfterAnInvalidBlankTrailingRowDoesNotRetainAnInvisibleLine() {
+        val editor = LyricsEditor("[00:01.00] Start")
+        editor.edit(editor.current.text + "\n", 0)
+        assertFalse(editor.current.isValid)
+        editor.deleteLines()
+        assertEquals("", editor.current.text)
+        assertEquals(
+            emptyList(),
+            editor.current.document
+                .getValue("lines")
+                .jsonArray,
+        )
+        assertTrue(editor.current.isValid)
+    }
+
+    @Test
     fun invalidTimestampRetainsTextAndSourceUntilCorrected() {
         val editor = LyricsEditor(raw)
         val original = editor.current
