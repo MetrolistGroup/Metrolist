@@ -7,13 +7,22 @@
 
 package com.metrolist.shared.ui.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.exponentialDecay
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -55,19 +64,28 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.input.pointer.util.addPointerInputChange
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -109,7 +127,10 @@ import com.metrolist.shared.ui.playback.retainPlaybackKeyFocus
 import com.metrolist.shared.ui.tv.tvFocusHighlight
 import com.metrolist.shared.ui.utils.segmentedGroupShape
 import com.metrolist.shared.utils.formatDuration
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.abs
 
 @Composable
 fun SleepTimerDialog(
@@ -167,7 +188,7 @@ fun SleepTimerDialog(
                             DurationField(hours, { hours = it }, stringResource(Res.string.sleep_timer_hour), 23, Modifier.weight(1f))
                             Text(
                                 stringResource(Res.string.sleep_timer_separator),
-                                modifier = Modifier.padding(top = 12.dp),
+                                modifier = Modifier.padding(top = 20.dp),
                                 style = MaterialTheme.typography.displayMedium,
                             )
                             DurationField(
@@ -364,49 +385,179 @@ private fun DurationField(
     last: Boolean = false,
 ) {
     val focusManager = LocalFocusManager.current
+    val hapticFeedback = LocalHapticFeedback.current
+    val coroutineScope = rememberCoroutineScope()
+    val currentValue by rememberUpdatedState(value)
+    val currentOnValueChange by rememberUpdatedState(onValueChange)
     var input by remember { mutableStateOf(TextFieldValue(value)) }
+    var isFocused by remember { mutableStateOf(false) }
+    var lastDirection by remember { mutableIntStateOf(1) }
+    var flingJob by remember { mutableStateOf<Job?>(null) }
+
     LaunchedEffect(value) {
         if (input.text != value) input = TextFieldValue(value, TextRange(0, value.length))
     }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        OutlinedTextField(
-            value = input,
-            onValueChange = {
-                if (sleepTimerFieldValue(it.text) != null) {
-                    input = it
-                    onValueChange(it.text)
+
+    fun stepValue(steps: Int) {
+        if (steps == 0) return
+        lastDirection = if (steps > 0) 1 else -1
+        val updated = stepDurationFieldValue(currentValue, steps, maximum)
+        if (updated != currentValue) {
+            currentOnValueChange(updated)
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+    }
+
+    val isError = sleepTimerFieldValue(value)?.let { it > maximum } == true
+
+    Column(
+        modifier =
+            modifier
+                .pointerInput(maximum) {
+                    val stepPx = 20.dp.toPx()
+                    val velocityTracker = VelocityTracker()
+                    val decay = exponentialDecay<Float>(frictionMultiplier = 2.6f)
+                    var accumulatedDrag = 0f
+                    detectVerticalDragGestures(
+                        onDragStart = {
+                            flingJob?.cancel()
+                            focusManager.clearFocus()
+                            velocityTracker.resetTracking()
+                            accumulatedDrag = 0f
+                        },
+                        onDragCancel = {
+                            velocityTracker.resetTracking()
+                            accumulatedDrag = 0f
+                        },
+                        onVerticalDrag = { change, dragAmount ->
+                            change.consume()
+                            velocityTracker.addPointerInputChange(change)
+                            accumulatedDrag += dragAmount
+                            val steps = (-accumulatedDrag / stepPx).toInt()
+                            if (steps != 0) {
+                                accumulatedDrag += steps * stepPx
+                                stepValue(steps)
+                            }
+                        },
+                        onDragEnd = {
+                            val velocityY = velocityTracker.calculateVelocity().y
+                            velocityTracker.resetTracking()
+                            val startOffset = accumulatedDrag
+                            accumulatedDrag = 0f
+                            if (abs(velocityY) > stepPx * 3f) {
+                                flingJob =
+                                    coroutineScope.launch {
+                                        var lastAnimValue = startOffset
+                                        var carry = startOffset
+                                        Animatable(startOffset).animateDecay(velocityY, decay) {
+                                            val delta = this.value - lastAnimValue
+                                            lastAnimValue = this.value
+                                            carry += delta
+                                            val steps = (-carry / stepPx).toInt()
+                                            if (steps != 0) {
+                                                carry += steps * stepPx
+                                                stepValue(steps)
+                                            }
+                                        }
+                                    }
+                            }
+                        },
+                    )
+                }.pointerInput(maximum) {
+                    var accumulatedScroll = 0f
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            if (event.type == PointerEventType.Scroll) {
+                                val scrollY = event.changes.fold(0f) { acc, change -> acc + change.scrollDelta.y }
+                                if (scrollY != 0f) {
+                                    event.changes.forEach { it.consume() }
+                                    flingJob?.cancel()
+                                    accumulatedScroll += scrollY
+                                    val steps = (-accumulatedScroll).toInt()
+                                    if (steps != 0) {
+                                        accumulatedScroll += steps
+                                        stepValue(steps)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }.padding(vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center,
+        ) {
+            OutlinedTextField(
+                value = input,
+                onValueChange = {
+                    if (sleepTimerFieldValue(it.text) != null) {
+                        input = it
+                        onValueChange(it.text)
+                    }
+                },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .retainPlaybackKeyFocus()
+                        .onFocusChanged {
+                            isFocused = it.isFocused
+                            if (it.isFocused) {
+                                flingJob?.cancel()
+                                input = input.copy(selection = TextRange(0, input.text.length))
+                            }
+                        }.semantics { contentDescription = label },
+                textStyle = MaterialTheme.typography.displayMedium.copy(textAlign = TextAlign.Center),
+                singleLine = true,
+                isError = isError,
+                shape = MaterialTheme.shapes.small,
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        focusedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        unfocusedTextColor = Color.Transparent,
+                        errorTextColor = if (isFocused) MaterialTheme.colorScheme.error else Color.Transparent,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = Color.Transparent,
+                    ),
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = if (last) ImeAction.Done else ImeAction.Next,
+                    ),
+                keyboardActions =
+                    KeyboardActions(
+                        onNext = { focusManager.moveFocus(FocusDirection.Next) },
+                        onDone = { focusManager.clearFocus() },
+                    ),
+            )
+            if (!isFocused) {
+                AnimatedContent(
+                    targetState = value,
+                    modifier = Modifier.clipToBounds(),
+                    transitionSpec = {
+                        val slideOffset: (Int) -> Int = { height ->
+                            if (lastDirection > 0) (height * 0.65f).toInt() else -(height * 0.65f).toInt()
+                        }
+                        (slideInVertically(tween(220, easing = FastOutSlowInEasing), slideOffset) + fadeIn(tween(180)))
+                            .togetherWith(
+                                slideOutVertically(tween(220, easing = FastOutSlowInEasing)) { height -> -slideOffset(height) } +
+                                    fadeOut(tween(150)),
+                            )
+                    },
+                    label = "duration_digit_roll",
+                ) { displayValue ->
+                    Text(
+                        text = displayValue,
+                        style = MaterialTheme.typography.displayMedium.copy(textAlign = TextAlign.Center),
+                        color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                    )
                 }
-            },
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .retainPlaybackKeyFocus()
-                    .onFocusChanged {
-                        if (it.isFocused) input = input.copy(selection = TextRange(0, input.text.length))
-                    }.semantics { contentDescription = label },
-            textStyle = MaterialTheme.typography.displayMedium.copy(textAlign = TextAlign.Center),
-            singleLine = true,
-            isError = sleepTimerFieldValue(value)?.let { it > maximum } == true,
-            shape = MaterialTheme.shapes.small,
-            colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                    focusedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = Color.Transparent,
-                ),
-            keyboardOptions =
-                KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = if (last) ImeAction.Done else ImeAction.Next,
-                ),
-            keyboardActions =
-                KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Next) },
-                    onDone = { focusManager.clearFocus() },
-                ),
-        )
+            }
+        }
         Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -447,3 +598,14 @@ private fun TimerCheckboxRow(
 }
 
 fun formatSleepTimerRemaining(remainingMs: Long?): String = remainingMs?.let { formatDuration(it, hideLeadingZeroUnits = true) } ?: "--:--"
+
+internal fun stepDurationFieldValue(
+    current: String,
+    steps: Int,
+    maximum: Int,
+): String {
+    val range = maximum + 1
+    val base = (current.toIntOrNull() ?: 0).coerceIn(0, maximum)
+    val next = ((base + steps) % range + range) % range
+    return next.toString().padStart(2, '0')
+}
