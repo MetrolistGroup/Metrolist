@@ -111,6 +111,51 @@ class SpeedDialPolicyTest {
     }
 
     @Test
+    fun remotePlaylistPinKeepsItsIdAndGainsMetadataFromBrowseAlias() {
+        val pin = PlaylistItem("PLabc", "Playlist", null)
+        val recommendation = pin.copy(id = "VLPLabc", thumbnail = "playlist.jpg", radioEndpointParams = "radio")
+
+        assertEquals(listOf(recommendation.copy(id = pin.id)), mergeSpeedDialItems(listOf(pin), listOf(recommendation)))
+        val browsePin = pin.copy(id = recommendation.id)
+        val plainRecommendation = recommendation.copy(id = pin.id)
+        assertEquals(listOf(recommendation), mergeSpeedDialItems(listOf(browsePin), listOf(plainRecommendation)))
+    }
+
+    @Test
+    fun playlistBrowseAliasDoesNotOverridePinnedMetadataOrLocalState() {
+        val pin =
+            PlaylistItem(
+                "PLabc",
+                "Pinned name",
+                "pinned.jpg",
+                playEndpointParams = "pinned-play",
+                customThumbnail = "custom.jpg",
+                isEditable = true,
+            )
+        val alias =
+            PlaylistItem(
+                "VLPLabc",
+                "Recommendation",
+                "source.jpg",
+                playEndpointParams = "source-play",
+                radioEndpointParams = "alias-radio",
+            )
+
+        assertEquals(listOf(pin.copy(radioEndpointParams = "alias-radio")), mergeSpeedDialItems(listOf(pin), listOf(alias)))
+        val local = pin.copy(isLocal = true)
+        assertEquals(listOf(local), mergeSpeedDialItems(listOf(local), listOf(alias)))
+    }
+
+    @Test
+    fun exactPlaylistRecommendationTakesPrecedenceOverBrowseAlias() {
+        val pin = PlaylistItem("PLabc", "Playlist", null)
+        val exact = pin.copy(thumbnail = "exact.jpg")
+        val alias = pin.copy(id = "VLPLabc", thumbnail = "alias.jpg")
+
+        assertEquals(listOf(exact), mergeSpeedDialItems(listOf(pin), listOf(alias, exact)))
+    }
+
+    @Test
     fun sparseAlbumRecommendationKeepsPinnedMetadata() {
         val pin =
             AlbumItem(
