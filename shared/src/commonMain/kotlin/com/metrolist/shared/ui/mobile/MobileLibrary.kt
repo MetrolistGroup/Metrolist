@@ -176,6 +176,7 @@ internal fun MobileLibrary(
     playbackController: PlaybackController,
     onItemClick: (YTItem) -> Unit,
     onAutoPlaylistClick: (String, String) -> Unit,
+    onSwipeFeedback: (String) -> Unit,
     modifier: Modifier = Modifier,
     onItemLongClick: ((YTItem) -> Unit)? = null,
     onCreatePlaylist: (() -> Unit)? = null,
@@ -331,31 +332,38 @@ internal fun MobileLibrary(
                         } else {
                             onItemLongClick?.let { callback -> { callback(ytItem) } }
                         }
-                    Box {
-                        LibraryItemContainer(
-                            isGridView = isGridView,
-                            onMenuClick = onMenuClick,
-                            modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onMenuClick),
-                            content = content,
-                        )
-                        DropdownMenuPopup(expanded = autoMenuExpanded, onDismissRequest = { autoMenuExpanded = false }) {
-                            val builtin = BuiltinPlaylist.fromId("auto:${hiddenItem.id}")
-                            val menuItemCount = if (builtin == null) 1 else 2
-                            DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
-                                builtin?.let { builtin ->
-                                    val playlist = builtin.playlist(stringResource(builtin.title))
-                                    SpeedDialPinMenuItem(playlist, database, count = menuItemCount) { autoMenuExpanded = false }
+                    val libraryItemContent: @Composable () -> Unit = {
+                        Box {
+                            LibraryItemContainer(
+                                isGridView = isGridView,
+                                onMenuClick = onMenuClick,
+                                modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onMenuClick),
+                                content = content,
+                            )
+                            DropdownMenuPopup(expanded = autoMenuExpanded, onDismissRequest = { autoMenuExpanded = false }) {
+                                val builtin = BuiltinPlaylist.fromId("auto:${hiddenItem.id}")
+                                val menuItemCount = if (builtin == null) 1 else 2
+                                DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
+                                    builtin?.let { builtin ->
+                                        val playlist = builtin.playlist(stringResource(builtin.title))
+                                        SpeedDialPinMenuItem(playlist, database, count = menuItemCount) { autoMenuExpanded = false }
+                                    }
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(Res.string.hide_from_library_local)) },
+                                        shape = groupedMenuItemShapes(menuItemCount - 1, menuItemCount).shape,
+                                        onClick = {
+                                            HiddenLibraryItems.hide(hiddenItem)
+                                            autoMenuExpanded = false
+                                        },
+                                    )
                                 }
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(Res.string.hide_from_library_local)) },
-                                    shape = groupedMenuItemShapes(menuItemCount - 1, menuItemCount).shape,
-                                    onClick = {
-                                        HiddenLibraryItems.hide(hiddenItem)
-                                        autoMenuExpanded = false
-                                    },
-                                )
                             }
                         }
+                    }
+                    if (ytItem is SongItem && !isGridView) {
+                        SongSwipeActions(ytItem, onSwipeFeedback, content = libraryItemContent)
+                    } else {
+                        libraryItemContent()
                     }
                 },
                 scrollState = libraryGridState,

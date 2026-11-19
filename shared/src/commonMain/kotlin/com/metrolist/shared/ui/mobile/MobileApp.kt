@@ -1248,6 +1248,7 @@ fun MobileApp(
                                     database = database,
                                     viewModel = libraryViewModel,
                                     playbackController = playbackController,
+                                    onSwipeFeedback = onSwipeFeedback,
                                     onItemClick = ::openItem,
                                     onItemLongClick = { menuItem = it to null },
                                     onAutoPlaylistClick = { type, title -> open(MobileRoute.SongCollection(type, title)) },
