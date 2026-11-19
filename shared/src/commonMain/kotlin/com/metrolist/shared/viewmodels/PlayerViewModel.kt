@@ -321,6 +321,7 @@ class PlayerViewModel(
                         manualAiTranslationForSongChange(
                             isNewSong = isNewSong,
                             newSongId = song?.id,
+                            newSongIsVideo = song?.isVideoSong == true,
                             counterpartTrackId = _uiState.value.counterpartTrackId,
                             currentValue = _uiState.value.manualAiTranslationEnabled,
                         ),
@@ -2219,9 +2220,18 @@ class PlayerViewModel(
 internal fun manualAiTranslationForSongChange(
     isNewSong: Boolean,
     newSongId: String?,
+    newSongIsVideo: Boolean,
     counterpartTrackId: String?,
     currentValue: Boolean,
-): Boolean = if (isNewSong) newSongId != null && newSongId == counterpartTrackId && currentValue else currentValue
+): Boolean =
+    if (!isNewSong) {
+        currentValue
+    } else {
+        // The return from video to audio is recognized by the counterpart ID. The outward
+        // switch happens before the video's counterpart is resolved, so a video song is
+        // treated as the other half of the same logical-song transition.
+        currentValue && ((newSongId != null && newSongId == counterpartTrackId) || newSongIsVideo)
+    }
 
 internal fun computeSeekTarget(
     currentMs: Long,
