@@ -73,12 +73,13 @@ class LyricsListIndexingTest {
         assertEquals("background existing background", merged.first().backgroundText)
         assertTrue(mainTimeline.hasActiveMainVocals(1_500))
         assertEquals("Main lyric (background existing background)", selectedLyricsText(merged, setOf(0)))
-        assertTrue(
+        assertEquals(
+            1,
             merged
                 .first()
                 .romanizedWords
                 .orEmpty()
-                .any { it.isBackground && it.text == "background" },
+                .count { it.isBackground && it.text == "existing background" },
         )
     }
 

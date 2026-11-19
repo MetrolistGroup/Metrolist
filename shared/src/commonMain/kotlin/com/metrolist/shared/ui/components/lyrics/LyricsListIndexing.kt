@@ -153,7 +153,7 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                             existingRomanizedWords.any { roman ->
                                 roman.isBackground && roman.startTime == raw.startTime && roman.endTime == raw.endTime
                             }
-                        } + listOfNotNull(mainTextBackgroundWord?.copy(hasTrailingSpace = true))
+                        }
                 ).withBackgroundPhraseBoundary() + romanizedIncomingWords.withBackgroundPhraseBoundary()
             } else {
                 null
