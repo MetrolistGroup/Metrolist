@@ -89,6 +89,7 @@ fun StatsScreen() {
     LaunchedEffect(period, mode, dateRange, refreshKey) {
         isLoading = true
         loadFailed = false
+        artistLookupGeneration++
         artistThumbnails.clear()
         artistIds.clear()
         try {
@@ -204,6 +205,8 @@ fun StatsScreen() {
                 errorMessage = if (loadFailed) stringResource(Res.string.statistics_load_failed) else null,
             ),
         onArtistVisible = { item ->
+            if (isLoading) return@StatisticsScreen
+            val lookupGeneration = artistLookupGeneration
             val artistName = item.title
             val statistic = statisticsArtistStatistic(item.id, topArtists)
             val statisticId = statistic?.id
@@ -228,7 +231,7 @@ fun StatsScreen() {
                             null
                         }
                     }
-                if (statisticsArtistStatistic(item.id, topArtists) == statistic) {
+                if (lookupGeneration == artistLookupGeneration && statisticsArtistStatistic(item.id, topArtists) == statistic) {
                     artistThumbnails[item.id] = match?.thumbnail
                     statisticId?.let { artistIds[item.id] = it } ?: match?.let { artistIds[item.id] = it.id }
                 }
