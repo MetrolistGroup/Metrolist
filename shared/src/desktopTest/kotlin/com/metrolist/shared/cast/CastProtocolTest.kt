@@ -425,6 +425,21 @@ class CastProtocolTest {
     }
 
     @Test
+    fun fcastAcceptsMediaEndEventsOnlyForTheCurrentMedia() {
+        val currentUrl = "http://127.0.0.1:46899/audio?token=current"
+        val currentEnd =
+            """{"event":{"type":1,"item":{"url":"$currentUrl"}}}"""
+        val oldEnd =
+            """{"event":{"type":1,"item":{"url":"http://127.0.0.1:46899/audio?token=old"}}}"""
+
+        assertTrue(isCurrentFcastMediaItemEndEvent(currentEnd, currentUrl))
+        assertFalse(isCurrentFcastMediaItemEndEvent(oldEnd, currentUrl))
+        assertFalse(isCurrentFcastMediaItemEndEvent("""{"event":{"type":2,"item":{"url":"$currentUrl"}}}""", currentUrl))
+        assertFalse(isCurrentFcastMediaItemEndEvent("""{"event":{"type":1}}""", currentUrl))
+        assertFalse(isCurrentFcastMediaItemEndEvent("not-json", currentUrl))
+    }
+
+    @Test
     fun byteRangesStayInsideKnownMediaLength() {
         assertEquals(ByteRange(10, 19), parseByteRange("bytes=10-19", 100))
         assertEquals(ByteRange(90, 99), parseByteRange("bytes=-10", 100))

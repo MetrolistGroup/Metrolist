@@ -15,7 +15,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
@@ -31,6 +34,8 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
+
+private const val FCAST_EVENT_MEDIA_ITEM_END = 1
 
 internal fun isCurrentFcastPlaybackUpdate(
     awaitingCurrentMediaUpdate: Boolean,
@@ -48,6 +53,18 @@ internal fun isCurrentFcastPlaybackUpdate(
                 abs(expectedStartPositionMs - actualPositionMs) <= 5_000L &&
                 (expectedDurationMs <= 0L || actualDurationMs <= 0L || abs(expectedDurationMs - actualDurationMs) <= 1_500L)
         )
+
+internal fun isCurrentFcastMediaItemEndEvent(
+    body: String?,
+    currentMediaUrl: String?,
+): Boolean {
+    if (body == null || currentMediaUrl == null) return false
+    val payload = runCatching { Json.parseToJsonElement(body) as? JsonObject }.getOrNull() ?: return false
+    val event = payload["event"] as? JsonObject ?: return false
+    val eventType = (event["type"] as? JsonPrimitive)?.intOrNull
+    val mediaUrl = ((event["item"] as? JsonObject)?.get("url") as? JsonPrimitive)?.contentOrNull
+    return eventType == FCAST_EVENT_MEDIA_ITEM_END && mediaUrl == currentMediaUrl
+}
 
 internal class FcastSession(
     private val scope: CoroutineScope,
@@ -76,6 +93,12 @@ internal class FcastSession(
     private var awaitingMediaStartPositionMs = 0L
 
     @Volatile
+    private var currentMediaUrl: String? = null
+
+    @Volatile
+    private var stopRequested = false
+
+    @Volatile
     private var closed = false
 
     override suspend fun load(
@@ -88,6 +111,8 @@ internal class FcastSession(
     ) = withContext(Dispatchers.IO) {
         check(!closed)
         this@FcastSession.mediaGeneration = mediaGeneration
+        currentMediaUrl = mediaUrl
+        stopRequested = false
         awaitingCurrentMediaUpdate = true
         awaitingMediaStartPositionMs = positionMs
         _state.value =
@@ -116,6 +141,12 @@ internal class FcastSession(
                         put("displayName", "Metrolist")
                         put("appName", "Metrolist")
                         put("appVersion", appVersion)
+                    }.toString(),
+                )
+                send(
+                    OPCODE_SUBSCRIBE_EVENT,
+                    buildJsonObject {
+                        put("event", buildJsonObject { put("type", FCAST_EVENT_MEDIA_ITEM_END) })
                     }.toString(),
                 )
             }
@@ -165,7 +196,11 @@ internal class FcastSession(
             send(OPCODE_SET_VOLUME, buildJsonObject { put("volume", volume.toDouble()) }.toString())
         }
 
-    override suspend fun stop() = withContext(Dispatchers.IO) { send(OPCODE_STOP) }
+    override suspend fun stop() =
+        withContext(Dispatchers.IO) {
+            stopRequested = true
+            send(OPCODE_STOP)
+        }
 
     private fun readLoop() {
         try {
@@ -270,6 +305,18 @@ internal class FcastSession(
                 if (volume != null) _state.value = _state.value.copy(volume = volume.toFloat().coerceIn(0f, 1f))
             }
 
+            OPCODE_EVENT -> {
+                if (stopRequested || !isCurrentFcastMediaItemEndEvent(body, currentMediaUrl)) return
+                val current = _state.value
+                _state.value =
+                    current.copy(
+                        isPlaying = false,
+                        positionMs = current.durationMs.takeIf { it > 0L } ?: current.positionMs,
+                        hasEnded = true,
+                        mediaGeneration = mediaGeneration,
+                    )
+            }
+
             OPCODE_PLAYBACK_ERROR -> {
                 close()
             }
@@ -331,5 +378,7 @@ internal class FcastSession(
         const val OPCODE_PING = 12
         const val OPCODE_PONG = 13
         const val OPCODE_INITIAL = 14
+        const val OPCODE_SUBSCRIBE_EVENT = 17
+        const val OPCODE_EVENT = 19
     }
 }
