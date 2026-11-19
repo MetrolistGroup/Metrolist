@@ -2307,6 +2307,7 @@ class MusicService :
                 currentPosition = media3Player?.currentPosition ?: player.getRealtimePositionMs(),
                 idleTitle = getString(R.string.not_playing),
                 idleArtist = getString(R.string.tap_to_play),
+                unknownArtist = getString(R.string.unknown_artist),
             )
         widgetManager.updateWidgets(
             title = state.title,
