@@ -358,6 +358,12 @@ fun AutoPlaylistScreen(
     val savedCachedOrder by rememberUpdatedState(decodedCachedOrder)
     var pendingCachedOrder by remember(currentType) { mutableStateOf<List<String>?>(null) }
     var pendingCachedSongs by remember(currentType) { mutableStateOf<List<SongItem>?>(null) }
+    val uncommittedCachedOrder =
+        remember {
+            object {
+                var order: List<String>? = null
+            }
+        }
 
     fun persistCachedOrder(order: List<String>): List<String> {
         val currentIds = collectionEntries.map { it.songId }
@@ -372,15 +378,18 @@ fun AutoPlaylistScreen(
         val order = pendingCachedOrder ?: return null
         pendingCachedOrder = null
         pendingCachedSongs = null
+        uncommittedCachedOrder.order = null
         return persistCachedOrder(order)
     }
 
-    val latestPendingCachedOrder by rememberUpdatedState(pendingCachedOrder)
-    val latestPersistCachedOrder by rememberUpdatedState(::persistCachedOrder)
     DisposableEffect(currentType) {
         onDispose {
             if (currentType == "cached") {
-                latestPendingCachedOrder?.let { latestPersistCachedOrder(it) }
+                val pending = uncommittedCachedOrder.order
+                uncommittedCachedOrder.order = null
+                if (pending != null && pending != Settings.shared.cachedSongsOrder()) {
+                    Settings.shared.setCachedSongsOrder(pending)
+                }
             }
         }
     }
@@ -922,8 +931,10 @@ fun AutoPlaylistScreen(
                                                 },
                                                 savedCachedOrder,
                                             )
+                                        val movedOrder = moveCachedSong(baseOrder, from.id, to.id, selectedIds)
                                         pendingCachedSongs = movedSongs
-                                        pendingCachedOrder = moveCachedSong(baseOrder, from.id, to.id, selectedIds)
+                                        pendingCachedOrder = movedOrder
+                                        uncommittedCachedOrder.order = movedOrder
                                     }
                                 }
                             }

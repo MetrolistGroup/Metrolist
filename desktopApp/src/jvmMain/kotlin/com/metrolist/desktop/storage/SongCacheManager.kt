@@ -159,6 +159,8 @@ object SongCacheManager {
     val cachedSongIds: StateFlow<Set<String>> = _cachedSongIds.asStateFlow()
     private val _cachedSongs = MutableStateFlow<List<CachedSongEntry>>(emptyList())
     val cachedSongs: StateFlow<List<CachedSongEntry>> = _cachedSongs.asStateFlow()
+    private val _accessTimeRevision = MutableStateFlow(0L)
+    val accessTimeRevision: StateFlow<Long> = _accessTimeRevision.asStateFlow()
     private val _cacheSizeBytes = MutableStateFlow(0L)
     private val settingsDir by lazy {
         File(
@@ -304,6 +306,7 @@ object SongCacheManager {
                         ?.takeIf { safeFile(it.filePath)?.let { file -> file.isFile && file.length() >= 1024L } == true }
                         ?: return@synchronized null
                 accessTimes.record(songId, System.currentTimeMillis())
+                _accessTimeRevision.value += 1L
                 if (accessSaveJob?.isActive != true) {
                     accessSaveJob =
                         scope.launch {

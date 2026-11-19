@@ -927,7 +927,9 @@ internal fun MobileSongCollectionScreen(
                                     showSearch = false,
                                     text =
                                         collectionFilterBarText(
-                                            includeManual = isCachedCollection && collectionSort == CollectionSort.MANUAL,
+                                            includeManual =
+                                                isCachedCollection &&
+                                                    (collectionSort == CollectionSort.MANUAL || cachedCustomOrder.isNotEmpty()),
                                         ),
                                     query = collectionQuery,
                                     onQueryChange = { collectionQuery = it },

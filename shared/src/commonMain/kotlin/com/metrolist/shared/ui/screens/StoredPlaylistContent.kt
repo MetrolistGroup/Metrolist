@@ -423,7 +423,7 @@ fun StoredPlaylistContent(
                                 text =
                                     collectionFilterBarText(
                                         includeClear = true,
-                                        includeManual = isCachedCollection && collectionSort == CollectionSort.MANUAL,
+                                        includeManual = isCachedCollection,
                                     ),
                                 query = query,
                                 onQueryChange = { query = it },

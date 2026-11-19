@@ -116,6 +116,7 @@ import io.ktor.utils.io.jvm.javaio.toByteReadChannel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -249,7 +250,7 @@ private fun CachedPlaylistScreen() {
     val formatFileSize = rememberFileSizeFormatter()
     val snapshot by produceState(CachedPlaylistSnapshot()) {
         withContext(Dispatchers.IO) {
-            SongCacheManager.cachedSongs.collect {
+            combine(SongCacheManager.cachedSongs, SongCacheManager.accessTimeRevision) { _, _ -> Unit }.collect {
                 val entries = SongCacheManager.getCachedSongs()
                 value =
                     CachedPlaylistSnapshot(
