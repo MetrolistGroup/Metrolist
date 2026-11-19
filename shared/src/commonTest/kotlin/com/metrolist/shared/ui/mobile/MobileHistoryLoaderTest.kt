@@ -8,6 +8,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -210,6 +211,115 @@ class MobileHistoryLoaderTest {
             assertTrue(loader.refresh("changed"))
             assertEquals(100 to 0, requests.last())
             assertEquals(100, loader.rows.size)
+        }
+
+    @Test
+    fun insertionBetweenPagesKeepsRowsUniqueAndAdvancesByRawPageSize() =
+        runTest {
+            var source = (250L downTo 1L).map(::row)
+            val offsets = mutableListOf<Int>()
+            val loader =
+                MobileHistoryLoader { size, offset, _, _, _ ->
+                    offsets += offset
+                    source.drop(offset).take(size)
+                }
+            assertTrue(loader.refresh())
+            source = listOf(row(251)) + source
+            loader.loadMore()
+            assertEquals((250L downTo 52L).toList(), loader.rows.map { it.id })
+            assertTrue(loader.hasMore)
+            loader.loadMore()
+            assertEquals((250L downTo 1L).toList(), loader.rows.map { it.id })
+            assertEquals(listOf(0, 100, 200), offsets)
+            assertFalse(loader.hasMore)
+        }
+
+    @Test
+    fun fullyOverlappingRawPageDoesNotStrandOlderEntries() =
+        runTest {
+            var source = (150L downTo 1L).map(::row)
+            val offsets = mutableListOf<Int>()
+            val loader =
+                MobileHistoryLoader { size, offset, _, _, _ ->
+                    offsets += offset
+                    source.drop(offset).take(size)
+                }
+            assertTrue(loader.refresh())
+            source = (250L downTo 151L).map(::row) + source
+            loader.loadMore()
+            assertEquals((150L downTo 1L).toList(), loader.rows.map { it.id })
+            assertEquals(listOf(0, 100, 200), offsets)
+            assertFalse(loader.hasMore)
+        }
+
+    @Test
+    fun failedReadAfterOverlapRetriesTheUnconsumedOffset() =
+        runTest {
+            val initial = (150L downTo 51L).map(::row)
+            val offsets = mutableListOf<Int>()
+            var fail = true
+            val loader =
+                MobileHistoryLoader { _, offset, _, _, _ ->
+                    offsets += offset
+                    when (offset) {
+                        0, 100 -> initial
+                        200 -> if (fail) error("Read failed") else (50L downTo 1L).map(::row)
+                        else -> error("Unexpected offset")
+                    }
+                }
+            assertTrue(loader.refresh())
+            loader.loadMore()
+            assertEquals(initial, loader.rows)
+            assertTrue(loader.failed)
+            assertTrue(loader.hasMore)
+            assertFalse(loader.loadingPage)
+
+            fail = false
+            loader.loadMore()
+            assertEquals((150L downTo 1L).toList(), loader.rows.map { it.id })
+            assertEquals(listOf(0, 100, 200, 200), offsets)
+            assertFalse(loader.hasMore)
+            assertFalse(loader.failed)
+        }
+
+    @Test
+    fun refreshSupersedesAReadAfterAnOverlapPage() =
+        runTest {
+            val initial = (150L downTo 51L).map(::row)
+            val readStarted = CompletableDeferred<Unit>()
+            val staleResult = CompletableDeferred<List<StoredHistoryRow>>()
+            val loader =
+                MobileHistoryLoader { _, offset, query, _, _ ->
+                    when {
+                        query == "changed" -> {
+                            listOf(row(999))
+                        }
+
+                        offset == 0 || offset == 100 -> {
+                            initial
+                        }
+
+                        offset == 200 -> {
+                            readStarted.complete(Unit)
+                            staleResult.await()
+                        }
+
+                        else -> {
+                            error("Unexpected offset")
+                        }
+                    }
+                }
+            assertTrue(loader.refresh())
+            val page = launch { loader.loadMore() }
+            withTimeout(1_000L) { readStarted.await() }
+            assertTrue(loader.loadingPage)
+            assertTrue(loader.refresh(query = "changed"))
+            staleResult.complete(listOf(row(50)))
+            page.join()
+            assertEquals(listOf(row(999)), loader.rows)
+            assertFalse(loader.hasMore)
+            assertFalse(loader.loadingPage)
+            assertFalse(loader.failed)
         }
 
     @Test
