@@ -272,7 +272,8 @@ class AudioCacheManager(
     suspend fun isDownloaded(songId: String): Boolean =
         withContext(Dispatchers.IO) {
             val entry = database.dao().cachedAudio(songId) ?: return@withContext false
-            entry.kind == KIND_DOWNLOAD && audioAvailable(entry.filePath)
+            entry.kind == KIND_DOWNLOAD && audioAvailable(entry.filePath) &&
+                (isContentUri(entry.filePath) || File(entry.filePath).canRead())
         }
 
     suspend fun downloadedIds(songIds: Collection<String>): Set<String> =
