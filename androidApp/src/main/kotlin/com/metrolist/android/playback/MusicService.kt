@@ -10,7 +10,6 @@ import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Binder
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -52,7 +51,6 @@ import com.metrolist.android.listentogether.AndroidListenTogetherManager
 import com.metrolist.android.models.PersistPlayerState
 import com.metrolist.android.models.PlaybackPersistenceWriter
 import com.metrolist.android.models.decodePersistPlayerState
-import com.metrolist.android.models.playbackPersistenceJson
 import com.metrolist.android.widget.EXTRA_WIDGET_COMMAND_TOKEN
 import com.metrolist.android.widget.MetrolistWidgetManager
 import com.metrolist.android.widget.MusicWidgetReceiver
@@ -61,7 +59,6 @@ import com.metrolist.android.widget.WidgetControls
 import com.metrolist.android.widget.sampleWidgetProgress
 import com.metrolist.android.widget.shouldSampleWidgetProgress
 import com.metrolist.android.widget.widgetScreenInteractive
-import com.metrolist.innertubex.extraction.ContentHints
 import com.metrolist.innertubex.extraction.TokenProvider
 import com.metrolist.innertubex.sabr.findSabrProtocolException
 import com.metrolist.shared.BuildConfig
@@ -156,7 +153,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
@@ -179,7 +175,6 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import android.provider.Settings as AndroidSettings
 import com.metrolist.shared.generated.resources.Res as SharedRes
-import com.metrolist.shared.generated.resources.shuffle as sharedShuffle
 import com.metrolist.shared.generated.resources.start_radio as sharedStartRadio
 
 private const val QUEUE_RESOLVE_RETRY_DELAY_MS = 350L
@@ -313,8 +308,8 @@ class MusicService :
                 )
             ) {
                 queueCoordinator.replaceQueueSession(songs, startIndex, queueTitle, finite = true, playlistPage = playlistPage) {
-                    if (songPlaybackMode == AutomotiveSongPlaybackMode.SINGLE_SONG) {
-                        queueCoordinator.singleSongQueueSessionId = queueCoordinator.queueSessionId
+                    if (songPlaybackMode != null) {
+                        queueCoordinator.recommendationLockedSessionId = queueCoordinator.queueSessionId
                     }
                     val initialRequestId = player.latestQueuePlaybackRequestId
                     replacement()

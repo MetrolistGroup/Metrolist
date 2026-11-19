@@ -24,7 +24,6 @@ import com.metrolist.shared.model.selectRadioQueueChip
 import com.metrolist.shared.playback.MusicQueue
 import com.metrolist.shared.playback.MusicQueueSnapshot
 import com.metrolist.shared.playback.PlaybackSeekSource
-import com.metrolist.shared.playback.QUEUE_SOURCE_ADDED_MANUALLY
 import com.metrolist.shared.playback.QUEUE_SOURCE_AUTO_MIX
 import com.metrolist.shared.playback.QUEUE_SOURCE_RECOMMENDED
 import com.metrolist.shared.playback.isAutoMixQueueSource
@@ -38,7 +37,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,7 +47,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jetbrains.compose.resources.getString
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -115,7 +112,7 @@ internal class AndroidQueueCoordinator(
     private var pendingRestorePositionMs: Long? = null
     private var restoredSongId: String? = null
     private var remoteLoadGeneration = 0L
-    var singleSongQueueSessionId: Long? = null
+    var recommendationLockedSessionId: Long? = null
 
     fun saveShuffleMode() {
         val queue = player.queueSnapshots.value
@@ -444,6 +441,7 @@ internal class AndroidQueueCoordinator(
         if (seed.isUnavailable || BlockedContent.isBlocked(seed)) return
         val title = context.getString(R.string.song_mix_title, seed.title)
         val current = player.currentSong.value?.takeIf { it.id == seed.id }
+        val remote = castState().takeIf { it.isConnected }?.forQueueEntry(player.queueState.value)
         if (AndroidDeviceConnect.intercept(
                 DcPlaybackCommand(
                     DcPlaybackAction.REPLACE_QUEUE,
@@ -451,7 +449,7 @@ internal class AndroidQueueCoordinator(
                     index = 0,
                     title = title,
                     finite = false,
-                    positionMs = if (current != null) player.getRealtimePositionMs() else 0L,
+                    positionMs = if (current != null) remote?.positionMs ?: player.getRealtimePositionMs() else 0L,
                     preserveCurrentTrack = true,
                 ),
             )
@@ -459,7 +457,7 @@ internal class AndroidQueueCoordinator(
             return
         }
         _repeatMode.value = Player.REPEAT_MODE_OFF
-        val preserveCurrent = current != null && player.isReady && !player.playbackTransitionPending.value
+        val preserveCurrent = current != null && (remote != null || player.isReady) && !player.playbackTransitionPending.value
         if (preserveCurrent) {
             replaceQueueSession(listOf(requireNotNull(current)), 0, title, finite = false) {
                 val queue = MusicQueue().apply { setQueue(listOf(current)) }
@@ -569,7 +567,7 @@ internal class AndroidQueueCoordinator(
         )
 
     private fun canBootstrapRecommendations(): Boolean =
-        singleSongQueueSessionId != queueSessionId &&
+        recommendationLockedSessionId != queueSessionId &&
             shouldBootstrapQueueRecommendations(isFiniteQueue, Settings.shared.autoLoadMore, playlistPage?.hasMore == true)
 
     fun selectQueueChip(chipId: String) {
@@ -759,7 +757,7 @@ internal class AndroidQueueCoordinator(
         recommendationBootstrapJob?.join()
         if (!PlaybackNetworkStateStore.current.connected || sessionId != queueSessionId) return false
         if (!Settings.shared.autoLoadMore || repeatMode.value != Player.REPEAT_MODE_OFF) return false
-        if (singleSongQueueSessionId == sessionId) return false
+        if (recommendationLockedSessionId == sessionId) return false
 
         val currentQueue = player.songQueue.value
         val currentIndex = player.currentMediaItemIndex.value
