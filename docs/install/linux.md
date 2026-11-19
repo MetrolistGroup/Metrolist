@@ -76,6 +76,10 @@ Back up, quit, then replace the AppImage with a verified download of the same ar
 
 For silent playback, check [ALSA routing](../desktop.md#linux-audio-setup). For blank login, check WebKitGTK and XWayland. For forgotten sign-in, check the unlocked Secret Service collection and [credential recovery](../desktop.md#credentials-and-settings-files). Use the [application log](../desktop.md#logs-and-profiling) to report remaining failures.
 
+### Storage paths
+
+Metrolist uses the default home directories when `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, or `XDG_STATE_HOME` is unset, empty, or relative. If an older setup stored files under a relative path, set that variable to the absolute path of the existing directory to keep using those files. Metrolist does not move them automatically.
+
 ### Sonos and DLNA with firewalld
 
 Discovery sends SSDP searches to `239.255.255.250:1900`. Speakers reply from UDP port 1900 to a temporary local UDP port. Allowing only incoming destination port 1900 does not allow these replies. Metrolist serves cast audio on TCP port `57643` for the entire session, including song changes. This applies to Google Cast and FCast too. The app reports an error if it cannot bind this port or if the receiver has not requested the stream after 15 seconds of requested playback. A missing request can indicate a firewall, routing or receiver problem.
