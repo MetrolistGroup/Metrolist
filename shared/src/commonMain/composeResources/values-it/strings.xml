@@ -700,7 +700,7 @@
     <string name="downloading">Download in corso</string>
     <string name="remove_from_playlist">Rimuovi da playlist</string>
     <string name="radio">Radio</string>
-    <string name="downloaded_songs_empty_hint">Clicca sul pulsante di download di un brano per salvarlo e riprodurlo offline.</string>
+    <string name="downloaded_songs_empty_hint">Clicca sul pulsante di download su qualsiasi brano per salvarlo per l'ascolto offline.</string>
     <string name="imported_playlist">Playlist importata</string>
     <string name="import_error_unsupported_link">Questo link non è riconosciuto o supportato.</string>
     <string name="bitrate_value">%1$d kbps</string>
@@ -778,7 +778,7 @@
     <string name="languages">Lingue</string>
     <string name="language_serbian">Serbo</string>
     <string name="library_cached_songs">Brani nella cache</string>
-    <string name="library_offline_songs">Brani scaricati</string>
+    <string name="library_offline_songs">Brani offline</string>
     <string name="library_top_songs">I tuoi brani più ascoltati</string>
     <string name="listen_together_add_custom_server">Aggiungi server personalizzato</string>
     <string name="listen_together_add_queue_title">Aggiungere %1$s?</string>
@@ -1429,7 +1429,7 @@
     <string name="menu_application_logs">Log dell'applicazione</string>
     <string name="menu_report_issue">Segnala un problema…</string>
     <string name="menu_about_metrolist">A proposito di Metrolist</string>
-    <string name="menu_song">Brani</string>
+    <string name="menu_song">Brano</string>
     <string name="menu_stop">Ferma</string>
     <string name="menu_go_to_current_song">Vai al brano in riproduzione</string>
     <string name="menu_set_volume_maximum">Imposta il volume al massimo</string>
@@ -2004,7 +2004,7 @@
     <string name="credits_leads_section">Lead</string>
     <string name="credits_creator_section">Creatore</string>
     <string name="downloads_empty">Nessun download in corso</string>
-    <string name="downloads_empty_hint">I brani salvati per la riproduzione offline appariranno qui durante il download.</string>
+    <string name="downloads_empty_hint">I brani salvati per l'ascolto offline saranno mostrati qui durante il download.</string>
     <string name="edit_playlist_cover">Modifica copertina playlist</string>
     <string name="edit_playlist_cover_note">Il tuo account dev\u0027essere collegato ad un numero di telefono e verificato su YouTube Music per cambiare la cover della playlist</string>
     <string name="edit_playlist_cover_note_wait">Dopo aver selezionato un'immagine, attendi un momento per far mostrare la nuova copertina nella tua playlist</string>
