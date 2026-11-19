@@ -173,7 +173,7 @@ internal data class HttpByteRange(
 )
 
 internal fun parseHttpByteRange(value: String?): HttpByteRange? {
-    val match = Regex("^bytes (\\d+)-(\\d+)/(\\d+)$").matchEntire(value ?: return null) ?: return null
+    val match = Regex("^(?i:bytes) (\\d+)-(\\d+)/(\\d+)$").matchEntire(value ?: return null) ?: return null
     val start = match.groupValues[1].toLongOrNull() ?: return null
     val end = match.groupValues[2].toLongOrNull() ?: return null
     val total = match.groupValues[3].toLongOrNull() ?: return null

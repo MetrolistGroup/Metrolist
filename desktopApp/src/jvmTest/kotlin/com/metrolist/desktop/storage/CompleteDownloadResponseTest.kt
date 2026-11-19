@@ -33,11 +33,13 @@ class CompleteDownloadResponseTest {
         val cases =
             listOf(
                 Triple("prefix", "bytes 0-2047/8192", false),
+                Triple("mixed-prefix", "Bytes 0-2047/8192", false),
                 Triple("suffix", "bytes 6144-8191/8192", false),
                 Triple("unknown", "bytes 0-2047/*", false),
                 Triple("missing", null, false),
                 Triple("short", "bytes 0-8191/8192", false),
                 Triple("complete", "bytes 0-2047/2048", true),
+                Triple("mixed-complete", "bYtEs 0-2047/2048", true),
                 Triple("chunked", "bytes 0-2047/2048", true),
                 Triple("ordinary", null, true),
             )
