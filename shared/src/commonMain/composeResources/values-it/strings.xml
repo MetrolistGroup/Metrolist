@@ -143,11 +143,11 @@
     <string name="queue_loading">Caricamento coda…</string>
     <string name="calculating">Calcolando…</string>
     <plurals name="queue_track_count_duration">
-        <item quantity="one">%1$d traccia · %2$s</item>
-        <item quantity="many">%1$d tracce · %2$s</item>
-        <item quantity="other">%1$d tracce · %2$s</item>
+        <item quantity="one">%1$d brano · %2$s</item>
+        <item quantity="many">%1$d brani · %2$s</item>
+        <item quantity="other">%1$d brani · %2$s</item>
     </plurals>
-    <string name="suggested_tracks">Raccomandate</string>
+    <string name="suggested_tracks">Raccomandati</string>
     <string name="playback_notification_channel_name">Riproduzione</string>
     <string name="settings">Impostazioni</string>
     <string name="theme_mode">Modalità tema</string>
@@ -292,7 +292,7 @@
     <string name="settings_interface">Interfaccia</string>
     <string name="settings_playback">Riproduzione</string>
     <string name="settings_player_audio_description">Audio, transizioni, coda</string>
-    <string name="track_transition_fade_desc">Sfuma gradualmente fra il brano in riproduzione e il successivo</string>
+    <string name="track_transition_fade_desc">Sfuma gradualmente fra il brano corrente e quello successivo</string>
     <string name="settings_content_title">Contenuti</string>
     <string name="settings_content_description">Lingua, feed, esplorazione</string>
     <string name="settings_lyrics_description">Acquisizione testi e traduzione</string>
@@ -360,7 +360,7 @@
     <string name="immersive_player">Lettore immersivo</string>
     <string name="immersive_player_description">Nascondi le barre di sistema quando il lettore è esteso</string>
     <string name="song_gestures">Gesti per i brani</string>
-    <string name="appearance_enable_swipe_to_change_track">Scorri sulla copertina per cambiare tracce</string>
+    <string name="appearance_enable_swipe_to_change_track">Scorri la copertina per cambiare brano</string>
     <string name="appearance_play_videos_in_mini_player" tools:ignore="MissingTranslation">Riproduci i video nel mini lettore</string>
     <string name="appearance_play_videos_in_mini_player_desc" tools:ignore="MissingTranslation">Mostra i video musicali quando il mini lettore è ridotto</string>
     <string name="appearance_mini_player_swipe_sensitivity">Sensibilità scorrimento</string>
@@ -383,9 +383,9 @@
     <string name="appearance_auto_playlists">Playlist automatiche</string>
     <string name="appearance_show_liked_playlist">Brani che ti piacciono</string>
     <string name="appearance_show_downloaded_playlist">Brani scaricati</string>
-    <string name="appearance_show_top_playlist">Playlist dei più ascoltati</string>
-    <string name="appearance_show_uploaded_playlist">Playlist Caricate</string>
-    <string name="appearance_show_cached_playlist">Playlist Cache</string>
+    <string name="appearance_show_top_playlist">Brani più ascoltati</string>
+    <string name="appearance_show_uploaded_playlist">Brani caricati</string>
+    <string name="appearance_show_cached_playlist">Brani nella cache</string>
     <string name="player_settings_title">Lettore e audio</string>
     <string name="lyrics_settings_title">Testi</string>
     <string name="sources">Fonti</string>
@@ -414,7 +414,7 @@
     <string name="lyrics_display">Visualizzazione</string>
     <string name="privacy_settings_title">Privacy</string>
     <string name="sentry_reporting">Report di arresti anomali e prestazioni</string>
-    <string name="sentry_reporting_desc">Invia a Sentry arresti anomali, errori, dati sulle prestazioni e dettagli di riproduzione come le informazioni sul brano. Rimuove le credenziali.</string>
+    <string name="sentry_reporting_desc">Invia arresti anomali, errori, dati sulle prestazioni e dettagli di riproduzione (come le informazioni sui brani) a Sentry. L'app rimuove le credenziali.</string>
     <string name="history_duration_desc">Tempo di riproduzione minimo prima di salvare nella cronologia</string>
     <string name="privacy_blocklists">Liste bloccati</string>
     <string name="blocked_artists">Artisti bloccati</string>
@@ -426,19 +426,19 @@
         <item quantity="many">%1$d artisti bloccati</item>
         <item quantity="other">%1$d artisti bloccati</item>
     </plurals>
-    <string name="android_auto_pinned_playlists">Playlist per guida fissate</string>
-    <string name="android_auto_pinned_playlists_desc">Mostra fino a sei playlist nella home dell'auto per riprodurle con un tocco. Mantiene l'ordine di selezione.</string>
+    <string name="android_auto_pinned_playlists">Playlist fissate per la guida</string>
+    <string name="android_auto_pinned_playlists_desc">Scegli fino a sei playlist da mostrare per prime nella schermata Home dell'auto per avviarle con un solo tocco. L'ordine di selezione viene mantenuto.</string>
     <string name="android_auto_pinned_playlists_count">Fissate: %1$d di %2$d</string>
-    <string name="android_auto_choose_pinned_playlists">Scegli le playlist per la guida</string>
-    <string name="android_auto_pinned_playlist_mode">Riproduzione delle playlist</string>
-    <string name="android_auto_pinned_playlist_mode_desc">Scegli come far iniziare le playlist fissate per la guida</string>
+    <string name="android_auto_choose_pinned_playlists">Scegli playlist per la guida</string>
+    <string name="android_auto_pinned_playlist_mode">Riproduzione playlist</string>
+    <string name="android_auto_pinned_playlist_mode_desc">Scegli come avviare le playlist fissate per la guida</string>
     <string name="android_auto_play_in_order">Riproduci in ordine</string>
     <string name="android_auto_no_playlists">Nessuna playlist disponibile.</string>
     <string name="android_auto_local_playlist">Playlist salvata</string>
     <string name="android_auto_youtube_playlist">Playlist di YouTube</string>
     <string name="android_auto_driving_playlists">Playlist per la guida</string>
     <string name="my_top_100">La mia top 100</string>
-    <string name="uploaded_playlist_name">Caricato</string>
+    <string name="uploaded_playlist_name">Caricata</string>
     <string name="prompt_continue_playback">Chiedi prima di proseguire con la riproduzione</string>
     <string name="continue_playback_title">Continuare riproduzione?</string>
     <string name="continue_playback_message">Continuare a riprodurre "%1$s"?</string>
@@ -451,7 +451,7 @@
     <string name="backup_restore_title">Backup e importazione</string>
     <string name="spotify_sign_in">Accedi a Spotify</string>
     <string name="spotify_sign_in_again">Accedi di nuovo</string>
-    <string name="spotify_choose_playlists_supporting">Scegli le playlist che vuoi importare su Metrolist.</string>
+    <string name="spotify_choose_playlists_supporting">Scegli le playlist che vuoi importare in Metrolist.</string>
     <plurals name="spotify_selected_playlist_count">
         <item quantity="one">%1$d playlist selezionata</item>
         <item quantity="many">%1$d playlist selezionate</item>
@@ -462,11 +462,11 @@
         <item quantity="many">%1$d playlist</item>
         <item quantity="other">%1$d playlist</item>
     </plurals>
-    <string name="spotify_track_limit_warning">Le playlist importate da Spotify si limitano ai primi 5.000 brani per ciascuna.</string>
+    <string name="spotify_track_limit_warning">Le importazioni da Spotify sono limitate ai primi 5.000 brani di ogni playlist.</string>
     <plurals name="spotify_playlist_track_count">
-        <item quantity="one">%1$d traccia</item>
-        <item quantity="many">%1$d tracce</item>
-        <item quantity="other">%1$d tracce</item>
+        <item quantity="one">%1$d brano</item>
+        <item quantity="many">%1$d brani</item>
+        <item quantity="other">%1$d brani</item>
     </plurals>
     <string name="spotify_login_page_failed">Impossibile caricare l\u0027accesso a Spotify: %1$s</string>
     <string name="import_playlist">Importa playlist</string>
@@ -474,11 +474,11 @@
     <string name="playlist_name">Nome playlist</string>
     <string name="load_playlist">Carica playlist</string>
     <string name="local_playlist">Locale</string>
-    <string name="or_choose_existing_playlist">O seleziona una playlist già esistente</string>
+    <string name="or_choose_existing_playlist">Oppure scegli una playlist esistente</string>
     <plurals name="playlist_import_success">
-        <item quantity="one">Importata %1$d traccia</item>
-        <item quantity="many">Importate %1$d tracce</item>
-        <item quantity="other">Importate %1$d tracce</item>
+        <item quantity="one">Importato %1$d brano</item>
+        <item quantity="many">Importati %1$d brani</item>
+        <item quantity="other">Importati %1$d brani</item>
     </plurals>
     <string name="backup_restore_export_desc">Esporta le impostazioni, il database della libreria, la playlist, i Mi piace e la cronologia in un file zip</string>
     <string name="backup_restore_import_desc">Ripristina un backup di Metrolist. In seguito ad un ripristino andato a buon fine, l\u0027app si riavvierà.</string>
@@ -493,11 +493,11 @@
     <string name="scrobble_connection_failed">Connessione non riuscita</string>
     <string name="scrobble_delay">Ritardo dello scrobbling</string>
     <string name="scrobble_delay_description">Lunghezza del brano riprodotta prima dello scrobbling</string>
-    <string name="scrobble_min_duration_description">Durata minima della traccia in secondi per attivare lo scrobbling</string>
+    <string name="scrobble_min_duration_description">Durata minima dei brani (in secondi) per lo scrobbling</string>
     <string name="scrobble_max_delay">Ritardo massimo</string>
     <string name="scrobble_max_delay_description">Durata massima in secondi prima che venga forzato lo scrobbling</string>
     <string name="lastfm_connect_account">Connetti il tuo account Last.fm</string>
-    <string name="lastfm_enable_description">Invia al tuo account Last.fm lo scrobbling dei brani riprodotti</string>
+    <string name="lastfm_enable_description">Invia i brani riprodotti al tuo account Last.fm</string>
     <string name="lastfm_now_playing_description">Mostra il brano in riproduzione su Last.fm</string>
     <string name="lastfm_connect_title">Connettiti a Last.fm</string>
     <string name="lastfm_connect_description">Inserisci le tue credenziali di Last.fm per abilitare lo scrobbling</string>
@@ -528,7 +528,7 @@
     <string name="hide_podcasts">Nascondi i podcast</string>
     <string name="hide_podcasts_desc">Nascondi i podcast e gli episodi dalla navigazione, ricerca e riproduzione</string>
     <string name="hide_short_songs">Nascondi i brani brevi</string>
-    <string name="hide_short_songs_desc">Nascondi anteprime, audio di Shorts e altre tracce più brevi della durata impostata</string>
+    <string name="hide_short_songs_desc">Nascondi anteprime, audio degli Shorts e altri brani più brevi della durata impostata</string>
     <string name="minimum_song_duration">Durata minima dei brani</string>
     <string name="minimum_song_duration_desc">Nascondi brani di durata inferiore a %1$d secondi</string>
     <string name="block_ai_slop_artists">Blocca gli artisti IA noti</string>
@@ -563,8 +563,8 @@
     <string name="playback_speed">Velocità di riproduzione</string>
     <string name="equalizer">Equalizzatore</string>
     <string name="adjust_audio_equalizer">Regola l\u0027equalizzatore audio</string>
-    <string name="queue_current_playing">In riproduzione</string>
-    <string name="queue_current_paused">Traccia attuale, in pausa</string>
+    <string name="queue_current_playing">Brano corrente, in riproduzione</string>
+    <string name="queue_current_paused">Brano corrente, in pausa</string>
     <string name="lyrics_timing_unsynced">Non sincronizzato</string>
     <string name="lyrics_timing_line_synced">Sincronizzato</string>
     <string name="lyrics_timing_word_synced">Sillaba</string>
@@ -630,7 +630,7 @@
     <string name="ai_system_prompt_label">Prompt del sistema</string>
     <string name="ai_translation_enable">Traduci testi</string>
     <string name="ai_translation_enable_description">Mostra i testi nella tua lingua sotto le parole originali</string>
-    <string name="ai_translation_for_track">Traduzione con IA per questa traccia</string>
+    <string name="ai_translation_for_track">Traduzione con IA per questo brano</string>
     <string name="ai_translation_new_title">Nuova traduzione del testo con IA</string>
     <string name="ai_translation_new_desc">Crea una nuova traduzione</string>
     <string name="ai_translation_mode_literal">Traduzione</string>
@@ -712,7 +712,7 @@
     <string name="enter_fullscreen" tools:ignore="MissingTranslation">Modalità schermo intero</string>
     <string name="export_format_csv_description">Elenco brani per i fogli di calcolo</string>
     <string name="export_saved">Esportazione salvata</string>
-    <string name="ai_translation_trigger_manual_description">Attiva la traduzione dal menu dei testi per ciascuna traccia</string>
+    <string name="ai_translation_trigger_manual_description">Usa l'interruttore nel menu dei testi per singolo brano</string>
     <string name="duplicate_song">Brano duplicato</string>
     <string name="expand">Espandi</string>
     <string name="collapse">Riduci</string>
@@ -2269,7 +2269,7 @@
     <string name="move_to_bottom">Sposta in fondo</string>
     <string name="move_to_top">Sposta in cima</string>
     <string name="playback_error_message">Errore di riproduzione: %1$s</string>
-    <string name="playback_unable_to_play_queued_track">Impossibile riprodurre questa traccia in coda.</string>
+    <string name="playback_unable_to_play_queued_track">Impossibile riprodurre questo brano in coda.</string>
     <string name="token_login_sensitive_warning_generic">NON condividere il token.</string>
     <string name="legacy_shuffle">Riproduzione casuale classica</string>
     <string name="playlist_cover_updated">Copertina playlist aggiornata</string>
