@@ -1987,8 +1987,8 @@
     <string name="lyrics_offset_decrease">−%1$d ms</string>
     <string name="lyrics_offset_increase">+%1$d ms</string>
     <string name="milliseconds_unit">ms</string>
-    <string name="playlist_add_progress">Elaborate %1$d tracce su %2$d</string>
-    <string name="playlist_add_stopped">%1$d tracce aggiunte o già presenti; %2$d in attesa di conferma. Le tracce aggiunte sono state mantenute.</string>
+    <string name="playlist_add_progress">%1$d di %2$d brani elaborati</string>
+    <string name="playlist_add_stopped">%1$d brani completati o già presenti; %2$d restano non confermati. Le aggiunte completate sono state mantenute.</string>
     <string name="playlist_add_uncertain">L'ultima richiesta potrebbe essere andata a buon fine. Controlla la playlist prima di riprovare.</string>
     <string name="upload_sign_in_required">Accedi a YouTube Music prima di caricare brani.</string>
     <string name="upload_unsupported_type">YouTube Music non supporta questo formato. Convertilo in MP3, M4A, WMA, FLAC, o OGG prima di caricarlo. Anche i file Ogg Opus (.opus) sono supportati.</string>
@@ -2045,7 +2045,7 @@
     <string name="varispeed">Varispeed</string>
     <string name="varispeed_description">Collega la tonalità alla velocità per accelerare e rallentare come su un nastro</string>
     <string name="audio_track_playback_params">Elaborazione audio hardware</string>
-    <string name="audio_track_playback_params_description">Usa l'AudioTrack di Android per la velocità di riproduzione. I cambi di tonalità vengono elaborati via software. Richiede il riavvio dell'app.</string>
+    <string name="audio_track_playback_params_description">Usa AudioTrack di Android per la velocità di riproduzione. Per le modifiche dell'intonazione, l'app passa automaticamente all'elaborazione software. Richiede il riavvio dell'app.</string>
     <string name="no_other_devices_nearby">Nessun dispositivo nelle vicinanze</string>
     <string name="recognition_match_found">Corrispondenza trovata</string>
     <string name="recognition_listening_hint">Mantieni il telefono vicino alla musica</string>
@@ -2085,7 +2085,7 @@
     <string name="leave">Abbandona</string>
     <string name="room_code">Codice Stanza</string>
     <string name="create_room">Crea Stanza</string>
-    <string name="suggest_track">Consiglia un Brano</string>
+    <string name="suggest_track">Suggerisci un brano</string>
     <string name="reconnect">Riconnettiti</string>
     <string name="all">Tutti</string>
     <string name="errors">Errori</string>
@@ -2104,7 +2104,7 @@
     <string name="auto_playlist_cached_subtitle">Brani salvati nella cache</string>
     <string name="auto_playlist_uploaded_title">Caricati</string>
     <string name="auto_playlist_uploaded_subtitle">I tuoi brani caricati</string>
-    <string name="import_status_matching_tracks">Sto abbinando la traccia %1$d di %2$d: %3$s…</string>
+    <string name="import_status_matching_tracks">Abbinamento brano %1$d di %2$d: %3$s…</string>
     <string name="canvas">Canvas</string>
     <string name="library_grid_columns">Colonne della griglia della raccolta</string>
     <string name="canvas_cache">Cache canvas</string>
@@ -2145,7 +2145,7 @@
     <string name="download_error_network">Connessione non riuscita. Controlla la connessione e riprova.</string>
     <string name="download_error_generic">Download non riuscito. Riprova.</string>
     <string name="amazon_music_marketplace">Scegli il tuo mercato Amazon Music</string>
-    <string name="import_cancelled_partial">Importazione annullata. Destinazione: %2$s. Brani salvati: almeno %1$d. Per continuare, importa di nuovo e scegli questa destinazione.</string>
+    <string name="import_cancelled_partial">Importazione annullata. Destinazione: %2$s. Brani salvati: almeno %1$d. Per continuare, avvia di nuovo l'importazione e scegli questa destinazione.</string>
     <string name="recognition_history_save_failed">Impossibile salvare questo brano nella cronologia dei brani riconosciuti.</string>
     <string name="device_connect_server_failed">Impossibile avviare Device Connect. Controlla la rete e riprova.</string>
     <string name="device_connect_discovery_failed">Ricerca dei dispositivi non riuscita. Controlla l'accesso alla rete locale e ripeti la ricerca.</string>
@@ -2308,7 +2308,7 @@
     <string name="settings_storage_summary">%1$s usati • %2$s liberi</string>
     <string name="live">LIVE</string>
     <string name="playback_event_log_raw_description">Diagnostica di riproduzione sempre attiva. Copia o esporta questo log in caso di errori.</string>
-    <string name="playback_event_log_raw_empty">Nessun evento di riproduzione. Riproduci una traccia per acquisire la diagnostica.</string>
+    <string name="playback_event_log_raw_empty">Nessun evento di riproduzione ancora registrato. Riproduci un brano per acquisire i dati diagnostici.</string>
     <string name="download_error_incomplete">YouTube non ha provvisto il file audio completo. Riprova più tardi o usa una rete diversa.</string>
     <string name="chip_content_description">%1$s, chip</string>
     <string name="global_lyrics_offset">Offset globale testi</string>
@@ -2327,8 +2327,8 @@
     <string name="statistics_share_failed">Non è stato possibile creare o condividere l'immagine delle statistiche. Riprova.</string>
     <string name="queue_move">Sposta</string>
     <string name="queue_multi_select">Selezione multipla</string>
-    <string name="queue_move_hint">Sposta: premi OK per selezionare o posizionare una traccia, Su/Giù per spostarla, e Indietro per terminare.</string>
-    <string name="queue_select_hint">Selezione multipla: premi OK per selezionare le tracce. Premi Destra o tieni premuto OK per aprire le azioni.</string>
+    <string name="queue_move_hint">Sposta: premi OK per prendere o posizionare un brano, Su/Giù per spostarlo e Indietro per terminare.</string>
+    <string name="queue_select_hint">Selezione multipla: premi OK per selezionare i brani. Premi Destra o tieni premuto OK per aprire le azioni.</string>
     <string name="device_connect_direct_title">Connettiti con indirizzo IP</string>
     <string name="device_connect_direct_address">Indirizzo IP e porta</string>
     <string name="device_connect_direct_hint">Questo dispositivo ascolta sulla porta %1$d. Immetti l'IP della LAN o VPN dell'altro dispositivo e la sua porta di ascolto come IPv4:porta o [IPv6]:porta. Confronta il codice di accoppiamento su entrambi i dispositivi.</string>
