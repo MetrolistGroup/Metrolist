@@ -445,7 +445,9 @@ internal class AndroidQueueCoordinator(
         if (seed.isUnavailable || BlockedContent.isBlocked(seed)) return
         val title = context.getString(R.string.song_mix_title, seed.title)
         val current = player.currentSong.value?.takeIf { it.id == seed.id }
-        val remote = castState().takeIf { it.isConnected }?.forQueueEntry(player.queueState.value)
+        val remote = castState()
+            .takeIf { it.isConnected && it.queueEntry != null }
+            ?.forQueueEntry(player.queueState.value)
         if (AndroidDeviceConnect.intercept(
                 DcPlaybackCommand(
                     DcPlaybackAction.REPLACE_QUEUE,
@@ -469,6 +471,7 @@ internal class AndroidQueueCoordinator(
                 if (remote != null) {
                     val state = player.queueState.value
                     player.removeQueueItems(state.entries.indices.filterTo(mutableSetOf()) { it != state.currentIndex })
+                    if (!Settings.shared.persistentShuffleAcrossQueues && player.isShuffleEnabled) player.toggleShuffle()
                 } else {
                     val queue = MusicQueue().apply { setQueue(listOf(current)) }
                     if (Settings.shared.persistentShuffleAcrossQueues &&
