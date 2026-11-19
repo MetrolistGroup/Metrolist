@@ -1990,7 +1990,17 @@ fun PlayerScreen(
                                                             } else {
                                                                 MaterialTheme.typography.titleMedium
                                                             },
-                                                        color = textBackgroundColor.copy(alpha = 0.7f),
+                                                        color =
+                                                            textBackgroundColor.copy(
+                                                                alpha =
+                                                                    if (playerBackground == PlayerBackgroundStyle.LIQUID &&
+                                                                        MaterialTheme.colorScheme.surface.luminance() >= 0.5f
+                                                                    ) {
+                                                                        1f
+                                                                    } else {
+                                                                        0.7f
+                                                                    },
+                                                            ),
                                                         modifier =
                                                             Modifier
                                                                 .then(
