@@ -44,9 +44,30 @@
     },
     {
       "glob": "version.properties"
+    },
+    {
+      "glob": "sentry-debug-meta.properties"
+    },
+    {
+      "glob": "sentry-external-modules.txt"
     }
   ],
   "reflection": [
+    {
+      "type": "io.sentry.opentelemetry.OtelContextScopesStorage"
+    },
+    {
+      "type": "io.sentry.opentelemetry.OtelSpanFactory"
+    },
+    {
+      "type": "io.sentry.opentelemetry.agent.AgentMarker"
+    },
+    {
+      "type": "io.sentry.opentelemetry.agent.AgentlessMarker"
+    },
+    {
+      "type": "io.sentry.opentelemetry.agent.AgentlessSpringMarker"
+    },
     {
       "type": "java.awt.AWTError",
       "jniAccessible": true,

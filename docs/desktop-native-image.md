@@ -1,19 +1,21 @@
 # Desktop Native Image
 
-## Opt-in native tester builds
+## Native builds
 
 The supported path keeps Serial GC, `-Os`, a 32 MiB initial heap and a 384 MiB maximum heap. It compiles with `-march=compatibility`, because GraalVM's default x86-64-v3 target exits on x64 CPUs without AVX2, FMA or BMI2 and its default ARM target excludes Raspberry Pi 4 class cores. The measurements below used the default target. GraalVM 25.0.4 downloads and SHA-256 hashes live in [graalvm-pins.json](../scripts/graalvm-pins.json). The hashes come from Oracle's adjacent `.sha256` URLs. Local Linux builds use `/mnt/work/tools/graalvm-25`; do not download or unpack a builder under RAM-backed `/tmp`.
 
 | Target | Build and package | CI state |
 | --- | --- | --- |
-| Linux x64 | Native app directory and AppImage | Dispatch or reusable push caller |
-| Windows x64 | Native app directory and portable ZIP | Dispatch or reusable push caller |
+| Linux x64 | Native app directory and AppImage | Stable releases, nightlies and dispatch |
+| Windows x64 | Native app directory and portable ZIP | Stable releases, nightlies and dispatch |
 | macOS ARM64 | Native `.app` and ZIP built; font configuration fix awaits CI verification | Dispatch or reusable push caller |
 | Linux ARM64 | Native app directory and AppImage | Dispatch or reusable push caller |
 | Windows ARM64 | JVM only | No GraalVM distribution ships a Windows AArch64 builder |
 | macOS Intel | JVM only | Oracle GraalVM 25 dropped macOS x64 |
 
-Windows ARM64 and macOS Intel keep their JVM packages. Every existing JVM package stays the default. The native Linux artifact has a separate `metrolist-desktop-native-linux-x64-<version>.AppImage` name. Native Windows uses `Metrolist.exe`, the existing portable install-manifest schema, and `resources/windows` login helper/checksum layout. Its ZIP has a separate native filename. The native path validates Windows launcher/helper/DLL architecture and helper checksums. Linux packages require ELF64 libraries and executables with the target machine type. macOS packages require ARM64 Mach-O libraries and executables, including loose sidecars under `Contents/Resources`.
+Windows ARM64 and macOS Intel keep their JVM packages, as do Linux ARM64 and macOS ARM64 in stable releases. The native packager names its outputs `metrolist-desktop-native-<platform>-<version>`; stable and nightly publication rename them to the JVM asset names. Native Windows uses `Metrolist.exe`, the existing portable install-manifest schema, and `resources/windows` login helper/checksum layout, so the Windows installer installs and updates it unchanged. To return releases to JVM x64 packages, revert the release workflow change that added the native jobs; partial edits leave the manager, publish and cleanup jobs depending on them.
+
+Crash reporting follows the JVM build. `SentryManager` treats the native image as a packaged application, the image bundles `sentry-debug-meta.properties`, and the strict smoke initializes Sentry, checks the bundle ID and serializes an event through an in-memory transport. On Windows it also reads the registry through the JNA calls the update manager handoff uses. The native path validates Windows launcher/helper/DLL architecture and helper checksums. Linux packages require ELF64 libraries and executables with the target machine type. macOS packages require ARM64 Mach-O libraries and executables, including loose sidecars under `Contents/Resources`.
 
 ### Build locally
 
@@ -60,9 +62,9 @@ All files under `Contents/MacOS` must be ARM64 Mach-O code. Packaging adds `@exe
 
 ### CI, metadata and caches
 
-Run `build-desktop-native.yml` manually with one target. Linux x64 and Windows x64 use Blacksmith 8-vCPU runners for builder memory, rather than adding CPUs to existing JVM jobs. Linux ARM64 also uses 8; macOS ARM64 uses the existing 6-vCPU Apple Silicon tier. All four targets run without repository enable variables. The reusable workflow also accepts push callers and rejects pull requests and schedules. Each build runs on its target OS and architecture. The [nightly workflow](releasing.md#nightly-prereleases) builds Linux x64 and Windows x64 after eligible main pushes. Check actual hosted time before adding more push targets or scheduling builds.
+Run `build-desktop-native.yml` manually with one target. Linux x64 and Windows x64 use Blacksmith 8-vCPU runners for builder memory, rather than adding CPUs to existing JVM jobs. Linux ARM64 also uses 8; macOS ARM64 uses the existing 6-vCPU Apple Silicon tier. All four targets run without repository enable variables. The reusable workflow also accepts push callers, including release tags, and rejects pull requests and schedules. Each build runs on its target OS and architecture. The [nightly workflow](releasing.md#nightly-prereleases) builds Linux x64 and Windows x64 after eligible main pushes. Check actual hosted time before adding more push targets or scheduling builds.
 
-Stable releases keep JVM desktop packages. The rolling nightly prerelease includes the native Linux x64 AppImage and Windows x64 portable ZIP. Native packages and their separate evidence archives remain available as workflow artifacts of the calling run.
+Stable releases and the rolling nightly prerelease publish the native Linux x64 AppImage and Windows x64 portable ZIP; stable Linux ARM64, Windows ARM64 and macOS packages stay on the JVM. Stable release native jobs also run the strict launch smoke. Download stable native packages from the published release; the release run deletes its `release-` package artifacts after publishing. Each native job's `desktop-native-<platform>-evidence` archive stays a workflow artifact for four days, and nightly and dispatched runs also keep the package artifact for four days.
 
 The toolchain cache holds only the original builder archives. Its key covers OS, architecture, the complete pin manifest and installer source. Every restore rechecks SHA-256 and extracts afresh. A missing or corrupt cache triggers a verified download. Native images, profiles, traces and compiled application outputs are never cached. Native jobs restore Gradle caches read-only, disable the Gradle build cache and do not persist configuration caches, so generated credentials cannot enter new caches. Every native invocation performs a full build from current classes, metadata, resources and sidecars.
 

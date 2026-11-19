@@ -113,9 +113,9 @@ class StableReleaseNotesTest(unittest.TestCase):
     def test_checks_precede_all_stable_packaging_and_leave_tester_notes_separate(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text()
         self.assertLess(workflow.index('- name: Validate release notes'), workflow.index('- name: Require prior verification'))
-        for job in ('android', 'windows', 'linux', 'macos', 'ios', 'windows-manager'):
+        for job in ('android', 'windows-native', 'windows', 'linux-native', 'linux', 'macos', 'ios', 'windows-manager'):
             block = re.search(rf'(?ms)^  {job}:\n(.*?)(?=^  \S|\Z)', workflow)[1]
-            self.assertIn('    needs: prepare\n', block)
+            self.assertRegex(block, r'    needs: (prepare|\[prepare, [a-z-]+\])\n')
 
     def test_real_fastlane_note_matches_android_code_and_store_limit(self):
         build = (ROOT / 'androidApp/build.gradle.kts').read_text()

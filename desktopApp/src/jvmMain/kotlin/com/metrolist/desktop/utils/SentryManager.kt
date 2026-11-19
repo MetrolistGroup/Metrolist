@@ -75,6 +75,8 @@ object SentryManager {
 
     private fun isPackagedApplication(): Boolean {
         if (System.getenv("SENTRY_ENABLE_DEVELOPMENT").toBoolean()) return true
+        // Native images have no JAR code source; only packaged builds are compiled ahead of time.
+        if (System.getProperty("org.graalvm.nativeimage.imagecode") == "runtime") return true
         val source =
             SentryManager::class.java.protectionDomain
                 ?.codeSource
