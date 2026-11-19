@@ -52,6 +52,7 @@ class XdgUtilsTest {
                     .joinToString(File.pathSeparator)
             val javaBin = File(System.getProperty("java.home"), "bin")
             val java = File(javaBin, "java").takeIf(File::isFile) ?: File(javaBin, "java.exe")
+            val errorFile = File(root, "probe-stderr.log")
             val process =
                 ProcessBuilder(
                     java.absolutePath,
@@ -61,7 +62,7 @@ class XdgUtilsTest {
                     XdgEnvironmentProbe::class.java.name,
                 ).apply {
                     directory(root)
-                    redirectErrorStream(true)
+                    redirectError(errorFile)
                     listOf("XDG_DATA_HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME", "XDG_CONFIG_HOME").forEach {
                         if (environmentValue == null) environment().remove(it) else environment()[it] = environmentValue
                     }
@@ -69,7 +70,7 @@ class XdgUtilsTest {
             try {
                 assertTrue(process.waitFor(15, TimeUnit.SECONDS), "XDG probe timed out")
                 val output = process.inputStream.bufferedReader().readLines()
-                assertEquals(0, process.exitValue(), output.joinToString("\n"))
+                assertEquals(0, process.exitValue(), output.joinToString("\n") + "\n" + errorFile.readText())
                 assertEquals(expected, output, "XDG environment: $environmentValue")
             } finally {
                 process.destroyForcibly()
