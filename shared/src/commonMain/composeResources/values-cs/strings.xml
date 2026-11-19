@@ -20,8 +20,8 @@
     <string name="keep_listening">Poslouchejte dál</string>
     <string name="similar_to">Podobné</string>
     <string name="new_releases">Nově vydané</string>
-    <string name="podcasts_for_you">Podcasty pro tebe</string>
-    <string name="recap">Shrnutí</string>
+    <string name="podcasts_for_you">Podcasty pro vás</string>
+    <string name="recap">Recap</string>
     <string name="home_unavailable">Domovská stránka není k dispozici</string>
     <string name="today">Dnes</string>
     <string name="yesterday">Včera</string>
@@ -29,7 +29,7 @@
     <string name="last_week">Minulý týden</string>
     <string name="most_viewed_videos">Nejsledovanější videoklipy</string>
     <string name="search">Vyhledávání</string>
-    <string name="search_library">Prohledej svou knihovnu</string>
+    <string name="search_library">Prohledejte svou knihovnu</string>
     <string name="filter_library">Knihovna</string>
     <string name="filter_downloaded">Stažené</string>
     <string name="filter_all">Vše</string>
@@ -47,7 +47,7 @@
     <string name="edit">Upravit</string>
     <string name="start_radio">Spustit rádio</string>
     <string name="play">Přehrát</string>
-    <string name="pause">Pauza</string>
+    <string name="pause">Pozastavit</string>
     <string name="play_next">Přehrát jako další</string>
     <string name="add_to_queue">Přidat do fronty</string>
     <string name="remove_from_library">Odebrat z knihovny</string>
@@ -56,7 +56,7 @@
     <string name="download_notification_paused">Stahování pozastaveno</string>
     <string name="downloads_completed">Stahování dokončeno</string>
     <string name="downloads_finished">Stahování dokončeno</string>
-    <string name="completed_downloads">Stahování dokončeno</string>
+    <string name="completed_downloads">Dokončená stahování</string>
     <string name="download_completion_summary">Staženo: %1$d, nezdařilo se: %2$d</string>
     <plurals name="download_notification_progress">
         <item quantity="one">Staženo %1$d z %2$d skladby, %3$d se nezdařilo stáhnout</item>
@@ -75,7 +75,7 @@
     <string name="refetch">Obnovit</string>
     <string name="share">Sdílet</string>
     <string name="delete">Odstranit</string>
-    <string name="remove_from_queue">Odstranit z fronty</string>
+    <string name="remove_from_queue">Odebrat z fronty</string>
     <string name="search_online">Hledat online</string>
     <string name="sort_by_create_date">Datum přidání</string>
     <string name="sort_by_name">Název</string>
@@ -91,8 +91,8 @@
     <string name="file_size">Velikost souboru</string>
     <string name="unknown">Neznámé</string>
     <string name="copied">Zkopírováno do schránky</string>
-    <string name="edit_lyrics">Upravit texty</string>
-    <string name="search_lyrics">Hledat texty</string>
+    <string name="edit_lyrics">Upravit text skladby</string>
+    <string name="search_lyrics">Hledat v textu</string>
     <string name="select_songs">Vybrat skladby</string>
     <string name="edit_song">Upravit skladbu</string>
     <string name="song_title">Název skladby</string>
@@ -2052,7 +2052,7 @@
     <string name="choose_from_library">Vybrat z knihovny</string>
     <string name="remove_custom_image">Odstranit vlastní obrázek</string>
     <string name="downloads_empty_hint">Skladby, které si uložíte pro offline poslech, se zde zobrazí, zatímco se stahují.</string>
-    <string name="edit_playlist_cover_note">Tvůj účet musí být propojen s telefonním číslem a ověřen na YouTube Music pro změnu obalu playlistu</string>
+    <string name="edit_playlist_cover_note">Váš účet musí být propojen s telefonním číslem a ověřen na YouTube Music pro změnu obalu playlistu</string>
     <string name="edit_playlist_cover_note_wait">Po výběru obrázku chvíli počkejte, než se nový obal zobrazí ve vašem playlistu</string>
     <string name="playlist_cover_update_failed">Nepodařilo se aktualizovat obal playlistu</string>
     <string name="bottom_sheet_pane_title">Spodní panel</string>
@@ -2100,7 +2100,7 @@
     <string name="recognition_no_match_message">Nepodařilo se nám identifikovat tuto skladbu.</string>
     <string name="import_error_playlist_tracks_unavailable">Skladby playlistu z %1$s se nepodařilo načíst. Exportujte playlist a vložte seznam skladeb.</string>
     <string name="import_error_album_tracks_unavailable">Skladby alba z %1$s se nepodařilo načíst. Exportujte album a vložte seznam skladeb.</string>
-    <string name="verified_artists">Ověření interpreti</string>
+    <string name="verified_artists">Ověření umělci</string>
     <string name="onboarding_welcome_privacy_description">Nastavte si soukromí před prvním poslechem.</string>
     <string name="import_notification_progress_channel_name">Průběh importu playlistu</string>
     <string name="cast_discovery_failed">Nepodařilo se vyhledat zařízení Cast. Zavřete a znovu otevřete výběr zařízení a zkuste to znovu.</string>
