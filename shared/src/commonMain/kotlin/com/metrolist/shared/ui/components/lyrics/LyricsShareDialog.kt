@@ -256,6 +256,7 @@ fun LyricsShareDialog(
                     .heightIn(max = 880.dp)
                     .fillMaxHeight(0.9f),
             shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
@@ -310,7 +311,7 @@ fun LyricsShareDialog(
                         }
                         if (!storyMode) {
                             item {
-                                Text(stringResource(Res.string.player_background_style))
+                                Text(stringResource(Res.string.player_background_style), style = MaterialTheme.typography.titleSmall)
                                 val scrollState = rememberScrollState()
                                 Row(
                                     Modifier.fillMaxWidth().carouselScroll(scrollState).horizontalScroll(scrollState),
@@ -463,26 +464,23 @@ private fun LyricsColorSwatches(
 ) {
     Text(label, style = MaterialTheme.typography.titleSmall)
     val scrollState = rememberScrollState()
-    Row(Modifier.fillMaxWidth().carouselScroll(scrollState).horizontalScroll(scrollState)) {
+    Row(
+        Modifier.fillMaxWidth().carouselScroll(scrollState).horizontalScroll(scrollState),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         colors.forEach { color ->
             val description = stringResource(Res.string.lyrics_share_color, label, color.toArgb().toUInt().toString(16))
             Box(
                 Modifier
-                    .size(56.dp)
+                    .size(48.dp)
                     .semantics { contentDescription = description }
                     .selectable(selected = color == selected, enabled = enabled, role = Role.RadioButton, onClick = { onSelect(color) })
-                    .padding(3.dp)
-                    .background(color, RoundedCornerShape(8.dp))
+                    .padding(4.dp)
+                    .background(color, RoundedCornerShape(10.dp))
                     .border(
-                        2.dp,
-                        if (color ==
-                            selected
-                        ) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.outline
-                        },
-                        RoundedCornerShape(8.dp),
+                        if (color == selected) 2.dp else 1.dp,
+                        if (color == selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                        RoundedCornerShape(10.dp),
                     ),
             )
         }

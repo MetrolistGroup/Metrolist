@@ -147,7 +147,10 @@ internal fun renderLyricsImage(
             density = density,
             layoutDirection = layoutDirection,
         )
-    val fit = fitLyricsImageText(textHeight, style.textScale) { measureLyrics(it).size.height.toFloat() }
+    val fit =
+        fitLyricsImageText(textHeight, style.textScale, maxFontSize = if (story) 34f else 50f) {
+            measureLyrics(it).size.height.toFloat()
+        }
     val lyricsLayout = measureLyrics(fit.fontSize)
     val renderedLyricsHeight = lyricsLayout.size.height * fit.drawScale
     val footerTop =
@@ -294,12 +297,12 @@ internal fun renderLyricsImage(
                 radius = 10 * footerScale,
                 center =
                     Offset(
-                        padding + 24f * footerScale,
+                        padding + 28f * footerScale,
                         (footerTop + verticalOffset) * scale + 14 * footerScale,
                     ),
             )
             translate(
-                padding + 14f * footerScale,
+                padding + 18f * footerScale,
                 (footerTop + verticalOffset) * scale + 4 * footerScale,
             ) {
                 with(logo) {
@@ -311,7 +314,7 @@ internal fun renderLyricsImage(
             }
             label(
                 appName,
-                layout.padding + 48f * contentScale,
+                layout.padding + 44f * contentScale,
                 footerTop + verticalOffset + 8f * contentScale,
                 12f * contentScale,
                 if (story) storySecondaryColor else style.secondaryColor,

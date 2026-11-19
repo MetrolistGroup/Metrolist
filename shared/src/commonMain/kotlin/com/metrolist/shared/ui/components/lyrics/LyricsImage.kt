@@ -103,6 +103,7 @@ internal data class LyricsTextFit(
 internal fun fitLyricsImageText(
     height: Float,
     textScale: Float,
+    maxFontSize: Float = 50f,
     measureHeight: (Float) -> Float,
 ): LyricsTextFit {
     fun fit(maximum: Float): Float {
@@ -114,7 +115,7 @@ internal fun fitLyricsImageText(
         }
         return low
     }
-    val automatic = fit(50f)
+    val automatic = fit(maxFontSize)
     val requested = automatic * textScale.coerceIn(0.5f, 2f)
     val fontSize = if (requested <= automatic) requested else fit(requested)
     return LyricsTextFit(fontSize, (height / measureHeight(fontSize).coerceAtLeast(1f)).coerceAtMost(1f))
