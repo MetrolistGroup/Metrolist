@@ -85,6 +85,7 @@ object LibraryContentState {
         private set
     private var unfilteredLibraryItems: List<YTItem> = emptyList()
     private val playlistSources = UserPlaylistSourceCache()
+    private val playlistRenameRequests = PlaylistRenameRequests()
     private var playlistObservationJob: Job? = null
     private var playlistRefreshJob: Job? = null
     private var playlistRefreshGeneration = 0L
@@ -181,11 +182,13 @@ object LibraryContentState {
     ) {
         AppState.scope.launch {
             val result =
-                withContext(Dispatchers.IO) {
-                    renameStoredPlaylist(database, GlobalYouTubeRepository.instance, playlist.id, name)
+                playlistRenameRequests.save(playlist.id) {
+                    withContext(Dispatchers.IO) {
+                        renameStoredPlaylist(database, GlobalYouTubeRepository.instance, playlist.id, name)
+                    }
                 }
-            if (result.isSuccess) fetchLibraryData(force = true)
             onResult(result)
+            if (result.isSuccess) fetchLibraryData(force = true)
         }
     }
 
