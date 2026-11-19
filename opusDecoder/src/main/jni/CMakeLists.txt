@@ -14,6 +14,9 @@ set(OPUS_DRED OFF CACHE BOOL "" FORCE)
 set(OPUS_OSCE OFF CACHE BOOL "" FORCE)
 set(OPUS_INSTALL_PKG_CONFIG_MODULE OFF CACHE BOOL "" FORCE)
 set(OPUS_INSTALL_CMAKE_CONFIG_MODULE OFF CACHE BOOL "" FORCE)
+# libopus embeds `git describe` output as its version, which depends on clone depth and tags; skip it so
+# every checkout builds the same library.
+set(CMAKE_DISABLE_FIND_PACKAGE_Git ON)
 
 # libopus' hardening asserts embed __FILE__; map the checkout path away so builds are reproducible.
 set(opus_common_flags "-ffunction-sections -fdata-sections -ffile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}=.")
