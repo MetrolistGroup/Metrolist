@@ -289,7 +289,7 @@ internal fun renderLyricsImage(
                         else -> textWidth * (1f - fit.drawScale) / 2f
                     }
             clipRect(textLeft, textTop, textLeft + textWidth, textTop + textHeight) {
-                translate(textX, textTop + (textHeight - lyricsLayout.size.height * fit.drawScale) / 2f) {
+                translate(textX, textTop) {
                     scale(fit.drawScale, pivot = Offset.Zero) { drawText(lyricsLayout) }
                 }
             }
