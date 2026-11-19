@@ -113,12 +113,10 @@ internal fun renderLyricsImage(
     val width = layout.lyricsWidth * scale
     val lyricsTop = layout.lyricsTop * scale
     val lyricsHeight = layout.lyricsHeight * scale
-    val lyricsInsetX = if (story) 12f * contentScale * scale else 0f
-    val lyricsInsetY = if (story) 10f * contentScale * scale else 0f
-    val textWidth = width - 2 * lyricsInsetX
-    val textHeight = lyricsHeight - 2 * lyricsInsetY
-    val textLeft = padding + lyricsInsetX
-    val textTop = lyricsTop + lyricsInsetY
+    val textWidth = width
+    val textHeight = lyricsHeight
+    val textLeft = padding
+    val textTop = lyricsTop
     val textStyle =
         TextStyle(
             color = style.textColor,
@@ -195,6 +193,23 @@ internal fun renderLyricsImage(
                     if (story) drawRect(Color.Black.copy(alpha = 0.16f))
                 }
             }
+            if (story) {
+                val cardTop = layout.cardTop * scale
+                val cardHeight = (layout.cardBottom - layout.cardTop) * scale
+                drawRoundRect(
+                    Color.Black.copy(alpha = 0.4f),
+                    topLeft = Offset(padding, cardTop),
+                    size = Size(width, cardHeight),
+                    cornerRadius = CornerRadius(28f * scale),
+                )
+                drawRoundRect(
+                    Color.White.copy(alpha = 0.16f),
+                    topLeft = Offset(padding, cardTop),
+                    size = Size(width, cardHeight),
+                    cornerRadius = CornerRadius(28f * scale),
+                    style = Stroke(width = scale),
+                )
+            }
             artwork?.let {
                 val topLeft = Offset(layout.artworkX * scale, layout.artworkTop * scale)
                 val artworkSide = layout.artworkSize * scale
@@ -248,21 +263,6 @@ internal fun renderLyricsImage(
             val headerWidth = if (story) layout.lyricsWidth else 340f - layout.padding - headerX
             label(title, headerX, layout.titleTop, 20f * contentScale, style.textColor, headerWidth, centered = story)
             label(artist, headerX, layout.artistTop, 16f * contentScale, style.secondaryColor, headerWidth, centered = story)
-            if (story) {
-                drawRoundRect(
-                    Color.Black.copy(alpha = 0.22f),
-                    topLeft = Offset(padding, lyricsTop),
-                    size = Size(width, lyricsHeight),
-                    cornerRadius = CornerRadius(22f * scale),
-                )
-                drawRoundRect(
-                    Color.White.copy(alpha = 0.18f),
-                    topLeft = Offset(padding, lyricsTop),
-                    size = Size(width, lyricsHeight),
-                    cornerRadius = CornerRadius(22f * scale),
-                    style = Stroke(width = scale),
-                )
-            }
             val textX =
                 textLeft +
                     when (style.alignment) {
