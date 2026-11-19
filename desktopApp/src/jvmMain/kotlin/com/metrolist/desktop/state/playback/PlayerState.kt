@@ -3937,6 +3937,7 @@ object PlayerState {
             }
             return
         }
+        desiredPlayback.value = true
         initialRecommendationsGeneration = generation
         playbackTransitionJob =
             scope.launch {
@@ -3979,17 +3980,27 @@ object PlayerState {
                             ?: recommendations.await().firstOrNull { it.id == videoId }
                             ?: run {
                                 if (isCurrentPlayFromIdRequest()) {
+                                    desiredPlayback.value = false
                                     reportPlayerError(getString(Res.string.playback_error_track_not_found))
                                 }
                                 return@launch
                             }
-                    if (!isCurrentPlayFromIdRequest() || isSongBlocked(target)) {
+                    if (!isCurrentPlayFromIdRequest()) return@launch
+                    if (isSongBlocked(target)) {
+                        desiredPlayback.value = false
                         return@launch
                     }
                     if (castManager.state.value.isConnected) {
                         replaceQueue(listOf(target), 0)
                         queueReplaced = true
-                        if (playCastTrack(target, generation, true, canCommit = ::canCommitPlayFromIdPlayback)) {
+                        val shouldStartCast = playbackTransitions.playbackIntent(desiredPlayback.value)
+                        if (playCastTrack(
+                                target,
+                                generation,
+                                shouldStartCast,
+                                canCommit = ::canCommitPlayFromIdPlayback,
+                            )
+                        ) {
                             val songs = recommendations.await()
                             if (Settings.shared.autoLoadMore && canCommitPlayFromIdPlayback()) {
                                 appendRadioRecommendations(songs, generation)
@@ -4008,22 +4019,31 @@ object PlayerState {
                             queueReplaced = true
                         }
                         val pendingTransitionId = player.beginPendingPlayback(target)
+                        val shouldStartLocal = playbackTransitions.playbackIntent(desiredPlayback.value)
                         val played =
                             withContext(Dispatchers.IO) {
                                 player.playPending(
                                     target,
                                     resource,
                                     pendingTransitionId,
-                                    startPaused = false,
-                                    shouldCommit = ::canCommitPlayFromIdPlayback,
-                                )
+                                    startPaused = !shouldStartLocal,
+                                ) {
+                                    canCommitPlayFromIdPlayback()
+                                }
                             }
                         if (played && canCommitPlayFromIdPlayback()) {
+                            val keepPlaying = playbackTransitions.playbackIntent(desiredPlayback.value)
                             onTrackPlaybackStarted(target, resource, generation)
+                            if (!keepPlaying) {
+                                desiredPlayback.value = false
+                                player.setPlaying(false)
+                                video.pause()
+                            }
                         } else if (!played && canCommitPlayFromIdPlayback()) {
                             video.setResolving(false)
                         }
                     } else {
+                        desiredPlayback.value = false
                         reportPlayerError(getString(Res.string.playback_error_unable_to_play_link))
                         return@launch
                     }
@@ -4037,6 +4057,7 @@ object PlayerState {
                     val canReportError =
                         if (queueReplaced) canCommitPlayFromIdPlayback() else isCurrentPlayFromIdRequest()
                     if (canReportError) {
+                        desiredPlayback.value = false
                         reportPlayerError(getString(Res.string.playback_error_unable_to_play_link))
                     }
                 }
