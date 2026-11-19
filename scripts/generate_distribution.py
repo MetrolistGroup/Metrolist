@@ -108,6 +108,7 @@ def generate(assets_dir, metadata, output):
         nix = stage / "nix"
         (nix / "packaging/nix").mkdir(parents=True)
         shutil.copyfile(ROOT / "flake.nix", nix / "flake.nix")
+        shutil.copyfile(ROOT / "flake.lock", nix / "flake.lock")
         for recipe in ("package.nix", "darwin.nix"):
             shutil.copyfile(ROOT / "packaging/nix" / recipe, nix / "packaging/nix" / recipe)
         (nix / "packaging/release.json").write_text(json.dumps(release, indent=2) + "\n")

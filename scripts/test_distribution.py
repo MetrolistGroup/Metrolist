@@ -63,6 +63,13 @@ class DistributionTest(unittest.TestCase):
         if shutil.which('ruby'):
             subprocess.run(['ruby', '-c', str(self.output / 'homebrew/Casks/metrolist.rb')], check=True, capture_output=True)
 
+    def test_generated_nix_flake_keeps_the_matching_input_lock(self):
+        self.generate()
+        source = Path(__file__).resolve().parents[1]
+        generated = self.output / 'nix'
+        for name in ('flake.nix', 'flake.lock'):
+            self.assertEqual((source / name).read_bytes(), (generated / name).read_bytes())
+
     def test_rejects_unpublished_wrong_repository_and_nonstable_releases(self):
         for key, value in [('tagName', 'v14.0.0-rc7'), ('tagName', '../14.0.0'),
                            ('isDraft', True), ('isPrerelease', True),
