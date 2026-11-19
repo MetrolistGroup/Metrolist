@@ -607,6 +607,45 @@ class DesktopPlaybackLibraryTest {
         }
 
     @Test
+    fun aNewPickerRequestDoesNotShowPreviousResultsAfterEarlyLoadFailure() =
+        runTest {
+            for (timesOut in listOf(false, true)) {
+                val song = SongItem("song", "Song", null, emptyList(), null)
+                val oldPlaylist = PlaylistItem("PLprevious", "Previous", null, isEditable = true)
+                var loadCount = 0
+                val library =
+                    DesktopPlaybackLibrary(
+                        scope = this,
+                        database = { error("Use the injected loader") },
+                        loadPlaylists = { _, _ ->
+                            when {
+                                loadCount++ == 0 -> listOf(oldPlaylist)
+                                timesOut -> awaitCancellation()
+                                else -> error("local playlists unavailable")
+                            }
+                        },
+                        playlistSongIds = { emptySet() },
+                    )
+                library.showAddToPlaylistSong = song
+                library.fetchUserPlaylists(song, signedIn = true)
+                runCurrent()
+                assertEquals(listOf(oldPlaylist), library.userPlaylists)
+
+                library.dismissAddToPlaylist()
+                library.showAddToPlaylistSong = song
+                library.fetchUserPlaylists(song, signedIn = true)
+                runCurrent()
+                if (timesOut) {
+                    advanceTimeBy(60.seconds)
+                    runCurrent()
+                }
+
+                assertFalse(library.isUserPlaylistsLoading)
+                assertEquals(emptyList(), library.userPlaylists)
+            }
+        }
+
+    @Test
     fun storedLocalAndSyncedPlaylistsStayUsableWhenTheRemoteListNeverLoads() =
         runTest {
             val song = SongItem(id = "song", title = "Song", artists = emptyList(), thumbnail = null, album = null)

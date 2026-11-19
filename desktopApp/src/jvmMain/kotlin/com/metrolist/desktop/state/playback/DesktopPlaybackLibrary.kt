@@ -144,6 +144,7 @@ internal class DesktopPlaybackLibrary(
         val generation = ++playlistRequestGeneration
         fetchUserPlaylistsJob?.cancel()
         isUserPlaylistsLoading = true
+        userPlaylists = emptyList()
         userPlaylistMembership = emptySet()
 
         fun isCurrent() = generation == playlistRequestGeneration && showAddToPlaylistSongs == songs
