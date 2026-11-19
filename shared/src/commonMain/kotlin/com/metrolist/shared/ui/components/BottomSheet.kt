@@ -52,7 +52,6 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -124,6 +123,56 @@ private class BottomSheetClipShape(
 }
 
 /**
+ * Keeps one clip shape per sheet progress value and remembers its last outline, so the layer clip and the
+ * container drawing share a single outline per frame instead of each building their own path.
+ */
+private class PlayerSheetOutlineCache {
+    private var bounds: Rect? = null
+    private var style: PlayerSheetContainerStyle? = null
+    private var progress = Float.NaN
+    private var shape: Shape? = null
+
+    fun shape(
+        bounds: Rect,
+        style: PlayerSheetContainerStyle,
+        progress: Float,
+    ): Shape {
+        val cached = shape
+        if (cached != null && this.bounds == bounds && this.style == style && this.progress == progress) return cached
+        this.bounds = bounds
+        this.style = style
+        this.progress = progress
+        return MemoizedOutlineShape(PlayerSheetClipShape(bounds, style, progress)).also { shape = it }
+    }
+}
+
+private class MemoizedOutlineShape(
+    private val delegate: Shape,
+) : Shape {
+    private var size = Size.Unspecified
+    private var layoutDirection: LayoutDirection? = null
+    private var density = Float.NaN
+    private var outline: Outline? = null
+
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Outline {
+        val cached = outline
+        if (cached != null && this.size == size && this.layoutDirection == layoutDirection && this.density == density.density) {
+            return cached
+        }
+        return delegate.createOutline(size, layoutDirection, density).also {
+            outline = it
+            this.size = size
+            this.layoutDirection = layoutDirection
+            this.density = density.density
+        }
+    }
+}
+
+/**
  * Bottom Sheet
  * Modified from [ViMusic](https://github.com/vfsfitvnm/ViMusic)
  */
@@ -149,6 +198,7 @@ fun BottomSheet(
     val density = LocalDensity.current
     val container = remember(morphCollapsedContainer) { if (morphCollapsedContainer) PlayerSheetContainerState() else null }
     val artworkHandoff = remember(morphCollapsedContainer) { if (morphCollapsedContainer) PlayerArtworkHandoff() else null }
+    val outlineCache = remember { PlayerSheetOutlineCache() }
     val motionScheme = MaterialTheme.motionScheme
     val motion = remember(motionScheme) { PlayerSheetMotion(motionScheme) }
     val expandedColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 1f)
@@ -262,7 +312,7 @@ fun BottomSheet(
                     val style = container?.style
                     shape =
                         if (bounds != null && style != null) {
-                            PlayerSheetClipShape(bounds, style, state.progress)
+                            outlineCache.shape(bounds, style, state.progress.coerceIn(0f, 1f))
                         } else {
                             BottomSheetClipShape(
                                 progress = state.progress,
@@ -276,7 +326,7 @@ fun BottomSheet(
                                 collapsedHeaderHeightPx = collapsedHeaderHeight.toPx(),
                             )
                         }
-                    shadowElevation = if (style != null) style.elevation.toPx() * (1f - state.progress.coerceIn(0f, 1f)) else 0f
+                    shadowElevation = if (style != null) style.elevation.toPx() * (1f - state.progress.coerceIn(0f, 0.5f) * 2f) else 0f
                     clip = true
                 }.onGloballyPositioned { container?.coordinates = it }
                 .drawWithContent {
@@ -285,7 +335,7 @@ fun BottomSheet(
                     val progress = state.progress.coerceIn(0f, 1f)
                     val outline =
                         if (bounds != null && style != null) {
-                            PlayerSheetClipShape(bounds, style, progress).createOutline(size, layoutDirection, this)
+                            outlineCache.shape(bounds, style, progress).createOutline(size, layoutDirection, this)
                         } else {
                             BottomSheetClipShape(
                                 progress,
@@ -297,12 +347,8 @@ fun BottomSheet(
                         val color = if (style != null) lerp(style.color.copy(alpha = 1f), expandedColor, progress) else expandedColor
                         drawOutline(outline, color)
                     }
-                    if (outline is Outline.Generic) {
-                        // Bound retained player content to the Expressive path during sheet motion.
-                        clipPath(outline.path) { this@drawWithContent.drawContent() }
-                    } else {
-                        drawContent()
-                    }
+                    // The graphicsLayer above already clips to this outline; clipping again doubles the path mask cost.
+                    drawContent()
                     if (style?.border != null && bounds != null && progress < 1f) {
                         drawOutline(outline, style.border.brush, alpha = 1f - progress, style = Stroke(style.border.width.toPx() * 2f))
                     }
