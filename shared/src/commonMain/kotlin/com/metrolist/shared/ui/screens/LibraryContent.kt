@@ -1147,7 +1147,7 @@ private fun librarySongCount(item: YTItem): Int? =
     when (item) {
         is ArtistItem -> item.songCount
         is AlbumItem -> item.songCount
-        is PlaylistItem -> item.songCount?.toIntOrNull()
+        is PlaylistItem -> parseDisplayCount(item.songCount)
         else -> null
     }
 
