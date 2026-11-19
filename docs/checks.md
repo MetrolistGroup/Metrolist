@@ -39,6 +39,8 @@ For keyboard and Android TV focus, traverse Home, Library, Search, album/artist/
 
 On Android TV, in song and player menus, Radio and Add to playlist share the primary row with no Share action. Check full, landscape, tablet and fullscreen video players in Standard, Classic and Vintage. Cast and Share stay hidden, Like still works, and D-pad traversal skips removed controls. Repeat with Portuguese labels, lyrics, menus and the queue. Phones, tablets, Automotive, desktop and iOS keep their existing controls.
 
+On Android TV, play a video in the landscape player and check that the background blends into the controls without a visible seam through the video. Repeat with album artwork and both layout directions.
+
 On Android, compare launcher, media-notification and download-notification launches with the app running, stopped and restored after process death. Select a bundled app language, change system display size and font size while the app is in the background, then reopen it through each path. The locale override must preserve the Activity's current density, font scale and window dimensions. Check portrait, landscape and split-screen, including compact scaling and the saved display-density setting.
 
 After Activity, Lifecycle, Navigation3 or Adaptive updates, verify cold starts, deep links, process recreation and predictive Back on Android. Check MainActivity and crash recovery in light and dark themes, with gesture and three-button navigation. MainActivity keeps transparent system bars; crash recovery keeps navigation-bar contrast. Check pane resizing and destination restoration on desktop and iOS too.
