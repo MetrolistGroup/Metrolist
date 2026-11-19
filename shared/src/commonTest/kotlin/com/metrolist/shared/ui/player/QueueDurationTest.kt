@@ -50,6 +50,23 @@ class QueueDurationTest {
         assertSame(incoming, reconcileReorderedTracks(original.take(1), incoming, hasPendingReorder = true))
     }
 
+    @Test
+    fun activeTrackUsesPlaybackDurationWhenCatalogDurationIsUnknown() {
+        for (catalogDuration in listOf(null, 0L, -1L)) {
+            val track = track("unknown", catalogDuration)
+            assertEquals("2:03", track.durationText(isActive = true, currentDuration = 123_000L))
+            assertEquals("--:--", track.durationText(isActive = true, currentDuration = 0L))
+            assertEquals("--:--", track.durationText(isActive = false, currentDuration = 123_000L))
+        }
+    }
+
+    @Test
+    fun knownCatalogDurationRemainsStable() {
+        val known = track("known", 60_000L)
+        assertEquals("1:00", known.durationText(isActive = true, currentDuration = 123_000L))
+        assertEquals("1:00", known.durationText(isActive = false, currentDuration = 123_000L))
+    }
+
     private fun track(
         id: String,
         duration: Long?,

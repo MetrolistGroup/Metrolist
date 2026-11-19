@@ -316,7 +316,7 @@ internal fun prepareQueueTracks(
 internal fun QueueTrack.durationText(
     isActive: Boolean,
     currentDuration: Long?,
-): String = formatQueueDuration(duration ?: currentDuration?.takeIf { isActive && it > 0L })
+): String = formatQueueDuration(duration?.takeIf { it > 0L } ?: currentDuration?.takeIf { isActive && it > 0L })
 
 internal fun QueueTrack.isReorderTarget(
     draggingEntryKey: Long?,
