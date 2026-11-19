@@ -11,6 +11,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
 import android.os.Build
 import android.os.Process
+import android.system.Os
 import androidx.core.database.sqlite.transaction
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room3.exclusiveTransaction
@@ -140,6 +141,35 @@ class BackupRestoreManager(
     private val database: MusicDatabase,
 ) {
     suspend fun backup(uri: Uri): Result<Unit> =
+        backup { archive ->
+            context.contentResolver.openOutputStream(uri, "wt")?.use { output ->
+                archive.inputStream().buffered().use { it.copyTo(output) }
+                output.flush()
+            } ?: error("Could not open backup destination")
+        }
+
+    suspend fun backup(destination: File): Result<Unit> =
+        backup { archive ->
+            val liveDatabase = context.getDatabasePath(BACKUP_DATABASE_ENTRY)
+            val protectedPaths =
+                listOf(
+                    liveDatabase,
+                    File(liveDatabase.path + "-wal"),
+                    File(liveDatabase.path + "-shm"),
+                    File(liveDatabase.path + "-journal"),
+                ).map { it.canonicalFile }
+            check(destination.canonicalFile !in protectedPaths) { "Backup destination cannot replace the live database or its sidecars" }
+            check(destination.parentFile?.let { it.mkdirs() || it.isDirectory } != false) { "Could not create backup directory" }
+            val temporary = File(destination.parentFile, ".${destination.name}.tmp")
+            try {
+                archive.inputStream().buffered().use { input -> temporary.outputStream().buffered().use(input::copyTo) }
+                Os.rename(temporary.absolutePath, destination.absolutePath)
+            } finally {
+                temporary.delete()
+            }
+        }
+
+    private suspend fun backup(writeArchive: (File) -> Unit): Result<Unit> =
         withContext(Dispatchers.IO) {
             runCatching {
                 DiscordTokenStore.migrateLegacyCredentials(context)
@@ -177,10 +207,7 @@ class BackupRestoreManager(
                         snapshot.inputStream().buffered().use { it.copyTo(zip, BackupArchiveLimits.DATABASE_BYTES) }
                         zip.closeEntry()
                     }
-                    context.contentResolver.openOutputStream(uri, "wt")?.use { output ->
-                        archive.inputStream().buffered().use { it.copyTo(output) }
-                        output.flush()
-                    } ?: error("Could not open backup destination")
+                    writeArchive(archive)
                 } finally {
                     staging.deleteRecursively()
                 }

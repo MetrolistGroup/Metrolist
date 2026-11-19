@@ -4,6 +4,7 @@
  */
 
 import AVFoundation
+import BackgroundTasks
 import Combine
 import Foundation
 import Sentry
@@ -12,6 +13,8 @@ import SwiftUI
 
 @main
 struct MetrolistApp: App {
+    @UIApplicationDelegateAdaptor(AutomaticBackupAppDelegate.self) private var appDelegate
+
     init() {
         IosCrashRecovery.shared.install()
         NSSetUncaughtExceptionHandler { exception in
@@ -44,6 +47,57 @@ struct MetrolistApp: App {
             try audioSession.setCategory(.playback, mode: .default)
         } catch {
             print("Audio session configuration error: \(error.localizedDescription)")
+        }
+    }
+}
+
+private final class AutomaticBackupAppDelegate: NSObject, UIApplicationDelegate {
+    private static let taskIdentifier = "com.metrolist.automatic-backup"
+    private let settingsChanged = Notification.Name("com.metrolist.automaticBackupSettingsChanged")
+
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil,
+    ) -> Bool {
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.taskIdentifier, using: nil) { [weak self] task in
+            guard let task = task as? BGProcessingTask else {
+                task.setTaskCompleted(success: false)
+                return
+            }
+            self?.run(task)
+        }
+        NotificationCenter.default.addObserver(self, selector: #selector(schedule), name: settingsChanged, object: nil)
+        schedule()
+        return true
+    }
+
+    @objc private func schedule() {
+        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.taskIdentifier)
+        guard UserDefaults.standard.bool(forKey: "autoBackupEnabled") else { return }
+
+        let frequency = UserDefaults.standard.string(forKey: "autoBackupFrequency") ?? "WEEKLY"
+        let interval: TimeInterval
+        switch frequency {
+        case "DAILY": interval = 24 * 60 * 60
+        case "MONTHLY": interval = 30 * 24 * 60 * 60
+        case "WEEKLY", "": interval = 7 * 24 * 60 * 60
+        default: return
+        }
+        let lastSuccess = UserDefaults.standard.double(forKey: "autoBackupLastSuccessEpoch") / 1000
+        let request = BGProcessingTaskRequest(identifier: Self.taskIdentifier)
+        request.earliestBeginDate = Date(timeIntervalSince1970: lastSuccess + interval)
+        request.requiresNetworkConnectivity = false
+        request.requiresExternalPower = false
+        try? BGTaskScheduler.shared.submit(request)
+    }
+
+    private func run(_ task: BGProcessingTask) {
+        task.expirationHandler = {
+            IosAutomaticBackupBridgeKt.cancelIosAutomaticBackup()
+        }
+        IosAutomaticBackupBridgeKt.createIosAutomaticBackup { [weak self] succeeded in
+            task.setTaskCompleted(success: succeeded)
+            self?.schedule()
         }
     }
 }

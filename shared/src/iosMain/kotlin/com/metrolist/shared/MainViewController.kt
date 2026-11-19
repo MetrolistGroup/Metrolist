@@ -46,6 +46,7 @@ import coil3.network.ktor3.KtorNetworkFetcherFactory
 import com.metrolist.shared.backup.BackupArchiveLimits
 import com.metrolist.shared.backup.IosBackupRestoreManager
 import com.metrolist.shared.backup.defaultBackupFilename
+import com.metrolist.shared.backup.notifyIosAutomaticBackupSettingsChanged
 import com.metrolist.shared.crash.IosCrashRecovery
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.discord.IosDiscordPresenceEffect
@@ -524,6 +525,7 @@ fun MetrolistIOSApp() {
                                             onImport = ::importBackup,
                                             status = backupStatus,
                                             failure = backupFailure,
+                                            onAutoBackupSettingsChanged = ::notifyIosAutomaticBackupSettingsChanged,
                                         )
                                         Button(
                                             onClick = { showPlaylistImporter = true },

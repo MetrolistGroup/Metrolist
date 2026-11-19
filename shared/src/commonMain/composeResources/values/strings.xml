@@ -1392,6 +1392,13 @@
     <string name="backup_restore_import_desc">Restore a Metrolist backup. The app will restart after a successful restore.</string>
     <!-- Translators: Progress or status message for restore busy in the Backup & Restore. -->
     <string name="backup_restore_busy">Working…</string>
+    <string name="automatic_backup">Automatic backup</string>
+    <string name="automatic_backup_description">Save a local backup automatically and keep the 10 most recent copies.</string>
+    <string name="automatic_backup_frequency">Backup frequency</string>
+    <string name="automatic_backup_daily">Daily</string>
+    <string name="automatic_backup_weekly">Weekly</string>
+    <string name="automatic_backup_monthly">Monthly</string>
+    <string name="automatic_backup_location">Backups stay on this device. Mobile operating systems may defer them. Desktop backups run while Metrolist is open.</string>
     <!-- Translators: Title of the Backup & Restore option that imports a backup made by a different YouTube Music app. -->
     <string name="foreign_import_title">Import from another app</string>
     <!-- Translators: Supporting text beneath the import-from-another-app option in the Backup & Restore. App names are product names. -->

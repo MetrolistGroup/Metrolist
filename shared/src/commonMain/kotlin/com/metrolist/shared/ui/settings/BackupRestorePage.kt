@@ -6,13 +6,18 @@ package com.metrolist.shared.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -22,11 +27,20 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.metrolist.shared.backup.AutoBackupFrequency
 import com.metrolist.shared.backup.BackupValidationException
 import com.metrolist.shared.backup.BackupValidationFailure
 import com.metrolist.shared.generated.resources.Res
+import com.metrolist.shared.generated.resources.automatic_backup
+import com.metrolist.shared.generated.resources.automatic_backup_daily
+import com.metrolist.shared.generated.resources.automatic_backup_description
+import com.metrolist.shared.generated.resources.automatic_backup_frequency
+import com.metrolist.shared.generated.resources.automatic_backup_location
+import com.metrolist.shared.generated.resources.automatic_backup_monthly
+import com.metrolist.shared.generated.resources.automatic_backup_weekly
 import com.metrolist.shared.generated.resources.backup_create_failed
 import com.metrolist.shared.generated.resources.backup_create_success
 import com.metrolist.shared.generated.resources.backup_invalid_data
@@ -45,6 +59,7 @@ import com.metrolist.shared.generated.resources.restore_backup
 import com.metrolist.shared.generated.resources.restore_confirm_message
 import com.metrolist.shared.generated.resources.restore_confirm_title
 import com.metrolist.shared.generated.resources.restore_failed
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.PopupVisibility
 import kotlinx.coroutines.delay
@@ -64,7 +79,10 @@ fun BackupRestorePage(
     modifier: Modifier = Modifier,
     status: BackupRestoreStatus? = null,
     failure: Throwable? = null,
+    onAutoBackupSettingsChanged: () -> Unit = {},
 ) {
+    val settings = Settings.shared
+    val autoBackupFrequency = AutoBackupFrequency.fromSetting(settings.autoBackupFrequency)
     var showBackupWarning by remember { mutableStateOf(false) }
     var showRestoreWarning by remember { mutableStateOf(false) }
     var warningSeconds by remember { mutableIntStateOf(5) }
@@ -86,6 +104,45 @@ fun BackupRestorePage(
         Text(stringResource(Res.string.backup_sensitive_title), style = MaterialTheme.typography.titleMedium)
         Text(stringResource(Res.string.backup_sensitive_message), style = MaterialTheme.typography.bodyMedium)
         Text(stringResource(Res.string.backup_restore_export_desc), style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(Res.string.automatic_backup), style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(Res.string.automatic_backup_location), style = MaterialTheme.typography.bodyMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(Res.string.automatic_backup_description), modifier = Modifier.weight(1f))
+            Switch(
+                checked = settings.autoBackupEnabled,
+                onCheckedChange = {
+                    settings.autoBackupEnabled = it
+                    onAutoBackupSettingsChanged()
+                },
+            )
+        }
+        if (settings.autoBackupEnabled) {
+            Text(stringResource(Res.string.automatic_backup_frequency), style = MaterialTheme.typography.titleSmall)
+            AutoBackupFrequency.entries.forEach { frequency ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(
+                        selected = autoBackupFrequency == frequency,
+                        onClick = {
+                            settings.autoBackupFrequency = frequency.name
+                            onAutoBackupSettingsChanged()
+                        },
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(
+                            when (frequency) {
+                                AutoBackupFrequency.DAILY -> Res.string.automatic_backup_daily
+                                AutoBackupFrequency.WEEKLY -> Res.string.automatic_backup_weekly
+                                AutoBackupFrequency.MONTHLY -> Res.string.automatic_backup_monthly
+                            },
+                        ),
+                    )
+                }
+            }
+        }
         Button(
             onClick = { showBackupWarning = true },
             modifier = Modifier.fillMaxWidth(),

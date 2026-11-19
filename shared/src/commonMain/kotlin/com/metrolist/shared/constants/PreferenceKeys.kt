@@ -173,6 +173,9 @@ val LastFmArtistCacheJsonKey = "lastFmArtistCacheV2Json"
 val LastFmPhotoCacheJsonKey = "lastFmPhotoCacheJson"
 val SeekDurationSecondsKey = "seekDurationSeconds"
 val PauseOnMuteKey = "pauseOnMute"
+val AutoBackupEnabledKey = "autoBackupEnabled"
+val AutoBackupFrequencyKey = "autoBackupFrequency"
+val AutoBackupLastSuccessEpochKey = "autoBackupLastSuccessEpoch"
 
 enum class SongSortType {
     CREATE_DATE,

@@ -46,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import com.metrolist.desktop.backup.DesktopAutomaticBackupScheduler
 import com.metrolist.desktop.backup.DesktopBackupRestoreManager
 import com.metrolist.desktop.spotifyimport.DesktopAmazonMusicImportFlow
 import com.metrolist.desktop.spotifyimport.DesktopAppleMusicImportFlow
@@ -57,6 +58,7 @@ import com.metrolist.desktop.state.content.LibraryContentState
 import com.metrolist.desktop.state.playback.validatedLocalMediaUrl
 import com.metrolist.desktop.utils.pickDesktopFile
 import com.metrolist.desktop.utils.saveDesktopFile
+import com.metrolist.shared.backup.AutoBackupFrequency
 import com.metrolist.shared.backup.defaultBackupFilename
 import com.metrolist.shared.backup.foreignImportMessage
 import com.metrolist.shared.backup.importForeignBackup
@@ -67,6 +69,13 @@ import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.action_backup
 import com.metrolist.shared.generated.resources.action_restore
 import com.metrolist.shared.generated.resources.app_data
+import com.metrolist.shared.generated.resources.automatic_backup
+import com.metrolist.shared.generated.resources.automatic_backup_daily
+import com.metrolist.shared.generated.resources.automatic_backup_description
+import com.metrolist.shared.generated.resources.automatic_backup_frequency
+import com.metrolist.shared.generated.resources.automatic_backup_location
+import com.metrolist.shared.generated.resources.automatic_backup_monthly
+import com.metrolist.shared.generated.resources.automatic_backup_weekly
 import com.metrolist.shared.generated.resources.backup_create_failed
 import com.metrolist.shared.generated.resources.backup_create_success
 import com.metrolist.shared.generated.resources.backup_created
@@ -176,6 +185,7 @@ import com.metrolist.shared.playlistimport.PlaylistImportStatusManager
 import com.metrolist.shared.playlistimport.UnifiedPlaylistImporter
 import com.metrolist.shared.playlistimport.UniversalPlaylistParser
 import com.metrolist.shared.playlistimport.readPlaylistText
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.Dialog
@@ -340,6 +350,7 @@ private fun ProviderImportDialog(
 @Suppress("FunctionName")
 fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
     val scope = rememberCoroutineScope()
+    val appSettings = Settings.shared
     val database: MusicDatabase = koinInject()
 
     val playlistImportManager =
@@ -611,6 +622,45 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                 searchKeywords = listOf("backup", "restore", "export", "import"),
                 items =
                     listOf(
+                        Material3SettingsItem(
+                            title = { Text(stringResource(Res.string.automatic_backup)) },
+                            description = {
+                                Text(
+                                    "${stringResource(Res.string.automatic_backup_description)}\n" +
+                                        stringResource(Res.string.automatic_backup_location),
+                                )
+                            },
+                            checked = appSettings.autoBackupEnabled,
+                            trailingContent = { SettingsSwitch(appSettings.autoBackupEnabled) },
+                            onClick = {
+                                appSettings.autoBackupEnabled = !appSettings.autoBackupEnabled
+                                DesktopAutomaticBackupScheduler.schedule()
+                            },
+                        ),
+                        Material3SettingsItem(
+                            title = { Text(stringResource(Res.string.automatic_backup_frequency)) },
+                            description = {
+                                Text(
+                                    stringResource(
+                                        when (AutoBackupFrequency.fromSetting(appSettings.autoBackupFrequency)) {
+                                            AutoBackupFrequency.DAILY -> Res.string.automatic_backup_daily
+                                            AutoBackupFrequency.WEEKLY -> Res.string.automatic_backup_weekly
+                                            AutoBackupFrequency.MONTHLY -> Res.string.automatic_backup_monthly
+                                        },
+                                    ),
+                                )
+                            },
+                            enabled = appSettings.autoBackupEnabled,
+                            onClick = {
+                                appSettings.autoBackupFrequency =
+                                    when (AutoBackupFrequency.fromSetting(appSettings.autoBackupFrequency)) {
+                                        AutoBackupFrequency.DAILY -> AutoBackupFrequency.WEEKLY
+                                        AutoBackupFrequency.WEEKLY -> AutoBackupFrequency.MONTHLY
+                                        AutoBackupFrequency.MONTHLY -> AutoBackupFrequency.DAILY
+                                    }.name
+                                DesktopAutomaticBackupScheduler.schedule()
+                            },
+                        ),
                         Material3SettingsItem(
                             title = { Text(stringResource(Res.string.create_backup)) },
                             description = { Text(stringResource(Res.string.create_backup_desc)) },
