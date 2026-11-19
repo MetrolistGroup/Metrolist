@@ -75,6 +75,7 @@ internal class FcastSession(
     private val json = Json { ignoreUnknownKeys = true }
     private val socket = Socket()
     private val writeLock = Any()
+    private val mediaStateLock = Any()
     private lateinit var input: BufferedInputStream
     private lateinit var output: BufferedOutputStream
     private val receiverVersion = CompletableDeferred<Int>()
@@ -110,20 +111,23 @@ internal class FcastSession(
         mediaGeneration: Long,
     ) = withContext(Dispatchers.IO) {
         check(!closed)
-        this@FcastSession.mediaGeneration = mediaGeneration
-        currentMediaUrl = mediaUrl
-        stopRequested = false
-        awaitingCurrentMediaUpdate = true
-        awaitingMediaStartPositionMs = positionMs
-        _state.value =
-            CastSessionState(
-                connected = true,
-                isPlaying = autoplay,
-                positionMs = positionMs,
-                durationMs = media.durationMs,
-                volume = _state.value.volume,
-                mediaGeneration = mediaGeneration,
-            )
+        synchronized(mediaStateLock) {
+            check(!closed)
+            this@FcastSession.mediaGeneration = mediaGeneration
+            currentMediaUrl = mediaUrl
+            stopRequested = false
+            awaitingCurrentMediaUpdate = true
+            awaitingMediaStartPositionMs = positionMs
+            _state.value =
+                CastSessionState(
+                    connected = true,
+                    isPlaying = autoplay,
+                    positionMs = positionMs,
+                    durationMs = media.durationMs,
+                    volume = _state.value.volume,
+                    mediaGeneration = mediaGeneration,
+                )
+        }
         if (!socket.isConnected) {
             socket.connect(InetSocketAddress(address, port), CONNECT_TIMEOUT_MS)
             socket.soTimeout = READ_TIMEOUT_MS
@@ -198,7 +202,9 @@ internal class FcastSession(
 
     override suspend fun stop() =
         withContext(Dispatchers.IO) {
-            stopRequested = true
+            synchronized(mediaStateLock) {
+                stopRequested = true
+            }
             send(OPCODE_STOP)
         }
 
@@ -245,7 +251,6 @@ internal class FcastSession(
 
             OPCODE_PLAYBACK_UPDATE -> {
                 val payload = body?.let { json.parseToJsonElement(it).jsonObject } ?: return
-                val current = _state.value
                 val playbackState = payload["state"]?.jsonPrimitive?.intOrNull
                 val isPlaying = playbackState == PLAYBACK_STATE_PLAYING
                 val reportedPositionMs =
@@ -254,43 +259,47 @@ internal class FcastSession(
                         ?.doubleOrNull
                         ?.times(1000.0)
                         ?.toLong()
-                val positionMs = reportedPositionMs ?: current.positionMs
-                val durationMs =
-                    payload["duration"]
-                        ?.jsonPrimitive
-                        ?.doubleOrNull
-                        ?.times(1000.0)
-                        ?.toLong() ?: current.durationMs
-                val hasEnded =
-                    castPlaybackEndedNearDuration(
-                        current.isPlaying,
-                        playbackState == PLAYBACK_STATE_IDLE,
-                        positionMs,
-                        durationMs,
-                    )
-                // shortcut: FCast sends no media ID; replace this heuristic if the protocol adds one.
-                if (
-                    !isCurrentFcastPlaybackUpdate(
-                        awaitingCurrentMediaUpdate,
-                        hasEnded,
-                        current.durationMs,
-                        durationMs,
-                        awaitingMediaStartPositionMs,
-                        positionMs,
-                        reportedPositionMs != null,
-                    )
-                ) {
-                    return
+                synchronized(mediaStateLock) {
+                    val current = _state.value
+                    val positionMs = reportedPositionMs ?: current.positionMs
+                    val durationMs =
+                        payload["duration"]
+                            ?.jsonPrimitive
+                            ?.doubleOrNull
+                            ?.times(1000.0)
+                            ?.toLong() ?: current.durationMs
+                    val hasEnded =
+                        current.hasEnded ||
+                            castPlaybackEndedNearDuration(
+                                current.isPlaying,
+                                playbackState == PLAYBACK_STATE_IDLE,
+                                positionMs,
+                                durationMs,
+                            )
+                    // shortcut: FCast sends no media ID; replace this heuristic if the protocol adds one.
+                    if (
+                        !isCurrentFcastPlaybackUpdate(
+                            awaitingCurrentMediaUpdate,
+                            hasEnded,
+                            current.durationMs,
+                            durationMs,
+                            awaitingMediaStartPositionMs,
+                            positionMs,
+                            reportedPositionMs != null,
+                        )
+                    ) {
+                        return
+                    }
+                    awaitingCurrentMediaUpdate = false
+                    _state.value =
+                        current.copy(
+                            isPlaying = isPlaying,
+                            positionMs = positionMs,
+                            durationMs = durationMs,
+                            hasEnded = hasEnded,
+                            mediaGeneration = mediaGeneration,
+                        )
                 }
-                awaitingCurrentMediaUpdate = false
-                _state.value =
-                    current.copy(
-                        isPlaying = isPlaying,
-                        positionMs = positionMs,
-                        durationMs = durationMs,
-                        hasEnded = hasEnded,
-                        mediaGeneration = mediaGeneration,
-                    )
             }
 
             OPCODE_VOLUME_UPDATE -> {
@@ -302,19 +311,25 @@ internal class FcastSession(
                             ?.jsonPrimitive
                             ?.doubleOrNull
                     }
-                if (volume != null) _state.value = _state.value.copy(volume = volume.toFloat().coerceIn(0f, 1f))
+                if (volume != null) {
+                    synchronized(mediaStateLock) {
+                        _state.value = _state.value.copy(volume = volume.toFloat().coerceIn(0f, 1f))
+                    }
+                }
             }
 
             OPCODE_EVENT -> {
-                if (stopRequested || !isCurrentFcastMediaItemEndEvent(body, currentMediaUrl)) return
-                val current = _state.value
-                _state.value =
-                    current.copy(
-                        isPlaying = false,
-                        positionMs = current.durationMs.takeIf { it > 0L } ?: current.positionMs,
-                        hasEnded = true,
-                        mediaGeneration = mediaGeneration,
-                    )
+                synchronized(mediaStateLock) {
+                    if (closed || stopRequested || !isCurrentFcastMediaItemEndEvent(body, currentMediaUrl)) return
+                    val current = _state.value
+                    _state.value =
+                        current.copy(
+                            isPlaying = false,
+                            positionMs = current.durationMs.takeIf { it > 0L } ?: current.positionMs,
+                            hasEnded = true,
+                            mediaGeneration = mediaGeneration,
+                        )
+                }
             }
 
             OPCODE_PLAYBACK_ERROR -> {
@@ -349,12 +364,14 @@ internal class FcastSession(
     }
 
     override fun close() {
-        if (closed) return
-        closed = true
+        synchronized(mediaStateLock) {
+            if (closed) return
+            closed = true
+            _state.value = CastSessionState(mediaGeneration = mediaGeneration)
+        }
         heartbeatJob?.cancel()
         readerJob?.cancel()
         runCatching { socket.close() }
-        _state.value = CastSessionState(mediaGeneration = mediaGeneration)
     }
 
     private companion object {
